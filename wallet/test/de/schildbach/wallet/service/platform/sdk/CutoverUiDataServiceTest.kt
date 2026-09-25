@@ -1643,6 +1643,36 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun unadvertisedDestinationNeverFallsBackToTheWarmReceiveCache() = runTest {
+        // The dangerous shape: the RECEIVE cache is warm (so anything that falls
+        // back through the overlaid freshReceiveAddress() would get the
+        // advertised address) while the CHANGE read is unavailable. The
+        // unadvertised accessor must answer null and let the caller fail, never
+        // substitute the advertised address — that would reintroduce the exact
+        // leak this destination exists to prevent, and precisely when the engine
+        // is already misbehaving.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals(
+            "precondition: the receive cache is warm",
+            "yENGINEnextUnusedAddress",
+            service.sdkReceiveAddressOrNull()
+        )
+
+        source.nextChangeAddress = null
+
+        assertNull(
+            "an unavailable change read must not borrow the advertised address",
+            service.sdkUnadvertisedAddressLiveBlockingOrNull()
+        )
+        // …and the receive cache is still warm, proving the null was a refusal
+        // rather than an empty overlay.
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
     fun unshieldDestinationIsRefusedWhenTheBindingIsGone() = runTest {
         // Same wallet-isolation rule as the receive read: paying our OWN funds to
         // an address derived from a wiped binding would send them somewhere the

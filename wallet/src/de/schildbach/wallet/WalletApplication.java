@@ -2102,8 +2102,9 @@ public class WalletApplication extends MultiDexApplication
      * {@link #currentReceiveAddress()} with a LIVE engine read instead of the
      * cached one — for callers already off the main thread that want the
      * engine's answer as of this instant (the Receive screen and the QR it
-     * shows, the unshield destination, the exchange-integration deposit
-     * addresses). Falls back to {@link #currentReceiveAddress()} whenever the
+     * shows, the exchange-integration deposit addresses). NOT the unshield or
+     * CoinJoin-combine destinations: those are self-transfers and must never be
+     * paid to an advertised address — see {@link #unadvertisedDestinationLive()}. Falls back to {@link #currentReceiveAddress()} whenever the
      * engine has no answer, so it is always safe to prefer over it.
      *
      * <p>BLOCKS: off-main callers only. See {@code WalletData.currentReceiveAddressLive}.
@@ -2141,24 +2142,42 @@ public class WalletApplication extends MultiDexApplication
      * one {@link #freshReceiveAddressLive()} returns, and a counterparty who was
      * handed the QR and never paid it can watch it.
      *
-     * <p>Falls back to dashj's freshly issued receive key whenever the engine has
-     * no answer — pre-cutover, rolled back, or the wallet was wiped while the
-     * read was blocked. That is the behaviour these paths had before the SDK
-     * overlay, and it is already distinct from the advertised current key.
+     * <p><b>Post-cutover this FAILS rather than falling back.</b> There is no
+     * safe fallback on this side: {@link #freshReceiveAddress()} is itself
+     * overlaid, so on a warm cache it returns the very advertised address this
+     * method exists to avoid — a fallback there would silently reintroduce the
+     * leak precisely when the engine read is failing. Both callers
+     * ({@code ShieldedTransferExecutor}, {@code CoinJoinFundsMigrationService})
+     * catch this strictly BEFORE broadcast and report not-sent, so failing is
+     * merely a retry; leaking would be permanent and invisible.
+     *
+     * <p>Pre-cutover it returns the REAL dashj fresh key — read straight off the
+     * wallet, deliberately not through the overlaid accessor — which is what
+     * these paths used before the SDK overlay existed and is already distinct
+     * from the advertised current key.
      *
      * <p>BLOCKS on the SDK FFI: off-main callers only.
+     *
+     * @throws IllegalStateException post-cutover when no unadvertised
+     *     destination can be obtained.
      */
     @NotNull
     @Override
     public Address unadvertisedDestinationLive() {
-        if (cutoverUiDataService != null) {
+        if (cutoverUiDataService != null && cutoverUiDataService.isCutoverActive()) {
             final Address unadvertised = toDashjAddressOrNull(
                     cutoverUiDataService.sdkUnadvertisedAddressLiveBlockingOrNull());
-            if (unadvertised != null) {
-                return unadvertised;
+            if (unadvertised == null) {
+                throw new IllegalStateException(
+                        "no unadvertised destination available post-cutover; refusing to pay a "
+                                + "self-transfer to the advertised receive address");
             }
+            return unadvertised;
         }
-        return freshReceiveAddress();
+        // NOT freshReceiveAddress(): that accessor is overlaid and would serve
+        // the cached engine RECEIVE address. Go straight to dashj.
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+        return wallet.freshReceiveAddress();
     }
 
     @NotNull

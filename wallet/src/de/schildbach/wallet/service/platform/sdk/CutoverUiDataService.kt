@@ -2548,8 +2548,10 @@ class CutoverUiDataService internal constructor(
     /**
      * LIVE engine read of the next unused receive address, bypassing the cache —
      * for callers that are already off the main thread and want the engine's
-     * answer as of THIS instant (the Receive screen, the unshield destination,
-     * the buy/sell integrations' deposit address). Publishes what it reads, so
+     * answer as of THIS instant (the Receive screen, the buy/sell integrations'
+     * deposit address). NOT the unshield or CoinJoin-combine destinations —
+     * those are self-transfers and draw from
+     * [sdkUnadvertisedAddressLiveBlockingOrNull] instead. Publishes what it reads, so
      * the cache the synchronous [sdkReceiveAddressOrNull] serves is refreshed as
      * a side effect.
      *
@@ -2570,17 +2572,6 @@ class CutoverUiDataService internal constructor(
             sdkReceiveAddressLiveBlockingOrNull()
         }
 
-    /**
-     * [sdkReceiveAddressLiveOrNull] without the coroutine — the whole read is
-     * synchronous (the FFI call needs no suspension), so the Java call sites
-     * that are already on a background thread
-     * ([de.schildbach.wallet.WalletApplication.currentReceiveAddressLive] and
-     * [de.schildbach.wallet.WalletApplication.freshReceiveAddressLive], which
-     * the paper-wallet sweep drives off its background handler) can use it
-     * directly instead of bridging into `runBlocking`.
-     *
-     * BLOCKS on the engine's wallet-manager write lock — off-main only.
-     */
     /**
      * The engine's next unused INTERNAL (change) address — a destination for the
      * user's OWN money that has never been advertised to anyone.
@@ -2627,6 +2618,17 @@ class CutoverUiDataService internal constructor(
         }
     }
 
+    /**
+     * [sdkReceiveAddressLiveOrNull] without the coroutine — the whole read is
+     * synchronous (the FFI call needs no suspension), so the Java call sites
+     * that are already on a background thread
+     * ([de.schildbach.wallet.WalletApplication.currentReceiveAddressLive] and
+     * [de.schildbach.wallet.WalletApplication.freshReceiveAddressLive], which
+     * the paper-wallet sweep drives off its background handler) can use it
+     * directly instead of bridging into `runBlocking`.
+     *
+     * BLOCKS on the engine's wallet-manager write lock — off-main only.
+     */
     fun sdkReceiveAddressLiveBlockingOrNull(): String? {
         // Capture the binding and its generation together, then read OUTSIDE the
         // lock — holding it across a blocking FFI call would make every
