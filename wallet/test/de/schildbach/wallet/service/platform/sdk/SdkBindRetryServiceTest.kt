@@ -604,6 +604,52 @@ class SdkBindRetryServiceTest {
     }
 
     /**
+     * Review, 2026-09-25 (second round): the mutex serializes the operations,
+     * not the order queued coroutines reach it. A clear queued by a foreground
+     * edge can run AFTER the app has gone back to the background and a valid
+     * notice has been posted for a still-blocked wallet; before the fix it
+     * cleared that notice and the recovery prompt was gone. The clear now
+     * re-checks live visibility under the lock and skips.
+     */
+    @Test
+    fun aQueuedForegroundClear_doesNotRemoveANoticePostedForAStillBlockedWallet() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            h.appInBackground = true
+            val service = h.service(collectors)
+
+            // A failure handler holds the mutex, parked in persistBlocker.
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            h.persistGate = gate
+            h.fail(lockedDenial())
+            assertTrue(h.notices.isEmpty())
+
+            // A fast foreground/background flip while it is parked: the
+            // foreground edge queues its clear, then the app is back in the
+            // background — and its own callback queues a post behind the clear.
+            h.appInBackground = false
+            service.noteAppForeground()
+            h.appInBackground = true
+            service.noteAppBackground()
+            assertEquals(0, h.noticeClears)
+
+            gate.complete(Unit)
+            // The failure handler posted (background at its re-check); the
+            // queued clear ran next and must have skipped; the background post
+            // may re-post the same notice, which is harmless.
+            assertTrue("the valid notice stands", h.notices.isNotEmpty())
+            assertEquals("a queued clear must not remove a notice for a still-blocked, backgrounded wallet", 0, h.noticeClears)
+            assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        } finally {
+            collectors.cancel()
+        }
+    }
+
+    /**
      * The mirror image on the way back: a failure handler that has decided to
      * post (background at its check) and is parked holding the mutex must
      * not land its notice after the foreground clear. Its re-check under the
@@ -732,6 +778,9 @@ class SdkBindRetryServiceTest {
         h.fail(lockedDenial()); runCurrent()
         assertEquals(1, h.notices.size)
 
+        // The foreground monitor flips before its callback fires; the clear
+        // reads that live state under the lock.
+        h.appInBackground = false
         service.noteAppForeground()
         runCurrent()
         assertEquals(1, h.noticeClears)

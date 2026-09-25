@@ -502,10 +502,15 @@ class SdkBindRetryService internal constructor(
         // reason noteAppBackground posts under it: a failure handler that
         // passed its background check and is about to post must not land its
         // notice after this clear (its re-check under the lock sees the
-        // foreground and skips).
+        // foreground and skips). And decided from LIVE visibility under the
+        // lock (review, 2026-09-25): the mutex serializes the operations, not
+        // the order independently dispatched coroutines reach it, so a clear
+        // queued by a foreground edge can run after the app has gone back to
+        // the background and a valid notice has been posted for a still-blocked
+        // wallet — clearing it would lose the recovery prompt.
         scope.launch {
             outcomeMutex.withLock {
-                if (_blocker.value != null) clearPendingNotice()
+                if (!appInBackground() && _blocker.value != null) clearPendingNotice()
             }
         }
         if (!bindRetryPending()) return
