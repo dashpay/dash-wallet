@@ -2500,6 +2500,15 @@ branch from the shipping pin `d525f431`, merge #1016 (which merge-trees onto the
 conflicts but will not compile as-is: our Phase-0 seeding calls the two batch methods it deletes),
 delete our durable pending-sweep machinery along with it, and ship that as the next SDK drop.
 
+**Done, 2026-09-22, as int22.** `0.1.0-v42int22-SNAPSHOT` pins `9d1804d6` = `d525f431` +
+#1015 + the block-counter fix + #1016 with our durable pending-sweep plumbing removed
+(`~/Documents/dash/wallet-snapshots/BUILD-RECIPE-v42int22.md` §2, seven dash-spv tests retired
+with the mechanism, including `interrupted_sweep_is_replayed_after_restart`). Verified against the
+artifact, not the recipe: the AAR in mavenLocal (51,981,795 bytes, sha256 `60aeeb00ae71d84e`,
+identical to the Sonatype publish of 09-23) carries native libraries hashing `d95c1959cb9a6673`
+(arm64) and `a62fc094b946aaf6` (x86_64), the recipe's #1016 build, not the #1015-only
+`08c0c04e` fallback. §38 originally described int22 as the #1015-only pin; corrected there.
+
 **What stays true on our side, and what changes.** §35's sync rule and §34.6's old watchdog
 verdict (`SDK_FINAL_BATCH`, hold 30 min) still describe the user-facing behaviour correctly: the
 cursor parks inside one batch of the target with every filter stored. Their log lines were reworded
@@ -2875,9 +2884,11 @@ wallet changes rarely, and the alternative is the zombie.
 ## 38. Restore evidence, 2026-09-22 evening: int22 on both devices
 
 Both devices restored the job flower wallet from seed on SDK `0.1.0-v42int22-SNAPSHOT` (engine
-pin `08c0c04e` = int21's `d525f431` + rust-dashcore #1015 + the block-counter fix; the sweep and
-our durable pending set are still present — §34.6). Branch `fix/sync-process-stalls` at
-`2e3e3518d`. Both reached synced and seeded the correct balance on the first pass, with no watchdog
+pin `9d1804d6` = int21's `d525f431` + rust-dashcore #1015 + the block-counter fix + **#1016, the
+sweep and our durable pending set removed** — §34.6). *Corrected 2026-09-25: this section first
+said `08c0c04e`, the #1015-only fallback pin; the AAR's native-library hashes are the #1016
+build's, the debug APK was built at 17:07 against it, and the release APK the next morning.*
+Branch `fix/sync-process-stalls` at `2e3e3518d`. Both reached synced and seeded the correct balance on the first pass, with no watchdog
 verdict, no stall WARN, no restart.
 
 ### 38.1 The two restores
@@ -2896,14 +2907,13 @@ verdict, no stall WARN, no restart.
 
 Times are local (UTC−7). Scan start to synced on the emulator: 3 m 34 s.
 
-**No sweep on the emulator this time.** The 09-21 restore of the same wallet on the same emulator
-hit `Rescan committed filters (0-1555999)` at the tip and paid 19,305 false-positive block fetches
-(§34.1); tonight's log has no `Rescan committed filters` line at all, only the 102 forward rescans
-inside active batches. Best reading, from the code and not stated by the log: this launch
-provisioned the contact accounts BEFORE the SPV started, at `synced_height == 0`, which
-`manager/startup.rs` says marks them covered by the coming full scan, so nothing was derived late
-enough to reach the backward set. Whether a restore pays the sweep therefore depends on an ordering
-the user cannot see. One more reason it should go (§34.6).
+**No sweep on the emulator this time — because int22 has none.** The 09-21 restore of the same
+wallet on the same emulator, on int21, hit `Rescan committed filters (0-1555999)` at the tip and
+paid 19,305 false-positive block fetches (§34.1); tonight's log has no `Rescan committed filters`
+line at all, only the 102 forward rescans inside active batches. *The reading this paragraph first
+offered — that a provisioning-order accident kept the scripts out of the backward set — was wrong:
+#1016 removed the committed-range sweep, so there was nothing to hit.* Scan start to synced in
+3 m 34 s against int21's 7 m 04 s on the same wallet is #1016 doing what its author measured.
 
 **A debug-build caveat for stall hunting.** `PlatformSyncService.shutdown` keeps the SDK engines
 warm across service teardown in debug builds, so the release-only idle-stop that cut Andrei's sweep
@@ -2935,8 +2945,10 @@ honestly `WaitingForConnections` and our watchdog restarting into it; and his 09
 
 ### 38.4 What the day leaves open
 
-- rust-dashcore#1016 (drop the sweep) onto our pin, with our durable pending-sweep plumbing removed
-  — the other session's build.
+- ~~rust-dashcore#1016 (drop the sweep) onto our pin~~ — that is int22 (§34.6). What int22 gives
+  up with it: the interrupted-restore replay of scripts derived mid-sync (the 2026-08-19 fund
+  loss). The recipe's §5 step 0 — kill the app mid-restore, relaunch, balance must still land
+  exactly — has not been run on a device.
 - dashpay/platform#4302 (persist the DashPay backfill completion) — the per-launch re-walk.
 - The watchdog restarting into a device-offline stall; it does not check connectivity.
 - The `SyncEvent monitor lagged` fatal (rust-dashcore#1002's field log): a broadcast channel of 16
@@ -2951,7 +2963,8 @@ Source: Joel's contact-support report from the Pixel 8a (Android 17, 8 GB, `prod
 `~/Downloads/joel-stuck-at-99/`. This is the reference install of §31 — 33,297 transactions,
 68,317 keys, 229 DashPay friend chains — on the SDK **int21** build. It has none of
 `fix/sync-process-stalls` (#1571): no bounded shielded stop (§37), no 5-minute process exit, no
-start-time alarm (§36.6), no int22.
+start-time alarm (§36.6), and no int22 — which means it still carries the committed-range sweep
+that int22's #1016 removed (§34.6).
 
 All times below are UTC; `wallet.log` is written in UTC, the logcat in EDT (UTC−4).
 
@@ -3039,17 +3052,25 @@ lowest batch, every one of those filters is also re-tested against all 67,658 sc
 BIP158's P=19, 93 block fetches per 5,000 filters observed. Joel's wallet carries 67,658 scripts
 into the sweep — five times as many — and the observed rate follows:
 
-| | scripts | blocks fetched per 5,000-filter batch | per pass from 2,167,093 |
-|---|---|---|---|
-| Andrei, testnet (§34.2) | 13,024 | 83 expected / 93 observed | — |
-| Joel, mainnet, 01:44 | 67,658 | **817** (`Batch 2167093-2172092`), then 800 (`Rescan found 800 additional blocks`) | ≈ 60,000 block fetches |
+| | sweep scripts | the sweep's additional block fetches per 5,000-filter batch |
+|---|---|---|
+| Andrei, testnet (§34.2) | 13,024 | 83 expected / 93 observed |
+| Joel, mainnet, 01:44 | 67,658 | **800** (`Rescan found 800 additional blocks`, batch 2,167,093) |
 
-16% of every batch's blocks are fetched, parsed and matched, for a sweep that finds nothing new.
+Two costs stack on every batch, and the engine log separates them. The scan's OWN matching of the
+batch against the wallet's watched set — `Batch 2167093-2172092: found 817 matching blocks`, and
+438–815 on the nine batches logged in the 01:14 session — fetches 9–16% of the batch's blocks
+before the sweep does anything. The sweep's re-test of the same batch against the 67,658 pending
+scripts then adds up to 800 more (`Rescan found 800 additional blocks` on that first batch; 1 on
+the batches it re-tested in the 01:14 session, whose pending set was evidently smaller). Both are
+false positives at BIP158's P=19; the sweep's are for a re-test that finds nothing new.
+
 The 09-24 pass ran 158 minutes for 365,000 filters and rewrote block segments 43–47 (250,000
 heights' worth of files, 550 MB) on the way; the 01:14 pass had rewritten 45–47 again by 01:41. A
 full pass from the anchor is about 2.7 h of continuous foreground-service time at 2 GB PSS, and
-then the final batch parks. Joel got through one full pass on 09-24; the service stop that followed
-cost 70,000 blocks, the deadlock cost 50 minutes, and the process death sent it back to the anchor.
+then the final batch parks in the sweep. Joel got through one full pass on 09-24; the service stop
+that followed cost 70,000 blocks, the deadlock cost 50 minutes, and the process death sent it back
+to the anchor.
 
 ### 39.5 The §37 deadlock, second sighting
 
@@ -3086,10 +3107,20 @@ more than the memory: a fresh process is what re-arms rewind 3.
 Would have: the 50-minute deadlock (bounded stop, process exit after 5 min in the background), so
 the engine resumes at 23:56 instead of 01:14. That is the whole of the app-side difference.
 
-Would not: the re-walk to 2,167,092 on every fresh process (#4302, platform), the sweep's 817
-block fetches per batch (rust-dashcore#1016, the other session's build), the 70,000-block persistence
-lag under the final-batch park (SDK), or the 2.3 GB process that makes the fresh process likely.
-On this wallet those four together mean the sync cannot reach a persisted tip on
-`12000017`, and cannot on `12000018` either. The #1016 build removes the sweep's block fetches
-but not the re-walk; #4302 removes the re-walk. It needs both before the reference install can
-finish a sync it started.
+Would not, from the app code: the re-walk to 2,167,092 on every fresh process (#4302, platform),
+the 2.3 GB process that makes the fresh process likely, or the SDK's persistence granularity.
+
+**What int22 (`12000018`) changes for this wallet** — it carries #1016 (§34.6), so: no
+committed-range sweep, so no `Rescan found 800 additional blocks` on top of each batch, no
+`filters_pending_sweep.dat` re-seeding 67,658 scripts into the lowest batch at every start, and no
+final-batch park — the 99.904% stop at 23:34 was the sweep's commit wait, so the §35 rule would
+have read a completed scan instead and the 70,000-block persistence lag under the park has nothing
+to lag behind. And #1015, which matters to this wallet specifically: it is a CoinJoin wallet
+(67,770 CoinJoin keys), and #1015 is the spend-before-fund record-completeness fix.
+
+**What int22 does not change.** Every fresh process still rewinds to 2,167,092 (#4302), and the
+scan's own matching from there still fetches 9–16% of every batch's blocks — 438–817 per 5,000
+observed — for 377,000 filters. That is tens of thousands of block fetches and well over an hour
+per launch at the observed rate, on a process that dies at 2.3 GB. int22 halves the per-launch
+cost and removes the park; #4302 removes the per-launch cost. The reference install needs #4302
+before it can finish a sync it started, and int22 before that sync is a reasonable length.
