@@ -2131,6 +2131,36 @@ public class WalletApplication extends MultiDexApplication
         return live != null ? live : freshReceiveAddress();
     }
 
+    /**
+     * A destination for the user's OWN money that was never advertised — the
+     * engine's next unused INTERNAL (change) address post-cutover.
+     *
+     * <p>See {@code WalletData.unadvertisedDestinationLive}: the unshield
+     * withdrawal and the CoinJoin combine must not be paid to the address the
+     * Receive screen is showing, because post-cutover that address is the same
+     * one {@link #freshReceiveAddressLive()} returns, and a counterparty who was
+     * handed the QR and never paid it can watch it.
+     *
+     * <p>Falls back to dashj's freshly issued receive key whenever the engine has
+     * no answer — pre-cutover, rolled back, or the wallet was wiped while the
+     * read was blocked. That is the behaviour these paths had before the SDK
+     * overlay, and it is already distinct from the advertised current key.
+     *
+     * <p>BLOCKS on the SDK FFI: off-main callers only.
+     */
+    @NotNull
+    @Override
+    public Address unadvertisedDestinationLive() {
+        if (cutoverUiDataService != null) {
+            final Address unadvertised = toDashjAddressOrNull(
+                    cutoverUiDataService.sdkUnadvertisedAddressLiveBlockingOrNull());
+            if (unadvertised != null) {
+                return unadvertised;
+            }
+        }
+        return freshReceiveAddress();
+    }
+
     @NotNull
     @Override
     public String getNetworkId() {

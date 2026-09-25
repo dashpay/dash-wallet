@@ -604,11 +604,15 @@ class ShieldedTransferExecutor @Inject constructor(
             ShieldedTransferDirection.FromShielded ->
                 shieldedBalanceService.withdrawToCore(
                     debugUnshieldDestinationOverride()
-                        // `Live`, not the plain accessor: this whole function runs
-                        // on [ioDispatcher], and post-cutover the dashj chain is
-                        // HELD — the plain read would unshield into an address the
-                        // chain has already paid (SR-03 / D-003).
-                        ?: walletDataProvider.freshReceiveAddressLive().toBase58(),
+                        // The UNADVERTISED (engine internal/change) chain, not the
+                        // receive chain. Post-cutover `fresh` and `current` receive
+                        // addresses coincide, so withdrawing to the receive chain
+                        // would pay the unshield to the very address the Receive
+                        // screen is advertising: a counterparty handed that QR who
+                        // never pays it can watch it and learn the withdrawal and
+                        // its amount — the one thing shielding exists to prevent.
+                        // Runs on [ioDispatcher], which the live read requires.
+                        ?: walletDataProvider.unadvertisedDestinationLive().toBase58(),
                     amount
                 )
         }

@@ -45,6 +45,7 @@ import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.WalletUIConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -876,6 +877,12 @@ class CutoverUiDataServiceTest {
         @Volatile
         var receiveAddressReadParked = false
 
+        /** The engine's internal (change) chain — never advertised to a payer. */
+        var nextChangeAddress: String? = "yENGINEinternalChangeAddress"
+
+        override fun nextChangeAddressOrNull(walletIdHex: String, accountIndex: Int): String? =
+            nextChangeAddress
+
         override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
             nextReceiveAddressReads++
             if (gatedReadThreadName != null && Thread.currentThread().name == gatedReadThreadName) {
@@ -1545,9 +1552,14 @@ class CutoverUiDataServiceTest {
         events.emit(
             L1TxEvent.Detected(displayHex(3), 1_000_000L, null, contextCode = 0, directionCode = 0)
         )
-        runCurrent()
 
-        assertEquals("yENGINEsecondUnusedAddress", service.sdkReceiveAddressOrNull())
+        // The refresh hops onto a REAL dispatcher (refreshNativeSplit wraps the
+        // engine read in withContext(IO)), so virtual time alone does not drain
+        // it — a bare runCurrent() here passed only by luck.
+        assertTrue(
+            "the cache must follow the engine pointer after a tx event",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEsecondUnusedAddress" }
+        )
     }
 
     @Test
@@ -1566,10 +1578,16 @@ class CutoverUiDataServiceTest {
         assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
 
         source.nextReceiveAddress = null
+        val readsBefore = source.nextReceiveAddressReads
         events.emit(
             L1TxEvent.Detected(displayHex(4), 1_000_000L, null, contextCode = 0, directionCode = 0)
         )
-        runCurrent()
+        // Wait for the refresh to have actually ATTEMPTED the read, otherwise a
+        // still-correct cache would prove nothing about the hold.
+        assertTrue(
+            "the refresh must have attempted an engine read",
+            pumpUntil { source.nextReceiveAddressReads > readsBefore }
+        )
 
         assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
         // …and the live read reports the same held value rather than nothing.
@@ -1585,6 +1603,61 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         assertNull(service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun unshieldDestinationIsNeverTheAdvertisedReceiveAddress() = runTest {
+        // The Receive screen advertises the engine's next unused RECEIVE address.
+        // Post-cutover `fresh` and `current` coincide there (the engine tracks
+        // USED, not ISSUED), so if a self-transfer drew from the same chain it
+        // would pay the advertised address — and a counterparty handed that QR
+        // who simply never pays it can watch it and learn the withdrawal and its
+        // amount. Shielding exists to prevent exactly that.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        val advertised = service.sdkReceiveAddressLiveBlockingOrNull()
+        val selfTransfer = service.sdkUnadvertisedAddressLiveBlockingOrNull()
+
+        assertEquals("yENGINEnextUnusedAddress", advertised)
+        assertEquals("yENGINEinternalChangeAddress", selfTransfer)
+        assertNotEquals(
+            "a self-transfer must never be paid to the advertised receive address",
+            advertised,
+            selfTransfer
+        )
+        // …and it stays separate when the receive handout goes UNPAID, which is
+        // the attack: the engine's receive pointer does not move until something
+        // is actually seen on chain, so a naive implementation would keep
+        // returning that same advertised address for every later withdrawal.
+        repeat(3) {
+            assertEquals(
+                "the advertised address is unchanged while it stays unpaid",
+                advertised,
+                service.sdkReceiveAddressLiveBlockingOrNull()
+            )
+            assertNotEquals(advertised, service.sdkUnadvertisedAddressLiveBlockingOrNull())
+        }
+    }
+
+    @Test
+    fun unshieldDestinationIsRefusedWhenTheBindingIsGone() = runTest {
+        // Same wallet-isolation rule as the receive read: paying our OWN funds to
+        // an address derived from a wiped binding would send them somewhere the
+        // CURRENT wallet cannot spend.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEinternalChangeAddress", service.sdkUnadvertisedAddressLiveBlockingOrNull())
+
+        state.value = "DUAL_RUNNING"
+        assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == null })
+
+        assertNull(service.sdkUnadvertisedAddressLiveBlockingOrNull())
     }
 
     @Test

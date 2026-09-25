@@ -1192,6 +1192,25 @@ interface CutoverUiSource {
     fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int = 0): String? = null
 
     /**
+     * The wallet's NEXT UNUSED BIP-44 INTERNAL (change) address, base58, read
+     * from the engine over the FFI (`core_wallet_next_change_address` →
+     * `ManagedCoreWallet.nextChangeAddress`).
+     *
+     * The internal chain exists precisely because it is NEVER handed to a payer,
+     * which is what makes it the right destination for moving our OWN money:
+     * the unshield withdrawal and the post-upgrade CoinJoin combine. Both are
+     * self-transfers whose whole point is that nobody can link them to the user.
+     * Paying them to [nextReceiveAddressOrNull] would do the opposite — that
+     * address is the one the Receive screen is advertising, so a counterparty
+     * who was handed the QR and simply did not pay it can watch it and learn the
+     * withdrawal and its amount.
+     *
+     * Same null contract, same threading contract and same blocking behaviour as
+     * [nextReceiveAddressOrNull]. Default null: sources without a core wallet.
+     */
+    fun nextChangeAddressOrNull(walletIdHex: String, accountIndex: Int = 0): String? = null
+
+    /**
      * ONE-SHOT count of the wallet's own transaction RECORDS — the distinct
      * txids the wallet's TXOs fund or spend, i.e. the cardinality of the set
      * [observeWalletTxRecords] / [forEachWalletTxRecordPage] enumerate. This
@@ -1389,6 +1408,24 @@ internal class DashSdkCutoverUiSource(
             // take down the balance refresh this rides on.
             log.warn(
                 "engine next-receive-address read failed for account {} on {}…: {}",
+                accountIndex, walletIdHex.take(8), e.message
+            )
+            null
+        }
+    }
+
+    /** See [CutoverUiSource.nextChangeAddressOrNull]. Same discipline as the receive read. */
+    override fun nextChangeAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
+        val manager = service.walletManagerOrNull() ?: return null
+        val wallet = manager.wallets.value[walletIdHex] ?: return null
+        return try {
+            wallet.coreWallet().use { core -> core.nextChangeAddress(accountIndex) }
+                .takeIf { it.isNotBlank() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            log.warn(
+                "engine next-change-address read failed for account {} on {}…: {}",
                 accountIndex, walletIdHex.take(8), e.message
             )
             null
@@ -2544,6 +2581,52 @@ class CutoverUiDataService internal constructor(
      *
      * BLOCKS on the engine's wallet-manager write lock — off-main only.
      */
+    /**
+     * The engine's next unused INTERNAL (change) address — a destination for the
+     * user's OWN money that has never been advertised to anyone.
+     *
+     * ## Why this is separate from the receive address
+     *
+     * Post-cutover `fresh` and `current` receive addresses coincide (the engine
+     * tracks USED, not ISSUED), so serving the unshield withdrawal from the
+     * receive chain would pay it to the exact address the Receive screen is
+     * advertising. A counterparty handed that QR who simply never pays it can
+     * watch the address and learn the withdrawal and its amount — which is the
+     * one thing shielding exists to prevent. The internal chain is never handed
+     * out, so it restores the separation dashj had (advertised = an issued
+     * current key, self-transfer = a newly issued key).
+     *
+     * ## Why it is not cached
+     *
+     * Unlike the receive address there is no screen to keep warm: every caller
+     * consumes this immediately at spend time. Caching would also make two
+     * successive self-transfers share one destination for no benefit. Two
+     * unshields raced before either confirms can still land on the same internal
+     * address, because the engine's "next unused" cannot move until one is seen
+     * — the FFI exposes no reservation. That is reuse between two of the user's
+     * OWN transfers, not anything a payer can observe.
+     *
+     * Generation-validated exactly like [sdkReceiveAddressLiveBlockingOrNull]:
+     * an answer produced for a binding that has since been wiped is discarded
+     * rather than returned. BLOCKS on the FFI — off-main only.
+     */
+    fun sdkUnadvertisedAddressLiveBlockingOrNull(): String? {
+        val bound = synchronized(receiveAddressLock) {
+            if (!_cutoverActive.value) return null
+            val walletIdHex = activeWalletIdHex ?: return null
+            receiveAddressGeneration to walletIdHex
+        }
+        val (generation, walletIdHex) = bound
+        val address = source.nextChangeAddressOrNull(walletIdHex)
+        return synchronized(receiveAddressLock) {
+            // The wallet was wiped or rolled back while we were blocked: this
+            // address belongs to a wallet that is no longer current, and paying
+            // our own funds to it would send them somewhere the CURRENT wallet
+            // cannot spend. Answer nothing; the caller falls back to dashj.
+            if (generation != receiveAddressGeneration) null else address
+        }
+    }
+
     fun sdkReceiveAddressLiveBlockingOrNull(): String? {
         // Capture the binding and its generation together, then read OUTSIDE the
         // lock — holding it across a blocking FFI call would make every

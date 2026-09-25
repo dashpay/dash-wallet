@@ -102,10 +102,11 @@ class ShieldedTransferViewModelTest {
         // transferable balance comes from the chainlocked-only selection
         every { observeTotalBalance() } returns flowOf(Coin.parseCoin("3.00"))
         every { observeBalance(any(), any()) } returns flowOf(Coin.parseCoin("3.00"))
-        // The unshield destination comes from the `Live` accessor — the engine's
-        // next UNUSED address post-cutover, dashj's fresh one before it (SR-03 /
-        // D-003). It returns a dashj Address, which the executor base58-encodes.
-        every { freshReceiveAddressLive() } returns unshieldDestination
+        // The unshield destination is the UNADVERTISED (engine internal/change)
+        // chain — deliberately NOT the receive address the Receive screen shows,
+        // which post-cutover would be the same address a payer was handed.
+        // Returns a dashj Address, which the executor base58-encodes.
+        every { unadvertisedDestinationLive() } returns unshieldDestination
     }
     private val dashPayConfig = mockk<DashPayConfig> {
         coEvery { get(DashPayConfig.SHIELDED_TIMING_INFO_SHOWN) } returns true
@@ -483,7 +484,7 @@ class ShieldedTransferViewModelTest {
 
     @Test
     fun freshAddressFailure_isNotSent_notAmbiguous() = runTest(dispatcher) {
-        every { walletData.freshReceiveAddressLive() } throws IllegalStateException("wallet locked")
+        every { walletData.unadvertisedDestinationLive() } throws IllegalStateException("wallet locked")
         val vm = viewModel()
 
         vm.onSwapDirection()
