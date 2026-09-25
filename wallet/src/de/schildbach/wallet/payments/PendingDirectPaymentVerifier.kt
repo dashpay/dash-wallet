@@ -94,6 +94,8 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val DEFAULT_RECORD_RETENTION_MS = 24 * 60 * 60_000L
         /** How long a payment flow waits for restoration before refusing to proceed. */
         private const val DEFAULT_RESTORE_TIMEOUT_MS = 30_000L
+        /** How long a wipe waits for running verifications to stop before going ahead anyway. */
+        private const val DRAIN_TIMEOUT_MS = 5_000L
     }
 
     @VisibleForTesting internal var pollIntervalMs = DEFAULT_POLL_INTERVAL_MS
@@ -110,6 +112,42 @@ class PendingDirectPaymentVerifier @Inject constructor(
     private val jobs = ConcurrentHashMap<Sha256Hash, Deferred<Transaction?>>()
     private val jobsMutex = Mutex()
 
+    init {
+        // A pending payment belongs to the wallet that made it, but this is a singleton: its
+        // scope, its jobs and its restored flag all outlive a wipe, which replaces the wallet
+        // without ending the process. A job still watching for the old transaction would find a
+        // brand new wallet under it and commit, attribute and rebroadcast a payment that has
+        // nothing to do with it.
+        walletData.attachOnWalletWipedListener { forgetWalletState() }
+    }
+
+    /**
+     * Drops everything held on behalf of the wallet being wiped.
+     *
+     * Jobs are drained, not merely cancelled, because cancellation is a request: one already
+     * inside commit() would otherwise carry on writing records for a wallet that no longer
+     * exists. The store is cleared here as well, even though [PendingDirectPaymentConfig] wipes
+     * itself through [org.dash.wallet.common.data.BaseConfig], because wipe listeners run in
+     * registration order and this one has no claim to being first. Doing it after the drain
+     * leaves the same end state whichever way round they run.
+     */
+    private suspend fun forgetWalletState() {
+        val running = jobs.values.toList()
+        jobs.clear()
+        running.forEach { it.cancel() }
+        // Bounded: a job wedged in a call that does not answer cancellation must not hold up the
+        // wipe, and the captured-wallet checks below mean a straggler still cannot touch the
+        // replacement wallet.
+        withTimeoutOrNull(DRAIN_TIMEOUT_MS) { running.forEach { runCatching { it.join() } } }
+        locksRestored = false
+        try {
+            config.clearAll()
+        } catch (e: Exception) {
+            log.error("could not clear pending payments during wipe", e)
+        }
+        log.info("wallet wiped; dropped {} pending payment watch(es) and reset readiness", running.size)
+    }
+
     /**
      * Locks the inputs of [tx], persists it and starts watching the network for it.
      *
@@ -120,13 +158,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
         tx: Transaction,
         paymentUrl: String,
         serviceName: String?,
-        recovery: PaymentRecoveryMetadata? = null
+        recovery: PaymentRecoveryMetadata? = null,
+        paymentRequestId: String? = null
     ): Deferred<Transaction?> {
         val wallet = walletData.wallet ?: throw IllegalStateException("wallet is not available")
         val payment = PendingDirectPayment(
             txId = tx.txId,
             txBytes = tx.bitcoinSerialize(),
             paymentUrl = paymentUrl,
+            paymentRequestId = paymentRequestId,
             serviceName = serviceName,
             createdAt = System.currentTimeMillis(),
             isGiftCardPurchase = recovery?.isGiftCardPurchase ?: false,
@@ -146,7 +186,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
             throw e
         }
         log.info("quarantined possibly-sent tx {} ({} inputs locked)", tx.txId, tx.inputs.size)
-        return track(tx, payment)
+        return track(tx, payment, wallet)
     }
 
     /**
@@ -228,7 +268,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                             // untouched for the next start to look again.
                             wallet.getTransaction(tx.txId)?.let {
                                 log.info("transaction {} arrived after its watch expired", tx.txId)
-                                commit(it, payment)
+                                commit(it, payment, wallet)
                             }
                             continue
                         }
@@ -239,7 +279,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         if (!payment.abandoned && !isTracked(tx.txId)) {
                             lockInputs(wallet, tx)
                         }
-                        track(tx, payment)
+                        track(tx, payment, wallet)
                     } catch (e: Exception) {
                         // Keep the record. Failing to deserialize, lock or track says nothing
                         // about whether the merchant received the payment, and dropping it
@@ -263,6 +303,28 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     fun isTracked(txId: Sha256Hash): Boolean = jobs[txId]?.isActive == true
+
+    /**
+     * The transaction of a submission for [paymentRequestId] whose outcome is still unknown, or
+     * null if this invoice has nothing outstanding.
+     *
+     * Restoring input locks is not enough to stop a second payment for the same invoice: it stops
+     * the new transaction reusing those outpoints, and a wallet with other funds simply builds one
+     * from different ones, leaving two payments the payee can both broadcast. A screen that has
+     * lost its own state - process death, or the invoice opened again - has nothing else to ask.
+     *
+     * An abandoned payment does not count. Its inputs have been released because the wallet judged
+     * it never sent, and refusing to let the user pay after that would strand them on an invoice
+     * they never actually paid.
+     */
+    suspend fun unresolvedSubmissionFor(paymentRequestId: String?): Sha256Hash? {
+        if (paymentRequestId == null) {
+            return null
+        }
+        return config.getAllOrThrow()
+            .firstOrNull { it.paymentRequestId == paymentRequestId && !it.abandoned }
+            ?.txId
+    }
 
     /**
      * Undoes a quarantine once the payment's outcome is known for certain, whether acknowledged
@@ -303,24 +365,40 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
     }
 
-    private suspend fun track(tx: Transaction, payment: PendingDirectPayment): Deferred<Transaction?> =
+    private suspend fun track(
+        tx: Transaction,
+        payment: PendingDirectPayment,
+        origin: Wallet
+    ): Deferred<Transaction?> =
         jobsMutex.withLock {
             jobs[tx.txId]?.takeIf { it.isActive }
-                ?: scope.async { verify(tx, payment) }.also { jobs[tx.txId] = it }
+                ?: scope.async { verify(tx, payment, origin) }.also { jobs[tx.txId] = it }
         }
 
-    private suspend fun verify(tx: Transaction, payment: PendingDirectPayment): Transaction? {
+    /**
+     * True while [origin] is still the installed wallet. Everything this class does on behalf of a
+     * payment is done to the wallet that made it, and a wipe swaps that out underneath a running
+     * job, so each pass asks again before acting.
+     */
+    private fun stillOwnedBy(origin: Wallet): Boolean = walletData.wallet === origin
+
+    private suspend fun verify(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): Transaction? {
         log.info("watching the network for possibly-sent tx {} (submitted to {})", tx.txId, payment.paymentUrl)
         var current = payment
         var syncedSince = 0L
 
         while (true) {
             try {
+                if (!stillOwnedBy(origin)) {
+                    log.info("the wallet that sent {} is gone; abandoning its verification", tx.txId)
+                    return null
+                }
+
                 if (isTransactionOnNetwork(tx)) {
                     // Also the late-broadcast case: a released payment is still watched, so a
                     // payee that held the transaction back cannot leave us with a paid order
                     // whose records were thrown away.
-                    return commit(tx, current)
+                    return commit(tx, current, origin)
                 }
 
                 val now = System.currentTimeMillis()
@@ -340,7 +418,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         current = release(tx, current)
                     }
                 } else if (now - current.createdAt >= recordRetentionMs) {
-                    discardRecords(current)
+                    discardRecords(current, origin)
                     return null
                 }
             } catch (e: CancellationException) {
@@ -369,8 +447,16 @@ class PendingDirectPaymentVerifier @Inject constructor(
         return state.isSynced() && System.currentTimeMillis() - bestChainDate.time < RECENT_CHAIN_TIP_MS
     }
 
-    private suspend fun commit(tx: Transaction, payment: PendingDirectPayment): Transaction {
-        val wallet = walletData.wallet ?: throw IllegalStateException("wallet is not available")
+    /**
+     * Commits to [wallet], the one this payment was made from, rather than to whatever is
+     * installed at the moment. The two differ only after a wipe, and then committing, attributing
+     * and rebroadcasting an old payment onto the replacement wallet is exactly the harm to avoid;
+     * writing to the wallet that is on its way out is merely wasted work.
+     */
+    private suspend fun commit(tx: Transaction, payment: PendingDirectPayment, wallet: Wallet): Transaction {
+        if (!stillOwnedBy(wallet)) {
+            throw IllegalStateException("the wallet that sent ${tx.txId} has been wiped")
+        }
         Context.propagate(wallet.context)
 
         val existing = wallet.getTransaction(tx.txId)
@@ -442,13 +528,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * once that succeeds: discarding it earlier would leave gift cards, metadata or queued
      * platform changes behind with nothing left to retry them.
      */
-    private suspend fun discardRecords(payment: PendingDirectPayment) {
+    private suspend fun discardRecords(payment: PendingDirectPayment, origin: Wallet) {
         // The transaction can arrive between the last network check and this call. forgetTransaction
         // then reports settled without deleting anything, because the wallet holds it, and finishing
         // here would lose the gift card metadata commit() restores. Look again first.
-        walletData.wallet?.getTransaction(payment.txId)?.let { walletTx ->
+        origin.takeIf { stillOwnedBy(it) }?.getTransaction(payment.txId)?.let { walletTx ->
             log.info("abandoned payment {} turned out to be real after all, committing it", payment.txId)
-            commit(walletTx, payment)
+            commit(walletTx, payment, origin)
             return
         }
 

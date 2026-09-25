@@ -64,12 +64,22 @@ data class PendingDirectPayment(
      * only durable copy of the selected provider. Such a payment is never polled; it is applied
      * only if the transaction turns up in the wallet by other means.
      */
-    val watchExpired: Boolean = false
+    val watchExpired: Boolean = false,
+    /**
+     * Identifies the invoice this paid, as hex of the SHA-256 the parser takes over the serialized
+     * BIP70 PaymentRequest. The payment URL cannot do this job: merchants routinely serve every
+     * invoice from one endpoint, so matching on it would block unrelated purchases.
+     *
+     * Null for a record written before this was stored, and for a payment that had no payment
+     * request behind it at all.
+     */
+    val paymentRequestId: String? = null
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
         .put(KEY_TX, Utils.HEX.encode(txBytes))
         .put(KEY_PAYMENT_URL, paymentUrl)
+        .put(KEY_REQUEST_ID, paymentRequestId ?: JSONObject.NULL)
         .put(KEY_SERVICE_NAME, serviceName ?: JSONObject.NULL)
         .put(KEY_CREATED_AT, createdAt)
         .put(KEY_GIFT_CARD, isGiftCardPurchase)
@@ -81,6 +91,7 @@ data class PendingDirectPayment(
         private const val KEY_TX_ID = "txId"
         private const val KEY_TX = "tx"
         private const val KEY_PAYMENT_URL = "paymentUrl"
+        private const val KEY_REQUEST_ID = "paymentRequestId"
         private const val KEY_SERVICE_NAME = "serviceName"
         private const val KEY_CREATED_AT = "createdAt"
         private const val KEY_ABANDONED = "abandoned"
@@ -92,6 +103,14 @@ data class PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
             txBytes = Utils.HEX.decode(json.getString(KEY_TX)),
             paymentUrl = json.getString(KEY_PAYMENT_URL),
+            // opt, not get: a record written before this field existed must still decode, because
+            // getAllOrThrow() refuses the whole store over one entry it cannot read, and a store
+            // it refuses blocks every send.
+            paymentRequestId = if (json.isNull(KEY_REQUEST_ID)) {
+                null
+            } else {
+                json.optString(KEY_REQUEST_ID, "").ifEmpty { null }
+            },
             serviceName = if (json.isNull(KEY_SERVICE_NAME)) null else json.getString(KEY_SERVICE_NAME),
             createdAt = json.getLong(KEY_CREATED_AT),
             isGiftCardPurchase = json.optBoolean(KEY_GIFT_CARD, false),

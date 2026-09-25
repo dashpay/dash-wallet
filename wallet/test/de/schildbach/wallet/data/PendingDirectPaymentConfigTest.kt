@@ -298,4 +298,38 @@ class PendingDirectPaymentConfigTest {
 
         assertEquals(listOf(false, true, false), seen)
     }
+
+    // --- the invoice identity, and records written before it existed ---------------------------
+
+    @Test
+    fun paymentRequestIdRoundTrips() = runBlocking {
+        val identified = payment.copy(paymentRequestId = "ab12cd")
+        config.add(identified)
+
+        assertEquals(listOf("ab12cd"), config.getAllOrThrow().map { it.paymentRequestId })
+    }
+
+    @Test
+    fun aRecordWrittenBeforeTheInvoiceIdentityStillDecodes() = runBlocking {
+        // exactly what an older build wrote: no paymentRequestId key at all. getAllOrThrow refuses
+        // the whole store over a single entry it cannot read, and a store it refuses blocks every
+        // send, so a field added here must never be one an old record is missing.
+        seed(
+            """[{"txId":"${payment.txId}","tx":"01020304",""" +
+                """"paymentUrl":"https://merchant.example/pay/1",""" +
+                """"serviceName":"CTX","createdAt":1700000000000}]"""
+        )
+
+        val stored = config.getAllOrThrow()
+
+        assertEquals(1, stored.size)
+        assertEquals(null, stored.single().paymentRequestId)
+    }
+
+    @Test
+    fun anExplicitNullInvoiceIdentityDecodes() = runBlocking {
+        config.add(payment)
+
+        assertEquals(null, config.getAllOrThrow().single().paymentRequestId)
+    }
 }

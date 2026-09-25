@@ -153,6 +153,17 @@ class SendCoinsTaskRunner @Inject constructor(
      */
     suspend fun awaitPaymentReadiness() = pendingPaymentVerifier.awaitRestored()
 
+    /**
+     * The transaction of an earlier submission for this same payment request whose outcome is
+     * still unknown, or null if there is none.
+     *
+     * [awaitPaymentReadiness] and this answer different questions. That one stops a new payment
+     * spending an uncertain one's outpoints; this one stops it being a second payment for the same
+     * invoice, which restored locks do nothing about when the wallet has other funds to draw on.
+     */
+    suspend fun findUnresolvedSubmission(paymentRequestHash: ByteArray?): Sha256Hash? =
+        pendingPaymentVerifier.unresolvedSubmissionFor(paymentRequestHash?.let { Constants.HEX.encode(it) })
+
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: Address,
@@ -305,8 +316,10 @@ class SendCoinsTaskRunner @Inject constructor(
      * @param paymentIntent The payment intent containing the payment URL
      * @param serviceName Optional service name for transaction metadata
      * @return The committed transaction
-     * @throws DirectPayException if the payment is not acknowledged
-     * @throws IOException if the HTTP request fails
+     * @throws PaymentSubmissionPendingException if the submission result is unknown, which now
+     *   includes an explicit nack: it is answered only after delivery, so it says nothing about
+     *   whether the payee kept the transaction
+     * @throws IOException if the HTTP request fails before it could have reached the merchant
      */
     suspend fun sendDirectPayment(
         sendRequest: SendRequest,
@@ -405,8 +418,8 @@ class SendCoinsTaskRunner @Inject constructor(
      * @param finalPaymentIntent The payment intent containing the payment URL
      * @param serviceName Optional service name for transaction metadata
      * @return The committed transaction
-     * @throws DirectPayException if the payment is not acknowledged
-     * @throws PaymentSubmissionPendingException if the submission result is unknown
+     * @throws PaymentSubmissionPendingException if the submission result is unknown, a nack
+     *   included
      * @throws IOException if the HTTP request fails before it could have reached the merchant
      */
     private suspend fun directPay(
@@ -449,7 +462,13 @@ class SendCoinsTaskRunner @Inject constructor(
         // memory. A process death mid-flight would otherwise restart with the order recorded but
         // no pending payment, no locks and nothing for resume() to find, leaving the same inputs
         // free to fund a retry of a payment that already went through.
-        val verification = pendingPaymentVerifier.quarantine(sendRequest.tx, requestUrl, serviceName, recovery)
+        val verification = pendingPaymentVerifier.quarantine(
+            sendRequest.tx,
+            requestUrl,
+            serviceName,
+            recovery,
+            finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) }
+        )
 
         try {
             val response = directPayHttpClient.call(request)
@@ -467,12 +486,16 @@ class SendCoinsTaskRunner @Inject constructor(
             log.info("received {} via http", if (acknowledged) "ack" else "nack")
 
             if (!acknowledged) {
+                // A nack is not a refusal we can act on. It is reached only after the request
+                // arrived and the payee answered, so by then it has had the transaction and may
+                // have broadcast it whatever the memo says; the memo itself is a free-text field
+                // the payee chooses. Treating it as proof of non-receipt used to free the inputs
+                // and send callers into cleanup that deletes a gift card order, so a payee that
+                // nacked and relayed anyway left a paid purchase with nothing to redeem. Falls
+                // through to the ambiguous handling below, which is what an unanswered submission
+                // gets and what this is.
                 throw DirectPayException("Payment was not acknowledged by the server")
             }
-        } catch (e: DirectPayException) {
-            // An explicit nack is a definite outcome: the payee refused it.
-            pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
-            throw e
         } catch (e: Exception) {
             val tx = sendRequest.tx
 

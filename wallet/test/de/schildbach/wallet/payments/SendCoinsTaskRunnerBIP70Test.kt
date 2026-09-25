@@ -683,53 +683,48 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
-    fun `sendDirectPayment handles NACK response`() = runTest {
-        // Given: A payment intent and NACK response
+    fun `a nacked payment stays quarantined and is reported as pending`() = runTest {
+        // Given: the payee answers the submission with a nack
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
-        val testAmount = Coin.parseCoin("1.0")
+        val testAmount = Coin.parseCoin("0.01")
         val paymentUrl = mockWebServer.url("/payment").toString()
+        val paymentIntent = createBip70PaymentIntent(testAddress, testAmount, paymentUrl)
 
-        val outputs = arrayOf(
-            PaymentIntent.Output(
-                testAmount,
-                org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress)
-            )
-        )
-        val paymentIntent = PaymentIntent(
-            PaymentIntent.Standard.BIP70,
-            null, null,
-            outputs,
-            null,
-            paymentUrl,
-            null, null, null, null, null
-        )
-
-        // Create NACK response (memo = "nack")
-        val nackPayment = Protos.Payment.newBuilder().setMemo("Test").build()
         val nackResponse = Protos.PaymentACK.newBuilder()
-            .setPayment(nackPayment)
+            .setPayment(Protos.Payment.newBuilder().setMemo("Test").build())
             .setMemo("nack")
             .build()
-
         mockWebServer.enqueue(
             MockResponse()
                 .setResponseCode(HttpURLConnection.HTTP_OK)
                 .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
                 .setBody(okio.Buffer().write(nackResponse.toByteArray()))
         )
-
         val sendRequest = createTestSendRequest(testAddress, testAmount)
 
-        // When/Then: Should throw DirectPayException for NACK
-        try {
-            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent)
-            // If no exception, the nack was not properly handled
-        } catch (e: org.dash.wallet.common.services.DirectPayException) {
-            // Expected - NACK should throw DirectPayException
-            assertTrue(e.message?.contains("not acknowledged") == true)
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent, "TestService")
+            null
         } catch (e: Exception) {
-            // Other exceptions may occur due to mocking
+            e
         }
+
+        // Then: a nack is reached only after the request arrived and the payee answered, so it
+        // says nothing about whether the transaction was kept or relayed; the memo is the payee's
+        // own free text. Treating it as a refusal freed the inputs and sent callers into cleanup
+        // that deletes the order they had already recorded.
+        val tx = sendRequest.tx
+        assertNotNull("expected an exception", thrown)
+        assertTrue("expected PaymentSubmissionPendingException, got $thrown", thrown is PaymentSubmissionPendingException)
+        assertEquals(tx.txId, (thrown as PaymentSubmissionPendingException).txId)
+
+        coVerify(exactly = 0) { pendingPaymentVerifier.cancelQuarantine(any()) }
+        assertTrue(pendingPaymentVerifier.isTracked(tx.txId))
+        tx.inputs.forEach { input ->
+            assertTrue("input ${input.outpoint} must stay locked", wallet.isLockedOutput(input.outpoint))
+        }
+        coVerify(exactly = 0) { pendingPaymentConfig.remove(tx.txId) }
     }
 
     @Test
@@ -1034,6 +1029,43 @@ class SendCoinsTaskRunnerBIP70Test {
         assertFalse(pendingPaymentVerifier.isTracked(sendRequest.tx.txId))
         sendRequest.tx.inputs.forEach { input ->
             assertFalse(wallet.isLockedOutput(input.outpoint))
+        }
+    }
+
+    @Test
+    fun `a quarantined payment records which invoice it was for`() = runTest {
+        // Given: an invoice whose serialized request the parser hashed, and a submission that
+        // never gets an answer
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val host = if (loopback is Inet6Address) "[${loopback.hostAddress}]" else loopback.hostAddress
+        val requestHash = ByteArray(32) { it.toByte() }
+        val paymentIntent = PaymentIntent(
+            PaymentIntent.Standard.BIP70,
+            null, null,
+            arrayOf(PaymentIntent.Output(testAmount, org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress))),
+            null,
+            "http://$host:${mockWebServer.port}/payment",
+            null, null,
+            requestHash,
+            null, null
+        )
+        mockWebServer.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent, "TestService")
+        } catch (expected: Exception) {
+            // pending, as an unanswered submission always is
+        }
+
+        // Then: the record names the invoice, which is the only thing a screen that has lost its
+        // own state can match a later attempt against
+        val expected = org.dash.wallet.common.util.Constants.HEX.encode(requestHash)
+        coVerify {
+            pendingPaymentConfig.add(
+                match { it.txId == sendRequest.tx.txId && it.paymentRequestId == expected }
+            )
         }
     }
 }

@@ -42,6 +42,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -183,6 +184,18 @@ class PaymentProtocolViewModel @Inject constructor(
                 // Before coin selection, for the same reason: locking an outpoint afterwards
                 // does not remove it from a transaction that already selected it.
                 sendCoinsTaskRunner.awaitPaymentReadiness()
+
+                // And before building anything, ask whether this invoice already has a submission
+                // out. The barrier above only keeps the new transaction off the old one's inputs;
+                // a wallet with other funds happily builds a second payment for the same invoice
+                // from different ones, and the payee can broadcast both. This screen keeps its own
+                // record of having sent in a fragment-scoped view model, which is gone after
+                // process death and was never there when the invoice is simply opened again, so
+                // the stored record is the only thing left that remembers.
+                sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!.paymentRequestHash)?.let { txId ->
+                    log.info("not submitting again, {} is still unresolved for this payment request", txId)
+                    throw PaymentSubmissionPendingException(txId, null)
+                }
 
                 val sendRequest = sendCoinsTaskRunner.createSendRequest(
                     basePaymentIntent.mayEditAmount(),

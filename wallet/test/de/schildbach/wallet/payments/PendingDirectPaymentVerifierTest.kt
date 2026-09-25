@@ -24,6 +24,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -50,6 +51,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.net.InetAddress
@@ -75,6 +77,9 @@ class PendingDirectPaymentVerifierTest {
     private lateinit var config: PendingDirectPaymentConfig
     private lateinit var verifier: PendingDirectPaymentVerifier
 
+    /** What WalletApplication.finalizeWipe() invokes; captured so tests can run a wipe. */
+    private lateinit var onWalletWiped: suspend () -> Unit
+
     @Before
     fun setUp() {
         Context.propagate(Context(params))
@@ -92,11 +97,15 @@ class PendingDirectPaymentVerifierTest {
         config = mockk(relaxed = true)
         coEvery { config.getAllOrThrow() } returns emptyList()
 
+        val wipeListener = slot<suspend () -> Unit>()
+        every { walletData.attachOnWalletWipedListener(capture(wipeListener)) } answers { }
+
         verifier = PendingDirectPaymentVerifier(
             walletData, walletApplication, blockchainStateProvider, metadataProvider, config
         ).apply {
             pollIntervalMs = 20L
         }
+        onWalletWiped = if (wipeListener.isCaptured) wipeListener.captured else ({ })
     }
 
     /**
@@ -645,5 +654,122 @@ class PendingDirectPaymentVerifierTest {
 
         coVerify(exactly = 0) { metadataProvider.markGiftCardTransaction(any(), any(), any()) }
         coVerify { metadataProvider.setTransactionService(tx.txId, "SomeService") }
+    }
+
+    // --- a wiped wallet takes its pending payments with it ------------------------------------
+
+    @Test
+    fun `a wipe stops a watch before it can commit onto the replacement wallet`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(100)
+        assertTrue(verifier.isTracked(tx.txId))
+
+        // finalizeWipe() notifies its listeners and only then swaps the wallet out; the process
+        // keeps running, so this singleton and its jobs survive into the next wallet's life
+        onWalletWiped()
+        val replacement = Wallet.createBasic(params)
+        every { walletData.wallet } returns replacement
+
+        // evidence arrives for a transaction that belonged to the wallet that is now gone
+        tx.confidence.markBroadcastBy(PeerAddress(params, InetAddress.getLoopbackAddress(), 9999))
+        delay(200)
+
+        assertFalse("the watch must not outlive its wallet", verifier.isTracked(tx.txId))
+        assertNull("must not commit an old payment onto a new wallet", replacement.getTransaction(tx.txId))
+        verify(exactly = 0) { walletApplication.broadcastTransaction(any()) }
+        coVerify(exactly = 0) { metadataProvider.setTransactionService(tx.txId, any()) }
+    }
+
+    @Test
+    fun `a watch that outlives the wipe still refuses the replacement wallet`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(100)
+
+        // The wipe swaps the wallet out while jobs are still being asked to stop; cancellation is
+        // a request, not an event, so one already past its own check can arrive here. This is that
+        // straggler: the listener has not reached it, and the wallet underneath has changed.
+        val replacement = Wallet.createBasic(params)
+        every { walletData.wallet } returns replacement
+        tx.confidence.markBroadcastBy(PeerAddress(params, InetAddress.getLoopbackAddress(), 9999))
+        delay(200)
+
+        assertNull("must not commit onto a wallet that did not make this payment", replacement.getTransaction(tx.txId))
+        verify(exactly = 0) { walletApplication.broadcastTransaction(any()) }
+        coVerify(exactly = 0) { metadataProvider.setTransactionService(tx.txId, any()) }
+    }
+
+    @Test
+    fun `a wipe clears readiness so the next wallet has to restore for itself`() = runBlocking {
+        verifier.awaitRestored()
+
+        onWalletWiped()
+
+        // the replacement wallet's store cannot be read, so readiness must fail rather than be
+        // inherited from the scan the wiped wallet passed
+        coEvery { config.getAllOrThrow() } throws IllegalStateException("unreadable")
+        try {
+            verifier.awaitRestored()
+            fail("readiness survived the wipe")
+        } catch (expected: IllegalStateException) {
+            // expected
+        }
+    }
+
+    @Test
+    fun `a wipe drops the stored payments itself, whichever listener runs first`() = runBlocking {
+        // BaseConfig registers its own wipe listener to clear this store, but listeners run in
+        // registration order and this one cannot claim to be first; clearing after the drain
+        // leaves the same end state either way round
+        onWalletWiped()
+
+        coVerify { config.clearAll() }
+    }
+
+    // --- one invoice, one submission -----------------------------------------------------------
+
+    private fun storedPayment(tx: Transaction, requestId: String?, abandoned: Boolean = false) =
+        PendingDirectPayment(
+            tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis(),
+            abandoned = abandoned, paymentRequestId = requestId
+        )
+
+    @Test
+    fun `an invoice with an unresolved submission names the transaction holding it`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
+
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("abc123"))
+    }
+
+    @Test
+    fun `a different invoice is not blocked by this one`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
+
+        // merchants routinely serve every invoice from one payment endpoint, so identity has to
+        // come from the request itself; matching more loosely would block unrelated purchases
+        assertNull(verifier.unresolvedSubmissionFor("def456"))
+    }
+
+    @Test
+    fun `a released submission stops blocking its invoice`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123", abandoned = true))
+
+        // its inputs were freed because the wallet judged it never sent; refusing to let the user
+        // pay after that would strand them on an invoice they never actually paid
+        assertNull(verifier.unresolvedSubmissionFor("abc123"))
+    }
+
+    @Test
+    fun `a payment request with no identity blocks nothing`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, null))
+
+        // a record written before identities were stored must not match every later invoice
+        assertNull(verifier.unresolvedSubmissionFor(null))
+        assertNull(verifier.unresolvedSubmissionFor("abc123"))
     }
 }
