@@ -3024,7 +3024,12 @@ re-tested from there. Why the lowest active batch sat at 2,294,810 rather than a
 a fixed height, the same on both process-fresh launches, not on the in-process restarts, with the
 batch grid re-anchored on it (residue 2,093 mod 5,000 after 01:44; residue 2,092 after 20:48). On
 testnet the anchor was 1,532,171, the wallet's earliest DashPay contact request; this wallet has
-229 contacts and 2,167,092 is where its earliest one would sit. dashpay/platform#4302. Each fresh
+229 contacts, and the binder's own coverage line puts the earliest RECEIVED contact request at
+`receivedContactFloor=2167714` — 622 blocks above the anchor, which the SDK computes over its own
+subset of the contacts. dashpay/platform#4302. The app-side `DashPayBackfillGate` did not see any
+of this because it is disabled: `PlatformSdkModule` binds the no-op `ALWAYS_RUN`, so the
+`dashPayBackfill(armed=false, replaying=false)` on every published line is the constant it returns,
+not an observation. Each fresh
 launch costs a 377,000-filter re-walk from there — and, with the durable sweep set seeded into that
 lowest batch, every one of those filters is also re-tested against all 67,658 scripts.
 
