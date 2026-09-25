@@ -254,6 +254,7 @@ public class WalletApplication extends MultiDexApplication
 
     /** The wallet protobuf load threw past the internal recovery (e.g. OOM on a huge wallet). */
     private volatile boolean walletLoadFailed = false;
+    private volatile boolean recoveredWalletPersistencePending = false;
     /** Safe mode skipped the wallet load after consecutive launch deaths (see StartupBreadcrumbs). */
     private volatile boolean walletLoadSkippedSafeMode = false;
     /** An optional startup stage failed and was skipped (catch-degrade). */
@@ -348,9 +349,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
-     * True when the wallet file exists but NO wallet object is loaded — the
-     * launch is running degraded (load failure caught, or safe mode skipped
-     * the load after consecutive launch deaths). OnboardingActivity must show
+     * True when loading was unsuccessful, skipped, or a recovered wallet could
+     * not be persisted. OnboardingActivity must show
      * the crash-report path instead of onboarding/`wallet!!` routing.
      */
     public boolean isWalletLoadDegraded() {
@@ -360,7 +360,7 @@ public class WalletApplication extends MultiDexApplication
         if (!safeModeRetryInProgress) {
             awaitDeferredWalletLoad();
         }
-        return walletLoadFailed || walletLoadSkippedSafeMode;
+        return walletLoadFailed || walletLoadSkippedSafeMode || recoveredWalletPersistencePending;
     }
 
     /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
@@ -721,7 +721,7 @@ public class WalletApplication extends MultiDexApplication
             return;
         }
         if (!walletLoadSkippedSafeMode) {
-            onDone.accept(wallet != null);
+            onDone.accept(wallet != null && !isWalletLoadDegraded());
             return;
         }
         log.warn("SAFE MODE ESCAPE: retrying the skipped wallet load in-process, off the main thread");
@@ -767,7 +767,10 @@ public class WalletApplication extends MultiDexApplication
 
     /** Main thread: the retry's load is over, either way; tell every waiter. */
     private void completeSafeModeRetry() {
-        final boolean loaded = wallet != null && !walletLoadFailed;
+        // A recovered wallet whose primary save failed is loaded but not
+        // usable: it stays degraded. safeModeRetryInProgress is still set
+        // here, so isWalletLoadDegraded() answers without waiting.
+        final boolean loaded = wallet != null && !isWalletLoadDegraded();
         if (loaded) {
             // The load works: the strikes that engaged safe mode were a false
             // alarm (a killed background process, not a failing launch). Clear
@@ -1655,6 +1658,10 @@ public class WalletApplication extends MultiDexApplication
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
+        // Keep the recovered keys in memory, but do not start wallet services
+        // or publish a usable wallet until the primary copy is durable.
+        if (recoveredWalletPersistencePending)
+            return false;
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
         return true;
     }
@@ -1762,13 +1769,13 @@ public class WalletApplication extends MultiDexApplication
             // not strand the next launch on onboarding with only the backup on
             // disk.
             try {
-                protobufSerializeWallet(wallet);
+                persistRecoveredWallet(wallet);
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
                         "WALLET_RECOVERED_PRIMARY_SAVED");
             } catch (final IOException x) {
-                // Keep the recovered wallet for this process, and keep the
-                // key-backup launch gate above so the next process retries the
-                // same recovery instead of falling through to onboarding.
+                // Leave the persistence latch set: onboarding must show the
+                // report/close screen, never Create/Restore. A cold launch
+                // retries from the untouched key backup.
                 log.error("wallet restored from backup but primary wallet save failed", x);
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
                         "WALLET_RECOVERED_PRIMARY_SAVE_FAILED",
@@ -1833,6 +1840,12 @@ public class WalletApplication extends MultiDexApplication
         } catch (final IOException x) {
             throw new RuntimeException(x);
         }
+    }
+
+    void persistRecoveredWallet(final Wallet recoveredWallet) throws IOException {
+        recoveredWalletPersistencePending = true;
+        protobufSerializeWallet(recoveredWallet);
+        recoveredWalletPersistencePending = false;
     }
 
     private void protobufSerializeWallet(final Wallet wallet) throws IOException {
