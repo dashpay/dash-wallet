@@ -29,8 +29,11 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -251,22 +254,35 @@ class SdkShieldedInviteCreationTest {
         assertEquals(link.link.toString(), inserted.captured.dynamicLink)
     }
 
+    /** Verifies the recoverable raw link is saved before wrapping updates the same invitation. */
     @Test
-    fun broadcast_wrapsShareLinkAndPersistenceInTheOneLink() = runTest {
+    fun broadcast_persistsRawLinkBeforeGeneratingAndPersistingOneLink() = runTest {
         val source = happySource()
         val dao = dao()
-        val inserted = slot<Invitation>()
+        val inserted = mutableListOf<Invitation>()
         coEvery { dao.insert(capture(inserted)) } just Runs
         val oneLink = "https://dashpay.onelink.appsflyersdk.com/xyz?af_dp=dashpay"
 
-        val result = service(source = source, invitationsDao = dao, generateOneLink = { oneLink })
-            .createShieldedInvite("alice", "Alice", "", contested = false)
+        val result = service(
+            source = source,
+            invitationsDao = dao,
+            generateOneLink = { link ->
+                assertEquals(1, inserted.size)
+                assertEquals(link.link.toString(), inserted[0].dynamicLink)
+                assertEquals(inserted[0].dynamicLink, inserted[0].shortDynamicLink)
+                oneLink
+            }
+        ).createShieldedInvite("alice", "Alice", "", contested = false)
 
         val invite = (result as SdkWriteResult.Broadcast).value
-        // Shared/copied link AND the persisted row are the OneLink, not the raw deep link (H1).
         assertEquals(oneLink, invite.shareLink)
-        assertEquals(oneLink, inserted.captured.dynamicLink)
-        assertEquals(oneLink, inserted.captured.shortDynamicLink)
+        assertEquals(2, inserted.size)
+        assertEquals(invite.linkData.link.toString(), inserted[0].dynamicLink)
+        assertTrue(inserted[0].dynamicLink!!.contains("osk=${bytes32ToHex(spendingKey)}"))
+        assertEquals(inserted[0].dynamicLink, inserted[0].shortDynamicLink)
+        assertEquals(oneLink, inserted[1].dynamicLink)
+        assertEquals(oneLink, inserted[1].shortDynamicLink)
+        assertEquals(inserted[0].fundingAddress, inserted[1].fundingAddress)
         // The raw deep link is retained as the preview source.
         assertTrue(invite.linkData.isShielded)
     }
@@ -287,6 +303,39 @@ class SdkShieldedInviteCreationTest {
         val invite = (result as SdkWriteResult.Broadcast).value
         assertEquals(invite.linkData.link.toString(), invite.shareLink)
         assertEquals(invite.linkData.link.toString(), inserted.captured.dynamicLink)
+    }
+
+    /** SR-02: cancellation during a suspended database write must not discard the funded key. */
+    @Test
+    fun cancellationAfterFundingStillPersistsRawInviteLink() = runTest {
+        val source = happySource()
+        val dao = dao()
+        val inserted = mutableListOf<Invitation>()
+        val persistStarted = CompletableDeferred<Unit>()
+        val releasePersist = CompletableDeferred<Unit>()
+        coEvery { dao.insert(any()) } coAnswers {
+            persistStarted.complete(Unit)
+            releasePersist.await()
+            inserted += firstArg<Invitation>()
+        }
+
+        val createJob = launch {
+            service(
+                source = source,
+                invitationsDao = dao,
+                generateOneLink = { awaitCancellation() }
+            ).createShieldedInvite("alice", "Alice", "", contested = false)
+        }
+        persistStarted.await()
+        assertTrue(inserted.isEmpty())
+        createJob.cancel()
+        releasePersist.complete(Unit)
+        createJob.join()
+
+        val persistedLink = inserted.single().dynamicLink!!
+        assertTrue(persistedLink.startsWith("dashpay://invite?"))
+        assertTrue(persistedLink.contains("osk=${bytes32ToHex(spendingKey)}"))
+        assertEquals(persistedLink, inserted.single().shortDynamicLink)
     }
 
     @Test
