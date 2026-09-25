@@ -57,6 +57,7 @@ class ImportSharedImageActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
+        if (redirectDegradedWallet(application as WalletApplication)) return
         if ((application as WalletApplication).wallet == null) {
             setResult(RESULT_CANCELED)
             finish()

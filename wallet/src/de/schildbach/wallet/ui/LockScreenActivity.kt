@@ -142,33 +142,9 @@ open class LockScreenActivity : SecureActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (redirectDegradedWallet(walletApplication)) return
+
         if (walletData.wallet == null) {
-            // SAFE-MODE / DEGRADED LAUNCH. Android restores whatever activity
-            // was on top of the task straight into a fresh process, so any
-            // subclass of this class can be the FIRST activity of a launch
-            // whose wallet load was skipped (StartupBreadcrumbs safe mode) or
-            // failed. Joel's 12000012 report is exactly that: two ANRs armed
-            // safe mode, the next launch restored NetworkMonitorActivity, and
-            // it died in onCreate — which counts as another death before the
-            // main UI and re-arms safe mode, so the crash-loop breaker fed
-            // the loop it exists to break.
-            //
-            // OnboardingActivity is the only screen that owns the recovery
-            // (WalletApplication.retryWalletLoadAfterSafeMode) and the
-            // crash-report path, so send the user there instead of finishing
-            // into nothing. CLEAR_TASK drops the restored back stack, whose
-            // every entry would hit this same branch.
-            if (walletApplication.isWalletLoadDegraded) {
-                log.warn(
-                    "degraded launch: {} was restored without a wallet — routing to onboarding",
-                    javaClass.simpleName
-                )
-                startActivity(
-                    OnboardingActivity.createIntent(this).addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    )
-                )
-            }
             finish()
             return
         }
@@ -295,6 +271,8 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onStart() {
         super.onStart()
+
+        if (isFinishing || redirectDegradedWallet(walletApplication)) return
 
         // A Reset Wallet is destroying this wallet's data. Nothing below may
         // run: not the unlock (its keys are being deleted), not
