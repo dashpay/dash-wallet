@@ -95,6 +95,12 @@ interface WalletData {
      * key, which is what the unshield path used before the SDK overlay existed
      * and is already distinct from the advertised current key.
      *
+     * POST-CUTOVER THIS THROWS rather than falling back when the engine cannot
+     * answer. There is no safe fallback on that side: the overlaid
+     * `freshReceiveAddress()` would serve the cached ADVERTISED address, which is
+     * exactly what this method exists to avoid. Both callers catch strictly
+     * before broadcast, so a failure is a retry; a leak would be permanent.
+     *
      * BLOCKING, like the accessors above: off-main callers only.
      */
     fun unadvertisedDestinationLive(): Address = freshReceiveAddress()

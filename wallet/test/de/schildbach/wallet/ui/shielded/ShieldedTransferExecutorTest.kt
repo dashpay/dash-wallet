@@ -176,6 +176,11 @@ class ShieldedTransferExecutorTest {
 
     @Test
     fun freshAddressFailure_isNotSent_notAmbiguous() = runTest(dispatcher) {
+        // Post-cutover the destination accessor THROWS when no unadvertised
+        // address can be obtained, rather than falling back to the advertised
+        // receive address (which the overlaid freshReceiveAddress() would hand
+        // back on a warm cache). This pins that failing closed is safe: the
+        // throw lands strictly pre-broadcast.
         every { walletData.unadvertisedDestinationLive() } throws IllegalStateException("wallet locked")
         val executor = executor()
 
@@ -183,6 +188,10 @@ class ShieldedTransferExecutorTest {
 
         // pre-broadcast failure must surface as NotSent (retry-safe), never Ambiguous
         assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+        // nothing was sent, and no advertised address was consulted as a fallback
+        io.mockk.coVerify(exactly = 0) { shieldedService.withdrawToCore(any(), any()) }
+        io.mockk.verify(exactly = 0) { walletData.freshReceiveAddressLive() }
+        io.mockk.verify(exactly = 0) { walletData.currentReceiveAddressLive() }
     }
 
     // ── Max-spend fee adjustment (FromShielded only) ────────────────────
