@@ -30,9 +30,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -256,6 +254,7 @@ class SdkShieldedInviteCreationTest {
         assertEquals(link.link.toString(), inserted.captured.dynamicLink)
     }
 
+    /** Verifies the recoverable raw link is saved before wrapping updates the same invitation. */
     @Test
     fun broadcast_persistsRawLinkBeforeGeneratingAndPersistingOneLink() = runTest {
         val source = happySource()
@@ -306,28 +305,32 @@ class SdkShieldedInviteCreationTest {
         assertEquals(invite.linkData.link.toString(), inserted.captured.dynamicLink)
     }
 
+    /** SR-02: cancellation during a suspended database write must not discard the funded key. */
     @Test
     fun cancellationAfterFundingStillPersistsRawInviteLink() = runTest {
         val source = happySource()
         val dao = dao()
         val inserted = mutableListOf<Invitation>()
-        coEvery { dao.insert(capture(inserted)) } just Runs
-        val fundingReturned = CompletableDeferred<Unit>()
-        var createJob: Job? = null
-        coEvery { source.fundNotesToRaw43(walletIdHex, orchardAddress, any()) } coAnswers {
-            fundingReturned.complete(Unit)
-            Unit
+        val persistStarted = CompletableDeferred<Unit>()
+        val releasePersist = CompletableDeferred<Unit>()
+        coEvery { dao.insert(any()) } coAnswers {
+            persistStarted.complete(Unit)
+            releasePersist.await()
+            inserted += firstArg<Invitation>()
         }
 
-        createJob = launch {
+        val createJob = launch {
             service(
                 source = source,
                 invitationsDao = dao,
                 generateOneLink = { awaitCancellation() }
             ).createShieldedInvite("alice", "Alice", "", contested = false)
         }
-        fundingReturned.await()
-        createJob.cancelAndJoin()
+        persistStarted.await()
+        assertTrue(inserted.isEmpty())
+        createJob.cancel()
+        releasePersist.complete(Unit)
+        createJob.join()
 
         val persistedLink = inserted.single().dynamicLink!!
         assertTrue(persistedLink.startsWith("dashpay://invite?"))
