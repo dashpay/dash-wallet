@@ -137,7 +137,20 @@ data class ShadowSyncProgress(
      * LATEST-WINS, not monotonic: an armed rescan rewinds the cursor and
      * the follow-up events legitimately re-climb from the rewound floor.
      */
-    val walletSyncedHeight: Long = 0
+    val walletSyncedHeight: Long = 0,
+    /**
+     * The LOWEST header cursor this engine session has reported (0 = none
+     * yet). With [sessionFilterStart], the floor the session's work is
+     * measured from: the displayed percentage is progress over
+     * `[floor, target]`, not over the whole chain. Fed by
+     * [L1ShadowSyncService] as a running minimum, so a rewind that lands
+     * after the first snapshot (the DashPay backfill rewinds the filter
+     * cursor a few seconds into the session — plan §38.2, §39.3) lowers the
+     * floor and the figure honestly restarts. Reset at every engine stop.
+     */
+    val sessionHeaderStart: Long = 0,
+    /** The lowest filter cursor this engine session has reported; see [sessionHeaderStart]. */
+    val sessionFilterStart: Long = 0
 ) {
     /** The shadow chain is fully synced — parity mismatches count as real from here. */
     val synced: Boolean get() = phase == ShadowSyncPhase.SYNCED
@@ -315,10 +328,8 @@ fun kotlinSyncLabel(progress: ShadowSyncProgress, status: L1VerificationStatus):
         ShadowSyncPhase.CONNECTING -> "Kotlin 0%"
         ShadowSyncPhase.HEADERS, ShadowSyncPhase.FILTER_HEADERS,
         ShadowSyncPhase.MASTERNODES, ShadowSyncPhase.FILTERS -> {
-            val done = progress.headerHeight + progress.filterHeight
-            val target = progress.headerTarget + progress.filterTarget
             // Cap below 100 while scanning: only the SYNCED phase may claim 100%.
-            "Kotlin ${syncPct(done, target).coerceAtMost(99)}%"
+            "Kotlin ${sessionPermille(progress).coerceAtMost(999) / 10}%"
         }
         ShadowSyncPhase.SYNCED -> when (status) {
             // The scan is done AND the latest parity probe matched dashj.
@@ -330,23 +341,41 @@ fun kotlinSyncLabel(progress: ShadowSyncProgress, status: L1VerificationStatus):
         ShadowSyncPhase.ERROR -> "Kotlin: error"
     }
 
-/** Integer percent of h/t, clamped to 0..100; 0 while the target is unknown. */
-private fun syncPct(h: Long, t: Long): Int =
-    if (t <= 0) 0 else ((h * 100) / t).toInt().coerceIn(0, 100)
+/**
+ * Progress over THIS SESSION's work — headers and filters together — in
+ * tenths of a percent, 0..1000; 0 while a target is unknown.
+ *
+ * The work is `[floor, target]`, where the floor is the lowest cursor the
+ * session has reported ([ShadowSyncProgress.sessionHeaderStart] /
+ * [ShadowSyncProgress.sessionFilterStart]), not 0. Over the whole chain the
+ * figure said nothing: a rewind from 2,167,092 to a 2,544,483 tip — three
+ * hours of scanning on the reference install — read 95 → 99.9%, and the
+ * 27,000-block re-walk every launch pays (§38.2) sat at 99% from start to
+ * finish (Joel, 2026-09-25). With no floor recorded (a fresh restore, or a
+ * hand-built snapshot) this is the old whole-chain ratio.
+ */
+private fun sessionPermille(progress: ShadowSyncProgress): Int {
+    val headerFloor = progress.sessionHeaderStart.coerceIn(0, progress.headerHeight)
+    val filterFloor = progress.sessionFilterStart.coerceIn(0, progress.filterHeight)
+    val done = (progress.headerHeight - headerFloor) + (progress.filterHeight - filterFloor)
+    val target = (progress.headerTarget - headerFloor) + (progress.filterTarget - filterFloor)
+    return if (target <= 0) 0 else ((done * 1000) / target).toInt().coerceIn(0, 1000)
+}
 
 /**
- * The SDK L1 scan progress as a single 0..100 percent, for the home-screen
- * "Syncing N%" header AFTER cutover (Phase 5d) when the SDK owns L1 and the
- * dashj percent no longer advances. Same combined header+filter metric as
- * [kotlinSyncLabel] for the DISPLAYED figure (the SDK's three-phase mean would
- * read ahead of the filter scan the user is waiting on); the 100% decision
- * is [ShadowSyncProgress.scanCaughtUpToTip], which since 2026-09-21 includes
- * the iOS aggregate rule ([ShadowSyncProgress.aggregateCaughtUp]). Pure —
- * host-testable.
+ * The SDK L1 scan progress in tenths of a percent (0..1000), for the
+ * home-screen "Syncing N.N%" header AFTER cutover (Phase 5d) when the SDK
+ * owns L1 and the dashj percent no longer advances. The figure is
+ * [sessionPermille] — the session's own work, and the same combined
+ * header+filter metric as [kotlinSyncLabel] (the SDK's three-phase mean
+ * would read ahead of the filter scan the user is waiting on); the 100%
+ * decision is [ShadowSyncProgress.scanCaughtUpToTip], which since 2026-09-21
+ * includes the iOS aggregate rule ([ShadowSyncProgress.aggregateCaughtUp]).
+ * Pure — host-testable.
  */
-fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase) {
+fun shadowSyncPermille(progress: ShadowSyncProgress): Int = when (progress.phase) {
     ShadowSyncPhase.IDLE, ShadowSyncPhase.CONNECTING -> 0
-    ShadowSyncPhase.SYNCED -> 100
+    ShadowSyncPhase.SYNCED -> 1000
     ShadowSyncPhase.ERROR -> 0
     // A live shadow SPV never latches SYNCED (a new testnet block every
     // ~2.5 min bumps the targets and drops the overall state back to
@@ -355,17 +384,17 @@ fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase)
     // tip within [SCAN_TIP_TOLERANCE_BLOCKS] OR the engine's aggregate is at
     // the iOS threshold ([ShadowSyncProgress.aggregateCaughtUp] — the §34
     // stall, parked a few thousand short with every filter stored); a
-    // genuine mid-scan still caps at 99%. Fail-closed for
+    // genuine mid-scan still caps at 99.9%. Fail-closed for
     // IDLE/CONNECTING/ERROR above.
-    else -> if (progress.scanCaughtUpToTip) {
-        100
-    } else {
-        syncPct(
-            progress.headerHeight + progress.filterHeight,
-            progress.headerTarget + progress.filterTarget
-        ).coerceAtMost(99)
-    }
+    else -> if (progress.scanCaughtUpToTip) 1000 else sessionPermille(progress).coerceAtMost(999)
 }
+
+/**
+ * [shadowSyncPermille] as the whole percent the persisted row and the
+ * `percentageSync == 100` consumers use: 100 only when the scan is caught up,
+ * 99 at most while it is not.
+ */
+fun shadowSyncPercent(progress: ShadowSyncProgress): Int = shadowSyncPermille(progress) / 10
 
 /**
  * Map the SDK's SPV progress snapshot to the app-side shape. Pure — the
@@ -2306,6 +2335,14 @@ class L1ShadowSyncService internal constructor(
 
     private val _progress = MutableStateFlow(ShadowSyncProgress.IDLE)
 
+    /**
+     * The session floors behind [ShadowSyncProgress.sessionHeaderStart] /
+     * [ShadowSyncProgress.sessionFilterStart]: the lowest non-zero cursor
+     * each feed has reported since the engine last started. 0 = none yet.
+     */
+    @Volatile private var sessionHeaderStart = 0L
+    @Volatile private var sessionFilterStart = 0L
+
     /** Live shadow SPV progress ([ShadowSyncProgress.IDLE] while stopped). */
     val progress: StateFlow<ShadowSyncProgress> = _progress.asStateFlow()
 
@@ -2769,6 +2806,8 @@ class L1ShadowSyncService internal constructor(
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
             _progress.value = ShadowSyncProgress.IDLE
+            sessionHeaderStart = 0L // the next session measures its own work
+            sessionFilterStart = 0L
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
             lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
             lastStopAtMs = nowMs()
@@ -2894,8 +2933,22 @@ class L1ShadowSyncService internal constructor(
                     // caught-up predicate can see block/tx-pipeline churn
                     // the typed SPV progress hides (fed at ≤1s staleness —
                     // this feed ticks at 1 Hz while SPV runs).
-                    val mapped = toShadowSyncProgress(data)
-                        .copy(walletSyncedHeight = _engineWalletSyncedHeight.value)
+                    val raw = toShadowSyncProgress(data)
+                    // The session's work floor: a running MINIMUM, because
+                    // the first snapshot reads the wallet's stored height and
+                    // the DashPay backfill rewinds the filter cursor below it
+                    // a few seconds later (§38.2). Zeros carry no position.
+                    if (raw.headerHeight > 0 && (sessionHeaderStart == 0L || raw.headerHeight < sessionHeaderStart)) {
+                        sessionHeaderStart = raw.headerHeight
+                    }
+                    if (raw.filterHeight > 0 && (sessionFilterStart == 0L || raw.filterHeight < sessionFilterStart)) {
+                        sessionFilterStart = raw.filterHeight
+                    }
+                    val mapped = raw.copy(
+                        walletSyncedHeight = _engineWalletSyncedHeight.value,
+                        sessionHeaderStart = sessionHeaderStart,
+                        sessionFilterStart = sessionFilterStart
+                    )
                     _progress.value = mapped
                     // Verification verdict from the chain state: still
                     // scanning until SYNCED, then "probing" until a parity
@@ -3687,6 +3740,8 @@ class L1ShadowSyncService internal constructor(
                 runCatching { source.stopSpv() }
                     .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
                 _progress.value = ShadowSyncProgress.IDLE
+                sessionHeaderStart = 0L // the rescan is a new session's work
+                sessionFilterStart = 0L
                 // Pre-reset parity evidence must never count toward a cutover.
                 parityStreakRecorder.clear()
                 if (hard) {

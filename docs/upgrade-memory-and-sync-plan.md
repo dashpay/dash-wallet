@@ -3124,3 +3124,20 @@ observed — for 377,000 filters. That is tens of thousands of block fetches and
 per launch at the observed rate, on a process that dies at 2.3 GB. int22 halves the per-launch
 cost and removes the park; #4302 removes the per-launch cost. The reference install needs #4302
 before it can finish a sync it started, and int22 before that sync is a reasonable length.
+
+### 39.8 The percentage now measures the session's work (2026-09-25)
+
+Joel's header read 99% for hours because the figure was the filter cursor over the whole chain:
+a rewind to 2,167,092 under a 2,544,483 tip is 85% of the filters, blended with the finished
+header phase into the 95.1 → 99.9% he watched for three hours, and the 27,000-block re-walk every
+launch pays (§38.2) is 1% of the chain, so it sat at 99% from start to finish. The number said
+nothing about how long was left.
+
+`ShadowSyncProgress` now carries the session's floor — the lowest header and filter cursor the
+engine has reported since it started, tracked as a running minimum so the backfill's rewind a few
+seconds into the session lowers it — and `shadowSyncPermille` measures progress over `[floor,
+target]`. The same snapshot Joel saw as 95.1% reads 0%; the re-walk goes 0 → 100 instead of
+99 → 100. A fresh restore (floor 0) reads exactly as before. The persisted `percentageSync` stays
+a whole number for its `== 100` consumers; the header gets tenths (`L1SyncUiStatus.percentageTenths`)
+and shows "99.1%" / "99.9%", "100%" never "100.0%", and dashj's whole number pre-cutover. The 100
+decision is unchanged: caught up within two blocks of the tip, or the iOS aggregate rule.
