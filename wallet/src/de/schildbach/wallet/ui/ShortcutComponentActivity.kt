@@ -31,6 +31,7 @@ open class ShortcutComponentActivity : AppCompatActivity() {
 
 
     open fun finishIfNotInitialized(): Boolean {
+        if (redirectDegradedWallet(walletApplication)) return true
         if (walletApplication.wallet == null) {
             startActivity(OnboardingActivity.createIntent(this))
             finish()

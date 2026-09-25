@@ -218,6 +218,7 @@ public class WalletApplication extends MultiDexApplication
 
     /** The wallet protobuf load threw past the internal recovery (e.g. OOM on a huge wallet). */
     private volatile boolean walletLoadFailed = false;
+    private volatile boolean recoveredWalletPersistencePending = false;
     /** Safe mode skipped the wallet load after consecutive launch deaths (see StartupBreadcrumbs). */
     private volatile boolean walletLoadSkippedSafeMode = false;
     /** An optional startup stage failed and was skipped (catch-degrade). */
@@ -302,13 +303,22 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
-     * True when the wallet file exists but NO wallet object is loaded — the
-     * launch is running degraded (load failure caught, or safe mode skipped
-     * the load after consecutive launch deaths). OnboardingActivity must show
+     * Startup has two durable wallet sources: the primary protobuf and the
+     * transaction-stripped key backup. The public {@link #walletFileExists()}
+     * predicate intentionally keeps its old, strict meaning because onboarding
+     * uses it to distinguish an already-loaded primary wallet from first run.
+     */
+    private boolean recoverableWalletFileExists() {
+        return walletFileExists() || getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists();
+    }
+
+    /**
+     * True when loading was unsuccessful, skipped, or a recovered wallet could
+     * not be persisted. OnboardingActivity must show
      * the crash-report path instead of onboarding/`wallet!!` routing.
      */
     public boolean isWalletLoadDegraded() {
-        return walletLoadFailed || walletLoadSkippedSafeMode;
+        return walletLoadFailed || walletLoadSkippedSafeMode || recoveredWalletPersistencePending;
     }
 
     /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
@@ -393,7 +403,7 @@ public class WalletApplication extends MultiDexApplication
             // as the user's own. Finish the wipe instead — it is idempotent,
             // and it is the only path to a state the user can act on.
             WalletApplicationExt.INSTANCE.resumeInterruptedWipe(this);
-        } else if (walletFileExists()) {
+        } else if (recoverableWalletFileExists()) {
             if (StartupBreadcrumbs.isSafeModeAdvised()) {
                 // Crash-loop breaker: the last two launches died before the
                 // main UI. Skip the wallet load and every engine start so the
@@ -493,7 +503,7 @@ public class WalletApplication extends MultiDexApplication
      */
     public boolean retryWalletLoadAfterSafeMode() {
         if (!walletLoadSkippedSafeMode) {
-            return wallet != null;
+            return wallet != null && !isWalletLoadDegraded();
         }
         log.warn("SAFE MODE ESCAPE: retrying the skipped wallet load in-process");
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SAFE_MODE_RETRY, "SAFE_MODE_RETRY");
@@ -513,7 +523,7 @@ public class WalletApplication extends MultiDexApplication
             }
             return false;
         }
-        if (wallet != null) {
+        if (wallet != null && !isWalletLoadDegraded()) {
             // The load works: the strikes that engaged safe mode were a false
             // alarm (a killed background process, not a failing launch). Clear
             // the latch on disk so no later launch engages off that history.
@@ -1350,6 +1360,10 @@ public class WalletApplication extends MultiDexApplication
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
+        // Keep the recovered keys in memory, but do not start wallet services
+        // or publish a usable wallet until the primary copy is durable.
+        if (recoveredWalletPersistencePending)
+            return;
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
         walletStateFlow.setValue(wallet);
         finalizeInitialization();
@@ -1439,6 +1453,30 @@ public class WalletApplication extends MultiDexApplication
             StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
                     "WALLET_RECOVERED_FROM_BACKUP");
 
+            // The restored wallet is intentionally small and transaction-free,
+            // and after SDK L1 cutover dashj may not dirty it again during the
+            // session. Do not wait for autosave or graceful shutdown: publish
+            // the primary wallet now so a kill immediately after recovery does
+            // not strand the next launch on onboarding with only the backup on
+            // disk.
+            try {
+                persistRecoveredWallet(wallet);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
+                        "WALLET_RECOVERED_PRIMARY_SAVED");
+            } catch (final IOException x) {
+                // Leave the persistence latch set: onboarding must show the
+                // report/close screen, never Create/Restore. A cold launch
+                // retries from the untouched key backup.
+                log.error("wallet restored from backup but primary wallet save failed", x);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
+                        "WALLET_RECOVERED_PRIMARY_SAVE_FAILED",
+                        x.getClass().getName() + ": " + x.getMessage());
+                try {
+                    CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
+                } catch (final Throwable ignored) {
+                }
+            }
+
             // POST-RECOVERY GUARD: if the Tools "dashj sync (diagnostic)"
             // toggle is ON, force it OFF. With the toggle on, the un-held dashj
             // peergroup dirties the wallet continuously and the 5s autosave
@@ -1492,6 +1530,12 @@ public class WalletApplication extends MultiDexApplication
         } catch (final IOException x) {
             throw new RuntimeException(x);
         }
+    }
+
+    void persistRecoveredWallet(final Wallet recoveredWallet) throws IOException {
+        recoveredWalletPersistencePending = true;
+        protobufSerializeWallet(recoveredWallet);
+        recoveredWalletPersistencePending = false;
     }
 
     private void protobufSerializeWallet(final Wallet wallet) throws IOException {

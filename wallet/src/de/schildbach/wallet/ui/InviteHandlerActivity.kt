@@ -30,6 +30,7 @@ import de.schildbach.wallet_test.databinding.ActivityTransparentBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -77,6 +78,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(intent: Intent?) {
+        if (redirectDegradedWallet(application as WalletApplication)) return
         if (intent != null) {
             lifecycleScope.launch {
                 val invitation = viewModel.handleInvite(intent)
@@ -94,6 +96,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(invite: InvitationLinkData) {
+        if (redirectDegradedWallet(application as WalletApplication)) return
         val mainTask = inviteHandler.getMainTask()
         log.info("mainTask: $mainTask")
         when {
