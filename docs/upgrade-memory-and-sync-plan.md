@@ -3141,3 +3141,38 @@ target]`. The same snapshot Joel saw as 95.1% reads 0%; the re-walk goes 0 → 1
 a whole number for its `== 100` consumers; the header gets tenths (`L1SyncUiStatus.percentageTenths`)
 and shows "99.1%" / "99.9%", "100%" never "100.0%", and dashj's whole number pre-cutover. The 100
 decision is unchanged: caught up within two blocks of the tip, or the iOS aggregate rule.
+
+### 39.9 Topple restored on int22, emulator, 2026-09-25 — and the session percentage seen live
+
+`Pixel_9` AVD (API 36, 3.9 GB), testnet3 debug `12000018` from `b973ec308`, engine
+`dash-spv 0.45.0 (9d1804d6)`. Times UTC.
+
+| | restore, first pass | relaunch (force-stop → open) |
+|---|---|---|
+| engine start → `SyncComplete` | 17:13:59 → 17:18:17, **4 m 18 s** | 17:20:22 → 17:21:54, 92 s |
+| `scan_start` | 1,051,776 (birth) | **1,226,330** — the earliest received contact request (`receivedContactFloor=1226329`, 21 contacts): §38.2's per-launch re-walk, 334,220 filters on this wallet |
+| filters / matched / blocks downloaded | 508,775 / 16,673 / 15,639 | 334,220 / — / mostly from storage |
+| relevant transactions | 7,349 new | 3,690 re-applied as new |
+| sweep | **none** — no `Recovered pending`, no `Rescan committed` (131 forward rescans inside active batches, 2,192 blocks: the gap-limit cascade, which #1016 keeps) | none |
+| balance at `SyncComplete` | 16,902,812,043 duffs = **169.02812043** | the same, to the duff |
+
+**The balance.** Both passes land on 169.02812043, so the order-dependence #1015 fixes did not
+show. But the figure is 0.02701226 below the recipe's topple acceptance of 169.05513269, and the
+09-16 run (§10) had dashj at 167.82052936 with the SDK's 169.055 called inflated. Three figures
+for one wallet; which is right needs a dashj parity read on this install (Tools › dashj sync
+diagnostic), not settled here.
+
+**D-041 in the open, contained.** During the relaunch's re-walk the SDK feed published up to
+28,214,097,609 duffs (282 DASH) before settling — the in-memory ledger re-applying 3,690
+transactions. The display predicate held `l1Synced=false` the whole way, the header read "Syncing
+balance", and the seed persisted only at 17:21:57 with the settled figure. The protections §35 left
+in place did their job.
+
+**The session percentage, on screen.** The relaunch was polled with `uiautomator` once a second.
+The header read "Syncing…" at 17:20:31, then 1.4%, 4.4%, 8.9% … 55.3% at 17:21:23, 61.3% at
+17:21:27, until the auto-lock hid it; `SyncComplete` came at 17:21:54. At 17:21:22 the engine's own
+figure was 96.9% (filters 1,416,329 of 1,560,550); over the session's work from the 1,226,330
+floor that snapshot is 56.8%, which is what the header showed. Under the old figure this
+90-second re-walk would have read 96 → 99 → gone.
+
+Not run: the recipe's §5 step 0 (kill mid-restore, relaunch, balance must still land).
