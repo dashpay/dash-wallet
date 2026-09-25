@@ -525,16 +525,17 @@ class DashSpendViewModel @Inject constructor(
 
         try {
             response?.let { apiResponse ->
-                val updatedProviders = merchant.giftCardProviders.mapIndexed { index, giftCardProvider ->
-                    if (index == 0 && selectedProvider?.name == "CTX") {
+                // Refresh the provider row that matches the selected provider. The cached
+                // denominationsType from the explore dataset can disagree with what the
+                // provider's API currently sells (e.g. a merchant switching between fixed
+                // cards and a min-max range card), so it must be replaced here — the
+                // purchase screen decides the Fixed/Flexible mode from this row.
+                val updatedProviders = merchant.giftCardProviders.map { giftCardProvider ->
+                    if (giftCardProvider.provider == selectedProvider?.name) {
                         giftCardProvider.copy(
                             savingsPercentage = apiResponse.savingsPercentage,
-                            active = apiResponse.enabled
-                        )
-                    } else if (index == 0 && selectedProvider?.name == "PiggyCards") {
-                        giftCardProvider.copy(
-                            savingsPercentage = apiResponse.savingsPercentage,
-                            active = apiResponse.enabled
+                            active = apiResponse.enabled,
+                            denominationsType = apiResponse.denominationsType
                         )
                     } else {
                         giftCardProvider
@@ -651,7 +652,12 @@ class DashSpendViewModel @Inject constructor(
                 providerResponseList.add(
                     provider.copy(
                         savingsPercentage = details.savingsPercentage,
-                        active = details.enabled
+                        active = details.enabled,
+                        // The explore dataset's cached type goes stale when a merchant switches
+                        // between fixed cards and a range card. ItemDetails picks the range or
+                        // fixed subtitle from this row, so leaving it cached would disagree with
+                        // the purchase screen, which resolves the mode from the same live data.
+                        denominationsType = details.denominationsType
                     )
                 )
             } else {
