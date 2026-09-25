@@ -120,9 +120,9 @@ comment there.
 **2026-09-22 evening, int22, fresh restores (plan §38.1).** Emulator debug `12000017`: scan start
 17:18:48, `l1Synced=true` 17:22:22, seed 17:23:15 at 10,805,162,729 duffs, no sweep, no stall.
 Samsung release `12000018`: `l1Synced=true` 17:39:09 with `pipelineLagging=false`, seed 17:39:56 at
-the same figure, no watchdog verdict, no WARN. int22 still carries the sweep; this wallet did not
-trigger it tonight, which the code attributes to the contact accounts being provisioned before the
-scan started.
+the same figure, no watchdog verdict, no WARN. No sweep because int22 carries rust-dashcore#1016,
+which removed it (plan §34.6; the original reading here, a provisioning-order accident, was wrong
+and is corrected in plan §38.1).
 
 ---
 
@@ -240,15 +240,18 @@ in-process engine restart whose origin the truncated engine log does not show; a
 **2,167,092** on each of the two process-fresh launches — A-03's per-launch re-walk on mainnet,
 where the anchor is this wallet's earliest DashPay contact. Every fresh launch re-walks 377,000
 filters from there, with the durable pending-sweep set (67,658 scripts) seeded into the lowest
-batch, so **817 of every 5,000 filters fetch a block** (Andrei's wallet: 93). A pass is ≈ 2.7 h of
+batch, so the sweep adds **up to 800 block fetches per 5,000-filter batch** (Andrei's wallet: 93)
+on top of the scan's own 438–817. A pass is ≈ 2.7 h of
 foreground-service time at 2 GB PSS; the process died at ~01:43 with 2.3 GB PSS (cause not in the
 evidence) and the next launch started the pass again.
 
 **What applies.** A-03 (dashpay/platform#4302) for the anchor; §34 / rust-dashcore#1016 for the
-sweep's block fetches; the SDK's `synced_height` persistence granularity under the park. The
-50-minute deadlock in the middle is A-02 (fixed on `fix/sync-process-stalls`). Nothing else on
-the app side changes the outcome: on this wallet the sync cannot reach a persisted tip on
-`12000017` or `12000018`, and needs both the #1016 build and #4302.
+sweep's share of the block fetches and the final-batch park — **already in int22, i.e. in
+`12000018`**, which Joel has not run; the SDK's `synced_height` persistence granularity under the
+park. The 50-minute deadlock in the middle is A-02 (fixed on `fix/sync-process-stalls`). On
+`12000018` the sweep, its re-seeded 67,658-script set and the park are gone; the per-launch
+re-walk from 2,167,092 is not, and on this wallet it is still tens of thousands of block fetches
+per launch. Needs #4302 to finish; int22 makes each attempt about half the length.
 
 **Also seen.** The per-minute memory line's `Debug.getPss()` blocks the main thread for 5 s or
 more on a 2 GB process — four in-app ANR-watchdog dumps in one evening. App-side; plan §39.6.
