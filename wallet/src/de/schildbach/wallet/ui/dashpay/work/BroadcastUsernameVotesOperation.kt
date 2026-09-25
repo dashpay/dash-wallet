@@ -99,7 +99,7 @@ class BroadcastUsernameVotesOperation(val application: Application) {
             }
         }
 
-        private fun convertState(workInfo: WorkInfo): Resource<WorkInfo> {
+        internal fun convertState(workInfo: WorkInfo): Resource<WorkInfo> {
             return when (workInfo.state) {
                 WorkInfo.State.SUCCEEDED -> {
                     Resource.success(workInfo)
