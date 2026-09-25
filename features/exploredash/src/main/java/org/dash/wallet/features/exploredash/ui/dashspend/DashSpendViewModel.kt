@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -338,36 +339,55 @@ class DashSpendViewModel @Inject constructor(
      * died. Kept as a flow rather than read once, so resolving the payment - committed once the
      * network shows it, or released once it is judged never sent - lifts the block by itself and
      * does not shut the user out of gift cards for good.
+     *
+     * Null until the store has actually been read. A plain false there would make "we have not
+     * looked yet" indistinguishable from "nothing is pending", which is the one direction this
+     * flag must never guess in: every reader below treats anything other than an explicit false
+     * as a reason to refuse. A read that fails keeps it null for the same reason, and is caught
+     * rather than left to reach the scope's handler.
      */
-    private val hasUnresolvedPurchase: StateFlow<Boolean> = unresolvedPayments
+    private val unresolvedPurchaseOnDisk: StateFlow<Boolean?> = unresolvedPayments
         .observeUnresolvedGiftCardPurchase()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        .catch { e -> log.error("could not read pending payments; keeping gift card purchases blocked", e) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /**
      * Survives dialog recreation because this view model is scoped to the navigation graph, not
      * to a fragment, so a dialog rebuilt after the activity is destroyed still sees that a
      * purchase is outstanding, and survives process death through the durable record above.
+     *
+     * An in-memory state other than IDLE is reported as it stands: it describes this session's own
+     * submission, which the store has nothing to say about while it is still under way.
      */
     val submissionState: StateFlow<GiftCardSubmissionState> =
-        combine(_submissionState, hasUnresolvedPurchase) { state, unresolved ->
-            if (state == GiftCardSubmissionState.IDLE && unresolved) GiftCardSubmissionState.PENDING else state
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, GiftCardSubmissionState.IDLE)
+        combine(_submissionState, unresolvedPurchaseOnDisk) { state, unresolved ->
+            if (state == GiftCardSubmissionState.IDLE && unresolved != false) {
+                GiftCardSubmissionState.PENDING
+            } else {
+                state
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, GiftCardSubmissionState.PENDING)
 
     /**
      * Starts a new purchase from a clean state. Called only when the confirmation screen is
      * genuinely created by the user, never when it is rebuilt after activity recreation, so an
      * outstanding purchase stays blocked while a later, separate order is still allowed.
      *
-     * A submission that is still running or unresolved is left alone. The running one belongs to a
-     * purchase already in flight, and this view model outlives the screen that started it. The
-     * unresolved one is the whole point of the guard: an ambiguous submission dismisses the flow,
-     * so the next screen is always a new instance, and clearing the state for it would hand the
-     * user a second order paid from whatever inputs the first one did not reserve.
+     * A submission that is still running is left alone: it belongs to a purchase already in
+     * flight, and this view model outlives the screen that started it.
+     *
+     * One this session left unresolved is cleared, though, because this field is not what decides
+     * whether the user may buy - [unresolvedPurchaseOnDisk] is, and it goes on saying so through
+     * both [submissionState] and [tryStartSubmission] whatever is written here. Keeping the field
+     * at PENDING as well would add nothing and take something away: this view model is scoped to
+     * the navigation graph while the payment is not, so a transaction the verifier commits seconds
+     * later, or releases after the grace period, would leave every later purchase dead until the
+     * user happened to leave the graph. Clearing it here lets the block lift with the record that
+     * justifies it, and not before.
      */
     fun beginNewPurchase() {
-        val current = _submissionState.value
-        if (current == GiftCardSubmissionState.IN_PROGRESS || current == GiftCardSubmissionState.PENDING) {
-            log.info("not resetting submission state, a purchase is still {}", current)
+        if (_submissionState.value == GiftCardSubmissionState.IN_PROGRESS) {
+            log.info("not resetting submission state, a purchase is still in progress")
             return
         }
         _submissionState.value = GiftCardSubmissionState.IDLE
@@ -381,9 +401,13 @@ class DashSpendViewModel @Inject constructor(
      * [payAndRecordOrder] let two quick taps both get past the check and each create an order,
      * because the first had not reached that point yet. Release an unused claim with
      * [releaseUnusedSubmission].
+     *
+     * Needs the store to have said, in so many words, that nothing is outstanding. While the first
+     * read is still in flight the honest answer is that we do not know, and handing out a claim on
+     * that is how the same order gets paid for twice.
      */
     fun tryStartSubmission(): Boolean =
-        !hasUnresolvedPurchase.value &&
+        unresolvedPurchaseOnDisk.value == false &&
             _submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
 
     /** Gives back a claim that never reached submission, so the user can try again. */

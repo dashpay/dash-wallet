@@ -139,18 +139,36 @@ open class PendingDirectPaymentConfig @Inject constructor(
         return stored.readable
     }
 
-    override suspend fun hasUnresolvedGiftCardPurchase(): Boolean = getAll().any { it.isUnresolvedGiftCard }
-
-    override fun observeUnresolvedGiftCardPurchase(): Flow<Boolean> =
-        observe(PENDING_PAYMENTS).map { stored -> decode(stored).readable.any { it.isUnresolvedGiftCard } }
+    /**
+     * Answers false only when the store was read and held no outstanding gift card purchase. A
+     * store we cannot read is not an empty one, and the screen that asks this is deciding whether
+     * to let the user pay again, so the unreadable case has to count as "there is one". The
+     * payment would be refused anyway further down, by the barrier that reads the same file
+     * strictly; answering "nothing pending" here would only let the user get further first.
+     */
+    override suspend fun hasUnresolvedGiftCardPurchase(): Boolean = try {
+        getAllOrThrow().any { it.isUnresolvedGiftCard }
+    } catch (e: Exception) {
+        log.error("could not read pending payments; treating a gift card purchase as outstanding", e)
+        true
+    }
 
     /**
-     * Both readers above go through the tolerant [decode] on purpose, unlike everything that
-     * decides whether an outpoint may be spent. That decision belongs to the barrier in
-     * PendingDirectPaymentVerifier, which already refuses every payment when this store cannot be
-     * read; a second, differently-worded refusal here would only tell the user a worse story about
-     * the same failure. This answers the question the purchase screen asks, as far as it can.
-     *
+     * The same question as a stream, and strict for the same reason: a blob this cannot parse
+     * fails the flow rather than reporting a clean store, leaving the collector on whatever it
+     * last knew. Callers seed that with "not known yet" and refuse while it holds, so an
+     * unreadable store blocks instead of quietly permitting.
+     */
+    override fun observeUnresolvedGiftCardPurchase(): Flow<Boolean> =
+        appContext.dataStore.data.map { preferences ->
+            val stored = parse(preferences[PENDING_PAYMENTS])
+            check(stored.unreadable.isEmpty()) {
+                "${stored.unreadable.size} pending direct payment(s) could not be decoded"
+            }
+            stored.readable.any { it.isUnresolvedGiftCard }
+        }
+
+    /**
      * Released payments are deliberately not counted: their inputs are free again and the order
      * that outlives them is kept only to explain a late broadcast, so a user who has waited out an
      * unlucky purchase can buy again rather than being locked out for the retention period.

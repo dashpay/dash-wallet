@@ -270,6 +270,24 @@ class PendingDirectPaymentConfigTest {
     }
 
     @Test
+    fun anUnreadableStoreCountsAsAnOutstandingPurchase() = runBlocking {
+        seed("""[{"txId":"00000000""")
+
+        // the screen asking this is deciding whether to let the user pay again, and a store we
+        // cannot read is not an empty one
+        assertTrue(config.hasUnresolvedGiftCardPurchase())
+    }
+
+    @Test
+    fun anUnreadableStoreFailsTheObservedAnswer() = runBlocking {
+        seed("[$undecodableEntry]")
+
+        assertRefusesToRead("an undecodable entry") {
+            runBlocking { config.observeUnresolvedGiftCardPurchase().first() }
+        }
+    }
+
+    @Test
     fun theBlockFollowsTheStoreRatherThanBeingReadOnce() = runBlocking {
         val seen = mutableListOf<Boolean>()
         seen.add(config.observeUnresolvedGiftCardPurchase().first())

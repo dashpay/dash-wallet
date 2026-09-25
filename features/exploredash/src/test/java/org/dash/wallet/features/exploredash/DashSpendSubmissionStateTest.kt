@@ -26,6 +26,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
@@ -119,8 +120,12 @@ class DashSpendSubmissionStateTest {
 
     /** Submits a payment whose result never came back, leaving the purchase unresolved. */
     private suspend fun submitAmbiguously(viewModel: DashSpendViewModel) {
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } throws
-            PaymentSubmissionPendingException(Sha256Hash.ZERO_HASH, null)
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } answers {
+            // the verifier quarantines and persists the payment before the submission fails, so
+            // the record is already on disk by the time the screen hears about it
+            unresolvedOnDisk.value = true
+            throw PaymentSubmissionPendingException(Sha256Hash.ZERO_HASH, null)
+        }
 
         try {
             viewModel.payAndRecordOrder(paymentUri, emptyList())
@@ -187,6 +192,65 @@ class DashSpendSubmissionStateTest {
 
         assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
         assertTrue(viewModel.tryStartSubmission())
+    }
+
+    @Test
+    fun `the same screen may buy again once its own unresolved payment settles`() = runBlocking {
+        val viewModel = createViewModel()
+        submitAmbiguously(viewModel)
+        assertEquals(GiftCardSubmissionState.PENDING, viewModel.submissionState.value)
+
+        // the verifier committed the transaction, or released it, and dropped the record; this
+        // view model is scoped to the navigation graph and outlives that by a long way
+        unresolvedOnDisk.value = false
+        viewModel.beginNewPurchase()
+
+        assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+        assertTrue(
+            "the screen stayed dead after its payment settled",
+            viewModel.tryStartSubmission()
+        )
+    }
+
+    @Test
+    fun `a settled payment does not clear a purchase that is in flight`() = runBlocking {
+        val viewModel = createViewModel()
+        assertTrue(viewModel.tryStartSubmission())
+        assertEquals(GiftCardSubmissionState.IN_PROGRESS, viewModel.submissionState.value)
+
+        // an older payment settling says nothing about the one being submitted right now
+        viewModel.beginNewPurchase()
+
+        assertEquals(GiftCardSubmissionState.IN_PROGRESS, viewModel.submissionState.value)
+        assertFalse(viewModel.tryStartSubmission())
+    }
+
+    @Test
+    fun `a store that has not been read yet blocks rather than permits`() = runBlocking {
+        // never emits: the first read is still in flight, so nothing is known either way
+        every { unresolvedPayments.observeUnresolvedGiftCardPurchase() } returns emptyFlow()
+
+        val viewModel = createViewModel()
+
+        assertEquals(GiftCardSubmissionState.PENDING, viewModel.submissionState.value)
+        assertFalse(
+            "a claim was granted before the store had been read",
+            viewModel.tryStartSubmission()
+        )
+    }
+
+    @Test
+    fun `a store that cannot be read blocks rather than permits`() = runBlocking {
+        every { unresolvedPayments.observeUnresolvedGiftCardPurchase() } returns
+            flow { throw IllegalStateException("pending payments could not be decoded") }
+
+        val viewModel = createViewModel()
+
+        assertEquals(GiftCardSubmissionState.PENDING, viewModel.submissionState.value)
+        assertFalse(
+            "a claim was granted from a store that could not be read",
+            viewModel.tryStartSubmission()
+        )
     }
 
     @Test
