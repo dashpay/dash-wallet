@@ -854,8 +854,36 @@ class CutoverUiDataServiceTest {
         var nextReceiveAddress: String? = "yENGINEnextUnusedAddress"
         var nextReceiveAddressReads = 0
 
+        /**
+         * Holds a read inside the FFI, modelling the real blocking call: the
+         * engine read cannot be cancelled, so the binding can change while a
+         * caller is parked in it.
+         *
+         * Gated by CALLING THREAD, not by a one-shot flag: the balance
+         * pipeline's own refresh reads through this same method, and if it were
+         * the one parked, `collectLatest` could never finish cancelling the
+         * pipeline on deactivation — the test would wedge on its own fixture,
+         * or (worse, and observed) the pipeline would eat the one-shot and let
+         * the read under test sail through before the wipe, passing vacuously.
+         */
+        val receiveAddressGate = java.util.concurrent.CountDownLatch(1)
+
+        /** Only a read on THIS thread parks. */
+        @Volatile
+        var gatedReadThreadName: String? = null
+
+        /** Set once the gated read is actually parked, so a test can sequence against it. */
+        @Volatile
+        var receiveAddressReadParked = false
+
         override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
             nextReceiveAddressReads++
+            if (gatedReadThreadName != null && Thread.currentThread().name == gatedReadThreadName) {
+                receiveAddressReadParked = true
+                check(receiveAddressGate.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                    "receive-address gate never released"
+                }
+            }
             return nextReceiveAddress
         }
 
@@ -912,6 +940,29 @@ class CutoverUiDataServiceTest {
      * `flowOf`, which can never flip, so nothing could reach the deactivation
      * branch before this existed.
      */
+    /**
+     * Pump the test scheduler until [condition] holds or the deadline passes.
+     *
+     * The cutover pipelines hop onto a REAL dispatcher
+     * ([CutoverUiDataService.refreshNativeSplit] wraps the engine reads in
+     * `withContext(Dispatchers.IO)`), so a deactivation is not fully drained by
+     * virtual time alone — `runCurrent()` returns before the real-threaded work
+     * that the cancellation is waiting on has finished.
+     */
+    private fun kotlinx.coroutines.test.TestScope.pumpUntil(
+        timeoutMs: Long = 10_000,
+        condition: () -> Boolean
+    ): Boolean {
+        val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+        while (System.nanoTime() < deadline) {
+            runCurrent()
+            if (condition()) return true
+            Thread.sleep(5)
+        }
+        runCurrent()
+        return condition()
+    }
+
     private fun configWithMutableState(state: MutableStateFlow<String?>): DashPayConfig = mockk {
         every { observe(DashPayConfig.CUTOVER_STATE) } returns state
     }
@@ -1559,6 +1610,66 @@ class CutoverUiDataServiceTest {
         // future edit cannot drop one of them unnoticed.
         assertNull(service.sdkBalanceOrNull())
         assertNull(service.sdkSpendableUtxoCountOrNull())
+    }
+
+    @Test
+    fun inFlightReadCannotRepublishAWipedWalletsAddress() = runTest {
+        // WALLET ISOLATION. Reset Wallet clears the cutover state IN-PROCESS
+        // (WalletApplicationExt.clearDatabasesInner → resetForWalletWipe; the
+        // code says in as many words that it does not restart the process), so
+        // this service outlives the wallet it was reading for.
+        //
+        // The race: wallet A's live read captures A's id, blocks in the FFI,
+        // and the wipe lands while it is parked there. If the read republished
+        // on the way out, the cache would hold A's address — and the sync
+        // overlay would then hand it to wallet B, whose own engine read is not
+        // answering yet. WalletApplication validates the address's NETWORK, not
+        // which seed owns it, so nothing downstream catches it: B's Receive
+        // screen advertises an address only the ERASED wallet can spend.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        source.nextReceiveAddress = "yWALLETaEngineAddress"
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yWALLETaEngineAddress", service.sdkReceiveAddressOrNull())
+
+        // Park a live read for wallet A inside the FFI, and wait until it really
+        // is parked before wiping — otherwise the test could wipe first and
+        // prove nothing.
+        val readThreadName = "sr03-parked-live-read"
+        source.gatedReadThreadName = readThreadName
+        val parked = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, readThreadName)
+        }
+        val inFlight = parked.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        val deadline = System.nanoTime() + 10_000_000_000L
+        while (!source.receiveAddressReadParked && System.nanoTime() < deadline) Thread.sleep(5)
+        assertTrue("the live read never reached the FFI", source.receiveAddressReadParked)
+
+        // The wipe happens while it is parked.
+        state.value = "DUAL_RUNNING"
+        assertTrue(
+            "the wipe must empty the cache",
+            pumpUntil { service.sdkReceiveAddressOrNull() == null }
+        )
+
+        // Release the parked read: it returns A's address from the engine.
+        source.receiveAddressGate.countDown()
+        assertNull("a read whose binding is gone must answer nothing", inFlight.get())
+        parked.shutdown()
+
+        // Wallet B activates, and its OWN engine read is unavailable — the only
+        // way A's leftover could surface.
+        source.nextReceiveAddress = null
+        state.value = "CUT_OVER"
+        pumpUntil(2_000) { false }
+
+        assertNull(
+            "wallet B must never be served the wiped wallet's address",
+            service.sdkReceiveAddressOrNull()
+        )
+        assertNull(service.sdkReceiveAddressLiveOrNull())
     }
 
     @Test
