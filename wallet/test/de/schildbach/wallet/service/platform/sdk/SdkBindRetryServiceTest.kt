@@ -103,6 +103,8 @@ class SdkBindRetryServiceTest {
         val notices = mutableListOf<SdkBindBlocker>()
         var noticeClears = 0
         val persisted = mutableListOf<SdkBindBlocker?>()
+        /** When set, [persistBlocker] parks on it — holds the outcome mutex open at a known point. */
+        var persistGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
         fun service(scope: kotlinx.coroutines.CoroutineScope) = SdkBindRetryService(
             scope = scope,
@@ -120,7 +122,7 @@ class SdkBindRetryServiceTest {
             now = { nowMs },
             bindFailures = failures,
             bindEstablished = established,
-            persistBlocker = { persisted += it },
+            persistBlocker = { persistGate?.await(); persisted += it },
             showPendingNotice = { notices += it },
             clearPendingNotice = { noticeClears++ },
             appInBackground = { appInBackground }
@@ -552,8 +554,91 @@ class SdkBindRetryServiceTest {
         assertTrue(h.notices.isEmpty())
 
         // Leaving the app with the bind still pending posts it then.
+        h.appInBackground = true
         service.noteAppBackground()
+        runCurrent()
         assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
+    }
+
+    /**
+     * Review, 2026-09-25: the background callback read the blocker and posted
+     * outside the outcome mutex, so a success that cleared the blocker and the
+     * notice in between left a stale "unlock your device" notification on a
+     * bound wallet, which the foreground callback then never cleared. The
+     * decision and the post now happen under the mutex, from live state: a
+     * background note that arrives while a success holds the lock posts
+     * nothing once the success is through.
+     */
+    @Test
+    fun noteAppBackground_postsNothingOnceASuccessHoldingTheMutexIsThrough() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            val service = h.service(collectors)
+            h.fail(lockedDenial()) // foreground: classified, nothing posted
+            assertTrue(h.notices.isEmpty())
+
+            // The success takes the mutex, clears the blocker and the notice,
+            // and parks inside persistBlocker(null) still holding the lock.
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            h.persistGate = gate
+            h.succeed()
+            assertNull(service.blocker.value)
+            assertEquals(1, h.noticeClears)
+
+            // The app goes to the background NOW. Before the fix this posted
+            // DEVICE_LOCKED for a wallet that is already bound.
+            h.appInBackground = true
+            service.noteAppBackground()
+            assertTrue("still waiting on the mutex", h.notices.isEmpty())
+
+            gate.complete(Unit)
+            assertTrue("the post is decided from live state: nothing pending, nothing posted", h.notices.isEmpty())
+            assertTrue(h.persisted.contains(null))
+        } finally {
+            collectors.cancel()
+        }
+    }
+
+    /**
+     * The mirror image on the way back: a failure handler that has decided to
+     * post (background at its check) and is parked holding the mutex must
+     * not land its notice after the foreground clear. Its re-check under the
+     * lock sees the foreground and skips; the clear runs after it.
+     */
+    @Test
+    fun noteAppForeground_clearsUnderTheMutex_andAParkedFailureDoesNotPostAfterIt() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            h.appInBackground = true
+            val service = h.service(collectors)
+
+            // The failure classifies its blocker and parks in persistBlocker,
+            // holding the mutex, with its notice not yet posted.
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            h.persistGate = gate
+            h.fail(lockedDenial())
+            assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+            assertTrue(h.notices.isEmpty())
+
+            // The user opens the app while it is parked.
+            h.appInBackground = false
+            service.noteAppForeground()
+            assertEquals("the clear waits for the lock", 0, h.noticeClears)
+
+            gate.complete(Unit)
+            assertTrue("the failure re-checked the foreground under the lock and did not post", h.notices.isEmpty())
+            assertEquals("…and the foreground clear ran after it", 1, h.noticeClears)
+        } finally {
+            collectors.cancel()
+        }
     }
 
     @Test

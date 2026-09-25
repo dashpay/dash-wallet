@@ -396,10 +396,27 @@ class SdkBindRetryService internal constructor(
     /**
      * The app left the foreground with the bind still pending: tell the user
      * what it is waiting for, since nothing on screen can.
+     *
+     * Decided and posted UNDER [outcomeMutex], from live state (review,
+     * 2026-09-25): this callback used to read `_blocker` and post outside the
+     * lock, so a success that cleared the blocker and cancelled the notice
+     * between its read and its `notify()` left an "unlock your device"
+     * notification standing on a bound wallet — and [noteAppForeground] could
+     * not repair it, because it clears only while a blocker is recorded. The
+     * callback is not suspending (it comes from the foreground monitor on the
+     * main thread), so the lock is taken on the service scope; the post is
+     * skipped if the bind is no longer pending or the app is already back in
+     * the foreground by the time the lock is held.
      */
     fun noteAppBackground() {
-        val blocker = _blocker.value ?: return
-        showPendingNotice(blocker)
+        scope.launch {
+            outcomeMutex.withLock {
+                val blocker = _blocker.value ?: return@withLock
+                if (!bindRetryPending()) return@withLock // a success owns the state now
+                if (!appInBackground()) return@withLock // back on screen before the lock was ours
+                showPendingNotice(blocker)
+            }
+        }
     }
 
     /** Retries THIS service has attempted since the last success/foreground reset — the ladder index. */
@@ -481,8 +498,16 @@ class SdkBindRetryService internal constructor(
      */
     fun noteAppForeground() {
         // The user is looking at the app: the notification is redundant and
-        // the sheet takes over.
-        if (_blocker.value != null) clearPendingNotice()
+        // the sheet takes over. Cleared under the outcome mutex for the same
+        // reason noteAppBackground posts under it: a failure handler that
+        // passed its background check and is about to post must not land its
+        // notice after this clear (its re-check under the lock sees the
+        // foreground and skips).
+        scope.launch {
+            outcomeMutex.withLock {
+                if (_blocker.value != null) clearPendingNotice()
+            }
+        }
         if (!bindRetryPending()) return
         log.info("app foregrounded with an SDK bind retry pending — retrying the bind now")
         armUnlockReceiver()
