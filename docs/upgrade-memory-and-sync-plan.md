@@ -3231,3 +3231,19 @@ has the same mechanism: the resumed process fell back to 30/100 and lost the thr
 killed session had derived past the persisted rows. #1016 removed the replay that used to mask the
 regression. App fix: re-apply the widening on every bind. Upstream: persist the gap limit, or
 replay scripts derived since the last commit. Draft issue in the kill-test snapshot directory.
+
+**Fixed and proven, later the same day (`31799180b`).** `maybeWidenAddressWindows` now re-applies
+the widening on every bind, before the engine starts; only the heal's retroactive half stays once
+per version. The same kill test on the same engine (`9d1804d6`, sweep gone), re-creation then
+force-stop at the 40th commit (committed height 1,224,000), relaunch, `SyncComplete`:
+
+```
+control   1083 coins   169.02812043   txos 18312   txs 7346   watched 21,227
+kill      1083 coins   169.02812043   txos 18312   txs 7346   watched 21,227
+```
+
+Identical stores, every standard pool at 1000 beyond its used frontier, the dashj audit exact.
+Snapshot `2026-09-25-topple-int22-killtest-fixed/`. The resumed sync took 21 minutes rather than
+92 seconds, because the resume from 1,169,001 rescans 391,000 filters against the full address
+set — the price of the kill, paid correctly. Not yet run on the restore UI path, which needs the
+seed typed on the device; the mechanism under test (the bind's widening) is the same on both.
