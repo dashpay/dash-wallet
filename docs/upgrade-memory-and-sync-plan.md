@@ -2509,6 +2509,18 @@ identical to the Sonatype publish of 09-23) carries native libraries hashing `d9
 (arm64) and `a62fc094b946aaf6` (x86_64), the recipe's #1016 build, not the #1015-only
 `08c0c04e` fallback. §38 originally described int22 as the #1015-only pin; corrected there.
 
+**And then the recipe's §5 found what #1016 gives up, on a device (2026-09-23).** Kill topple
+mid-FILTERS, relaunch, let it reach SYNCED: three outputs the wallet owns are absent from its
+store — not marked spent, no row. The kill left `committed_height` at 1,188,000; the resume
+rescanned from there against a watch set that no longer held the scripts the killed run had
+derived, and nothing replayed them. That is exactly what `interrupted_sweep_is_replayed_after_restart`
+guarded. Reproduced twice; Job Flower's kill test lost nothing, which is the unrepresentative
+result. The recipe's verdict: the trade "needed undoing"; the fix is the hybrid (drop the
+per-commit sweep, keep `pending_sweep`/`recovered_pending`), unbuilt at the maintainer's
+direction, or a pin revert to `08c0c04e`. As published, int22 — and every `12000018` built on
+it — carries this window. It opens only when a session derives new scripts and dies before the
+next start; the reference install's process dies at 2.3 GB mid-scan routinely (§39.6).
+
 **What stays true on our side, and what changes.** §35's sync rule and §34.6's old watchdog
 verdict (`SDK_FINAL_BATCH`, hold 30 min) still describe the user-facing behaviour correctly: the
 cursor parks inside one batch of the target with every filter stored. Their log lines were reworded
@@ -3118,6 +3130,11 @@ have read a completed scan instead and the 70,000-block persistence lag under th
 to lag behind. And #1015, which matters to this wallet specifically: it is a CoinJoin wallet
 (67,770 CoinJoin keys), and #1015 is the spend-before-fund record-completeness fix.
 
+**What int22 costs.** The recipe's §5 fund loss (§34.6): a session that derives new scripts and
+dies before the next start loses the outputs those scripts received, silently. Joel's process
+dies mid-scan; his wallet's 68,317 keys were derived at bind, so mid-scan derivations are rarer
+than on a restore, but the window is open on the build he now runs.
+
 **What int22 does not change.** Every fresh process still rewinds to 2,167,092 (#4302), and the
 scan's own matching from there still fetches 9–16% of every batch's blocks — 438–817 per 5,000
 observed — for 377,000 filters. That is tens of thousands of block fetches and well over an hour
@@ -3156,11 +3173,13 @@ decision is unchanged: caught up within two blocks of the tip, or the iOS aggreg
 | sweep | **none** — no `Recovered pending`, no `Rescan committed` (131 forward rescans inside active batches, 2,192 blocks: the gap-limit cascade, which #1016 keeps) | none |
 | balance at `SyncComplete` | 16,902,812,043 duffs = **169.02812043** | the same, to the duff |
 
-**The balance.** Both passes land on 169.02812043, so the order-dependence #1015 fixes did not
-show. But the figure is 0.02701226 below the recipe's topple acceptance of 169.05513269, and the
-09-16 run (§10) had dashj at 167.82052936 with the SDK's 169.055 called inflated. Three figures
-for one wallet; which is right needs a dashj parity read on this install (Tools › dashj sync
-diagnostic), not settled here.
+**The balance, reconciled.** Both passes land on 169.02812043, so the order-dependence #1015
+fixes did not show. Audited against the dashj dump of the same wallet
+(`audit-jobflower2.py`, dump stated 167.82052936): **0 dashj-spendable coins missing, 0 burns
+wrongly unspent, 29 deep-index coins = 1.20759107 that dashj's lookahead cannot see and the SDK
+correctly holds.** 167.82052936 + 1.20759107 = 169.02812043 to the duff. Exact. (An earlier
+draft of this section compared against a 169.055 figure from §10 that was the int21 inflation,
+not an acceptance.)
 
 **D-041 in the open, contained.** During the relaunch's re-walk the SDK feed published up to
 28,214,097,609 duffs (282 DASH) before settling — the in-memory ledger re-applying 3,690

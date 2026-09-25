@@ -251,7 +251,9 @@ sweep's share of the block fetches and the final-batch park — **already in int
 park. The 50-minute deadlock in the middle is A-02 (fixed on `fix/sync-process-stalls`). On
 `12000018` the sweep, its re-seeded 67,658-script set and the park are gone; the per-launch
 re-walk from 2,167,092 is not, and on this wallet it is still tens of thousands of block fetches
-per launch. Needs #4302 to finish; int22 makes each attempt about half the length.
+per launch. Needs #4302 to finish; int22 makes each attempt about half the length — and carries
+the recipe's §5 fund loss (plan §34.6): a session that derives new scripts and dies before the next
+start loses what those scripts received. Joel's process dies mid-scan.
 
 **Also seen.** The per-minute memory line's `Debug.getPss()` blocks the main thread for 5 s or
 more on a 2 GB process — four in-app ANR-watchdog dumps in one evening. App-side; plan §39.6.
