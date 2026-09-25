@@ -83,6 +83,7 @@ class WalletUriHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
+        if (redirectDegradedWallet(application as WalletApplication)) return
         if (wallet == null) {
             setResult(RESULT_CANCELED)
             finish()
@@ -193,4 +194,3 @@ class WalletUriHandlerActivity : AppCompatActivity() {
         Unit
     }
 }
-

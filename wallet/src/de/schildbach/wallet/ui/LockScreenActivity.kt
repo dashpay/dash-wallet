@@ -197,17 +197,17 @@ open class LockScreenActivity : SecureActivity() {
             // crash-report path, so send the user there instead of finishing
             // into nothing. CLEAR_TASK drops the restored back stack, whose
             // every entry would hit this same branch.
+            //
+            // Degraded also covers a recovered wallet that is in memory but
+            // not yet persisted: walletData.wallet is non-null, yet the
+            // wallet must not be used.
             finishedForNoWallet = true
             if (degraded) {
                 log.warn(
-                    "degraded launch: {} was restored without a wallet — routing to onboarding",
+                    "degraded launch: {} was restored without a usable wallet — routing to onboarding",
                     javaClass.simpleName
                 )
-                startActivity(
-                    OnboardingActivity.createIntent(this).addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    )
-                )
+                if (redirectDegradedWallet(walletApplication)) return
             }
             finish()
             return
@@ -339,6 +339,8 @@ open class LockScreenActivity : SecureActivity() {
         // Early finish in onCreate: no UI to lock or unlock, and no wallet to
         // start the blockchain service for.
         if (!lockScreenUiReady) return
+
+        if (isFinishing || redirectDegradedWallet(walletApplication)) return
 
         // A Reset Wallet is destroying this wallet's data. Nothing below may
         // run: not the unlock (its keys are being deleted), not
