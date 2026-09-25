@@ -31,7 +31,9 @@ import androidx.viewpager.widget.ViewPager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.util.observe
+import java.text.DateFormat
 import java.text.NumberFormat
+import java.util.Date
 
 /**
  * Tools → Network Monitor.
@@ -62,6 +64,7 @@ class NetworkMonitorActivity : AbstractBindServiceActivity() {
     private lateinit var dashjHint: TextView
 
     private lateinit var stageView: TextView
+    private lateinit var partialScanWarningView: TextView
     private lateinit var progressView: TextView
     private lateinit var connectionView: TextView
     private lateinit var headersView: TextView
@@ -70,6 +73,7 @@ class NetworkMonitorActivity : AbstractBindServiceActivity() {
     private lateinit var chainLockView: TextView
 
     private val numberFormat = NumberFormat.getIntegerInstance()
+    private val dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM)
 
     private val onCheckedChangeListener =
         CompoundButton.OnCheckedChangeListener { buttonView, _ ->
@@ -85,6 +89,7 @@ class NetworkMonitorActivity : AbstractBindServiceActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         stageView = findViewById(R.id.network_status_stage)
+        partialScanWarningView = findViewById(R.id.network_status_partial_warning)
         progressView = findViewById(R.id.network_status_progress)
         connectionView = findViewById(R.id.network_status_connection)
         headersView = findViewById(R.id.network_status_headers)
@@ -113,7 +118,21 @@ class NetworkMonitorActivity : AbstractBindServiceActivity() {
     }
 
     private fun render(state: NetworkMonitorUIState) {
-        stageView.setText(state.stageRes)
+        // SR-22: the stage is the only label on this screen that can claim
+        // "Synced", and a scan bounded by a user-supplied wallet creation date
+        // has not seen the chain before that date. The ViewModel swaps the
+        // label for the `sync_synced_from` form in exactly that case — the one
+        // stage string that takes the date as an argument.
+        val scanStartDateSecs = state.scanStartDateSecs
+        stageView.text = if (state.stageRes == R.string.sync_synced_from && scanStartDateSecs != null) {
+            getString(state.stageRes, formatDate(scanStartDateSecs))
+        } else {
+            getString(state.stageRes)
+        }
+        partialScanWarningView.visibility = if (scanStartDateSecs == null) View.GONE else View.VISIBLE
+        scanStartDateSecs?.let {
+            partialScanWarningView.text = getString(R.string.sync_partial_scan_warning, formatDate(it))
+        }
         progressView.text = getString(R.string.network_monitor_progress, state.percentage)
         progressView.visibility = if (state.isSynced) View.GONE else View.VISIBLE
         connectionView.setText(state.connectionRes)
@@ -136,6 +155,8 @@ class NetworkMonitorActivity : AbstractBindServiceActivity() {
             numberFormat.format(target)
         )
     }
+
+    private fun formatDate(epochSeconds: Long): String = dateFormat.format(Date(epochSeconds * 1000L))
 
     private fun formatHeight(height: Long): String =
         if (height <= 0) getString(R.string.network_monitor_value_unknown) else numberFormat.format(height)

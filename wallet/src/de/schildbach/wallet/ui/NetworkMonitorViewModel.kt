@@ -52,6 +52,11 @@ import javax.inject.Inject
  *   scan position (both 0 = the engine reports no filter pipeline).
  * @property chainLockHeight best PROVEN chainlocked height (monotonic
  *   lower bound), 0 = none observed yet.
+ * @property scanStartDateSecs the date the scan started from when history
+ *   before it was skipped, else null — the screen renders the partial-scan
+ *   note from it, and formats it into [stageRes] when (and only when)
+ *   [stageRes] is the `sync_synced_from` form, which is the one stage label
+ *   that takes an argument. SR-22.
  */
 data class NetworkMonitorUIState(
     @StringRes val stageRes: Int = R.string.network_monitor_stage_idle,
@@ -64,7 +69,8 @@ data class NetworkMonitorUIState(
     val mnListHeight: Long = 0,
     val chainLockHeight: Long = 0,
     @StringRes val connectionRes: Int = R.string.network_monitor_connection_idle,
-    val showDashjPanels: Boolean = false
+    val showDashjPanels: Boolean = false,
+    val scanStartDateSecs: Long? = null
 )
 
 /** Neutral stage → its display name. Pure — host-testable. */
@@ -101,23 +107,42 @@ internal fun connectionStatusRes(stage: L1SyncStage): Int = when (stage) {
     else -> R.string.network_monitor_connection_connected
 }
 
-/** [L1SyncDetail] + the diagnostic toggle → the screen state. Pure — host-testable. */
+/**
+ * [L1SyncDetail] + the diagnostic toggle → the screen state. Pure — host-testable.
+ *
+ * SR-22: a scan that started at a user-supplied wallet creation date has NOT
+ * seen the chain before that date, so the SYNCED stage — the one label on
+ * this screen that literally reads "Synced" — is replaced by "Synced from
+ * <date>", and the note below it explains what is missing. Only the SYNCED
+ * stage is rewritten: every other stage already says work is outstanding, and
+ * a "Syncing filters from <date>" would add noise, not honesty.
+ */
 internal fun buildNetworkMonitorUiState(
     detail: L1SyncDetail,
     dashjDiagnosticOn: Boolean
-): NetworkMonitorUIState = NetworkMonitorUIState(
-    stageRes = stageNameRes(detail.stage),
-    percentage = detail.percentage,
-    isSynced = detail.isSynced,
-    headerHeight = detail.headerHeight,
-    headerTarget = detail.headerTarget,
-    filterHeight = detail.filterHeight,
-    filterTarget = detail.filterTarget,
-    mnListHeight = detail.mnListHeight,
-    chainLockHeight = detail.chainLockHeight.toLong(),
-    connectionRes = connectionStatusRes(detail.stage),
-    showDashjPanels = dashjDiagnosticOn
-)
+): NetworkMonitorUIState {
+    val syncedFromDateSecs = detail.scanStartDateSecs?.takeIf { detail.stage == L1SyncStage.SYNCED }
+    return NetworkMonitorUIState(
+        stageRes = if (syncedFromDateSecs != null) {
+            R.string.sync_synced_from
+        } else {
+            stageNameRes(detail.stage)
+        },
+        percentage = detail.percentage,
+        isSynced = detail.isSynced,
+        headerHeight = detail.headerHeight,
+        headerTarget = detail.headerTarget,
+        filterHeight = detail.filterHeight,
+        filterTarget = detail.filterTarget,
+        mnListHeight = detail.mnListHeight,
+        chainLockHeight = detail.chainLockHeight.toLong(),
+        connectionRes = connectionStatusRes(detail.stage),
+        showDashjPanels = dashjDiagnosticOn,
+        // The NOTE is shown for any stage — a bounded scan is bounded while it
+        // runs too — while the LABEL above only changes at SYNCED.
+        scanStartDateSecs = detail.scanStartDateSecs
+    )
+}
 
 @HiltViewModel
 class NetworkMonitorViewModel @Inject constructor(
