@@ -78,6 +78,27 @@ interface WalletData {
     fun currentReceiveAddressLive(): Address = currentReceiveAddress()
     fun freshReceiveAddressLive(): Address = freshReceiveAddress()
 
+    /**
+     * A destination for the user's OWN money that has never been advertised to
+     * anyone — the unshield withdrawal and the post-upgrade CoinJoin combine.
+     *
+     * These are self-transfers whose whole purpose is that nobody can link them
+     * to the user, so they must NOT be paid to the address the Receive screen is
+     * advertising. Post-cutover `fresh` and `current` receive addresses coincide
+     * (the engine tracks USED, not ISSUED), so a counterparty handed the receive
+     * QR who simply never pays it could otherwise watch that address and learn
+     * the withdrawal and its amount. [de.schildbach.wallet.WalletApplication]
+     * overrides this to read the engine's next unused INTERNAL (change) address,
+     * a chain that is never handed out.
+     *
+     * Pre-cutover — and in this default — it is dashj's freshly issued receive
+     * key, which is what the unshield path used before the SDK overlay existed
+     * and is already distinct from the advertised current key.
+     *
+     * BLOCKING, like the accessors above: off-main callers only.
+     */
+    fun unadvertisedDestinationLive(): Address = freshReceiveAddress()
+
     val networkId: String
         get() = networkParameters.id
     fun freshReceiveAddressString(): String = freshReceiveAddress().toBase58()

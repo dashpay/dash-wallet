@@ -1417,7 +1417,9 @@ class SdkL1SendService internal constructor(
      * the destination — which the calling UI must state plainly.
      *
      * [ownAddressBase58] MUST be an address of THIS wallet's unmixed BIP44
-     * account (callers derive it via `WalletData.freshReceiveAddress()`); the
+     * account (callers derive it via `WalletData.unadvertisedDestinationLive()`,
+     * a LIVE engine read on [Dispatchers.IO] — not the plain accessor, which
+     * serves a cache and would hand back an advertised address); the
      * only validation possible here is network/format.
      *
      * The floor is `1` duff: the engine overwrites the single output with
