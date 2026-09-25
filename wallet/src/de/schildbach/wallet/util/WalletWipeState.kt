@@ -59,6 +59,7 @@ object WalletWipeState {
     private const val MARKER_VERSION = "v1"
     private const val TOKEN_BYTES = 32
     private const val TOKEN_FILE_MAX_BYTES = TOKEN_BYTES * 2 + 1
+    // The UTF-8 version prefix "v1\n" occupies 3 bytes; update this bound if MARKER_VERSION changes.
     private const val MARKER_FILE_MAX_BYTES = 3 + TOKEN_FILE_MAX_BYTES
 
     private fun marker(filesDir: File) = File(filesDir, MARKER_FILE_NAME)
