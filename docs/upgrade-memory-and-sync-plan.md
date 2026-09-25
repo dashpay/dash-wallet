@@ -3219,3 +3219,15 @@ addresses received. And the dashj audit alone cannot see it — every lost coin 
 dashj's lookahead, so the audit reads "0 missing" on the damaged store; only the clean control
 shows the difference (`tools/diff-stores.py`). Any wallet on int22 as published, Joel's
 `12000018` included, has this window open on every process death mid-scan.
+
+**Correction, later the same day.** The kill store explains itself: every pool sits at exactly the
+Rust default gap beyond its used frontier (30 for BIP44, 100 for CoinJoin), where the clean store's
+sit at 1000. `set_gap_limit` is in-memory only, and `SdkWalletBinder.maybeWidenAddressWindows`
+applies the 1000 once per heal version — it ran on the 17:13 restore and on neither the 17:43
+re-creation nor the 17:46 relaunch. So the run above is confounded: the killed session itself ran
+at gap 30, and the seven outputs at change indices 828–1,630 were never derivable in it. The
+0.449 measures a full scan at gap 30, which is its own finding. The recipe's 09-23 run is clean and
+has the same mechanism: the resumed process fell back to 30/100 and lost the three outputs the
+killed session had derived past the persisted rows. #1016 removed the replay that used to mask the
+regression. App fix: re-apply the widening on every bind. Upstream: persist the gap limit, or
+replay scripts derived since the last commit. Draft issue in the kill-test snapshot directory.
