@@ -453,7 +453,10 @@ s2)
   note "locking the screen so the bind runs while Keystore's super key is zeroed"
   lock_screen
   start_service
-  assert_log "keystore denied the master alias"  "Keystore denied '(encrypt|createWallet)' on lock-bound alias"
+  # A first bind on a provably locked device is DEFERRED before the keystore is
+  # asked ("SDK bind deferred: the device is locked", SdkWalletBinder); the
+  # denial is the shape on devices whose lock state cannot be established.
+  assert_log "locked-device bind deferred or denied" "SDK bind deferred: the device is locked|Keystore denied '(encrypt|createWallet)' on lock-bound alias"
   assert_log "committed despite the broken bind" "DUAL_RUNNING -> CUT_OVER"
   assert_log "dashj held"                        "holding the dashj L1 engine"
   refute_log_for "dashj did NOT start as a fallback" "starting peergroup"
@@ -557,7 +560,7 @@ s4)
 log)
   require_device
   f=$(pull_log); echo "$f"
-  grep -nE "cutover state|declining to commit|Keystore denied|L1 shadow SPV started|L1ShadowLifecycle STOPPED|memory pressure \(onTrimMemory|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
+  grep -nE "cutover state|declining to commit|Keystore denied|SDK bind deferred|L1 shadow SPV started|L1ShadowLifecycle STOPPED|memory pressure \(onTrimMemory|idling detected|starting peergroup|holding the dashj L1 engine|bind has never succeeded|explainer armed" "$f" | tail -40
   ;;
 
 *)

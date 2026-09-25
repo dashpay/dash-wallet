@@ -311,6 +311,101 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         const val ALARM_REQUEST_CODE_RESTART = 1
 
         /**
+         * The replay restart alarm's PendingIntent, built in ONE place so
+         * arming and retiring can never disagree about which alarm they
+         * mean. `AlarmManager.cancel` matches an equal PendingIntent, and
+         * equality ignores extras, so a cancel built here retires whatever
+         * an earlier process armed.
+         */
+        @JvmStatic
+        fun replayRestartAlarmIntent(context: Context): PendingIntent {
+            val serviceIntent = Intent(context, BlockchainServiceImpl::class.java)
+            serviceIntent.putExtra(START_REASON_EXTRA, "restart-15min")
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
+                PendingIntent.getForegroundService(
+                    context, ALARM_REQUEST_CODE_RESTART, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            } else {
+                PendingIntent.getService(
+                    context, ALARM_REQUEST_CODE_RESTART, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            }
+        }
+
+        /**
+         * Arms the replay restart alarm: first fire in one minute, then every
+         * fifteen. Returns the first fire time. Repeating, so it survives a
+         * refused or failed start — and therefore needs an explicit
+         * retirement, which [decideOnReplayRestartAlarm] defines.
+         */
+        @JvmStatic
+        fun armReplayRestartAlarm(context: Context): Long {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
+            alarmManager.setInexactRepeating(
+                AlarmManager.RTC_WAKEUP,
+                restartTime,
+                AlarmManager.INTERVAL_FIFTEEN_MINUTES,
+                replayRestartAlarmIntent(context)
+            )
+            return restartTime
+        }
+
+        /**
+         * Retires the replay restart alarm. Never throws: this runs inside
+         * teardowns and the wallet wipe, neither of which may fail on it.
+         */
+        @JvmStatic
+        fun cancelReplayRestartAlarm(context: Context, why: String) {
+            try {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(replayRestartAlarmIntent(context))
+                log.info("ALARM-DIAG retired reason=restart-15min — {}", why)
+            } catch (t: Throwable) {
+                log.warn("could not retire the replay restart alarm ({})", why, t)
+            }
+        }
+
+        /** What a teardown does with the replay restart alarm. */
+        enum class ReplayRestartAlarmAction { ARM, RETIRE, LEAVE }
+
+        /**
+         * The replay restart alarm is armed by a teardown that interrupts a
+         * replay the service did not choose to abandon, and retired by the
+         * next teardown that has nothing to recover: the replay completed, or
+         * the user wiped or reset the wallet, or the SDK bind is blocked and
+         * the unlock receiver owns the restart. Once armed it repeats every
+         * fifteen minutes until retired, so leaving it standing after the
+         * replay it was armed for is over means a background service start
+         * every fifteen minutes for as long as the device stays up (review,
+         * 2026-09-24).
+         *
+         * A teardown of an instance that never finished initialising —
+         * a start refused because the previous cleanup is still running, an
+         * init failure, a start with no wallet — decides nothing: it knows
+         * nothing about the replay, and the alarm may be the only thing left
+         * that can recover the instance that armed it (§37).
+         *
+         * The wallet wipe retires the alarm itself, in
+         * `WalletApplication.destroyWalletFiles`, because the wipe can also
+         * be resumed by a launch that never runs this service.
+         */
+        @JvmStatic
+        fun decideOnReplayRestartAlarm(
+            initialised: Boolean,
+            replaying: Boolean,
+            deliberateStop: Boolean,
+            bindBlocked: Boolean
+        ): ReplayRestartAlarmAction = when {
+            !initialised -> ReplayRestartAlarmAction.LEAVE
+            !replaying || deliberateStop || bindBlocked -> ReplayRestartAlarmAction.RETIRE
+            else -> ReplayRestartAlarmAction.ARM
+        }
+
+        /**
          * Does this `onTrimMemory` level mean the process is genuinely under
          * memory pressure, i.e. worth tearing the service down for?
          *
@@ -394,6 +489,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
+
+    /**
+     * True once [onCreate]'s init coroutine ran to its end with a wallet.
+     * [onCreateCompleted] cannot say this: the refusal and failure paths
+     * complete it too, to release the callers awaiting it.
+     */
+    @Volatile
+    private var initCompleted = false
     private var checkMutex = Mutex(false)
 
     @Inject lateinit var  application: WalletApplication
@@ -1183,34 +1286,41 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * Not armed for deliberate stops: a wallet wipe, a rescan (the reset flow
      * restarts the service itself), or the "SDK setup pending" state, where
      * nothing can replay until the device is unlocked (the unlock receiver
-     * and the foreground edge restart it). Runs on the main thread at the
-     * top of onDestroy so a hung cleanup cannot prevent it. Never throws.
+     * and the foreground edge restart it). Those teardowns, and any teardown
+     * with no replay in progress, RETIRE the alarm instead — it repeats
+     * every fifteen minutes until something does ([decideOnReplayRestartAlarm]).
+     * Runs on the main thread at the top of onDestroy so a hung cleanup
+     * cannot prevent it. Never throws.
      */
     private fun rescheduleIfReplayInterrupted() {
         try {
             val replaying = blockchainState?.replaying == true
-            if (!replaying) return
-            if (deleteWalletFileOnShutdown || resetBlockchainOnShutdown) {
-                log.info("replay interrupted by a deliberate wipe/reset — not rescheduling")
-                return
-            }
+            val deliberateStop = deleteWalletFileOnShutdown || resetBlockchainOnShutdown
             val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
-            if (bindBlocked) {
-                log.info(
-                    "replay flagged but the SDK bind is blocked ({}) — not rescheduling; the unlock " +
-                        "receiver / app foreground restart the service",
-                    sdkBindRetryService.blocker.value
-                )
-                return
+            when (decideOnReplayRestartAlarm(initCompleted, replaying, deliberateStop, bindBlocked)) {
+                ReplayRestartAlarmAction.LEAVE ->
+                    log.info("service never finished initialising — leaving the replay restart alarm as it is")
+                ReplayRestartAlarmAction.RETIRE -> {
+                    val why = when {
+                        deliberateStop -> "replay interrupted by a deliberate wipe/reset"
+                        bindBlocked ->
+                            "replay flagged but the SDK bind is blocked (${sdkBindRetryService.blocker.value}); " +
+                                "the unlock receiver / app foreground restart the service"
+                        else -> "no replay in progress"
+                    }
+                    cancelReplayRestartAlarm(application, why)
+                }
+                ReplayRestartAlarmAction.ARM -> {
+                    log.warn(
+                        "service stopping with a replay in progress ({}%) — arming the one-minute restart " +
+                            "so the scan resumes without waiting for the periodic job",
+                        blockchainState?.percentageSync
+                    )
+                    rescheduleService()
+                }
             }
-            log.warn(
-                "service stopping with a replay in progress ({}%) — arming the one-minute restart " +
-                    "so the scan resumes without waiting for the periodic job",
-                blockchainState?.percentageSync
-            )
-            rescheduleService()
         } catch (t: Throwable) {
-            log.warn("could not arm the replay restart alarm", t)
+            log.warn("could not arm or retire the replay restart alarm", t)
         }
     }
 
@@ -1241,34 +1351,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private fun rescheduleService() {
         // Schedule restart in 1 minute
-        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-        val serviceIntent = Intent(
-            application,
-            BlockchainServiceImpl::class.java
-        )
-        serviceIntent.putExtra(START_REASON_EXTRA, "restart-15min")
-        val alarmIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
-            PendingIntent.getForegroundService(
-                application, ALARM_REQUEST_CODE_RESTART, serviceIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        } else {
-            PendingIntent.getService(
-                application, ALARM_REQUEST_CODE_RESTART, serviceIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        }
-        // alarmManager.cancel(alarmIntent)
-
-        val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
-        alarmManager.setInexactRepeating(
-            AlarmManager.RTC_WAKEUP,
-            restartTime,
-            AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-            alarmIntent
-        )
-
+        val restartTime = armReplayRestartAlarm(application)
         log.info("Scheduled service restart in 1 minute at {}", Date(restartTime))
         logAlarmDiagnostics("restart-15min", restartTime)
     }
@@ -2547,6 +2630,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     .onEach { enabled -> (networkCallback as? NetworkCallbackImpl)?.onDashjDiagnosticChanged(enabled) }
                     .launchIn(serviceScope)
 
+                initCompleted = true
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
             } catch (t: Throwable) {

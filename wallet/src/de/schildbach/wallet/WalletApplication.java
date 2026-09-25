@@ -1728,6 +1728,12 @@ public class WalletApplication extends MultiDexApplication
         scheduleStartBlockchainService(context, false);
     }
 
+    /**
+     * Retires BOTH alarms that can start the blockchain service: the periodic
+     * one this class arms and the replay restart alarm the service arms for an
+     * interrupted replay. Called by the wallet wipe, after which neither has a
+     * wallet to start the service for.
+     */
     public void cancelScheduledStartBlockchainService() {
         scheduleStartBlockchainService(this, true);
     }
@@ -1771,6 +1777,13 @@ public class WalletApplication extends MultiDexApplication
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         }
         alarmManager.cancel(alarmIntent);
+        if (cancelOnly) {
+            // The replay restart alarm has its own identity (request code 1, see
+            // below), so the cancel above leaves it standing — and, armed by an
+            // interrupted replay, it would go on starting this service every 15
+            // minutes against the wiped wallet (review, 2026-09-24).
+            BlockchainServiceImpl.cancelReplayRestartAlarm(context, "wallet wipe");
+        }
 
         // ALARM-DIAG. Both schedulers here use setInexactRepeating, and only EXACT
         // alarms are on Android's background FGS-start exemption list. The other
@@ -1784,7 +1797,9 @@ public class WalletApplication extends MultiDexApplication
         // window standing where a 15-minute restart had just been armed. They
         // now carry distinct request codes
         // ([BlockchainServiceImpl.ALARM_REQUEST_CODE_PERIODIC] and
-        // ..._RESTART), so both survive.
+        // ..._RESTART), so both survive — and each is retired on its own terms:
+        // the periodic one here, the restart one by the service's next teardown
+        // with nothing to recover, both by the wallet wipe.
         String batteryExempt;
         try {
             android.os.PowerManager pm =

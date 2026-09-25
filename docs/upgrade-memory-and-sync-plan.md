@@ -1975,10 +1975,28 @@ alarm scheduled by an older build carries that code, and `AlarmManager.cancel` o
 EQUAL `PendingIntent`, so renumbering it would orphan the very alarm the reschedule means to
 replace.
 
+**Two identities need two retirements (review, 2026-09-24).** Separating the alarms also meant the
+periodic scheduler's `cancel` no longer reached the restart alarm — and the wallet wipe
+(`destroyWalletFiles` → `cancelScheduledStartBlockchainService`) cancelled only the periodic one.
+A replay interrupted before a wipe left a repeating fifteen-minute alarm that went on starting the
+service against the wiped wallet, bypassing the periodic tier's backoff. The rule now, in
+`BlockchainServiceImpl.decideOnReplayRestartAlarm`:
+
+| teardown | restart alarm |
+|---|---|
+| replay in progress, not deliberate, bind not blocked | **armed** (as before) |
+| replay complete; or a wipe/reset; or the SDK bind blocked | **retired** |
+| instance never finished initialising (refused start, init failure, no wallet) | **left alone** — it may be the only thing that can recover the instance that armed it (§37) |
+| wallet wipe, from `WalletApplication` | **both alarms retired**, so a wipe resumed by a launch that never runs the service still clears it |
+
+Arming and cancelling build the `PendingIntent` in one place (`replayRestartAlarmIntent`), so the
+two can never disagree about which alarm they mean. `ReplayRestartAlarmTest` drives the real
+`AlarmManager` under Robolectric for the wipe shape and pins the rule.
+
 ### 32.10 How to verify it — the test that has never passed
 
-Neither fix is unit-testable as written (static methods over a `Context`, calling `AlarmManager`).
-The verification is §28's, and it needs a device left alone:
+The identities and the wipe are now covered under Robolectric (`ReplayRestartAlarmTest`); whether
+the armed alarm is DELIVERED is not. That verification is §28's, and it needs a device left alone:
 
 1. Open the app and use it, so `lastUsedAgo` is small. This matters: §32.6 showed that arming after
    an hour of non-use selects the **720-minute** tier, not 15.
