@@ -9,7 +9,9 @@ anything, and **A-01** (Andrei's post-upgrade "still 99%") is added at the end o
 `fix/sync-process-stalls`; #1568 itself takes only review fixes from here. Re-assessed
 2026-09-22 evening at `2e3e3518d` on SDK int22 after fresh restores on both devices
 (plan §38); **A-03** (the per-launch 26,000-block re-walk) is added under "Still applies" as an SDK
-defect.
+defect. Re-assessed 2026-09-25 after Joel's upgrade of the reference install to `12000017` (plan
+§39): **J-01** is added under "Still applies" — the same three SDK-side rewinds at mainnet scale —
+and A-02 gets a second field sighting.
 
 "Addressed" below means *the defect's cause is fixed on this branch*. It does **not** mean
 retested — see [Retest before closing](#retest-before-closing).
@@ -21,7 +23,7 @@ retested — see [Retest before closing](#retest-before-closing).
 | Fixed on this branch | 4 | SR-01, **SR-06** (delivered on device 2026-09-21), **A-01** (Andrei's "still 99%", 2026-09-21), **A-02** (Andrei's "resync got stuck", 2026-09-22 — on `fix/sync-process-stalls`) |
 | Addressed by the #1555 merge | 2 | D-056, D-031 |
 | Addressed by the pending master merge | 1 | D-011 |
-| Still applies | 8 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07, **A-03** (per-launch re-walk, SDK defect, 2026-09-22) |
+| Still applies | 9 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07, **A-03** (per-launch re-walk, SDK defect, 2026-09-22), **J-01** (Joel's "synced almost to completion, then reset", 2026-09-24 — SDK defects) |
 | Applies by deliberate decision | 1 | SR-08 |
 
 ---
@@ -147,6 +149,12 @@ wait — is drafted as [kotlin-sdk-issues-to-file.md §17](kotlin-sdk-issues-to-
 **Not yet proven on device.** Unit-pinned only (`ShieldedBalanceServiceTest`,
 `CleanupDeadlockPolicyTest`). A device proof needs the stuck asset lock's wallet, which is Andrei's.
 
+**Second sighting, 2026-09-24 (Joel, Pixel 8a, `12000017`, plan §39.5).** The idle-stop cleanup at
+23:54 UTC waited inside the shielded stop until the shielded bind returned at 00:44:40 — 50 minutes,
+seven refused starts ("deadlock in onDestroy"), four of them delivered alarms. Same app-side shape;
+the bind returned on its own, so no process death. Both halves of the fix on
+`fix/sync-process-stalls` would have applied at 23:56.
+
 ---
 
 ## Addressed by the #1555 merge (`1d9bbf659`)
@@ -217,6 +225,33 @@ in-memory only. Upstream: dashpay/platform#4302 (open since 2026-08-17), PR #474
 **Cost.** 4–11 s per launch on the emulator with everything in storage. On a mainnet wallet with an
 old first contact it is a re-walk of hundreds of thousands of filters on every launch, growing
 forever. Not fixed by rust-dashcore#1016 or by int22; nothing on the app side can stop it.
+
+### J-01 — "Synced almost to completion, then reset" (Joel, 2026-09-24)
+
+*Reported from the reference install (Pixel 8a, Android 17, `prod` release `12000017`, 33,297
+transactions, 229 DashPay contacts) after upgrading from `12000012`. Logs and the last 2 MB of the
+engine logs at `~/Downloads/joel-stuck-at-99/`. Plan §39 has the full timeline.*
+
+**The defect.** The header reached 99.9% at 23:34 UTC (2h49m after the upgrade launch) and read
+95.1% when the report was filed at 01:47. No blockchain reset. The engine's filter cursor went
+backwards three times: 70,000 blocks when the §35 rule declared the 99.904% final-batch park synced
+and the idle rule stopped the service with the SDK's persisted height that far behind; 242,000 on an
+in-process engine restart whose origin the truncated engine log does not show; and back to
+**2,167,092** on each of the two process-fresh launches — A-03's per-launch re-walk on mainnet,
+where the anchor is this wallet's earliest DashPay contact. Every fresh launch re-walks 377,000
+filters from there, with the durable pending-sweep set (67,658 scripts) seeded into the lowest
+batch, so **817 of every 5,000 filters fetch a block** (Andrei's wallet: 93). A pass is ≈ 2.7 h of
+foreground-service time at 2 GB PSS; the process died at ~01:43 with 2.3 GB PSS (cause not in the
+evidence) and the next launch started the pass again.
+
+**What applies.** A-03 (dashpay/platform#4302) for the anchor; §34 / rust-dashcore#1016 for the
+sweep's block fetches; the SDK's `synced_height` persistence granularity under the park. The
+50-minute deadlock in the middle is A-02 (fixed on `fix/sync-process-stalls`). Nothing else on
+the app side changes the outcome: on this wallet the sync cannot reach a persisted tip on
+`12000017` or `12000018`, and needs both the #1016 build and #4302.
+
+**Also seen.** The per-minute memory line's `Debug.getPss()` blocks the main thread for 5 s or
+more on a 2 GB process — four in-app ANR-watchdog dumps in one evening. App-side; plan §39.6.
 
 ### D-037 — Historical fully-spent transactions get no history row
 
