@@ -27,8 +27,10 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
@@ -56,10 +58,12 @@ class L1SyncStatusServiceTest {
         mnListHeight: Long = 0,
         walletSyncedHeight: Long = 0,
         /** The SDK's three-phase mean; 0.0 = "not supplied", so only the height rule applies. */
-        overallPercent: Double = 0.0
+        overallPercent: Double = 0.0,
+        sessionHeaderStart: Long = 0,
+        sessionFilterStart: Long = 0
     ) = ShadowSyncProgress(
         phase, overallPercent, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight,
-        walletSyncedHeight
+        walletSyncedHeight, sessionHeaderStart, sessionFilterStart
     )
 
     private fun dashjState(
@@ -182,6 +186,35 @@ class L1SyncStatusServiceTest {
         )
         assertTrue(status.isSynced)
         assertEquals(100, status.percentage)
+    }
+
+    @Test
+    fun merge_carriesTenthsOnlyInTheSdkRegime_andTheLabelShowsOneDecimal() {
+        // Post-cutover: a re-walk 99.1% through its own work.
+        val sdk = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = progress(
+                filterHeight = 1_400_000 + 113_629, filterTarget = 1_514_660,
+                sessionHeaderStart = 1_514_660, sessionFilterStart = 1_400_000
+            ),
+            dashjState = dashjState(percentageSync = 42)
+        )
+        assertEquals(991, sdk.percentageTenths)
+        assertEquals(99, sdk.percentage)
+        assertEquals("99.1%", syncHeaderPercentLabel(sdk, Locale.US))
+        assertEquals("99,1%", syncHeaderPercentLabel(sdk, Locale.GERMANY))
+
+        // 99.9 stays 99.9 until the scan is caught up; caught up is "100%", never "100.0%".
+        assertEquals("99.9%", syncHeaderPercentLabel(sdk.copy(percentageTenths = 999), Locale.US))
+        assertEquals("100%", syncHeaderPercentLabel(sdk.copy(percentageTenths = 1000), Locale.US))
+        // No usable figure yet: the bare "Syncing…".
+        assertNull(syncHeaderPercentLabel(sdk.copy(percentage = 0, percentageTenths = 0), Locale.US))
+
+        // Pre-cutover: dashj's whole number, no decimal.
+        val dashj = mergeL1SyncUiStatus(sdkOwnsL1 = false, sdkProgress = progress(), dashjState = dashjState(percentageSync = 42))
+        assertNull(dashj.percentageTenths)
+        assertEquals("42%", syncHeaderPercentLabel(dashj, Locale.US))
+        assertNull(syncHeaderPercentLabel(dashj.copy(percentage = 0), Locale.US))
     }
 
     @Test

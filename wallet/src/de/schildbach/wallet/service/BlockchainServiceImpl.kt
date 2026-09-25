@@ -475,6 +475,49 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         /** Whether a previous instance of this service is still tearing down. */
         val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
 
+        /**
+         * `SystemClock.elapsedRealtime()` at which the active [cleanupDeferred]
+         * was created; 0 until the first destroy. Read by the onCreate guard to
+         * measure how long a refused start has been waiting on a cleanup that
+         * never finishes.
+         */
+        private val cleanupStartedAtMs = AtomicLong(0)
+
+        /**
+         * Plan §37: how long a previous instance's cleanup may stay unfinished
+         * before a refused start ends the PROCESS instead of only stopping
+         * itself. The periodic alarm retries every 15 minutes, so the exit
+         * lands on the first retry past this bound.
+         */
+        internal const val CLEANUP_DEADLOCK_EXIT_MS = 5 * 60_000L
+
+        /** What a start refused by an unfinished cleanup does next — see [decideOnCleanupDeadlock]. */
+        enum class CleanupDeadlockAction { STOP_SELF, EXIT_PROCESS }
+
+        /**
+         * Plan §37 (Andrei, 2026-09-22): a shutdown parked behind a native SDK
+         * call never completed, so every start for four hours logged "deadlock
+         * in onDestroy" and stopped itself — the process lived on with the
+         * engine off and nothing in it could ever recover. A cleanup that has
+         * been stuck past [CLEANUP_DEADLOCK_EXIT_MS] is not going to finish;
+         * ending the process is the only exit, and the next start (the alarm,
+         * or the user) then begins from a clean one.
+         *
+         * Never while the app is visible: the start being refused is the one
+         * the user's own foreground triggered, and exiting would close the app
+         * in their face. They get the refusal as before; the background retry
+         * gets the exit.
+         *
+         * Pure, so both axes are pinned by test.
+         */
+        @JvmStatic
+        fun decideOnCleanupDeadlock(stuckForMs: Long, appVisible: Boolean): CleanupDeadlockAction =
+            if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS && !appVisible) {
+                CleanupDeadlockAction.EXIT_PROCESS
+            } else {
+                CleanupDeadlockAction.STOP_SELF
+            }
+
         /** Retries of a lock-blocked blockstore open before giving up. */
         private const val BLOCKSTORE_LOCK_RETRIES = 3
 
@@ -1992,14 +2035,29 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private var lastSdkProgress: de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress? = null
         private var sdkSampled = false
         private val activityHistory = arrayListOf<SyncActivitySample>()
+        private val memorySampleInFlight = AtomicBoolean(false)
 
         override fun onReceive(context: Context, intent: Intent) {
             // Once a minute while the service runs, one line of process
             // memory next to the sync-activity history — the crash-loop
             // investigation needs to see native-heap/PSS growth over a
-            // session without adb access (cheap in-process reads only,
-            // getPss() is the most expensive at ~ms).
-            logMemory()
+            // session without adb access. NOT on this thread: getPss()
+            // walks /proc/self/smaps, and on the reference install's 2 GB
+            // process that held the main thread — inside this broadcast
+            // receiver — for 5 s or more, four times in one evening (plan
+            // §39.6). One sample in flight at a time; a slow one skips ticks
+            // rather than queueing behind itself.
+            if (memorySampleInFlight.compareAndSet(false, true)) {
+                serviceScope.launch {
+                    try {
+                        logMemory()
+                    } finally {
+                        memorySampleInFlight.set(false)
+                    }
+                }
+            } else {
+                log.debug("previous memory sample still running — skipping this tick's")
+            }
 
             // WHICH ENGINE'S ACTIVITY COUNTS. The detector exists to stop a
             // genuinely idle service, and its four counters were all dashj-fed.
@@ -2053,9 +2111,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * One per-minute memory line into wallet.log. All figures come from
          * in-process syscalls — no dumpsys, no exec: [Runtime] for the JVM
          * heap, [android.os.Debug]'s native-heap counters for the
-         * Rust/dashj allocations, and [android.os.Debug.getPss] (reads
-         * /proc/self/smaps, a few ms — fine at this cadence) for the real
-         * resident footprint the OS kills on. Never throws.
+         * Rust/dashj allocations, and [android.os.Debug.getPss] for the real
+         * resident footprint the OS kills on. `getPss` reads
+         * /proc/self/smaps, whose cost scales with the mapping count: seconds
+         * on a 2 GB replay process (§39.6), so this runs off the main thread
+         * — see the caller. Never throws.
          */
         private fun logMemory() {
             try {
@@ -2224,6 +2284,32 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
+
+        // Plan §36.6 (Samsung SM-S901U, 2026-09-22 17:47): the periodic restart
+        // alarm used to be armed in ONE place — onDestroy's cleanup coroutine,
+        // at its "detaching from wallet" step, which runs only after the
+        // onCreate latch and the check() mutex. A kill that lands before that
+        // step leaves the wallet with no pending alarm: the task-removal kill
+        // Android defers until a started service stops itself arrived 600 ms
+        // into that coroutine, and lowmemorykiller on a cached process gives
+        // no onDestroy at all. A fresh install has no alarm from any earlier
+        // session either. Result: 70 minutes with no relaunch on an awake,
+        // charging, battery-exempt device, and nothing that would ever change
+        // that until the user opened the app.
+        //
+        // So arm it at service start as well. The scheduler cancels and
+        // replaces its own PendingIntent, so this and the clean-stop arm are
+        // idempotent; a start delivered while the service is already running
+        // is an ordinary onStartCommand. The tier it picks follows
+        // Configuration.lastUsed, which MainActivity stamps on open — a start
+        // from the alarm or the boot receiver with the UI never opened this
+        // process still reads the last stamped value, not zero.
+        try {
+            WalletApplication.scheduleStartBlockchainService(this)
+        } catch (t: Throwable) {
+            log.warn("could not arm the periodic restart alarm at service start", t)
+        }
+
         serviceScope.launch {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
@@ -2238,6 +2324,31 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // Complete onCreate to unblock any waiting onStartCommand calls
                     if (onCreateCompleted.isActive) {
                         onCreateCompleted.complete(Unit)
+                    }
+
+                    // Plan §37: a cleanup stuck past the bound is never going to
+                    // finish. With the app in the background, end the process so
+                    // the next start gets a clean one; stopSelf alone left the
+                    // engine off for four hours on 2026-09-22.
+                    val startedAt = cleanupStartedAtMs.get()
+                    val stuckForMs = if (startedAt == 0L) 0L else SystemClock.elapsedRealtime() - startedAt
+                    val appVisible = AppForegroundMonitor.isForeground.value
+                    if (decideOnCleanupDeadlock(stuckForMs, appVisible) == CleanupDeadlockAction.EXIT_PROCESS) {
+                        log.error(
+                            "The previous instance's cleanup has been stuck for {} min with the app in the " +
+                                "background — ending the process so the next start begins from a clean one " +
+                                "(plan §37)",
+                            stuckForMs / 60_000
+                        )
+                        Runtime.getRuntime().exit(0)
+                        return@launch
+                    }
+                    if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS) {
+                        log.error(
+                            "The previous instance's cleanup has been stuck for {} min; the app is visible, " +
+                                "so not ending the process now — the next background start will (plan §37)",
+                            stuckForMs / 60_000
+                        )
                     }
 
                     // Stop the service - we cannot safely initialize with cleanup still running
@@ -3010,6 +3121,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val existingCleanup = cleanupDeferred
                 if (existingCleanup == null || existingCleanup.isCompleted) {
                     cleanupDeferred = CompletableDeferred()
+                    cleanupStartedAtMs.set(SystemClock.elapsedRealtime())
                     log.info("Created new cleanupDeferred for coordination (previous was {})",
                         if (existingCleanup == null) "null" else "completed")
                 } else {

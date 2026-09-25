@@ -20,7 +20,12 @@ package de.schildbach.wallet.service.platform.sdk
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -84,6 +89,8 @@ class ShieldedBalanceServiceTest {
 
         var onConfigure: (String) -> Unit = {}
         var onBind: () -> Unit = {}
+        /** Suspending bind hook: a bring-up parked inside the native bind (plan §37). */
+        var onBindSuspend: suspend () -> Unit = {}
         var onStart: () -> Unit = {}
         var onShield: () -> Unit = {}
         var onTransfer: () -> Unit = {}
@@ -99,9 +106,13 @@ class ShieldedBalanceServiceTest {
         fun interactions() = supportCalls + configureCalls + bindCalls + startCalls +
             stopCalls + warmUpCalls + broadcastCalls
 
+        /** Suspending hook inside the support probe — the SDK bootstrap interval (review 2026-09-23). */
+        var onSupportSuspend: suspend () -> Unit = {}
+
         override suspend fun hasShieldedSupport(): Boolean {
             supportCalls++
             events += "support"
+            onSupportSuspend()
             return hasSupport
         }
 
@@ -123,6 +134,7 @@ class ShieldedBalanceServiceTest {
             lastBoundAccounts = accounts
             events += "bind"
             onBind()
+            onBindSuspend()
         }
 
         override suspend fun isShieldedSyncRunning(): Boolean {
@@ -134,10 +146,14 @@ class ShieldedBalanceServiceTest {
         var syncing = false
         override suspend fun isShieldedSyncing(): Boolean = syncing
 
+        /** Suspending hook inside the native sync-loop start (review 2026-09-23). */
+        var onStartSuspend: suspend () -> Unit = {}
+
         override suspend fun startShieldedSync() {
             startCalls++
             events += "start"
             onStart()
+            onStartSuspend()
         }
 
         override suspend fun stopShieldedSync() {
@@ -309,7 +325,8 @@ class ShieldedBalanceServiceTest {
         progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
         progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
         ensureL1SpvRunning: suspend () -> Boolean = { true },
-        noteSelfSpendBroadcast: () -> Unit = {}
+        noteSelfSpendBroadcast: () -> Unit = {},
+        stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs),
@@ -318,8 +335,165 @@ class ShieldedBalanceServiceTest {
         l1Progress = progress,
         l1ProgressFlow = { progressFlow },
         ensureL1SpvRunning = ensureL1SpvRunning,
-        noteSelfSpendBroadcast = noteSelfSpendBroadcast
+        noteSelfSpendBroadcast = noteSelfSpendBroadcast,
+        stopLockTimeoutMs = stopLockTimeoutMs
     )
+
+    // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
+
+    /**
+     * Andrei, 2026-09-22 (SM-A536B, `12000017`): after a blockchain reset the
+     * next bring-up entered `bindShielded` and the SDK parked it behind a
+     * resumed wallet shield waiting indefinitely for a ChainLock. `stop()` then
+     * waited on the bring-up lock forever, the blockchain service's onDestroy
+     * never finished, and every later start refused itself for four hours.
+     *
+     * Pins the bound: with the bind parked, stop() returns within its timeout,
+     * tears the Kotlin side down, and does NOT try to stop a sync loop that was
+     * never started. When the SDK finally returns the bind, the abandoned
+     * bring-up reports NOT ready and starts nothing; a fresh bring-up then
+     * binds again and succeeds.
+     */
+    @Test
+    fun stop_returnsWithinItsBound_whenTheBringUpIsParkedInTheNativeBind() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val source = readySource().apply { onBindSuspend = { gate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.bindCalls == 0) delay(10) }
+        assertTrue("the bring-up is parked inside the bind", bringUp.isActive)
+
+        val startedNs = System.nanoTime()
+        withTimeout(5_000) { service.stop() }
+        val elapsedMs = (System.nanoTime() - startedNs) / 1_000_000
+        assertTrue("stop() returned in ${elapsedMs}ms, well inside the 5 s the service gives a cleanup", elapsedMs < 4_000)
+        assertEquals("nothing to stop natively: the loop is only started after the bind", 0, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        // The SDK returns the bind after the stop: the bring-up must be inert.
+        gate.complete(Unit)
+        assertFalse("an abandoned bring-up does not report ready", bringUp.await())
+        assertEquals("…and does not start the sync loop", 0, source.startCalls)
+
+        // The lock is free again; a fresh bring-up succeeds end to end.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, source.bindCalls)
+        assertEquals(1, source.startCalls)
+    }
+
+    /**
+     * Review, 2026-09-23: the generation guard covered configure/bind only. A
+     * bring-up past that check could be parked in the native sync-loop start
+     * when stop() timed out and tore the Kotlin side down; on return it
+     * published ready and started the collectors over the teardown. The
+     * fence now re-checks after the loop start and, when superseded, stops
+     * the loop it started and declines.
+     */
+    @Test
+    fun stop_supersedesABringUpParkedInTheNativeLoopStart_whichThenStopsTheLoopItStarted() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val source = readySource().apply { onStartSuspend = { gate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.startCalls == 0) delay(10) }
+        assertEquals(1, source.bindCalls)
+
+        withTimeout(5_000) { service.stop() } // times out on the lock, tears the Kotlin side down
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        gate.complete(Unit) // the native start returns into a superseded bring-up
+        assertFalse("superseded: not ready", bringUp.await())
+        assertEquals("…and the loop it started is stopped", 1, source.stopCalls)
+
+        // Fresh bring-up afterwards is whole again.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, source.bindCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    /**
+     * Review, 2026-09-23: hasShieldedSupport()/boundWalletIdOrNull() call
+     * ensureStarted(), which can bootstrap the SDK. A stop() in that interval
+     * used to be absorbed by a generation snapshot taken later; the snapshot
+     * is now taken first, so the bring-up aborts before it ever binds.
+     */
+    @Test
+    fun stop_duringTheSdkBootstrapInterval_abortsTheBringUpBeforeItBinds() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val source = readySource().apply { onSupportSuspend = { gate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.supportCalls == 0) delay(10) }
+
+        withTimeout(5_000) { service.stop() } // times out; the bring-up holds the lock inside the probe
+        gate.complete(Unit)
+
+        assertFalse(bringUp.await())
+        assertEquals("never reached the bind", 0, source.bindCalls)
+        assertEquals(0, source.startCalls)
+        assertEquals(0, source.stopCalls)
+    }
+
+    /**
+     * Review, 2026-09-24: the two-bring-up handoff. Bring-up #1 holds the lock
+     * inside the native bind; #2 is queued on the lock; stop() bumps the
+     * generation and starts polling. #1 returns superseded and releases; the
+     * queued #2 wins the handoff over stop's tryLock and snapshots the
+     * generation stop already produced; #2 then parks in ITS native bind and
+     * stop times out. Without a second bump in the fallback, #2's snapshot
+     * still matched and it went on to start the loop and publish ready over
+     * the teardown.
+     */
+    @Test
+    fun stop_fallbackAlsoSupersedesASecondBringUpThatTookTheLockDuringItsPoll() = runBlocking {
+        val gate1 = CompletableDeferred<Unit>()
+        val gate2 = CompletableDeferred<Unit>()
+        var binds = 0
+        val source = readySource().apply { onBindSuspend = { if (++binds == 1) gate1.await() else gate2.await() } }
+        val service = service(source, stopLockTimeoutMs = 400)
+
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.bindCalls == 0) delay(10) } // #1 inside its bind
+        val second = async(Dispatchers.Default) { service.ensureShieldedReady() } // #2 queued on the lock
+        delay(50)
+        val stop = async(Dispatchers.Default) { service.stop() } // polling for the lock
+        delay(100)
+
+        gate1.complete(Unit) // #1 returns superseded; the queued #2 takes the lock…
+        withTimeout(5_000) { while (source.bindCalls < 2) delay(10) } // …and parks in its own bind
+        assertFalse(first.await())
+        withTimeout(5_000) { stop.await() } // times out on #2; fallback tears down
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        gate2.complete(Unit) // #2's native bind returns
+        assertFalse("#2 snapshotted a generation the fallback has since moved past", second.await())
+        assertEquals("no loop was ever started", 0, source.startCalls)
+
+        // A genuinely new bring-up after the stop is whole.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(3, source.bindCalls)
+        assertEquals(1, source.startCalls)
+    }
+
+    /** The uncontended path is unchanged: stop under the lock, and the native loop IS stopped. */
+    @Test
+    fun stop_uncontended_stillStopsTheNativeLoopUnderTheLock() = runBlocking {
+        val source = readySource()
+        val service = service(source, stopLockTimeoutMs = 200)
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(1, source.startCalls)
+
+        service.stop()
+
+        assertEquals(1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+        // Idempotent: a second stop with nothing ready touches the SDK no further.
+        service.stop()
+        assertEquals(1, source.stopCalls)
+    }
 
     // ── Inertness: flag off means NOTHING touches the SDK ─────────────────
 
