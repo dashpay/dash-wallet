@@ -257,21 +257,33 @@ class SdkShieldedInviteCreationTest {
     }
 
     @Test
-    fun broadcast_wrapsShareLinkAndPersistenceInTheOneLink() = runTest {
+    fun broadcast_persistsRawLinkBeforeGeneratingAndPersistingOneLink() = runTest {
         val source = happySource()
         val dao = dao()
-        val inserted = slot<Invitation>()
+        val inserted = mutableListOf<Invitation>()
         coEvery { dao.insert(capture(inserted)) } just Runs
         val oneLink = "https://dashpay.onelink.appsflyersdk.com/xyz?af_dp=dashpay"
 
-        val result = service(source = source, invitationsDao = dao, generateOneLink = { oneLink })
-            .createShieldedInvite("alice", "Alice", "", contested = false)
+        val result = service(
+            source = source,
+            invitationsDao = dao,
+            generateOneLink = { link ->
+                assertEquals(1, inserted.size)
+                assertEquals(link.link.toString(), inserted[0].dynamicLink)
+                assertEquals(inserted[0].dynamicLink, inserted[0].shortDynamicLink)
+                oneLink
+            }
+        ).createShieldedInvite("alice", "Alice", "", contested = false)
 
         val invite = (result as SdkWriteResult.Broadcast).value
-        // Shared/copied link AND the persisted row are the OneLink, not the raw deep link (H1).
         assertEquals(oneLink, invite.shareLink)
-        assertEquals(oneLink, inserted.captured.dynamicLink)
-        assertEquals(oneLink, inserted.captured.shortDynamicLink)
+        assertEquals(2, inserted.size)
+        assertEquals(invite.linkData.link.toString(), inserted[0].dynamicLink)
+        assertTrue(inserted[0].dynamicLink!!.contains("osk=${bytes32ToHex(spendingKey)}"))
+        assertEquals(inserted[0].dynamicLink, inserted[0].shortDynamicLink)
+        assertEquals(oneLink, inserted[1].dynamicLink)
+        assertEquals(oneLink, inserted[1].shortDynamicLink)
+        assertEquals(inserted[0].fundingAddress, inserted[1].fundingAddress)
         // The raw deep link is retained as the preview source.
         assertTrue(invite.linkData.isShielded)
     }
