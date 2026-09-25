@@ -2035,14 +2035,29 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private var lastSdkProgress: de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress? = null
         private var sdkSampled = false
         private val activityHistory = arrayListOf<SyncActivitySample>()
+        private val memorySampleInFlight = AtomicBoolean(false)
 
         override fun onReceive(context: Context, intent: Intent) {
             // Once a minute while the service runs, one line of process
             // memory next to the sync-activity history — the crash-loop
             // investigation needs to see native-heap/PSS growth over a
-            // session without adb access (cheap in-process reads only,
-            // getPss() is the most expensive at ~ms).
-            logMemory()
+            // session without adb access. NOT on this thread: getPss()
+            // walks /proc/self/smaps, and on the reference install's 2 GB
+            // process that held the main thread — inside this broadcast
+            // receiver — for 5 s or more, four times in one evening (plan
+            // §39.6). One sample in flight at a time; a slow one skips ticks
+            // rather than queueing behind itself.
+            if (memorySampleInFlight.compareAndSet(false, true)) {
+                serviceScope.launch {
+                    try {
+                        logMemory()
+                    } finally {
+                        memorySampleInFlight.set(false)
+                    }
+                }
+            } else {
+                log.debug("previous memory sample still running — skipping this tick's")
+            }
 
             // WHICH ENGINE'S ACTIVITY COUNTS. The detector exists to stop a
             // genuinely idle service, and its four counters were all dashj-fed.
@@ -2096,9 +2111,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * One per-minute memory line into wallet.log. All figures come from
          * in-process syscalls — no dumpsys, no exec: [Runtime] for the JVM
          * heap, [android.os.Debug]'s native-heap counters for the
-         * Rust/dashj allocations, and [android.os.Debug.getPss] (reads
-         * /proc/self/smaps, a few ms — fine at this cadence) for the real
-         * resident footprint the OS kills on. Never throws.
+         * Rust/dashj allocations, and [android.os.Debug.getPss] for the real
+         * resident footprint the OS kills on. `getPss` reads
+         * /proc/self/smaps, whose cost scales with the mapping count: seconds
+         * on a 2 GB replay process (§39.6), so this runs off the main thread
+         * — see the caller. Never throws.
          */
         private fun logMemory() {
             try {
