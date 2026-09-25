@@ -295,6 +295,37 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
+    fun `persisting recovered wallet does not clear an independent wipe recovery guard`() {
+        val originalBackup = backup.readBytes()
+        setField("recoveredWalletPersistencePending", true)
+        setField("walletWipeRecoveryRequired", true)
+
+        app.persistRecoveredWallet(recovered)
+        assertTrue(app.isWalletLoadDegraded)
+        assertTrue(app.isWalletWipeRecoveryRequired)
+        assertEquals(false, retryResult(app))
+
+        val originalPrimary = primary.readBytes()
+        // Must return before initialization or loading, even with a usable primary.
+        app.fullInitialization()
+        assertArrayEquals(originalPrimary, primary.readBytes())
+        assertArrayEquals(originalBackup, backup.readBytes())
+
+        val controller = Robolectric.buildActivity(Activity::class.java).create()
+        assertTrue(controller.get().redirectDegradedWallet(app))
+        assertTrue(controller.get().isFinishing)
+        controller.destroy()
+
+        setField("recoveredWalletPersistencePending", true)
+        setField("walletWipeRecoveryRequired", false)
+        assertTrue(app.isWalletLoadDegraded)
+        assertEquals(false, retryResult(app))
+
+        app.persistRecoveredWallet(recovered)
+        assertFalse(app.isWalletLoadDegraded)
+    }
+
+    @Test
     fun `wipe recovery outranks seed recovery and no replacement wallet is installed or saved`() {
         // A failed primary and backup load latched seed recovery; a Reset
         // Wallet then stopped with its marker on disk (review, PR #1576). The
