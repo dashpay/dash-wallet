@@ -1889,7 +1889,7 @@ class SdkWalletBinderTest {
     }
 
     @Test
-    fun bind_widensAddressWindowsOnce_thenInvalidatesBackfillCoverage() = runBlocking {
+    fun bind_widensAddressWindowsEveryBind_andHealsOnce() = runBlocking {
         val sdk = readySdk()
         val (config, recordedVersion) = healConfig()
         val binder = binder(sdk, config = config, scope = this)
@@ -1908,10 +1908,15 @@ class SdkWalletBinderTest {
         coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) }
         coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) }
 
-        // The recorded version latches ACROSS launches: a fresh binder
-        // (same config store) must not widen again.
+        // The recorded version latches the HEAL across launches — a fresh
+        // binder (same config store) must not arm a second rewind — but the
+        // widening itself runs again: the Rust side keeps the gap limit in
+        // memory only, so the next process is back at 30/100 without it
+        // (plan §39.10, the kill-test fund loss).
         binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
-        assertEquals(1, sdk.widenCalls)
+        assertEquals(2, sdk.widenCalls)
+        assertEquals(1, sdk.armRescanCalls)
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
     }
 
     @Test
@@ -1941,17 +1946,25 @@ class SdkWalletBinderTest {
         assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
     }
 
+    /**
+     * THE KILL-TEST CASE (plan §39.10): an install that healed long ago
+     * restarts mid-scan, or re-creates its SDK wallet. The heal must not
+     * re-run, but the windows must be re-applied — before this change the
+     * resumed scan ran at the Rust defaults and lost funds.
+     */
     @Test
-    fun bind_alreadyHealed_skipsWidening() = runBlocking {
+    fun bind_alreadyHealed_stillWidensTheWindows_butNeverRearmsTheHeal() = runBlocking {
         val sdk = readySdk()
-        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val (config, recordedVersion) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
         val binder = binder(sdk, config = config, scope = this)
 
         binder.bindIfEnabled(unlock)
 
-        assertEquals(0, sdk.widenCalls)
+        assertEquals(1, sdk.widenCalls)
         assertEquals(0, sdk.armRescanCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
         coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+        coVerify(exactly = 0) { config.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, any()) }
     }
 
     @Test

@@ -1422,27 +1422,40 @@ class SdkWalletBinder internal constructor(
     }
 
     /**
-     * Step 4c — the one-shot migration address-window heal.
+     * Step 4c — the address-window widening, EVERY bind, plus the one-shot
+     * migration heal on top of it.
      *
-     * Widens the SDK wallet's standard-family gap limits to the Rust max
-     * ([DashSdkService.widenAddressWindows]) and, on success, invalidates
-     * the recorded DIP-15 backfill coverage so the gate's next consult
-     * forces a full rewind: the re-scan then matches history against the
-     * widened script set, recovering transactions whose addresses sat past
-     * the old window (the same-seed-client frontier gap observed in the
-     * field). Guarded by [DashPayConfig.SDK_GAP_WIDENED_VERSION] so the
-     * widening + forced rewind happen ONCE per heal version, not per
-     * launch; a failed attempt records nothing and retries on the next
-     * bind. Never throws — the bind must survive this step failing.
+     * The widening ([DashSdkService.widenAddressWindows]) raises the SDK
+     * wallet's standard-family gap limits to the Rust max. It is applied on
+     * every bind because the Rust side keeps `gap_limit` in memory only —
+     * no changeset, no persistence — so every fresh process, and every
+     * re-created SDK wallet, comes up at the defaults (30 for BIP44, 100 for
+     * CoinJoin). It used to run once per heal version; on 2026-09-23 and
+     * 2026-09-25 (plan §39.10) a process killed mid-scan resumed at those
+     * defaults, and the outputs paid to change addresses the killed session
+     * had derived past `used + 30` were never rediscovered — a fund loss
+     * that only the now-removed committed-range sweep (rust-dashcore#1016)
+     * used to mask. Idempotent and cheap (three FFI calls, deriving only up
+     * to the window), and it runs here, before the engine starts, so the
+     * resumed scan runs at the same width as the killed one.
+     *
+     * The HEAL — the retroactive part — stays once per version: on the
+     * first successful widening it arms the SPV watermark rewind to birth
+     * and invalidates the recorded DIP-15 backfill coverage, so the re-scan
+     * matches history against the widened script set (the same-seed-client
+     * frontier gap observed in the field). Guarded by
+     * [DashPayConfig.SDK_GAP_WIDENED_VERSION]; a failed attempt records
+     * nothing and retries on the next bind. Never throws — the bind must
+     * survive this step failing.
      */
     private suspend fun maybeWidenAddressWindows(walletIdHex: String) {
         try {
-            val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
-            if (done >= GAP_WIDEN_HEAL_VERSION) return
             if (!sdkService.widenAddressWindows(walletIdHex)) {
-                log.warn("address-window heal did not complete; will retry next bind")
+                log.warn("address-window widening did not complete; will retry next bind")
                 return
             }
+            val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
+            if (done >= GAP_WIDEN_HEAL_VERSION) return // windows re-applied; the heal already ran
             // Retroactivity: rewind the SPV filter watermark to the wallet's
             // birth DIRECTLY, not only via the DashPay backfill gate — the
             // gate's rewind rides the contact-provisioning pass, which never
