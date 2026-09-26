@@ -469,6 +469,9 @@ class SendCoinsTaskRunner @Inject constructor(
             recovery,
             finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) }
         )
+        // The wallet that signed this, remembered before the request leaves. Everything after the
+        // answer comes back is done to this one or not at all.
+        val signingWallet = walletData.wallet ?: throw IllegalStateException("wallet is not available")
 
         try {
             val response = directPayHttpClient.call(request)
@@ -526,9 +529,14 @@ class SendCoinsTaskRunner @Inject constructor(
             throw PaymentSubmissionPendingException(tx.txId, e)
         }
 
-        // Acknowledged, so the payee has the payment whatever happens from here.
+        // Acknowledged, so the payee has the payment whatever happens from here - but "here" may
+        // belong to a different wallet than the one that signed. This whole function is
+        // NonCancellable and the wipe listener drains only the verifier's watches, so an answer
+        // that arrives late runs on regardless, and by then a wipe may have installed a
+        // replacement that passes the readiness barrier precisely because the wipe emptied the
+        // pending store. maybeCommitTx does not check whose transaction it is given.
         val sent = try {
-            sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true)
+            sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true, originWallet = signingWallet)
         } catch (e: Exception) {
             // Committing locally can still fail, and several of those failures land before
             // maybeCommitTx: a leftover-balance check, verification, the database. The payment is
@@ -547,6 +555,12 @@ class SendCoinsTaskRunner @Inject constructor(
         // would leave a process death here with a committed payment, a recorded order and no way
         // to attribute it, which is exactly what makes an order unretrievable.
         try {
+            // Same wallet, same reason: attribution would write metadata for a transaction the
+            // replacement does not hold, and cancelling would free outpoints and drop records
+            // belonging to a store the wipe has already emptied.
+            if (!pendingPaymentVerifier.stillOwnedBy(signingWallet)) {
+                throw IllegalStateException("the wallet that sent ${sendRequest.tx.txId} has been wiped")
+            }
             applyGiftCardRecoveryMetadata(sendRequest.tx.txId, serviceName, recovery)
             pendingPaymentVerifier.cancelQuarantine(sendRequest.tx)
         } catch (e: Exception) {
@@ -788,11 +802,20 @@ class SendCoinsTaskRunner @Inject constructor(
         txCompleted: Boolean = false,
         checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
-        serviceName: String? = null
+        serviceName: String? = null,
+        originWallet: Wallet? = null
     ): Transaction = withContext(Dispatchers.IO) {
         // Callers may have built this request before restoration finished, so wait here too.
         pendingPaymentVerifier.awaitRestored()
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        // A caller that signed against a particular wallet passes it, and this commits to that one
+        // rather than to whatever is installed by the time we get here. The two differ only after
+        // a wipe, and then committing is the harm: maybeCommitTx does not ask whether the
+        // transaction belongs to the wallet it is handed, so the old wallet's payment would be
+        // imported into the replacement and broadcast from it, without needing any of its keys.
+        if (originWallet != null && !pendingPaymentVerifier.stillOwnedBy(originWallet)) {
+            throw IllegalStateException("the wallet that signed ${sendRequest.tx.txId} has been wiped")
+        }
+        val wallet = originWallet ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         val watch = Stopwatch.createStarted()
         val currentThread = Thread.currentThread()

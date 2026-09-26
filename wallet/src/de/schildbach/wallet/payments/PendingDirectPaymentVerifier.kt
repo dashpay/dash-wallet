@@ -376,11 +376,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
 
     /**
-     * True while [origin] is still the installed wallet. Everything this class does on behalf of a
-     * payment is done to the wallet that made it, and a wipe swaps that out underneath a running
-     * job, so each pass asks again before acting.
+     * True while [origin] is still the installed wallet. Everything done on behalf of a payment
+     * is done to the wallet that made it, and a wipe swaps that out underneath work already in
+     * flight, so anything holding a wallet asks again before acting on it.
+     *
+     * Public because the watches this class owns are not the only such work: a payment's HTTP
+     * submission outlives cancellation as well, and it has to answer the same question.
      */
-    private fun stillOwnedBy(origin: Wallet): Boolean = walletData.wallet === origin
+    fun stillOwnedBy(origin: Wallet): Boolean = walletData.wallet === origin
 
     private suspend fun verify(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): Transaction? {
         log.info("watching the network for possibly-sent tx {} (submitted to {})", tx.txId, payment.paymentUrl)

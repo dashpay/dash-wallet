@@ -40,10 +40,13 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.spyk
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import okhttp3.mockwebserver.SocketPolicy
 import org.bitcoin.protocols.payments.Protos
 import org.bitcoinj.core.Address
@@ -67,6 +70,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -946,7 +950,10 @@ class SendCoinsTaskRunnerBIP70Test {
                 any<Boolean>(),
                 any<Boolean>(),
                 isNull(),
-                isNull()
+                isNull(),
+                // the signing wallet, threaded through since a late acknowledgement must not
+                // commit to whatever wallet a wipe has installed in the meantime
+                any<Wallet>()
             )
         } throws IllegalStateException("could not commit")
         val sendRequest = createTestSendRequest(testAddress, testAmount)
@@ -1068,4 +1075,50 @@ class SendCoinsTaskRunnerBIP70Test {
             )
         }
     }
+
+    @Test
+    fun `an acknowledgement that arrives after a wipe is not committed to the replacement wallet`() = runTest {
+        // Given: the payee takes long enough to answer that a wipe lands while the POST is out.
+        // directPay is NonCancellable and the wipe listener drains only the verifier's watches,
+        // so this call runs on regardless of what happened to the wallet underneath it.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val paymentIntent = createBip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+        val replacement = mockk<Wallet>(relaxed = true)
+
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                // the security wipe, mid-request: a brand new wallet is installed
+                every { walletDataProvider.wallet } returns replacement
+                return MockResponse()
+                    .setResponseCode(HttpURLConnection.HTTP_OK)
+                    .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                    .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+            }
+        }
+
+        // When
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(
+                sendRequest,
+                paymentIntent,
+                "PiggyCards",
+                PaymentRecoveryMetadata(isGiftCardPurchase = true)
+            )
+            fail("an acknowledged payment was committed after its wallet had been wiped")
+        } catch (e: PaymentSubmissionPendingException) {
+            // Expected. The payee has the transaction, so this is not a failure to report as one,
+            // but nothing local may be written on behalf of a wallet that no longer exists.
+        }
+
+        // Then: the erased wallet's transaction never reaches its replacement. maybeCommitTx does
+        // not ask whose transaction it is given, so nothing below this guard would have stopped
+        // the old payment being imported and broadcast from a wallet that never made it.
+        verify(exactly = 0) { replacement.maybeCommitTx(any()) }
+        // and nothing is attributed or cleaned up against it either
+        coVerify(exactly = 0) { metadataProvider.markGiftCardTransaction(any(), any(), any()) }
+        coVerify(exactly = 0) { pendingPaymentVerifier.cancelQuarantine(any()) }
+    }
+
 }
