@@ -45,6 +45,7 @@ import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.WalletUIConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -845,6 +846,66 @@ class CutoverUiDataServiceTest {
 
         override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = utxoCount
 
+        /**
+         * The ENGINE's next unused receive address (null = read unavailable),
+         * and how many times it has been asked for — the refresh cadence is
+         * part of the contract, since the pointer only moves when a receive
+         * lands and that arrives as a tx event.
+         */
+        var nextReceiveAddress: String? = "yENGINEnextUnusedAddress"
+        var nextReceiveAddressReads = 0
+
+        /**
+         * Holds a read inside the FFI, modelling the real blocking call: the
+         * engine read cannot be cancelled, so the binding can change while a
+         * caller is parked in it.
+         *
+         * Gated by CALLING THREAD, not by a one-shot flag: the balance
+         * pipeline's own refresh reads through this same method, and if it were
+         * the one parked, `collectLatest` could never finish cancelling the
+         * pipeline on deactivation — the test would wedge on its own fixture,
+         * or (worse, and observed) the pipeline would eat the one-shot and let
+         * the read under test sail through before the wipe, passing vacuously.
+         */
+        val receiveAddressGate = java.util.concurrent.CountDownLatch(1)
+
+        /** Only a read on THIS thread parks. */
+        @Volatile
+        var gatedReadThreadName: String? = null
+
+        /** Set once the gated read is actually parked, so a test can sequence against it. */
+        @Volatile
+        var receiveAddressReadParked = false
+
+        /** The engine's internal (change) chain — never advertised to a payer. */
+        var nextChangeAddress: String? = "yENGINEinternalChangeAddress"
+
+        override fun nextChangeAddressOrNull(walletIdHex: String, accountIndex: Int): String? =
+            nextChangeAddress
+
+        /** Match [gatedReadThreadName] as a PREFIX — the pipeline's dispatcher threads are numbered. */
+        @Volatile
+        var gateByThreadNamePrefix = false
+
+        override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
+            nextReceiveAddressReads++
+            val gate = gatedReadThreadName
+            val here = Thread.currentThread().name
+            val gated = gate != null && (if (gateByThreadNamePrefix) here.startsWith(gate) else here == gate)
+            // Capture the answer BEFORE parking. The engine computes its result
+            // and is then slow to return; a fake that read the field after the
+            // gate would hand back whatever the test set meanwhile, which makes
+            // an out-of-order-publication test pass vacuously (it did).
+            val answer = nextReceiveAddress
+            if (gated) {
+                receiveAddressReadParked = true
+                check(receiveAddressGate.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                    "receive-address gate never released"
+                }
+            }
+            return answer
+        }
+
         override suspend fun currentTotalDuffs(walletIdHex: String): Long =
             currentBalanceSplitDuffs(walletIdHex).total
 
@@ -889,6 +950,40 @@ class CutoverUiDataServiceTest {
 
     private fun configWithState(state: String?): DashPayConfig = mockk {
         every { observe(DashPayConfig.CUTOVER_STATE) } returns flowOf(state)
+    }
+
+    /**
+     * [configWithState] backed by a MUTABLE state, so a test can drive the
+     * cutover flag after [CutoverUiDataService.start] — the rollback
+     * (CUT_OVER → DUAL_RUNNING) path. The plain helper returns a one-shot
+     * `flowOf`, which can never flip, so nothing could reach the deactivation
+     * branch before this existed.
+     */
+    /**
+     * Pump the test scheduler until [condition] holds or the deadline passes.
+     *
+     * The cutover pipelines hop onto a REAL dispatcher
+     * ([CutoverUiDataService.refreshNativeSplit] wraps the engine reads in
+     * `withContext(Dispatchers.IO)`), so a deactivation is not fully drained by
+     * virtual time alone — `runCurrent()` returns before the real-threaded work
+     * that the cancellation is waiting on has finished.
+     */
+    private fun kotlinx.coroutines.test.TestScope.pumpUntil(
+        timeoutMs: Long = 10_000,
+        condition: () -> Boolean
+    ): Boolean {
+        val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+        while (System.nanoTime() < deadline) {
+            runCurrent()
+            if (condition()) return true
+            Thread.sleep(5)
+        }
+        runCurrent()
+        return condition()
+    }
+
+    private fun configWithMutableState(state: MutableStateFlow<String?>): DashPayConfig = mockk {
+        every { observe(DashPayConfig.CUTOVER_STATE) } returns state
     }
 
     private fun buildService(
@@ -1419,6 +1514,364 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         assertNull(service.sdkSpendableUtxoCountOrNull())
+    }
+
+    // ── Receive-address overlay (SR-03 / D-003) ──────────────────────
+
+    @Test
+    fun preCutover_receiveAddressKeepsTheDashjChain() = runTest {
+        // Pre-cutover dashj still owns the key chain and its pointer is live,
+        // so the overlay must not engage — nor touch the SDK at all.
+        val source = FakeSource()
+        val service = buildService(source, configWithState("DUAL_RUNNING"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkReceiveAddressOrNull())
+        assertNull(service.sdkReceiveAddressLiveOrNull())
+        assertEquals(0, source.nextReceiveAddressReads)
+    }
+
+    @Test
+    fun postCutover_receiveAddressServedFromTheEngine() = runTest {
+        // FIX-pin (SR-03 / D-003): post-cutover the dashj wallet is HELD, so
+        // its receive pointer is frozen wherever the restore left it — index 0
+        // on a fresh restore, an address the chain has ALREADY paid. The
+        // engine's pointer comes from the SPV scan's used-set.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun postCutover_receiveAddressAdvancesOnAnEngineTxEvent() = runTest {
+        // The one thing that moves the engine's pointer is a receive landing on
+        // the current address — which arrives as a tx event, so the cache the
+        // synchronous overlay serves must be re-read on that event.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope, txEvents = events
+        )
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        source.nextReceiveAddress = "yENGINEsecondUnusedAddress"
+        events.emit(
+            L1TxEvent.Detected(displayHex(3), 1_000_000L, null, contextCode = 0, directionCode = 0)
+        )
+
+        // The refresh hops onto a REAL dispatcher (refreshNativeSplit wraps the
+        // engine read in withContext(IO)), so virtual time alone does not drain
+        // it — a bare runCurrent() here passed only by luck.
+        assertTrue(
+            "the cache must follow the engine pointer after a tx event",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEsecondUnusedAddress" }
+        )
+    }
+
+    @Test
+    fun postCutover_failedEngineReadHoldsTheLastAddress() = runTest {
+        // Unlike the balance split and the UTXO count, a failed read must NOT
+        // drop the override to null: null sends the overlay back to the frozen
+        // dashj index-0 address, which is the defect itself. A slightly stale
+        // engine address is at worst one the engine has not yet marked used.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope, txEvents = events
+        )
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        source.nextReceiveAddress = null
+        val readsBefore = source.nextReceiveAddressReads
+        events.emit(
+            L1TxEvent.Detected(displayHex(4), 1_000_000L, null, contextCode = 0, directionCode = 0)
+        )
+        // Wait for the refresh to have actually ATTEMPTED the read, otherwise a
+        // still-correct cache would prove nothing about the hold.
+        assertTrue(
+            "the refresh must have attempted an engine read",
+            pumpUntil { source.nextReceiveAddressReads > readsBefore }
+        )
+
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+        // …and the live read reports the same held value rather than nothing.
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressLiveOrNull())
+    }
+
+    @Test
+    fun postCutover_receiveAddressUnavailableFromTheStartFallsBackToDashj() = runTest {
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+            .apply { nextReceiveAddress = null }
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        assertNull(service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun unshieldDestinationIsNeverTheAdvertisedReceiveAddress() = runTest {
+        // The Receive screen advertises the engine's next unused RECEIVE address.
+        // Post-cutover `fresh` and `current` coincide there (the engine tracks
+        // USED, not ISSUED), so if a self-transfer drew from the same chain it
+        // would pay the advertised address — and a counterparty handed that QR
+        // who simply never pays it can watch it and learn the withdrawal and its
+        // amount. Shielding exists to prevent exactly that.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        val advertised = service.sdkReceiveAddressLiveBlockingOrNull()
+        val selfTransfer = service.sdkUnadvertisedAddressLiveBlockingOrNull()
+
+        assertEquals("yENGINEnextUnusedAddress", advertised)
+        assertEquals("yENGINEinternalChangeAddress", selfTransfer)
+        assertNotEquals(
+            "a self-transfer must never be paid to the advertised receive address",
+            advertised,
+            selfTransfer
+        )
+        // …and it stays separate when the receive handout goes UNPAID, which is
+        // the attack: the engine's receive pointer does not move until something
+        // is actually seen on chain, so a naive implementation would keep
+        // returning that same advertised address for every later withdrawal.
+        repeat(3) {
+            assertEquals(
+                "the advertised address is unchanged while it stays unpaid",
+                advertised,
+                service.sdkReceiveAddressLiveBlockingOrNull()
+            )
+            assertNotEquals(advertised, service.sdkUnadvertisedAddressLiveBlockingOrNull())
+        }
+    }
+
+    @Test
+    fun unadvertisedDestinationNeverFallsBackToTheWarmReceiveCache() = runTest {
+        // The dangerous shape: the RECEIVE cache is warm (so anything that falls
+        // back through the overlaid freshReceiveAddress() would get the
+        // advertised address) while the CHANGE read is unavailable. The
+        // unadvertised accessor must answer null and let the caller fail, never
+        // substitute the advertised address — that would reintroduce the exact
+        // leak this destination exists to prevent, and precisely when the engine
+        // is already misbehaving.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals(
+            "precondition: the receive cache is warm",
+            "yENGINEnextUnusedAddress",
+            service.sdkReceiveAddressOrNull()
+        )
+
+        source.nextChangeAddress = null
+
+        assertNull(
+            "an unavailable change read must not borrow the advertised address",
+            service.sdkUnadvertisedAddressLiveBlockingOrNull()
+        )
+        // …and the receive cache is still warm, proving the null was a refusal
+        // rather than an empty overlay.
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+    }
+
+    @Test
+    fun unshieldDestinationIsRefusedWhenTheBindingIsGone() = runTest {
+        // Same wallet-isolation rule as the receive read: paying our OWN funds to
+        // an address derived from a wiped binding would send them somewhere the
+        // CURRENT wallet cannot spend.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEinternalChangeAddress", service.sdkUnadvertisedAddressLiveBlockingOrNull())
+
+        state.value = "DUAL_RUNNING"
+        assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == null })
+
+        assertNull(service.sdkUnadvertisedAddressLiveBlockingOrNull())
+    }
+
+    @Test
+    fun rollback_clearsTheReceiveAddressOverlayAndTheBoundWallet() = runTest {
+        // A rollback (CUT_OVER → DUAL_RUNNING) hands the key chain back to
+        // dashj, whose pointer is live again. If the overlay kept serving, the
+        // Receive screen would advertise an address derived from the SDK
+        // binding the rollback just abandoned — and the live read would go on
+        // answering from a wallet id nothing owns any more.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        state.value = "DUAL_RUNNING"
+        runCurrent()
+
+        assertNull("the cached overlay must stop serving", service.sdkReceiveAddressOrNull())
+        assertNull("the live read must stop serving", service.sdkReceiveAddressLiveOrNull())
+        // The balance overlays clear on the same branch — pinned here too, so a
+        // future edit cannot drop one of them unnoticed.
+        assertNull(service.sdkBalanceOrNull())
+        assertNull(service.sdkSpendableUtxoCountOrNull())
+    }
+
+    @Test
+    fun rollbackRevokesOwnershipEvenWhileThePipelineReadIsParked() = runTest {
+        // The pipeline's own refresh blocks in an uncancellable FFI read, and
+        // `collectLatest` CANCELS AND JOINS the previous run before its
+        // replacement action can execute. Revoking ownership from inside that
+        // action therefore left the retired binding authorized for as long as the
+        // read stayed parked. Ownership must be revoked by a collector that
+        // nothing can park.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        // Park the PIPELINE's read (any thread but the test's), then roll back.
+        source.gatedReadThreadName = "DefaultDispatcher"
+        source.gateByThreadNamePrefix = true
+        state.value = "DUAL_RUNNING"
+
+        assertTrue(
+            "ownership must be revoked without waiting for the parked read",
+            pumpUntil(5_000) { service.sdkReceiveAddressOrNull() == null }
+        )
+        assertNull(service.sdkReceiveAddressLiveOrNull())
+        assertNull(service.sdkUnadvertisedAddressLiveBlockingOrNull())
+
+        source.receiveAddressGate.countDown()
+    }
+
+    @Test
+    fun anOlderReadCannotOverwriteANewerPublishedAddress() = runTest {
+        // Generation separates BINDINGS, not reads within one binding. A refresh
+        // can take address A, pause in the FFI, a live read can publish the
+        // engine's newer B, and the released refresh would then put the
+        // ALREADY-USED A back on the Receive screen.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        // Start an OLDER read and park it holding A.
+        val readThreadName = "sr03-older-read"
+        source.nextReceiveAddress = "yENGINEaddressA"
+        source.gatedReadThreadName = readThreadName
+        val older = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, readThreadName)
+        }
+        val olderResult = older.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        val deadline = System.nanoTime() + 10_000_000_000L
+        while (!source.receiveAddressReadParked && System.nanoTime() < deadline) Thread.sleep(5)
+        assertTrue("the older read never reached the FFI", source.receiveAddressReadParked)
+
+        // A NEWER read publishes B while the older one is still parked.
+        source.gatedReadThreadName = null
+        source.nextReceiveAddress = "yENGINEaddressB"
+        assertEquals("yENGINEaddressB", service.sdkReceiveAddressLiveBlockingOrNull())
+        assertEquals("yENGINEaddressB", service.sdkReceiveAddressOrNull())
+
+        // Release the older read: it must not put A back.
+        source.receiveAddressGate.countDown()
+        olderResult.get()
+        older.shutdown()
+
+        assertEquals(
+            "an older read must not overwrite a newer published address",
+            "yENGINEaddressB",
+            service.sdkReceiveAddressOrNull()
+        )
+    }
+
+    @Test
+    fun inFlightReadCannotRepublishAWipedWalletsAddress() = runTest {
+        // WALLET ISOLATION. Reset Wallet clears the cutover state IN-PROCESS
+        // (WalletApplicationExt.clearDatabasesInner → resetForWalletWipe; the
+        // code says in as many words that it does not restart the process), so
+        // this service outlives the wallet it was reading for.
+        //
+        // The race: wallet A's live read captures A's id, blocks in the FFI,
+        // and the wipe lands while it is parked there. If the read republished
+        // on the way out, the cache would hold A's address — and the sync
+        // overlay would then hand it to wallet B, whose own engine read is not
+        // answering yet. WalletApplication validates the address's NETWORK, not
+        // which seed owns it, so nothing downstream catches it: B's Receive
+        // screen advertises an address only the ERASED wallet can spend.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        source.nextReceiveAddress = "yWALLETaEngineAddress"
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yWALLETaEngineAddress", service.sdkReceiveAddressOrNull())
+
+        // Park a live read for wallet A inside the FFI, and wait until it really
+        // is parked before wiping — otherwise the test could wipe first and
+        // prove nothing.
+        val readThreadName = "sr03-parked-live-read"
+        source.gatedReadThreadName = readThreadName
+        val parked = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, readThreadName)
+        }
+        val inFlight = parked.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        val deadline = System.nanoTime() + 10_000_000_000L
+        while (!source.receiveAddressReadParked && System.nanoTime() < deadline) Thread.sleep(5)
+        assertTrue("the live read never reached the FFI", source.receiveAddressReadParked)
+
+        // The wipe happens while it is parked.
+        state.value = "DUAL_RUNNING"
+        assertTrue(
+            "the wipe must empty the cache",
+            pumpUntil { service.sdkReceiveAddressOrNull() == null }
+        )
+
+        // Release the parked read: it returns A's address from the engine.
+        source.receiveAddressGate.countDown()
+        assertNull("a read whose binding is gone must answer nothing", inFlight.get())
+        parked.shutdown()
+
+        // Wallet B activates, and its OWN engine read is unavailable — the only
+        // way A's leftover could surface.
+        source.nextReceiveAddress = null
+        state.value = "CUT_OVER"
+        pumpUntil(2_000) { false }
+
+        assertNull(
+            "wallet B must never be served the wiped wallet's address",
+            service.sdkReceiveAddressOrNull()
+        )
+        assertNull(service.sdkReceiveAddressLiveOrNull())
+    }
+
+    @Test
+    fun postCutover_liveReceiveAddressBypassesTheCache() = runTest {
+        // The Receive screen reads live: it must see a pointer move that no tx
+        // event or ticker has published into the cache yet.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        source.nextReceiveAddress = "yENGINEliveAddress"
+
+        assertEquals("yENGINEliveAddress", service.sdkReceiveAddressLiveOrNull())
+        // …and publishes what it read, so the synchronous overlay follows.
+        assertEquals("yENGINEliveAddress", service.sdkReceiveAddressOrNull())
     }
 
     @Test

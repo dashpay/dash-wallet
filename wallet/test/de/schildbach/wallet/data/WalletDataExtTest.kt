@@ -37,9 +37,17 @@ import org.junit.Test
  * `freshReceiveAddress()` forces a SYNCHRONOUS full-wallet save (measured
  * 1.2s of `[main]` at 215 DashPay friend chains) — every main-thread call
  * site (LiveData observers, click listeners, dialog callbacks) goes through
- * them instead. These tests pin the contract: the underlying dashj call runs
+ * them instead. These tests pin the contract: the underlying call runs
  * on a DIFFERENT (IO) thread than the caller, the wallet's bitcoinj Context
  * is propagated onto that thread, and results pass through unchanged.
+ *
+ * The helpers dispatch to the `Live` accessors
+ * ([WalletData.freshReceiveAddressLive] /
+ * [org.dash.wallet.common.WalletDataProvider.freshReceiveAddressStringLive]),
+ * which is what makes them read the SDK engine's next UNUSED address
+ * post-cutover instead of the HELD dashj chain's frozen pointer (SR-03 /
+ * D-003); pre-cutover those delegate straight back to the dashj accessors, so
+ * the thread and context contract below is the same call either way.
  */
 class WalletDataExtTest {
 
@@ -52,7 +60,7 @@ class WalletDataExtTest {
         var executionThread: Thread? = null
         val walletData = mockk<WalletData> {
             every { wallet } returns null
-            every { freshReceiveAddress() } answers {
+            every { freshReceiveAddressLive() } answers {
                 executionThread = Thread.currentThread()
                 address
             }
@@ -85,7 +93,7 @@ class WalletDataExtTest {
         var observedContext: Context? = null
         val walletData = mockk<WalletData> {
             every { wallet } returns dashjWallet
-            every { freshReceiveAddress() } answers {
+            every { freshReceiveAddressLive() } answers {
                 observedContext = Context.get()
                 address
             }
@@ -100,7 +108,7 @@ class WalletDataExtTest {
     fun freshReceiveAddressStringOffMain_returnsBase58OfTheSameAddress() {
         val walletData = mockk<WalletData> {
             every { wallet } returns null
-            every { freshReceiveAddress() } returns address
+            every { freshReceiveAddressLive() } returns address
         }
 
         val result = runBlocking { walletData.freshReceiveAddressStringOffMain() }
@@ -113,11 +121,13 @@ class WalletDataExtTest {
         // The neutral (common-module) variant used by feature/integration
         // callers — same off-main contract, stubbable via the interface
         // method (it is an extension, not an interface member, precisely so
-        // existing fakes keep working).
+        // existing fakes keep working) — here the `Live` accessor the helper
+        // now calls, which for a fake that stubs only the plain one still
+        // resolves through the interface default.
         val callerThread = Thread.currentThread()
         var executionThread: Thread? = null
         val provider = mockk<WalletDataProvider> {
-            every { freshReceiveAddressString() } answers {
+            every { freshReceiveAddressStringLive() } answers {
                 executionThread = Thread.currentThread()
                 "ydW78zVxRgNhANX2qtG4saSCC5ejNQjw2U"
             }

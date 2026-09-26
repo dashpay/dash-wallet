@@ -40,6 +40,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -1996,16 +1997,215 @@ public class WalletApplication extends MultiDexApplication
         autoLogout.stopTimer();
     }
 
-    @NotNull
-    @Override
-    public Address currentReceiveAddress() {
-        return wallet.currentReceiveAddress();
+    /**
+     * The cutover overlay behind {@link #currentReceiveAddress()} and
+     * {@link #freshReceiveAddress()}: the ENGINE's next unused BIP-44 external
+     * address, or null to keep the dashj answer.
+     *
+     * <p>Post-cutover the dashj wallet is HELD — it never sees a block, so its
+     * receive key chain's pointer stays wherever the restore left it (index 0 on
+     * a fresh restore) and both methods below served an address the chain had
+     * already paid (SR-03 / D-003). The engine's pointer comes from the SPV
+     * scan's used-set, so it skips that range. See
+     * {@code CutoverUiDataService.sdkReceiveAddressOrNull} for why this is the
+     * cached engine value rather than a live FFI read, and
+     * {@link #currentReceiveAddressLive()} for the off-main callers that want
+     * the live one.
+     */
+    @Nullable
+    private Address sdkReceiveAddressOrNull() {
+        if (cutoverUiDataService == null) {
+            return null;
+        }
+        return toDashjAddressOrNull(cutoverUiDataService.sdkReceiveAddressOrNull());
+    }
+
+    /**
+     * Parse a base58 address the SDK produced into the dashj type, or null when
+     * it is absent or unparseable. A malformed engine address must degrade to
+     * the dashj fallback, never throw out of a receive-address read.
+     */
+    @Nullable
+    private Address toDashjAddressOrNull(@Nullable final String base58) {
+        if (base58 == null) {
+            return null;
+        }
+        try {
+            return Address.fromBase58(getNetworkParameters(), base58);
+        } catch (final Exception x) {
+            log.warn("engine receive address {} is not valid on {}; keeping dashj",
+                    base58, getNetworkParameters().getId(), x);
+            return null;
+        }
     }
 
     @NotNull
     @Override
+    public Address currentReceiveAddress() {
+        final Address sdkAddress = sdkReceiveAddressOrNull();
+        if (sdkAddress != null) {
+            return sdkAddress;
+        }
+        return wallet.currentReceiveAddress();
+    }
+
+    /**
+     * Post-cutover this returns the ENGINE's next unused receive address too —
+     * the engine exposes no per-invoice issuing marker
+     * ({@code core_wallet_next_receive_address} is idempotent and answers from
+     * the used-set), so "fresh" and "current" coincide until a payment lands and
+     * moves the pointer. That is a deliberate narrowing of dashj's per-call
+     * handout, and it is the correct trade here: dashj's post-cutover "fresh"
+     * walked forward from a frozen index-0 base and handed out addresses the
+     * chain had ALREADY paid, which is worse on both counts this method exists
+     * for (correctness and reuse).
+     *
+     * <p>It also no longer forces dashj's synchronous full-wallet save on this
+     * path (~1.2s at 215 DashPay friend chains), because no dashj key is issued.
+     */
+    @NotNull
+    @Override
     public Address freshReceiveAddress() {
+        final Address sdkAddress = sdkReceiveAddressOrNull();
+        if (sdkAddress != null) {
+            return sdkAddress;
+        }
         return wallet.freshReceiveAddress();
+    }
+
+    /**
+     * A LIVE engine read of the next unused receive address, bypassing the cache
+     * {@link #sdkReceiveAddressOrNull()} serves, or null when the engine has no
+     * answer.
+     *
+     * <p>Null means: pre-cutover, rolled back, the SDK is not up, or the read
+     * failed on a COLD cache. On a WARM cache a failed read instead returns the
+     * last known engine address — dropping to null there would send the caller
+     * back to the frozen dashj pointer, which is the defect this exists to fix.
+     * It is also null when the binding CHANGED while the read was blocked (a
+     * rollback, or Reset Wallet wiping the wallet in place): that answer belongs
+     * to a wallet that is no longer current, and serving it would advertise an
+     * erased wallet's address. See {@code CutoverUiDataService
+     * .sdkReceiveAddressLiveBlockingOrNull}.
+     *
+     * <p>BLOCKS on the SDK FFI — it takes the engine's wallet-manager write
+     * lock — so both public callers below are contracted off-main.
+     */
+    @Nullable
+    private Address liveSdkReceiveAddressOrNull() {
+        if (cutoverUiDataService == null) {
+            return null;
+        }
+        return toDashjAddressOrNull(cutoverUiDataService.sdkReceiveAddressLiveBlockingOrNull());
+    }
+
+    /**
+     * {@link #currentReceiveAddress()} with a LIVE engine read instead of the
+     * cached one — for callers already off the main thread that want the
+     * engine's answer as of this instant (the Receive screen and the QR it
+     * shows, the exchange-integration deposit addresses). NOT the unshield or
+     * CoinJoin-combine destinations: those are self-transfers and must never be
+     * paid to an advertised address — see {@link #unadvertisedDestinationLive()}. Falls back to {@link #currentReceiveAddress()} whenever the
+     * engine has no answer, so it is always safe to prefer over it.
+     *
+     * <p>BLOCKS: off-main callers only. See {@code WalletData.currentReceiveAddressLive}.
+     */
+    @NotNull
+    @Override
+    public Address currentReceiveAddressLive() {
+        final Address live = liveSdkReceiveAddressOrNull();
+        return live != null ? live : currentReceiveAddress();
+    }
+
+    /**
+     * {@link #freshReceiveAddress()} with a LIVE engine read. Post-cutover this
+     * is the same engine address {@link #currentReceiveAddressLive()} returns
+     * (see {@link #freshReceiveAddress()} for why the two coincide there);
+     * pre-cutover it is dashj's per-invoice handout, unchanged.
+     *
+     * <p>BLOCKS: off-main callers only — pre-cutover it still forces dashj's
+     * synchronous full-wallet save.
+     */
+    @NotNull
+    @Override
+    public Address freshReceiveAddressLive() {
+        final Address live = liveSdkReceiveAddressOrNull();
+        return live != null ? live : freshReceiveAddress();
+    }
+
+    /**
+     * A destination for the user's OWN money that was never advertised — the
+     * engine's next unused INTERNAL (change) address post-cutover.
+     *
+     * <p>See {@code WalletData.unadvertisedDestinationLive}: the unshield
+     * withdrawal and the CoinJoin combine must not be paid to the address the
+     * Receive screen is showing, because post-cutover that address is the same
+     * one {@link #freshReceiveAddressLive()} returns, and a counterparty who was
+     * handed the QR and never paid it can watch it.
+     *
+     * <p><b>Post-cutover this FAILS rather than falling back.</b> There is no
+     * safe fallback on this side: {@link #freshReceiveAddress()} is itself
+     * overlaid, so on a warm cache it returns the very advertised address this
+     * method exists to avoid — a fallback there would silently reintroduce the
+     * leak precisely when the engine read is failing. Both callers
+     * ({@code ShieldedTransferExecutor}, {@code CoinJoinFundsMigrationService})
+     * catch this strictly BEFORE broadcast and report not-sent, so failing is
+     * merely a retry; leaking would be permanent and invisible.
+     *
+     * <p>Pre-cutover it returns the REAL dashj fresh key — read straight off the
+     * wallet, deliberately not through the overlaid accessor — which is what
+     * these paths used before the SDK overlay existed and is already distinct
+     * from the advertised current key.
+     *
+     * <p>BLOCKS on the SDK FFI: off-main callers only.
+     *
+     * @throws IllegalStateException post-cutover when no unadvertised
+     *     destination can be obtained.
+     */
+    @NotNull
+    @Override
+    public Address unadvertisedDestinationLive() {
+        final boolean cutoverActive =
+                cutoverUiDataService != null && cutoverUiDataService.isCutoverActive();
+        final Address unadvertised = cutoverActive
+                ? toDashjAddressOrNull(cutoverUiDataService.sdkUnadvertisedAddressLiveBlockingOrNull())
+                : null;
+        return decideUnadvertisedDestination(cutoverActive, unadvertised, () -> {
+            // NOT freshReceiveAddress(): that accessor is overlaid and would
+            // serve the cached engine RECEIVE address. Go straight to dashj.
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            return wallet.freshReceiveAddress();
+        });
+    }
+
+    /**
+     * The post-cutover-or-not decision behind {@link #unadvertisedDestinationLive()},
+     * extracted so it is unit-testable without standing up the whole Hilt graph
+     * this Application needs.
+     *
+     * <p>The invariant worth pinning is not merely "throws on null" but that the
+     * post-cutover arm NEVER reaches {@code dashjFreshKey} — a fallback there is
+     * exactly the defect that shipped once already, because the obvious
+     * candidate ({@code freshReceiveAddress()}) is itself overlaid and hands back
+     * the advertised address on a warm cache.
+     *
+     * @throws IllegalStateException post-cutover when [unadvertised] is null.
+     */
+    @VisibleForTesting
+    @NotNull
+    static Address decideUnadvertisedDestination(
+            final boolean cutoverActive,
+            @Nullable final Address unadvertised,
+            @NotNull final java.util.function.Supplier<Address> dashjFreshKey) {
+        if (cutoverActive) {
+            if (unadvertised == null) {
+                throw new IllegalStateException(
+                        "no unadvertised destination available post-cutover; refusing to pay a "
+                                + "self-transfer to the advertised receive address");
+            }
+            return unadvertised;
+        }
+        return dashjFreshKey.get();
     }
 
     @NotNull

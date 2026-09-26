@@ -51,17 +51,27 @@ class PaymentsViewModel @Inject constructor(
     private val _dashPayProfile = MutableStateFlow<DashPayProfile?>(null)
     val dashPayProfile = _dashPayProfile.asLiveData()
 
+    /**
+     * The address the Receive screen advertises. Deliberately the `Live`
+     * accessor: post-cutover the dashj key chain is HELD, so its "current"
+     * pointer is frozen wherever the restore left it — index 0 on a fresh
+     * restore — and the plain read handed the payer back the very address the
+     * wallet had already been funded on (SR-03 / D-003). The live read asks the
+     * SDK engine, whose pointer comes from the SPV scan's used-set and so skips
+     * the used range. Already on [Dispatchers.IO], which the live read requires.
+     */
     suspend fun getCurrentAddress() = withContext(Dispatchers.IO) {
         walletDataProvider.wallet?.let {
             Context.propagate(it.context)
-            walletDataProvider.currentReceiveAddress()
+            walletDataProvider.currentReceiveAddressLive()
         } ?: error("Wallet not yet initialised")
     }
 
+    /** Same live-read reasoning as [getCurrentAddress]. */
     suspend fun getFreshAddress() = withContext(Dispatchers.IO) {
         walletDataProvider.wallet?.let {
             Context.propagate(it.context)
-            walletDataProvider.freshReceiveAddress()
+            walletDataProvider.freshReceiveAddressLive()
         } ?: error("Wallet not yet initialised")
     }
     init {
