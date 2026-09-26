@@ -27,6 +27,7 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.AppDatabaseMigrations
 import de.schildbach.wallet.database.dao.*
+import de.schildbach.wallet.database.dao.TransactionRecordsDao
 import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.integrations.maya.data.SwapOrderDao
@@ -84,6 +85,11 @@ object DatabaseModule {
     @Provides
     fun provideGiftCardDao(appDatabase: AppDatabase): GiftCardDao {
         return appDatabase.giftCardDao()
+    }
+
+    @Provides
+    fun provideTransactionRecordsDao(appDatabase: AppDatabase): TransactionRecordsDao {
+        return appDatabase.transactionRecordsDao()
     }
 
     // DashPay

@@ -139,6 +139,9 @@ dependencies {
     testImplementation "androidx.test:core-ktx:$testCoreVersion"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
+    // the view models here are constructed from final Kotlin classes, which the mockito version
+    // this project pins cannot stand in for
+    testImplementation "io.mockk:mockk:1.13.8"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
     testImplementation "org.robolectric:robolectric:4.15.1"
     testImplementation "androidx.room:room-testing:$roomVersion"

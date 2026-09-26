@@ -21,13 +21,17 @@ import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.dao.TransactionRecordsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
@@ -48,6 +52,10 @@ class WalletTransactionMetadataProviderGiftCardTest {
 
     private lateinit var giftCardDao: GiftCardDao
     private lateinit var cacheDao: TransactionMetadataChangeCacheDao
+    private lateinit var metadataDao: TransactionMetadataDao
+    private lateinit var recordsDao: TransactionRecordsDao
+    private lateinit var walletData: WalletDataProvider
+    private lateinit var wallet: Wallet
     private lateinit var provider: WalletTransactionMetadataProvider
 
     private val txId: Sha256Hash =
@@ -57,12 +65,19 @@ class WalletTransactionMetadataProviderGiftCardTest {
     fun setUp() {
         giftCardDao = mockk(relaxed = true)
         cacheDao = mockk(relaxed = true)
+        metadataDao = mockk(relaxed = true)
+        recordsDao = mockk(relaxed = true)
+        wallet = mockk(relaxed = true)
+        walletData = mockk(relaxed = true)
+        every { walletData.wallet } returns wallet
+        every { wallet.getTransaction(any()) } returns null
         provider = WalletTransactionMetadataProvider(
-            transactionMetadataDao = mockk(relaxed = true),
+            transactionMetadataDao = metadataDao,
             addressMetadataDao = mockk<AddressMetadataDao>(relaxed = true),
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
-            walletData = mockk<WalletDataProvider>(relaxed = true),
+            walletData = walletData,
             giftCardDao = giftCardDao,
+            transactionRecordsDao = recordsDao,
             swapOrderDao = mockk<SwapOrderDao>(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
@@ -283,5 +298,37 @@ class WalletTransactionMetadataProviderGiftCardTest {
         coVerify(exactly = 0) {
             cacheDao.insertGiftCardData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         }
+    }
+
+    // ==================== forgetTransaction ====================
+
+    @Test
+    fun `forgetTransaction discards every record in one database transaction`() = runTest {
+        coEvery { recordsDao.forgetTransaction(txId) } returns 2
+
+        provider.forgetTransaction(txId)
+
+        // one atomic call covers the cards, the queued platform changes and the metadata
+        coVerify(exactly = 1) { recordsDao.forgetTransaction(txId) }
+    }
+
+    @Test
+    fun `forgetTransaction refuses to touch a transaction the wallet holds`() = runTest {
+        // the payment did reach the network after all: this is real user data
+        every { wallet.getTransaction(txId) } returns mockk<Transaction>(relaxed = true)
+
+        provider.forgetTransaction(txId)
+
+        coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
+    }
+
+    @Test
+    fun `forgetTransaction does nothing when no wallet is available to confirm absence`() = runTest {
+        // cannot tell "never broadcast" from "cannot check right now", so fail closed
+        every { walletData.wallet } returns null
+
+        provider.forgetTransaction(txId)
+
+        coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
     }
 }

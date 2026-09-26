@@ -26,14 +26,18 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
@@ -116,6 +120,24 @@ data class GiftCardShoppingCart constructor(
     fun cardCount(): Int = items.sumOf { it.quantity }
 }
 
+/** How far a gift card purchase has got, held by the view model so it survives dialog recreation. */
+enum class GiftCardSubmissionState {
+    IDLE,
+
+    /** A payment is being submitted right now. */
+    IN_PROGRESS,
+
+    /** Submitted with an unknown result. It may have reached the merchant, so never resubmit. */
+    PENDING,
+
+    /** Paid for. */
+    COMPLETED
+}
+
+/** A second purchase was attempted while one was already submitted or unresolved. */
+class DuplicateGiftCardSubmissionException(val state: GiftCardSubmissionState) :
+    Exception("A gift card purchase is already $state")
+
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
@@ -131,7 +153,8 @@ class DashSpendViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val exploreDao: MerchantDao,
     private val ctxSpendConfig: CTXSpendConfig,
-    blockchainStateProvider: BlockchainStateProvider
+    blockchainStateProvider: BlockchainStateProvider,
+    private val unresolvedPayments: UnresolvedPaymentsProvider
 ) : ViewModel() {
 
     companion object {
@@ -307,17 +330,177 @@ class DashSpendViewModel @Inject constructor(
         } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
     }
 
-    suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash = withContext(Dispatchers.IO) {
+    private val _submissionState = MutableStateFlow(GiftCardSubmissionState.IDLE)
+
+    /**
+     * What the wallet has on disk about a payment that outlived the screen which sent it. The
+     * in-memory state above cannot answer that: it is created fresh as IDLE every time this view
+     * model is, while the merchant may still be holding a transaction from before the process
+     * died. Kept as a flow rather than read once, so resolving the payment - committed once the
+     * network shows it, or released once it is judged never sent - lifts the block by itself and
+     * does not shut the user out of gift cards for good.
+     *
+     * Null until the store has actually been read. A plain false there would make "we have not
+     * looked yet" indistinguishable from "nothing is pending", which is the one direction this
+     * flag must never guess in: every reader below treats anything other than an explicit false
+     * as a reason to refuse. A read that fails keeps it null for the same reason, and is caught
+     * rather than left to reach the scope's handler.
+     */
+    private val unresolvedPurchaseOnDisk: StateFlow<Boolean?> = unresolvedPayments
+        .observeUnresolvedGiftCardPurchase()
+        .catch { e -> log.error("could not read pending payments; keeping gift card purchases blocked", e) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Survives dialog recreation because this view model is scoped to the navigation graph, not
+     * to a fragment, so a dialog rebuilt after the activity is destroyed still sees that a
+     * purchase is outstanding, and survives process death through the durable record above.
+     *
+     * An in-memory state other than IDLE is reported as it stands: it describes this session's own
+     * submission, which the store has nothing to say about while it is still under way.
+     */
+    val submissionState: StateFlow<GiftCardSubmissionState> =
+        combine(_submissionState, unresolvedPurchaseOnDisk) { state, unresolved ->
+            if (state == GiftCardSubmissionState.IDLE && unresolved != false) {
+                GiftCardSubmissionState.PENDING
+            } else {
+                state
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, GiftCardSubmissionState.PENDING)
+
+    /**
+     * Starts a new purchase from a clean state. Called only when the confirmation screen is
+     * genuinely created by the user, never when it is rebuilt after activity recreation, so an
+     * outstanding purchase stays blocked while a later, separate order is still allowed.
+     *
+     * A submission that is still running is left alone: it belongs to a purchase already in
+     * flight, and this view model outlives the screen that started it.
+     *
+     * One this session left unresolved is cleared, though, because this field is not what decides
+     * whether the user may buy - [unresolvedPurchaseOnDisk] is, and it goes on saying so through
+     * both [submissionState] and [tryStartSubmission] whatever is written here. Keeping the field
+     * at PENDING as well would add nothing and take something away: this view model is scoped to
+     * the navigation graph while the payment is not, so a transaction the verifier commits seconds
+     * later, or releases after the grace period, would leave every later purchase dead until the
+     * user happened to leave the graph. Clearing it here lets the block lift with the record that
+     * justifies it, and not before.
+     */
+    fun beginNewPurchase() {
+        if (_submissionState.value == GiftCardSubmissionState.IN_PROGRESS) {
+            log.info("not resetting submission state, a purchase is still in progress")
+            return
+        }
+        _submissionState.value = GiftCardSubmissionState.IDLE
+    }
+
+    /**
+     * Claims the right to submit, atomically, returning false when a purchase is already under
+     * way or unresolved.
+     *
+     * Callers must claim before creating the order at the merchant. Leaving the claim to
+     * [payAndRecordOrder] let two quick taps both get past the check and each create an order,
+     * because the first had not reached that point yet. Release an unused claim with
+     * [releaseUnusedSubmission].
+     *
+     * Needs the store to have said, in so many words, that nothing is outstanding. While the first
+     * read is still in flight the honest answer is that we do not know, and handing out a claim on
+     * that is how the same order gets paid for twice.
+     */
+    fun tryStartSubmission(): Boolean =
+        unresolvedPurchaseOnDisk.value == false &&
+            _submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
+
+    /** Gives back a claim that never reached submission, so the user can try again. */
+    fun releaseUnusedSubmission() {
+        _submissionState.compareAndSet(GiftCardSubmissionState.IN_PROGRESS, GiftCardSubmissionState.IDLE)
+    }
+
+    /**
+     * Submits the payment and records the ordered cards as one operation that neither the
+     * caller's lifecycle nor process death can pull apart.
+     *
+     * The cards are written while the transaction is built and before anything is sent, because
+     * from that moment the payment can outlive this process: [PendingDirectPayment] keeps the
+     * transaction and the provider, not the order ids or redemption challenges, and those exist
+     * nowhere else. If the send then definitively fails, the rows are removed again.
+     *
+     * @throws DuplicateGiftCardSubmissionException if a purchase is already under way or
+     *   unresolved, so a recreated dialog cannot pay for the same order twice.
+     * @throws PaymentSubmissionPendingException if the submission result is unknown. The state
+     *   stays [GiftCardSubmissionState.PENDING], blocking any further purchase.
+     */
+    suspend fun payAndRecordOrder(
+        paymentUri: String,
+        giftCards: List<GiftCardInfo>
+    ): Sha256Hash = withContext(NonCancellable) {
+        // Read the durable record here rather than trust the flow above: this runs on a claim that
+        // may have been taken moments after the view model was built, before the store had been
+        // read once, and the in-memory state says nothing about a payment from before the process
+        // died. A claim is no protection against a purchase this process never saw.
+        if (unresolvedPayments.hasUnresolvedGiftCardPurchase()) {
+            throw DuplicateGiftCardSubmissionException(GiftCardSubmissionState.PENDING)
+        }
+
+        // Accepts a claim already made by the caller, and claims one itself otherwise, so this
+        // stays a guard of last resort for any caller that does not pre-claim.
+        if (_submissionState.value != GiftCardSubmissionState.IN_PROGRESS &&
+            !_submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
+        ) {
+            throw DuplicateGiftCardSubmissionException(_submissionState.value)
+        }
+
+        var recordedTxId: Sha256Hash? = null
+        try {
+            val txId = createSendingRequestFromDashUri(paymentUri) { newTxId ->
+                saveGiftCardDummy(newTxId, giftCards)
+                recordedTxId = newTxId
+            }
+            _submissionState.value = GiftCardSubmissionState.COMPLETED
+            txId
+        } catch (ex: PaymentSubmissionPendingException) {
+            // The merchant may hold this payment, so the purchase stays blocked for good.
+            _submissionState.value = GiftCardSubmissionState.PENDING
+            throw ex
+        } catch (e: Exception) {
+            // Nothing was sent, or the send definitively failed, so any rows written for this
+            // transaction describe an order that was never placed.
+            recordedTxId?.let { txId ->
+                try {
+                    transactionMetadata.forgetTransaction(txId)
+                } catch (ce: Exception) {
+                    log.error("could not discard the order recorded for failed payment {}", txId, ce)
+                }
+            }
+            _submissionState.value = GiftCardSubmissionState.IDLE
+            throw e
+        }
+    }
+
+    suspend fun createSendingRequestFromDashUri(
+        paymentUri: String,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
+    ): Sha256Hash = withContext(Dispatchers.IO) {
+        // Snapshot before suspending. The selection lives on the navigation-scoped view model and
+        // stays writable, while payAndRecordOrder is NonCancellable and can outlive the screen
+        // that started it. Re-reading afterwards would attribute this payment to whatever the
+        // user picked in the meantime, and overwrite the attribution recovery had got right.
+        //
+        // The provider, not the merchant's source field: those disagree for a PiggyCards order on
+        // a CTX-sourced merchant, and the provider is what GiftCardDetailsViewModel routes by.
+        val provider = selectedProvider?.serviceName ?: ServiceName.CTXSpend
+        val merchantIconUrl = _giftCardMerchant.value?.logoLocation
+
         val transaction = sendPaymentService.payWithDashUrl(
             paymentUri,
-            _giftCardMerchant.value?.source?.lowercase() ?: ServiceName.CTXSpend
+            provider,
+            // The purchase screen cannot record this itself for a payment that stays unresolved:
+            // marking a gift card transaction needs the transaction to be in the wallet. Carry it
+            // so recovery can restore the expense category and merchant icon after committing.
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = merchantIconUrl),
+            onTransactionCreated
         )
         log.info("ctx spend transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(
-            transaction.txId,
-            selectedProvider!!.serviceName,
-            _giftCardMerchant.value?.logoLocation
-        )
+        transactionMetadata.markGiftCardTransaction(transaction.txId, provider, merchantIconUrl)
 //        BitcoinURI(paymentUri).message?.let { memo ->
 //            if (memo.isNotBlank()) {
 //                transactionMetadata.setTransactionMemo(transaction.txId, memo)
@@ -555,7 +738,12 @@ class DashSpendViewModel @Inject constructor(
         providers[provider]?.logout()
     }
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
+    /**
+     * Records the ordered cards against [txId]. Suspends until the rows are written: the caller
+     * may be about to dismiss this screen, and on the payment-pending path nothing else holds the
+     * order details, so losing the write would strand the purchase with no way back to the order.
+     */
+    suspend fun saveGiftCardDummy(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
         log.info("saving {} dummy gift cards: {}", giftCards.size, txId)
         var index = 0
         val giftCard = giftCards.map {
@@ -569,9 +757,7 @@ class DashSpendViewModel @Inject constructor(
                 index = index++
             )
         }
-        viewModelScope.launch {
-            giftCardDao.insertGiftCards(giftCard)
-        }
+        giftCardDao.insertGiftCards(giftCard)
     }
 
     fun needsCrowdNodeWarning(dashAmount: Coin): Boolean {

@@ -89,6 +89,7 @@ class BlockchainStateDataProvider @Inject constructor(
     private val coroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     private val networkStatusFlow = MutableStateFlow(NetworkStatus.UNKNOWN)
+    private val connectedPeerCountFlow = MutableStateFlow(0)
     private val blockchainFlow = MutableStateFlow<AbstractBlockChain?>(null)
     private val syncStageFlow = MutableStateFlow<PeerGroup.SyncStage?>(null)
 
@@ -173,6 +174,20 @@ class BlockchainStateDataProvider @Inject constructor(
 
     override fun getNetworkStatus(): NetworkStatus {
         return networkStatusFlow.value
+    }
+
+    // set directly rather than through the queue: callers read this to decide whether there is
+    // live network evidence, so it must never lag behind the peer group
+    fun setConnectedPeerCount(peerCount: Int) {
+        connectedPeerCountFlow.value = peerCount
+    }
+
+    override fun getConnectedPeerCount(): Int {
+        return connectedPeerCountFlow.value
+    }
+
+    override fun observeConnectedPeerCount(): Flow<Int> {
+        return connectedPeerCountFlow
     }
 
     override fun observeNetworkStatus(): Flow<NetworkStatus> {
