@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet_test.BuildConfig
+
 /**
  * # ⚠️ SHIPPING REALITY: there is no "pre-cutover" user
  *
@@ -142,10 +144,9 @@ fun nextCutoverState(
 
 /**
  * The engine-start decision every start site consults (Phase 5d): may the
- * dashj L1 engine run this launch? True in every state EXCEPT the flipped
- * ones — post-cutover the SDK owns L1 and dashj must not start (never both
- * SPV engines live for one user). Kept trivial + pure so the start sites
- * stay obviously correct.
+ * dashj L1 engine run this launch? Always true when the build rollout is off;
+ * otherwise true in every state except the flipped ones. Kept trivial and
+ * pure so the start sites stay obviously correct.
  *
  * NOTE: this gate is now LIVE-WIRED — a committed cutover actually holds the
  * dashj engine and routes L1 to the SDK. The engine-start site
@@ -154,10 +155,12 @@ fun nextCutoverState(
  * false), and the SDK send/balance/UI paths ([SdkL1SendService],
  * [SdkBlockchainStateService], [CutoverUiDataService], [CutoverTxSeamService],
  * `MainViewModel`) all consult this same predicate on the CUTOVER_STATE flow.
- * So a CUT_OVER install genuinely runs SDK-primary — this is no longer inert
- * instrumentation. The coordinator's suspend `dashjEngineMayStart()` adds a
- * fail-safe on top: it also allows dashj when committed but the SDK L1 engine
- * is disabled, so the wallet is never left with no L1 engine.
+ * So a CUT_OVER install in a rollout-enabled build genuinely runs SDK-primary.
+ * A rollout-disabled build ignores even a stale committed state and keeps
+ * dashj primary.
  */
-fun dashjEngineMayStart(state: CutoverState): Boolean =
-    state == CutoverState.DUAL_RUNNING || state == CutoverState.READY_OBSERVED
+fun dashjEngineMayStart(
+    state: CutoverState,
+    cutoverEnabled: Boolean = BuildConfig.SDK_CUTOVER_ENABLED
+): Boolean =
+    !cutoverEnabled || state == CutoverState.DUAL_RUNNING || state == CutoverState.READY_OBSERVED

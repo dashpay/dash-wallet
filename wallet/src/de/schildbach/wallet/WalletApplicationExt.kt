@@ -203,11 +203,8 @@ object WalletApplicationExt {
         }
             .onFailure { rethrowCancellation(it); log.warn("tx-display-cache clear failed during reset", it) }
         WorkManager.getInstance(this).cancelAllWork()
-        // The wipe just emptied the DashPay DataStore mid-process, and the
-        // debug-flag seeding only runs in DashPayConfig's init — without
-        // this re-seed every USE_KOTLIN_SDK_* flag silently reads OFF for
-        // the rest of the process and the SDK paths go dark (observed
-        // live: the duck-say overnight restore ran with no SDK engine).
+        // Re-apply this build's migration defaults after the wipe. For a
+        // prodRelease without an explicit rollout this is intentionally a no-op.
         runCatching { dashPayConfig.seedDebugDefaultsIfUnset() }
             .onFailure { rethrowCancellation(it); log.warn("debug-flag re-seed failed after reset", it) }
         log.info("databases cleared (isWalletWipe = {})", isWalletWipe)

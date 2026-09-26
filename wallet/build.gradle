@@ -326,6 +326,8 @@ android {
         buildConfigField("String", "DASH_SDK_VERSION", "\"$dashSdkVersion\"")
         buildConfigField("int", "COMMIT_YEAR", "$commitYear")
         buildConfigField("String", "GIT_COMMIT", "\"$gitCommit\"")
+        buildConfigField("boolean", "SDK_MIGRATION_FLAGS_DEFAULT_ON", "false")
+        buildConfigField("boolean", "SDK_CUTOVER_ENABLED", "false")
     }
 
     buildTypes {
@@ -350,6 +352,9 @@ android {
             multiDexEnabled true
             minifyEnabled false
             debuggable true
+            // Internal/QA builds exercise the SDK migration by default.
+            buildConfigField("boolean", "SDK_MIGRATION_FLAGS_DEFAULT_ON", "true")
+            buildConfigField("boolean", "SDK_CUTOVER_ENABLED", "true")
             def supportEmail = localProps.getProperty("INTERNAL_SUPPORT_EMAIL")
             if (supportEmail != null) {
                 buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
@@ -406,6 +411,19 @@ android {
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
 
+            // Store releases remain on dashj unless the release invocation explicitly opts
+            // into the SDK rollout with -PsdkMigrationRolloutEnabled=true.
+            def sdkMigrationRolloutEnabled = providers.gradleProperty("sdkMigrationRolloutEnabled")
+                    .map { it.toBoolean() }
+                    .orElse(false)
+                    .get()
+            buildConfigField(
+                    "boolean",
+                    "SDK_MIGRATION_FLAGS_DEFAULT_ON",
+                    sdkMigrationRolloutEnabled.toString()
+            )
+            buildConfigField("boolean", "SDK_CUTOVER_ENABLED", sdkMigrationRolloutEnabled.toString())
+
             def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
             def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
             buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
@@ -429,6 +447,8 @@ android {
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
+            buildConfigField("boolean", "SDK_MIGRATION_FLAGS_DEFAULT_ON", "true")
+            buildConfigField("boolean", "SDK_CUTOVER_ENABLED", "true")
 
             def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX", "\"UPHOLD_CLIENT_ID\"")
             def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX", "\"UPHOLD_CLIENT_SECRET\"")
@@ -450,6 +470,8 @@ android {
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
+            buildConfigField("boolean", "SDK_MIGRATION_FLAGS_DEFAULT_ON", "true")
+            buildConfigField("boolean", "SDK_CUTOVER_ENABLED", "true")
             def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
             if (upholdClientId == null) {
@@ -475,6 +497,8 @@ android {
         }
         devnet {
             applicationId = "org.dash.dashpay.devnet"
+            buildConfigField("boolean", "SDK_MIGRATION_FLAGS_DEFAULT_ON", "true")
+            buildConfigField("boolean", "SDK_CUTOVER_ENABLED", "true")
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
             if (imgurClientId == null) {

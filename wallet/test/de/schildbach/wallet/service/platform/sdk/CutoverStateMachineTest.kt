@@ -116,6 +116,13 @@ class CutoverStateMachineTest {
     }
 
     @Test
+    fun dashjEngineGate_trueInEveryState_whenCutoverRolloutIsDisabled() {
+        CutoverState.entries.forEach { state ->
+            assertTrue(dashjEngineMayStart(state, cutoverEnabled = false))
+        }
+    }
+
+    @Test
     fun fromStored_defaultsToDualRunning() {
         assertEquals(CutoverState.DUAL_RUNNING, CutoverState.fromStored(null))
         assertEquals(CutoverState.DUAL_RUNNING, CutoverState.fromStored("GARBAGE"))

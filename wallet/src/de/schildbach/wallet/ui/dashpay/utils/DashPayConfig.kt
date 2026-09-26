@@ -360,16 +360,10 @@ open class DashPayConfig @Inject constructor(
         val USE_KOTLIN_SDK_L1_SEND = booleanPreferencesKey("use_kotlin_sdk_l1_send")
 
         /**
-         * The `USE_KOTLIN_SDK_*` flags every build seeds ON when unset — pure
-         * so [seedDebugDefaultsIfUnset]'s network split is host-testable. Per
-         * Brian's decisions: mainnet prodDebug seeds the SAME feature set as
-         * testnet (2026-07-27), and as of 2026-07-30 **all variants** seed
-         * (the `BuildConfig.DEBUG` gate was removed) so a prodRelease store
-         * build is byte-for-byte behaviourally identical to the QA builds —
-         * no divergence between what is tested and what ships. This means
-         * prodRelease exposes the SDK paths to REAL funds by default; the
-         * pre-release gates (DIP-15 friendship-xpub parity) still apply before
-         * a store rollout. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
+         * The `USE_KOTLIN_SDK_*` flags seeded ON when the build enables SDK
+         * migration defaults. Internal/QA builds enable them; prodRelease
+         * leaves them unset unless its release invocation explicitly enables
+         * the SDK rollout. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
          */
         internal fun debugSeedFlags(isMainnet: Boolean) = if (isMainnet) {
             // Mainnet: full set (real-funds validation vehicle — see KDoc).
@@ -688,11 +682,6 @@ open class DashPayConfig @Inject constructor(
     }
 
     init {
-        // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
-        // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
-        // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
-        // flag divergence between what is tested and what ships). QA can still toggle them
-        // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
         CoroutineScope(Dispatchers.IO).launch {
             seedDebugDefaultsIfUnset()
         }
@@ -705,11 +694,16 @@ open class DashPayConfig @Inject constructor(
      * `USE_KOTLIN_SDK_*` flags silently read as OFF, and every SDK path
      * (binder, shadow, shielded) goes inert with no log trail — observed
      * live: the duck-say overnight restore ran with the SDK dark. The
-     * wipe path calls this after clearing (debug builds only; a no-op on
-     * release where BuildConfig.DEBUG gates the caller). Which flags are
-     * seeded is network-dependent — see [debugSeedFlags].
+     * wipe path calls this after clearing. Builds with migration defaults
+     * disabled return without touching DataStore. Which flags are seeded is
+     * network-dependent — see [debugSeedFlags].
      */
     suspend fun seedDebugDefaultsIfUnset() {
+        if (!BuildConfig.SDK_MIGRATION_FLAGS_DEFAULT_ON) {
+            log.info("SDK migration flag seeding disabled for this build")
+            return
+        }
+
         try {
             val seeded = mutableListOf<String>()
             val alreadySet = mutableListOf<String>()

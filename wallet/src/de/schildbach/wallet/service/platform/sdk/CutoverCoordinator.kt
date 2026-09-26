@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,14 +48,11 @@ data class CutoverStatus(
  * (the state machine does) — only the persistence, the single-flight
  * serialization, and the atomic config write that IS the flip.
  *
- * POLICY (2026-09-16, docs/upgrade-memory-and-sync-plan.md §12): every
- * install cuts over to the SDK on its first launch of a cutover build —
- * fresh, restored and UPGRADED wallets alike — and the dashj L1 engine never
- * starts on its own. The only thing that starts a dashj peergroup is the
- * Tools › dashj sync diagnostic toggle, which the blockchain service applies
- * on top of [dashjEngineMayStart]. A failed SDK bind does NOT fall back to
- * dashj; it is retried until the device keystore is usable (see
- * [SdkBindRetryService]).
+ * When the build enables the SDK rollout, every install cuts over on its first
+ * launch of that build and the dashj L1 engine never starts on its own. When
+ * rollout is disabled, dashj remains primary and no cutover state is written.
+ * A failed SDK bind after an enabled cutover does not fall back to dashj; it is
+ * retried until the device keystore is usable (see [SdkBindRetryService]).
  */
 @Singleton
 class CutoverCoordinator @Inject constructor(
@@ -70,11 +68,10 @@ class CutoverCoordinator @Inject constructor(
         CutoverState.fromStored(runCatching { dashPayConfig.get(DashPayConfig.CUTOVER_STATE) }.getOrNull())
 
     /**
-     * Whether the dashj L1 engine may start ON ITS OWN this launch. Always
-     * false: the SDK owns L1 on every install from its first launch, and the
-     * dashj peergroup runs only when the user turns on the Tools › dashj sync
-     * diagnostic, which [de.schildbach.wallet.service.BlockchainServiceImpl]
-     * OR-s onto this gate itself.
+     * Whether the dashj L1 engine may start ON ITS OWN this launch. A build
+     * with rollout disabled always allows dashj. With rollout enabled, the SDK
+     * owns L1 from the first launch and dashj runs only through the Tools
+     * diagnostic override.
      *
      * The persisted [CutoverState] is no longer consulted here. It still drives
      * the UI seams' "SDK owns L1" reads through the pure [dashjEngineMayStart]
@@ -91,12 +88,14 @@ class CutoverCoordinator @Inject constructor(
      * OutOfMemoryError 90 s in. The "fall back to dashj" path this gate
      * implemented is what put two SPV engines in one process.
      *
-     * Logs a WARN when [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] is off, because
-     * in that configuration NO L1 engine starts. The flag is seeded on for every
-     * variant; a flag-off build is a configuration error, not a reason to start
-     * dashj.
+     * In a rollout-enabled build, logs a warning when
+     * [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] is off because that invalid
+     * combination leaves no primary L1 engine.
      */
     suspend fun dashjEngineMayStart(): Boolean {
+        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
+            return true
+        }
         if (!sdkL1EngineEnabled()) {
             log.warn(
                 "USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 engine will not start, and dashj " +
@@ -300,6 +299,10 @@ class CutoverCoordinator @Inject constructor(
         previousVersionCode: Int,
         onCutOverForExistingWallet: () -> Unit = {}
     ) {
+        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
+            log.info("upgrade cutover skipped: SDK rollout is disabled for this build")
+            return
+        }
         scope.launch {
             // The boundary test decides ONLY whether this install is owed the
             // one-time sync explainer. It used to gate the commit as well
@@ -329,8 +332,8 @@ class CutoverCoordinator @Inject constructor(
                     )
                 }
             }
-            // Unconditional: no bind evidence, no boundary test, no readiness.
-            // Every install is CUT_OVER from its first launch of a cutover build,
+            // No bind evidence, boundary test, or readiness gate. When this
+            // build enables rollout, every install is CUT_OVER from first launch,
             // and a same-version relaunch that somehow arrives pre-commit (a
             // failed persist, a wipe reset that lost the race) is corrected here
             // rather than left to a readiness observer. The SDK bind that follows
@@ -542,6 +545,10 @@ class CutoverCoordinator @Inject constructor(
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
             return CutoverStatus(current, READY_VERDICT) to false
         }
+        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
+            log.info("cutover skipped ({}): SDK rollout is disabled for this build", reason)
+            return CutoverStatus(current, READY_VERDICT) to false
+        }
         if (!sdkL1EngineEnabled()) {
             log.info(
                 "cutover skipped ({}): USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 " +
@@ -611,6 +618,9 @@ class CutoverCoordinator @Inject constructor(
         // boundary latch whose first write failed.
         persistBoundaryCrossingIfPending()
         val current = currentState()
+        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
+            return@withLock CutoverStatus(current, READY_VERDICT)
+        }
         val verdict = try {
             evaluateCutoverReadiness(evidenceCollector.collect())
         } catch (t: Throwable) {
