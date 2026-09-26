@@ -467,11 +467,9 @@ class SendCoinsTaskRunner @Inject constructor(
             requestUrl,
             serviceName,
             recovery,
-            finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) }
+            finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) },
+            origin = wallet
         )
-        // The wallet that signed this, remembered before the request leaves. Everything after the
-        // answer comes back is done to this one or not at all.
-        val signingWallet = walletData.wallet ?: throw IllegalStateException("wallet is not available")
 
         try {
             val response = directPayHttpClient.call(request)
@@ -536,7 +534,7 @@ class SendCoinsTaskRunner @Inject constructor(
         // replacement that passes the readiness barrier precisely because the wipe emptied the
         // pending store. maybeCommitTx does not check whose transaction it is given.
         val sent = try {
-            sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true, originWallet = signingWallet)
+            sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true, originWallet = wallet)
         } catch (e: Exception) {
             // Committing locally can still fail, and several of those failures land before
             // maybeCommitTx: a leftover-balance check, verification, the database. The payment is
@@ -558,7 +556,7 @@ class SendCoinsTaskRunner @Inject constructor(
             // Same wallet, same reason: attribution would write metadata for a transaction the
             // replacement does not hold, and cancelling would free outpoints and drop records
             // belonging to a store the wipe has already emptied.
-            if (!pendingPaymentVerifier.stillOwnedBy(signingWallet)) {
+            if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
                 throw IllegalStateException("the wallet that sent ${sendRequest.tx.txId} has been wiped")
             }
             applyGiftCardRecoveryMetadata(sendRequest.tx.txId, serviceName, recovery)

@@ -159,9 +159,17 @@ class PendingDirectPaymentVerifier @Inject constructor(
         paymentUrl: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
-        paymentRequestId: String? = null
+        paymentRequestId: String? = null,
+        origin: Wallet? = null
     ): Deferred<Transaction?> {
-        val wallet = walletData.wallet ?: throw IllegalStateException("wallet is not available")
+        // The caller passes the wallet it actually signed against. Reading the installed one here
+        // would be a second, later read: a wipe between signing and this call would bind the
+        // recovery record, its locks and its watch to the replacement instead of to the wallet
+        // whose outpoints they describe.
+        val wallet = origin ?: walletData.wallet ?: throw IllegalStateException("wallet is not available")
+        if (!stillOwnedBy(wallet)) {
+            throw IllegalStateException("the wallet that signed ${tx.txId} has been wiped")
+        }
         val payment = PendingDirectPayment(
             txId = tx.txId,
             txBytes = tx.bitcoinSerialize(),

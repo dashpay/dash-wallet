@@ -54,6 +54,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
@@ -69,6 +70,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assert.fail
@@ -879,7 +881,18 @@ class SendCoinsTaskRunnerBIP70Test {
         assertEquals(tx.txId, (thrown as PaymentSubmissionPendingException).txId)
 
         // the tx was handed to the verifier and persisted
-        coVerify { pendingPaymentVerifier.quarantine(tx, paymentIntent.paymentUrl!!, "TestService") }
+        // the origin matters as much as the rest: the record, its locks and its watch must be
+        // bound to the wallet that signed, not to whatever is installed by the time this runs
+        coVerify {
+            pendingPaymentVerifier.quarantine(
+                eq(tx),
+                eq(paymentIntent.paymentUrl!!),
+                eq("TestService"),
+                any(),
+                any(),
+                eq(wallet)
+            )
+        }
         coVerify { pendingPaymentConfig.add(match { it.txId == tx.txId }) }
 
         // its inputs are locked so a retry can't double-spend them ...
@@ -1119,6 +1132,44 @@ class SendCoinsTaskRunnerBIP70Test {
         // and nothing is attributed or cleaned up against it either
         coVerify(exactly = 0) { metadataProvider.markGiftCardTransaction(any(), any(), any()) }
         coVerify(exactly = 0) { pendingPaymentVerifier.cancelQuarantine(any()) }
+    }
+
+
+    @Test
+    fun `a wipe during preflight persistence does not bind the payment to the replacement wallet`() = runTest {
+        // Given: the wipe lands while the quarantine record is being written - after the
+        // transaction has been signed, but before the request goes out. Capturing the wallet any
+        // later than completeTx reads the replacement and calls it the signer, and every
+        // ownership check downstream then agrees with it.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val paymentIntent = createBip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
+        val sendRequest = createTestSendRequest(testAddress, testAmount)
+
+        // a real wallet, so the assertion below is about what it actually holds
+        val replacement = Wallet.createDeterministic(networkParams, Script.ScriptType.P2PKH)
+        coEvery { pendingPaymentConfig.add(any()) } answers {
+            every { walletDataProvider.wallet } returns replacement
+        }
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        // When
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(sendRequest, paymentIntent, "TestService")
+            fail("a payment was submitted on behalf of a wallet that had been wiped")
+        } catch (e: Exception) {
+            // Expected. Which exception depends on how far it got before a check refused it; the
+            // assertion that matters is what the replacement does not hold.
+        }
+
+        // Then: the erased wallet's transaction is not in the replacement. maybeCommitTx does not
+        // ask whose transaction it is handed, so nothing else would have kept it out.
+        assertNull(replacement.getTransaction(sendRequest.tx.txId))
     }
 
 }
