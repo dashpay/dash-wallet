@@ -32,6 +32,10 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashj.platform.dpp.voting.AbstainVoteChoice
+import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
+import org.dashj.platform.dpp.voting.LockVoteChoice
+import org.dashj.platform.dpp.voting.ResourceVoteChoice
+import org.dashj.platform.dpp.voting.Vote
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -76,12 +80,85 @@ class VoteFailureOutputTest {
         assertEquals("Unknown error - IllegalStateException", BaseWorker.extractError(failedOutput(IllegalStateException())))
     }
 
-    private fun failedOutput(error: Exception): Data = runBlocking {
+    @Test
+    fun `fresh and already-cast votes preserve submitted names and choices in order`() {
+        val result = runWorker(listOf(
+            Triple(AbstainVoteChoice(), null, Exception("vote is already present")),
+            Triple(LockVoteChoice(), successfulVote("bob"), null),
+            Triple(AbstainVoteChoice(), null, Exception("vote is already present")),
+            Triple(LockVoteChoice(), successfulVote("bob"), null)
+        ), arrayOf("a1ice", "bob"), arrayOf("Alice", "Bob"),
+            arrayOf(AbstainVoteChoice().toString(), LockVoteChoice().toString()))
+        assertTrue(result is ListenableWorker.Result.Success)
+        val output = (result as ListenableWorker.Result.Success).outputData
+        assertArrayEquals(arrayOf("a1ice", "bob"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS))
+        assertArrayEquals(arrayOf("Alice", "Bob"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_LABELS))
+        assertArrayEquals(arrayOf(AbstainVoteChoice().toString(), LockVoteChoice().toString()),
+            output.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES))
+    }
+
+    @Test
+    fun `already-cast and terminal failure reports terminal reason in either order`() {
+        val reason = "Masternode can only vote 5 times"
+        val results = listOf(
+            Triple(AbstainVoteChoice(), null, Exception("vote is already present")),
+            Triple(AbstainVoteChoice(), null, Exception(reason))
+        )
+        listOf(results, results.reversed()).forEach { batch ->
+            val result = runWorker(batch)
+            assertTrue(result is ListenableWorker.Result.Failure)
+            val output = (result as ListenableWorker.Result.Failure).outputData
+            val info = mockk<WorkInfo> {
+                every { state } returns WorkInfo.State.FAILED
+                every { outputData } returns output
+            }
+            val resource = BroadcastUsernameVotesOperation.convertState(info)
+            assertEquals(Status.ERROR, resource.status)
+            assertEquals(reason, resource.message)
+        }
+    }
+
+    @Test
+    fun `fresh success preserves partial-success behavior with terminal and already-cast results`() {
+        val result = runWorker(listOf(
+            Triple(AbstainVoteChoice(), null, Exception("vote is already present")),
+            Triple(AbstainVoteChoice(), null, Exception("can only vote 5 times")),
+            Triple(AbstainVoteChoice(), successfulVote("a1ice"), null)
+        ))
+        assertTrue(result is ListenableWorker.Result.Success)
+    }
+
+    @Test
+    fun `all already-cast votes still reconcile as success`() {
+        val result = runWorker(listOf(Triple(AbstainVoteChoice(), null, Exception("vote is already present"))))
+        assertTrue(result is ListenableWorker.Result.Success)
+    }
+
+    private fun successfulVote(name: String): Vote {
+        val poll = mockk<ContestedDocumentResourceVotePoll> {
+            every { indexValues } returns listOf("dash", name)
+        }
+        return mockk { every { resourceVote.votePoll } returns poll }
+    }
+
+    private fun failedOutput(error: Exception): Data {
+        val result = runWorker(listOf(Triple(AbstainVoteChoice(), null, error)))
+        assertTrue(result is ListenableWorker.Result.Failure)
+        val output = (result as ListenableWorker.Result.Failure).outputData
+        return Data.fromByteArray(output.toByteArray())
+    }
+
+    private fun runWorker(
+        results: List<Triple<ResourceVoteChoice, Vote?, Exception?>>,
+        names: Array<String> = arrayOf("a1ice"),
+        labels: Array<String> = arrayOf("Alice"),
+        choices: Array<String> = arrayOf(AbstainVoteChoice().toString())
+    ): ListenableWorker.Result = runBlocking {
         val input = workDataOf(
             BroadcastUsernameVotesWorker.KEY_PASSWORD to "test-password",
-            BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS to arrayOf("a1ice"),
-            BroadcastUsernameVotesWorker.KEY_LABELS to arrayOf("Alice"),
-            BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES to arrayOf(AbstainVoteChoice().toString()),
+            BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS to names,
+            BroadcastUsernameVotesWorker.KEY_LABELS to labels,
+            BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES to choices,
             BroadcastUsernameVotesWorker.KEY_MASTERNODE_KEYS to emptyArray<String>(),
             BroadcastUsernameVotesWorker.KEY_QUICK_VOTING to true
         )
@@ -92,14 +169,11 @@ class VoteFailureOutputTest {
         every { walletData.wallet!!.keyCrypter!!.deriveKey("test-password") } returns KeyParameter(ByteArray(32))
         val broadcaster = mockk<PlatformBroadcastService>()
         coEvery { broadcaster.broadcastUsernameVotes(any(), any(), any(), any()) } returns
-            listOf(Triple(AbstainVoteChoice(), null, error))
+            results
         val worker = BroadcastUsernameVotesWorker(
             RuntimeEnvironment.getApplication(), parameters, mockk(relaxed = true), broadcaster,
             mockk(relaxed = true), walletData, mockk(relaxed = true), mockk(relaxed = true)
         )
-        val result = worker.doWorkWithBaseProgress()
-        assertTrue(result is ListenableWorker.Result.Failure)
-        val output = (result as ListenableWorker.Result.Failure).outputData
-        Data.fromByteArray(output.toByteArray())
+        worker.doWorkWithBaseProgress()
     }
 }

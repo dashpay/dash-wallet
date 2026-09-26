@@ -130,14 +130,8 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
 
             // update local database
             analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
-            // A failed vote carries no Vote, so it contributes no poll name. Drop those
-            // rather than substituting the string "null": that placeholder has no entry
-            // in labelMap, and looking it up is what produced the null element that
-            // `Data` rejected. When nothing is left — every vote failed, or every vote
-            // was already cast — fall back to the labels that were actually submitted.
-            val arrayOfnames: Array<String> = votingResults.mapNotNull {
-                (it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll)?.indexValues?.get(1)
-            }.toSet().ifEmpty { normalizedLabels.toSet() }.toTypedArray()
+            // Results without a Vote still need their submitted name and position.
+            val arrayOfnames = normalizedLabels.copyOf()
             val votes = hashMapOf<String, UsernameVote>()
             votingResults.forEach {
                 when (val votePoll = it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll) {
@@ -164,6 +158,9 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                 result.third?.let { classifyVoteFailure(voteFailureText(it)) }
             }
             val errorCount = verdicts.count { it?.isTerminal == true }
+            val successCount = votingResults.count { it.second != null && it.third == null }
+            val terminalError = votingResults.withIndex()
+                .firstOrNull { verdicts[it.index]?.isTerminal == true }?.value?.third
             val alreadyCastCount = verdicts.count { it == VoteFailureVerdict.ALREADY_CAST }
             if (alreadyCastCount != 0) {
                 log.info(
@@ -172,45 +169,36 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     votingResults.size
                 )
             }
-            when (errorCount) {
-                0 -> {
+            when {
+                errorCount == 0 -> {
                     // all were successful
                     log.info("all votes succeeded: total submitted {}", errorCount, votingResults.size)
                     Result.success(
                         workDataOf(
-                            KEY_NORMALIZED_LABELS to if (votingResults.isNotEmpty()) {
-                                arrayOfnames
-                            } else {
-                                listOf("").toTypedArray()
-                            },
+                            KEY_NORMALIZED_LABELS to arrayOfnames,
                             KEY_LABELS to labels,
-                            KEY_VOTE_CHOICES to votingResults.map {
-                                it.first.toString()
-                            }.toTypedArray(),
+                            KEY_VOTE_CHOICES to voteChoices,
                             KEY_QUICK_VOTING to isQuickVoting
                         )
                     )
                 }
-                votingResults.size -> {
-                    // all have failed
-                    log.error("all votes failed: errors: {} vs total submitted {}", errorCount, votingResults.size)
+                successCount == 0 && terminalError != null -> {
+                    // Already-cast results cannot mask a terminal failure in this batch.
+                    log.error("no new votes succeeded: errors: {} vs total submitted {}", errorCount, votingResults.size)
                     // errors that can be returned
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode vote is already present for masternode EbitFAjpGsuf7qKPpsQMZw2ZKZ8rs2S1PdqKvYA8J2Ux voting for ContestedDocumentResourceVotePoll(ContestedDocumentResourceVotePoll { contract_id: GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec, document_type_name: domain, index_name: parentNameAndLabel, index_values: [string dash, string test-1101] })", metadata: MetadataMap { headers: {"drive-error-data-bin": "oW9zZXJpYWxpemVkRXJyb3KYbwIYKxjKDQkQABgqGO0YuRh/GLMDGOkYexgdGLEVGIMYvhhiGLMY2xiLGGEYRxj/GKgYSxiYGDAYnxjOGHEAGOYYaBjGGFkYrxhmGK4Y4RjnGCwYGBhtGN4YexhbGH4KGB0YcRgqCRjEDRhXGCEY9hgiGL8YUxjFGDEYVQYYZBhvGG0YYRhpGG4SGHAYYRhyGGUYbhh0GE4YYRhtGGUYQRhuGGQYTBhhGGIYZRhsAhIEGGQYYRhzGGgSCRh0GGUYcxh0GC0YMRgxGDAYMQ==", "code": "40304", "grpc-accept-encoding": "identity", "grpc-encoding": "identity", "content-type": "application/grpc+proto", "date": "Mon, 28 Oct 2024 22:27:37 GMT", "x-envoy-upstream-service-time": "55", "server": "envoy"} }, source: None }, Address { ban_count: 0, banned_until: None, uri: https://52.89.154.48:1443/ })
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode with id: CmbJumQ1ALJXHYFpUdCCnvbfgvXKSajErNXGhv3H4GN1 already voted 5 times and is trying to vote again, they can only vote 5 times"
                     logVoteFailures(votingResults, verdicts)
-                    val error = votingResults.first().third!!
                     // Keep SDK metadata from consuming WorkManager's 10 KB output budget.
-                    val errorMessage = voteFailureText(error)
-                        .ifBlank { "Unknown error - ${error.javaClass.simpleName}" }
+                    val errorMessage = voteFailureText(terminalError)
+                        .ifBlank { "Unknown error - ${terminalError.javaClass.simpleName}" }
                         .take(1024)
                     Result.failure(
                         workDataOf(
                             KEY_ERROR_MESSAGE to errorMessage,
                             KEY_NORMALIZED_LABELS to arrayOfnames,
                             KEY_LABELS to labelsFor(arrayOfnames, labelMap),
-                            KEY_VOTE_CHOICES to votingResults.map {
-                                it.first.toString()
-                            }.toTypedArray(),
+                            KEY_VOTE_CHOICES to voteChoices,
                             KEY_QUICK_VOTING to isQuickVoting
                         )
                     )
