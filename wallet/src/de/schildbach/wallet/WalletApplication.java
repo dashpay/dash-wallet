@@ -40,6 +40,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -2164,9 +2165,39 @@ public class WalletApplication extends MultiDexApplication
     @NotNull
     @Override
     public Address unadvertisedDestinationLive() {
-        if (cutoverUiDataService != null && cutoverUiDataService.isCutoverActive()) {
-            final Address unadvertised = toDashjAddressOrNull(
-                    cutoverUiDataService.sdkUnadvertisedAddressLiveBlockingOrNull());
+        final boolean cutoverActive =
+                cutoverUiDataService != null && cutoverUiDataService.isCutoverActive();
+        final Address unadvertised = cutoverActive
+                ? toDashjAddressOrNull(cutoverUiDataService.sdkUnadvertisedAddressLiveBlockingOrNull())
+                : null;
+        return decideUnadvertisedDestination(cutoverActive, unadvertised, () -> {
+            // NOT freshReceiveAddress(): that accessor is overlaid and would
+            // serve the cached engine RECEIVE address. Go straight to dashj.
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            return wallet.freshReceiveAddress();
+        });
+    }
+
+    /**
+     * The post-cutover-or-not decision behind {@link #unadvertisedDestinationLive()},
+     * extracted so it is unit-testable without standing up the whole Hilt graph
+     * this Application needs.
+     *
+     * <p>The invariant worth pinning is not merely "throws on null" but that the
+     * post-cutover arm NEVER reaches {@code dashjFreshKey} — a fallback there is
+     * exactly the defect that shipped once already, because the obvious
+     * candidate ({@code freshReceiveAddress()}) is itself overlaid and hands back
+     * the advertised address on a warm cache.
+     *
+     * @throws IllegalStateException post-cutover when [unadvertised] is null.
+     */
+    @VisibleForTesting
+    @NotNull
+    static Address decideUnadvertisedDestination(
+            final boolean cutoverActive,
+            @Nullable final Address unadvertised,
+            @NotNull final java.util.function.Supplier<Address> dashjFreshKey) {
+        if (cutoverActive) {
             if (unadvertised == null) {
                 throw new IllegalStateException(
                         "no unadvertised destination available post-cutover; refusing to pay a "
@@ -2174,10 +2205,7 @@ public class WalletApplication extends MultiDexApplication
             }
             return unadvertised;
         }
-        // NOT freshReceiveAddress(): that accessor is overlaid and would serve
-        // the cached engine RECEIVE address. Go straight to dashj.
-        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
-        return wallet.freshReceiveAddress();
+        return dashjFreshKey.get();
     }
 
     @NotNull

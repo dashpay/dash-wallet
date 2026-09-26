@@ -883,15 +883,27 @@ class CutoverUiDataServiceTest {
         override fun nextChangeAddressOrNull(walletIdHex: String, accountIndex: Int): String? =
             nextChangeAddress
 
+        /** Match [gatedReadThreadName] as a PREFIX — the pipeline's dispatcher threads are numbered. */
+        @Volatile
+        var gateByThreadNamePrefix = false
+
         override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
             nextReceiveAddressReads++
-            if (gatedReadThreadName != null && Thread.currentThread().name == gatedReadThreadName) {
+            val gate = gatedReadThreadName
+            val here = Thread.currentThread().name
+            val gated = gate != null && (if (gateByThreadNamePrefix) here.startsWith(gate) else here == gate)
+            // Capture the answer BEFORE parking. The engine computes its result
+            // and is then slow to return; a fake that read the field after the
+            // gate would hand back whatever the test set meanwhile, which makes
+            // an out-of-order-publication test pass vacuously (it did).
+            val answer = nextReceiveAddress
+            if (gated) {
                 receiveAddressReadParked = true
                 check(receiveAddressGate.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
                     "receive-address gate never released"
                 }
             }
-            return nextReceiveAddress
+            return answer
         }
 
         override suspend fun currentTotalDuffs(walletIdHex: String): Long =
@@ -1713,6 +1725,77 @@ class CutoverUiDataServiceTest {
         // future edit cannot drop one of them unnoticed.
         assertNull(service.sdkBalanceOrNull())
         assertNull(service.sdkSpendableUtxoCountOrNull())
+    }
+
+    @Test
+    fun rollbackRevokesOwnershipEvenWhileThePipelineReadIsParked() = runTest {
+        // The pipeline's own refresh blocks in an uncancellable FFI read, and
+        // `collectLatest` CANCELS AND JOINS the previous run before its
+        // replacement action can execute. Revoking ownership from inside that
+        // action therefore left the retired binding authorized for as long as the
+        // read stayed parked. Ownership must be revoked by a collector that
+        // nothing can park.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+
+        // Park the PIPELINE's read (any thread but the test's), then roll back.
+        source.gatedReadThreadName = "DefaultDispatcher"
+        source.gateByThreadNamePrefix = true
+        state.value = "DUAL_RUNNING"
+
+        assertTrue(
+            "ownership must be revoked without waiting for the parked read",
+            pumpUntil(5_000) { service.sdkReceiveAddressOrNull() == null }
+        )
+        assertNull(service.sdkReceiveAddressLiveOrNull())
+        assertNull(service.sdkUnadvertisedAddressLiveBlockingOrNull())
+
+        source.receiveAddressGate.countDown()
+    }
+
+    @Test
+    fun anOlderReadCannotOverwriteANewerPublishedAddress() = runTest {
+        // Generation separates BINDINGS, not reads within one binding. A refresh
+        // can take address A, pause in the FFI, a live read can publish the
+        // engine's newer B, and the released refresh would then put the
+        // ALREADY-USED A back on the Receive screen.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        // Start an OLDER read and park it holding A.
+        val readThreadName = "sr03-older-read"
+        source.nextReceiveAddress = "yENGINEaddressA"
+        source.gatedReadThreadName = readThreadName
+        val older = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, readThreadName)
+        }
+        val olderResult = older.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        val deadline = System.nanoTime() + 10_000_000_000L
+        while (!source.receiveAddressReadParked && System.nanoTime() < deadline) Thread.sleep(5)
+        assertTrue("the older read never reached the FFI", source.receiveAddressReadParked)
+
+        // A NEWER read publishes B while the older one is still parked.
+        source.gatedReadThreadName = null
+        source.nextReceiveAddress = "yENGINEaddressB"
+        assertEquals("yENGINEaddressB", service.sdkReceiveAddressLiveBlockingOrNull())
+        assertEquals("yENGINEaddressB", service.sdkReceiveAddressOrNull())
+
+        // Release the older read: it must not put A back.
+        source.receiveAddressGate.countDown()
+        olderResult.get()
+        older.shutdown()
+
+        assertEquals(
+            "an older read must not overwrite a newer published address",
+            "yENGINEaddressB",
+            service.sdkReceiveAddressOrNull()
+        )
     }
 
     @Test
