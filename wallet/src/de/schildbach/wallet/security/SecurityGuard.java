@@ -115,7 +115,17 @@ public class SecurityGuard {
         dualFallbackMigration.migrateToFallbacks(this);
     }
 
+    // logState() runs from the constructor AND every getInstance(); every
+    // 15-second platform sync pass calls getInstance(), so the six-line
+    // inventory landed in logcat 183 times in five minutes on 2026-09-25.
+    // Once per process carries the same diagnostic signal.
+    private static final java.util.concurrent.atomic.AtomicBoolean stateLogged =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
     private void logState() {
+        if (!stateLogged.compareAndSet(false, true)) {
+            return;
+        }
         // Never log preference VALUES here: they are the encrypted wallet-password
         // and PIN key blobs, and this line lands in wallet.log and every support
         // report. Key names plus value sizes carry the diagnostic signal this dump

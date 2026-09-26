@@ -56,9 +56,19 @@ public class AnrException extends Exception {
      * Logs the current process and all its threads
      */
     public void logProcessMap() {
+        // Log only the unresponsive thread's stack, not every thread in the
+        // process. The full map was ~150 threads / ~1,000 lines per detection,
+        // repeated every 5 s while the UI thread stayed slow — 5,000 logcat
+        // lines in five minutes on 2026-09-25, which saturated logd and made
+        // the very stalls it was reporting worse (a WorkManager thread holding
+        // its scheduler lock blocked in Log.println_native; main blocked behind
+        // it; "No response to onStartJob"). The full map is still available
+        // through printProcessMap(PrintStream) for a report that wants it.
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(bos);
-        this.printProcessMap(ps);
+        Map<Thread, StackTraceElement[]> stackTraces = Thread.getAllStackTraces();
+        ps.println("Unresponsive thread (" + stackTraces.size() + " threads in process):");
+        this.printThread(ps, Locale.getDefault(), Thread.currentThread(), this.getStackTrace());
         log.info(this.getClass().getSimpleName() + " " +
                 new String(bos.toByteArray()));
     }

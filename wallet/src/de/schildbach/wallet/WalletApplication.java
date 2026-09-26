@@ -1966,7 +1966,12 @@ public class WalletApplication extends MultiDexApplication
     public androidx.work.Configuration getWorkManagerConfiguration() {
         return new androidx.work.Configuration.Builder()
                 .setWorkerFactory(workerFactory)
-                .setMinimumLoggingLevel(Log.VERBOSE)
+                // INFO, not VERBOSE: WorkManager logs under its own scheduler
+                // lock (GreedyScheduler.schedule), and a logcat write that
+                // stalls under load holds that lock across the main thread's
+                // next schedule() call — the "No response to onStartJob" ANR
+                // seen on 2026-09-25 (wallet-snapshots/2026-09-25-topple-int23-run2-relaunch).
+                .setMinimumLoggingLevel(Log.INFO)
                 .build();
     }
 
