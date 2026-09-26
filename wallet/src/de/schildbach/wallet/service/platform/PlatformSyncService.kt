@@ -731,26 +731,15 @@ class PlatformSynchronizationService @Inject constructor(
         // torn down. Both stops are no-ops when not running and must never
         // block the rest of the cleanup.
         //
-        // DEBUG builds skip the engine stops here — a deliberate battery
-        // trade-off for testing: dashj's BlockchainService stops itself
-        // whenever it idles ("idling detected, stopping service"), and every
-        // engine restart left the SDK's SPV with stale quorum state — a live
-        // shielded transfer right after such a restart could not verify its
-        // asset lock's InstantSend lock and waited a full block (~3 min).
-        // Keeping the engines warm across these routine teardowns removes
-        // that window. The destructive paths are NOT weakened: the wallet
-        // wipe calls stopSdkEngines() explicitly before finalizeWipe(), and
-        // the shadow recovery paths (resetShadowState /
-        // recoverByRecreatingWallet) stop the SPV directly themselves.
-        if (BuildConfig.DEBUG) {
-            log.info(
-                "keeping Kotlin-SDK engines running across service teardown (debug): warm SPV " +
-                    "avoids the asset-lock islock-verification delay; wipe/reset still stop " +
-                    "them explicitly"
-            )
-        } else {
-            stopSdkEngines()
-        }
+        //
+        // DEBUG builds used to skip the engine stops here (warm SPV avoided
+        // the asset-lock islock-verification delay after an idle restart).
+        // That made a debug build's "close and reopen" a different event from
+        // release: the engines never restarted, so a normal service teardown
+        // could not exercise the engine-restart path — the int23 contact
+        // rewind (`2026-09-25-topple-int23-run2-relaunch`) needed exactly that.
+        // Debug now tears down like release.
+        stopSdkEngines()
 
         if (platformSyncJob != null && identityRepository.hasBlockchainIdentity) {
             // A non-null-but-completed job is a NORMAL state here, not an
