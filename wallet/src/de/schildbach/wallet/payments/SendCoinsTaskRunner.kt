@@ -364,7 +364,11 @@ class SendCoinsTaskRunner @Inject constructor(
             signSendRequest(sendRequestForSigning)
             wallet.completeTx(sendRequestForSigning)
             onTransactionCreated?.invoke(sendRequestForSigning.tx.txId)
-            return sendCoins(sendRequestForSigning, txCompleted = true, serviceName = serviceName)
+            // The callback suspends, and the gift card flow runs this NonCancellable, so a wipe can
+            // finish while the order is being recorded. Committing to whatever is installed by
+            // then would hand the replacement wallet this one's signed transaction to import and
+            // broadcast; commit to the wallet that signed it, or not at all.
+            return sendCoins(sendRequestForSigning, txCompleted = true, serviceName = serviceName, originWallet = wallet)
         }
     }
 

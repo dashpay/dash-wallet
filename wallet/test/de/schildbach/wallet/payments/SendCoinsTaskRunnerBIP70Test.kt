@@ -52,6 +52,7 @@ import org.bitcoin.protocols.payments.Protos
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.script.Script
@@ -1170,6 +1171,35 @@ class SendCoinsTaskRunnerBIP70Test {
         // Then: the erased wallet's transaction is not in the replacement. maybeCommitTx does not
         // ask whose transaction it is handed, so nothing else would have kept it out.
         assertNull(replacement.getTransaction(sendRequest.tx.txId))
+    }
+
+
+    @Test
+    fun `a wipe during the order callback does not commit a plain payment to the replacement wallet`() = runTest {
+        // Given: a plain BIP21 payment, signed locally, whose caller is still recording its order
+        // when a wipe installs a new wallet. The callback suspends and the gift card flow runs
+        // this NonCancellable, so the commit that follows runs regardless.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val bip21Uri = "dash:$testAddress?amount=0.01"
+        val replacement = Wallet.createDeterministic(networkParams, Script.ScriptType.P2PKH)
+        var signedTxId: Sha256Hash? = null
+
+        // When
+        try {
+            sendCoinsTaskRunner.payWithDashUrl(bip21Uri, "TestService") { txId ->
+                signedTxId = txId
+                every { walletDataProvider.wallet } returns replacement
+            }
+            fail("a payment was committed on behalf of a wallet that had been wiped")
+        } catch (e: Exception) {
+            // Expected: refused once the signing wallet is gone.
+        }
+
+        // Then: without this the test could pass by failing before it ever reached the gap
+        val txId = signedTxId
+        assertNotNull("the order callback never ran, so nothing here was exercised", txId)
+        // the erased wallet's transaction is not in its replacement
+        assertNull(replacement.getTransaction(txId!!))
     }
 
 }
