@@ -2521,6 +2521,50 @@ class CutoverUiDataService internal constructor(
     private var cachedReceiveAddress: ReceiveAddressSnapshot? = null
 
     /**
+     * Ticket issued to each engine read BEFORE it blocks, and the highest ticket
+     * that has already published.
+     *
+     * The generation tells two wallet BINDINGS apart; it says nothing about the
+     * order of two reads within ONE binding. Both the ticker/event refresh and a
+     * live read can be in the FFI at once: a refresh can take address A, pause,
+     * a live read can then publish the engine's newer B, and the released
+     * refresh would overwrite B with the stale A — putting an ALREADY-USED
+     * address back on the Receive screen until the next successful refresh.
+     * A read may therefore publish only if no later-started read has published
+     * first.
+     */
+    private var receiveReadTicket = 0L
+    private var lastPublishedReceiveTicket = 0L
+
+    /**
+     * Take the binding and a read ticket together, or null when nothing is bound.
+     * Called before the blocking FFI read; the lock is never held across it.
+     */
+    private fun beginReceiveRead(): Triple<Long, Long, String>? = synchronized(receiveAddressLock) {
+        if (!_cutoverActive.value) return null
+        val walletIdHex = activeWalletIdHex ?: return null
+        Triple(receiveAddressGeneration, ++receiveReadTicket, walletIdHex)
+    }
+
+    /**
+     * Publish [address] for the read identified by [generation]/[ticket], and
+     * return what that read should answer.
+     *
+     * Rejects two classes of stale result: a different BINDING (the wallet was
+     * wiped or rolled back while we blocked) and an OUT-OF-ORDER publication
+     * (a later read already published). Must be called under
+     * [receiveAddressLock].
+     */
+    private fun completeReceiveRead(generation: Long, ticket: Long, address: String?): String? {
+        if (generation != receiveAddressGeneration) return null
+        if (address != null && ticket > lastPublishedReceiveTicket) {
+            cachedReceiveAddress = ReceiveAddressSnapshot(generation, address)
+            lastPublishedReceiveTicket = ticket
+        }
+        return address ?: cachedReceiveAddress?.takeIf { it.generation == generation }?.address
+    }
+
+    /**
      * Bind the SDK wallet the receive-address reads answer for, invalidating
      * anything the previous binding cached or has in flight. Idempotent: a
      * re-bind to the SAME id (the tx pipeline re-announces it) does not bump the
@@ -2531,6 +2575,7 @@ class CutoverUiDataService internal constructor(
         activeWalletIdHex = walletIdHex
         receiveAddressGeneration++
         cachedReceiveAddress = null
+        lastPublishedReceiveTicket = receiveReadTicket
     }
 
     /**
@@ -2544,6 +2589,9 @@ class CutoverUiDataService internal constructor(
         activeWalletIdHex = null
         receiveAddressGeneration++
         cachedReceiveAddress = null
+        // Every read issued so far is now stale; the generation already rejects
+        // them, and this keeps the ticket floor consistent for the next binding.
+        lastPublishedReceiveTicket = receiveReadTicket
     }
 
     /**
@@ -2655,12 +2703,10 @@ class CutoverUiDataService internal constructor(
      * rather than returned. BLOCKS on the FFI — off-main only.
      */
     fun sdkUnadvertisedAddressLiveBlockingOrNull(): String? {
-        val bound = synchronized(receiveAddressLock) {
-            if (!_cutoverActive.value) return null
-            val walletIdHex = activeWalletIdHex ?: return null
-            receiveAddressGeneration to walletIdHex
-        }
-        val (generation, walletIdHex) = bound
+        // Takes a ticket like the receive reads so the binding check is identical,
+        // but publishes nothing — there is no cache on this side, so ordering
+        // between two of these cannot matter.
+        val (generation, _, walletIdHex) = beginReceiveRead() ?: return null
         val address = source.nextChangeAddressOrNull(walletIdHex)
         return synchronized(receiveAddressLock) {
             // The wallet was wiped or rolled back while we were blocked: this
@@ -2686,28 +2732,14 @@ class CutoverUiDataService internal constructor(
         // Capture the binding and its generation together, then read OUTSIDE the
         // lock — holding it across a blocking FFI call would make every
         // deactivation wait on the engine's wallet-manager lock.
-        val bound = synchronized(receiveAddressLock) {
-            if (!_cutoverActive.value) return null
-            val walletIdHex = activeWalletIdHex ?: return null
-            receiveAddressGeneration to walletIdHex
-        }
-        val (generation, walletIdHex) = bound
+        val (generation, ticket, walletIdHex) = beginReceiveRead() ?: return null
         val address = source.nextReceiveAddressOrNull(walletIdHex)
+        // A failed read leaves the last known value in place rather than clearing
+        // it (an empty cache sends the synchronous overlay back to the frozen
+        // dashj address); a stale binding or an out-of-order result is rejected —
+        // see [completeReceiveRead].
         return synchronized(receiveAddressLock) {
-            // The binding changed while we were blocked in the FFI — the cutover
-            // rolled back, or Reset Wallet wiped the wallet in place. Publishing
-            // now would resurrect the PREVIOUS wallet's address into a cache the
-            // next wallet reads. Answer nothing instead; the caller falls back to
-            // dashj, which for an unbound/rolled-back wallet is the correct owner
-            // of the key chain again.
-            if (generation != receiveAddressGeneration) return@synchronized null
-            // A failed read leaves the last known value in place rather than
-            // clearing it: an empty cache sends the synchronous overlay back to
-            // the frozen dashj address, which is the defect this exists to fix.
-            if (address != null) {
-                cachedReceiveAddress = ReceiveAddressSnapshot(generation, address)
-            }
-            address ?: cachedReceiveAddress?.takeIf { it.generation == generation }?.address
+            completeReceiveRead(generation, ticket, address)
         }
     }
 
@@ -2839,6 +2871,35 @@ class CutoverUiDataService internal constructor(
      */
     fun start() {
         if (!started.compareAndSet(false, true)) return
+        // OWNERSHIP first, in its OWN collector. `collectLatest` below cancels
+        // the previous pipeline run and JOINS it before running the replacement
+        // action, and `refreshNativeSplit` blocks in an uncancellable FFI read —
+        // so a parked read delays that replacement arbitrarily. Invalidating the
+        // binding from inside it therefore left the retired wallet's address
+        // authorized for the whole of that window: the cache still matched its
+        // generation and live reads still passed the active gate.
+        //
+        // This collector depends on nothing that can be parked, so a rollback or
+        // an in-place wallet wipe revokes ownership at once. The generation bump
+        // is what invalidates the reads already in flight.
+        //
+        // DEACTIVATION ONLY. Activation stays with the gated collector below,
+        // which publishes [_cutoverActive] = true only once the wipe fence and
+        // the stale-wiped-wallet hold have cleared: a `true` that outran those
+        // would advertise SDK ownership while no pipeline is running, and the
+        // wipe's whole point is that nothing answers for the wiped wallet. The
+        // asymmetry is deliberate — revoking early is always safe, granting
+        // early is not.
+        scope.launch {
+            cutoverUiActive()
+                .distinctUntilChanged()
+                .collect { active ->
+                    if (!active) {
+                        _cutoverActive.value = false
+                        unbindReceiveAddressWallet()
+                    }
+                }
+        }
         scope.launch {
             // [stopGeneration] re-runs the block after a wipe stop even when the
             // gate itself never changes: DataStore emissions conflate, so the
@@ -3031,6 +3092,15 @@ class CutoverUiDataService internal constructor(
         // a live read could still answer from the wallet the rollback, or
         // [stopForWalletWipe], just abandoned. The generation bump invalidates
         // the reads already parked in the FFI under the old binding.
+        //
+        // On the ROLLBACK path [start]'s eager ownership collector has normally
+        // revoked already and this is a redundant second bump (harmless: the
+        // generation only has to DIFFER). It is kept because [stopForWalletWipe]
+        // reaches here too, and that path must not depend on the gate: the wipe
+        // calls it right after `resetForWalletWipe()`, before the DataStore
+        // emission is guaranteed to have arrived — and when the cutover reset
+        // FAILED the state stays CUT_OVER, so the eager collector never fires
+        // at all. This is the deterministic revocation for the wiped wallet.
         unbindReceiveAddressWallet()
     }
 
@@ -3339,25 +3409,23 @@ class CutoverUiDataService internal constructor(
         // the overlay back to the frozen dashj index-0 address, which is the
         // defect ([sdkReceiveAddressOrNull]), whereas a slightly stale engine
         // address is at worst one the engine has not yet marked used.
-        val generation = synchronized(receiveAddressLock) { receiveAddressGeneration }
-        val nextReceive = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            source.nextReceiveAddressOrNull(walletIdHex)
-        }
-        val published = synchronized(receiveAddressLock) {
-            // Same generation guard as the live read, and for the same reason:
-            // this read blocks in the FFI too, and cancelling the pipeline cannot
-            // interrupt it, so the binding may be gone by the time it returns.
-            when {
-                generation != receiveAddressGeneration -> false
-                nextReceive != null -> {
-                    cachedReceiveAddress = ReceiveAddressSnapshot(generation, nextReceive)
-                    true
-                }
-                else -> cachedReceiveAddress != null
+        // Same ticketed read/publish pair as the live accessor, and for the same
+        // two reasons: this read blocks in the FFI too, so the binding may be gone
+        // by the time it returns, AND a live read may have published a newer
+        // address meanwhile — which this one must not overwrite with its older
+        // answer ([completeReceiveRead]).
+        val begun = beginReceiveRead()
+        if (begun != null) {
+            val (generation, ticket, boundWalletIdHex) = begun
+            val nextReceive = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                source.nextReceiveAddressOrNull(boundWalletIdHex)
             }
-        }
-        if (!published && nextReceive == null) {
-            log.info("engine next-receive-address unavailable; the Receive screen stays on dashj")
+            val served = synchronized(receiveAddressLock) {
+                completeReceiveRead(generation, ticket, nextReceive)
+            }
+            if (served == null && nextReceive == null) {
+                log.info("engine next-receive-address unavailable; the Receive screen stays on dashj")
+            }
         }
     }
 
