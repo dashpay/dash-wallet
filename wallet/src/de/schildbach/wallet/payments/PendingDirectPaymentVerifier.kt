@@ -46,6 +46,8 @@ import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.slf4j.LoggerFactory
+import java.util.Collections
+import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -110,6 +112,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
     /** Set once a scan has protected every persisted payment; cleared until then. */
     @Volatile private var locksRestored = false
     private val jobs = ConcurrentHashMap<Sha256Hash, Deferred<Transaction?>>()
+
+    /**
+     * Wallets a wipe has started on. Listeners run while the wiped wallet is still installed, so
+     * "is it still the installed wallet" keeps answering yes for the rest of the wipe; anything
+     * that checked only that could still act for it after its records were cleared. Weak, so a
+     * retired wallet is not kept alive by being remembered here.
+     */
+    private val retiredWallets: MutableSet<Wallet> =
+        Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
     private val jobsMutex = Mutex()
 
     init {
@@ -132,6 +143,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * leaves the same end state whichever way round they run.
      */
     private suspend fun forgetWalletState() {
+        // First, before anything can yield: from here on every write made for this wallet is
+        // refused where it would land, so the clear below cannot be undone by one already under
+        // way. See PendingDirectPaymentConfig.add.
+        walletData.wallet?.let { retiredWallets.add(it) }
         val running = jobs.values.toList()
         jobs.clear()
         running.forEach { it.cancel() }
@@ -178,11 +193,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
             serviceName = serviceName,
             createdAt = System.currentTimeMillis(),
             isGiftCardPurchase = recovery?.isGiftCardPurchase ?: false,
-            merchantIconUrl = recovery?.merchantIconUrl
+            merchantIconUrl = recovery?.merchantIconUrl,
+            walletId = walletIdentity(wallet)
         )
         lockInputs(wallet, tx)
         try {
-            config.add(payment)
+            config.add(payment) { stillOwnedBy(wallet) }
         } catch (e: Exception) {
             // Callers quarantine before submitting, so nothing has been sent yet and aborting
             // costs nothing. Carrying on without a record would be the expensive choice: the
@@ -266,7 +282,23 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     return@restore
                 }
                 log.info("resuming verification of {} pending direct payment(s)", pending.size)
+                val walletId = walletIdentity(wallet)
                 for (payment in pending) {
+                    if (payment.walletId != null && payment.walletId != walletId) {
+                        // Left by a wallet that has since been wiped: a write that was already on
+                        // its way when the wipe cleared the store, or a clear that failed. Its
+                        // outpoints are not this wallet's, so there is nothing here to protect,
+                        // and binding it here is the harm - a watch on this wallet would commit and
+                        // rebroadcast a transaction this wallet never made. Dropped, not kept:
+                        // no wallet that could use it is left.
+                        log.warn("discarding pending payment {}, it belongs to a wallet that was wiped", payment.txId)
+                        try {
+                            config.remove(payment.txId)
+                        } catch (e: Exception) {
+                            log.error("could not discard {}; it will be skipped again next time", payment.txId, e)
+                        }
+                        continue
+                    }
                     try {
                         val tx = Transaction(wallet.params, payment.txBytes)
 
@@ -384,14 +416,27 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
 
     /**
+     * A durable name for [wallet]: the hash of its watching key. The same wallet gives the same
+     * answer after a restart or a restore from its seed, and a replacement made after a wipe gives
+     * a different one. Only public key material goes into it.
+     */
+    private fun walletIdentity(wallet: Wallet): String? = try {
+        Sha256Hash.of(wallet.watchingKey.pubKey).toString()
+    } catch (e: Exception) {
+        log.warn("wallet has no watching key, recording pending payments without an owner", e)
+        null
+    }
+
+    /**
      * True while [origin] is still the installed wallet. Everything done on behalf of a payment
      * is done to the wallet that made it, and a wipe swaps that out underneath work already in
-     * flight, so anything holding a wallet asks again before acting on it.
+     * flight, so anything holding a wallet asks again before acting on it. A wallet a wipe has
+     * started on no longer counts, even though it stays installed until the wipe finishes.
      *
      * Public because the watches this class owns are not the only such work: a payment's HTTP
      * submission outlives cancellation as well, and it has to answer the same question.
      */
-    fun stillOwnedBy(origin: Wallet): Boolean = walletData.wallet === origin
+    fun stillOwnedBy(origin: Wallet): Boolean = walletData.wallet === origin && origin !in retiredWallets
 
     private suspend fun verify(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): Transaction? {
         log.info("watching the network for possibly-sent tx {} (submitted to {})", tx.txId, payment.paymentUrl)
@@ -426,7 +471,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     ) {
                         // Frees the inputs, but the order stays and so does this watch: silence
                         // for the grace period is not proof the payment never reached the payee.
-                        current = release(tx, current)
+                        current = release(tx, current, origin)
                     }
                 } else if (now - current.createdAt >= recordRetentionMs) {
                     discardRecords(current, origin)
@@ -509,7 +554,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
      *
      * @return the payment as now stored, marked abandoned
      */
-    private suspend fun release(tx: Transaction, payment: PendingDirectPayment): PendingDirectPayment {
+    private suspend fun release(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): PendingDirectPayment {
         log.warn(
             "possibly-sent tx {} has not been seen on the network while connected and synced; " +
                 "releasing its inputs but keeping the order and watching for a late broadcast",
@@ -522,7 +567,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // have been respent, and the next resume() would lock them again and re-verify it.
         val abandoned = payment.copy(abandoned = true)
         try {
-            config.add(abandoned)
+            config.add(abandoned) { stillOwnedBy(origin) }
         } catch (e: Exception) {
             log.error("could not record the release of {}, keeping it locked and pending", tx.txId, e)
             throw e
@@ -530,7 +575,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
 
         // Past this point the stored payment says abandoned, so a restart will not lock these
         // inputs again, only carry on watching.
-        walletData.wallet?.let { unlockInputs(it, tx) }
+        unlockInputs(origin, tx)
         return abandoned
     }
 
@@ -562,7 +607,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 payment.txId
             )
             try {
-                config.add(payment.copy(watchExpired = true))
+                config.add(payment.copy(watchExpired = true)) { stillOwnedBy(origin) }
             } catch (e: Exception) {
                 log.error("could not record the expired watch for {}", payment.txId, e)
             }

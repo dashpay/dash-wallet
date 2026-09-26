@@ -139,7 +139,7 @@ class PendingDirectPaymentVerifierTest {
         delay(100)
 
         tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
-        coVerify { config.add(match { it.txId == tx.txId && it.paymentUrl == paymentUrl && it.serviceName == "CTXSpend" }) }
+        coVerify { config.add(match { it.txId == tx.txId && it.paymentUrl == paymentUrl && it.serviceName == "CTXSpend" }, any()) }
         assertTrue(verifier.isTracked(tx.txId))
         assertFalse("must not resolve while disconnected", result.isCompleted)
         assertNull(wallet.getTransaction(tx.txId))
@@ -226,7 +226,7 @@ class PendingDirectPaymentVerifierTest {
         // inputs are freed, but the record survives so the cleanup can be retried
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
         coVerify(exactly = 0) { config.remove(tx.txId) }
-        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }) }
+        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
     }
 
     @Test
@@ -234,7 +234,7 @@ class PendingDirectPaymentVerifierTest {
         // Callers quarantine before submitting, so nothing has been sent and aborting is free.
         // Proceeding without a record would leave memory-only locks that no restart could
         // restore, and the inputs of an uncertain payment free to fund a retry.
-        coEvery { config.add(any()) } throws RuntimeException("datastore is gone")
+        coEvery { config.add(any(), any()) } throws RuntimeException("datastore is gone")
         val tx = createTransaction()
 
         val thrown = try {
@@ -255,7 +255,7 @@ class PendingDirectPaymentVerifierTest {
         verifier.syncedGraceMs = 100L
         goOnlineAndSynced()
         // the quarantine write succeeds; only the abandoned transition fails
-        coEvery { config.add(match { it.abandoned }) } throws RuntimeException("datastore is gone")
+        coEvery { config.add(match { it.abandoned }, any()) } throws RuntimeException("datastore is gone")
         val tx = createTransaction()
 
         val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
@@ -346,7 +346,7 @@ class PendingDirectPaymentVerifierTest {
         // The payee decides when to relay the transaction, so silence is not proof it never
         // arrived. Free the inputs, but keep the order and the watch.
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
-        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }) }
+        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
         assertFalse("the watch must continue past release", result.isCompleted)
     }
@@ -395,7 +395,7 @@ class PendingDirectPaymentVerifierTest {
         // selected provider, and without it a late arrival cannot be attributed or retrieved.
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
         coVerify(exactly = 0) { config.remove(tx.txId) }
-        coVerify { config.add(match { it.txId == tx.txId && it.watchExpired }) }
+        coVerify { config.add(match { it.txId == tx.txId && it.watchExpired }, any()) }
     }
 
     @Test

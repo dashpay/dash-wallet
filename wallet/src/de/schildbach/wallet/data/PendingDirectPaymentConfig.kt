@@ -18,6 +18,7 @@
 package de.schildbach.wallet.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -73,7 +74,16 @@ data class PendingDirectPayment(
      * Null for a record written before this was stored, and for a payment that had no payment
      * request behind it at all.
      */
-    val paymentRequestId: String? = null
+    val paymentRequestId: String? = null,
+    /**
+     * Which wallet signed this, as a hash of that wallet's watching key. The in-memory checks that
+     * keep a payment on its own wallet end with the process; this is what lets a later restore
+     * tell a record of its own wallet from one left behind by a wallet that has since been wiped,
+     * and refuse to adopt the second into a replacement that never made it.
+     *
+     * Null for a record written before this was stored.
+     */
+    val walletId: String? = null
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
@@ -86,6 +96,7 @@ data class PendingDirectPayment(
         .put(KEY_ICON_URL, merchantIconUrl ?: JSONObject.NULL)
         .put(KEY_ABANDONED, abandoned)
         .put(KEY_WATCH_EXPIRED, watchExpired)
+        .put(KEY_WALLET_ID, walletId ?: JSONObject.NULL)
 
     companion object {
         private const val KEY_TX_ID = "txId"
@@ -98,6 +109,7 @@ data class PendingDirectPayment(
         private const val KEY_GIFT_CARD = "giftCard"
         private const val KEY_ICON_URL = "iconUrl"
         private const val KEY_WATCH_EXPIRED = "watchExpired"
+        private const val KEY_WALLET_ID = "walletId"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
@@ -116,10 +128,16 @@ data class PendingDirectPayment(
             isGiftCardPurchase = json.optBoolean(KEY_GIFT_CARD, false),
             merchantIconUrl = if (json.isNull(KEY_ICON_URL)) null else json.optString(KEY_ICON_URL, "").ifEmpty { null },
             abandoned = json.optBoolean(KEY_ABANDONED, false),
-            watchExpired = json.optBoolean(KEY_WATCH_EXPIRED, false)
+            watchExpired = json.optBoolean(KEY_WATCH_EXPIRED, false),
+            // opt for the same reason as paymentRequestId
+            walletId = if (json.isNull(KEY_WALLET_ID)) null else json.optString(KEY_WALLET_ID, "").ifEmpty { null }
         )
     }
 }
+
+/** A pending-payment write refused because the wallet it was made for is no longer current. */
+class StalePendingPaymentWriteException(val txId: Sha256Hash) :
+    IllegalStateException("not recording pending payment $txId: its wallet is no longer current")
 
 @Singleton
 // Persists BIP70 payments whose submission result is unknown, keyed by transaction id.
@@ -200,10 +218,31 @@ open class PendingDirectPaymentConfig @Inject constructor(
     // discarding every other quarantine. Their locks live only in memory, so nothing would be
     // left for a restart to restore, which is the state the strict read exists to prevent. A
     // failing store aborts the write instead.
-    open suspend fun add(payment: PendingDirectPayment) = mutex.withLock {
-        val stored = decodeStrict()
-        val payments = stored.readable.filter { it.txId != payment.txId } + payment
-        set(PENDING_PAYMENTS, encode(payments, stored.unreadable))
+    //
+    // [add] also reads and writes inside a single DataStore edit, and asks [stillValid] there, at
+    // the moment the write would land. The mutex only orders this class's own writes: the wipe
+    // clears the store through BaseConfig.clearAll(), which knows nothing of it, so a write that
+    // decided to go ahead before a wipe and landed after it would put an erased payment back.
+    // DataStore runs edits one at a time, so a check made inside this one is ordered against the
+    // wipe's clear in a way no check made before it can be.
+    /**
+     * @param stillValid asked inside the edit; returning false leaves the store untouched
+     * @throws StalePendingPaymentWriteException if [stillValid] refused the write
+     */
+    open suspend fun add(payment: PendingDirectPayment, stillValid: () -> Boolean = { true }) = mutex.withLock {
+        var refused = false
+        appContext.dataStore.edit { preferences ->
+            if (!stillValid()) {
+                refused = true
+                return@edit
+            }
+            val stored = parse(preferences[PENDING_PAYMENTS])
+            val payments = stored.readable.filter { it.txId != payment.txId } + payment
+            preferences[PENDING_PAYMENTS] = encode(payments, stored.unreadable)
+        }
+        if (refused) {
+            throw StalePendingPaymentWriteException(payment.txId)
+        }
     }
 
     open suspend fun remove(txId: Sha256Hash) = mutex.withLock {

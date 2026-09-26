@@ -474,6 +474,13 @@ class SendCoinsTaskRunner @Inject constructor(
             finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) },
             origin = wallet
         )
+        // Last check before anything leaves. A wipe can start after the quarantine was written,
+        // and its clear then removes that record; submitting anyway would send the payee a
+        // payment whose only recovery record has just been erased, on behalf of a wallet the
+        // user has chosen to wipe.
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            throw IllegalStateException("the wallet that signed ${sendRequest.tx.txId} has been wiped; not submitting")
+        }
 
         try {
             val response = directPayHttpClient.call(request)

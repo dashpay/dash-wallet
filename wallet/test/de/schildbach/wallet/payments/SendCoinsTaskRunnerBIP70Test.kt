@@ -894,7 +894,7 @@ class SendCoinsTaskRunnerBIP70Test {
                 eq(wallet)
             )
         }
-        coVerify { pendingPaymentConfig.add(match { it.txId == tx.txId }) }
+        coVerify { pendingPaymentConfig.add(match { it.txId == tx.txId }, any()) }
 
         // its inputs are locked so a retry can't double-spend them ...
         assertTrue(tx.inputs.isNotEmpty())
@@ -1085,7 +1085,8 @@ class SendCoinsTaskRunnerBIP70Test {
         val expected = org.dash.wallet.common.util.Constants.HEX.encode(requestHash)
         coVerify {
             pendingPaymentConfig.add(
-                match { it.txId == sendRequest.tx.txId && it.paymentRequestId == expected }
+                match { it.txId == sendRequest.tx.txId && it.paymentRequestId == expected },
+                any()
             )
         }
     }
@@ -1149,7 +1150,7 @@ class SendCoinsTaskRunnerBIP70Test {
 
         // a real wallet, so the assertion below is about what it actually holds
         val replacement = Wallet.createDeterministic(networkParams, Script.ScriptType.P2PKH)
-        coEvery { pendingPaymentConfig.add(any()) } answers {
+        coEvery { pendingPaymentConfig.add(any(), any()) } answers {
             every { walletDataProvider.wallet } returns replacement
         }
         mockWebServer.enqueue(
@@ -1171,6 +1172,8 @@ class SendCoinsTaskRunnerBIP70Test {
         // Then: the erased wallet's transaction is not in the replacement. maybeCommitTx does not
         // ask whose transaction it is handed, so nothing else would have kept it out.
         assertNull(replacement.getTransaction(sendRequest.tx.txId))
+        // and it was never sent: its recovery record belongs to a store the wipe has cleared
+        assertEquals("a payment was submitted for a wiped wallet", 0, mockWebServer.requestCount)
     }
 
 
