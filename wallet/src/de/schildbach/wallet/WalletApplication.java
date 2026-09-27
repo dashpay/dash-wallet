@@ -2680,6 +2680,12 @@ public class WalletApplication extends MultiDexApplication
      * (Fragment.startActivity on a fragment detached two minutes earlier).
      */
     public void triggerWipe() {
+        if (WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir())
+                == WalletWipeState.State.RECOVERY_REQUIRED) {
+            walletWipeRecoveryRequired = true;
+            log.warn("refusing wallet wipe while recovery is required");
+            return;
+        }
         log.info("Removing all the data and restarting the app.");
         WalletApplicationExt.INSTANCE.beginWalletWipe(this);
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));

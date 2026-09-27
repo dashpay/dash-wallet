@@ -174,7 +174,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (pinRetryController.isLockedForever) {
+        if (pinRetryController.isLockedForever && !walletApplication.isWalletWipeRecoveryRequired) {
             val binding = ActivityOnboardingPermLockBinding.inflate(layoutInflater)
             setContentView(binding.root)
             getStatusBarHeightPx()
