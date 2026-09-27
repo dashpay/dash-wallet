@@ -33,6 +33,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.UnresolvedPaymentsProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
@@ -142,7 +143,12 @@ class DashSpendViewModelTest {
             SavedStateHandle(),
             mock<MerchantDao>(),
             mock<CTXSpendConfig>(),
-            mock<BlockchainStateProvider> { on { observeState() } doReturn emptyFlow() }
+            mock<BlockchainStateProvider> { on { observeState() } doReturn emptyFlow() },
+            // nothing outstanding: these tests are about merchant details, and the view model
+            // refuses to start a purchase until this says so explicitly
+            mock<UnresolvedPaymentsProvider> {
+                on { observeUnresolvedGiftCardPurchase() } doReturn flowOf(false)
+            }
         )
     }
 

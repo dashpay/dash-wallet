@@ -40,6 +40,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.toFormattedString
@@ -173,10 +174,18 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                 Status.ERROR -> {
                     if (isAdded) {
                         binding.viewFlipper.displayedChild = VIEW_ERROR
-                        binding.errorView.title = R.string.payment_request_problem_title
-                        binding.errorView.setMessage(ack.message)
-                        binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                            viewModel.sendPayment()
+                        if (ack.exception is PaymentSubmissionPendingException) {
+                            // The merchant may have received the payment; the wallet keeps checking
+                            // the network in the background. Retrying now could pay twice.
+                            binding.errorView.title = R.string.payment_submission_pending_title
+                            binding.errorView.message = R.string.payment_submission_pending_message
+                            binding.errorView.hideConfirmButton()
+                        } else {
+                            binding.errorView.title = R.string.payment_request_problem_title
+                            binding.errorView.setMessage(ack.message)
+                            binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
+                                viewModel.sendPayment()
+                            }
                         }
                         binding.errorView.hideCancelButton()
                     }

@@ -32,6 +32,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.*
@@ -115,9 +116,23 @@ abstract class AppModule {
             coinJoinService: CoinJoinService,
             identityRepository: IdentityRepository,
             platformRepo: PlatformRepo,
-            transactionMetadataProvider: TransactionMetadataProvider
+            transactionMetadataProvider: TransactionMetadataProvider,
+            pendingPaymentVerifier: PendingDirectPaymentVerifier
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, coinJoinService, identityRepository, platformRepo, transactionMetadataProvider)
+            val realService = SendCoinsTaskRunner(
+                walletData,
+                walletApplication,
+                securityFunctions,
+                packageInfoProvider,
+                analyticsService,
+                identityConfig,
+                coinJoinConfig,
+                coinJoinService,
+                identityRepository,
+                platformRepo,
+                transactionMetadataProvider,
+                pendingPaymentVerifier
+            )
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService
