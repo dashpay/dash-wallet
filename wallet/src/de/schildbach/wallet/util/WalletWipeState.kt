@@ -75,6 +75,10 @@ object WalletWipeState {
      */
     fun begin(filesDir: File, noBackupFilesDir: File): Boolean {
         return try {
+            if (inspect(filesDir, noBackupFilesDir) == State.RECOVERY_REQUIRED) {
+                log.warn("refusing to replace an unverified wallet-wipe marker")
+                return false
+            }
             val file = marker(filesDir)
             val token = installToken(noBackupFilesDir) ?: return false
             file.writeText(markerBody(token), Charsets.UTF_8)

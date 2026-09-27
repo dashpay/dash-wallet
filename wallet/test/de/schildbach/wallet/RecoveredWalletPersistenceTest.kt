@@ -326,6 +326,25 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
+    fun `reset request with legacy marker never starts wipe service`() {
+        val files = directory.newFolder("files")
+        val noBackup = directory.newFolder("no-backup")
+        val marker = File(files, de.schildbach.wallet.util.WalletWipeState.MARKER_FILE_NAME)
+        marker.createNewFile()
+        val guardedApp = spyk(app)
+        every { guardedApp.filesDir } returns files
+        every { guardedApp.noBackupFilesDir } returns noBackup
+        every { guardedApp.startService(any()) } answers { fail("must not start wipe service"); null }
+
+        guardedApp.triggerWipe()
+
+        assertTrue(guardedApp.isWalletWipeRecoveryRequired)
+        assertEquals("", marker.readText())
+        assertTrue(noBackup.listFiles()!!.isEmpty())
+        verify(exactly = 0) { guardedApp.startService(any()) }
+    }
+
+    @Test
     fun `wipe recovery outranks seed recovery and no replacement wallet is installed or saved`() {
         // A failed primary and backup load latched seed recovery; a Reset
         // Wallet then stopped with its marker on disk (review, PR #1576). The

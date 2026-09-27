@@ -80,6 +80,8 @@ class WalletWipeSequenceTest {
         val noBackupFilesDir = newNoBackupFilesDir()
         File(filesDir, WalletWipeState.MARKER_FILE_NAME).createNewFile()
 
+        assertFalse(WalletWipeState.begin(filesDir, noBackupFilesDir))
+        assertFalse(File(noBackupFilesDir, "wallet-wipe.install-token").exists())
         assertFalse(WalletWipeState.isPending(filesDir, noBackupFilesDir))
         repeat(2) {
             assertEquals(WalletWipeState.State.RECOVERY_REQUIRED, WalletWipeState.inspect(filesDir, noBackupFilesDir))
@@ -94,6 +96,10 @@ class WalletWipeSequenceTest {
         val restoredNoBackupFilesDir = newNoBackupFilesDir()
         assertTrue(WalletWipeState.begin(filesDir, originalNoBackupFilesDir))
 
+        val originalMarker = File(filesDir, WalletWipeState.MARKER_FILE_NAME).readText()
+        assertFalse(WalletWipeState.begin(filesDir, restoredNoBackupFilesDir))
+        assertEquals(originalMarker, File(filesDir, WalletWipeState.MARKER_FILE_NAME).readText())
+        assertFalse(File(restoredNoBackupFilesDir, "wallet-wipe.install-token").exists())
         assertFalse(WalletWipeState.isPending(filesDir, restoredNoBackupFilesDir))
         assertEquals(WalletWipeState.State.RECOVERY_REQUIRED, WalletWipeState.inspect(filesDir, restoredNoBackupFilesDir))
         assertTrue(File(filesDir, WalletWipeState.MARKER_FILE_NAME).exists())
@@ -111,6 +117,10 @@ class WalletWipeSequenceTest {
         val mismatched = valid.replaceRange(3, 4, if (valid[3] == '0') "1" else "0")
         for (body in listOf("", "malformed", valid.replace("v1", "v2"), mismatched, "x".repeat(1024))) {
             marker.writeText(body)
+            val token = File(noBackupFilesDir, "wallet-wipe.install-token")
+            val tokenBefore = token.readText()
+            assertFalse(WalletWipeState.begin(filesDir, noBackupFilesDir))
+            assertEquals(tokenBefore, token.readText())
             repeat(2) {
                 assertEquals(WalletWipeState.State.RECOVERY_REQUIRED, WalletWipeState.inspect(filesDir, noBackupFilesDir))
                 assertFalse(WalletWipeState.isPending(filesDir, noBackupFilesDir))
@@ -136,7 +146,8 @@ class WalletWipeSequenceTest {
         assertTrue(WalletWipeState.begin(filesDir, noBackupFilesDir))
         File(noBackupFilesDir, "wallet-wipe.install-token").writeText("a".repeat(1024))
         assertEquals(WalletWipeState.State.RECOVERY_REQUIRED, WalletWipeState.inspect(filesDir, noBackupFilesDir))
-        assertTrue(WalletWipeState.begin(filesDir, noBackupFilesDir))
+        assertFalse(WalletWipeState.begin(filesDir, noBackupFilesDir))
+        assertEquals("a".repeat(1024), File(noBackupFilesDir, "wallet-wipe.install-token").readText())
         val marker = File(filesDir, WalletWipeState.MARKER_FILE_NAME)
         assertTrue(marker.delete())
         assertTrue(marker.mkdir())
