@@ -779,6 +779,15 @@ public class WalletApplication extends MultiDexApplication
         return wallet;
     }
 
+    /**
+     * Whether a wallet is loaded, safe to ask from any thread. The wallet field is not volatile,
+     * so a background thread reading it can go on seeing a wallet a wipe has already removed;
+     * the state flow is updated alongside it and publishes the change to every thread.
+     */
+    public boolean hasWallet() {
+        return walletStateFlow.getValue() != null;
+    }
+
     private final MutableStateFlow<Wallet> walletStateFlow = StateFlowKt.MutableStateFlow(null);
     @NonNull
     @Override
@@ -1183,6 +1192,12 @@ public class WalletApplication extends MultiDexApplication
         log.info("removing wallet from memory during wipe");
         wallet = null;
         walletStateFlow.setValue(null);
+        // Here, after the wallet is gone, and not with the other alarms at the top: the service's
+        // cleanup can still be scheduling its one-minute recovery restart until this point, and
+        // from here on it refuses to. A restart that fires with no wallet leaves the service
+        // half-created, and every later start - including the one for a replacement wallet -
+        // waits on it for good.
+        BlockchainServiceImpl.cancelRecoveryRestart(this);
         authenticationGroupExtension = null;
         walletBalanceObserver.close();
         walletBalanceObserver = null;

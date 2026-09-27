@@ -41,6 +41,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.text.format.DateUtils
 import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -234,6 +235,70 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * during cleanup would otherwise wipe this alarm.
          */
         private const val RECOVERY_ALARM_REQUEST_CODE = 1
+
+        /**
+         * The one-minute recovery restart, built in one place so that cancelling it matches the
+         * alarm it scheduled: AlarmManager cancels only an intent equal to the one it holds, and a
+         * cancel built separately that drifts in request code or type silently cancels nothing.
+         */
+        private fun recoveryRestartIntent(context: Context): PendingIntent {
+            val serviceIntent = Intent(context, BlockchainServiceImpl::class.java)
+            // Request code RECOVERY_ALARM_REQUEST_CODE, not 0: WalletApplication.scheduleStartBlockchainService
+            // builds the same intent with request code 0 and cancels it during onDestroy, replacing it
+            // with the 15 minute to 24 hour usage backoff. Sharing the code meant every ordinary
+            // cleanup threw away this recovery deadline, which is the one the pending-payment
+            // verification depends on to get peers back quickly.
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
+                PendingIntent.getForegroundService(
+                    context, RECOVERY_ALARM_REQUEST_CODE, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            } else {
+                PendingIntent.getService(
+                    context, RECOVERY_ALARM_REQUEST_CODE, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            }
+        }
+
+        /**
+         * Brings the service back in a minute, unless there is no wallet for it to serve.
+         *
+         * A restart with no wallet is worse than none: onCreate returns before it completes
+         * onCreateCompleted, and every later start, including the one for a replacement wallet,
+         * then waits on it forever. So [hasWallet] is asked after the alarm is set, not before: a
+         * check before could pass, and a wipe then clear the wallet and cancel before this sets
+         * the alarm, leaving it behind. A wipe clears the wallet before it cancels, so whichever
+         * way the two interleave, one of them removes the alarm.
+         */
+        @VisibleForTesting
+        internal fun scheduleRecoveryRestart(context: Context, hasWallet: () -> Boolean) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            // One-shot, not repeating. Only a wallet wipe cancels this request code, so a repeating
+            // alarm would outlive the recovery it was scheduled for and keep waking the service
+            // every 15 minutes alongside the backoff alarm, defeating the 12 and 24 hour intervals
+            // that one is meant to apply. The long-term safety net is that backoff alarm; this one
+            // only has to deliver the fast restart.
+            val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
+            alarmManager.set(AlarmManager.RTC_WAKEUP, restartTime, recoveryRestartIntent(context))
+            if (!hasWallet()) {
+                log.info("no wallet to serve, not keeping the service restart")
+                cancelRecoveryRestart(context)
+                return
+            }
+            log.info("Scheduled one-shot service restart in 1 minute at {}", Date(restartTime))
+        }
+
+        /**
+         * Cancels the recovery restart. For wallet wipe only: ordinary cleanup must leave it alone,
+         * which is why it has a request code of its own.
+         */
+        @JvmStatic
+        fun cancelRecoveryRestart(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(recoveryRestartIntent(context))
+        }
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -714,39 +779,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     @SuppressLint("WrongConstant")
     private fun rescheduleService() {
-        // Schedule restart in 1 minute
-        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-        val serviceIntent = Intent(
-            application,
-            BlockchainServiceImpl::class.java
-        )
-        // Request code RECOVERY_ALARM_REQUEST_CODE, not 0: WalletApplication.scheduleStartBlockchainService
-        // builds the same intent with request code 0 and cancels it during onDestroy, replacing it
-        // with the 15 minute to 24 hour usage backoff. Sharing the code meant every ordinary
-        // cleanup threw away this recovery deadline, which is the one the pending-payment
-        // verification depends on to get peers back quickly.
-        val alarmIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
-            PendingIntent.getForegroundService(
-                application, RECOVERY_ALARM_REQUEST_CODE, serviceIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        } else {
-            PendingIntent.getService(
-                application, RECOVERY_ALARM_REQUEST_CODE, serviceIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        }
-
-        // One-shot, not repeating. Nothing ever cancels this request code, so a repeating alarm
-        // would outlive the recovery it was scheduled for and keep waking the service every 15
-        // minutes alongside the backoff alarm, defeating the 12 and 24 hour intervals that one
-        // is meant to apply. The long-term safety net is that backoff alarm; this one only has
-        // to deliver the fast restart.
-        val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
-        alarmManager.set(AlarmManager.RTC_WAKEUP, restartTime, alarmIntent)
-
-        log.info("Scheduled one-shot service restart in 1 minute at {}", Date(restartTime))
+        scheduleRecoveryRestart(application) { application.hasWallet() }
     }
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =
