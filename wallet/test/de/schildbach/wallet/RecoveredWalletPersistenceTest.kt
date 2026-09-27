@@ -9,6 +9,9 @@ import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.util.SafeModeRetryWaiters
 import io.mockk.every
 import io.mockk.spyk
+import io.mockk.mockk
+import io.mockk.verify
+import de.schildbach.wallet.service.WalletFactory
 import org.bitcoinj.core.Context
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
@@ -123,6 +126,30 @@ class RecoveredWalletPersistenceTest {
         val saved = primary.inputStream().use { WalletProtobufSerializer().readWallet(it) }
         assertEquals(recovered.currentReceiveAddress(), saved.currentReceiveAddress())
         assertArrayEquals(originalBackup, backup.readBytes())
+    }
+
+    @Test
+    fun `backup recovery does not queue reset when primary persistence fails`() {
+        val originalBackup = backup.readBytes()
+        // A missing parent forces the actual protobuf save to fail.
+        setField("walletFile", File(directory.root, "missing/primary"))
+        setField("walletFactory", mockk<WalletFactory> {
+            every { getExtensions(any()) } returns emptyArray()
+        })
+        val recoveryApp = spyk(app)
+        every { recoveryApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } answers { backup.inputStream() }
+        every { recoveryApp.resetBlockchain() } answers { fail("must not queue reset before persistence succeeds") }
+
+        val restored = WalletApplication::class.java.getDeclaredMethod("restoreWalletFromBackup").run {
+            isAccessible = true
+            invoke(recoveryApp) as Wallet
+        }
+
+        assertEquals(recovered.currentReceiveAddress(), restored.currentReceiveAddress())
+        assertTrue(recoveryApp.isWalletLoadDegraded)
+        assertFalse(recoveryApp.isWalletRecoveryFromSeedNeeded)
+        assertArrayEquals(originalBackup, backup.readBytes())
+        verify(exactly = 0) { recoveryApp.resetBlockchain() }
     }
 
     @Test
