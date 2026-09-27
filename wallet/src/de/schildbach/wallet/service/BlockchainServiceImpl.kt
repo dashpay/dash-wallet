@@ -2418,8 +2418,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                 propagateContext()
                 val wallet = application.wallet
-                if (wallet == null) {
-                    log.error("onCreate: wallet is null after cleanup, service cannot continue")
+                if (wallet == null || application.isWalletLoadDegraded) {
+                    log.warn("onCreate: wallet is unavailable or degraded, service cannot continue")
+                    withContext(Dispatchers.Main) { stopSelf() }
                     return@launch
                 }
                 // Phase 5d: resolve the cutover engine gate ONCE, before we
@@ -2997,6 +2998,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
             log.info("onCreate completed, processing onStartCommand")
+            if (application.isWalletLoadDegraded && intent?.action != BlockchainService.ACTION_WIPE_WALLET) {
+                withContext(Dispatchers.Main) { stopSelf() }
+                return@launch
+            }
             if (intent != null) {
                 propagateContext()
                 log.info(
@@ -3286,7 +3291,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
                 }
-                if (!deleteWalletFileOnShutdown) {
+                if (!deleteWalletFileOnShutdown && !application.isWalletLoadDegraded) {
                     propagateContext()
                     application.saveWallet()
                 }

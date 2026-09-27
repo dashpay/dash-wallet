@@ -1755,12 +1755,6 @@ public class WalletApplication extends MultiDexApplication
 
             wallet.addKeyChain(Constants.BIP44_PATH);
 
-            resetBlockchain();
-
-            // May run on the deferred load's worker, which has no Looper: a
-            // direct Toast would throw here and fail a recovery that worked.
-            showLoadToast(getString(R.string.toast_wallet_reset));
-
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
             StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
                     "WALLET_RECOVERED_FROM_BACKUP");
@@ -1787,7 +1781,14 @@ public class WalletApplication extends MultiDexApplication
                     CrashReporter.saveBackgroundTrace(x, packageInfoProvider.getPackageInfo());
                 } catch (final Throwable ignored) {
                 }
+                return wallet;
             }
+
+            // Service-backed reset must not escape the persistence failure guard.
+            resetBlockchain();
+            // May run on the deferred load's worker, which has no Looper: a
+            // direct Toast would throw here and fail a recovery that worked.
+            showLoadToast(getString(R.string.toast_wallet_reset));
 
             // POST-RECOVERY GUARD: if the Tools "dashj sync (diagnostic)"
             // toggle is ON, force it OFF. With the toggle on, the un-held dashj
