@@ -334,9 +334,10 @@ public final class Constants {
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
-    // 2,500,000,000 credits
-    public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
-    public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
+    // 1,500,000,000 credits (Platform v4.2 reduced the contested-name
+    // prefunded voting balance from 0.2 to 0.1 DASH; see MO-1069)
+    public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.15");
+    public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.10");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
 
     // Fee margin one shielded operation costs ON TOP of its denomination /
@@ -358,10 +359,12 @@ public final class Constants {
 
     // How much the user should SHIELD (L1 -> pool) to afford a username via
     // the shielded path. The pool must hold the whole exit denomination
-    // (0.03 non-contested / 0.25 contested under the v13 allowed set —
-    // see SHIELDED_IDENTITY_DENOMINATIONS_CREDITS; under v13 the
-    // denominations equal DASH_PAY_FEE / DASH_PAY_FEE_CONTESTED, pinned by
-    // InviteFeeGateTest), and the Shield operation's own fee is deducted
+    // (0.03 non-contested / 0.25 contested under the v13 allowed set — see
+    // SHIELDED_IDENTITY_DENOMINATIONS_CREDITS). The non-contested denomination
+    // still equals DASH_PAY_FEE; the contested denomination (0.25) is now only
+    // the SMALLEST member covering DASH_PAY_FEE_CONTESTED (0.15 since MO-1069,
+    // down from 0.2/0.25) — no longer an exact match, pinned by
+    // InviteFeeGateTest. The Shield operation's own fee is deducted
     // from the locked amount — so shielding the bare denomination lands
     // just short. User-facing guidance is a ROUND number chosen above
     // denomination + SHIELDED_FEE_MARGIN (product decision 2026-08-05):

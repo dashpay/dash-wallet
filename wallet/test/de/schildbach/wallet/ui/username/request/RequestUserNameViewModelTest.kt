@@ -539,9 +539,9 @@ class RequestUserNameViewModelTest {
 
     @Test
     fun checkUsernameValid_dashSource_freshlyFundedWallet_passes_contested() = runVmTest {
-        // The same pre-block mirror state at the 0.25 DASH contested fee:
+        // The same pre-block mirror state at the 0.15 DASH contested fee:
         // a wallet comfortably above the threshold must not be refused
-        // either (the S21 log failed both, at 0.03 and at 0.25).
+        // either (the S21 log failed both, at 0.03 and at 0.15).
         assetLockFundingEvidence.value = AssetLockFundingEvidence(
             eligibleDuffs = 0L,
             unclassifiedDuffs = 50_000_000L
@@ -553,7 +553,7 @@ class RequestUserNameViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue("brian must be contested", state.usernameContestable)
-        assertEquals("0.25", state.requiredAmount)
+        assertEquals("0.15", state.requiredAmount)
         assertTrue(state.enoughBalance)
         assertFalse(state.fundsSettling)
     }
