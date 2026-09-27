@@ -167,9 +167,13 @@ class ShieldedBalanceServiceTest {
             events += "syncNow"
         }
 
+        /** Suspending hook inside the prover warm-up — the last suspend before ready (review 2026-09-27). */
+        var onWarmUpSuspend: suspend () -> Unit = {}
+
         override suspend fun warmUpProver() {
             warmUpCalls++
             events += "warmUp"
+            onWarmUpSuspend()
         }
 
         override fun observeUnspentNotes(walletId: ByteArray): Flow<List<ShieldedNoteEntity>> = notesFlow
@@ -476,6 +480,48 @@ class ShieldedBalanceServiceTest {
         assertTrue(service.ensureShieldedReady())
         assertEquals(3, source.bindCalls)
         assertEquals(1, source.startCalls)
+    }
+
+    /**
+     * Review, 2026-09-27: warmUpProver() is a suspend call AFTER the last
+     * generation check. A stop() that timed out on the lock while it was
+     * outstanding tore the Kotlin side down, and when warm-up returned the
+     * bring-up published ready anyway, leaving the native loop running and
+     * letting ensureShieldedReady() restart the collectors and the sweep over
+     * the teardown. The fence now re-checks after warm-up: not ready, and the
+     * loop it started is stopped.
+     */
+    @Test
+    fun stop_supersedesABringUpParkedInTheProverWarmUp_whichThenStopsTheLoopAndDeclines() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        var warmUps = 0
+        val source = readySource().apply { onWarmUpSuspend = { if (++warmUps == 1) gate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.warmUpCalls == 0) delay(10) }
+        assertEquals("the loop was started before the warm-up", 1, source.startCalls)
+        assertTrue("the bring-up is parked inside the warm-up", bringUp.isActive)
+
+        // Times out on the lock and runs its fallback to completion BEFORE warm-up returns.
+        withTimeout(5_000) { service.stop() }
+        assertEquals("the fallback cannot reach the loop", 0, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        gate.complete(Unit) // warm-up returns into a superseded bring-up
+        assertFalse("superseded during warm-up: not ready", bringUp.await())
+        assertEquals("…and the loop it started is stopped", 1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        // A later stop has nothing ready and touches the SDK no further.
+        service.stop()
+        assertEquals(1, source.stopCalls)
+
+        // A fresh bring-up afterwards is whole again.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, source.bindCalls)
+        assertEquals(2, source.startCalls)
+        assertEquals(2, source.warmUpCalls)
     }
 
     /** The uncontended path is unchanged: stop under the lock, and the native loop IS stopped. */

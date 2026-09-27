@@ -948,9 +948,42 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // the first spend doesn't pay the ~30s warm-up on top of its
                 // own proof. Idempotent; runs on a background thread SDK-side.
                 runCatching { source.warmUpProver() }
-                    .onFailure { log.warn("shielded prover warm-up failed (spends will build it lazily)", it) }
+                    .onFailure {
+                        if (it is CancellationException) throw it
+                        log.warn("shielded prover warm-up failed (spends will build it lazily)", it)
+                    }
+                // warmUpProver() suspends too (review, 2026-09-27): a stop()
+                // that times out on the lock while it is outstanding has
+                // already torn the Kotlin side down, so the fence runs once
+                // more before anything is published.
+                if (superseded()) {
+                    log.warn(
+                        "shielded bring-up superseded by a stop() during the prover warm-up — stopping " +
+                            "the loop and not reporting ready"
+                    )
+                    runCatching { source.stopShieldedSync() }
+                        .onFailure { log.warn("failed to stop the shielded sync loop after a superseded bring-up", it) }
+                    return false
+                }
 
+                // Publish, THEN verify. stop()'s fallback bumps the generation
+                // before it clears the latch, and runs on another thread
+                // without the lock. If its bump lands after the check above,
+                // either this verify sees it, or its clear lands after this
+                // publish and removes it. Checking only before publishing
+                // leaves a window where the clear runs first and this write
+                // survives the teardown.
                 readyWalletIdHex.value = walletIdHex
+                if (superseded()) {
+                    readyWalletIdHex.compareAndSet(walletIdHex, null)
+                    log.warn(
+                        "shielded bring-up superseded by a stop() as it published ready — withdrawing " +
+                            "it and stopping the loop"
+                    )
+                    runCatching { source.stopShieldedSync() }
+                        .onFailure { log.warn("failed to stop the shielded sync loop after a superseded bring-up", it) }
+                    return false
+                }
                 log.info(
                     "shielded runtime ready on SDK wallet {}… (account {}, sync loop running)",
                     walletIdHex.take(8), DEFAULT_SHIELDED_ACCOUNT
