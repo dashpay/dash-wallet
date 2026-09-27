@@ -145,7 +145,7 @@ class RecoveredWalletPersistenceTest {
             invoke(recoveryApp) as Wallet
         }
 
-        assertEquals(recovered.currentReceiveAddress(), restored.currentReceiveAddress())
+        assertTrue(restored.isPubKeyMine(recovered.currentReceiveKey().pubKey))
         assertTrue(recoveryApp.isWalletLoadDegraded)
         assertFalse(recoveryApp.isWalletRecoveryFromSeedNeeded)
         assertArrayEquals(originalBackup, backup.readBytes())
