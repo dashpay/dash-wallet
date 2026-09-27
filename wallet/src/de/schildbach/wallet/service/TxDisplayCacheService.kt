@@ -738,7 +738,37 @@ class TxDisplayCacheService @Inject constructor(
         _cachedRows.value = emptyList()
     }
 
-    /** clear database tables during a wipe wallet or rescan operation */
+    /**
+     * The rescan (not wipe) half of [clearDatabase] — MO-1054.
+     *
+     * Post-cutover a rescan only rewinds the SDK's scan watermark
+     * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.armSpvRescanForBlockchainReset]);
+     * the SDK keeps every transaction record. Wiping the caches here threw
+     * away rows whose source still holds them, and no change-feed delta
+     * follows (the records did not change) — so the history sat empty,
+     * under a "synced" header, until the pipeline's next full reconcile walk
+     * (10 s after activation, then every 60 s, plus the walk itself). Keep
+     * the rows and ask for that walk now instead: it is idempotent and
+     * corrects any row in place.
+     *
+     * Pre-cutover dashj really does drop its transactions on a rescan and
+     * re-adds them as the replay proceeds, so the wipe stays.
+     */
+    suspend fun clearDatabaseForRescan() {
+        if (!rescanMayClearHistoryCache(cutoverCommittedOrUnknown())) {
+            log.info(
+                "rescan: keeping {} display rows / {} group rows — the cutover is committed and the " +
+                    "SDK keeps its transactions across a rescan; requesting a reconcile walk instead",
+                txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
+            )
+            runCatching { cutoverUiDataService.get().requestFullReconcile() }
+                .onFailure { log.warn("could not request an SDK reconcile pass after the rescan", it) }
+            return
+        }
+        clearDatabase()
+    }
+
+    /** clear database tables during a wipe wallet or (pre-cutover) rescan operation */
     suspend fun clearDatabase() {
         txDisplayCacheDao.deleteAll()
         txGroupCacheDao.deleteAll()
@@ -1626,6 +1656,19 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
  */
 internal fun dashjRebuildWouldEraseHistory(cutoverCommitted: Boolean, dashjTxCount: Int): Boolean =
     cutoverCommitted && dashjTxCount == 0
+
+/**
+ * Whether a blockchain rescan may wipe the display/group caches — the pure
+ * core of [TxDisplayCacheService.clearDatabaseForRescan] (MO-1054).
+ *
+ * Only pre-cutover: there the dashj wallet drops its transactions and the
+ * replay re-adds them. Post-cutover the SDK keeps its records across the
+ * rescan, so a wipe only empties the history until the next reconcile walk.
+ * An unreadable cutover state arrives here as committed (see
+ * `cutoverCommittedOrUnknown`), which keeps the rows — the non-destructive
+ * direction.
+ */
+internal fun rescanMayClearHistoryCache(cutoverCommitted: Boolean): Boolean = !cutoverCommitted
 
 /**
  * Read [read] until it yields a count, up to [polls] retries [intervalMs]

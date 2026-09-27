@@ -266,4 +266,21 @@ class TxDisplayCacheRebuildGuardTest {
             ).action
         )
     }
+
+    // ── The rescan wipe (MO-1054) ─────────────────────────────────────
+
+    @Test
+    fun postCutoverRescanKeepsTheHistoryRows() {
+        // The SDK keeps its transactions across a rescan (only the scan
+        // watermark rewinds), so a wipe emptied the history until the next
+        // reconcile walk — the "no trxs after rescan" report.
+        assertFalse(rescanMayClearHistoryCache(cutoverCommitted = true))
+    }
+
+    @Test
+    fun preCutoverRescanStillWipesTheHistoryRows() {
+        // dashj drops its transactions on a rescan and re-adds them as the
+        // replay proceeds; keeping the rows there would show stale history.
+        assertTrue(rescanMayClearHistoryCache(cutoverCommitted = false))
+    }
 }
