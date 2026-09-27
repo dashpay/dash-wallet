@@ -87,18 +87,27 @@ data class L1SyncUiStatus(
  *
  * Uses [ShadowSyncProgress.scanCaughtUpToTip], not the SDK's never-latching
  * `synced`/phase == SYNCED: a live SPV perpetually chasing the moving tip
- * would otherwise read as un-synced forever. Pure — host-testable.
+ * would otherwise read as un-synced forever. Since 2026-09-21 that predicate
+ * also carries the iOS rule ([ShadowSyncProgress.aggregateCaughtUp]) — the
+ * engine's own aggregate at `>= 0.999` — so the two clients call the same
+ * engine state synced at the same instant. Pure — host-testable.
  *
- * The `synced` (SDK-latched SYNCED phase) arm is ALSO gated on the block
- * pipeline not provably lagging ([ShadowSyncProgress.blockPipelineLagging]):
- * the engine's overall phase was observed holding SYNCED while an armed
- * rescan replayed the whole filter range and the block/tx pipeline was
- * still churning — the premature l1Synced=true that persisted a partial
- * balance in the field. An UNKNOWN cursor never counts as lagging, so this
- * cannot deadlock a genuinely-at-tip wallet (see the predicate's KDoc).
+ * THE PIPELINE-LAG VETO IS GONE FROM HERE, ON PURPOSE. Until 2026-09-21 this
+ * also required `!blockPipelineLagging`, closing the field incident where the
+ * engine held SYNCED through an armed replay and the app persisted a partial
+ * 48.86 DASH as the last-known balance. Two things changed the call:
+ * - iOS never had the veto, and the point of adopting its rule is to read
+ *   "synced" when it does.
+ * - In the dash-spv final-partial-batch stall (plan §34) the wallet cursor
+ *   parks WITH the filter cursor, so the veto held "Syncing balance" on
+ *   forever at 99% — the report this change exists to fix.
+ * The protection moved rather than died: [L1SyncStatusService.sdkPipelineLagging]
+ * feeds `CutoverUiDataService`'s persist gate, so the DURABLE seed — the one
+ * place a wrong figure poisons every later launch — still waits for the
+ * pipeline. The DISPLAY hold and the label no longer do.
  */
 fun sdkL1ScanCaughtUp(progress: ShadowSyncProgress): Boolean =
-    (progress.synced || progress.scanCaughtUpToTip) && !progress.blockPipelineLagging
+    progress.synced || progress.scanCaughtUpToTip
 
 /**
  * dashj's own header percentage, replicating the historical rule that a
@@ -505,6 +514,18 @@ class L1SyncStatusService @Inject constructor(
      */
     val sdkScanCaughtUp: Flow<Boolean> =
         l1ShadowSyncService.progress.map(::sdkL1ScanCaughtUp).distinctUntilChanged()
+
+    /**
+     * [ShadowSyncProgress.blockPipelineLagging] over the live progress feed —
+     * the veto that LEFT [sdkL1ScanCaughtUp] on 2026-09-21, published on its
+     * own so `CutoverUiDataService` can keep applying it to the one decision
+     * where it still belongs: persisting the balance as the launch seed. A
+     * wrong DISPLAYED figure corrects itself on the next tick; a wrong
+     * PERSISTED one poisons every later launch (the 48.86 DASH incident), so
+     * that gate alone still waits for the block pipeline to drain.
+     */
+    val sdkPipelineLagging: Flow<Boolean> =
+        l1ShadowSyncService.progress.map { it.blockPipelineLagging }.distinctUntilChanged()
 
     /**
      * The SUSTAINED platform-outage verdict ([platformMasternodeListStarved]

@@ -20,9 +20,13 @@ package de.schildbach.wallet.service.platform.sdk
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
+import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,10 +36,9 @@ import org.junit.Test
  * Host-JVM tests for the MO-995 bind retry machinery: the capped backoff
  * ladder, the re-arming semantics ([SdkBindRetryService.maybeRetry] /
  * [SdkBindRetryService.retryNowInBackground]), the device-unlock heal
- * receiver arming, and the engine-fallback rollback — including the
- * end-to-end invariant over a REAL binder + REAL coordinator: after
- * persistent bind failures the gate ends with dashj allowed OR the SDK
- * wallet bound, never both held.
+ * receiver arming — and the no-fallback invariant over a REAL binder +
+ * REAL coordinator: persistent bind failures keep retrying and never hand
+ * L1 back to dashj (docs/upgrade-memory-and-sync-plan.md §12).
  */
 class SdkBindRetryServiceTest {
 
@@ -90,20 +93,24 @@ class SdkBindRetryServiceTest {
         var registerSucceeds: Boolean = true
     ) {
         var nowMs = 0L
-        var rollbacks = 0
-        var lastRollbackFailures = -1
         var registrations = 0
         var unlockCallback: (() -> Unit)? = null
+
+        // The "SDK setup pending" surface.
+        val failures = kotlinx.coroutines.flow.MutableStateFlow<SdkBindFailure?>(null)
+        val established = kotlinx.coroutines.flow.MutableStateFlow(false)
+        var appInBackground = false
+        val notices = mutableListOf<SdkBindBlocker>()
+        var noticeClears = 0
+        val persisted = mutableListOf<SdkBindBlocker?>()
+        /** When set, [persistBlocker] parks on it — holds the outcome mutex open at a known point. */
+        var persistGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
         fun service(scope: kotlinx.coroutines.CoroutineScope) = SdkBindRetryService(
             scope = scope,
             bindRetryPending = { signal.pending },
             consecutiveBindFailures = { signal.failures },
             runBindPass = { signal.bindPass() },
-            rollbackCutover = { failures ->
-                rollbacks++
-                lastRollbackFailures = failures
-            },
             registerUnlockReceiver = { onUserPresent ->
                 if (registerSucceeds) {
                     registrations++
@@ -112,9 +119,40 @@ class SdkBindRetryServiceTest {
                 registerSucceeds
             },
             deviceProvablyLocked = { deviceLocked },
-            now = { nowMs }
+            now = { nowMs },
+            bindFailures = failures,
+            bindEstablished = established,
+            persistBlocker = { persistGate?.await(); persisted += it },
+            showPendingNotice = { notices += it },
+            clearPendingNotice = { noticeClears++ },
+            appInBackground = { appInBackground }
         )
+
+        /** Publish one failed pass the way the binder does. */
+        fun fail(cause: Throwable) {
+            signal.primeFailed(signal.failures + 1)
+            established.value = false
+            failures.value = SdkBindFailure(cause, signal.failures, atMs = ++nowMs)
+        }
+
+        /** Both signals, exactly as SdkWalletBinder.noteBindOutcome raises them. */
+        fun succeed() {
+            signal.pending = false
+            signal.failures = 0
+            failures.value = null
+            established.value = true
+        }
     }
+
+    private fun lockedDenial() = org.dashfoundation.dashsdk.security.KeystoreDeviceLockedException(
+        "org.dashfoundation.wallet.master", "createWallet",
+        org.dashfoundation.dashsdk.security.DeviceLockState(true, true), RuntimeException("denied")
+    )
+
+    private fun unlockedDenial() = org.dashfoundation.dashsdk.security.KeystoreDeviceLockedException(
+        "org.dashfoundation.wallet.master", "createWallet",
+        org.dashfoundation.dashsdk.security.DeviceLockState(false, false), RuntimeException("denied")
+    )
 
     // ── maybeRetry: gating + ladder ───────────────────────────────────
 
@@ -156,6 +194,88 @@ class SdkBindRetryServiceTest {
         assertEquals(3, h.signal.passes)
     }
 
+    /**
+     * Review, 2026-09-22: success and failure ride separate StateFlows on
+     * separate collectors, so a success that was already inside
+     * onBindEstablished and parked on the mutex can run AFTER a newer failure
+     * classified its blocker. The binder's live `bindRetryPending` — true
+     * before a failure is published, false before a success is — tells the
+     * stale success from a current one. A real success that follows still
+     * clears everything.
+     *
+     * Unconfined scope so each emission runs its collector synchronously; a
+     * locked-device denial classifies to a blocker on the first failure.
+     */
+    @Test
+    fun staleBindSuccess_doesNotClearANewerFailuresBlocker() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            val service = h.service(collectors)
+
+            h.fail(lockedDenial())
+            val blocker = service.blocker.value
+            assertNotNull("the failure classified a blocker", blocker)
+            val clearsBefore = h.noticeClears
+
+            // The stale success: `bindEstablished` reads true while the binder
+            // still reports a retry pending for the newer failure.
+            h.established.value = true
+            assertEquals("a superseded success leaves the newer failure's blocker in place", blocker, service.blocker.value)
+            assertEquals("…and does not clear the notice", clearsBefore, h.noticeClears)
+            assertFalse("…and persists no NONE", h.persisted.contains(null))
+
+            // The binder lowers `bindEstablished` for the failure it published;
+            // the genuine success that follows clears the state as before.
+            h.established.value = false
+            h.succeed()
+            assertNull(service.blocker.value)
+            assertEquals(clearsBefore + 1, h.noticeClears)
+            assertTrue(h.persisted.contains(null))
+        } finally {
+            collectors.cancel()
+        }
+    }
+
+    /**
+     * Review, 2026-09-24: the mirror image of the stale success. A failure
+     * that reached its handler and then waited on the mutex while the OTHER
+     * collector delivered a success is history by the time it classifies —
+     * the identity check cannot see that, because it compares against a
+     * value the failure collector itself wrote. The binder's live
+     * `bindRetryPending` reads false once the bind succeeded, and the
+     * classifier now drops the failure on that.
+     */
+    @Test
+    fun staleBindFailure_arrivingAfterTheBindSucceeded_publishesNothing() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            val service = h.service(collectors)
+            h.fail(lockedDenial())
+            assertNotNull(service.blocker.value)
+
+            h.succeed() // pending=false, blocker cleared
+            assertNull(service.blocker.value)
+            val noticesBefore = h.notices.size
+            val persistedBefore = h.persisted.size
+
+            // The stale failure: the binder still says no retry is pending.
+            h.failures.value = SdkBindFailure(lockedDenial(), 1, atMs = ++h.nowMs)
+            assertNull("a failure that lost the race to a success republishes nothing", service.blocker.value)
+            assertEquals(noticesBefore, h.notices.size)
+            assertEquals(persistedBefore, h.persisted.size)
+        } finally {
+            collectors.cancel()
+        }
+    }
+
     @Test
     fun maybeRetry_successResetsTheLadder() = runTest {
         val h = Harness()
@@ -173,7 +293,6 @@ class SdkBindRetryServiceTest {
         h.nowMs += 100_000
         service.maybeRetry("poll")
         assertEquals(2, h.signal.passes)
-        assertEquals(0, h.rollbacks)
     }
 
     @Test
@@ -230,7 +349,6 @@ class SdkBindRetryServiceTest {
         runCurrent()
         assertEquals(3, h.signal.passes)
         assertFalse(h.signal.pending)
-        assertEquals(0, h.rollbacks)
     }
 
     @Test
@@ -248,32 +366,28 @@ class SdkBindRetryServiceTest {
         assertEquals(1, h.registrations)
     }
 
-    // ── The engine-fallback rollback ──────────────────────────────────
+    // ── No engine fallback ────────────────────────────────────────────
 
     @Test
-    fun rollback_firesAfterTheFailureThreshold_withTheDeviceUnlocked() = runTest {
+    fun persistentFailures_keepRetryingOnTheHourlyTail_withTheDeviceUnlocked() = runTest {
+        // Five consecutive failures used to roll the cutover back to dashj.
+        // Now they are just five failures: the ladder keeps going.
         val h = Harness()
         h.signal.primeFailed()
         val service = h.service(backgroundScope)
 
-        // Failures 2..4 (initial + three retries): below the threshold.
-        repeat(3) {
+        repeat(8) {
             h.nowMs += 3_600_000
             service.maybeRetry("poll")
         }
-        assertEquals(0, h.rollbacks)
-
-        // The 5th consecutive failure crosses it.
-        h.nowMs += 3_600_000
-        service.maybeRetry("poll")
-        assertEquals(1, h.rollbacks)
-        assertEquals(5, h.lastRollbackFailures)
+        assertEquals(8, h.signal.passes)
+        assertTrue(h.signal.pending)
     }
 
     @Test
-    fun rollback_isHeldWhileTheDeviceIsProvablyLocked() = runTest {
-        // A genuinely locked device EXPECTS keystore denials; flipping
-        // engines for it would punish every locked-screen background start.
+    fun persistentFailures_whileProvablyLocked_healOnTheUnlockReceiver() = runTest {
+        // A genuinely locked device EXPECTS keystore denials; the unlock is
+        // the heal.
         val h = Harness(deviceLocked = true)
         h.signal.primeFailed()
         val service = h.service(backgroundScope)
@@ -282,43 +396,35 @@ class SdkBindRetryServiceTest {
             h.nowMs += 3_600_000
             service.maybeRetry("poll")
         }
-        assertTrue(h.signal.failures >= SdkBindRetryService.ROLLBACK_AFTER_CONSECUTIVE_FAILURES)
-        assertEquals(0, h.rollbacks)
+        assertTrue(h.signal.pending)
 
-        // Unlock: the receiver retry heals instead — no rollback needed.
         h.deviceLocked = false
         h.signal.passSucceeds = true
         checkNotNull(h.unlockCallback).invoke()
         runCurrent()
         assertFalse(h.signal.pending)
-        assertEquals(0, h.rollbacks)
     }
 
-    // ── End-to-end invariant: dashj allowed OR sdk bound, never both held ──
+    // ── End-to-end invariant: a failing bind never hands L1 back to dashj ──
 
     /**
-     * The full MO-995 outage replayed over a REAL [SdkWalletBinder] and a
-     * REAL [CutoverCoordinator]: fresh-wallet commit holds dashj, the SDK
-     * bind (createWallet in the keystore) fails on every pass, the retry
-     * service drives the ladder — and the gate MUST end with
-     * `dashjEngineMayStart() == true`. Before this fix the end state was
-     * dashj held forever with nothing bound: no sync engine at all.
+     * The MO-995 outage replayed over a REAL [SdkWalletBinder] and a REAL
+     * [CutoverCoordinator], under the no-fallback policy: fresh-wallet commit
+     * holds dashj, the SDK bind (createWallet in the keystore) fails on every
+     * pass, the retry service drives the ladder past the old five-failure
+     * threshold — and the cutover stays CUT_OVER with `dashjEngineMayStart()`
+     * false throughout. The old end state (rolled back to DUAL_RUNNING, dashj
+     * syncing) is exactly what produced two SPV engines on the reference
+     * install once the bind later succeeded.
      */
     @Test
-    fun endToEnd_persistentBindFailure_endsWithDashjAllowed_neverBothHeld() = runTest {
-        // Real coordinator over a stateful in-memory CUTOVER_STATE.
+    fun endToEnd_persistentBindFailure_staysCutOver_andNeverStartsDashj() = runTest {
         var storedState: String? = null
         val config = mockk<DashPayConfig>()
         coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { storedState }
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
-        // "Has EVER bound" is true here on purpose: this models a wallet that
-        // bound successfully at some point and whose Keystore then started
-        // denying (e.g. the device locked). The commit is therefore legal, and
-        // the rollback is exactly the safety net under test. A never-bound
-        // wallet is refused up front instead — see
-        // CutoverCoordinatorTest.autoAdvance_refusesToCommit_*.
-        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns true
-        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns true
+        coEvery { config.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) } returns false
+        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns false
         coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns false
@@ -364,49 +470,44 @@ class SdkBindRetryServiceTest {
             backfillGate = DashPayBackfillGate.ALWAYS_RUN
         )
 
-        // The Andrei launch: fresh-wallet setup commits the cutover…
         assertEquals(CutoverState.CUT_OVER, coordinator.commitForFreshWalletSetup().state)
-        assertFalse(coordinator.dashjEngineMayStart()) // dashj held
+        assertFalse(coordinator.dashjEngineMayStart())
 
-        // …then the first bind pass fails (the keystore denial).
         binder.bindIfEnabled { WalletUnlock.Unencrypted }
         assertTrue(binder.bindRetryPending.value)
 
-        // The retry service drives the ladder to the rollback threshold.
         var nowMs = 0L
         val retryService = SdkBindRetryService(
             scope = backgroundScope,
             bindRetryPending = { binder.bindRetryPending.value },
             consecutiveBindFailures = { binder.consecutiveBindFailures },
             runBindPass = { binder.bindIfEnabled { WalletUnlock.Unencrypted } },
-            rollbackCutover = { failures -> coordinator.rollbackForFailedBind(failures) },
             registerUnlockReceiver = { true },
             deviceProvablyLocked = { false },
             now = { nowMs }
         )
-        repeat(SdkBindRetryService.ROLLBACK_AFTER_CONSECUTIVE_FAILURES - 1) {
+        repeat(10) {
             nowMs += 3_600_000
             retryService.maybeRetry("poll")
         }
 
-        // THE INVARIANT: the gate rolled back — dashj may sync again.
-        assertEquals(CutoverState.DUAL_RUNNING.name, storedState)
-        assertTrue(coordinator.dashjEngineMayStart())
+        assertTrue("still failing", binder.consecutiveBindFailures >= 10)
+        assertTrue("still pending — retries continue", binder.bindRetryPending.value)
+        assertEquals("the cutover never rolled back", CutoverState.CUT_OVER.name, storedState)
+        assertFalse("dashj never starts on its own", coordinator.dashjEngineMayStart())
     }
 
-    /** The complementary end state: the bind HEALS — the cutover stays committed (SDK owns L1). */
+    /** The bind HEALS on the ladder — the cutover was committed all along. */
     @Test
-    fun endToEnd_bindHealsBeforeTheThreshold_cutoverStaysCommitted() = runTest {
+    fun endToEnd_bindHealsOnTheLadder() = runTest {
         val h = Harness()
         h.signal.primeFailed()
-        var rolledBack = false
         var nowMs = 0L
         val service = SdkBindRetryService(
             scope = backgroundScope,
             bindRetryPending = { h.signal.pending },
             consecutiveBindFailures = { h.signal.failures },
             runBindPass = { h.signal.bindPass() },
-            rollbackCutover = { rolledBack = true },
             registerUnlockReceiver = { true },
             deviceProvablyLocked = { false },
             now = { nowMs }
@@ -418,7 +519,271 @@ class SdkBindRetryServiceTest {
         nowMs += 15_001
         service.maybeRetry("poll") // heals on the third retry
         assertFalse(h.signal.pending)
-        assertFalse(rolledBack)
+    }
+
+    // ── "SDK setup pending": classification, arming, notification ─────
+
+    @Test
+    fun lockedDenial_publishesDeviceLocked_armsTheReceiverImmediately_andNotifiesInBackground() = runTest {
+        // The reference install, 2026-09-14 14:49: background start, phone
+        // locked, createWallet denied. Nothing polled maybeRetry for 22 hours
+        // and the receiver was never armed. Now the first failure does both.
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        val service = h.service(backgroundScope)
+        runCurrent()
+        assertEquals(0, h.registrations)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        assertEquals("armed on the failure itself, no poll needed", 1, h.registrations)
+        assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
+        assertEquals(listOf<SdkBindBlocker?>(SdkBindBlocker.DEVICE_LOCKED), h.persisted)
+    }
+
+    @Test
+    fun lockedDenial_inTheForeground_doesNotNotify() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = false
+        val service = h.service(backgroundScope)
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        assertTrue(h.notices.isEmpty())
+
+        // Leaving the app with the bind still pending posts it then.
+        h.appInBackground = true
+        service.noteAppBackground()
+        runCurrent()
+        assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
+    }
+
+    /**
+     * Review, 2026-09-25: the background callback read the blocker and posted
+     * outside the outcome mutex, so a success that cleared the blocker and the
+     * notice in between left a stale "unlock your device" notification on a
+     * bound wallet, which the foreground callback then never cleared. The
+     * decision and the post now happen under the mutex, from live state: a
+     * background note that arrives while a success holds the lock posts
+     * nothing once the success is through.
+     */
+    @Test
+    fun noteAppBackground_postsNothingOnceASuccessHoldingTheMutexIsThrough() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            val service = h.service(collectors)
+            h.fail(lockedDenial()) // foreground: classified, nothing posted
+            assertTrue(h.notices.isEmpty())
+
+            // The success takes the mutex, clears the blocker and the notice,
+            // and parks inside persistBlocker(null) still holding the lock.
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            h.persistGate = gate
+            h.succeed()
+            assertNull(service.blocker.value)
+            assertEquals(1, h.noticeClears)
+
+            // The app goes to the background NOW. Before the fix this posted
+            // DEVICE_LOCKED for a wallet that is already bound.
+            h.appInBackground = true
+            service.noteAppBackground()
+            assertTrue("still waiting on the mutex", h.notices.isEmpty())
+
+            gate.complete(Unit)
+            assertTrue("the post is decided from live state: nothing pending, nothing posted", h.notices.isEmpty())
+            assertTrue(h.persisted.contains(null))
+        } finally {
+            collectors.cancel()
+        }
+    }
+
+    /**
+     * Review, 2026-09-25 (second round): the mutex serializes the operations,
+     * not the order queued coroutines reach it. A clear queued by a foreground
+     * edge can run AFTER the app has gone back to the background and a valid
+     * notice has been posted for a still-blocked wallet; before the fix it
+     * cleared that notice and the recovery prompt was gone. The clear now
+     * re-checks live visibility under the lock and skips.
+     */
+    @Test
+    fun aQueuedForegroundClear_doesNotRemoveANoticePostedForAStillBlockedWallet() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            h.appInBackground = true
+            val service = h.service(collectors)
+
+            // A failure handler holds the mutex, parked in persistBlocker.
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            h.persistGate = gate
+            h.fail(lockedDenial())
+            assertTrue(h.notices.isEmpty())
+
+            // A fast foreground/background flip while it is parked: the
+            // foreground edge queues its clear, then the app is back in the
+            // background — and its own callback queues a post behind the clear.
+            h.appInBackground = false
+            service.noteAppForeground()
+            h.appInBackground = true
+            service.noteAppBackground()
+            assertEquals(0, h.noticeClears)
+
+            gate.complete(Unit)
+            // The failure handler posted (background at its re-check); the
+            // queued clear ran next and must have skipped; the background post
+            // may re-post the same notice, which is harmless.
+            assertTrue("the valid notice stands", h.notices.isNotEmpty())
+            assertEquals("a queued clear must not remove a notice for a still-blocked, backgrounded wallet", 0, h.noticeClears)
+            assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        } finally {
+            collectors.cancel()
+        }
+    }
+
+    /**
+     * The mirror image on the way back: a failure handler that has decided to
+     * post (background at its check) and is parked holding the mutex must
+     * not land its notice after the foreground clear. Its re-check under the
+     * lock sees the foreground and skips; the clear runs after it.
+     */
+    @Test
+    fun noteAppForeground_clearsUnderTheMutex_andAParkedFailureDoesNotPostAfterIt() = runBlocking {
+        val collectors = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        try {
+            val h = Harness(deviceLocked = true)
+            h.signal.primeFailed()
+            h.appInBackground = true
+            val service = h.service(collectors)
+
+            // The failure classifies its blocker and parks in persistBlocker,
+            // holding the mutex, with its notice not yet posted.
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            h.persistGate = gate
+            h.fail(lockedDenial())
+            assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+            assertTrue(h.notices.isEmpty())
+
+            // The user opens the app while it is parked.
+            h.appInBackground = false
+            service.noteAppForeground()
+            assertEquals("the clear waits for the lock", 0, h.noticeClears)
+
+            gate.complete(Unit)
+            assertTrue("the failure re-checked the foreground under the lock and did not post", h.notices.isEmpty())
+            assertEquals("…and the foreground clear ran after it", 1, h.noticeClears)
+        } finally {
+            collectors.cancel()
+        }
+    }
+
+    @Test
+    fun threeUnlockedDenials_escalateToKeystoreProblem() = runTest {
+        // walletB: the keyguard says unlocked, Keystore2 still denies.
+        val h = Harness(deviceLocked = false)
+        val service = h.service(backgroundScope)
+
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, service.blocker.value)
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, service.blocker.value)
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.KEYSTORE_PROBLEM, service.blocker.value)
+        assertEquals(
+            "persisted on every change, not every failure",
+            listOf<SdkBindBlocker?>(SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, SdkBindBlocker.KEYSTORE_PROBLEM),
+            h.persisted
+        )
+    }
+
+    @Test
+    fun aLockedDenial_resetsTheUnlockedStreak() = runTest {
+        val h = Harness(deviceLocked = false)
+        val service = h.service(backgroundScope)
+        h.fail(unlockedDenial()); runCurrent()
+        h.fail(unlockedDenial()); runCurrent()
+        h.deviceLocked = true
+        h.fail(lockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        h.deviceLocked = false
+        h.fail(unlockedDenial()); runCurrent()
+        assertEquals("streak restarted after the locked denial", SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, service.blocker.value)
+    }
+
+    @Test
+    fun otherFailures_becomeSetupFailed_afterFive() = runTest {
+        val h = Harness()
+        val service = h.service(backgroundScope)
+        repeat(4) { h.fail(IllegalStateException("Room: database is locked")); runCurrent() }
+        assertEquals(SdkBindBlocker.OTHER, service.blocker.value)
+        h.fail(IllegalStateException("Room: database is locked")); runCurrent()
+        assertEquals(SdkBindBlocker.SETUP_FAILED, service.blocker.value)
+    }
+
+    @Test
+    fun bindSuccess_clearsTheBlocker_theNotification_andThePersistedRecord() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        val service = h.service(backgroundScope)
+        h.fail(lockedDenial()); runCurrent()
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+
+        h.succeed(); runCurrent()
+
+        assertEquals(null, service.blocker.value)
+        assertEquals(1, h.noticeClears)
+        assertEquals(listOf<SdkBindBlocker?>(SdkBindBlocker.DEVICE_LOCKED, null), h.persisted)
+    }
+
+    /**
+     * Regression, emulator-5554 2026-09-16: the app was force-stopped mid-repair,
+     * the bind then succeeded in the fresh process and the notification cleared,
+     * yet `sdk_bind_blocker` still read OTHER in the support report. The clear
+     * path keyed off the in-memory blocker, which a new process starts at null,
+     * so it early-returned and left the previous process's record standing.
+     */
+    @Test
+    fun bindSuccess_inAProcessThatNeverSawAFailure_stillClearsThePersistedRecord() = runTest {
+        val h = Harness()
+        val service = h.service(backgroundScope)
+        runCurrent()
+        // Fresh process: nothing failed here, so there is no in-memory blocker.
+        assertEquals(null, service.blocker.value)
+
+        h.succeed(); runCurrent()
+
+        assertEquals(
+            "the durable record must be overwritten with NONE even when this " +
+                "process never classified a blocker of its own",
+            listOf<SdkBindBlocker?>(null),
+            h.persisted
+        )
+    }
+
+    @Test
+    fun foregroundWithAPendingBind_clearsTheNotification() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        val service = h.service(backgroundScope)
+        h.fail(lockedDenial()); runCurrent()
+        assertEquals(1, h.notices.size)
+
+        // The foreground monitor flips before its callback fires; the clear
+        // reads that live state under the lock.
+        h.appInBackground = false
+        service.noteAppForeground()
+        runCurrent()
+        assertEquals(1, h.noticeClears)
     }
 
     // ── The binder's own outcome bookkeeping (real binder) ────────────

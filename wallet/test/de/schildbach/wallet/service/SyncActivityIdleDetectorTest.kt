@@ -124,6 +124,30 @@ class SyncActivityIdleDetectorTest {
         assertTrue(isSyncIdle(List(MIN_COLLECT_HISTORY) { sample }))
     }
 
+    // ── Phase 1b item 7: a replay is never idle ───────────────────────
+
+    @Test
+    fun idleCounters_doNotStopTheService_whileReplaying() {
+        // The reference install's SDK replay: minutes of matched-block
+        // processing with the filter position frozen. Idle by the counters,
+        // but the service must stay up until the scan reaches the tip.
+        val stable = progress()
+        val sample = sdkActivitySample(stable, stable, txEventsSinceLastSample = 0)
+        val history = List(MIN_COLLECT_HISTORY + 3) { sample }
+        assertTrue("the counters themselves read idle", isSyncIdle(history))
+        assertFalse("…but a replay keeps the service alive", shouldStopForIdle(history, replaying = true))
+        assertTrue("…and once the replay is over the same history stops it", shouldStopForIdle(history, replaying = false))
+    }
+
+    @Test
+    fun activeCounters_neverStop_regardlessOfTheReplayFlag() {
+        val before = progress(headerHeight = 1_500_000, filterHeight = 1_400_000, mnListHeight = 1_499_000)
+        val after = progress(headerHeight = 1_500_020, filterHeight = 1_402_000, mnListHeight = 1_499_010)
+        val sample = sdkActivitySample(before, after, txEventsSinceLastSample = 0)
+        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = false))
+        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = true))
+    }
+
     // ── The missing-blockstore wallet.reset() guard ───────────────────
 
     @Test

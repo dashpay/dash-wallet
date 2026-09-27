@@ -309,6 +309,7 @@ class SdkWalletBinderTest {
         now: () -> Long = { System.currentTimeMillis() },
         backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
         backfillWatchIntervalMs: Long = 5L,
+        deviceProvablyLocked: () -> Boolean = { false },
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -321,8 +322,43 @@ class SdkWalletBinderTest {
         supportsPlatform = { supportsPlatform },
         now = now,
         backfillGate = backfillGate,
-        backfillWatchIntervalMs = backfillWatchIntervalMs
+        backfillWatchIntervalMs = backfillWatchIntervalMs,
+        deviceProvablyLocked = deviceProvablyLocked
     )
+
+    // ── Phase 1a item 4: no first bind while the device is locked ─────
+
+    @Test
+    fun firstBind_whileTheDeviceIsLocked_isDeferredWithoutScryptOrAKeystoreCall() = runBlocking {
+        // The reference install's 2026-09-14 launches 1 and 2: background
+        // starts with the phone locked. The pass used to derive the wallet key
+        // (scrypt, seconds) and call createWallet just to be denied. Now it
+        // defers up front and publishes a DEVICE_LOCKED-classifiable failure.
+        var locked = true
+        val sdk = FakeSdkService(onBind = { _, _ -> "ab".repeat(32) })
+        val mnemonic = FakeMnemonicProvider { error("must not derive the key while locked") }
+        val binder = binder(sdk, mnemonic, deviceProvablyLocked = { locked }, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(0, sdk.bindCalls)
+        assertEquals(0, mnemonic.calls)
+        assertTrue(binder.bindRetryPending.value)
+        val failure = binder.lastBindFailure.value
+        assertTrue(failure?.cause is SdkBindDeferredWhileLockedException)
+        assertEquals(
+            SdkBindBlocker.DEVICE_LOCKED,
+            classifyBindFailure(failure!!.cause, deviceProvablyLocked = false, unlockedDenialStreak = 0, otherFailureStreak = 0)
+        )
+
+        // Unlock: the next pass (the receiver / foreground retry) binds normally.
+        locked = false
+        mnemonic.onGet = { words }
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(false, binder.bindRetryPending.value)
+        assertNull(binder.lastBindFailure.value)
+    }
 
     /** Scriptable [DashPayBackfillGate] with interaction counters. */
     private class FakeBackfillGate(

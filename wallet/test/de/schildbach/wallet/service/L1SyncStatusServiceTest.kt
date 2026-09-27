@@ -54,9 +54,11 @@ class L1SyncStatusServiceTest {
         filterHeight: Long = 1_400_000,
         filterTarget: Long = 1_514_660,
         mnListHeight: Long = 0,
-        walletSyncedHeight: Long = 0
+        walletSyncedHeight: Long = 0,
+        /** The SDK's three-phase mean; 0.0 = "not supplied", so only the height rule applies. */
+        overallPercent: Double = 0.0
     ) = ShadowSyncProgress(
-        phase, 0.0, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight,
+        phase, overallPercent, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight,
         walletSyncedHeight
     )
 
@@ -96,35 +98,50 @@ class L1SyncStatusServiceTest {
     }
 
     @Test
-    fun sdkCaughtUp_blocksWhileTheBlockPipelineProvablyLags() {
-        // The field incident: filters sub-progress at the tip (position-wise
-        // "synced") one minute into a three-hour replay while the engine was
-        // still downloading/processing the matched blocks — the committed
-        // wallet cursor trailing the header tip is the only Kotlin-visible
-        // evidence of that churn, and it must hold the gate closed.
-        assertFalse(
-            "filters at tip but the committed cursor far behind = still churning",
-            sdkL1ScanCaughtUp(
-                progress(filterHeight = 1_514_659, walletSyncedHeight = 1_200_000)
-            )
+    fun sdkCaughtUp_noLongerVetoedByThePipelineLag_whichMovedToTheDurableSeed() {
+        // Until 2026-09-21 the lagging block pipeline held this predicate
+        // closed (the field incident that persisted a partial 48.86 DASH). It
+        // was dropped here so the label reads "synced" when iOS would — iOS
+        // never had the veto, and in the dash-spv final-partial-batch stall
+        // the wallet cursor parks WITH the filter cursor, so the veto pinned
+        // "Syncing balance" on forever at 99%. The lag is still exposed
+        // (sdkPipelineLagging) and still gates the persisted seed in
+        // CutoverUiDataService — see that test class.
+        assertTrue(
+            "the display predicate ignores the pipeline lag",
+            sdkL1ScanCaughtUp(progress(filterHeight = 1_514_659, walletSyncedHeight = 1_200_000))
         )
-        // The SDK's own latched SYNCED phase is gated the same way — it was
-        // observed holding SYNCED right through an armed replay.
-        assertFalse(
-            sdkL1ScanCaughtUp(
-                progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_200_000)
-            )
+        assertTrue(
+            sdkL1ScanCaughtUp(progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_200_000))
         )
-        // A cursor within tolerance of the tip is drained: caught up.
+        // …and the lag itself is still measured on the same snapshot.
+        assertTrue(progress(filterHeight = 1_514_659, walletSyncedHeight = 1_200_000).blockPipelineLagging)
+        assertFalse(progress(filterHeight = 1_514_659, walletSyncedHeight = 1_514_658).blockPipelineLagging)
+    }
+
+    @Test
+    fun sdkCaughtUp_acceptsTheIosAggregateRule_forTheFinalBatchStall() {
+        // The §34 stall as the Samsung reported it: 2,167 short (far outside
+        // the 2-block height tolerance), aggregate 99.954%. iOS calls this
+        // synced; so do we now.
         assertTrue(
             sdkL1ScanCaughtUp(
-                progress(filterHeight = 1_514_659, walletSyncedHeight = 1_514_658)
+                progress(
+                    headerHeight = 1_558_166, headerTarget = 1_558_166,
+                    filterHeight = 1_555_999, filterTarget = 1_558_166,
+                    overallPercent = 0.99954
+                )
             )
         )
-        // An UNKNOWN cursor (0 — no event/seed evidence) must never deadlock
-        // the gate: pre-change behavior applies.
-        assertTrue(
-            sdkL1ScanCaughtUp(progress(filterHeight = 1_514_659, walletSyncedHeight = 0))
+        // Same gap with the aggregate below 0.999 is a real mid-scan.
+        assertFalse(
+            sdkL1ScanCaughtUp(
+                progress(
+                    headerHeight = 1_556_922, headerTarget = 1_556_922,
+                    filterHeight = 1_552_170, filterTarget = 1_556_922,
+                    overallPercent = 0.99898
+                )
+            )
         )
     }
 

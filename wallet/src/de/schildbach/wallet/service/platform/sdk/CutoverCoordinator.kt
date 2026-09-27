@@ -47,10 +47,14 @@ data class CutoverStatus(
  * (the state machine does) — only the persistence, the single-flight
  * serialization, and the atomic config write that IS the flip.
  *
- * Everything here is reversible and inert by default: with no explicit
- * COMMIT the state never leaves DUAL_RUNNING/READY_OBSERVED, and
- * [dashjEngineMayStart] stays true — so wiring this up changes nothing
- * observable until a deliberate [commitCutover] (a debug action first).
+ * POLICY (2026-09-16, docs/upgrade-memory-and-sync-plan.md §12): every
+ * install cuts over to the SDK on its first launch of a cutover build —
+ * fresh, restored and UPGRADED wallets alike — and the dashj L1 engine never
+ * starts on its own. The only thing that starts a dashj peergroup is the
+ * Tools › dashj sync diagnostic toggle, which the blockchain service applies
+ * on top of [dashjEngineMayStart]. A failed SDK bind does NOT fall back to
+ * dashj; it is retried until the device keystore is usable (see
+ * [SdkBindRetryService]).
  */
 @Singleton
 class CutoverCoordinator @Inject constructor(
@@ -66,30 +70,40 @@ class CutoverCoordinator @Inject constructor(
         CutoverState.fromStored(runCatching { dashPayConfig.get(DashPayConfig.CUTOVER_STATE) }.getOrNull())
 
     /**
-     * Whether the dashj L1 engine may start this launch (engine-start sites
-     * consult this). True in every non-committed state, AND — the hardening
-     * guard — also true when the state IS committed (CUT_OVER/SETTLED) but the
-     * SDK L1 engine is disabled ([DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] off).
+     * Whether the dashj L1 engine may start ON ITS OWN this launch. Always
+     * false: the SDK owns L1 on every install from its first launch, and the
+     * dashj peergroup runs only when the user turns on the Tools › dashj sync
+     * diagnostic, which [de.schildbach.wallet.service.BlockchainServiceImpl]
+     * OR-s onto this gate itself.
      *
-     * WHY: the stored cutover state is per-install-persisted while the shadow
-     * flag can be toggled off on a LATER launch. Without this guard a committed
-     * install whose flag was turned off would hold dashj (state committed) AND
-     * never start the SDK shadow (start gated on the flag) — leaving the wallet
-     * with NO L1 engine at all. The immediate/auto commits both self-gate on the
-     * flag so this cannot arise same-launch, but the flag is external state; this
-     * makes the engine-start decision robust to a later toggle-off. Never hold
-     * dashj unless the SDK will actually own L1.
+     * The persisted [CutoverState] is no longer consulted here. It still drives
+     * the UI seams' "SDK owns L1" reads through the pure [dashjEngineMayStart]
+     * predicate and [sdkOwnsL1Flow], and the upgrade seam still writes it
+     * (unconditionally now) so those seams settle on CUT_OVER within the first
+     * launch.
+     *
+     * Field history for why this used to be state-dependent, and why the
+     * fallback it enabled is gone: the reference install (Pixel 8a, 62 MB
+     * wallet) upgraded 11.9.1 → 12.0.0 on 2026-09-14, the seam declined to
+     * commit (no bind evidence yet), the bind succeeded seconds later, and on
+     * the next foreground launch the dashj peergroup and the SDK engine ran
+     * side by side in a 512 MB heap already 94% full of the dashj wallet —
+     * OutOfMemoryError 90 s in. The "fall back to dashj" path this gate
+     * implemented is what put two SPV engines in one process.
+     *
+     * Logs a WARN when [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] is off, because
+     * in that configuration NO L1 engine starts. The flag is seeded on for every
+     * variant; a flag-off build is a configuration error, not a reason to start
+     * dashj.
      */
     suspend fun dashjEngineMayStart(): Boolean {
-        val state = currentState()
-        if (dashjEngineMayStart(state)) return true
         if (!sdkL1EngineEnabled()) {
             log.warn(
-                "cutover state is {} but USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 engine will " +
-                    "not start, so allowing dashj to run (never hold dashj without an SDK L1 owner)",
-                state
+                "USE_KOTLIN_SDK_L1_SHADOW is off — the SDK L1 engine will not start, and dashj " +
+                    "no longer starts on its own (cutover state {}). No L1 engine will run " +
+                    "unless the Tools › dashj sync diagnostic is on.",
+                currentState()
             )
-            return true
         }
         return false
     }
@@ -136,29 +150,11 @@ class CutoverCoordinator @Inject constructor(
     suspend fun commitCutover(): CutoverStatus =
         transition(CutoverAction.COMMIT_CUTOVER)
 
-    /** Undo a flip while still legal (CUT_OVER → DUAL_RUNNING). */
-    suspend fun rollback(): CutoverStatus =
-        transition(CutoverAction.ROLLBACK)
-
-    /**
-     * Drive the full advisory→commit path in one call — the AUTOMATIC
-     * cutover trigger ([CutoverAutoCommitObserver]) does exactly what a
-     * manual CHECK_CUTOVER + COMMIT_CUTOVER would: recompute the advisory
-     * readiness edge (DUAL_RUNNING → READY_OBSERVED if Ready), then commit
-     * (READY_OBSERVED → CUT_OVER if STILL Ready under the lock). Both legs
-     * re-check readiness, so this is fail-safe by construction: if any
-     * blocker holds, the state never leaves DUAL_RUNNING/READY_OBSERVED and
-     * [dashjEngineMayStart] stays true — no timeout, no forced commit.
-     * Idempotent: a no-op once already CUT_OVER/SETTLED.
-     */
-    suspend fun autoAdvanceToCutover(): CutoverStatus {
-        val advisory = observeReadiness()
-        // Only READY_OBSERVED can legally commit; anything else (still
-        // DUAL_RUNNING because a blocker holds, or already past the flip)
-        // is returned unchanged without attempting the commit leg.
-        if (advisory.state != CutoverState.READY_OBSERVED) return advisory
-        return commitCutover()
-    }
+    // No rollback and no readiness-driven auto-commit any more. The
+    // ROLLBACK edge of the pure state machine is unused; the debug readout's
+    // ROLLBACK_CUTOVER action and CutoverAutoCommitObserver were removed with
+    // the dashj fallback (docs/upgrade-memory-and-sync-plan.md, Phase 1a
+    // item 2). commitCutover()/observeReadiness() remain for the debug readout.
 
     /**
      * Restore/new-wallet path: make the SDK the L1 source of truth
@@ -177,13 +173,10 @@ class CutoverCoordinator @Inject constructor(
      * on dashj. Only advances a pre-commit state; never clobbers
      * CUT_OVER/SETTLED. Never throws.
      *
-     * MO-995 escape hatch: this commit lands BEFORE the first SDK wallet
-     * bind runs (it has to — see [rollbackForFailedBind] for why deferring
-     * it is not possible), so a bind that then fails persistently
-     * (keystore denial) would hold dashj with nothing to replace it. The
-     * bind-failure rollback ([rollbackForFailedBind], driven by
-     * [SdkBindRetryService]) undoes this commit in that case, restoring
-     * the dashj fallback engine.
+     * This commit lands BEFORE the first SDK wallet bind runs (the bind
+     * starts with platform sync). A bind that then fails is retried in
+     * place by [SdkBindRetryService] until the device keystore is usable;
+     * it never rolls the cutover back.
      */
     /**
      * Fire-and-forget [commitForFreshWalletSetup] for the Java `setWallet`
@@ -291,27 +284,32 @@ class CutoverCoordinator @Inject constructor(
      *   construction, so still the pre-upgrade value even after this launch
      *   persists its own code), or 0 if the app never ran before.
      *
+     * @param onCutOverForExistingWallet runs when THIS call moved an existing
+     *   (not freshly created/restored) wallet to CUT_OVER — the moment the SDK
+     *   takes over a wallet that dashj had synced. `WalletApplication` uses
+     *   it to mark the replay as started (Phase 1b item 8) so the service
+     *   stays alive and the home screen reads "syncing" before the SDK's
+     *   first progress update lands. Invoked at most once per install (the
+     *   state only flips once); failures are logged, never propagated.
+     *
      * Fire-and-forget on the injected scope for the same reason as
      * [commitForFreshWalletSetupAsync] — the caller is on the main thread and
      * must not block on DataStore I/O. Never throws.
      */
-    fun commitForUpgradedWalletAsync(previousVersionCode: Int) {
+    fun commitForUpgradedWalletAsync(
+        previousVersionCode: Int,
+        onCutOverForExistingWallet: () -> Unit = {}
+    ) {
         scope.launch {
-            // MO-995 GATE 1 — this must be a REAL upgrade across the cutover
-            // boundary. The same `previousVersionCode` test below used to gate
-            // only the explainer, while the commit itself ran unconditionally.
-            // walletB reached here on a SAME-VERSION relaunch (previous code
-            // 12000001 == this build): the seam committed, dashj was held, the
-            // SDK bind then failed on the keystore, and the wallet was left
-            // with no L1 engine at all. If this launch did not cross the
-            // boundary, the upgrade seam has no business committing — the
-            // readiness-gated auto-commit observer owns that decision.
-            // `previousVersionCode` is the version the PREVIOUS LAUNCH ran, and
-            // `Configuration.updateLastVersionCode` overwrites it every startup
-            // — so the boundary crossing is visible for exactly one launch, and
-            // that is the one launch on which GATE 2 below cannot yet be
-            // satisfied (the bind runs after this seam). Latch it durably so a
-            // later launch with a working bind can still commit.
+            // The boundary test decides ONLY whether this install is owed the
+            // one-time sync explainer. It used to gate the commit as well
+            // (MO-995 GATE 1), together with a bind-evidence gate (GATE 2) that
+            // by construction could not pass on the upgrade launch — the bind
+            // runs after this seam — so a real upgrade always committed one
+            // launch late, with dashj running in between. Under the no-fallback
+            // policy the commit is unconditional (below) and the boundary
+            // crossing is latched here purely so the explainer survives the
+            // one launch on which `previousVersionCode` reveals it.
             val crossedNow = isPreCutoverUpgrade(previousVersionCode)
             if (crossedNow) {
                 runCatching {
@@ -331,26 +329,15 @@ class CutoverCoordinator @Inject constructor(
                     )
                 }
             }
-            val crossedEver = crossedNow || runCatching {
-                dashPayConfig.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) == true
-            }.getOrDefault(false)
-            if (!crossedEver) {
-                log.info(
-                    "upgrade seam declining to commit the cutover: previous version code {} is " +
-                        "not a pre-{} upgrade (0 = fresh install, >= {} = already cut over) and " +
-                        "no boundary crossing was ever latched — leaving the state alone for the " +
-                        "readiness-gated auto-commit",
-                    previousVersionCode, FIRST_CUTOVER_VERSION_CODE, FIRST_CUTOVER_VERSION_CODE
-                )
-                return@launch
-            }
-
-            // GATE 2 (bind evidence) now lives in commitLocked /
-            // refusesCutOverWithoutBindEvidence, so EVERY commit path inherits
-            // it — the seam, the fresh-wallet commit, and the readiness-driven
-            // auto-commit that used to bypass it entirely.
+            // Unconditional: no bind evidence, no boundary test, no readiness.
+            // Every install is CUT_OVER from its first launch of a cutover build,
+            // and a same-version relaunch that somehow arrives pre-commit (a
+            // failed persist, a wipe reset that lost the race) is corrected here
+            // rather than left to a readiness observer. The SDK bind that follows
+            // this seam is retried until it works ([SdkBindRetryService]); a
+            // failing bind no longer changes which engine owns L1.
             val (_, justCutOver) = mutex.withLock {
-                commitLocked("upgraded-wallet launch", requireBindEvidence = true)
+                commitLocked("upgraded-wallet launch")
             }
             if (!justCutOver) {
                 // The seam DECLINING is the normal case on a real upgrade — the
@@ -370,6 +357,14 @@ class CutoverCoordinator @Inject constructor(
                 )
                 return@launch
             }
+            // An existing wallet just changed engines: the SDK scan from birth
+            // is a replay, and the row must say so before the SDK does.
+            runCatching { onCutOverForExistingWallet() }
+                .onSuccess { log.info("upgrade cutover: replay marked as started for the SDK takeover") }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    log.warn("upgrade cutover: the post-commit hook failed", it)
+                }
             // NB: the explainer is NOT armed here any more. It is armed from
             // [armUpgradeNoticeIfUpgraded], which every commit path calls —
             // because on a REAL upgrade this seam is not the path that
@@ -415,17 +410,10 @@ class CutoverCoordinator @Inject constructor(
      * hours later. So the arming needs a marker that is never cleared, which is
      * [DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED].
      *
-     * WHY THE COMMIT IS THAT LATE, since it is what makes a second arming
-     * reachable at all: the bind-evidence gate
-     * ([refusesCutOverWithoutBindEvidence]) cannot pass on the upgrade launch
-     * — the bind runs after this seam — so the boundary is latched and the
-     * commit lands on a later process start, whenever that happens to be. The
-     * readiness-driven [CutoverAutoCommitObserver] is the in-launch path that
-     * would close the gap, and in that same log it ran for 8.5 hours without
-     * committing. Bounding the deferral means changing which engine owns L1
-     * mid-launch, which the "never two live SPV engines" invariant forbids
-     * (see [rollbackForFailedBind]) — so the deferral stays, and this makes it
-     * harmless to the user.
+     * The commit is no longer deferred (the upgrade seam commits on the
+     * upgrade launch itself), but the once-ever latch stays: a wipe reset
+     * followed by a re-commit, or a failed state persist retried on the next
+     * launch, would otherwise re-arm a sheet that promises to appear once.
      *
      * Ordering note: the latch is written BEFORE the pending flag. A crash
      * between the two costs the user the explainer; the reverse order would
@@ -521,125 +509,17 @@ class CutoverCoordinator @Inject constructor(
     }
 
     /**
-     * MO-995 REGRESSION FIX. This path commits WITHOUT bind evidence, on
-     * purpose — and it is the one path that must.
-     *
-     * `36792ccd1` ("refuse EVERY path into CUT_OVER without SDK bind
-     * evidence") put that guard inside [commitLocked], which this shares with
-     * the upgrade seam. On a fresh install there is no bind evidence BY
-     * CONSTRUCTION: the commit is what routes the launch, and the first bind
-     * pass only runs once platform sync starts, after it. So the guard could
-     * never pass here, and every newly created or restored wallet silently
-     * fell back to dashj instead of the SDK's fast initial sync.
-     *
-     * Field log (2026-09-03, prod 12.0.0-sync/12000003, brand-new wallet):
-     *
-     *     07:10:02  successfully created new wallet
-     *     09:29:06  declining to commit the cutover: the SDK wallet bind has
-     *               never succeeded on this install
-     *     09:29:06  Phase 5d cutover gate: dashjEngineMayStart=true
-     *     09:29:09  app wallet bound to new SDK wallet d992760a…
-     *
-     * — the bind succeeding three seconds AFTER the refusal is the whole
-     * problem in one line. QA reported it as "one time sync not started".
-     *
-     * A failed bind is handled by [rollbackForFailedBind] instead (driven by
-     * [de.schildbach.wallet.service.platform.sdk.SdkBindRetryService]), which
-     * restores the dashj engine. That escape hatch is why this commit is safe
-     * to make eagerly, and it is what the guard here duplicated — badly,
-     * since deferring is exactly what [rollbackForFailedBind]'s own KDoc
-     * explains cannot work for a fresh wallet (a deferred commit lets the
-     * dashj peergroup start and then lands mid-launch, leaving BOTH SPV
-     * engines live — the "never two live SPV engines" invariant).
+     * The fresh-wallet commit. Like the upgrade seam it commits without bind
+     * evidence: on a fresh install there is none BY CONSTRUCTION — the commit
+     * is what routes the launch, and the first bind pass only runs once
+     * platform sync starts, after it. Field log (2026-09-03, prod 12000003,
+     * brand-new wallet) from when a bind-evidence guard was briefly applied
+     * here: "declining to commit … bind has never succeeded" at 09:29:06,
+     * "app wallet bound to new SDK wallet" at 09:29:09. QA reported it as
+     * "one time sync not started".
      */
     suspend fun commitForFreshWalletSetup(): CutoverStatus = mutex.withLock {
-        commitLocked("fresh-wallet setup (restore/new)", requireBindEvidence = false).first
-    }
-
-    /**
-     * MO-995 bind-failure fallback: roll a committed cutover back to
-     * DUAL_RUNNING because the SDK wallet bind keeps failing — after this,
-     * [dashjEngineMayStart] is true again and the user syncs on the dashj
-     * fallback engine instead of being stranded with NO engine at all.
-     *
-     * WHY a rollback and not a deferred commit: the fresh-wallet commit
-     * ([commitForFreshWalletSetupAsync]) cannot wait for the first
-     * successful bind, because the commit IS what routes the fresh-wallet
-     * launch — [de.schildbach.wallet.service.BlockchainServiceImpl]
-     * resolves the engine gate once at service onCreate (right after
-     * `setWallet`), while the first bind pass only runs when platform sync
-     * starts. A deferred commit would let the dashj peergroup start on
-     * EVERY fresh wallet and then land mid-launch, leaving both SPV
-     * engines live for the rest of the session (the "never two live SPV
-     * engines" invariant). So the commit stays immediate and THIS is the
-     * escape hatch: [SdkBindRetryService] calls it once
-     * [SdkWalletBinder.consecutiveBindFailures] passes its threshold
-     * (skipping it while the device is provably locked — a locked-device
-     * keystore denial heals on unlock and must not flip engines).
-     *
-     * Legal only from CUT_OVER (mirrors the state machine's ROLLBACK edge —
-     * SETTLED is past the migration horizon and never regresses); a no-op
-     * from any other state. The live engine un-hold is
-     * BlockchainServiceImpl's job: it observes CUTOVER_STATE and starts the
-     * dashj peergroup when a rollback lands mid-launch. Recovery is
-     * symmetric — once a later bind pass succeeds, the auto-commit observer
-     * re-earns CUT_OVER through the normal readiness policy. Never throws.
-     */
-    suspend fun rollbackForFailedBind(consecutiveFailures: Int): CutoverStatus = mutex.withLock {
-        val current = currentState()
-        if (current != CutoverState.CUT_OVER) {
-            return@withLock CutoverStatus(current, READY_VERDICT)
-        }
-        writeState(
-            current,
-            CutoverState.DUAL_RUNNING,
-            "SDK wallet bind failed $consecutiveFailures consecutive passes — " +
-                "falling back to the dashj engine so the wallet is never left with no L1 engine"
-        )
-    }
-
-    /**
-     * Whether the SDK has ever proved, on THIS install, that it can bind the
-     * app wallet — i.e. that its Keystore-backed master alias is usable. Set by
-     * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] on the first
-     * successful pass. Absent reads as false: fail safe, not fail open.
-     */
-    private suspend fun sdkBindEverSucceeded(): Boolean =
-        runCatching { dashPayConfig.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) == true }
-            .getOrDefault(false)
-
-    /**
-     * MO-995: refuse ANY transition into CUT_OVER while the SDK has never bound.
-     *
-     * Committing HOLDS the dashj engine, so committing onto an SDK that cannot
-     * bind leaves the wallet with NO L1 engine — no sync, no incoming
-     * transactions, "setup is incomplete" (walletB, HONOR PTP-N49, 16
-     * consecutive `KeystoreDeviceLockedException` denials on the lock-bound
-     * master alias).
-     *
-     * WHY HERE AND NOT ONLY AT THE SEAM: the gate first lived in
-     * [commitForUpgradedWalletAsync], which left the readiness-driven path
-     * wide open. On the emulator, with every bind failing,
-     * [CutoverAutoCommitObserver] still committed FOUR times —
-     * `READY_OBSERVED -> CUT_OVER on COMMIT_CUTOVER (ready=true)` followed by
-     * "SDK is now L1-primary (dashj held)" — reaching walletB's end state
-     * through a different door. The readiness evaluator has no notion of
-     * whether the wallet is bound, so this has to be checked where the write
-     * happens: [commitLocked] AND [transition] both consult it.
-     *
-     * Only CUT_OVER is guarded. ROLLBACK and the wipe reset move AWAY from a
-     * committed state and must never be blocked — that is the escape hatch.
-     */
-    private suspend fun refusesCutOverWithoutBindEvidence(to: CutoverState, path: String): Boolean {
-        if (to != CutoverState.CUT_OVER) return false
-        if (sdkBindEverSucceeded()) return false
-        log.warn(
-            "declining to commit the cutover ({}): the SDK wallet bind has never succeeded on " +
-                "this install, so handing L1 to the SDK would hold dashj and leave no L1 engine " +
-                "— staying on dashj until a bind succeeds",
-            path
-        )
-        return true
+        commitLocked("fresh-wallet setup (restore/new)").first
     }
 
     /**
@@ -649,15 +529,15 @@ class CutoverCoordinator @Inject constructor(
      * corrupted by a racing commit — the property the one-time upgrade
      * explainer depends on. Must be called under [mutex].
      *
-     * @param requireBindEvidence whether [refusesCutOverWithoutBindEvidence]
-     *   applies. TRUE for the upgrade seam, FALSE for fresh-wallet setup —
-     *   see [commitForFreshWalletSetup] for why that asymmetry is required
-     *   rather than merely convenient. No default: every call site states it.
+     * No bind-evidence gate. One lived here (MO-995 GATE 2, `36792ccd1`) and
+     * refused every path into CUT_OVER until the SDK had bound once on the
+     * install. It could not pass on the launch that needed it — the bind runs
+     * after both seams — so upgrades committed one launch late with dashj
+     * running in between, and on the reference install that produced two SPV
+     * engines in one 512 MB heap. A bind that fails is now retried in place
+     * ([SdkBindRetryService]); it never decides engine ownership.
      */
-    private suspend fun commitLocked(
-        reason: String,
-        requireBindEvidence: Boolean
-    ): Pair<CutoverStatus, Boolean> {
+    private suspend fun commitLocked(reason: String): Pair<CutoverStatus, Boolean> {
         val current = currentState()
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
             return CutoverStatus(current, READY_VERDICT) to false
@@ -668,9 +548,6 @@ class CutoverCoordinator @Inject constructor(
                     "engine is inactive, so dashj must keep owning L1 (staying {})",
                 reason, current
             )
-            return CutoverStatus(current, READY_VERDICT) to false
-        }
-        if (requireBindEvidence && refusesCutOverWithoutBindEvidence(CutoverState.CUT_OVER, reason)) {
             return CutoverStatus(current, READY_VERDICT) to false
         }
         val status = writeState(current, CutoverState.CUT_OVER, reason)
@@ -744,11 +621,6 @@ class CutoverCoordinator @Inject constructor(
             return@withLock CutoverStatus(current, CutoverVerdict(setOf(CutoverBlocker.PARITY_EVIDENCE_STALE)))
         }
         val next = nextCutoverState(current, action, verdict.ready)
-        if (next != current && refusesCutOverWithoutBindEvidence(next, "readiness auto-commit")) {
-            // Readiness said yes, but the SDK cannot own L1. Report the state
-            // unchanged so the observer keeps observing instead of standing down.
-            return@withLock CutoverStatus(current, verdict)
-        }
         if (next != current) {
             runCatching { dashPayConfig.set(DashPayConfig.CUTOVER_STATE, next.name) }
                 .onFailure {

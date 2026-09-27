@@ -103,11 +103,41 @@ public class BootstrapReceiver extends BroadcastReceiver {
             // make sure there is always a blockchain sync scheduled
             if (application.getWallet() != null) {
                 if (bootCompleted && Build.VERSION.SDK_INT >= 35) { // Android 15+ (VANILLA_ICE_CREAM)
-                    // Android 15+ restricts BOOT_COMPLETED from launching dataSync foreground services
-                    // Schedule service start with a short delay using AlarmManager
-                    scheduleDelayedBlockchainServiceStart(context);
+                    // DELIBERATELY DOES NOTHING. Android 15 blocks a BOOT_COMPLETED receiver
+                    // from starting a foreground service of type `dataSync` (the type
+                    // BlockchainServiceImpl declares), throwing
+                    // ForegroundServiceStartNotAllowedException with no exemption, for any app
+                    // targeting API 35+. We target 35.
+                    //
+                    // This used to call scheduleDelayedBlockchainServiceStart(), whose 5s
+                    // AlarmManager hop was intended to dodge that restriction. It cannot: an
+                    // alarm broadcast is not one of the exempt start reasons, and deferring
+                    // through it also discards the BOOT_COMPLETED exemption the receiver
+                    // itself holds. Measured on the 2026-09-17 cold-boot test — the alarm
+                    // fired, the start silently no-opped on the process-importance guard, and
+                    // the wallet did no block sync at all until the app was opened by hand
+                    // (§25 of the upgrade memory and sync plan).
+                    //
+                    // Product decision 2026-09-17: background catch-up after a reboot is NOT a
+                    // requirement. So do not schedule a wake-up that provably cannot succeed —
+                    // say so plainly instead. Syncing resumes when the user opens the app,
+                    // which starts the service from the foreground where it is always allowed.
+                    log.info("post-boot sync not attempted on Android 15+: a dataSync foreground "
+                            + "service cannot be started from BOOT_COMPLETED. Syncing resumes when "
+                            + "the app is opened.");
+                } else if (packageReplaced) {
+                    // An UPGRADE must actually start syncing. startBlockchainService()
+                    // silently no-ops here — this process runs at receiver importance,
+                    // below the IMPORTANCE_FOREGROUND its guard demands — so the
+                    // 2026-09-16 emulator upgrade test committed the cutover, bound the
+                    // wallet and then scanned nothing at all, with no foreground service
+                    // to start the SDK L1 engine from. MY_PACKAGE_REPLACED is exempt from
+                    // the background FGS-start restrictions, so start one directly, and
+                    // fall back to the alarm if the platform still refuses.
+                    if (!application.startBlockchainServiceAfterUpgrade()) {
+                        scheduleDelayedBlockchainServiceStart(context);
+                    }
                 } else {
-                    // For package replacement or older Android versions, start normally
                     application.startBlockchainService(false);
                 }
             }

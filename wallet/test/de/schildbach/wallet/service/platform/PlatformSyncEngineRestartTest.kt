@@ -97,11 +97,29 @@ class PlatformSyncEngineRestartTest {
         cutoverUiDataService = mockk(relaxed = true),
         sdkBlockchainStateService = mockk(relaxed = true),
         cutoverTxSeamService = mockk(relaxed = true),
-        cutoverAutoCommitObserver = mockk(relaxed = true),
         shieldedTransferExecutor = mockk(relaxed = true),
         contactRequestNotificationService = mockk(relaxed = true),
         dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus()
     )
+
+    /**
+     * Emulator finding 12 (docs/upgrade-memory-and-sync-plan.md §10.4): a
+     * WorkManager job started a cold process, WalletApplication.onCreate ran
+     * init(), the engine came up with no foreground service, and the
+     * cached-app freezer suspended it nine seconds into a re-walk. init()
+     * binds and starts the UI data services; only resume() — called by the
+     * foreground blockchain service — starts the engine.
+     */
+    @Test
+    fun init_doesNotStartTheL1Engine_onlyTheForegroundServiceDoes() = runBlocking {
+        val service = service()
+        service.init()
+        kotlinx.coroutines.delay(500)
+        coVerify(exactly = 0) { l1ShadowSyncService.startIfEnabled() }
+
+        service.resume()
+        coVerify(timeout = kickTimeoutMs, exactly = 1) { l1ShadowSyncService.startIfEnabled() }
+    }
 
     @Test
     fun resume_startsTheL1Engine() = runBlocking {

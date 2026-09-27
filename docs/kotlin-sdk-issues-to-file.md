@@ -123,3 +123,76 @@ balance so integrators can validate the amount and show the correct "available" 
 balance overstates what's shieldable. Also: the error is a WalletOperation with the reason in the
 message string; a typed InsufficientFunds error (with available/required) would let integrators
 classify + display it without message-matching (relates to #14).
+
+## 16. DIP-15 contact address pools never grow — the 21st payment from any contact is invisible
+
+> **FILED** as dashpay/rust-dashcore#1032 (2026-09-16). The defect is in the `key-wallet` crate
+> in rust-dashcore, not in platform, so it went there rather than on dashpay/platform. Note the
+> root cause is narrower than first written: `AccountTypeToCheck` is a fieldless enum, so
+> `extended_public_key_for_account_type` structurally cannot identify which contact account is
+> meant. The fix belongs in `wallet_checker.rs`, which already holds the fully-keyed
+> `AccountType`.
+
+Live (testnet, two emulators, `rust-dashcore` rev `af88edf`): a DashPay contact chain watches
+exactly 20 addresses, indices 0-19, and **never extends**. The 21st payment a contact sends
+lands on index 20, which is never derived, so it is never matched by the filter scan and never
+enters the balance. It is unrecoverable by rescanning, because the address does not exist
+client-side. Money-visibility bug, not latency.
+
+Three things compose:
+
+- `key-wallet/src/wallet/helper.rs:612` — `extended_public_key_for_account_type` returns `None`
+  for `DashpayReceivingFunds` and `DashpayExternalAccount`, commented "Currently not retrieved
+  via this helper". So `key_source_for_account_type` yields `KeySource::NoKeySource`.
+- `key-wallet/src/transaction_checking/wallet_checker.rs:357` — `if matches!(key_source,
+  KeySource::NoKeySource) { continue; }` bails **before** `maintain_gap_limit`. Note
+  `mark_address_used` runs *above* the guard, so used flags advance normally while the window
+  does not. That divergence is what makes the bug hard to see.
+- `key-wallet/src/managed_account/managed_account_type.rs:726` and `:745` — both DashPay pools
+  are built via `single_pool(..., 20, ...)` with a **hardcoded literal**, not a named constant.
+  `maintain_gap_limit` with `highest_used == None` targets `gap_limit - 1` = 19, which is
+  exactly the observed pool.
+
+Measured on a wallet with 14 contact accounts: every one sits at top index 19 regardless of
+use. Driving six payments onto one chain advanced `isUsed` to index 5 while the top index
+stayed 19. A sliding pool (`highest_used + gap_limit`, as `maintain_gap_limit` documents)
+would have reached 0-25.
+
+Requests:
+
+- Make the checker reach `maintain_gap_limit` for the two DashPay pools. The material is
+  already persisted — every contact account row carries `accountExtendedPubKeyBytes`
+  (104 bytes) — and friend-chain receiving addresses derive from that xpub alone, so no seed
+  and no device unlock is needed. This is unfinished wiring, not a cryptographic limit.
+
+  Resolve it in `wallet_checker.rs`, **not** by teaching
+  `extended_public_key_for_account_type` to return the contact xpub. That helper takes
+  `AccountTypeToCheck`, which is a FIELDLESS enum: given only `DashpayReceivingFunds` it
+  cannot say *which* contact account is being asked about, so there is no correct value for it
+  to return. `wallet_checker.rs` already holds the fully-keyed `AccountType`, so either it
+  does the lookup itself, or it passes that keyed value down — but the fieldless helper cannot
+  be the place the decision is made.
+
+  (An earlier revision of this section asked for exactly that helper change. The note at the
+  top of this issue corrected the root cause; this bullet had not been brought in line, so the
+  issue as filed still points implementers at an API change that cannot fix the defect.
+  rust-dashcore#1032 needs a comment saying so.)
+- Replace the hardcoded `20` with a named constant. Note `DEFAULT_CONTACT_GAP_LIMIT = 10`
+  exists in `rs-platform-wallet/src/wallet/identity/crypto/dip14.rs:254` (quoting DIP-15's
+  recommendation) but has **no consumer** — neither it nor `derive_contact_payment_address`
+  is called outside its own module. Decide which value is intended and wire one of them.
+- Consider whether `mark_address_used` should stay above the `NoKeySource` guard. Advancing
+  used-state for a pool that can never be maintained produces a database that looks healthy
+  while the watch set is stale.
+
+Also affects `dashpayExternalAccount`, so a wallet stops tracking its own outgoing contact
+payments past index 19.
+
+**Reproduced end to end (testnet, 2026-09-16).** Twenty sequential contact payments filled
+indices 0-19 and were all received. The 21st, `b837bcb2f4f50c29502cd32549b3c369f28157b4ead872b7f41351cebb121ab0`
+(29,000 duffs to `yR3kpYnbcPipq4982WcEK2mCBrQXh7P39K`, block 1555216, 2 confirmations), was
+never seen. With the receiving wallet's service running and synced through block 1555217,
+its database holds zero `transactions` rows, zero `txos` rows, and — decisively — zero
+`core_addresses` rows for the destination address. The address was never derived, so the
+BIP158 scan could not match it. Coins are on-chain and spendable by the seed, but invisible
+to the wallet permanently and unrecoverable by rescan.

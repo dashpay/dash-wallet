@@ -1836,6 +1836,21 @@ class CutoverUiDataService internal constructor(
      */
     private val l1Synced: Flow<Boolean> = flowOf(true),
     /**
+     * Whether the engine's block/tx pipeline PROVABLY trails the header tip
+     * ([de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress.blockPipelineLagging]),
+     * fed from [de.schildbach.wallet.service.L1SyncStatusService.sdkPipelineLagging].
+     *
+     * This veto used to sit INSIDE [l1Synced]'s predicate. On 2026-09-21 the
+     * display predicate adopted iOS's aggregate rule and dropped it — iOS never
+     * had it, and in the dash-spv final-partial-batch stall it pinned "Syncing
+     * balance" on forever. It survives HERE, on the one decision where being
+     * wrong is expensive: the DURABLE seed. A wrong displayed figure corrects
+     * itself on the next tick; a wrong persisted one is the 48.86 DASH that
+     * seeded every later launch. Defaults to `false` (not lagging) so the
+     * fake-fed tests keep exercising the persisting path.
+     */
+    private val pipelineLagging: Flow<Boolean> = flowOf(false),
+    /**
      * Whether an APP-ARMED SPV rescan/replay was armed recently
      * ([DashSdkService.spvRescanArmedWithin] over
      * [RESCAN_ARM_PERSIST_HOLD_MS]) — the second guard on persisting
@@ -1996,6 +2011,9 @@ class CutoverUiDataService internal constructor(
         // this was a second hand-copied `synced || scanCaughtUpToTip`
         // expression that had to be kept in lockstep by hand.
         l1Synced = l1SyncStatusService.sdkScanCaughtUp,
+        // The pipeline-lag veto that used to live INSIDE sdkScanCaughtUp,
+        // now applied to the durable seed only — see [pipelineLagging].
+        pipelineLagging = l1SyncStatusService.sdkPipelineLagging,
         retryBind = { sdkBindRetryService.maybeRetry("cutover-ui bound-wallet wait") },
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
@@ -2335,6 +2353,21 @@ class CutoverUiDataService internal constructor(
     private val _l1Synced = MutableStateFlow(false)
 
     /**
+     * Latest [pipelineLagging] reading. Read ONLY by the durable-seed
+     * decision in [updateSdkBalance]; the display hold ([overlayTotalBalance])
+     * and [_l1Synced] deliberately ignore it — see [pipelineLagging].
+     */
+    private val _pipelineLagging = MutableStateFlow(false)
+
+    /**
+     * The last figure actually written to [WalletUIConfig.LAST_TOTAL_BALANCE]
+     * this session, so the seed write can be logged ONCE per distinct value —
+     * the publication line is change-gated on the displayed figure and the
+     * ticker re-persists silently, so without this the write is invisible.
+     */
+    private var lastPersistedDuffs: Long? = null
+
+    /**
      * The LAST KNOWN total balance ([WalletUIConfig.LAST_TOTAL_BALANCE], the
      * same fast-startup seed the dashj
      * [WalletBalanceObserver][de.schildbach.wallet.transactions.WalletBalanceObserver]
@@ -2484,7 +2517,38 @@ class CutoverUiDataService internal constructor(
             l1Synced
                 .distinctUntilChanged()
                 .catch { e -> log.error("SDK L1 sync-state feed failed; balance stays held", e) }
-                .collect { _l1Synced.value = it }
+                .collect { synced ->
+                    _l1Synced.value = synced
+                    // EDGE LOG. The publication line below only prints when the
+                    // balance VALUE changes, so a wallet whose figure settled
+                    // before the scan caught up flips to synced with no line at
+                    // all — twice on 2026-09-21 the display decision had to be
+                    // inferred rather than read. One line per flip, regardless.
+                    log.info(
+                        "SDK L1 display predicate -> l1Synced={} | published={} duffs pipelineLagging={} " +
+                            "lastKnown={} (the header's 'Syncing balance' label and the balance hold " +
+                            "both follow this)",
+                        synced, _sdkTotalBalance.value?.value ?: "none", _pipelineLagging.value,
+                        _lastKnownTotalBalance.value?.value ?: "none"
+                    )
+                }
+        }
+        launch {
+            pipelineLagging
+                .distinctUntilChanged()
+                // Fail SAFE for the seed: a dead feed reads as lagging, so the
+                // durable figure is withheld rather than persisted blind.
+                .catch { e ->
+                    log.error("SDK pipeline-lag feed failed; the launch seed stays unpersisted", e)
+                    emit(true)
+                }
+                .collect { lagging ->
+                    _pipelineLagging.value = lagging
+                    log.info(
+                        "SDK L1 block pipeline -> lagging={} (gates the durable seed only; l1Synced={})",
+                        lagging, _l1Synced.value
+                    )
+                }
         }
         launch { balancePipeline(walletIdHex) }
         launch { txPipeline(walletIdHex) }
@@ -2765,17 +2829,25 @@ class CutoverUiDataService internal constructor(
         // where the cost of being wrong is a persisted figure that poisons
         // every later launch; its armed term carries its own deadline.
         publishDashPaySyncTerms(buildsSettled, !backfillStatus.ledgerIncomplete)
-        val persist = synced && !armedRescanHold && backfillStatus.settled && buildsSettled
+        // …and the block/tx pipeline must have DRAINED. This is the veto that
+        // left the display predicate on 2026-09-21 (see [pipelineLagging]):
+        // "synced" above now means what iOS means by it, which can be true
+        // while matched blocks are still being processed — and a partial
+        // figure written HERE seeds every later launch. So the seed alone
+        // still waits. An unknown cursor never reads as lagging, so this
+        // cannot pin the seed on a wallet genuinely at the tip.
+        val lagging = _pipelineLagging.value
+        val persist = synced && !lagging && !armedRescanHold && backfillStatus.settled && buildsSettled
         // One line per published figure (changes only — the ticker republishes
         // the same value every REFRESH_INTERVAL_MS). Carries what decides what
         // the user actually SEES: while !synced the header holds the last-known
         // figure instead of this one ([overlayTotalBalance]).
         if (previous?.value != duffs) {
             log.info(
-                "SDK balance published: {} duffs (was {}) | l1Synced={} rescanArmedHold={} " +
-                    "dashPayBackfill(armed={},replaying={}) deferredContactBuilds={} " +
-                    "(unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
-                duffs, previous?.value ?: "none", synced, armedRescanHold,
+                "SDK balance published: {} duffs (was {}) | l1Synced={} pipelineLagging={} " +
+                    "rescanArmedHold={} dashPayBackfill(armed={},replaying={}) " +
+                    "deferredContactBuilds={} (unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
+                duffs, previous?.value ?: "none", synced, lagging, armedRescanHold,
                 backfillStatus.armed, backfillStatus.replaying, deferredBuilds.count,
                 deferredBuilds.unchangedReads, persist,
                 _lastKnownTotalBalance.value?.value ?: "none"
@@ -2783,6 +2855,22 @@ class CutoverUiDataService internal constructor(
         }
         if (!persist) return
         runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
+            .onSuccess {
+                // EDGE LOG: once per distinct value written, not per tick. The
+                // publication line above is gated on the DISPLAYED figure
+                // changing, and the ticker re-runs this write every interval,
+                // so a seed that lands only after the pipeline drains — with
+                // the figure long settled — used to leave no trace at all.
+                if (lastPersistedDuffs != duffs) {
+                    lastPersistedDuffs = duffs
+                    log.info(
+                        "SDK balance PERSISTED as the launch seed: {} duffs (was {}) | l1Synced={} " +
+                            "pipelineLagging={} rescanArmedHold={} backfillSettled={} buildsSettled={}",
+                        duffs, _lastKnownTotalBalance.value?.value ?: "none", synced, lagging,
+                        armedRescanHold, backfillStatus.settled, buildsSettled
+                    )
+                }
+            }
             .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
     }
 

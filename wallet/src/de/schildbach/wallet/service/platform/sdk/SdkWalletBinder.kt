@@ -38,6 +38,9 @@ import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
+import android.app.KeyguardManager
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -296,10 +299,21 @@ class SdkWalletBinder internal constructor(
     private val backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
     // Injectable so the post-arm rewind watch is testable on the host JVM
     // without a minute of real time per poll. Production uses the constant.
-    private val backfillWatchIntervalMs: Long = BACKFILL_WATCH_INTERVAL_MS
+    private val backfillWatchIntervalMs: Long = BACKFILL_WATCH_INTERVAL_MS,
+    /**
+     * `KeyguardManager.isDeviceLocked`. A FIRST bind (no SDK wallet yet)
+     * needs the lock-bound master alias, which Keystore2 refuses while this
+     * is true — so the pass is deferred up front as
+     * [SdkBindDeferredWhileLockedException] instead of paying scrypt and a
+     * keystore round trip to be denied (docs/upgrade-memory-and-sync-plan.md,
+     * Phase 1a item 4). Unknowable reads as unlocked: attempt, and let the
+     * keystore answer.
+     */
+    private val deviceProvablyLocked: () -> Boolean = { false }
 ) {
     @Inject
     constructor(
+        @ApplicationContext context: Context,
         sdkService: DashSdkService,
         mnemonicProvider: PlatformMnemonicProvider,
         identityConfig: BlockchainIdentityConfig,
@@ -317,7 +331,14 @@ class SdkWalletBinder internal constructor(
         blockchainServiceConfig = blockchainServiceConfig,
         scope = scope,
         supportsPlatform = { Constants.SUPPORTS_PLATFORM },
-        backfillGate = backfillGate
+        backfillGate = backfillGate,
+        deviceProvablyLocked = {
+            try {
+                context.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true
+            } catch (t: Throwable) {
+                false
+            }
+        }
     )
 
     /** Serializes passes — the single-flight guarantee. */
@@ -378,11 +399,31 @@ class SdkWalletBinder internal constructor(
     val bindRetryPending: StateFlow<Boolean> = _bindRetryPending.asStateFlow()
 
     /**
+     * The most recent failed pass while a retry is pending, null once the
+     * wallet is bound. [SdkBindRetryService] classifies it into an
+     * [SdkBindBlocker] (device locked / keystore problem / other) and
+     * surfaces that to the user, since a failed bind no longer falls back
+     * to dashj.
+     */
+    private val _lastBindFailure = MutableStateFlow<SdkBindFailure?>(null)
+    val lastBindFailure: StateFlow<SdkBindFailure?> = _lastBindFailure.asStateFlow()
+
+    /**
+     * True once a pass in THIS process has left the app wallet bound.
+     *
+     * Deliberately distinct from [lastBindFailure] being null, which is also
+     * true before the first pass of a fresh process. Consumers that write a
+     * durable "nothing is blocking the bind" record need to tell those two
+     * apart, or a restart silently republishes a stale blocker.
+     */
+    private val _bindEstablished = MutableStateFlow(false)
+    val bindEstablished: StateFlow<Boolean> = _bindEstablished.asStateFlow()
+
+    /**
      * CONSECUTIVE bind passes that attempted and failed without leaving a
-     * bound wallet — the rollback counter [SdkBindRetryService] consults
-     * before rolling a committed cutover back to dashj
-     * ([CutoverCoordinator.rollbackForFailedBind]). Reset to 0 by any pass
-     * that leaves the wallet bound. Passes SKIPPED by the eligibility gate
+     * bound wallet — reported by [SdkBindRetryService] on every failed retry
+     * (there is no engine fallback to drive any more). Reset to 0 by any
+     * pass that leaves the wallet bound. Passes SKIPPED by the eligibility gate
      * (flags off, no unlock available) count neither way — they carry no
      * evidence about the keystore.
      */
@@ -397,10 +438,16 @@ class SdkWalletBinder internal constructor(
      * LATER stage (discovery/key heal) failed — those have their own
      * retries and do not strand the L1 engine.
      */
-    private fun noteBindOutcome(failed: Boolean) {
+    private fun noteBindOutcome(failed: Boolean, cause: Throwable? = null) {
         if (failed) {
             consecutiveBindFailuresCount++
             _bindRetryPending.value = true
+            _bindEstablished.value = false
+            _lastBindFailure.value = SdkBindFailure(
+                cause = cause ?: IllegalStateException("bind pass left no bound SDK wallet"),
+                consecutiveFailures = consecutiveBindFailuresCount,
+                atMs = now()
+            )
             log.warn(
                 "SDK wallet bind still not established ({} consecutive failed pass(es)); " +
                     "a bind retry is pending",
@@ -415,6 +462,8 @@ class SdkWalletBinder internal constructor(
             }
             consecutiveBindFailuresCount = 0
             _bindRetryPending.value = false
+            _lastBindFailure.value = null
+            _bindEstablished.value = true
             markBindEverSucceeded()
         }
     }
@@ -763,6 +812,13 @@ class SdkWalletBinder internal constructor(
                 if (armedRewind && identityId != null) {
                     watchArmedBackfillRewind(walletId, identityId, userId)
                 }
+                // DIAGNOSTIC ONLY (docs/upgrade-memory-and-sync-plan.md §17):
+                // did this pass leave contact chains registered BELOW the
+                // height the filter scan has already reached? That is the
+                // "uncovered contact chain" condition — payments to those
+                // addresses were passed over and nothing is known to rewind
+                // for them. Reported, never acted on.
+                if (identityId != null) logContactCoverageDebt(walletId, identityId)
             } finally {
                 provisioning.set(false)
             }
@@ -774,6 +830,163 @@ class SdkWalletBinder internal constructor(
                     "discovery may lag until the next pass",
                 t
             )
+        }
+    }
+
+    /**
+     * Report whether DIP-15 contact chains are registered at core heights the
+     * filter scan has ALREADY passed — the "uncovered contact chain" condition
+     * of docs/upgrade-memory-and-sync-plan.md §17.
+     *
+     * WHY THIS IS ONLY A LOG. The protection added in `1266edc1c` is ORDERING:
+     * the SDK bring-up registers contact receival accounts before `startSpv`,
+     * so a scan that starts afterwards covers them from its first block. Three
+     * situations break that ordering — a restore whose contact discovery has
+     * not finished, a locked device whose bring-up returns
+     * `SEED_BINDING_UNVERIFIED` and derives nothing (§15.3), and a bring-up
+     * that returns with accounts still pending, which the 20 s budget in item
+     * 1b.10 makes reachable (Joel's logs: `PARTIAL_ACCOUNTS_PENDING drained=50
+     * pending=94`). In those cases a payment to a contact address lands in a
+     * block the scan walks straight past.
+     *
+     * Whether anything recovers it afterwards is UNRESOLVED, which is exactly
+     * why this reports rather than acts. `wallets_behind` compares a
+     * wallet-level `synced_height` that is false at the tip, `create_account`
+     * only bumps a structural revision, and the app-side backfill rewind is
+     * bound to the no-op `DashPayBackfillGate.ALWAYS_RUN`. Against that, the
+     * sweep in `provisionDashPayContactAccounts` is documented to lower the
+     * SPV synced height by itself — the very behavior the retired gate existed
+     * to throttle. So a rewind may already happen here, may be suppressed, or
+     * may not happen at all, and arming another one blind risks either leaving
+     * funds invisible or restoring the every-launch re-scan that stopped
+     * initial syncs from finishing.
+     *
+     * This line is what settles it, on a device, in one reading: a WARN means
+     * the condition occurred, and the section 16 test can then check whether
+     * the payment ever becomes visible.
+     *
+     * WHY THE LIVE SYNCED HEIGHT CANNOT ANSWER THIS. The condition is about
+     * ORDERING — was the chain registered after the scan had already walked
+     * its core height — and `syncedHeight > floor` is not that question. It
+     * is true of every wallet that has finished syncing, because finishing
+     * means the cursor ends above every contact's height. Compared live it
+     * reported OK at bind (cursor 0) and DEBT after a full rescan from
+     * genesis on the SAME wallet with the SAME coverage, which is the
+     * clearest possible demonstration that it measures progress, not debt.
+     * The verdict is therefore taken against
+     * [DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT], written by
+     * [recordContactRegistrationHeight] when a drain actually registers
+     * accounts, and the live height is logged only as context.
+     *
+     * Never throws; a diagnostic must not affect a provisioning pass.
+     */
+    private suspend fun logContactCoverageDebt(walletId: String, identityId: ByteArray) {
+        try {
+            val signals = sdkService.readDashPayBackfillSignals(walletId, identityId)
+            val synced = signals.syncedHeight
+            val floor = signals.receivedContactCoreHeightFloor ?: signals.contactCoreHeightFloor
+            val registeredAt = readContactRegistrationHeight(walletId)
+            val contacts = signals.contactRequestCount
+            when (ContactCoverageDecider.decide(synced, floor, registeredAt)) {
+                ContactCoverageDecider.Verdict.NOT_DETERMINABLE -> log.info(
+                    "DashPay contact coverage: not determinable on {}… (syncedHeight={}, " +
+                        "receivedContactFloor={}, registeredAtHeight={}, contacts={}) — the " +
+                        "live height alone cannot say whether the scan passed those chains " +
+                        "before or after they were registered",
+                    walletId.take(8), synced, floor, registeredAt, contacts
+                )
+
+                ContactCoverageDecider.Verdict.SWEEP_AHEAD_COVERS -> {
+                    // The scan is below the floor and will walk those blocks
+                    // with today's account set watched, so any ordering on
+                    // record is repaid by the sweep in flight.
+                    clearContactRegistrationHeight(walletId)
+                    log.info(
+                        "DashPay contact coverage OK on {}…: the scan is at {}, below the " +
+                            "earliest received contact height {} ({} contact request(s)) — the " +
+                            "sweep ahead covers those chains with the accounts registered now",
+                        walletId.take(8), synced, floor, contacts
+                    )
+                }
+
+                ContactCoverageDecider.Verdict.COVERED -> log.info(
+                    "DashPay contact coverage OK on {}…: receival accounts were registered at " +
+                        "scan height {}, at or below the earliest received contact height {} " +
+                        "({} contact request(s); scan now at {})",
+                    walletId.take(8), registeredAt, floor, contacts, synced
+                )
+
+                ContactCoverageDecider.Verdict.DEBT -> log.warn(
+                    "DashPay contact coverage DEBT on {}…: receival accounts were registered " +
+                        "with the filter scan already at {}, past the earliest received contact " +
+                        "request at core height {} ({} blocks below, {} contact request(s); " +
+                        "scan now at {}). Payments to those chains were scanned past. This is " +
+                        "reported, not repaired — see §17 of the upgrade memory and sync plan",
+                    walletId.take(8), registeredAt, floor,
+                    (registeredAt ?: 0L) - (floor ?: 0L), contacts, synced
+                )
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("DashPay contact coverage diagnostic failed: {}", t.toString())
+        }
+    }
+
+    /**
+     * Record the scan's position as the ordering evidence for the receival
+     * accounts a drain has just registered
+     * ([DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT]).
+     *
+     * Keeps the HIGHEST height seen for this wallet: a later registration
+     * above the contact floor is a real debt regardless of an earlier one
+     * that sat below it, and only the worst ordering can prove coverage.
+     *
+     * Never throws — this feeds a diagnostic, and a provisioning pass must
+     * not fail because a preference write did.
+     */
+    private suspend fun recordContactRegistrationHeight(walletId: String, identityId: ByteArray) {
+        try {
+            val synced = sdkService.readDashPayBackfillSignals(walletId, identityId).syncedHeight
+                ?: return
+            val previous = readContactRegistrationHeight(walletId)
+            if (previous != null && previous >= synced) return
+            dashPayConfig.setContactRegistration(walletId, synced)
+            log.info(
+                "DashPay receival-account registration recorded on {}… at scan height {}" +
+                    "{} — the §17 coverage verdict is taken against this, not the live height",
+                walletId.take(8), synced,
+                if (previous == null) "" else " (was $previous)"
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("DashPay registration-height record failed: {}", t.toString())
+        }
+    }
+
+    /**
+     * The recorded registration height, or null when none belongs to this
+     * wallet — including a record written for a DIFFERENT SDK wallet, whose
+     * ordering says nothing about this one.
+     */
+    private suspend fun readContactRegistrationHeight(walletId: String): Long? {
+        val owner = dashPayConfig.get(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_WALLET)
+        if (owner != walletId) return null
+        return dashPayConfig.get(DashPayConfig.DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT)
+    }
+
+    /**
+     * Reset the recorded ordering to 0 for this wallet, because a scan
+     * running below the contact floor is about to re-walk those blocks with
+     * today's accounts watched. 0 rather than absent: the accounts ARE
+     * registered, and their effective ordering is now at/below the scan —
+     * which is a coverage verdict of OK, not "not determinable".
+     */
+    private suspend fun clearContactRegistrationHeight(walletId: String) {
+        try {
+            dashPayConfig.setContactRegistration(walletId, 0L)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("DashPay registration-height reset failed: {}", t.toString())
         }
     }
 
@@ -845,7 +1058,7 @@ class SdkWalletBinder internal constructor(
                 ) { "${it.take(8)}…" }
             }
             log.info(
-                "DashPay receival-account coverage on {}…: establishedContacts={}, " +
+                "DashPay receival-account coverage on {}…: channelsWePublished={}, " +
                     "receivalAccounts={}, dark={}{} — a dark contact's receiving addresses " +
                     "are in no watched script set (permanently-dark candidate under the SDK's " +
                     "re-enqueue asymmetry)",
@@ -894,6 +1107,11 @@ class SdkWalletBinder internal constructor(
             // verdict lets THIS cycle pay it with a follow-up sweep instead
             // of leaving the money invisible until a relaunch.
             val registeredNew = backfillGate.noteAccountBuildsRegistered(report.built)
+            // §17 ordering evidence: these accounts exist as of NOW, so the
+            // scan's position NOW is the position they were registered at.
+            // Recorded before the coverage diagnostic runs, so this pass's
+            // own registrations are accounted for in this pass's verdict.
+            if (report.built > 0) recordContactRegistrationHeight(walletId, identityId)
             if (report.bound) {
                 logReceivalCoverageDiagnostics(walletId, identityId)
             }
@@ -952,9 +1170,9 @@ class SdkWalletBinder internal constructor(
             // arm the retry machinery. A throw AFTER the bind established
             // the wallet (discovery/heal) is not — those retry on their own
             // triggers and the L1 engine is not blocked on them.
-            noteBindOutcome(failed = boundWalletIdHex == null)
+            noteBindOutcome(failed = boundWalletIdHex == null, cause = t)
             // Opportunistic by contract: never break the calling flow.
-            log.warn("SDK wallet binding pass failed; dashj behavior unchanged", t)
+            log.warn("SDK wallet binding pass failed; retry pending", t)
         }
     }
 
@@ -1032,6 +1250,18 @@ class SdkWalletBinder internal constructor(
 
         // 4. Bind the seed (skipped when a previous pass already bound it).
         val walletId = boundWalletIdHex ?: run {
+            // First bind on this process: the SDK will createWallet under the
+            // lock-bound master alias. Do not spend scrypt and a keystore call
+            // to be told the device is locked — defer, and let the unlock
+            // receiver / foreground edge run the pass (Phase 1a item 4). An
+            // ALREADY bound wallet skips this: opening it needs no keystore.
+            if (deviceProvablyLocked()) {
+                log.info(
+                    "SDK bind deferred: the device is locked and the SDK master alias is lock-bound; " +
+                        "retrying on unlock / app foreground"
+                )
+                throw SdkBindDeferredWhileLockedException()
+            }
             val unlock = unlockProvider()
             if (unlock == null) {
                 log.info("SDK binding skipped: no wallet unlock available at this call site")
@@ -1512,5 +1742,53 @@ class SdkWalletBinder internal constructor(
          * steady-state passes are cheap.
          */
         internal const val PROVISION_MIN_INTERVAL_MS = 60_000L
+    }
+}
+
+/**
+ * The §17 "uncovered contact chain" rule, as a pure function of three
+ * numbers, so it can be proven without an SDK, a wallet or a DataStore.
+ *
+ * The rule the old comparison got wrong: debt is about ORDERING, not about
+ * where the scan happens to be now. A DIP-15 receival chain is uncovered
+ * when it was registered while the scan had ALREADY walked past its core
+ * height — those blocks were filtered without its addresses in the match
+ * set, and nothing is known to go back for them. Asking instead whether the
+ * scan is now above the contact floor answers "has this wallet finished
+ * syncing", which is true of every healthy wallet and of none that is still
+ * catching up. It is the same verdict for opposite situations.
+ */
+internal object ContactCoverageDecider {
+    enum class Verdict {
+        /** No registration ordering is on record; refuse to guess. */
+        NOT_DETERMINABLE,
+
+        /**
+         * The scan is below the contact floor and will sweep those blocks
+         * with the accounts registered now — any recorded debt is repaid by
+         * the sweep in flight, so the record resets.
+         */
+        SWEEP_AHEAD_COVERS,
+
+        /** Accounts were registered at or below the floor. */
+        COVERED,
+
+        /** Accounts were registered above the floor: payments were missed. */
+        DEBT
+    }
+
+    /**
+     * @param syncedHeight durable filter-scan watermark, null when unknown.
+     * @param floor earliest RECEIVED contact request's core height, null
+     *   when the wallet holds none — in which case nothing can be uncovered.
+     * @param registeredAt the scan height when receival accounts were last
+     *   registered, null when no registration is on record for this wallet.
+     */
+    fun decide(syncedHeight: Long?, floor: Long?, registeredAt: Long?): Verdict = when {
+        syncedHeight == null || floor == null -> Verdict.NOT_DETERMINABLE
+        syncedHeight < floor -> Verdict.SWEEP_AHEAD_COVERS
+        registeredAt == null -> Verdict.NOT_DETERMINABLE
+        registeredAt > floor -> Verdict.DEBT
+        else -> Verdict.COVERED
     }
 }

@@ -96,6 +96,52 @@ class WalletFileSizeGuardTest {
 
     // ── preserveAside: forensics + safety, never delete ───────────────
 
+    // ── autosave debounce (Phase 1a item 6) ──────────────────────────
+
+    @Test
+    fun autosaveDelay_staysAtFiveSeconds_belowHalfTheSoftLimit() {
+        // 512 MB heap → soft limit 51.2 MB; a 12 MB (emulator "topple") wallet is cheap to save.
+        val heapMb = 512
+        assertEquals(WalletFileSizeGuard.AUTOSAVE_DELAY_DEFAULT_MS, WalletFileSizeGuard.autosaveDelayMs(0L, heapMb))
+        assertEquals(WalletFileSizeGuard.AUTOSAVE_DELAY_DEFAULT_MS, WalletFileSizeGuard.autosaveDelayMs(12L * 1024 * 1024, heapMb))
+        assertEquals(
+            WalletFileSizeGuard.AUTOSAVE_DELAY_DEFAULT_MS,
+            WalletFileSizeGuard.autosaveDelayMs(WalletFileSizeGuard.softLimitBytes(heapMb) / 2 - 1, heapMb)
+        )
+    }
+
+    @Test
+    fun autosaveDelay_isThirtySeconds_fromHalfTheSoftLimit() {
+        val heapMb = 512
+        val half = WalletFileSizeGuard.softLimitBytes(heapMb) / 2
+        assertEquals(WalletFileSizeGuard.AUTOSAVE_DELAY_LARGE_MS, WalletFileSizeGuard.autosaveDelayMs(half, heapMb))
+        assertEquals(
+            WalletFileSizeGuard.AUTOSAVE_DELAY_LARGE_MS,
+            WalletFileSizeGuard.autosaveDelayMs(WalletFileSizeGuard.softLimitBytes(heapMb) - 1, heapMb)
+        )
+    }
+
+    @Test
+    fun autosaveDelay_isSixtySeconds_atAndAboveTheSoftLimit() {
+        // The reference install: 62 MB file on a 512 MB heap (soft limit 51.2 MB) → RISKY tier.
+        val heapMb = 512
+        assertEquals(WalletFileSizeGuard.Verdict.RISKY, WalletFileSizeGuard.verdict(62L * 1024 * 1024, heapMb))
+        assertEquals(WalletFileSizeGuard.AUTOSAVE_DELAY_RISKY_MS, WalletFileSizeGuard.autosaveDelayMs(62L * 1024 * 1024, heapMb))
+        assertEquals(
+            WalletFileSizeGuard.AUTOSAVE_DELAY_RISKY_MS,
+            WalletFileSizeGuard.autosaveDelayMs(WalletFileSizeGuard.softLimitBytes(heapMb), heapMb)
+        )
+        assertEquals(WalletFileSizeGuard.AUTOSAVE_DELAY_RISKY_MS, WalletFileSizeGuard.autosaveDelayMs(WalletFileSizeGuard.HARD_LIMIT_BYTES, heapMb))
+    }
+
+    @Test
+    fun autosaveDelay_followsTheDeviceHeap() {
+        // The same 62 MB file is below half the (100 MB-capped) soft limit on a
+        // 4 GB-heap device → default; and RISKY on a 256 MB heap (25.6 MB limit).
+        assertEquals(WalletFileSizeGuard.AUTOSAVE_DELAY_LARGE_MS, WalletFileSizeGuard.autosaveDelayMs(62L * 1024 * 1024, 4096))
+        assertEquals(WalletFileSizeGuard.AUTOSAVE_DELAY_RISKY_MS, WalletFileSizeGuard.autosaveDelayMs(62L * 1024 * 1024, 256))
+    }
+
     private fun freshDir(): File = Files.createTempDirectory("size-guard-test").toFile()
 
     @Test

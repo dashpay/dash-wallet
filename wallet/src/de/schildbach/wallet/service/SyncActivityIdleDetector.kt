@@ -89,6 +89,26 @@ fun isSyncIdle(history: List<SyncActivitySample>): Boolean {
 }
 
 /**
+ * The verdict that actually stops the service: idle counters AND no replay
+ * in progress (docs/upgrade-memory-and-sync-plan.md, Phase 1b item 7).
+ *
+ * The SDK replay has multi-minute stretches with no filter advance —
+ * matched-block download and processing for the CoinJoin years, and the
+ * DashPay bring-up that used to precede SPV — during which every counter
+ * reads zero. On the reference install the idle rule tore the engine down
+ * nine times in one day and ten the next, and the SDK persisted its
+ * watermark rarely enough that each teardown cost up to 155,000 blocks;
+ * two days after the upgrade the replay was further from the tip than when
+ * it started. The old dashj-era contract was "the service stays alive until
+ * the replay finishes"; `replaying` only rescheduled a one-minute restart
+ * AFTER the stop. It is now a guard that skips the stop. A genuinely stuck
+ * engine is the SDK stall impediment's and the watchdog's problem, not this
+ * rule's. Pure — host-testable.
+ */
+fun shouldStopForIdle(history: List<SyncActivitySample>, replaying: Boolean): Boolean =
+    !replaying && isSyncIdle(history)
+
+/**
  * One activity sample taken from the KOTLIN SDK L1 engine — the
  * post-cutover replacement for the dashj counters, mapped onto the same
  * four slots so [isSyncIdle] is untouched:

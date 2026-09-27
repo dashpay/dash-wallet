@@ -24,6 +24,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -188,19 +190,54 @@ data class ShadowSyncProgress(
      * IDLE/ERROR/still on headers) trails far outside the tolerance and
      * keeps the gate closed (fail-closed).
      *
-     * ALSO requires the block/tx pipeline not to be PROVABLY lagging
-     * ([blockPipelineLagging]) — the field incident this closes: the
-     * filters sub-progress reported Synced (scan position at tip) one
-     * minute into a three-hour replay while the engine's block
-     * download/processing pipeline was still churning through the matched
-     * blocks, so the app declared l1Synced=true and persisted a partial
-     * 48.86 DASH as the last-known balance.
+     * OR — the iOS rule, adopted 2026-09-21 — the SDK's own aggregate says
+     * so ([aggregateCaughtUp]). The two are a union: the height test keeps
+     * every fixture and every reading that fed it exact; the aggregate
+     * absorbs the one case the height test cannot, a filter commit parked a
+     * few thousand blocks short by dash-spv itself (plan §34) while every
+     * filter is already on disk.
+     *
+     * NO LONGER requires the block/tx pipeline to be drained. That veto
+     * ([blockPipelineLagging]) used to live here, closing the field incident
+     * where the filters sub-progress read Synced one minute into a
+     * three-hour replay and the app persisted a partial 48.86 DASH as the
+     * last-known balance. The protection is not gone — it moved to the ONE
+     * place being wrong is expensive, the durable seed
+     * (`CutoverUiDataService`'s persist gate, via
+     * `L1SyncStatusService.sdkPipelineLagging`). Kept out of the DISPLAY
+     * predicate so this reads "synced" when iOS would: iOS never had the
+     * veto, and with it in place the §34 stall parks the wallet cursor with
+     * the filter cursor and the veto holds "syncing" forever at 99%.
      */
     val scanCaughtUpToTip: Boolean get() =
         headerTarget > 0 && headerHeight >= headerTarget &&
             filterTarget > 0 &&
-            headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS &&
-            !blockPipelineLagging
+            (headerTarget - filterHeight <= SCAN_TIP_TOLERANCE_BLOCKS || aggregateCaughtUp)
+
+    /**
+     * THE iOS RULE. `SyncingActivityMonitor` (dashwallet-ios) calls the wallet
+     * synced when the engine's overall percentage is `>= 0.999`; this is
+     * that test, on the same number.
+     *
+     * [overallPercent] is dash-spv's `SyncProgress::percentage()`: the MEAN
+     * of the headers, filter-headers and filters phases (blocks and
+     * masternodes do not contribute), where the filters phase reports its
+     * COMMITTED height over target. Verified against the shipped engine on
+     * 2026-09-21 — `71.5%` reported at filters 14.5% is exactly
+     * (100 + 100 + 14.5) / 3, and `99.4%` at filters 98.33% is exactly
+     * (100 + 100 + 98.33) / 3. (Two older comments in this file said it
+     * "under-reports"; that was a previous SDK.)
+     *
+     * What 0.999 on a three-phase mean tolerates: a filters shortfall of up
+     * to 0.3% of chain height with the other two phases at 100%. At today's
+     * testnet height that is ~4,600 blocks — wide enough to cover the §34
+     * final-partial-batch stall (2,167 short, 99.954% → synced; 3 short on
+     * mainnet, 99.99994% → synced) and NOT a real mid-scan (4,752 short read
+     * 99.898% → not synced). Requires both targets known so an all-zero
+     * snapshot can never pass.
+     */
+    val aggregateCaughtUp: Boolean get() =
+        headerTarget > 0 && filterTarget > 0 && overallPercent >= IOS_SYNC_DONE_THRESHOLD
 
     /**
      * The engine's block-download/tx-processing pipeline DEMONSTRABLY
@@ -242,6 +279,15 @@ data class ShadowSyncProgress(
          * set even if not yet filter-scanned.
          */
         const val SCAN_TIP_TOLERANCE_BLOCKS = 2L
+
+        /**
+         * The iOS "synced" threshold on the engine's aggregate percentage —
+         * `SyncingActivityMonitor.swift`: `if sdkProgress >= 0.999 { .syncDone }`.
+         * Same constant, same number, so the two clients call the same
+         * engine state synced at the same instant. See [aggregateCaughtUp]
+         * for what it tolerates and why.
+         */
+        const val IOS_SYNC_DONE_THRESHOLD = 0.999
     }
 }
 
@@ -250,9 +296,15 @@ data class ShadowSyncProgress(
  * (shadow idle: flag off or not started). The percent is the COMBINED
  * header+filter progress — (headerHeight + filterHeight) over
  * (headerTarget + filterTarget) — one monotonic number across the whole
- * pipeline; the SDK's own [ShadowSyncProgress.overallPercent] is
- * deliberately NOT used (it under-reports during the filter scan —
- * observed live: 1.0% at filters 1402000/1514660). Renders side by side
+ * pipeline. The SDK's own [ShadowSyncProgress.overallPercent] is not the
+ * DISPLAYED number here: it is a three-phase mean (headers, filter headers,
+ * filters — see [ShadowSyncProgress.aggregateCaughtUp]), so during the
+ * filter scan it sits well above the filter position and would read as
+ * further along than the scan the user is waiting on. (An older note here
+ * said it "under-reports, 1.0% at filters 1402000/1514660"; that was a
+ * previous SDK — on the shipped engine it is the mean, verified
+ * 2026-09-21.) It IS consulted for the 100% decision, through
+ * [ShadowSyncProgress.scanCaughtUpToTip]. Renders side by side
  * with the "DashJ N%" status in the sync header, so it stays short.
  * English-only like the rest of the debug instrumentation. Pure —
  * host-testable.
@@ -286,8 +338,11 @@ private fun syncPct(h: Long, t: Long): Int =
  * The SDK L1 scan progress as a single 0..100 percent, for the home-screen
  * "Syncing N%" header AFTER cutover (Phase 5d) when the SDK owns L1 and the
  * dashj percent no longer advances. Same combined header+filter metric as
- * [kotlinSyncLabel] (the SDK's own `overallPercent` under-reports during the
- * filter scan); only the SYNCED phase may claim 100%. Pure — host-testable.
+ * [kotlinSyncLabel] for the DISPLAYED figure (the SDK's three-phase mean would
+ * read ahead of the filter scan the user is waiting on); the 100% decision
+ * is [ShadowSyncProgress.scanCaughtUpToTip], which since 2026-09-21 includes
+ * the iOS aggregate rule ([ShadowSyncProgress.aggregateCaughtUp]). Pure —
+ * host-testable.
  */
 fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase) {
     ShadowSyncPhase.IDLE, ShadowSyncPhase.CONNECTING -> 0
@@ -297,8 +352,11 @@ fun shadowSyncPercent(progress: ShadowSyncProgress): Int = when (progress.phase)
     // ~2.5 min bumps the targets and drops the overall state back to
     // SYNCING — see [ShadowSyncProgress.scanCaughtUpToTip]). So an active
     // scan claims 100% once the filter scan has caught up to a real header
-    // tip within [SCAN_TIP_TOLERANCE_BLOCKS]; a genuine mid-scan still caps
-    // at 99%. Fail-closed for IDLE/CONNECTING/ERROR above.
+    // tip within [SCAN_TIP_TOLERANCE_BLOCKS] OR the engine's aggregate is at
+    // the iOS threshold ([ShadowSyncProgress.aggregateCaughtUp] — the §34
+    // stall, parked a few thousand short with every filter stored); a
+    // genuine mid-scan still caps at 99%. Fail-closed for
+    // IDLE/CONNECTING/ERROR above.
     else -> if (progress.scanCaughtUpToTip) {
         100
     } else {
@@ -359,14 +417,18 @@ internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
 
 /**
  * Whether the engine is ACTIVELY syncing/replaying, for the replay memory
- * telemetry ([replayMemTelemetryLine]): not caught up on the drain-aware
- * predicate — the scan position trails the tip, the phase never reached a
- * caught-up state, OR the block/tx pipeline provably lags
+ * telemetry ([replayMemTelemetryLine]): not caught up — the scan position
+ * trails the tip and the aggregate is below the iOS threshold, the phase
+ * never reached a caught-up state — OR the block/tx pipeline provably lags
  * ([ShadowSyncProgress.blockPipelineLagging] — the phase can hold SYNCED
- * right through an armed replay). Exactly the negation of the shared
- * caught-up predicate (`sdkL1ScanCaughtUp`), spelled out here so the
- * telemetry stops the moment "synced" settles for the UI too. Pure —
- * host-testable.
+ * right through an armed replay).
+ *
+ * DELIBERATELY STRICTER than the UI's `sdkL1ScanCaughtUp` since 2026-09-21:
+ * that predicate dropped the pipeline-lag veto so the header reads "synced"
+ * when iOS would, but this is telemetry about whether the engine is still
+ * doing replay WORK, and a churning block pipeline is exactly that. So the
+ * two can disagree by design — the UI settled, the memory telemetry still
+ * sampling — for as long as the pipeline lags. Pure — host-testable.
  */
 internal val ShadowSyncProgress.replayActive: Boolean get() =
     !(synced || scanCaughtUpToTip) || blockPipelineLagging
@@ -873,10 +935,24 @@ internal fun parityProbePolicy(
  * start"). The corrective action therefore has to rebuild the WALLET, not
  * just the scan:
  *
- * ## The self-heal: one full SDK-wallet rebuild, then stand down
+ * ## RETIRED AS AN ACTION (2026-09-16): the verdict is advisory
+ *
+ * [Decision.REBUILD_WALLET] is now LOGGED, never executed. On the emulator
+ * upgrade test (docs/upgrade-memory-and-sync-plan.md §10, finding 8) it
+ * fired on an inflated SDK balance three probes after the SDK first
+ * reached tip, removed the SDK wallet, deleted the SPV data dir and
+ * rescanned from genesis with no user involvement. Under the no-fallback
+ * cutover policy (§12) the SDK wallet is the ledger of record on every
+ * install from its first launch; wiping it on the word of a dashj engine
+ * that is itself catching up is not a self-heal. The decider and its table
+ * are kept so the evidence still lands in the log and the support report;
+ * [L1ShadowDebugReset] remains the manual path. The text below describes
+ * what the verdict USED to do.
+ *
+ * ## The self-heal (retired): one full SDK-wallet rebuild, then stand down
  *
  * On a persistent mismatch (either direction) the decider fires
- * [Decision.REBUILD_WALLET] exactly ONCE per process. The service runs
+ * [Decision.REBUILD_WALLET] exactly ONCE per process. The service ran
  * [L1ShadowSyncService.recoverByRecreatingWallet]: unbind the SDK wallet
  * and clear ALL SDK-side persistence for it (the full `removeAppWallet`
  * cascade — Room wallet/identity/TXO/address/shielded rows INCLUDING the
@@ -1055,6 +1131,287 @@ internal class ProbeWatchdogDecider(
             else -> Decision.NONE
         }
     }
+}
+
+/**
+ * Restart decision for the FILTER-STALL watchdog (MO-1022).
+ *
+ * ## The failure this exists for
+ *
+ * Measured on a Samsung A53 / Android 16, build 12000012, upgrading the
+ * "job flower" mainnet wallet (6,787 txs, 1,177 matched blocks). The SDK's
+ * SPV engine parked 2,971 blocks short of the tip and never recovered:
+ *
+ * ```
+ * Filters: Syncing 2538000/2540971 (99.9%) stored:2540971, downloaded: 0, last_activity: 240s
+ * Blocks:  WaitForEvents ... requested: 933, downloaded: 928,          last_activity: 239s
+ * ```
+ *
+ * Every filter was already on disk (`stored` == target), so nothing was
+ * waiting on the network for filters. The block fetcher had 933 requests
+ * out and 928 answers back — **five blocks that never arrived** — and its
+ * download coordinator had already spent its retry ladder (108 first
+ * attempts, 61 second, 19 third, 1 fourth) and stood down. Filter
+ * processing cannot pass a block it is still waiting for, so the scan
+ * froze. Observed frozen for 44 minutes, then a process relaunch moved it
+ * 45,000 blocks in 90 seconds before it hit the same wall again. The user
+ * sees "99%" forever.
+ *
+ * ## Why this is filter-specific rather than reusing the idle detector
+ *
+ * [de.schildbach.wallet.service.isSyncIdle] samples four counters —
+ * filters, headers, masternode list, tx events — and calls it idle only
+ * when NONE advance. During this stall HEADERS KEPT ADVANCING, because new
+ * blocks kept arriving and being chained (2540967 -> 2540974 while the
+ * filters sat still), and chainlocks kept validating. A multi-counter idle
+ * rule therefore reads the engine as healthy and never fires. The filter
+ * cursor is the only counter that tells the truth here.
+ *
+ * ## The rule
+ *
+ * Arm only when filters are demonstrably BEHIND (`filterTarget > 0 &&
+ * filterHeight < filterTarget`) — at or past target there is nothing to
+ * stall on, and before the target is known there is nothing to measure.
+ * Restart when that cursor has not moved for [stallThresholdMs], at most
+ * [maxRestarts] times per process, then report [Decision.EXHAUSTED] once
+ * and stay quiet. Pure, so the arming, the reset-on-progress and the
+ * give-up semantics are host-JVM unit-testable.
+ */
+internal class FilterStallWatchdogDecider(
+    private val stallThresholdMs: Long = L1ShadowSyncService.FILTER_STALL_THRESHOLD_MS,
+    private val maxRestarts: Int = L1ShadowSyncService.FILTER_STALL_MAX_RESTARTS,
+    /** How long a reported final-batch shape suppresses restarts before falling through. */
+    private val finalBatchRestartHoldMs: Long = L1ShadowSyncService.FINAL_BATCH_RESTART_HOLD_MS
+) {
+    /**
+     * [SDK_FINAL_BATCH] is a REPORT, not an action: the stall has been
+     * identified as the `dash_spv` final-partial-batch defect (§34), for which
+     * a restart is both useless and expensive. See [isFinalBatchSignature].
+     */
+    enum class Decision { NONE, RESTART, EXHAUSTED, SDK_FINAL_BATCH }
+
+    private var lastHeight: Long = -1L
+    private var lastAdvanceMs: Long = 0L
+    private var restartsIssued = 0
+    private var exhaustedReported = false
+    private var finalBatchReported = false
+    /** When [Decision.SDK_FINAL_BATCH] was last reported; the restart hold is measured from here. */
+    private var finalBatchReportedAtMs = 0L
+
+    /**
+     * The threshold the last decision was taken against, and how long the
+     * cursor had actually sat still. Exposed so the log can state what
+     * happened instead of a constant — the two tiers mean the constant is
+     * no longer the answer.
+     */
+    var lastThresholdMs: Long = 0L
+        private set
+    var lastStillMs: Long = 0L
+        private set
+
+    /**
+     * The wait before attempt [attempt], zero-based: 10 / 20 / 30 minutes.
+     *
+     * The backoff stands, because with a flat threshold the spacing between
+     * restarts IS the threshold and a short one spends the whole budget
+     * inside a single normal pause (measured at 90 s: three restarts and
+     * EXHAUSTED in under seven minutes, against a 6 min 32 s benign pause on
+     * the same device).
+     *
+     * A FAST FIRST RUNG WAS TRIED AND WITHDRAWN. Three minutes when a restart
+     * looked cheap, judged by `filterTarget - walletSyncedHeight`. It was the
+     * wrong signal: `walletSyncedHeight` is the engine's IN-MEMORY committed
+     * cursor (`_engineWalletSyncedHeight`, fed from the event stream), while
+     * a restart resumes from the DURABLE `WalletEntity.syncedHeight` in the
+     * SDK's database — the value [L1ShadowSyncService.stop]'s own diagnostic
+     * warns can trail by up to 155,000 blocks.
+     *
+     * Observed on a Samsung SM-S901U, 2026-09-19: the gap read 4,741 blocks,
+     * the tier called it cheap and restarted at three minutes, and the engine
+     * resumed 20,000 blocks lower — re-walking to the tip, stalling, and
+     * restarting again. A loop, and worse than leaving it alone, because the
+     * same stall had cleared itself in 2–7 minutes on every earlier run.
+     *
+     * One favourable sample (47 s, a 1-block gap) is what made the tier look
+     * justified. It does not generalise. A fast first attempt needs the
+     * durable watermark, not a proxy for it.
+     */
+    internal fun waitBeforeAttempt(attempt: Int): Long = when (attempt) {
+        0 -> stallThresholdMs
+        1 -> stallThresholdMs * 2
+        else -> stallThresholdMs * 3
+    }
+
+    /**
+     * @param filterHeight the engine's current filter cursor.
+     * @param filterTarget the height it is scanning toward; 0 when unknown.
+     * @param lastWalletEventMs when the engine last delivered ANY wallet
+     *   event, or 0 when none has been seen since the start. This is the
+     *   liveness signal that separates the two ways the cursor can sit
+     *   still — see the note below.
+     * @param walletSyncedHeight the DURABLE watermark a restart would resume
+     *   from. INFORMATIONAL ONLY: this decision does not read it, and the wait
+     *   comes from [waitBeforeAttempt], which sees only the attempt number. It
+     *   is threaded through so the caller can log what the restart it is about
+     *   to issue will COST. It did once select a fast first rung; that rung was
+     *   withdrawn, because the value it was read from is the in-memory cursor,
+     *   not this one. 0 when unknown.
+     */
+    fun onCheck(
+        nowMs: Long,
+        filterHeight: Long,
+        filterTarget: Long,
+        lastWalletEventMs: Long,
+        walletSyncedHeight: Long = 0L
+    ): Decision {
+        val behind = filterTarget > 0 && filterHeight < filterTarget
+        if (!behind) {
+            // Caught up, or the target is not known yet. Nothing to stall on,
+            // and the next spell of being behind must be timed from scratch.
+            lastHeight = -1L
+            return Decision.NONE
+        }
+        if (filterHeight != lastHeight) {
+            lastHeight = filterHeight
+            lastAdvanceMs = nowMs
+            // A moving cursor ends the park. The final-batch report is PER
+            // PARK, not per process: the next park earns its own report and
+            // its own restart hold. (CodeRabbit on #1568: as a process-lifetime
+            // latch this silenced every later restart, including for a
+            // different, recoverable wedge in the same range.)
+            finalBatchReported = false
+            finalBatchReportedAtMs = 0L
+            return Decision.NONE
+        }
+        // BACKOFF, not a constant. The wait before attempt N is not the same
+        // as the wait before attempt N+1, because those two waits answer
+        // different questions.
+        //
+        // The FIRST wait asks "is this a pause or a wedge?", and it has to be
+        // long enough to outlast a benign pause. The longest benign one
+        // measured is 6 min 32 s (§34), so 10 minutes. A fast rung for the
+        // near-tip case was tried and WITHDRAWN: it judged a restart cheap
+        // from walletSyncedHeight, which is the engine's in-memory cursor,
+        // while a restart actually resumes from the DURABLE watermark —
+        // stop()'s diagnostic recorded that trailing by up to 155,000 blocks,
+        // so "cheap" was wrong by a re-walk, and the Samsung looped on it.
+        //
+        // Every LATER wait asks "did the last restart achieve anything?", and
+        // there the risk is the opposite one: with a flat threshold the
+        // spacing between restarts IS the threshold, so a short one spends
+        // the whole budget inside a single normal pause. Measured on the same
+        // device with the threshold at 90 s: restarts at 18:21, 18:24, 18:26,
+        // EXHAUSTED by 18:28 — the watchdog stood down for the process in
+        // under seven minutes, and the longest BENIGN pause we have measured
+        // is 6 min 32 s. Backing off keeps the budget alive across the whole
+        // session instead of burning it in one spell.
+        val threshold = waitBeforeAttempt(restartsIssued)
+        if (nowMs - lastAdvanceMs < threshold) return Decision.NONE
+        lastThresholdMs = threshold
+        lastStillMs = nowMs - lastAdvanceMs
+        // A STILL CURSOR IS NOT A STOPPED ENGINE. Observed on a Samsung
+        // SM-S901U, 2026-09-19 (§34): the cursor sat at 1,555,999 for
+        // 6 min 32 s and then recovered UNAIDED, persisting 1556842 ->
+        // 1556845 in 130 ms and going SYNCED. A restart in that window would
+        // have torn down an engine that was about to finish.
+        //
+        // So a restart requires the cursor to be still AND the event stream
+        // to have gone quiet for the same window. Events still arriving means
+        // alive.
+        //
+        // HOW MUCH THIS BUYS, HONESTLY: not that case. An earlier revision of
+        // this comment claimed the SDK logged `wallet-event batch: folded=N`
+        // throughout that stall with only the watermark write blocked behind a
+        // contended dash-sdk.db connection. That was a misreading of the logs
+        // — the event stream had stopped too, and under instrumentation the
+        // database is idle during a stall (§34.3, §34.4). The real cause was a
+        // final partial filter batch holding its own commit on blocks it never
+        // received, which this gate does not detect. The gate is kept as a
+        // cheap guard against the case it names; the BACKOFF above is what
+        // limits the damage when a stall is one the watchdog cannot cure.
+        if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < threshold) {
+            return Decision.NONE
+        }
+        // A CONFIRMED stall, so it is now worth asking WHICH stall — because for
+        // the one we have root-caused, restarting is the wrong move twice over.
+        if (isFinalBatchSignature(filterHeight, filterTarget)) {
+            if (!finalBatchReported) {
+                finalBatchReported = true
+                finalBatchReportedAtMs = nowMs
+                return Decision.SDK_FINAL_BATCH
+            }
+            // The signature is a DISTANCE heuristic, not proof (see
+            // isFinalBatchSignature): a different, recoverable wedge inside the
+            // same range looks identical from here. So the suppression is
+            // BOUNDED: for finalBatchRestartHoldMs after the report a restart is
+            // withheld — that is the window a real final-batch park clears in
+            // on its own, and a restart inside it re-walks for nothing. Past
+            // it, the stall falls through to the ordinary restart ladder below,
+            // backoff included, because by then "the chain will re-cut the
+            // boundary" has had every chance and the cost of being wrong has
+            // flipped: an engine that stays wedged for half an hour is one a
+            // restart might actually help. (CodeRabbit on #1568: "retain the
+            // diagnostic report but allow a restart after a longer threshold".)
+            if (nowMs - finalBatchReportedAtMs < finalBatchRestartHoldMs) return Decision.NONE
+        }
+        return when {
+            restartsIssued < maxRestarts -> {
+                restartsIssued++
+                // Re-baseline: the restart gets a full window to show progress
+                // before it is judged again.
+                lastAdvanceMs = nowMs
+                Decision.RESTART
+            }
+            !exhaustedReported -> {
+                exhaustedReported = true
+                Decision.EXHAUSTED
+            }
+            else -> Decision.NONE
+        }
+    }
+
+    /**
+     * Whether a confirmed stall carries the shape of the `dash_spv`
+     * final-partial-batch defect (plan §34), for which a restart must NOT be
+     * issued.
+     *
+     * `dash_spv` commits filters in `BATCH_PROCESSING_SIZE` = 5,000-block
+     * batches, in order, and the LAST batch runs from the last boundary to the
+     * tip. When that batch matches blocks it then never fetches, its
+     * `pending_blocks()` never reaches zero, its commit is withheld, and
+     * `committed_height` — which is what [filterHeight] is — parks inside one
+     * batch of the target. That bound is the signature: a stall of this kind is
+     * always LESS than 5,000 blocks short.
+     *
+     * Restarting there is wrong on both counts at once, which is why this is
+     * worth a special case rather than a tier:
+     *
+     * - **Useless.** A restart recreates the same final batch against a
+     *   slightly newer tip, matches the same blocks, fails the same fetch and
+     *   stalls identically (§34.2 — observed across four restarts; the one that
+     *   appeared to help was the chain advancing, not the restart).
+     * - **Expensive.** A restart resumes from the DURABLE watermark, not from
+     *   this cursor — [L1ShadowSyncService.stop]'s own diagnostic has recorded
+     *   that trailing by up to 155,000 blocks. So the cost is a re-walk, paid
+     *   to achieve nothing. This is the same miscosting that sank the fast
+     *   near-tip rung; the conclusion just runs the other way.
+     *
+     * THE WEAKNESS, STATED. 5,000 is `dash_spv`'s internal constant, read from
+     * its source, not anything the FFI publishes. If the SDK retunes it this
+     * predicate silently widens or narrows, and the app cannot tell. The clean
+     * discriminator would be "every filter STORED but not committed", which is
+     * unambiguous and costs no magic number — but `stored_height` is not
+     * exposed through `SpvSyncProgressData`. Asking for it is a request on the
+     * `dash_spv` issue; until then this bound is the best available proxy.
+     *
+     * The cost of a false positive is bounded: a genuine wedge within 5,000
+     * blocks of the target stops receiving a restart it probably could not use
+     * either, and the next process start brings the engine up regardless.
+     */
+    internal fun isFinalBatchSignature(filterHeight: Long, filterTarget: Long): Boolean =
+        filterTarget > 0 &&
+            filterHeight in 1 until filterTarget &&
+            filterTarget - filterHeight < L1ShadowSyncService.SDK_FILTER_BATCH_BLOCKS
 }
 
 /**
@@ -1701,6 +2058,7 @@ class L1ShadowSyncService internal constructor(
     private val progressLogIntervalMs: Long = PROGRESS_LOG_INTERVAL_MS,
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
+    private val filterStallThresholdMs: Long = FILTER_STALL_THRESHOLD_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
     private val recreator: ShadowWalletRecreator? = null,
     /**
@@ -1717,7 +2075,17 @@ class L1ShadowSyncService internal constructor(
      * probe counters (the parity tests count that exact call); the @Inject
      * constructor turns it on.
      */
-    private val balanceFactsEnabled: Boolean = false
+    private val balanceFactsEnabled: Boolean = false,
+    /** How long [startIfEnabled] waits for the DashPay bring-up before starting SPV anyway. */
+    private val bringUpBudgetMs: Long = BRING_UP_BUDGET_MS,
+    /** How long a stop waits for a cancelled bring-up to actually end — see [stopInternal]. */
+    private val bringUpStopJoinMs: Long = BRING_UP_STOP_JOIN_MS,
+    /**
+     * How long a destructive step that can be refused ([recoverByRecreatingWallet],
+     * a hard [resetShadowState]) waits for a cancelled bring-up to leave its
+     * native call before giving up — see [quiesceBringUpForDestruction].
+     */
+    private val destructiveBringUpJoinMs: Long = DESTRUCTIVE_BRING_UP_JOIN_MS
 ) {
     @Inject
     constructor(
@@ -1784,10 +2152,53 @@ class L1ShadowSyncService internal constructor(
     /** Running latch: the wallet id the probe compares, null when stopped. */
     private val runningWalletIdHex = MutableStateFlow<String?>(null)
 
+    /**
+     * The DashPay bring-up once it has outlived its budget and [startIfEnabled]
+     * has stopped awaiting it — service-owned so [stop] can end it.
+     *
+     * It runs on the long-lived injected [scope], not as a child of the start
+     * that created it, so neither a cancelled start nor [stop]'s teardown of
+     * the four loop jobs touches it. Held here so both can.
+     */
+    @Volatile
+    private var detachedBringUp: Deferred<Result<String?>>? = null
+
     private var monitorJob: Job? = null
     private var parityJob: Job? = null
     private var watchdogJob: Job? = null
     private var eventTapJob: Job? = null
+
+    /**
+     * The filter-stall watchdog's restart, held so a second decision cannot
+     * stack a concurrent teardown on top of one already in flight. Lives on
+     * the service [scope], NOT on `watchdogJob`, because `stop()` cancels
+     * that one.
+     */
+    private var stallRestartJob: Job? = null
+
+    /**
+     * Bumped by every external [stop]. A filter-stall restart samples it when
+     * it is launched and refuses to start the engine again if it has moved by
+     * the time its own stop has finished: the foreground service (or a wallet
+     * wipe's `stopSdkEngines`) said stop in the meantime, and a restart that
+     * outlived that stop would leave the engine running after shutdown
+     * (review, 2026-09-23).
+     */
+    @Volatile
+    private var externalStopGeneration = 0L
+
+    /**
+     * When the engine last delivered ANY wallet event, monotonic-ish wall
+     * clock via [nowMs]; 0 until the first one of this run.
+     *
+     * The filter-stall watchdog's liveness signal. The cursor going still
+     * and the ENGINE going still are different failures — see the note in
+     * [FilterStallWatchdogDecider.onCheck] — and this is what tells them
+     * apart. Stamped on every event the tap sees, parsed or not: an event
+     * arriving at all proves the engine is producing.
+     */
+    @Volatile
+    private var lastWalletEventMs: Long = 0L
 
     /**
      * Parsed per-transaction engine events ([L1TxEvent]), live while the
@@ -1867,6 +2278,9 @@ class L1ShadowSyncService internal constructor(
 
     /** The once-per-process probe-loop restart state (see [ProbeWatchdogDecider]). */
     private val watchdogDecider = ProbeWatchdogDecider(probeStallThresholdMs)
+
+    /** MO-1022: the filter-cursor stall watchdog (see [FilterStallWatchdogDecider]). */
+    private val filterStallDecider = FilterStallWatchdogDecider(filterStallThresholdMs)
 
     /**
      * Wall-clock ms of the last app-initiated SDK L1 SELF-SPEND broadcast
@@ -2100,11 +2514,28 @@ class L1ShadowSyncService internal constructor(
      * is on and the app wallet is bound to the SDK. Never throws (see
      * class KDoc); returns whether the shadow is running afterwards.
      */
-    suspend fun startIfEnabled(): Boolean {
+    /**
+     * [expectedExternalStopGeneration]: a filter-stall restart passes the
+     * [externalStopGeneration] it sampled when it was decided, and this start
+     * refuses under [mutex] if it has moved since. The check has to live
+     * HERE, inside the critical section: the enablement read above suspends
+     * on DataStore, and an external stop can arrive and complete in that gap
+     * (review, 2026-09-23). Ordinary callers pass nothing.
+     */
+    suspend fun startIfEnabled(expectedExternalStopGeneration: Long? = null): Boolean {
         if (!isEnabled()) return false
         return try {
             mutex.withLock {
                 if (runningWalletIdHex.value != null) return true
+                if (expectedExternalStopGeneration != null &&
+                    externalStopGeneration != expectedExternalStopGeneration
+                ) {
+                    log.info(
+                        "L1 shadow sync not started: an external stop() arrived after this restart was " +
+                            "decided — the engine stays down"
+                    )
+                    return false
+                }
 
                 val walletIdHex = source.boundWalletIdOrNull()
                 if (walletIdHex == null) {
@@ -2123,14 +2554,110 @@ class L1ShadowSyncService internal constructor(
                     // above). Best-effort: it returns a status rather than
                     // throwing, and any failure must not hold back SPV — Core
                     // sync is the wallet's primary function.
-                    try {
-                        val summary = source.startWalletSubsystems(walletIdHex)
-                        if (summary != null) {
-                            log.info("DashPay bring-up before SPV: $summary")
+                    //
+                    // Phase 1b item 10 (docs/upgrade-memory-and-sync-plan.md):
+                    // …and with a BUDGET. The bring-up needs the seed, and the
+                    // seed needs the lock-bound keystore (§12): on the reference
+                    // install's locked overnight starts it ran 766 s, 1,438 s
+                    // and 10,139 s with the filter position frozen, 0 of 177
+                    // accounts drained, and the idle rule tore the service down
+                    // before SPV ever began. Past the budget SPV starts; the
+                    // bring-up finishes in the background and logs when it
+                    // does, and the SDK marks late accounts covered at
+                    // synced_height=0 so the next scan picks them up.
+                    // A bring-up DETACHED by an earlier start may still be
+                    // running. The runningWalletIdHex guard above does not
+                    // cover that: a start which detached one and then failed
+                    // (startSpv throwing, say) leaves it in flight with
+                    // runningWalletIdHex still null. Adding a second
+                    // startWalletSubsystems on top of it is exactly the
+                    // overlap this must not create, so join the one in flight.
+                    // A bring-up an earlier start left behind comes in two kinds:
+                    // still ACTIVE (its start detached it at the budget), or
+                    // CANCELLED but not COMPLETED — a stop() cancelled it and its
+                    // native call has not returned yet. `isActive` is false for
+                    // the second kind, and that is precisely the straggler a new
+                    // bring-up must not run alongside (review, 2026-09-24), so
+                    // the test is "not completed".
+                    //
+                    // Owned by the service from the moment one is created — not
+                    // only once its budget expires. A caller cancelled during the
+                    // wait (BindHealL1Starter.cancel() from shutdown, say) used to
+                    // rethrow with the deferred neither recorded nor cancelled,
+                    // so stop() saw nothing to stop while startWalletSubsystems
+                    // was still live (review, 2026-09-23).
+                    val straggler = detachedBringUp?.takeIf { !it.isCompleted }
+                    val (bringUp, joined) = when {
+                        straggler == null -> newBringUp(walletIdHex) to false
+                        straggler.isCancelled -> {
+                            log.info(
+                                "a cancelled DashPay bring-up is still inside its native call; waiting up to " +
+                                    "{} ms for it before starting another",
+                                bringUpBudgetMs
+                            )
+                            val ended = withTimeoutOrNull(bringUpBudgetMs) { straggler.join(); true } == true
+                            if (ended) {
+                                if (detachedBringUp === straggler) detachedBringUp = null
+                                newBringUp(walletIdHex) to false
+                            } else {
+                                log.warn(
+                                    "the cancelled DashPay bring-up is still running after the budget — starting " +
+                                        "SPV without a new bring-up; it stays recorded until it ends"
+                                )
+                                null to false
+                            }
                         }
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                        else -> {
+                            log.info("DashPay bring-up from an earlier start is still running; joining it")
+                            straggler to true
+                        }
+                    }
+                    if (bringUp != null) {
+                        val outcome = try {
+                            withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
+                        } catch (e: CancellationException) {
+                            if (currentCoroutineContext().isActive) {
+                                // This caller is fine; the DEFERRED was cancelled —
+                                // a stop() took the bring-up down under us. No SPV.
+                                if (detachedBringUp === bringUp) detachedBringUp = null
+                                log.info("DashPay bring-up was cancelled by a stop; not starting SPV")
+                                return false
+                            }
+                            // Genuine caller cancellation: take the bring-up we
+                            // created down with us; a joined one belongs to the
+                            // start that detached it.
+                            if (!joined) bringUp.cancel()
+                            throw e
+                        }
+                        when {
+                            outcome == null -> {
+                                log.warn(
+                                    "DashPay bring-up before SPV exceeded its {} s budget — starting SPV now; " +
+                                        "the bring-up continues in the background",
+                                    bringUpBudgetMs / 1000
+                                )
+                                // Service-owned from here: nobody is awaiting it
+                                // any more, so stop() is the only thing that can
+                                // end it.
+                                detachedBringUp = bringUp
+                                scope.launch {
+                                    bringUp.await()
+                                        .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
+                                        .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
+                                    if (detachedBringUp === bringUp) detachedBringUp = null
+                                }
+                            }
+                            outcome.isSuccess -> {
+                                if (detachedBringUp === bringUp) detachedBringUp = null
+                                outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
+                            }
+                            else -> {
+                                if (detachedBringUp === bringUp) detachedBringUp = null
+                                val t = outcome.exceptionOrNull()
+                                if (t is CancellationException) throw t
+                                log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                            }
+                        }
                     }
                     source.startSpv(dataDir.absolutePath)
                 }
@@ -2173,9 +2700,61 @@ class L1ShadowSyncService internal constructor(
      * Stop the probe loops and the Rust SPV client; SPV storage stays on
      * disk so the next start resumes. Safe to call when not running.
      */
+    /** Create and RECORD a DashPay bring-up — service-owned from birth (see [startIfEnabled]). */
+    private fun newBringUp(walletIdHex: String): Deferred<Result<String?>> =
+        scope.async { runCatching { source.startWalletSubsystems(walletIdHex) } }.also { detachedBringUp = it }
+
+    /**
+     * The EXTERNAL stop — the foreground service's teardown, `stopSdkEngines`
+     * before a wallet wipe, the shadow recovery paths. Invalidates any
+     * filter-stall restart in flight (see [externalStopGeneration]) and then
+     * tears the engine down. The restart itself uses [stopInternal], which
+     * does not invalidate anything.
+     */
     suspend fun stop() {
+        externalStopGeneration++
+        stopInternal()
+    }
+
+    private suspend fun stopInternal() {
         mutex.withLock {
-            if (runningWalletIdHex.value == null) return
+            // BEFORE the early return. A bring-up that outlived its budget is
+            // not one of the four loop jobs, and it is not covered by
+            // runningWalletIdHex either — a start that detached one and then
+            // failed leaves it running with that still null, so the return
+            // below would step straight over it and the next start would run a
+            // second startWalletSubsystems alongside it.
+            detachedBringUp?.let {
+                log.info("cancelling a DashPay bring-up still running past its budget")
+                it.cancel()
+                // Bounded: a bring-up inside its native call cannot observe
+                // the cancel until that call returns, and an ordinary stop
+                // must not hang on it. The callers that go on to REMOVE the
+                // SDK wallet or the dataDir cannot accept that: they wait for
+                // it themselves, under the mutex, in
+                // quiesceBringUpForDestruction (review, 2026-09-25).
+                val ended = withTimeoutOrNull(bringUpStopJoinMs) { it.join(); true } == true
+                if (ended) {
+                    detachedBringUp = null
+                } else {
+                    log.warn(
+                        "the cancelled DashPay bring-up is still inside its native call after {} ms; it " +
+                            "stays recorded so the next start waits for it instead of running a second one",
+                        bringUpStopJoinMs
+                    )
+                }
+            }
+            val walletIdHex = runningWalletIdHex.value ?: return
+            // Phase 1b item 13 (docs/upgrade-memory-and-sync-plan.md): the
+            // watermark the SDK will resume from vs. what the engine had
+            // actually committed. The app CANNOT flush it — the SDK's WalletDao
+            // exposes no synced-height setter and the value is owned by the
+            // native engine — so every stop logs the gap as the evidence for
+            // Phase 1c item 15 (persist on a fixed cadence and on stop). On the
+            // reference install the durable value trailed the committed cursor
+            // by up to 155,000 blocks at teardown.
+            val committedAtStop = _engineWalletSyncedHeight.value
+            val filterAtStop = _progress.value.filterHeight
             runningWalletIdHex.value = null
             monitorJob?.cancel()
             monitorJob = null
@@ -2187,8 +2766,10 @@ class L1ShadowSyncService internal constructor(
             eventTapJob = null
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
+            logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
             _progress.value = ShadowSyncProgress.IDLE
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
+            lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
             lastStopAtMs = nowMs()
             stopCount++
             log.info(
@@ -2197,6 +2778,33 @@ class L1ShadowSyncService internal constructor(
                     "teardown #{} this process. Nothing runs until the next startIfEnabled().",
                 if (startedAtMs == 0L) "unknown" else humanDuration(lastStopAtMs - startedAtMs),
                 stopCount
+            )
+        }
+    }
+
+    /**
+     * Item 13 diagnostic: after the SPV client stopped, compare the SDK's
+     * durable `syncedHeight` (what the next start resumes from) with the
+     * cursor the engine had committed in this session. WARN when progress
+     * will be re-walked. Never throws.
+     */
+    private suspend fun logWatermarkAtStop(walletIdHex: String, committed: Long, filter: Long) {
+        val durable = runCatching { source.sdkWalletSyncedHeight(walletIdHex) }.getOrNull()
+        when {
+            durable == null || committed <= 0L -> log.info(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight={} committed cursor={} filter={}",
+                durable ?: "unknown", committed, filter
+            )
+            durable < committed -> log.warn(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight {} is {} blocks BEHIND the " +
+                    "committed cursor {} (filter {}). The SDK persists its synced height at 5,000-block " +
+                    "steps and the app has no setter for it, so the next start re-walks those blocks " +
+                    "(Phase 1c item 15)",
+                durable, committed - durable, committed, filter
+            )
+            else -> log.info(
+                "L1ShadowLifecycle watermark at stop: durable syncedHeight {} covers the committed cursor {} (filter {})",
+                durable, committed, filter
             )
         }
     }
@@ -2396,6 +3004,10 @@ class L1ShadowSyncService internal constructor(
         while (currentCoroutineContext().isActive) {
             try {
                 source.walletEventStrings().collect { debug ->
+                    // Liveness for the filter-stall watchdog, stamped before
+                    // any parsing: an event the parsers all drop still proves
+                    // the engine is alive and producing.
+                    lastWalletEventMs = nowMs()
                     // Chainlock feed first: it rides the SAME event stream but
                     // on OTHER variants (ChainLockProcessed / BlockProcessed),
                     // which parseL1TxEvent drops. Monotonic — a replayed or
@@ -2540,6 +3152,7 @@ class L1ShadowSyncService internal constructor(
             delay(watchdogIntervalMs)
             try {
                 checkProbeHeartbeat()
+                checkFilterStall()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("L1Shadow watchdog check failed; will retry on the next tick", t)
@@ -2579,6 +3192,164 @@ class L1ShadowSyncService internal constructor(
                 ProbeWatchdogDecider.Decision.NONE -> Unit
             }
         }
+    }
+
+    /**
+     * MO-1022: restart the SPV engine when the FILTER cursor is wedged.
+     *
+     * See [FilterStallWatchdogDecider] for the measured failure. In short:
+     * the engine can park with every filter already stored but a handful of
+     * matched blocks never delivered and its download coordinator out of
+     * retries, and filter processing cannot step past a block it is still
+     * waiting for. Nothing in the engine re-drives it; a process relaunch
+     * does, which is what this reproduces without needing the user to force
+     * stop the app.
+     *
+     * DELIBERATELY OUTSIDE [mutex]. Both [stop] and [startIfEnabled] take it
+     * themselves, so taking it here would deadlock the watchdog against the
+     * restart it is trying to perform. The cost is that a concurrent stop
+     * can land between the two calls; [startIfEnabled] re-reads the enable
+     * gate and the bound wallet, so the worst case is a start that declines.
+     */
+    private suspend fun checkFilterStall() {
+        if (runningWalletIdHex.value == null) return
+        val p = _progress.value
+        val decision = filterStallDecider.onCheck(
+            nowMs(), p.filterHeight, p.filterTarget, lastWalletEventMs, p.walletSyncedHeight
+        )
+        if (decision == FilterStallWatchdogDecider.Decision.NONE) return
+        when (decision) {
+            FilterStallWatchdogDecider.Decision.RESTART -> {
+                log.error(
+                    "L1Shadow filter-stall watchdog: the filter cursor has sat at {} of {} " +
+                        "({} blocks short) for {}s — past the {}s threshold for a wallet whose " +
+                        "durable watermark is {} ({} blocks from the target, so a restart " +
+                        "re-walks that much) — restarting the SPV engine. Known shape (MO-1022): " +
+                        "every filter stored, a few matched blocks never delivered, the download " +
+                        "coordinator out of retries.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
+                    filterStallDecider.lastStillMs / 1000,
+                    filterStallDecider.lastThresholdMs / 1000,
+                    p.walletSyncedHeight, p.filterTarget - p.walletSyncedHeight
+                )
+                // THE RESTART MUST NOT RUN IN THIS COROUTINE. `stop()`
+                // cancels `watchdogJob`, and this check runs INSIDE it — so
+                // doing the restart inline cancels the very coroutine
+                // performing it: `startIfEnabled()` throws
+                // CancellationException at its first suspension point, the
+                // engine stays stopped, and the watchdog has turned a
+                // stalled-but-running engine into a dead one. Strictly worse
+                // than no watchdog at all.
+                //
+                // Launching on the service [scope] (which `stop()` does NOT
+                // cancel — it cancels the four loop jobs only) is what
+                // [checkProbeHeartbeat] already does for its own restart.
+                // The new run installs a fresh watchdogJob.
+                launchStallRestart(stuckAt = p.filterHeight)
+            }
+            FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH -> {
+                // NO RESTART. Logged once per process, with everything needed
+                // to recognise it in a support bundle without reading source.
+                //
+                // THE COST CLAIM HAS TO BE COMPUTED, NOT ASSUMED. A restart's
+                // re-walk is the distance from the cursor BACK to the durable
+                // watermark — not the cursor's distance to the target. Near the
+                // tip the two values are often equal, and then a restart is
+                // CHEAP and only the "useless" half of the argument holds.
+                // The first version of this line reported
+                // `filterTarget - walletSyncedHeight` as "blocks back" and so
+                // claimed a 2,167-block re-walk on a release build where the
+                // watermark and the cursor were both 1,555,999 and a restart
+                // would have cost nothing. Suppression is still right there;
+                // overstating why is not.
+                val reWalk = p.filterHeight - p.walletSyncedHeight
+                val costClause = when {
+                    p.walletSyncedHeight <= 0L ->
+                        "the durable watermark is not known yet, so the re-walk cost cannot be stated"
+                    reWalk > 0L ->
+                        "a restart resumes from the durable watermark ${p.walletSyncedHeight}, " +
+                            "re-walking $reWalk blocks to get back here"
+                    else ->
+                        "a restart would be cheap here — the durable watermark " +
+                            "${p.walletSyncedHeight} is level with the cursor — but no less useless"
+                }
+                log.error(
+                    "L1Shadow filter-stall watchdog: SDK-FINAL-BATCH — the filter cursor has " +
+                        "sat at {} of {} ({} blocks short, inside one {}-block dash_spv commit " +
+                        "batch) for {}s with the wallet-event stream quiet. This is the " +
+                        "final-partial-batch defect (plan section 34): the last batch matched " +
+                        "blocks it never received, so pending_blocks() never reaches zero and " +
+                        "committed_height is withheld. NOT restarting — a restart recreates the " +
+                        "same batch, matches the same blocks and stalls identically; {}. " +
+                        "It clears when the chain advances enough to re-cut the batch boundary. " +
+                        "Needs an SDK-side fix; the engine's own run.log " +
+                        "(files/sdk-logs/dash_spv/run.log, attached to support reports) carries " +
+                        "the matched-block count and its requested count.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight,
+                    SDK_FILTER_BATCH_BLOCKS,
+                    filterStallDecider.lastStillMs / 1000,
+                    costClause
+                )
+            }
+            FilterStallWatchdogDecider.Decision.EXHAUSTED -> {
+                // No claim about the shape: a final-batch park that outlasts
+                // FINAL_BATCH_RESTART_HOLD_MS falls through to this ladder too
+                // (review nitpick, 2026-09-22), so the distance alone is stated.
+                log.error(
+                    "L1Shadow filter-stall watchdog: the filter cursor is still wedged at {} of " +
+                        "{} ({} blocks short) after every restart this process was willing to " +
+                        "spend — standing down. Needs an SDK-side fix.",
+                    p.filterHeight, p.filterTarget, p.filterTarget - p.filterHeight
+                )
+            }
+            FilterStallWatchdogDecider.Decision.NONE -> Unit
+        }
+    }
+
+    /**
+     * The RESTART verdict's action, on the service [scope] (which [stop] does
+     * not cancel — see the comment at the call site). Internal so the ordering
+     * against an external [stop] can be pinned by test.
+     *
+     * The generation is sampled HERE, when the restart is decided, not when
+     * its coroutine gets to run: an external stop that lands in between is
+     * just as much a stop as one that lands while our own [stopInternal] is
+     * inside `stopSpv()`. In both cases the check after [stopInternal] sees a
+     * moved generation and the engine stays down. The external stop's own
+     * [stopInternal] queues behind ours on [mutex] and finds nothing running.
+     */
+    internal fun launchStallRestart(stuckAt: Long): Job {
+        val generation = externalStopGeneration
+        stallRestartJob?.cancel()
+        val job = scope.launch {
+            runCatching {
+                stopInternal()
+                if (externalStopGeneration != generation) {
+                    log.info(
+                        "L1Shadow filter-stall watchdog: an external stop() arrived during the restart — " +
+                            "leaving the engine stopped (was stuck at {})",
+                        stuckAt
+                    )
+                    return@runCatching null
+                }
+                // Re-validated under the start's own mutex: the enablement
+                // read inside suspends, and a stop can land in that gap too.
+                startIfEnabled(expectedExternalStopGeneration = generation)
+            }.onSuccess { started ->
+                if (started != null) {
+                    log.info(
+                        "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
+                        if (started) "succeeded" else "declined to start",
+                        stuckAt
+                    )
+                }
+            }.onFailure {
+                if (it is CancellationException) throw it
+                log.warn("L1Shadow filter-stall watchdog: the engine restart failed", it)
+            }
+        }.logCompletion("filter-stall engine restart")
+        stallRestartJob = job
+        return job
     }
 
     /**
@@ -2739,25 +3510,24 @@ class L1ShadowSyncService internal constructor(
         )
         when (decision) {
             ShadowResetDecider.Decision.REBUILD_WALLET -> {
-                // The SPV-only hard reset this used to run left the +0.01
-                // inflation intact on device (it lives in the SDK WALLET
-                // ledger, not the SPV scan data). Self-heal with a ONE-TIME
-                // full SDK-wallet REBUILD instead — unbind + clear ALL
-                // SDK-side persistence, then re-bind from the RETAINED seed
-                // and re-scan. Fire-and-forget: recovery stops this probe
-                // loop. SDK-side ONLY — dashj/seed/keys are untouched.
+                // ADVISORY ONLY. This used to run recreateWalletInBackground():
+                // unbind the SDK wallet, clear all SDK persistence, delete the
+                // SPV data dir, re-bind and rescan from birth. Retired with the
+                // dashj fallback (Phase 1a item 2): the SDK wallet is the ledger
+                // of record, and on the emulator upgrade test this wiped a
+                // just-synced wallet on a transient inflation. Log the evidence
+                // for the SDK bug report; L1ShadowDebugReset is the manual path.
                 val direction = if (report.sdkDuffs > report.dashjDuffs) "INFLATED" else "DEFICIT"
                 log.warn(
                     "L1Parity {} MISMATCH persisted for {} consecutive synced probes " +
-                        "(sdk={} vs dashj={} duffs, delta={}) — the SDK L1 WALLET LEDGER " +
-                        "disagrees with dashj (an SPV-only reset already proved it does NOT " +
-                        "live in the scan data); self-healing with ONE full SDK-wallet rebuild " +
-                        "(unbind + clear SDK persistence, re-bind from the retained seed, " +
-                        "re-scan). SDK-side only — dashj, seed and keys are untouched",
+                        "(sdk={} vs dashj={} duffs, delta={}, sdkTx={} dashjTx={}) — the SDK " +
+                        "L1 wallet ledger disagrees with dashj. Automatic SDK-wallet rebuild is " +
+                        "DISABLED (no-fallback cutover policy); not acting. Use the debug reset " +
+                        "or a seed restore if the mismatch is real",
                     direction, ShadowResetDecider.RESET_CONSECUTIVE_PROBES,
-                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs
+                    report.sdkDuffs, report.dashjDuffs, report.sdkDuffs - report.dashjDuffs,
+                    report.sdkTxCount, report.dashjTxCount
                 )
-                recreateWalletInBackground()
             }
             ShadowResetDecider.Decision.STAND_DOWN -> {
                 _verificationStatus.value = L1VerificationStatus.FAILED
@@ -2794,6 +3564,57 @@ class L1ShadowSyncService internal constructor(
         }
         val sdkUtxos = source.sdkUnspentUtxos(walletIdHex)
         log.warn(l1OutpointDiffLog(computeL1OutpointDiff(sdkUtxos, dashjUtxos)))
+    }
+
+    /**
+     * Under [mutex]. A bring-up that [stopInternal] cancelled but could not
+     * join is still INSIDE `startWalletSubsystems` — still using the SDK
+     * wallet and the SPV dataDir the caller is about to remove. A stop may
+     * leave it be; a destructive step may not: removing the wallet row or the
+     * directory underneath a native call is a use-after-free with extra
+     * steps (review, 2026-09-25). So the destructive callers wait for it
+     * here, holding the mutex so no start can create another meanwhile.
+     *
+     * @param budgetMs how long to wait; null waits as long as it takes,
+     *   logging every [DESTRUCTION_WAIT_LOG_SLICE_MS] so the log shows what
+     *   the caller is waiting on.
+     * @return whether the bring-up has ended and the caller may proceed.
+     *   False means it is still running when the budget expired: the caller
+     *   must leave the SDK wallet and the dataDir alone.
+     */
+    private suspend fun quiesceBringUpForDestruction(what: String, budgetMs: Long?): Boolean {
+        val live = detachedBringUp?.takeIf { !it.isCompleted } ?: return true
+        live.cancel()
+        log.warn(
+            "{}: a cancelled DashPay bring-up is still inside its native call — waiting {} for it " +
+                "before touching the SDK wallet or the SPV dataDir",
+            what,
+            budgetMs?.let { "up to $it ms" } ?: "as long as it takes"
+        )
+        var waitedMs = 0L
+        while (!live.isCompleted) {
+            val slice = if (budgetMs == null) {
+                DESTRUCTION_WAIT_LOG_SLICE_MS
+            } else {
+                minOf(DESTRUCTION_WAIT_LOG_SLICE_MS, budgetMs - waitedMs)
+            }
+            if (slice <= 0) break
+            val ended = withTimeoutOrNull(slice) { live.join(); true } == true
+            if (ended) break
+            waitedMs += slice
+            if (budgetMs != null && waitedMs >= budgetMs) break
+            log.warn("{}: still waiting on the DashPay bring-up's native call after {} s", what, waitedMs / 1000)
+        }
+        if (!live.isCompleted) {
+            log.error(
+                "{}: the DashPay bring-up is still inside its native call after {} ms — refusing to " +
+                    "remove the SDK wallet or the SPV dataDir underneath it; nothing was touched",
+                what, waitedMs
+            )
+            return false
+        }
+        if (detachedBringUp === live) detachedBringUp = null
+        return true
     }
 
     /**
@@ -2853,6 +3674,13 @@ class L1ShadowSyncService internal constructor(
                     if (hard) "HARD" else "soft",
                     if (hard) "deleting the SPV dataDir" else "clearing SPV storage via the SDK"
                 )
+                // A hard reset deletes the dataDir a straggling bring-up may
+                // still be using (a start that found one running past its
+                // budget starts SPV next to it). Refuse rather than delete
+                // underneath it; nothing has been touched yet.
+                if (hard && !quiesceBringUpForDestruction("shadow hard reset", destructiveBringUpJoinMs)) {
+                    return false
+                }
                 runCatching { source.stopSpv() }
                     .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
                 _progress.value = ShadowSyncProgress.IDLE
@@ -3012,6 +3840,13 @@ class L1ShadowSyncService internal constructor(
                         log.warn("wallet re-creation aborted: the shadow was restarted concurrently")
                         return false
                     }
+                    // stop() above joins a cancelled bring-up for a bounded
+                    // time only. Removing the wallet under a native call still
+                    // using it is not an option, so wait here — and refuse if
+                    // it outlasts the budget: this path is re-runnable.
+                    if (!quiesceBringUpForDestruction("wallet re-creation", destructiveBringUpJoinMs)) {
+                        return false
+                    }
                     recreator.removeSdkWallet(walletIdHex)
                     deleteSpvDataDir()
                     runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
@@ -3102,6 +3937,14 @@ class L1ShadowSyncService internal constructor(
                 runCatching { recreator.stopShieldedSync() }
                     .onFailure { log.warn("wipe cleanup: shielded stop failed; continuing", it) }
                 mutex.withLock {
+                    // The wipe cannot be refused and cannot be retried later
+                    // against a directory the NEXT wallet may by then own, so
+                    // it waits for a straggling bring-up as long as that takes.
+                    // The wipe already runs for minutes and survives process
+                    // death through its marker; a native call that never
+                    // returns is the process's problem, not a reason to delete
+                    // underneath it.
+                    quiesceBringUpForDestruction("wallet-wipe SDK cleanup", budgetMs = null)
                     if (walletIdHex != null) {
                         runCatching { recreator.removeSdkWallet(walletIdHex) }
                             .onFailure { log.warn("wipe cleanup: removeSdkWallet failed; continuing", it) }
@@ -3193,6 +4036,14 @@ class L1ShadowSyncService internal constructor(
         internal const val PARITY_INTERVAL_MS = 10_000L
 
         /**
+         * Phase 1b item 10: the most [startIfEnabled] waits for the DashPay
+         * bring-up before starting SPV. 20 s is what the bring-up took on the
+         * reference install's one unlocked foreground launch; every locked
+         * background start ran into the minutes-to-hours range.
+         */
+        internal const val BRING_UP_BUDGET_MS = 20_000L
+
+        /**
          * Downtime past which [logEngineDowntimeIfResuming] escalates to WARN.
          * A routine `BlockchainServiceImpl` idle bounce is seconds to minutes
          * (three in the MO-995 log were ~30s, ~3min and 5h28m); ten minutes
@@ -3234,6 +4085,77 @@ class L1ShadowSyncService internal constructor(
          * 10s probes.
          */
         internal const val PROBE_STALL_THRESHOLD_MS = 5 * 60_000L
+
+        /**
+         * Filter cursor frozen this long, while demonstrably behind its
+         * target, means the engine is wedged rather than working: normal
+         * batch cadence moves it well inside a minute, and the MO-1022
+         * stall held for 44 minutes. Ten minutes is far above the former
+         * and far below the latter.
+         */
+        internal const val FILTER_STALL_THRESHOLD_MS = 10 * 60_000L
+
+        /**
+         * WITHDRAWN: a short first wait for wallets where a restart looked
+         * cheap. See [FilterStallWatchdogDecider.waitBeforeAttempt] for the
+         * measurement that retired it — the cheapness was judged from the
+         * engine's in-memory cursor, while a restart resumes from the durable
+         * watermark, and on a Samsung SM-S901U the two differed by 20,000
+         * blocks and the "cheap" restart started a re-walk loop.
+         *
+         * Kept as a comment rather than a constant so the idea is not
+         * re-invented without the durable watermark to back it.
+         */
+
+        /**
+         * Engine restarts the filter-stall watchdog will spend before
+         * standing down. A restart demonstrably clears the MO-1022 wall
+         * (45,000 blocks in 90 s after a relaunch), but it is not free, and
+         * a wall that survives three of them is not ours to fix from here.
+         */
+        internal const val FILTER_STALL_MAX_RESTARTS = 3
+
+        /**
+         * `dash_spv`'s filter-commit batch size — `BATCH_PROCESSING_SIZE` in
+         * `dash-spv/src/sync/filters/manager.rs`.
+         *
+         * Mirrored here, not published by the FFI, and used for exactly one
+         * purpose: recognising the final-partial-batch stall
+         * ([FilterStallWatchdogDecider.isFinalBatchSignature]), whose cursor
+         * always parks inside one batch of the target. If the SDK retunes its
+         * constant this copy goes silently stale, which is a known weakness
+         * of the approach and is argued in that function's KDoc.
+         */
+        internal const val SDK_FILTER_BATCH_BLOCKS = 5_000L
+
+        /**
+         * How long a reported final-batch park ([FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH])
+         * suppresses the watchdog's restart before the stall falls through to
+         * the ordinary restart ladder.
+         *
+         * Thirty minutes — the third backoff rung ([FilterStallWatchdogDecider.waitBeforeAttempt]),
+         * and about three times the longest final-batch park measured today
+         * (10 m 40 s, Samsung SM-S901U, 2026-09-21 16:46–16:57). A genuine
+         * final-batch park clears well inside this when the chain re-cuts the
+         * boundary; a wedge that survives it is no longer well explained by
+         * that defect and gets the restart the watchdog exists to give.
+         */
+        internal const val FINAL_BATCH_RESTART_HOLD_MS = 30 * 60_000L
+
+        /** How long a stop waits for a cancelled DashPay bring-up to actually end before moving on. */
+        internal const val BRING_UP_STOP_JOIN_MS = 5_000L
+
+        /**
+         * How long a refusable destructive step waits for that bring-up to
+         * leave its native call — see [quiesceBringUpForDestruction]. A
+         * minute: long enough for a bind that is merely slow, short enough
+         * that a wedged one (§37's ran 50 minutes) does not hold the
+         * recovery mutex for the rest of the process.
+         */
+        internal const val DESTRUCTIVE_BRING_UP_JOIN_MS = 60_000L
+
+        /** How often an unbounded destructive wait says what it is waiting on. */
+        internal const val DESTRUCTION_WAIT_LOG_SLICE_MS = 30_000L
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L

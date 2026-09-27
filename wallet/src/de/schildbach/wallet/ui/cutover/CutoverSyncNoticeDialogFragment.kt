@@ -81,6 +81,7 @@ class CutoverSyncNoticeDialogFragment :
     }
 
     companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(CutoverSyncNoticeDialogFragment::class.java)
         private const val TAG = "cutover_sync_notice"
 
         /**
@@ -88,10 +89,25 @@ class CutoverSyncNoticeDialogFragment :
          * check makes it idempotent across the lifecycle churn a startup
          * trigger goes through.
          */
-        fun showOnce(activity: FragmentActivity) {
+        /**
+         * @return true when the sheet is now showing (or was already), false
+         *   when it could not be shown and the caller must keep its pending
+         *   marker so a later attempt can succeed. Measured on the 2026-09-16
+         *   emulator upgrade test: the explainer was armed on the upgrade
+         *   launch and never appeared, because the caller cleared its pending
+         *   flag before this returned and the fragment manager had already
+         *   saved state.
+         */
+        fun showOnce(activity: FragmentActivity): Boolean {
             val fm = activity.supportFragmentManager
-            if (fm.isStateSaved || fm.findFragmentByTag(TAG) != null) return
-            CutoverSyncNoticeDialogFragment().show(fm, TAG)
+            if (fm.findFragmentByTag(TAG) != null) return true
+            if (fm.isStateSaved) {
+                log.info("cutover sync explainer not shown yet: fragment state is saved; staying pending")
+                return false
+            }
+            return runCatching { CutoverSyncNoticeDialogFragment().show(fm, TAG) }
+                .onFailure { log.warn("cutover sync explainer could not be shown; staying pending", it) }
+                .isSuccess
         }
     }
 }
