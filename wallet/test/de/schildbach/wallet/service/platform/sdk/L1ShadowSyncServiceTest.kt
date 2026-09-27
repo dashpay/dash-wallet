@@ -262,6 +262,7 @@ class L1ShadowSyncServiceTest {
         bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS,
         bringUpStopJoinMs: Long = L1ShadowSyncService.BRING_UP_STOP_JOIN_MS,
         destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
+        rolloutEnabled: Boolean = true,
         flagGate: () -> CompletableDeferred<Unit>? = { null },
         scanMayAdvance: suspend (String) -> Boolean = { true },
         scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS
@@ -279,7 +280,11 @@ class L1ShadowSyncServiceTest {
         bringUpStopJoinMs = bringUpStopJoinMs,
         destructiveBringUpJoinMs = destructiveBringUpJoinMs,
         scanMayAdvance = scanMayAdvance,
-        scanGateRetryInitialMs = scanGateRetryInitialMs
+        scanGateRetryInitialMs = scanGateRetryInitialMs,
+        rolloutPolicy = SdkRolloutPolicy(
+            migrationFlagsDefaultOn = rolloutEnabled,
+            cutoverEnabled = rolloutEnabled
+        )
     )
 
     /**
@@ -314,6 +319,15 @@ class L1ShadowSyncServiceTest {
     }
 
     // ── Phase 1b item 10: SPV waits for the DashPay bring-up, but not forever ──
+
+    @Test
+    fun startIsInert_whenRolloutIsDisabledEvenWithPersistedShadowFlag() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, flag = true, rolloutEnabled = false)
+
+        assertFalse(service.startIfEnabled())
+        assertEquals(0, source.interactions())
+    }
 
     @Test
     fun start_runsTheBringUpBeforeSpv_whenItFinishesInsideTheBudget() = runBlocking {

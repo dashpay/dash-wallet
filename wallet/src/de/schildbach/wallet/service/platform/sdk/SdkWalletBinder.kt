@@ -290,6 +290,7 @@ class SdkWalletBinder internal constructor(
     private val blockchainServiceConfig: BlockchainServiceConfig,
     private val scope: CoroutineScope,
     private val supportsPlatform: () -> Boolean,
+    private val rolloutPolicy: SdkRolloutPolicy = SdkRolloutPolicy(),
     // Injectable clock so the friend-chain provisioning throttle is
     // deterministically testable on the host JVM. Production uses wall time.
     private val now: () -> Long = { System.currentTimeMillis() },
@@ -1805,19 +1806,24 @@ class SdkWalletBinder internal constructor(
         false
     }
 
-    private suspend fun anyFlagEnabled(): Boolean = try {
-        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
-            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
-            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true ||
-            // The L1 shadow scan needs a bound wallet (L1ShadowSyncService's
-            // "requires a bound wallet" contract) — a shadow flag that can't
-            // cause a bind would silently never run when it is the ONLY
-            // flag on (the read-only mainnet validation configuration).
-            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
-    } catch (e: Exception) {
-        log.warn("failed to read Kotlin-SDK flags; treating as off", e)
-        false
-    }
+    private suspend fun anyFlagEnabled(): Boolean =
+        if (!rolloutPolicy.cutoverEnabled) {
+            false
+        } else {
+            try {
+                dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
+                    dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
+                    dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true ||
+                    // The L1 shadow scan needs a bound wallet (L1ShadowSyncService's
+                    // "requires a bound wallet" contract) — a shadow flag that can't
+                    // cause a bind would silently never run when it is the ONLY
+                    // flag on (the read-only mainnet validation configuration).
+                    dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
+            } catch (e: Exception) {
+                log.warn("failed to read Kotlin-SDK flags; treating as off", e)
+                false
+            }
+        }
 
     /** Shielded features widen the identity gate (fresh wallets bind too). Read failure = off. */
     private suspend fun shieldedFlagEnabled(): Boolean = try {

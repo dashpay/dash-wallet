@@ -18,7 +18,6 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +59,8 @@ class CutoverCoordinator @Inject constructor(
     private val evidenceCollector: CutoverEvidenceCollector,
     // The default keeps host tests (which construct with two args) working;
     // Dagger injects the application scope in production.
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val rolloutPolicy: SdkRolloutPolicy = SdkRolloutPolicy()
 ) {
     private val mutex = Mutex()
 
@@ -93,7 +93,7 @@ class CutoverCoordinator @Inject constructor(
      * combination leaves no primary L1 engine.
      */
     suspend fun dashjEngineMayStart(): Boolean {
-        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
+        if (!rolloutPolicy.cutoverEnabled) {
             return true
         }
         if (!sdkL1EngineEnabled()) {
@@ -129,7 +129,7 @@ class CutoverCoordinator @Inject constructor(
             dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW)
         ) { storedState, shadowEnabled ->
             val state = CutoverState.fromStored(storedState)
-            !dashjEngineMayStart(state) && shadowEnabled == true
+            !dashjEngineMayStart(state, rolloutPolicy.cutoverEnabled) && shadowEnabled == true
         }.distinctUntilChanged()
 
     /**
@@ -299,10 +299,6 @@ class CutoverCoordinator @Inject constructor(
         previousVersionCode: Int,
         onCutOverForExistingWallet: () -> Unit = {}
     ) {
-        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
-            log.info("upgrade cutover skipped: SDK rollout is disabled for this build")
-            return
-        }
         scope.launch {
             // The boundary test decides ONLY whether this install is owed the
             // one-time sync explainer. It used to gate the commit as well
@@ -331,6 +327,11 @@ class CutoverCoordinator @Inject constructor(
                         it
                     )
                 }
+            }
+            if (!rolloutPolicy.cutoverEnabled) {
+                persistBoundaryCrossingIfPending()
+                log.info("upgrade cutover skipped: SDK rollout is disabled for this build")
+                return@launch
             }
             // No bind evidence, boundary test, or readiness gate. When this
             // build enables rollout, every install is CUT_OVER from first launch,
@@ -545,7 +546,7 @@ class CutoverCoordinator @Inject constructor(
         if (current == CutoverState.CUT_OVER || current == CutoverState.SETTLED) {
             return CutoverStatus(current, READY_VERDICT) to false
         }
-        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
+        if (!rolloutPolicy.cutoverEnabled) {
             log.info("cutover skipped ({}): SDK rollout is disabled for this build", reason)
             return CutoverStatus(current, READY_VERDICT) to false
         }
@@ -618,7 +619,7 @@ class CutoverCoordinator @Inject constructor(
         // boundary latch whose first write failed.
         persistBoundaryCrossingIfPending()
         val current = currentState()
-        if (!BuildConfig.SDK_CUTOVER_ENABLED) {
+        if (!rolloutPolicy.cutoverEnabled) {
             return@withLock CutoverStatus(current, READY_VERDICT)
         }
         val verdict = try {

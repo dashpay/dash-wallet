@@ -20,25 +20,22 @@ package de.schildbach.wallet.service.platform.sdk
 import de.schildbach.wallet_test.BuildConfig
 
 /**
- * # ⚠️ SHIPPING REALITY: there is no "pre-cutover" user
+ * # Shipping ownership is selected by the build rollout gate
  *
  * READ THIS BEFORE REASONING ABOUT ANY STATE BELOW.
  *
- * The rollout decision is that **the SDK owns the wallet for every
- * user-facing feature immediately** — new wallets, upgraded wallets and
- * restored wallets alike. Every shipping install is effectively [CUT_OVER]
- * from its first launch. There is no cohort of users running with dashj as
- * the L1 owner, and no phased flip in the field.
+ * A rollout-enabled build gives the SDK ownership immediately for new,
+ * upgraded and restored wallets. A rollout-disabled build keeps dashj as the
+ * sole L1 owner even when an earlier build persisted [CUT_OVER]. This lets a
+ * release disable the SDK without running both SPV engines in one process.
  *
  * The graded states below are **migration scaffolding**, not a description
  * of anything users experience. They exist because the cutover was built to
  * be staged and reversible while it was being developed and validated.
  *
- * This distinction has repeatedly misled both developers and AI agents into
- * designing for, and gating work on, a "pre-cutover" population that does
- * not exist — producing dependencies and sequencing constraints that are not
- * real. If you are about to write "for pre-cutover users…", stop: that user
- * does not exist.
+ * The persisted states remain migration scaffolding. Build policy takes
+ * precedence over them for engine startup; state becomes authoritative again
+ * when rollout is enabled.
  *
  * **TODO (timeframe TBD): remove this state machine and its callers.** Once
  * dashj no longer owns L1 in any code path, [DUAL_RUNNING], [READY_OBSERVED]
@@ -60,9 +57,8 @@ enum class CutoverState {
     /**
      * Both engines live; SDK is instrumentation only.
      *
-     * NOT a shipping state — see the file header. No user runs here; it is a
-     * development/validation stage only. Do not design features, migrations
-     * or dependencies around a population sitting in this state.
+     * A migration state used while rollout is enabled. With rollout disabled,
+     * dashj ownership is selected independently of this persisted value.
      */
     DUAL_RUNNING,
 

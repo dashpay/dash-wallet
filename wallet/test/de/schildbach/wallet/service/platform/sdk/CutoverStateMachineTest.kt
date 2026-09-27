@@ -109,10 +109,10 @@ class CutoverStateMachineTest {
 
     @Test
     fun dashjEngineGate_falseOnlyWhenFlipped() {
-        assertTrue(dashjEngineMayStart(CutoverState.DUAL_RUNNING))
-        assertTrue(dashjEngineMayStart(CutoverState.READY_OBSERVED))
-        assertFalse(dashjEngineMayStart(CutoverState.CUT_OVER))
-        assertFalse(dashjEngineMayStart(CutoverState.SETTLED))
+        assertTrue(dashjEngineMayStart(CutoverState.DUAL_RUNNING, cutoverEnabled = true))
+        assertTrue(dashjEngineMayStart(CutoverState.READY_OBSERVED, cutoverEnabled = true))
+        assertFalse(dashjEngineMayStart(CutoverState.CUT_OVER, cutoverEnabled = true))
+        assertFalse(dashjEngineMayStart(CutoverState.SETTLED, cutoverEnabled = true))
     }
 
     @Test

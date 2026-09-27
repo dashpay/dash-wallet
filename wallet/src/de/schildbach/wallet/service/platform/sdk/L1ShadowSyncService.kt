@@ -2202,7 +2202,8 @@ class L1ShadowSyncService internal constructor(
     private val scanMayAdvance: suspend (walletIdHex: String) -> Boolean = { true },
     /** First retry delay after the scan gate declines a start; doubles up to [scanGateRetryMaxMs]. */
     private val scanGateRetryInitialMs: Long = SCAN_GATE_RETRY_INITIAL_MS,
-    private val scanGateRetryMaxMs: Long = SCAN_GATE_RETRY_MAX_MS
+    private val scanGateRetryMaxMs: Long = SCAN_GATE_RETRY_MAX_MS,
+    private val rolloutPolicy: SdkRolloutPolicy = SdkRolloutPolicy()
 ) {
     @Inject
     constructor(
@@ -4250,7 +4251,8 @@ class L1ShadowSyncService internal constructor(
     }
 
     private suspend fun isEnabled(): Boolean = try {
-        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
+        rolloutPolicy.cutoverEnabled &&
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
     } catch (e: Exception) {
         log.warn("failed to read USE_KOTLIN_SDK_L1_SHADOW; treating as off", e)
         false

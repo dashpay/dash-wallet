@@ -102,6 +102,17 @@ class DashPayConfigSeedTest {
     }
 
     @Test
+    fun skipsAllReadsAndWrites_whenMigrationDefaultsAreDisabled() = runBlocking {
+        val config = mockk<DashPayConfig>()
+        coEvery { config.seedDebugDefaultsIfUnset(defaultsEnabled = false) } coAnswers { callOriginal() }
+
+        config.seedDebugDefaultsIfUnset(defaultsEnabled = false)
+
+        coVerify(exactly = 0) { config.get(any<Preferences.Key<Boolean>>()) }
+        coVerify(exactly = 0) { config.set(any<Preferences.Key<Boolean>>(), any<Boolean>()) }
+    }
+
+    @Test
     fun aFailingRead_doesNotThrow() = runBlocking {
         val config = mockk<DashPayConfig>()
         coEvery { config.get(any<Preferences.Key<Boolean>>()) } throws RuntimeException("simulated read failure")

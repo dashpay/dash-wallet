@@ -698,8 +698,10 @@ open class DashPayConfig @Inject constructor(
      * disabled return without touching DataStore. Which flags are seeded is
      * network-dependent — see [debugSeedFlags].
      */
-    suspend fun seedDebugDefaultsIfUnset() {
-        if (!BuildConfig.SDK_MIGRATION_FLAGS_DEFAULT_ON) {
+    suspend fun seedDebugDefaultsIfUnset(
+        defaultsEnabled: Boolean = BuildConfig.SDK_MIGRATION_FLAGS_DEFAULT_ON
+    ) {
+        if (!defaultsEnabled) {
             log.info("SDK migration flag seeding disabled for this build")
             return
         }
