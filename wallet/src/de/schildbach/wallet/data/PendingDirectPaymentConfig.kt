@@ -18,6 +18,7 @@
 package de.schildbach.wallet.data
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -219,12 +220,13 @@ open class PendingDirectPaymentConfig @Inject constructor(
     // left for a restart to restore, which is the state the strict read exists to prevent. A
     // failing store aborts the write instead.
     //
-    // [add] also reads and writes inside a single DataStore edit, and asks [stillValid] there, at
-    // the moment the write would land. The mutex only orders this class's own writes: the wipe
-    // clears the store through BaseConfig.clearAll(), which knows nothing of it, so a write that
-    // decided to go ahead before a wipe and landed after it would put an erased payment back.
-    // DataStore runs edits one at a time, so a check made inside this one is ordered against the
-    // wipe's clear in a way no check made before it can be.
+    // Both also read and write inside a single DataStore edit. The mutex only orders this class's
+    // own writes: the wipe clears the store through BaseConfig.clearAll(), which knows nothing of
+    // it. A write computed from a read made before a wipe and landing after it puts back what the
+    // wipe erased - for [add] the payment being written, for [remove] every other payment that was
+    // in the array it read. DataStore runs edits one at a time, so a read made inside the edit is
+    // ordered against the wipe's clear in a way no read made before it can be. [add] asks
+    // [stillValid] there too, at the moment the write would land.
     /**
      * @param stillValid asked inside the edit; returning false leaves the store untouched
      * @throws StalePendingPaymentWriteException if [stillValid] refused the write
@@ -245,13 +247,25 @@ open class PendingDirectPaymentConfig @Inject constructor(
         }
     }
 
+    /** Leaves the store as it is when nothing matches [txId], rather than rewriting it unchanged. */
     open suspend fun remove(txId: Sha256Hash) = mutex.withLock {
-        val stored = decodeStrict()
-        val remaining = stored.readable.filter { it.txId != txId }
-        if (remaining.size != stored.readable.size) {
-            set(PENDING_PAYMENTS, encode(remaining, stored.unreadable))
+        appContext.dataStore.edit { preferences ->
+            val stored = parse(preferences[PENDING_PAYMENTS])
+            val remaining = stored.readable.filter { it.txId != txId }
+            if (remaining.size != stored.readable.size) {
+                beforeRemovalLands()
+                preferences[PENDING_PAYMENTS] = encode(remaining, stored.unreadable)
+            }
         }
     }
+
+    /**
+     * Runs inside [remove]'s edit, after the store was read and before the change is written, and
+     * does nothing. It exists so a test can start a wipe in exactly the gap the single edit closes;
+     * a hook anywhere else would be reached whether or not the read and the write were one step.
+     */
+    @VisibleForTesting
+    protected open suspend fun beforeRemovalLands() = Unit
 
     /**
      * Reads without BaseConfig's IOException-to-empty fallback and without [decode]'s tolerance

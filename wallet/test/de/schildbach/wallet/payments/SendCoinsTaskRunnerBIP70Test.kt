@@ -41,7 +41,14 @@ import io.mockk.mockkStatic
 import io.mockk.spyk
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.Dispatcher
@@ -84,6 +91,9 @@ import java.io.FileInputStream
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.HttpURLConnection
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Unit tests for SendCoinsTaskRunner BIP70/71/72 payment protocol functionality.
@@ -115,6 +125,9 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var pendingPaymentConfig: PendingDirectPaymentConfig
     private lateinit var pendingPaymentVerifier: PendingDirectPaymentVerifier
     private lateinit var wallet: Wallet
+
+    /** The verifier's own wipe listener, captured so a test can run the wipe WalletApplication runs. */
+    private val wipeListeners = mutableListOf<suspend () -> Unit>()
 
     private val networkParams: NetworkParameters = TestNet3Params.get()
     /** Fixed loopback IP so tests that need a single route can address the server by IP. */
@@ -169,6 +182,7 @@ class SendCoinsTaskRunnerBIP70Test {
         every { blockchainStateProvider.getNetworkStatus() } returns NetworkStatus.DISCONNECTED
         coEvery { blockchainStateProvider.getState() } returns null
         coEvery { pendingPaymentConfig.getAll() } returns emptyList()
+        every { walletDataProvider.attachOnWalletWipedListener(any()) } answers { wipeListeners.add(firstArg()) }
         pendingPaymentVerifier = spyk(
             PendingDirectPaymentVerifier(
                 walletDataProvider,
@@ -205,6 +219,10 @@ class SendCoinsTaskRunnerBIP70Test {
 
     @After
     fun tearDown() {
+        // Stop this test's watches: the verifier's scope outlives the test, and a watch left
+        // polling keeps asking mocks about the real wallet, whose toString MockK's call logging
+        // renders in full, starving every test that runs after it.
+        runBlocking { wipeListeners.forEach { it() } }
         mockWebServer.shutdown()
         unmockkStatic(SecurityGuard::class)
     }
@@ -1205,4 +1223,274 @@ class SendCoinsTaskRunnerBIP70Test {
         assertNull(replacement.getTransaction(txId!!))
     }
 
+    // ==================== a wipe between confirmation and signing ====================
+
+    /** A second copy of the funded wallet: anything that wrongly pays from it can. */
+    private fun loadFundedReplacement(): Wallet =
+        javaClass.getResourceAsStream("coinjoin.wallet").use { WalletProtobufSerializer().readWallet(it) }
+
+    /**
+     * What WalletApplication.finalizeWipe() does, and what the user does after it: the listeners
+     * run while the old wallet is still installed, retiring it, and then a new wallet goes in.
+     */
+    private fun wipeAndInstall(replacement: Wallet) {
+        runBlocking { wipeListeners.forEach { it() } }
+        every { walletDataProvider.wallet } returns replacement
+    }
+
+    private fun paymentRequestResponse(address: Address, amount: Coin): MockResponse = MockResponse()
+        .setResponseCode(HttpURLConnection.HTTP_OK)
+        .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTREQUEST)
+        .setBody(
+            okio.Buffer().write(
+                createPaymentRequest(address, amount, paymentUrl = mockWebServer.url("/payment").toString())
+            )
+        )
+
+    private fun ackResponse(): MockResponse = MockResponse()
+        .setResponseCode(HttpURLConnection.HTTP_OK)
+        .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+        .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+
+    /** Nothing was selected from, signed with or committed to [replacement]. */
+    private fun assertReplacementUntouched(replacement: Wallet, transactionsBefore: Int) {
+        verify(exactly = 0) { securityFunctions.deriveKey(match { it === replacement }, any()) }
+        assertEquals(
+            "the replacement wallet holds a transaction it never made",
+            transactionsBefore,
+            replacement.getTransactions(true).size
+        )
+        replacement.unspents.forEach {
+            assertFalse("the replacement wallet has a locked output", replacement.isLockedOutput(it.outPointFor))
+        }
+    }
+
+    @Test
+    fun `an invoice fetched without a wipe is paid from the wallet it was confirmed on`() = runBlocking {
+        // The control for the tests below: the same flow, uninterrupted, gets as far as submitting.
+        // Without it they could pass by refusing for some reason that has nothing to do with a wipe.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val posts = AtomicInteger()
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.method == "POST") {
+                    posts.incrementAndGet()
+                    ackResponse()
+                } else {
+                    paymentRequestResponse(testAddress, testAmount)
+                }
+        }
+        val bip72Uri = "dash:$testAddress?amount=0.01&r=${mockWebServer.url("/request")}"
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrl(bip72Uri, "TestService", originWallet = wallet)
+        } catch (e: Exception) {
+            // committing may fail in this harness; what matters is that it was submitted
+        }
+
+        assertEquals("the payment was never submitted", 1, posts.get())
+        verify(atLeast = 1) { securityFunctions.deriveKey(match { it === wallet }, any()) }
+    }
+
+    @Test
+    fun `a wipe while the invoice is outstanding stops the payment before the replacement is touched`() = runBlocking {
+        // Given: the payee is slow to answer the invoice request, and in that time the wallet is
+        // wiped and a funded replacement installed. No origin is passed, so this is also the
+        // capture every other caller gets: the wallet installed when the call began.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val replacement = loadFundedReplacement()
+        val transactionsBefore = replacement.getTransactions(true).size
+        val invoiceRequests = AtomicInteger()
+        val posts = AtomicInteger()
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.method == "POST") {
+                    posts.incrementAndGet()
+                    return ackResponse()
+                }
+                invoiceRequests.incrementAndGet()
+                wipeAndInstall(replacement)
+                return paymentRequestResponse(testAddress, testAmount)
+            }
+        }
+        val bip72Uri = "dash:$testAddress?amount=0.01&r=${mockWebServer.url("/request")}"
+        var createdTxId: Sha256Hash? = null
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.payWithDashUrl(bip72Uri, "TestService") { createdTxId = it }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then: without this the test could pass by failing before the invoice was requested
+        assertEquals("the invoice was never requested, so the wipe never landed in the gap", 1, invoiceRequests.get())
+        assertTrue("expected a refusal, got $thrown", thrown is IllegalStateException)
+        assertEquals("a payment was submitted after its wallet was wiped", 0, posts.get())
+        // refused before any coins were selected or any key derived, for either wallet
+        verify(exactly = 0) { securityFunctions.deriveKey(any(), any()) }
+        assertNull("an order was recorded for a payment that cannot be sent", createdTxId)
+        assertReplacementUntouched(replacement, transactionsBefore)
+    }
+
+    @Test
+    fun `a caller cancelled while the invoice is outstanding still refuses once the wallet is wiped`() = runBlocking {
+        // Given: the purchase screen goes away while the invoice is outstanding, and the purchase
+        // carries on regardless, as payAndRecordOrder runs it NonCancellable; then the wallet it
+        // was confirmed on is wiped and a funded replacement installed
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val replacement = loadFundedReplacement()
+        val transactionsBefore = replacement.getTransactions(true).size
+        val invoiceRequested = CountDownLatch(1)
+        val answerInvoice = CountDownLatch(1)
+        val posts = AtomicInteger()
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                if (request.method == "POST") {
+                    posts.incrementAndGet()
+                    return ackResponse()
+                }
+                invoiceRequested.countDown()
+                answerInvoice.await(10, TimeUnit.SECONDS)
+                return paymentRequestResponse(testAddress, testAmount)
+            }
+        }
+        val bip72Uri = "dash:$testAddress?amount=0.01&r=${mockWebServer.url("/request")}"
+        val outcome = CompletableDeferred<Throwable?>()
+
+        val caller = launch(Dispatchers.IO) {
+            withContext(NonCancellable) {
+                outcome.complete(
+                    runCatching {
+                        sendCoinsTaskRunner.payWithDashUrl(bip72Uri, "TestService", originWallet = wallet)
+                    }.exceptionOrNull()
+                )
+            }
+        }
+        assertTrue(
+            "the invoice was never requested",
+            withContext(Dispatchers.IO) { invoiceRequested.await(10, TimeUnit.SECONDS) }
+        )
+
+        // When
+        caller.cancel()
+        wipeAndInstall(replacement)
+        answerInvoice.countDown()
+        val thrown = withTimeout(20_000) { outcome.await() }
+        caller.join()
+
+        // Then: the continuation ran to its end despite the cancellation, and refused there
+        assertTrue("expected a refusal, got $thrown", thrown is IllegalStateException)
+        assertEquals("a payment was submitted after its wallet was wiped", 0, posts.get())
+        verify(exactly = 0) { securityFunctions.deriveKey(any(), any()) }
+        assertReplacementUntouched(replacement, transactionsBefore)
+    }
+
+    @Test
+    fun `a wipe during key derivation stops an invoice payment before it is signed`() = runBlocking {
+        // Given: the invoice arrives before the wipe, but the wipe lands on another thread while a
+        // key is being derived for the dry runs, after the check that followed the fetch
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val testAmount = Coin.parseCoin("0.01")
+        val replacement = loadFundedReplacement()
+        val transactionsBefore = replacement.getTransactions(true).size
+        val posts = AtomicInteger()
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.method == "POST") {
+                    posts.incrementAndGet()
+                    ackResponse()
+                } else {
+                    paymentRequestResponse(testAddress, testAmount)
+                }
+        }
+        val derivations = AtomicInteger()
+        every { securityFunctions.deriveKey(any(), any()) } answers {
+            if (derivations.incrementAndGet() == 1) {
+                wipeAndInstall(replacement)
+            }
+            mockk(relaxed = true)
+        }
+        val bip72Uri = "dash:$testAddress?amount=0.01&r=${mockWebServer.url("/request")}"
+        var createdTxId: Sha256Hash? = null
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.payWithDashUrl(bip72Uri, "TestService") { createdTxId = it }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then
+        assertTrue("the wipe never landed during key derivation", derivations.get() >= 1)
+        assertTrue("expected a refusal, got $thrown", thrown is IllegalStateException)
+        assertEquals("a payment was submitted after its wallet was wiped", 0, posts.get())
+        // every key was derived for the wallet the payment was confirmed on
+        assertReplacementUntouched(replacement, transactionsBefore)
+        // and nothing was signed: no transaction id was handed out to record an order against,
+        // and no metadata was written for one
+        assertNull("an order was recorded for a payment that cannot be sent", createdTxId)
+        coVerify(exactly = 0) { metadataProvider.setTransactionService(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a plain payment whose wallet was wiped before it started is refused before coin selection`() = runBlocking {
+        // Given: the caller captured the wallet the user confirmed on, and then waited on
+        // something of its own long enough for that wallet to be wiped and a replacement installed
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val replacement = loadFundedReplacement()
+        val transactionsBefore = replacement.getTransactions(true).size
+        wipeAndInstall(replacement)
+        var createdTxId: Sha256Hash? = null
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.payWithDashUrl("dash:$testAddress?amount=0.01", "TestService", originWallet = wallet) {
+                createdTxId = it
+            }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then
+        assertTrue("expected a refusal, got $thrown", thrown is IllegalStateException)
+        verify(exactly = 0) { securityFunctions.deriveKey(any(), any()) }
+        assertNull("an order was recorded for a payment that cannot be sent", createdTxId)
+        assertReplacementUntouched(replacement, transactionsBefore)
+    }
+
+    @Test
+    fun `a wipe during key derivation stops a plain payment before it is signed`() = runBlocking {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val replacement = loadFundedReplacement()
+        val transactionsBefore = replacement.getTransactions(true).size
+        val derivations = AtomicInteger()
+        every { securityFunctions.deriveKey(any(), any()) } answers {
+            if (derivations.incrementAndGet() == 1) {
+                wipeAndInstall(replacement)
+            }
+            mockk(relaxed = true)
+        }
+        var createdTxId: Sha256Hash? = null
+
+        // When
+        val thrown = try {
+            sendCoinsTaskRunner.payWithDashUrl("dash:$testAddress?amount=0.01", "TestService") { createdTxId = it }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then
+        assertTrue("the wipe never landed during key derivation", derivations.get() >= 1)
+        assertTrue("expected a refusal, got $thrown", thrown is IllegalStateException)
+        assertReplacementUntouched(replacement, transactionsBefore)
+        assertNull("an order was recorded for a payment that cannot be sent", createdTxId)
+    }
 }

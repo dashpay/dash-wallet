@@ -25,8 +25,15 @@ import de.schildbach.wallet.data.PendingDirectPaymentConfig
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -42,6 +49,7 @@ import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -131,6 +139,31 @@ class PendingDirectPaymentWipeTest {
                 it()
             }
             super.add(payment, stillValid)
+        }
+
+        /** Runs between a removal's read and its write, inside whatever makes them one step. */
+        var beforeNextRemovalLands: (suspend () -> Unit)? = null
+        var heldRemovals = 0
+
+        override suspend fun beforeRemovalLands() {
+            beforeNextRemovalLands?.let {
+                beforeNextRemovalLands = null
+                heldRemovals++
+                it()
+            }
+        }
+
+        /** Runs before the next strict read, which is where a recovery scan starts. */
+        var beforeNextStrictRead: (suspend () -> Unit)? = null
+        var heldReads = 0
+
+        override suspend fun getAllOrThrow(): List<PendingDirectPayment> {
+            beforeNextStrictRead?.let {
+                beforeNextStrictRead = null
+                heldReads++
+                it()
+            }
+            return super.getAllOrThrow()
         }
     }
 
@@ -253,4 +286,105 @@ class PendingDirectPaymentWipeTest {
         assertEquals(identityOf(oldWallet), config.getAllOrThrow().single { it.txId == tx.txId }.walletId)
     }
 
+    // --- a removal held between its read and its write while the wipe clears the store ----------
+
+    private fun recordFor(tx: Transaction, wallet: Wallet) = PendingDirectPayment(
+        txId = tx.txId,
+        txBytes = tx.bitcoinSerialize(),
+        paymentUrl = paymentUrl,
+        serviceName = "CTXSpend",
+        createdAt = System.currentTimeMillis(),
+        walletId = identityOf(wallet)
+    )
+
+    private fun aRemovalHeldAcrossAWipeDoesNotRestoreTheRest(listenersReversed: Boolean) = runBlocking {
+        // Given: two payments on disk, and the one whose outcome is now known is being removed by
+        // the acknowledgement path, which runs NonCancellable and is not one of the verifier's
+        // drained jobs. The removal has read both and is about to write back the one it keeps
+        // when the wipe starts, and the wipe is given every chance to finish first: if it can
+        // clear the store in that gap, it will, and the write then puts the other payment back.
+        val settled = createTransaction()
+        val stillPending = createTransaction()
+        config.add(recordFor(settled, oldWallet))
+        config.add(recordFor(stillPending, oldWallet))
+        val test = this
+        val wipeFinished = CompletableDeferred<Unit>()
+        config.beforeNextRemovalLands = {
+            test.launch {
+                wipe(listenersReversed)
+                wipeFinished.complete(Unit)
+            }
+            withTimeoutOrNull(1_000) { wipeFinished.await() }
+        }
+
+        // When
+        verifier.cancelQuarantine(settled)
+        withTimeout(5_000) { wipeFinished.await() }
+
+        // Then: without this the test could pass with the removal never reaching the gap
+        assertEquals("the removal was never held across the wipe", 1, config.heldRemovals)
+        // read before any recovery scan, which would quietly drop a survivor from another wallet
+        // and hide that the wipe's clear had been undone
+        assertEquals("the wipe's clear was undone", emptyList<PendingDirectPayment>(), config.getAllOrThrow())
+        assertReplacementAdoptsNothing(stillPending)
+    }
+
+    @Test
+    fun `a removal held across a wipe does not restore the other payments, store listener first`() =
+        aRemovalHeldAcrossAWipeDoesNotRestoreTheRest(listenersReversed = false)
+
+    @Test
+    fun `a removal held across a wipe does not restore the other payments, verifier listener first`() =
+        aRemovalHeldAcrossAWipeDoesNotRestoreTheRest(listenersReversed = true)
+
+    // --- a payment waiting at the readiness barrier when the wipe lands ---------------------------
+
+    private fun aPaymentWaitingAtTheBarrierIsRefused(listenersReversed: Boolean) = runBlocking {
+        // Given: a payment on the old wallet is waiting for restoration, which the wipe runs to
+        // completion in the middle of, installing a replacement. The caller reads the installed
+        // wallet again as soon as the barrier lets it through.
+        config.beforeNextStrictRead = { wipe(listenersReversed) }
+
+        // When
+        val thrown = try {
+            withTimeout(5_000) { verifier.awaitRestored() }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then: without this the test could pass by refusing before the scan was ever reached
+        assertEquals("the scan was never held across the wipe", 1, config.heldReads)
+        assertTrue(
+            "the barrier let a payment confirmed on a wiped wallet go on to its replacement: $thrown",
+            thrown is IllegalStateException && thrown !is CancellationException
+        )
+        // and a payment begun on the replacement is not held up by it
+        withTimeout(5_000) { verifier.awaitRestored() }
+    }
+
+    @Test
+    fun `a payment waiting at the barrier across a wipe is refused, store listener first`() =
+        aPaymentWaitingAtTheBarrierIsRefused(listenersReversed = false)
+
+    @Test
+    fun `a payment waiting at the barrier across a wipe is refused, verifier listener first`() =
+        aPaymentWaitingAtTheBarrierIsRefused(listenersReversed = true)
+
+    @Test
+    fun `the barrier lets the first payment through once the wallet loads at startup`() = runBlocking {
+        // Given: nothing is installed yet when the payment arrives at the barrier, as at app start
+        installed = null
+        val loaded = MutableStateFlow<Wallet?>(null)
+        every { walletData.observeWallet() } returns loaded
+        // undispatched, so it is already waiting when the wallet appears
+        val waiting = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { verifier.awaitRestored() } }
+
+        // When: the wallet finishes loading
+        installed = oldWallet
+        loaded.value = oldWallet
+
+        // Then: a caller that held no wallet had none to lose, so it goes on
+        waiting.await()
+    }
 }

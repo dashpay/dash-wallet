@@ -44,6 +44,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
@@ -432,7 +433,23 @@ class DashSpendViewModel @Inject constructor(
     suspend fun payAndRecordOrder(
         paymentUri: String,
         giftCards: List<GiftCardInfo>
-    ): Sha256Hash = withContext(NonCancellable) {
+    ): Sha256Hash {
+        // The wallet the user has just confirmed this purchase on, taken before the first
+        // suspension. Everything below outlives the screen, and the invoice fetch alone can take
+        // many seconds, so a wipe can finish and a funded replacement be installed while this is
+        // still running; reading the wallet once the invoice arrives would pay from that one.
+        val authorizedWallet = walletDataProvider.wallet
+            ?: throw IllegalStateException("there is no wallet to pay for this purchase from")
+        return withContext(NonCancellable) {
+            payAndRecordOrderFrom(authorizedWallet, paymentUri, giftCards)
+        }
+    }
+
+    private suspend fun payAndRecordOrderFrom(
+        authorizedWallet: Wallet,
+        paymentUri: String,
+        giftCards: List<GiftCardInfo>
+    ): Sha256Hash {
         // Read the durable record here rather than trust the flow above: this runs on a claim that
         // may have been taken moments after the view model was built, before the store had been
         // read once, and the in-memory state says nothing about a payment from before the process
@@ -450,8 +467,8 @@ class DashSpendViewModel @Inject constructor(
         }
 
         var recordedTxId: Sha256Hash? = null
-        try {
-            val txId = createSendingRequestFromDashUri(paymentUri) { newTxId ->
+        return try {
+            val txId = createSendingRequestFromDashUri(paymentUri, authorizedWallet) { newTxId ->
                 saveGiftCardDummy(newTxId, giftCards)
                 recordedTxId = newTxId
             }
@@ -478,6 +495,7 @@ class DashSpendViewModel @Inject constructor(
 
     suspend fun createSendingRequestFromDashUri(
         paymentUri: String,
+        originWallet: Wallet? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Sha256Hash = withContext(Dispatchers.IO) {
         // Snapshot before suspending. The selection lives on the navigation-scoped view model and
@@ -497,7 +515,8 @@ class DashSpendViewModel @Inject constructor(
             // marking a gift card transaction needs the transaction to be in the wallet. Carry it
             // so recovery can restore the expense category and merchant icon after committing.
             PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = merchantIconUrl),
-            onTransactionCreated
+            originWallet = originWallet,
+            onTransactionCreated = onTransactionCreated
         )
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, provider, merchantIconUrl)

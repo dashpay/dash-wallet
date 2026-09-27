@@ -25,6 +25,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
@@ -72,6 +73,7 @@ class FakeDashSpendService @Inject constructor(
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
+        originWallet: Wallet?,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
     ): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
@@ -87,7 +89,7 @@ class FakeDashSpendService @Inject constructor(
             onTransactionCreated?.invoke(transaction.txId)
             transaction
         } else {
-            realService.payWithDashUrl(dashUri, serviceName, recovery, onTransactionCreated)
+            realService.payWithDashUrl(dashUri, serviceName, recovery, originWallet, onTransactionCreated)
         }
     }
 

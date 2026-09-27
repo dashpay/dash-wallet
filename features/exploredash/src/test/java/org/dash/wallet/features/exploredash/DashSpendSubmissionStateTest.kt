@@ -31,6 +31,7 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -51,6 +52,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -77,6 +79,7 @@ class DashSpendSubmissionStateTest {
 
     private lateinit var sendPaymentService: SendPaymentService
     private lateinit var unresolvedPayments: UnresolvedPaymentsProvider
+    private lateinit var walletDataProvider: WalletDataProvider
 
     @Before
     fun setUp() {
@@ -87,7 +90,7 @@ class DashSpendSubmissionStateTest {
     }
 
     private fun createViewModel(): DashSpendViewModel {
-        val walletDataProvider = mockk<WalletDataProvider>(relaxed = true)
+        walletDataProvider = mockk(relaxed = true)
         every { walletDataProvider.observeSpendableBalance() } returns MutableStateFlow(Coin.COIN)
 
         val exchangeRates = mockk<ExchangeRatesProvider>(relaxed = true)
@@ -120,7 +123,7 @@ class DashSpendSubmissionStateTest {
 
     /** Submits a payment whose result never came back, leaving the purchase unresolved. */
     private suspend fun submitAmbiguously(viewModel: DashSpendViewModel) {
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } answers {
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
             // the verifier quarantines and persists the payment before the submission fails, so
             // the record is already on disk by the time the screen hears about it
             unresolvedOnDisk.value = true
@@ -156,7 +159,7 @@ class DashSpendSubmissionStateTest {
         val viewModel = createViewModel()
         val transaction = mockk<Transaction>(relaxed = true)
         every { transaction.txId } returns Sha256Hash.ZERO_HASH
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } returns transaction
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
 
         viewModel.payAndRecordOrder(paymentUri, emptyList())
         assertEquals(GiftCardSubmissionState.COMPLETED, viewModel.submissionState.value)
@@ -270,6 +273,50 @@ class DashSpendSubmissionStateTest {
             assertEquals(GiftCardSubmissionState.PENDING, expected.state)
         }
 
-        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) }
+    }
+
+    // --- the purchase is bound to the wallet it was confirmed on ------------------------------
+
+    @Test
+    fun `a purchase is paid from the wallet it was confirmed on, not one installed while it waits`() = runBlocking {
+        val confirmedOn = mockk<Wallet>()
+        val replacement = mockk<Wallet>()
+        val viewModel = createViewModel()
+        every { walletDataProvider.wallet } returns confirmedOn
+        // Given: the first thing the purchase waits on is the durable record, and a wipe that
+        // finishes meanwhile installs a replacement wallet
+        coEvery { unresolvedPayments.hasUnresolvedGiftCardPurchase() } answers {
+            every { walletDataProvider.wallet } returns replacement
+            false
+        }
+        val origins = mutableListOf<Wallet?>()
+        val transaction = mockk<Transaction>(relaxed = true)
+        every { transaction.txId } returns Sha256Hash.ZERO_HASH
+        coEvery {
+            sendPaymentService.payWithDashUrl(any(), any(), any(), captureNullable(origins), any())
+        } returns transaction
+
+        // When
+        viewModel.payAndRecordOrder(paymentUri, emptyList())
+
+        // Then: the payment is told which wallet the user confirmed on. Without it, it would take
+        // whatever is installed when it starts, which by now is the replacement.
+        assertSame(confirmedOn, origins.single())
+    }
+
+    @Test
+    fun `a purchase with no wallet to pay from is refused rather than left to find one later`() = runBlocking {
+        val viewModel = createViewModel()
+        every { walletDataProvider.wallet } returns null
+
+        try {
+            viewModel.payAndRecordOrder(paymentUri, emptyList())
+            fail("a purchase went ahead with no wallet to bind it to")
+        } catch (expected: IllegalStateException) {
+            // a null origin would let the payment adopt whatever wallet is installed later
+        }
+
+        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) }
     }
 }

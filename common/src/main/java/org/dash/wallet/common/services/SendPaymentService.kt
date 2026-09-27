@@ -26,6 +26,7 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.Wallet
 import java.util.function.Consumer
 import java.util.function.Predicate
 
@@ -76,6 +77,11 @@ interface SendPaymentService {
     )
 
     /**
+     * @param originWallet the wallet the user confirmed this payment on, captured by the caller
+     *   before it suspended. Coins are selected, the transaction signed and submitted from this
+     *   wallet only, and the payment is refused if a wipe has taken it away since. Null means the
+     *   wallet installed when this is called, which is right for a caller that has not waited on
+     *   anything since the user confirmed.
      * @param onTransactionCreated invoked once the transaction is built and signed, before it is
      *   submitted, so a caller can persist anything it will need to recover the payment later.
      *   Runs while the payment is still recoverable: after this point the transaction may reach
@@ -85,6 +91,7 @@ interface SendPaymentService {
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
+        originWallet: Wallet? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction
     fun isFeeTooHigh(tx: Transaction): Boolean

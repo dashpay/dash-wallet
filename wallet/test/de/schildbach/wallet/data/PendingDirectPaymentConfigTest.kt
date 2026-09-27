@@ -209,6 +209,28 @@ class PendingDirectPaymentConfigTest {
         assertTrue(raw()!!.contains(payment.txId.toString()))
     }
 
+    @Test
+    fun removeCarriesUndecodableEntriesThrough() = runBlocking {
+        seed("[$undecodableEntry, ${payment.toJson()}]")
+
+        config.remove(payment.txId)
+
+        // the payment is gone, the entry we could not read is not
+        assertTrue(raw()!!.contains("zzzz"))
+        assertFalse(raw()!!.contains(payment.txId.toString()))
+    }
+
+    @Test
+    fun removingAnAbsentPaymentLeavesTheStoreAsItWas() = runBlocking {
+        // spaced as encode() never writes it, so any rewrite at all would show
+        val original = "[ ${payment.toJson()} ]"
+        seed(original)
+
+        config.remove(otherPayment.txId)
+
+        assertEquals(original, raw())
+    }
+
     // --- the tolerant reader stays tolerant ---------------------------------------------------
 
     @Test

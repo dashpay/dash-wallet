@@ -232,13 +232,20 @@ class PendingDirectPaymentVerifier @Inject constructor(
      *
      * Starts restoration itself if nothing has yet, so it does not depend on the service.
      *
-     * @throws IllegalStateException if restoration does not finish in time. Refusing to build a
+     * @throws IllegalStateException if restoration does not finish in time, or if the wallet that
+     *   was installed when the caller arrived was wiped while it waited. Refusing to build a
      *   payment we cannot protect is the safer failure.
      */
     suspend fun awaitRestored() {
         if (locksRestored) {
             return
         }
+        // The wallet the caller is about to pay from. Callers read the installed wallet again as
+        // soon as this returns, and this can wait for a long time, so a wipe that lands meanwhile
+        // would have them select coins from and sign with the replacement, for a payment the
+        // user confirmed on the wallet that was wiped. Null means nothing is installed yet, which
+        // is app start: that caller is waiting for the wallet, not holding one.
+        val waitingFor = walletData.wallet
         // Readiness means a scan that actually protected everything, not merely one that ran.
         // Swallowing a failed read here and carrying on would leave an uncertain payment's
         // outpoints spendable, which is what the barrier exists to prevent. A failure leaves the
@@ -248,6 +255,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
             throw IllegalStateException(
                 "pending payments could not be restored; refusing to risk spending their inputs"
             )
+        }
+        if (waitingFor != null && !stillOwnedBy(waitingFor)) {
+            throw IllegalStateException("the wallet was wiped while this payment waited for restoration")
         }
     }
 

@@ -234,13 +234,21 @@ class SendCoinsTaskRunner @Inject constructor(
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
+        originWallet: Wallet?,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
-    ): Transaction =
-        withContext(Dispatchers.IO) {
+    ): Transaction {
+        // Taken before anything here can suspend. The barrier and the invoice fetch can each take
+        // many seconds, and everything after them selects coins, signs and submits; reading the
+        // installed wallet only then would let a wipe in between pay for this purchase from the
+        // replacement. A caller that captured the wallet earlier still, when the user confirmed,
+        // passes that one.
+        val wallet = originWallet ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        return withContext(Dispatchers.IO) {
             pendingPaymentVerifier.awaitRestored()
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
-            createPaymentRequest(paymentIntent, serviceName, recovery, onTransactionCreated)
+            createPaymentRequest(wallet, paymentIntent, serviceName, recovery, onTransactionCreated)
         }
+    }
 
     override suspend fun completeTransaction(sendRequest: SendRequest) {
         pendingPaymentVerifier.awaitRestored()
@@ -331,11 +339,27 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
-        signSendRequest(sendRequest)
-        directPay(sendRequest, paymentIntent, serviceName, recovery)
+        signSendRequest(wallet, sendRequest)
+        directPay(wallet, sendRequest, paymentIntent, serviceName, recovery)
     }
 
+    /**
+     * Refuses to go on with a payment whose wallet has been wiped since the user confirmed it,
+     * including one a wipe has started on but not yet removed.
+     */
+    private fun ensureStillOwned(wallet: Wallet, next: String) {
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            throw IllegalStateException("the wallet this payment was confirmed on has been wiped; not $next")
+        }
+    }
+
+    /**
+     * Every step below works on [wallet], the one the payment was confirmed on, and never reads
+     * the installed wallet again: a wipe can land while the invoice is fetched or a key is being
+     * derived, and a fresh read after it would select coins from the replacement and sign with it.
+     */
     private suspend fun createPaymentRequest(
+        wallet: Wallet,
         basePaymentIntent: PaymentIntent,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
@@ -344,11 +368,19 @@ class SendCoinsTaskRunner @Inject constructor(
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
             val paymentIntent = fetchPaymentRequest(basePaymentIntent)
-            val sendRequest = createRequestFromPaymentIntent(paymentIntent)
-            return sendPayment(paymentIntent, sendRequest, serviceName, recovery, onTransactionCreated)
+            // The payee answers when it likes, and the gift card flow runs this NonCancellable,
+            // so leaving the screen does not end the wait: a wipe can start, or finish and
+            // install a replacement, before the invoice arrives.
+            ensureStillOwned(wallet, "selecting coins")
+            val sendRequest = createRequestFromPaymentIntent(wallet, paymentIntent)
+            return sendPayment(wallet, paymentIntent, sendRequest, serviceName, recovery, onTransactionCreated)
         } else {
-            val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
+            // Nothing is fetched here, but the barrier, and whatever the caller awaited after it
+            // took the wallet, can each take long enough for a wipe.
+            ensureStillOwned(wallet, "selecting coins")
+            val sendRequest = createRequestFromPaymentIntent(wallet, basePaymentIntent)
             val sendRequestForSigning = createSendRequest(
+                wallet,
                 false,
                 basePaymentIntent,
                 true,
@@ -359,9 +391,12 @@ class SendCoinsTaskRunner @Inject constructor(
             // Recording afterwards would mean a failed insert arriving when the payment has
             // already gone out, which sends callers down their failure path and leaves an
             // already-paid order with nothing durable behind it.
-            val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
             Context.propagate(wallet.context)
-            signSendRequest(sendRequestForSigning)
+            signSendRequest(wallet, sendRequestForSigning)
+            // Asked again after the key derivations above, which take long enough for a wipe on
+            // another thread to start; signing now would have the caller record an order for a
+            // transaction that can never be sent.
+            ensureStillOwned(wallet, "signing")
             wallet.completeTx(sendRequestForSigning)
             onTransactionCreated?.invoke(sendRequestForSigning.tx.txId)
             // The callback suspends, and the gift card flow runs this NonCancellable, so a wipe can
@@ -372,10 +407,10 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    private fun createRequestFromPaymentIntent(paymentIntent: PaymentIntent): SendRequest {
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+    private fun createRequestFromPaymentIntent(wallet: Wallet, paymentIntent: PaymentIntent): SendRequest {
         Context.propagate(wallet.context)
         val sendRequest = createSendRequest(
+            wallet,
             false,
             paymentIntent,
             signInputs = false,
@@ -386,6 +421,7 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     private suspend fun sendPayment(
+        wallet: Wallet,
         finalPaymentIntent: PaymentIntent,
         sendRequest: SendRequest,
         serviceName: String?,
@@ -394,14 +430,15 @@ class SendCoinsTaskRunner @Inject constructor(
     ): Transaction {
         log.info("creating final sendRequest({}, ..., {})", finalPaymentIntent.paymentUrl, serviceName)
         val finalSendRequest = createSendRequest(
+            wallet,
             false,
             finalPaymentIntent,
             true,
             sendRequest.ensureMinRequiredFee
         )
-        signSendRequest(finalSendRequest)
+        signSendRequest(wallet, finalSendRequest)
         log.info("created final send Request")
-        return directPay(finalSendRequest, finalPaymentIntent, serviceName, recovery, onTransactionCreated)
+        return directPay(wallet, finalSendRequest, finalPaymentIntent, serviceName, recovery, onTransactionCreated)
     }
 
     /**
@@ -418,6 +455,7 @@ class SendCoinsTaskRunner @Inject constructor(
      * for it. If it shows up within [ambiguousSubmissionWaitMs] it is returned as sent; otherwise
      * [PaymentSubmissionPendingException] is thrown and verification continues in the background.
      *
+     * @param wallet The wallet the request was built and its key derived for
      * @param sendRequest The send request (should already be created via createSendRequest)
      * @param finalPaymentIntent The payment intent containing the payment URL
      * @param serviceName Optional service name for transaction metadata
@@ -427,14 +465,19 @@ class SendCoinsTaskRunner @Inject constructor(
      * @throws IOException if the HTTP request fails before it could have reached the merchant
      */
     private suspend fun directPay(
+        wallet: Wallet,
         sendRequest: SendRequest,
         finalPaymentIntent: PaymentIntent,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction = withContext(NonCancellable) {
+        // Asked here, before signing, and not only at the quarantine: key derivation takes long
+        // enough for a wipe on another thread to start, and signing anyway would record metadata
+        // and hand the caller a transaction id to write its order against, for a payment the
+        // quarantine is then bound to refuse.
+        ensureStillOwned(wallet, "signing")
         log.info("completing sendRequest transaction")
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         wallet.completeTx(sendRequest)
         log.info("completed sendRequest transaction")
@@ -611,16 +654,31 @@ class SendCoinsTaskRunner @Inject constructor(
         signInputs: Boolean,
         forceEnsureMinRequiredFee: Boolean,
         useCoinJoinGreedy: Boolean
+    ): SendRequest = createSendRequest(
+        walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE),
+        mayEditAmount,
+        paymentIntent,
+        signInputs,
+        forceEnsureMinRequiredFee,
+        useCoinJoinGreedy
+    )
+
+    private fun createSendRequest(
+        wallet: Wallet,
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean,
+        useCoinJoinGreedy: Boolean
     ): SendRequest {
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         val sendRequest = paymentIntent.toSendRequest(NETWORK_PARAMETERS)
-        sendRequest.coinSelector = getCoinSelector(useCoinJoinGreedy)
+        sendRequest.coinSelector = getCoinSelector(wallet, useCoinJoinGreedy)
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
-        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
+        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector(wallet))
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
         if (!sendRequest.emptyWallet && useCoinJoinGreedy && coinJoinSend) {
             sendRequest.returnChange = false
@@ -634,28 +692,44 @@ class SendCoinsTaskRunner @Inject constructor(
         paymentIntent: PaymentIntent,
         signInputs: Boolean,
         forceEnsureMinRequiredFee: Boolean
+    ): SendRequest = createSendRequest(
+        walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE),
+        mayEditAmount,
+        paymentIntent,
+        signInputs,
+        forceEnsureMinRequiredFee
+    )
+
+    private fun createSendRequest(
+        wallet: Wallet,
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean
     ): SendRequest {
         val firstSendRequest = createSendRequest(
+            wallet,
             mayEditAmount,
             paymentIntent,
             signInputs = true,
             forceEnsureMinRequiredFee,
             useCoinJoinGreedy = coinJoinSend
         )
-        signSendRequest(firstSendRequest)
-        walletData.wallet!!.completeTx(firstSendRequest)
+        signSendRequest(wallet, firstSendRequest)
+        wallet.completeTx(firstSendRequest)
 
         // check for dust
         val secondSendRequest = if (checkDust(firstSendRequest)) {
             val sendRequest = createSendRequest(
+                wallet,
                 false,
                 paymentIntent,
                 signInputs = false,
                 forceEnsureMinRequiredFee = true,
                 useCoinJoinGreedy = coinJoinSend
             )
-            signSendRequest(sendRequest)
-            walletData.wallet!!.completeTx(sendRequest)
+            signSendRequest(wallet, sendRequest)
+            wallet.completeTx(sendRequest)
             sendRequest
         } else {
             firstSendRequest
@@ -665,6 +739,7 @@ class SendCoinsTaskRunner @Inject constructor(
         return if (isFeeTooHigh(secondSendRequest.tx)) {
             log.info("fee was found to be too high: {}", secondSendRequest.tx.fee)
             createSendRequest(
+                wallet,
                 mayEditAmount,
                 paymentIntent,
                 signInputs,
@@ -673,6 +748,7 @@ class SendCoinsTaskRunner @Inject constructor(
             )
         } else {
             createSendRequest(
+                wallet,
                 mayEditAmount,
                 paymentIntent,
                 signInputs,
@@ -693,12 +769,12 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
-        sendRequest.coinSelector = getCoinSelector(useCoinJoinGreedy)
+        sendRequest.coinSelector = getCoinSelector(wallet, useCoinJoinGreedy)
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
-        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
+        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector(wallet))
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
         if (!sendRequest.emptyWallet && useCoinJoinGreedy && coinJoinSend) {
             sendRequest.returnChange = false
@@ -779,7 +855,7 @@ class SendCoinsTaskRunner @Inject constructor(
             this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
 
-            val selector = coinSelector ?: getCoinSelector(useCoinJoinGreedy)
+            val selector = coinSelector ?: getCoinSelector(walletData.wallet, useCoinJoinGreedy)
             this.canUseLockedOutputPredicate = canSendLockedOutput
             this.coinSelector = selector
 
@@ -789,17 +865,17 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    private fun getCoinSelector(useCoinJoinGreedy: Boolean) = if (coinJoinSend) {
+    private fun getCoinSelector(wallet: Wallet?, useCoinJoinGreedy: Boolean) = if (coinJoinSend) {
         // mixed only
-        CoinJoinCoinSelector(walletData.wallet, false, useCoinJoinGreedy)
+        CoinJoinCoinSelector(wallet, false, useCoinJoinGreedy)
     } else {
         // collect all coins, mixed and unmixed
         ZeroConfCoinSelector.get()
     }
 
-    private fun getMaxOutputCoinSelector() = if (coinJoinSend) {
+    private fun getMaxOutputCoinSelector(wallet: Wallet) = if (coinJoinSend) {
         // mixed only
-        MaxOutputAmountCoinJoinCoinSelector(walletData.wallet!!)
+        MaxOutputAmountCoinJoinCoinSelector(wallet)
     } else {
         // collect all coins, mixed and unmixed
         MaxOutputAmountCoinSelector()
@@ -920,8 +996,10 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    fun signSendRequest(sendRequest: SendRequest) {
-        val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+    fun signSendRequest(sendRequest: SendRequest) =
+        signSendRequest(walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE), sendRequest)
+
+    private fun signSendRequest(wallet: Wallet, sendRequest: SendRequest) {
         Context.propagate(wallet.context)
 
         val securityGuard = SecurityGuard.getInstance()
