@@ -124,13 +124,27 @@ class RequestUserNameViewModelTest {
         assertFalse(state.usernameExists)
         assertFalse(state.usernameBlocked)
         // the vote is not consulted once the lookup has failed
-        verify(exactly = 0) { platformRepo.getVoteContenders(any()) }
+        verify(exactly = 0) { platformRepo.getVoteContendersOrNull(any()) }
+    }
+
+    @Test
+    fun checkUsername_ballotLookupFailsAfterEmptyDomainLookup_isNotReportedAsChecked() {
+        // The name lookup found no document, but the ballot could not be read: a locked or already
+        // won name looks exactly like a free one at this point, so the check must stay unverified.
+        nameLookupReturns(null)
+        every { platformRepo.getVoteContendersOrNull(username) } returns null
+
+        val state = checkUsername()
+
+        assertFalse("a failed ballot lookup must not count as a successful check", state.usernameCheckSuccess)
+        assertFalse(state.usernameExists)
+        assertFalse(state.usernameBlocked)
     }
 
     @Test
     fun checkUsername_noDocumentAndNoVote_isAvailable() {
         nameLookupReturns(null)
-        every { platformRepo.getVoteContenders(username) } returns contenders()
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders()
 
         val state = checkUsername()
 
@@ -143,7 +157,7 @@ class RequestUserNameViewModelTest {
     @Test
     fun checkUsername_documentExists_isTaken() {
         nameLookupReturns(mockk<Document>())
-        every { platformRepo.getVoteContenders(username) } returns contenders()
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders()
 
         val state = checkUsername()
 
@@ -155,7 +169,7 @@ class RequestUserNameViewModelTest {
     @Test
     fun checkUsername_voteInProgress_isContestedButNotBlocked() {
         nameLookupReturns(null)
-        every { platformRepo.getVoteContenders(username) } returns contenders(
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders(
             map = mapOf(otherIdentity to contender(votes = 3)),
             lockVoteTally = 1
         )
@@ -171,7 +185,7 @@ class RequestUserNameViewModelTest {
     @Test
     fun checkUsername_voteInProgressWithNoContendersAndLockVotes_isBlocked() {
         nameLookupReturns(null)
-        every { platformRepo.getVoteContenders(username) } returns contenders(lockVoteTally = 2)
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders(lockVoteTally = 2)
 
         val state = checkUsername()
 
@@ -183,7 +197,7 @@ class RequestUserNameViewModelTest {
         // A finished vote that locked the name: the contender map is empty and there are no lock
         // votes left in the tally, so the in-progress rule alone would call the name available.
         nameLookupReturns(null)
-        every { platformRepo.getVoteContenders(username) } returns contenders(
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders(
             winner = finishedVote(isLocked = true)
         )
 
@@ -198,7 +212,7 @@ class RequestUserNameViewModelTest {
     fun checkUsername_wonBallotBeforeDomainLookupCatchesUp_isTaken() {
         // Another identity won the vote, but the name lookup does not return its domain document yet
         nameLookupReturns(null)
-        every { platformRepo.getVoteContenders(username) } returns contenders(
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders(
             winner = finishedVote(isLocked = false, noWinner = false)
         )
 
@@ -212,7 +226,7 @@ class RequestUserNameViewModelTest {
     @Test
     fun checkUsername_ballotEndedWithNoWinner_isAvailableAgain() {
         nameLookupReturns(null)
-        every { platformRepo.getVoteContenders(username) } returns contenders(
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders(
             winner = finishedVote(isLocked = false, noWinner = true)
         )
 

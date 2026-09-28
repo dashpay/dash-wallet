@@ -379,8 +379,14 @@ class RequestUserNameViewModel @Inject constructor(
                 var usernameContested = false
                 var usernameBlocked = false
                 var firstCreatedAt = -1L
+                val contenders = withContext(Dispatchers.IO) { platformRepo.getVoteContendersOrNull(username) }
+                if (contenders == null) {
+                    // No ballot could be read, so a locked or already won name would look available
+                    log.warn("vote contenders lookup failed for {}", username)
+                    _uiState.update { it.copy(checkingUsername = false, usernameCheckSuccess = false) }
+                    return@let
+                }
                 withContext(Dispatchers.IO) {
-                    val contenders = platformRepo.getVoteContenders(username)
                     val finishedVote = contenders.winner.orElse(null)?.first
                     when {
                         finishedVote == null -> {
