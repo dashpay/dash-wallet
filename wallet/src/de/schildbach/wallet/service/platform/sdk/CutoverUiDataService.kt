@@ -2561,7 +2561,16 @@ class CutoverUiDataService internal constructor(
             cachedReceiveAddress = ReceiveAddressSnapshot(generation, address)
             lastPublishedReceiveTicket = ticket
         }
-        return address ?: cachedReceiveAddress?.takeIf { it.generation == generation }?.address
+        // Answer from the CACHE, not from this read's own result. Rejecting an
+        // out-of-order publication is only half the job: an older read that
+        // handed its own stale address back to its caller would still put an
+        // already-used address on the Receive screen, because
+        // [de.schildbach.wallet.WalletApplication]'s live accessors return a
+        // non-null result unchanged. After the gate the cache holds the newest
+        // address for this binding, so every caller — including one whose own
+        // read lost the ordering — gets that. The `?: address` residual covers
+        // only the case where nothing has ever been cached.
+        return cachedReceiveAddress?.takeIf { it.generation == generation }?.address ?: address
     }
 
     /**
@@ -2692,11 +2701,26 @@ class CutoverUiDataService internal constructor(
      *
      * Unlike the receive address there is no screen to keep warm: every caller
      * consumes this immediately at spend time. Caching would also make two
-     * successive self-transfers share one destination for no benefit. Two
-     * unshields raced before either confirms can still land on the same internal
-     * address, because the engine's "next unused" cannot move until one is seen
-     * — the FFI exposes no reservation. That is reuse between two of the user's
-     * OWN transfers, not anything a payer can observe.
+     * successive self-transfers share one destination for no benefit.
+     *
+     * ## KNOWN RESIDUAL — this is NOT an isolation guarantee
+     *
+     * The address is taken with `next_change_address`, which returns the next
+     * UNUSED internal address without issuing or reserving it, and that is the
+     * SAME allocator the engine's own change selection draws from. So while an
+     * internal address C stays unused, an ordinary payment and a self-transfer
+     * can both select C — and the payment's RECIPIENT can see their change
+     * output and link the later self-transfer to it. That is cross-operation
+     * linkage, visible to a counterparty; an earlier version of this comment
+     * claimed the only collision was between two of the user's own transfers and
+     * was wrong.
+     *
+     * What this destination does buy is avoiding the EASIER attack: the engine's
+     * receive chain would hand self-transfers the very address the Receive screen
+     * is advertising, which anyone holding an unpaid QR can watch. Closing the
+     * residual needs an SDK allocation mechanism competing change builders
+     * honour — no reservation or dedicated-pool API is exposed at v42int21 — or
+     * a maintainer decision to accept it.
      *
      * Generation-validated exactly like [sdkReceiveAddressLiveBlockingOrNull]:
      * an answer produced for a binding that has since been wiped is discarded

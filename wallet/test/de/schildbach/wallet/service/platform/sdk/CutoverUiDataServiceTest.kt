@@ -1797,15 +1797,24 @@ class CutoverUiDataServiceTest {
         assertEquals("yENGINEaddressB", service.sdkReceiveAddressLiveBlockingOrNull())
         assertEquals("yENGINEaddressB", service.sdkReceiveAddressOrNull())
 
-        // Release the older read: it must not put A back.
+        // Release the older read: it must neither put A back in the cache NOR
+        // hand A to its own caller. The second half matters just as much —
+        // WalletApplication returns a non-null live result unchanged, so an
+        // older caller answered with A would advertise an already-used address
+        // even though the cache is correct.
         source.receiveAddressGate.countDown()
-        olderResult.get()
+        val olderAnswer = olderResult.get()
         older.shutdown()
 
         assertEquals(
             "an older read must not overwrite a newer published address",
             "yENGINEaddressB",
             service.sdkReceiveAddressOrNull()
+        )
+        assertEquals(
+            "the older caller must also be answered with the newer address",
+            "yENGINEaddressB",
+            olderAnswer
         )
     }
 

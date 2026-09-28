@@ -618,13 +618,31 @@ public class SweepWalletFragment extends Fragment {
         // SendCoinsOfflineTask callbacks keep their main-looper affinity).
         backgroundHandler.post(() -> {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
-            // Through the application, not the dashj wallet directly, and through
-            // the LIVE accessor: post-cutover the dashj chain is HELD and its
-            // pointer frozen, so sweeping the paper wallet straight into it would
-            // land the funds on an address the chain has already paid
-            // (SR-03 / D-003). Already on the background handler, as the live
-            // read requires.
-            final Address receivingAddress = application.freshReceiveAddressLive();
+            // The SELF-TRANSFER destination, not the advertised receive address.
+            // A sweep moves the user's own coins into their own wallet, and
+            // post-cutover freshReceiveAddressLive() returns the very address the
+            // Receive screen is showing — so a counterparty holding an unpaid QR
+            // could watch it and tie the sweep's amount and its paper-wallet
+            // inputs to the person behind that QR. "The funds are already linked
+            // to the paper key" does not answer that: the NEW link is from the
+            // paper key to the QR holder's view of the recipient.
+            //
+            // Post-cutover this THROWS rather than falling back to an advertised
+            // address, so preparation failures are handled here, before anything
+            // is sent.
+            final Address receivingAddress;
+            try {
+                receivingAddress = application.unadvertisedDestinationLive();
+            } catch (final Exception x) {
+                log.warn("sweep: could not obtain a self-transfer destination", x);
+                handler.post(() -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    setState(State.FAILED);
+                });
+                return;
+            }
             handler.post(() -> {
                 if (!isAdded()) {
                     return;

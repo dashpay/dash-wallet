@@ -2481,11 +2481,19 @@ public class WalletApplication extends MultiDexApplication
     @NotNull
     @Override
     public Address unadvertisedDestinationLive() {
-        final boolean cutoverActive =
-                cutoverUiDataService != null && cutoverUiDataService.isCutoverActive();
-        final Address unadvertised = cutoverActive
+        // Attempt the SDK read FIRST, then take the ownership snapshot. The read
+        // gates on the live cutover flag under the service's own lock, so a
+        // cutover that commits before it runs is honoured; taking the snapshot
+        // first meant a cutover committing just after it would skip the SDK and
+        // issue a dashj key that is NOT guaranteed to differ from the engine's
+        // advertised address. This narrows that window to the read itself — a
+        // strict guarantee across arbitrary ownership changes would need
+        // coordination with the transition, which this seam does not have.
+        final Address unadvertised = cutoverUiDataService != null
                 ? toDashjAddressOrNull(cutoverUiDataService.sdkUnadvertisedAddressLiveBlockingOrNull())
                 : null;
+        final boolean cutoverActive =
+                cutoverUiDataService != null && cutoverUiDataService.isCutoverActive();
         return decideUnadvertisedDestination(cutoverActive, unadvertised, () -> {
             // NOT freshReceiveAddress(): that accessor is overlaid and would
             // serve the cached engine RECEIVE address. Go straight to dashj.
