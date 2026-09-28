@@ -156,9 +156,13 @@ class ShieldedBalanceServiceTest {
             onStartSuspend()
         }
 
+        /** Suspending hook inside the native loop stop — an owed-stop drain that takes a while (review 2026-09-28). */
+        var onStopSuspend: suspend () -> Unit = {}
+
         override suspend fun stopShieldedSync() {
             stopCalls++
             events += "stop"
+            onStopSuspend()
         }
 
         var syncNowCalls = 0
@@ -576,6 +580,60 @@ class ShieldedBalanceServiceTest {
         assertEquals(1, source.stopCalls)
         service.stop()
         assertEquals("an uncontended stop still stops the loop", 2, source.stopCalls)
+    }
+
+    /**
+     * Review, 2026-09-28: a queued bring-up sampled its generation only AFTER
+     * paying an owed stop, and that payment suspends in the native stop. A
+     * second stop that timed out during the drain was absorbed: the bring-up
+     * sampled its bumped generation, bound, started a replacement loop,
+     * published ready, paid the second debt on release — stopping that loop —
+     * and still returned true over the teardown. The sample now precedes the
+     * drain, so the pass sees it was superseded and never binds.
+     */
+    @Test
+    fun stop_timingOutDuringAQueuedBringUpsOwedStopDrain_supersedesThatBringUp() = runBlocking {
+        val commitGate = CompletableDeferred<Unit>()
+        val stopGate = CompletableDeferred<Unit>()
+        var parked = false
+        var commits = 0
+        var stops = 0
+        val source = readySource().apply { onStopSuspend = { if (++stops == 1) stopGate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200, afterReadyCommitted = {
+            if (++commits == 1) {
+                parked = true
+                commitGate.await()
+            }
+        })
+
+        // #1 holds the lock past its last check; stop A times out and leaves #1's loop stop owed.
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (!parked) delay(10) }
+        withTimeout(5_000) { service.stop() }
+        assertEquals(0, source.stopCalls)
+
+        // #2 queues on the lock. UNDISPATCHED runs it synchronously up to its
+        // first suspension, which is lock.lock() — so it is provably queued
+        // before #1 releases, and Mutex.unlock() hands the lock straight to it.
+        val second = async(start = CoroutineStart.UNDISPATCHED) { service.ensureShieldedReady() }
+        assertTrue(second.isActive)
+
+        commitGate.complete(Unit) // #1 resumes; its release hands the lock to #2, which pays A's debt…
+        withTimeout(5_000) { while (source.stopCalls == 0) delay(10) } // …and suspends in that native stop
+        assertFalse("#1 was superseded by stop A", first.await())
+
+        withTimeout(5_000) { service.stop() } // stop B times out against #2's drain
+        stopGate.complete(Unit)
+
+        assertFalse("#2 sampled before the drain, so stop B supersedes it", second.await())
+        assertEquals("#2 never bound", 1, source.bindCalls)
+        assertEquals("…never started a replacement loop", 1, source.startCalls)
+        assertEquals("only #1's loop was stopped", 1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        // A fresh bring-up afterwards is whole.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, source.startCalls)
     }
 
     /**
