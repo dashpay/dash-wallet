@@ -75,9 +75,9 @@ class CutoverCoordinator @Inject constructor(
      *
      * The persisted [CutoverState] is no longer consulted here. It still drives
      * the UI seams' "SDK owns L1" reads through the pure [dashjEngineMayStart]
-     * predicate and [sdkOwnsL1Flow], and the upgrade seam still writes it
-     * (unconditionally now) so those seams settle on CUT_OVER within the first
-     * launch.
+     * predicate and [sdkOwnsL1Flow]. With rollout enabled, the upgrade seam
+     * writes CUT_OVER on the first launch. With rollout disabled, it only
+     * preserves upgrade-notice eligibility and leaves ownership with dashj.
      *
      * Field history for why this used to be state-dependent, and why the
      * fallback it enabled is gone: the reference install (Pixel 8a, 62 MB

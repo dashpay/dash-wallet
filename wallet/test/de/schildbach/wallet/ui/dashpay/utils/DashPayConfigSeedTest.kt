@@ -34,8 +34,8 @@ import org.junit.Test
  *
  * `get`/`set` are stubbed against an in-memory map (mockk, no real
  * DataStore); the seeding method itself runs its real implementation via
- * `callOriginal()`. These tests run under the debug variant, so
- * `BuildConfig.DEBUG` is true and the seeding body executes.
+ * `callOriginal()`. Each test explicitly selects its rollout policy so the
+ * same assertions apply in debug and release variants.
  */
 class DashPayConfigSeedTest {
 
@@ -50,7 +50,7 @@ class DashPayConfigSeedTest {
         coEvery { config.set(any<Preferences.Key<Boolean>>(), any<Boolean>()) } answers {
             store[firstArg<Preferences.Key<Boolean>>()] = secondArg<Boolean>()
         }
-        coEvery { config.seedDebugDefaultsIfUnset() } coAnswers { callOriginal() }
+        coEvery { config.seedDebugDefaultsIfUnset(defaultsEnabled = true) } coAnswers { callOriginal() }
         return config
     }
 
@@ -58,7 +58,7 @@ class DashPayConfigSeedTest {
     fun seedsAllDebugFlags_whenUnset() = runBlocking {
         val config = configBackedByStore()
 
-        config.seedDebugDefaultsIfUnset()
+        config.seedDebugDefaultsIfUnset(defaultsEnabled = true)
 
         assertEquals(true, store[DashPayConfig.USE_KOTLIN_SDK_DPNS_READS])
         assertEquals(true, store[DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES])
@@ -77,7 +77,7 @@ class DashPayConfigSeedTest {
         store[DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] = false
         val config = configBackedByStore()
 
-        config.seedDebugDefaultsIfUnset()
+        config.seedDebugDefaultsIfUnset(defaultsEnabled = true)
 
         // explicitly-set values (even OFF) must never be overwritten
         assertEquals(false, store[DashPayConfig.USE_KOTLIN_SDK_DPNS_READS])
@@ -93,7 +93,7 @@ class DashPayConfigSeedTest {
         store[DashPayConfig.USE_KOTLIN_SDK_SHIELDED] = false
         val config = configBackedByStore()
 
-        config.seedDebugDefaultsIfUnset()
+        config.seedDebugDefaultsIfUnset(defaultsEnabled = true)
 
         assertEquals(true, store[DashPayConfig.USE_KOTLIN_SDK_DPNS_READS])
         assertEquals(true, store[DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES])
@@ -116,10 +116,10 @@ class DashPayConfigSeedTest {
     fun aFailingRead_doesNotThrow() = runBlocking {
         val config = mockk<DashPayConfig>()
         coEvery { config.get(any<Preferences.Key<Boolean>>()) } throws RuntimeException("simulated read failure")
-        coEvery { config.seedDebugDefaultsIfUnset() } coAnswers { callOriginal() }
+        coEvery { config.seedDebugDefaultsIfUnset(defaultsEnabled = true) } coAnswers { callOriginal() }
 
         // best-effort seeding: failures are logged (loudly), never thrown
-        config.seedDebugDefaultsIfUnset()
+        config.seedDebugDefaultsIfUnset(defaultsEnabled = true)
 
         assertFalse(store.containsKey(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS))
     }

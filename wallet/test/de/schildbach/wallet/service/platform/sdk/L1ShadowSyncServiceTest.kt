@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet_test.BuildConfig
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -1165,7 +1166,8 @@ class L1ShadowSyncServiceTest {
             source = source,
             dashPayConfig = config,
             scope = scope,
-            spvDataDirPath = { dataDir.resolve("spv").absolutePath }
+            spvDataDirPath = { dataDir.resolve("spv").absolutePath },
+            rolloutPolicy = SdkRolloutPolicy(migrationFlagsDefaultOn = true, cutoverEnabled = true)
         )
         assertFalse(service.startIfEnabled())
         assertEquals(0, source.interactions())
@@ -2661,11 +2663,11 @@ class L1ShadowSyncServiceTest {
         source.progressFlow.value = synced
 
         repeat(3) { service.probeParity(walletIdHex) }
-        assertEquals(1, source.sdkUtxoFetches) // same state → one diff dump
+        assertEquals(if (BuildConfig.DEBUG) 1 else 0, source.sdkUtxoFetches) // same state → one debug diff dump
 
         source.sdkConfirmed = 60_000 // the mismatch changed shape → dump again
         service.probeParity(walletIdHex)
-        assertEquals(2, source.sdkUtxoFetches)
+        assertEquals(if (BuildConfig.DEBUG) 2 else 0, source.sdkUtxoFetches)
     }
 
     @Test
@@ -2705,7 +2707,7 @@ class L1ShadowSyncServiceTest {
 
         source.dashjUtxos = emptyList() // becomes available → same state retried
         service.probeParity(walletIdHex)
-        assertEquals(1, source.sdkUtxoFetches)
+        assertEquals(if (BuildConfig.DEBUG) 1 else 0, source.sdkUtxoFetches)
     }
 
     // ── Pure SPV-progress mapping ─────────────────────────────────────

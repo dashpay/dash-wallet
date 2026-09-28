@@ -50,6 +50,8 @@ import java.io.IOException
  */
 class CutoverCoordinatorTest {
 
+    private val enabledRollout = SdkRolloutPolicy(migrationFlagsDefaultOn = true, cutoverEnabled = true)
+
     private val probeIntervalMs = L1ShadowSyncService.PARITY_INTERVAL_MS
 
     /** A fully drained, caught-up, parity-proven, backed-up evidence set → Ready. */
@@ -187,7 +189,7 @@ class CutoverCoordinatorTest {
         val setSlot: CapturingSlot<String> = slot()
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, capture(setSlot)) } just Runs
         val collector = mockk<CutoverEvidenceCollector>()
-        val coordinator = CutoverCoordinator(config, collector)
+        val coordinator = CutoverCoordinator(config, collector, rolloutPolicy = enabledRollout)
 
         assertEquals(CutoverState.DUAL_RUNNING, coordinator.resetForWalletWipe().state)
         // No write when there is nothing to reset.
@@ -277,7 +279,7 @@ class CutoverCoordinatorTest {
         every { config.observe(DashPayConfig.CUTOVER_STATE) } returns stateFlow
         every { config.observe(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns shadowFlow
         val collector = mockk<CutoverEvidenceCollector>()
-        return Triple(CutoverCoordinator(config, collector), stateFlow, shadowFlow)
+        return Triple(CutoverCoordinator(config, collector, rolloutPolicy = enabledRollout), stateFlow, shadowFlow)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -341,7 +343,7 @@ class CutoverCoordinatorTest {
         val collector = mockk<CutoverEvidenceCollector>()
         // Unconfined runs the launched commit inline, so the effect is observable
         // synchronously here — the production seam is fire-and-forget (non-blocking).
-        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
+        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined), enabledRollout)
 
         coordinator.commitForFreshWalletSetupAsync()
 
@@ -403,7 +405,7 @@ class CutoverCoordinatorTest {
         // through this helper too — that is the path that actually commits on
         // a real upgrade (MO-1022), and it must be able to arm the explainer.
         coEvery { collector.collect() } returns readyEvidence()
-        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
+        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined), enabledRollout)
         return Triple(coordinator, { current }, { noticeArmed })
     }
 
@@ -672,7 +674,7 @@ class CutoverCoordinatorTest {
             pending = secondArg(); Unit
         }
         val coordinator = CutoverCoordinator(
-            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined), enabledRollout
         )
 
         coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
@@ -710,7 +712,7 @@ class CutoverCoordinatorTest {
             pending = secondArg(); Unit
         }
         val coordinator = CutoverCoordinator(
-            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined), enabledRollout
         )
 
         coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
@@ -812,7 +814,7 @@ class CutoverCoordinatorTest {
             noticeArmed = secondArg()
             Unit
         }
-        val coordinator = CutoverCoordinator(config, mockk(), CoroutineScope(Dispatchers.Unconfined))
+        val coordinator = CutoverCoordinator(config, mockk(), CoroutineScope(Dispatchers.Unconfined), enabledRollout)
 
         coordinator.commitForFreshWalletSetupAsync()
         assertEquals("the fresh commit no-opped, as intended for this case", null, current)

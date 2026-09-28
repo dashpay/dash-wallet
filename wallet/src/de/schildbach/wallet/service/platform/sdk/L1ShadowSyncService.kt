@@ -2487,7 +2487,10 @@ class L1ShadowSyncService internal constructor(
      */
     private suspend fun resolveParityPolicy(): ParityProbePolicy {
         val committed = try {
-            !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
+            !dashjEngineMayStart(
+                CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)),
+                cutoverEnabled = rolloutPolicy.cutoverEnabled
+            )
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("parity policy: cutover state unreadable; assuming dual-run", t)
@@ -3320,7 +3323,8 @@ class L1ShadowSyncService internal constructor(
         if (slowParityCadenceLatched) return true
         val committed = try {
             !dashjEngineMayStart(
-                CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE))
+                CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)),
+                cutoverEnabled = rolloutPolicy.cutoverEnabled
             )
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
