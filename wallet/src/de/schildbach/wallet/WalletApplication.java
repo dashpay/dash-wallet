@@ -2421,8 +2421,24 @@ public class WalletApplication extends MultiDexApplication
      * engine's answer as of this instant (the Receive screen and the QR it
      * shows, the exchange-integration deposit addresses). NOT the unshield or
      * CoinJoin-combine destinations: those are self-transfers and must never be
-     * paid to an advertised address — see {@link #unadvertisedDestinationLive()}. Falls back to {@link #currentReceiveAddress()} whenever the
-     * engine has no answer, so it is always safe to prefer over it.
+     * paid to an advertised address — see {@link #unadvertisedDestinationLive()}.
+     *
+     * <p><b>KNOWN GAP.</b> When the engine has no answer this falls back to
+     * {@link #currentReceiveAddress()}, and that in turn falls back to the HELD
+     * dashj chain once the cache is also cold — which is the frozen,
+     * already-paid address SR-03 is about. The window is real: between the
+     * cutover flag going active and {@code awaitBoundWallet} resolving,
+     * {@code sdkReceiveAddressLiveBlockingOrNull} answers null with nothing
+     * cached, and a failing/retrying bind widens it.
+     *
+     * <p>Closing it means these accessors failing closed the way
+     * {@link #unadvertisedDestinationLive()} does, which needs an explicit
+     * "receive address unavailable" path at ~14 call sites (the Receive screen,
+     * the BIP70/URI handlers and every exchange-integration deposit address),
+     * most of which today call from a bare {@code lifecycleScope.launch} with no
+     * failure handling. That is a design change rather than a patch, so it is
+     * recorded here instead of half-applied — replacing a reused address with an
+     * app crash would be worse.
      *
      * <p>BLOCKS: off-main callers only. See {@code WalletData.currentReceiveAddressLive}.
      */

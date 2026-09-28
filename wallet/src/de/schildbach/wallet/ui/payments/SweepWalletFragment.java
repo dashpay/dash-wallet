@@ -634,12 +634,24 @@ public class SweepWalletFragment extends Fragment {
             try {
                 receivingAddress = application.unadvertisedDestinationLive();
             } catch (final Exception x) {
+                // RETRYABLE, not FAILED: the destination read can fail
+                // transiently (the engine is not bound yet, an FFI read errored),
+                // and State.FAILED disables the sweep button with no error shown,
+                // stranding the user on a dead screen. Return them to the
+                // confirmation step so they can try again — the one thing we must
+                // not do is proceed to an advertised address.
                 log.warn("sweep: could not obtain a self-transfer destination", x);
                 handler.post(() -> {
                     if (!isAdded()) {
                         return;
                     }
-                    setState(State.FAILED);
+                    setState(State.CONFIRM_SWEEP);
+                    final androidx.fragment.app.FragmentActivity activity = getActivity();
+                    if (activity != null) {
+                        android.widget.Toast.makeText(activity,
+                                org.dash.wallet.common.R.string.loading_error,
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
                 });
                 return;
             }

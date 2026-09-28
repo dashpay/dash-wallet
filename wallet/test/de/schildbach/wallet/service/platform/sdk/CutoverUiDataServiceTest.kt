@@ -1747,15 +1747,34 @@ class CutoverUiDataServiceTest {
         // read stayed parked. Ownership must be revoked by a collector that
         // nothing can park.
         val state = MutableStateFlow<String?>("CUT_OVER")
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
-        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        val service = buildService(
+            source, configWithMutableState(state), backgroundScope, txEvents = events
+        )
         service.start()
         runCurrent()
         assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
 
-        // Park the PIPELINE's read (any thread but the test's), then roll back.
+        // ACTUALLY park a pipeline read. `refreshNativeSplit` only reads at
+        // pipeline start, on a tx event, or on the ticker — so without emitting
+        // an event nothing is in flight when the state flips, and this test would
+        // pass while proving only that the unbind EXISTS, not that it is timely.
         source.gatedReadThreadName = "DefaultDispatcher"
         source.gateByThreadNamePrefix = true
+        source.receiveAddressReadParked = false
+        events.emit(
+            L1TxEvent.Detected(displayHex(9), 1_000_000L, null, contextCode = 0, directionCode = 0)
+        )
+        assertTrue(
+            "the pipeline read must be parked before the rollback",
+            pumpUntil(10_000) { source.receiveAddressReadParked }
+        )
+
+        // Roll back WHILE it is parked. collectLatest cannot deliver its
+        // replacement action until the cancelled pipeline finishes, and the
+        // parked read is what stops it finishing — so an unbind that lived in
+        // that action would not run until the read is released.
         state.value = "DUAL_RUNNING"
 
         assertTrue(
