@@ -447,7 +447,7 @@
     <string name="request_username_username_voting_message">+ що таке голосування за імʼя користувача\?</string>
     <string name="request_username_character_requirement">Лише літери, цифри та дефіси</string>
     <string name="request_username_character_requirement_invite_noncontested">Числа 2-9</string>
-    <string name="request_username_balance_requirement">Для створення цього імені користувача потрібно мати 0,25 DASH</string>
+    <string name="request_username_balance_requirement">Для створення цього імені користувача потрібно мати %s DASH</string>
     <string name="request_username_requirements_message_invite_noncontested">Ім’я користувача повинно відповідати одному з цих критеріїв</string>
     <string name="request_username_requirements_message">Ім’я користувача повинно відповідати цим критеріям</string>
     <string name="request_username_length_requirement">Від 3 до 23 символів</string>

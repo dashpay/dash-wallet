@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.username.request
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -64,8 +65,8 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
     private val amount: Coin
         get() = when {
             usernameType == UsernameType.Secondary -> Coin.ZERO
-            isContestableUsername && !hasIdentity -> Constants.DASH_PAY_FEE_CONTESTED
-            isContestableUsername && hasIdentity -> Constants.DASH_PAY_FEE_CONTESTED_NAME
+            isContestableUsername && !hasIdentity -> ContestedUsernameFees.fee
+            isContestableUsername && hasIdentity -> ContestedUsernameFees.nameFee
             else -> Constants.DASH_PAY_FEE
         }
     init {

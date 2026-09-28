@@ -385,7 +385,7 @@
 
     <string name="request_username_username_voting_message">+ kullanıcı adı oylaması nedir\?</string>
     <string name="request_username_character_requirement">Yalnızca harfler, sayılar ve kısa çizgiler</string>
-    <string name="request_username_balance_requirement">Bu kullanıcı adını oluşturmak için 0.25 DASH\'a sahip olmanız gerekiyor</string>
+    <string name="request_username_balance_requirement">Bu kullanıcı adını oluşturmak için %s DASH\'a sahip olmanız gerekiyor</string>
     <string name="request_username_length_requirement">3 ile 23 karakter arasında</string>
     <string name="request_username_confirm">Kabul ediyorum</string>
     <string name="tools_credits_buy_button">Al</string>
