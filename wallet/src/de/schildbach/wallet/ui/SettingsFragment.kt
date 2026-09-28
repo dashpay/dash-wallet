@@ -130,6 +130,8 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private var isSavingTransactionMetadata = false
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun setupTransactionMetadataObservers() {
         lifecycleScope.launch {
@@ -139,11 +141,18 @@ class SettingsFragment : Fragment() {
         transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
             transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
                 val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
-                setTransactionMetadataText(progress != 100 && progress != -1, progress)
+                isSavingTransactionMetadata = progress != 100 && progress != -1
+                setTransactionMetadataText(isSavingTransactionMetadata, progress)
             }
         }
 
-        setTransactionMetadataText(isSaving = false, saveProgress = -1)
+        // lastSaveDate arrives from DataStore after the view is built and moves
+        // when a publish completes; reading it once showed a blank row forever.
+        transactionMetadataSettingsViewModel.lastSaveDate.observe(viewLifecycleOwner) {
+            if (!isSavingTransactionMetadata) {
+                setTransactionMetadataText(isSaving = false, saveProgress = -1)
+            }
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

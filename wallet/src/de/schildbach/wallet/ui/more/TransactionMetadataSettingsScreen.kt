@@ -127,16 +127,13 @@ fun TransactionMetadataSettingsScreen(
                         stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
                     } else if (hasPastTransactionsToSave) {
                         stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
-                    } else if (lastSaveDate != 0L) {
+                    } else if (lastSaveDate > 0L) {
                         stringResource(
                             R.string.transaction_metadata_past_already_saved,
                             dateFormat.format(Date(lastSaveDate))
                         )
                     } else {
-                        stringResource(
-                            R.string.transaction_metadata_past_already_saved_none,
-                            dateFormat.format(Date(lastSaveDate))
-                        )
+                        stringResource(R.string.transaction_metadata_past_already_saved_none)
                     },
                     enabled = hasPastTransactionsToSave && !isSaving
                 )
@@ -147,7 +144,7 @@ fun TransactionMetadataSettingsScreen(
                         viewModel.updatePreferences(filterState.copy(saveToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_future_title),
-                    subtitle = if (futureSaveDate != 0L) {
+                    subtitle = if (futureSaveDate > 0L) {
                         stringResource(
                             R.string.transaction_metadata_future_subtitle,
                             dateFormat.format(Date(futureSaveDate))

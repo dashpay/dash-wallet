@@ -107,7 +107,8 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val transactionMetadataDao: TransactionMetadataDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    private val platformSyncService: PlatformSyncService
+    private val platformSyncService: PlatformSyncService,
+    private val applicationScope: CoroutineScope
 ) : ViewModel(), TransactionMetadataSettingsPreviewViewModel {
     companion object {
         val CURRENT_DATA_COST = Coin.valueOf(25000) //0.00025000
@@ -133,9 +134,11 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     //private val savePastTxToNetwork = MutableStateFlow(false)
     private val _lastSaveWorkId = MutableStateFlow<String?>(null)
     override val lastSaveWorkId = _lastSaveWorkId.asStateFlow()
-    private val _lastSaveDate = MutableStateFlow<Long>(-1)
+    // 0 = "never", which is what every reader tests for; -1 rendered as
+    // "saved Dec 31, 1969" before the DataStore value landed.
+    private val _lastSaveDate = MutableStateFlow<Long>(0)
     override val lastSaveDate = _lastSaveDate.asStateFlow()
-    private val _futureSaveDate = MutableStateFlow<Long>(-1)
+    private val _futureSaveDate = MutableStateFlow<Long>(0)
     override val futureSaveDate = _futureSaveDate.asStateFlow()
     private val _hasPastTransactionsToSave = MutableStateFlow<Boolean>(false)
     override val hasPastTransactionsToSave = _hasPastTransactionsToSave.asStateFlow()
@@ -154,6 +157,29 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                     originalState = it
                 }
             }.launchIn(viewModelWorkerScope)
+
+        // Written by PublishTransactionMetadataWorker on a complete publish;
+        // this is the only thing that tells a saved wallet from an unsaved one.
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
+            .onEach {
+                _lastSaveDate.value = it ?: 0
+                log.info("last save date: {}", it?.let { Date(it) })
+            }
+            .launchIn(viewModelScope)
+
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER)
+            .onEach {
+                _futureSaveDate.value = it ?: System.currentTimeMillis()
+                log.info("future save date: {}", it?.let { Date(it) })
+            }
+            .launchIn(viewModelScope)
+
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { selectedCurrency = it }
+            .flatMapLatest(exchangeRates::observeExchangeRate)
+            .onEach { _selectedExchangeRate.value = it }
+            .launchIn(viewModelScope)
 
         dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
             .flatMapLatest { startTimestamp ->
@@ -189,8 +215,9 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
             .launchIn(viewModelWorkerScope)
 
         viewModelScope.launch(Dispatchers.IO) {
-            val (oldUnsavedList, _) = platformSyncService.getUnsavedTransactions()
+            val (oldUnsavedList, firstUnsavedDate) = platformSyncService.getUnsavedTransactions()
             log.info("old unsaved count: ${oldUnsavedList.size}")
+            firstUnsavedTxDate = firstUnsavedDate
             _oldUnsavedTransactions.value = oldUnsavedList
         }
     }
@@ -247,9 +274,16 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
         _lastSaveWorkId.value = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
     }
 
-    /** save using current settings */
+    /**
+     * save using current settings
+     *
+     * Runs in the application scope, not the screen's: every caller pops the
+     * screen right after this returns, which clears the ViewModel and cancels
+     * its scopes while the DataStore writes below are still in flight — the
+     * publish was never enqueued on ~1 in 3 attempts, with no sign of it.
+     */
     fun saveToNetwork(forceSave: Boolean) {
-        viewModelWorkerScope.launch {
+        applicationScope.launch(Dispatchers.IO) {
             val previousSettings = dashPayConfig.getTransactionMetadataSettings()
             val settings = filterState.value
             savePreferences(settings)

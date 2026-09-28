@@ -73,7 +73,7 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
         // ask the user
         val hasTxs = viewModel.hasPastTransactionsToSave.value
         val settings = viewModel.filterState.value
-        val lastSaveDate = if (viewModel.lastSaveDate.value != 0L) {
+        val lastSaveDate = if (viewModel.lastSaveDate.value > 0L) {
             SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM).format(viewModel.lastSaveDate.value)
         } else {
             SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM).format(viewModel.firstUnsavedTxDate)
