@@ -43,8 +43,12 @@ public class AnrException extends Exception {
      *
      * @param thread the {@link Thread} which is not repsonding
      */
+    /** The thread whose stack this exception carries; not the thread that logs it. */
+    private final transient Thread thread;
+
     public AnrException(Thread thread) {
         super("ANR detected");
+        this.thread = thread;
 
         // Copy the Thread's stack, 
         // so the Exception seams to occure there
@@ -66,9 +70,13 @@ public class AnrException extends Exception {
         // through printProcessMap(PrintStream) for a report that wants it.
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(bos);
-        Map<Thread, StackTraceElement[]> stackTraces = Thread.getAllStackTraces();
-        ps.println("Unresponsive thread (" + stackTraces.size() + " threads in process):");
-        this.printThread(ps, Locale.getDefault(), Thread.currentThread(), this.getStackTrace());
+        // Label the saved stack with the thread it was taken from: the cleanup
+        // and send monitors build and log this from their own coroutine, so
+        // Thread.currentThread() here is the monitor, not the stalled thread.
+        // No thread count: Thread.getAllStackTraces() would collect every
+        // live thread's stack just to size the map, every 5 s.
+        ps.println("Unresponsive thread:");
+        this.printThread(ps, Locale.getDefault(), thread, this.getStackTrace());
         log.info(this.getClass().getSimpleName() + " " +
                 new String(bos.toByteArray()));
     }
