@@ -459,7 +459,11 @@ class ShieldedBalanceServiceTest {
         val gate2 = CompletableDeferred<Unit>()
         var binds = 0
         val source = readySource().apply { onBindSuspend = { if (++binds == 1) gate1.await() else gate2.await() } }
-        val service = service(source, stopLockTimeoutMs = 400)
+        // stop() must still be POLLING when gate1 opens (~150 ms in). If it
+        // timed out first, #2 would sample the generation after both bumps and
+        // legitimately start — a scheduler-timing failure, not a bug. 2 s gives
+        // a slow CI runner an order of magnitude of margin (review, 2026-09-28).
+        val service = service(source, stopLockTimeoutMs = 2_000)
 
         val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
         withTimeout(5_000) { while (source.bindCalls == 0) delay(10) } // #1 inside its bind
