@@ -1160,9 +1160,18 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    /** Pay an owed stop against every runtime older than it; the caller holds [lock]. */
+    /**
+     * Pay an owed stop against every runtime older than it; the caller holds [lock].
+     *
+     * Cancellation-safe for every entry point (review, 2026-09-28): the bring-up
+     * calls this from its caller's context (a view-model scope, say), and a
+     * cancellation there must not drop the debt with the loop still running.
+     * The native stop runs non-cancellably ([stopNativeLoop]), and the debt is
+     * cleared only after the attempt, by compare-and-set, so a newer debt
+     * recorded meanwhile survives for the next holder.
+     */
     private suspend fun drainOwedNativeStopLocked() {
-        val owedThrough = nativeStopOwedThrough.getAndSet(NO_GENERATION)
+        val owedThrough = nativeStopOwedThrough.get()
         if (owedThrough == NO_GENERATION) return
         tearDownReadyStateOlderThan(owedThrough)
         val owner = loopOwnerGeneration.get()
@@ -1170,16 +1179,25 @@ class ShieldedBalanceServiceImpl internal constructor(
             log.warn("shielded: stopping the sync loop a timed-out stop() could not reach")
             stopNativeLoop()
         }
+        nativeStopOwedThrough.compareAndSet(owedThrough, NO_GENERATION)
     }
 
-    /** Stop the native sync loop and clear [loopOwnerGeneration]. */
+    /**
+     * Stop the native sync loop; [loopOwnerGeneration] is cleared only once
+     * the SDK call has returned. Non-cancellable (review, 2026-09-28): the SDK
+     * dispatches the stop through `withContext(Dispatchers.IO)`, which a
+     * cancelled caller would skip, leaving the loop running with nothing left
+     * recording it. A failed stop keeps the ownership, so the next [stop]
+     * tries again instead of returning early. Callers hold [lock].
+     */
     private suspend fun stopNativeLoop() {
-        loopOwnerGeneration.set(NO_GENERATION)
-        runCatching { source.stopShieldedSync() }
-            .onFailure {
-                if (it is CancellationException) throw it
-                log.warn("failed to stop the shielded sync loop", it)
-            }
+        val owner = loopOwnerGeneration.get()
+        val stopped = withContext(NonCancellable) {
+            runCatching { source.stopShieldedSync() }
+                .onFailure { log.warn("failed to stop the shielded sync loop; the next stop() retries it", it) }
+                .isSuccess
+        }
+        if (stopped) loopOwnerGeneration.compareAndSet(owner, NO_GENERATION)
     }
 
     /**

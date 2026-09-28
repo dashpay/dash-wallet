@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -149,9 +150,13 @@ class ShieldedBalanceServiceTest {
         /** Suspending hook inside the native sync-loop start (review 2026-09-23). */
         var onStartSuspend: suspend () -> Unit = {}
 
+        /** Whether the simulated native loop is running: set when a start begins, cleared when a stop COMPLETES. */
+        var nativeLoopRunning = false
+
         override suspend fun startShieldedSync() {
             startCalls++
             events += "start"
+            nativeLoopRunning = true
             onStart()
             onStartSuspend()
         }
@@ -163,6 +168,7 @@ class ShieldedBalanceServiceTest {
             stopCalls++
             events += "stop"
             onStopSuspend()
+            nativeLoopRunning = false
         }
 
         var syncNowCalls = 0
@@ -683,6 +689,78 @@ class ShieldedBalanceServiceTest {
         // An ordinary stop still takes it down.
         service.stop()
         assertEquals(1, source.stopCalls)
+    }
+
+    /**
+     * Review, 2026-09-28 (third pass): a queued bring-up pays an owed stop in
+     * its CALLER's context. Cancelled there before the native stop ran — the
+     * SDK dispatches it through withContext(Dispatchers.IO), which a
+     * cancelled caller skips — the debt and the loop ownership were both
+     * already cleared, so every later stop() returned early with the native
+     * loop still running. The payment is now non-cancellable and the markers
+     * are cleared only after it.
+     */
+    @Test
+    fun cancellingAQueuedBringUpDuringItsOwedStopDrain_stillStopsTheNativeLoop() = runBlocking {
+        val commitGate = CompletableDeferred<Unit>()
+        val stopGate = CompletableDeferred<Unit>()
+        var parked = false
+        var commits = 0
+        var stops = 0
+        val source = readySource().apply {
+            onStopSuspend = { if (++stops == 1) stopGate.await() }
+            // The real SDK calls suspend on IO and observe cancellation; the fake's must too.
+            onSupportSuspend = { yield() }
+        }
+        val service = service(source, stopLockTimeoutMs = 200, afterReadyCommitted = {
+            if (++commits == 1) {
+                parked = true
+                commitGate.await()
+            }
+        })
+
+        // #1 is past its last check with the loop running; stop A times out and records the debt.
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (!parked) delay(10) }
+        withTimeout(5_000) { service.stop() }
+        assertTrue(source.nativeLoopRunning)
+
+        // #2 is queued on the lock (UNDISPATCHED: provably before #1 releases) and so pays the debt.
+        val second = async(start = CoroutineStart.UNDISPATCHED) { service.ensureShieldedReady() }
+        commitGate.complete(Unit)
+        withTimeout(5_000) { while (source.stopCalls == 0) delay(10) } // #2 is inside the native stop
+        first.await()
+
+        second.cancel() // the caller's scope goes away mid-drain
+        stopGate.complete(Unit)
+        second.join()
+
+        assertFalse("the native loop was stopped despite the cancellation", source.nativeLoopRunning)
+        assertEquals(1, source.stopCalls)
+
+        // Nothing left owed or owned: a later stop has nothing to do, and a fresh bring-up is whole.
+        service.stop()
+        assertEquals(1, source.stopCalls)
+        assertTrue(service.ensureShieldedReady())
+        assertTrue(source.nativeLoopRunning)
+    }
+
+    /** A failed native stop keeps the loop's ownership, so the next stop() retries instead of returning early. */
+    @Test
+    fun aFailedNativeStop_isRetriedByTheNextStop() = runBlocking {
+        var failNext = true
+        val source = readySource().apply {
+            onStopSuspend = { if (failNext) { failNext = false; throw IllegalStateException("sdk stop failed") } }
+        }
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        service.stop()
+        assertTrue("the failed stop left the loop running", source.nativeLoopRunning)
+
+        service.stop()
+        assertEquals("retried", 2, source.stopCalls)
+        assertFalse(source.nativeLoopRunning)
     }
 
     /**
