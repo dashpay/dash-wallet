@@ -1,4 +1,52 @@
 DashPay Wallet
+v11.9.1
+  New features & redesigns
+  - Dark mode support across the app: dialogs, PIN entry, DashPay cards, payment request details and Dash DEX screens (#1480)
+  - Tools menu: improved and updated (#1480)
+  - DashConnect: connect your DashPay username to apps on the Dash network by scanning a QR code; log in without passwords or accounts (#1510)
+  - DashConnect: enabled on mainnet
+  - Android 16 support: target SDK 36 with edge-to-edge insets on every screen (#1527)
+
+  Dash DEX
+  - Persist the committed swap route instead of the stale preview quote so transaction details link to the funded intent (#1519)
+  - Max sells on NEAR routes quote the balance minus the fee so the intent completes instead of refunding (#1519)
+  - Reject Dash addresses as sell destinations on chains with permissive address formats such as Solana (#1519)
+  - Handle all-caps bech32 addresses from QR scans and fix the memo colon in URI prefixes (#1519)
+  - Show the inline "enter a larger amount" hint when a provider reports the amount is too small (#1526, #1524)
+  - Keep the sell amount's currency in step with the picker; sweep the wallet correctly for a fiat- or crypto-anchored MAX swap (#1524)
+  - Redesigned the enter amount, address input and receive screens to match Figma, with font-scale-safe address truncation (#1539)
+  - Show exchanges that don't support the coin on the selected network as a disabled row with an explanation (#1542)
+  - Keep a connected exchange visible when its deposit-address lookup fails and retry on tap instead of showing Log in (#1542)
+  - New shared components: SystemMessage and ActionItem; Subhead and Footnote typography tiers (#1542)
+
+  DashSpend
+  - Recover a gift card payment whose merchant reply is lost: the signed transaction is held with its inputs locked, watched on the network and committed once seen, or released if it was never sent (#1560)
+  - Show "Payment status unknown" instead of a failure and withhold the retry button when the merchant's reply is lost (#1560)
+  - Record gift card details on the pending path and discard every record of a payment that was never sent (#1560)
+  - Blockchain service: only stop on TRIM_MEMORY_COMPLETE and reschedule a restart instead of leaving a pending payment with no peers (#1560)
+
+  DashPay
+  - Prevent registering a username that is locked
+
+  Stability & performance fixes
+  - Fixed a crash when a locale has incomplete string arrays indexed by enum ordinal (#1524)
+  - Fixed a crash from an uncaught timeout while fetching Maya fiat rates (#1524)
+  - Fixed a crash opening single-transaction CoinJoin and CrowdNode groups from the transaction list (#1524)
+  - Fixed black "Enter PIN" text on the lock screen in dark mode (#1524)
+  - Fixed an ANR caused by touching the dashj wallet on the main thread once a second (#1524)
+  - Explore Dash: scoped deferred view work and timers to the view lifecycle to prevent crashes after the view is destroyed (#1524)
+  - Scanner: keep the close button reachable and leave the scanner when camera access is refused (#1550)
+  - Close Imgur responses and log the response body when a profile picture upload fails (#1524)
+
+  Maintenance
+  - Updated to dashj 22.0.5 and dpp 4.0.1
+  - Upgraded Material Components to 1.14.0 (#1527)
+  - Upgraded AGP to 8.13.2 and Gradle to 8.13 (#1528)
+  - Write a SHA-256 checksum file next to each assembled APK (#1518)
+  - Fastlane: upgraded to 2.237 and added a qa lane that distributes QA builds to Firebase without CI (#1517, #1562)
+  - Updated GitHub actions (#1494)
+  - Translation updates, including the missing DE, PL, IT, FR, RU, ES, PT strings
+
 v11.9.0
   New features & redesigns
   - Dash DEX: new decentralized exchange integration powered by SwapKit (#1489, #1493)
