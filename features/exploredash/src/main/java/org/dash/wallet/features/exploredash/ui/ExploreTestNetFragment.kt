@@ -24,6 +24,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -31,6 +32,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.freshReceiveAddressStringOffMain
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
@@ -55,7 +57,18 @@ class ExploreTestNetFragment : Fragment(R.layout.fragment_explore_testnet) {
             // Off-main: dashj's freshReceiveAddress() forces a synchronous
             // full-wallet save — never run it on a click listener's thread.
             viewLifecycleOwner.lifecycleScope.launch {
-                val receiveAddress = walletDataProvider.freshReceiveAddressStringOffMain()
+                val receiveAddress = try {
+                    walletDataProvider.freshReceiveAddressStringOffMain()
+                } catch (ex: ReceiveAddressUnavailableException) {
+                    // Copying the held dashj chain's frozen address would point
+                    // the faucet at an already-paid address (SR-03).
+                    Toast.makeText(
+                        requireContext(),
+                        org.dash.wallet.common.R.string.loading_error,
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
                 val clipboardManager =
                     requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 

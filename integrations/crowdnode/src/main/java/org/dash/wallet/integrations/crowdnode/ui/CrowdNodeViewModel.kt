@@ -39,6 +39,7 @@ import org.dash.wallet.common.observeTotalDashBalance
 import org.dash.wallet.common.payments.parsers.DashUri
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BalanceUIState
@@ -408,7 +409,20 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     private suspend fun resetAddressAndApi() {
-        _accountAddress.value = createNewAccountAddress()
+        // Contained HERE rather than at each of the four viewModelScope.launch
+        // entry points (resetSignUp/retrySignup/resetAddress/…), all of which are
+        // bare launches that would crash on a throw. A CrowdNode account address
+        // taken from the held dashj chain would be its frozen, already-paid
+        // address (SR-03) and would be persisted as the account's identity, so
+        // failing to reset is much better than resetting onto a bad address —
+        // the existing apiError surface carries it to the UI.
+        val address = try {
+            createNewAccountAddress()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            crowdNodeApi.apiError.value = ex
+            return
+        }
+        _accountAddress.value = address
         crowdNodeApi.reset()
     }
 

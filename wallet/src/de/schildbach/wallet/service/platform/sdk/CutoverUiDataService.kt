@@ -2540,6 +2540,41 @@ class CutoverUiDataService internal constructor(
      * Take the binding and a read ticket together, or null when nothing is bound.
      * Called before the blocking FFI read; the lock is never held across it.
      */
+    /**
+     * [beginReceiveRead], but WAITING briefly for the binding when the cutover is
+     * active and no wallet is bound yet.
+     *
+     * That window — cutover flag on, `awaitBoundWallet` not yet resolved — is the
+     * dominant reason a live read comes back empty, and an empty answer sends the
+     * caller to the held dashj chain's frozen address, i.e. straight back into
+     * SR-03. Waiting is the honest response: the wallet genuinely has no address
+     * it can safely advertise until the engine binds, and these accessors are
+     * contractually off-main, so a short wait costs a spinner rather than a wrong
+     * address. Pre-cutover it never waits, because dashj owns the chain and
+     * answers immediately.
+     */
+    private fun beginReceiveReadAwaitingBinding(
+        timeoutMs: Long = BINDING_WAIT_MS
+    ): Triple<Long, Long, String>? {
+        val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+        while (true) {
+            beginReceiveRead()?.let { return it }
+            // Not bound. Only worth waiting while the cutover is actually active;
+            // otherwise dashj is the rightful owner and the caller should use it.
+            if (!_cutoverActive.value) return null
+            if (System.nanoTime() >= deadline) {
+                log.warn("no SDK wallet bound after {}ms; the caller must fail closed", timeoutMs)
+                return null
+            }
+            try {
+                Thread.sleep(BINDING_POLL_MS)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                return null
+            }
+        }
+    }
+
     private fun beginReceiveRead(): Triple<Long, Long, String>? = synchronized(receiveAddressLock) {
         if (!_cutoverActive.value) return null
         val walletIdHex = activeWalletIdHex ?: return null
@@ -2730,7 +2765,7 @@ class CutoverUiDataService internal constructor(
         // Takes a ticket like the receive reads so the binding check is identical,
         // but publishes nothing — there is no cache on this side, so ordering
         // between two of these cannot matter.
-        val (generation, _, walletIdHex) = beginReceiveRead() ?: return null
+        val (generation, _, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
         val address = source.nextChangeAddressOrNull(walletIdHex)
         return synchronized(receiveAddressLock) {
             // The wallet was wiped or rolled back while we were blocked: this
@@ -2756,7 +2791,7 @@ class CutoverUiDataService internal constructor(
         // Capture the binding and its generation together, then read OUTSIDE the
         // lock — holding it across a blocking FFI call would make every
         // deactivation wait on the engine's wallet-manager lock.
-        val (generation, ticket, walletIdHex) = beginReceiveRead() ?: return null
+        val (generation, ticket, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
         val address = source.nextReceiveAddressOrNull(walletIdHex)
         // A failed read leaves the last known value in place rather than clearing
         // it (an empty cache sends the synchronous overlay back to the frozen
@@ -4312,6 +4347,17 @@ class CutoverUiDataService internal constructor(
     }
 
     companion object {
+        /**
+         * How long a LIVE receive-address read waits for the SDK wallet to bind
+         * before giving up and letting the caller fail closed. Covers a normal
+         * post-cutover bind (sub-second once the engine is up) and a retrying one,
+         * without leaving a screen apparently hung.
+         */
+        internal const val BINDING_WAIT_MS = 5_000L
+
+        /** Poll granularity for [BINDING_WAIT_MS]. */
+        internal const val BINDING_POLL_MS = 50L
+
         internal const val REFRESH_INTERVAL_MS = 60_000L
 
         /**

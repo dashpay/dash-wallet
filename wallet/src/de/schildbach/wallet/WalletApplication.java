@@ -91,6 +91,7 @@ import org.dash.wallet.common.data.OnboardingState;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.transactions.TransactionWrapperFactory;
@@ -2423,22 +2424,20 @@ public class WalletApplication extends MultiDexApplication
      * CoinJoin-combine destinations: those are self-transfers and must never be
      * paid to an advertised address — see {@link #unadvertisedDestinationLive()}.
      *
-     * <p><b>KNOWN GAP.</b> When the engine has no answer this falls back to
-     * {@link #currentReceiveAddress()}, and that in turn falls back to the HELD
-     * dashj chain once the cache is also cold — which is the frozen,
-     * already-paid address SR-03 is about. The window is real: between the
-     * cutover flag going active and {@code awaitBoundWallet} resolving,
-     * {@code sdkReceiveAddressLiveBlockingOrNull} answers null with nothing
-     * cached, and a failing/retrying bind widens it.
+     * <p><b>FAILS CLOSED after cutover.</b> There is no safe fallback on that
+     * side: the dashj chain is HELD, so its "current" pointer is frozen wherever
+     * the restore left it — the already-paid address SR-03 is about — and
+     * {@link #currentReceiveAddress()} would serve exactly that once the cache is
+     * cold. Documenting the hazard was not enough, because the Receive UI, the
+     * URI/BIP70 handlers and the integration deposit paths would still advertise
+     * it. So post-cutover this throws {@link ReceiveAddressUnavailableException}
+     * and callers surface a retry.
      *
-     * <p>Closing it means these accessors failing closed the way
-     * {@link #unadvertisedDestinationLive()} does, which needs an explicit
-     * "receive address unavailable" path at ~14 call sites (the Receive screen,
-     * the BIP70/URI handlers and every exchange-integration deposit address),
-     * most of which today call from a bare {@code lifecycleScope.launch} with no
-     * failure handling. That is a design change rather than a patch, so it is
-     * recorded here instead of half-applied — replacing a reused address with an
-     * app crash would be worse.
+     * <p>The underlying read first waits briefly for the engine to bind, so the
+     * common initialization window resolves into a short wait rather than a
+     * failure; the throw is for genuinely unavailable states.
+     *
+     * <p>Pre-cutover it returns the dashj answer unchanged.
      *
      * <p>BLOCKS: off-main callers only. See {@code WalletData.currentReceiveAddressLive}.
      */
@@ -2446,7 +2445,24 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public Address currentReceiveAddressLive() {
         final Address live = liveSdkReceiveAddressOrNull();
-        return live != null ? live : currentReceiveAddress();
+        if (live != null) {
+            return live;
+        }
+        requireNoEngineAddressExpected("current");
+        return currentReceiveAddress();
+    }
+
+    /**
+     * Throw if the cutover is active, i.e. if an engine answer was required and
+     * did not arrive. Checked AFTER the SDK read so a cutover committing during
+     * the read is honoured rather than raced.
+     */
+    private void requireNoEngineAddressExpected(final String which) {
+        if (cutoverUiDataService != null && cutoverUiDataService.isCutoverActive()) {
+            throw new ReceiveAddressUnavailableException(
+                    "no engine " + which + " receive address after cutover; refusing to serve the "
+                            + "held dashj chain's frozen address");
+        }
     }
 
     /**
@@ -2462,7 +2478,11 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public Address freshReceiveAddressLive() {
         final Address live = liveSdkReceiveAddressOrNull();
-        return live != null ? live : freshReceiveAddress();
+        if (live != null) {
+            return live;
+        }
+        requireNoEngineAddressExpected("fresh");
+        return freshReceiveAddress();
     }
 
     /**

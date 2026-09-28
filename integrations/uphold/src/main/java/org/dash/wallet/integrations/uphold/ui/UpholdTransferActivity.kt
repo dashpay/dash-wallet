@@ -26,6 +26,7 @@ import android.text.style.ImageSpan
 import android.view.Gravity
 import android.view.MenuItem
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
@@ -39,6 +40,7 @@ import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.services.ConfirmTransactionService
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
@@ -140,7 +142,19 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     private fun showPaymentConfirmation(amount: Dash) = lifecycleScope.launch {
         // Off-main: this is reached from a Main-thread observer, and dashj's
         // freshReceiveAddress() forces a synchronous full-wallet save.
-        val receiveAddress = walletDataProvider.freshReceiveAddressStringOffMain()
+        val receiveAddress = try {
+            walletDataProvider.freshReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            // Withdrawing from Uphold to the held dashj chain's frozen address
+            // would send the funds to an already-paid address (SR-03). Abandon
+            // the confirmation; the user can retry.
+            Toast.makeText(
+                this@UpholdTransferActivity,
+                org.dash.wallet.common.R.string.loading_error,
+                Toast.LENGTH_LONG
+            ).show()
+            return@launch
+        }
 
         withdrawalDialog = UpholdWithdrawalHelper(
             BigDecimal(balance.toPlainString()),

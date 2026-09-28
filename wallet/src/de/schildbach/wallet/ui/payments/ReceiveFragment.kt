@@ -46,6 +46,8 @@ import de.schildbach.wallet.util.toNeutralCoin
 import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
+import android.widget.Toast
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 // RequestCoinsFragment in Bitcoin Wallet has the code for Bluetooth support (sharing addresses)
 @AndroidEntryPoint
@@ -86,10 +88,22 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
             // freshReceiveAddress() forces a synchronous full-wallet save
             // (measured 1.2s at 215 friend chains) — see freshReceiveAddressOffMain.
             viewLifecycleOwner.lifecycleScope.launch {
-                val address = walletData.freshReceiveAddressOffMain()
-                val dialogFragment =
-                    ReceiveDetailsDialog.createDialog(address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat())
-                dialogFragment.show(requireActivity())
+                try {
+                    val address = walletData.freshReceiveAddressOffMain()
+                    val dialogFragment = ReceiveDetailsDialog.createDialog(
+                        address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat()
+                    )
+                    dialogFragment.show(requireActivity())
+                } catch (ex: ReceiveAddressUnavailableException) {
+                    // No safe address to put in the request — see
+                    // PaymentsReceiveFragment. Better no invoice than one the
+                    // chain has already paid.
+                    Toast.makeText(
+                        requireContext(),
+                        org.dash.wallet.common.R.string.loading_error,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }

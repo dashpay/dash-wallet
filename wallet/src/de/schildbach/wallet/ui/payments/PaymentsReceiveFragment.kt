@@ -48,6 +48,11 @@ import de.schildbach.wallet.util.toNeutralCoin
 import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
+import android.widget.Toast
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger(PaymentsReceiveFragment::class.java)
 
 @AndroidEntryPoint
 class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
@@ -114,8 +119,22 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             // get current address is much faster, because the wallet doesn't need to be saved
-            val freshAddress = viewModel.getCurrentAddress()
-            binding.receiveInfo.setInfo(freshAddress.toBase58(), null)
+            try {
+                val freshAddress = viewModel.getCurrentAddress()
+                binding.receiveInfo.setInfo(freshAddress.toBase58(), null)
+            } catch (ex: ReceiveAddressUnavailableException) {
+                // Post-cutover the engine could not answer, and there is no safe
+                // substitute — the held dashj chain's pointer is frozen on an
+                // address the wallet has already been paid on (SR-03). Advertise
+                // nothing and let the user retry by reopening the screen.
+                log.warn("receive address unavailable; showing an error instead of an address", ex)
+                Toast.makeText(
+                    requireContext(),
+                    org.dash.wallet.common.R.string.loading_error,
+                    Toast.LENGTH_LONG
+                ).show()
+                findNavController().popBackStack()
+            }
         }
     }
 }

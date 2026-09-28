@@ -30,6 +30,7 @@ import org.dash.wallet.common.currentReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toDash
@@ -682,7 +683,15 @@ class SwapKitApiAggregator @Inject constructor(
         // until funded and still wallet-owned, so any NEAR refund is recoverable. Safe now
         // that disableBuildTx=true skips SwapKit's per-address balance check — the only
         // reason the max-balance address was originally required.
-        val sourceAddress = walletDataProvider.currentReceiveAddressStringOffMain()
+        val sourceAddress = try {
+            walletDataProvider.currentReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            // Reporting the held dashj chain's frozen address as the source would
+            // both leak an already-paid address to SwapKit and make any NEAR
+            // refund land there (SR-03). Fail the quote the same way a missing
+            // wallet does.
+            return ResponseResource.Failure(MayaException("receive address unavailable"), false, 0, null)
+        }
 
         val quote = webApi.getQuote(
             SwapKitQuoteRequest(
@@ -865,7 +874,11 @@ class SwapKitApiAggregator @Inject constructor(
         // quote createBuyOrder would, but stop before /v3/swap (no deposit address is created).
         // The converted DASH lands in the wallet, so the destination is our own receive address;
         // the caller passes the asset's example address as the refund/source address.
-        val destinationAddress = walletDataProvider.currentReceiveAddressStringOffMain()
+        val destinationAddress = try {
+            walletDataProvider.currentReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            return ResponseResource.Failure(MayaException("receive address unavailable"), false, 0, null)
+        }
         return when (
             val result = requestBuyRoute(sellAsset, sellAmount, refundAddress, destinationAddress)
         ) {

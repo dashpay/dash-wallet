@@ -1666,6 +1666,29 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun liveReadWaitsForTheBindingRatherThanAnsweringEmpty() = runTest {
+        // The window the fail-closed change exists for: the cutover flag is on but
+        // no wallet is bound yet. Answering null here sends the caller to the HELD
+        // dashj chain's frozen address, which is SR-03. The read waits instead, so
+        // the ordinary initialization case resolves into a short wait.
+        val source = FakeSource(boundWalletId = null, balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        // Nothing bound: the read must not answer, and must not answer instantly.
+        val startedAt = System.nanoTime()
+        val answer = service.sdkReceiveAddressLiveBlockingOrNull()
+        val waitedMs = (System.nanoTime() - startedAt) / 1_000_000
+
+        assertNull("an unbound wallet must not yield an address", answer)
+        assertTrue(
+            "the read must WAIT for the binding, not answer empty immediately (waited ${waitedMs}ms)",
+            waitedMs >= CutoverUiDataService.BINDING_WAIT_MS / 2
+        )
+    }
+
+    @Test
     fun unadvertisedDestinationNeverFallsBackToTheWarmReceiveCache() = runTest {
         // The dangerous shape: the RECEIVE cache is warm (so anything that falls
         // back through the overlaid freshReceiveAddress() would get the

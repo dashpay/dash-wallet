@@ -36,6 +36,7 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.NetworkStateInt
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
@@ -195,7 +196,20 @@ class DEXRefundAddressViewModel @Inject constructor(
             // needs (it touches the keychain, and post-cutover the SDK engine) and
             // is what makes this the engine's next UNUSED address rather than the
             // held dashj chain's frozen pointer — see SR-03 / D-003.
-            val destinationAddress = walletDataProvider.currentReceiveAddressStringOffMain()
+            val destinationAddress = try {
+                walletDataProvider.currentReceiveAddressStringOffMain()
+            } catch (ex: ReceiveAddressUnavailableException) {
+                // The converted DASH would land on the held dashj chain's frozen
+                // address (SR-03). Surface the screen's own error rather than
+                // placing an order we cannot receive safely.
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        orderErrorRes = org.dash.wallet.common.R.string.loading_error
+                    )
+                }
+                return@launch
+            }
             when (
                 val result = swapProvider.createBuyOrder(state.asset, sellAmount, destinationAddress, validAddress)
             ) {

@@ -46,6 +46,8 @@ import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseBuyDashViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseBuyUIState
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
+import android.widget.Toast
 
 @AndroidEntryPoint
 class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_review) {
@@ -84,10 +86,23 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
 
         binding.confirmBtnContainer.setOnClickListener {
             lifecycleScope.launch {
-                if (tryBuyDash()) {
-                    val params = viewModel.getTransferDashParams()
-                    val twoFaParams = CoinbaseTransactionParams(params, TransactionType.BuyDash)
-                    safeNavigate(CoinbaseOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToTwoFaCode(twoFaParams))
+                try {
+                    if (tryBuyDash()) {
+                        val params = viewModel.getTransferDashParams()
+                        val twoFaParams = CoinbaseTransactionParams(params, TransactionType.BuyDash)
+                        safeNavigate(
+                            CoinbaseOrderReviewFragmentDirections
+                                .coinbaseBuyDashOrderReviewToTwoFaCode(twoFaParams)
+                        )
+                    }
+                } catch (ex: ReceiveAddressUnavailableException) {
+                    // The buy would deposit to the held dashj chain's frozen
+                    // address (SR-03). Stop before the 2FA step.
+                    Toast.makeText(
+                        requireContext(),
+                        org.dash.wallet.common.R.string.loading_error,
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }

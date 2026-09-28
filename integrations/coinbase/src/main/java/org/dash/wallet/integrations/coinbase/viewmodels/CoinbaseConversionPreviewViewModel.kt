@@ -38,6 +38,7 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @HiltViewModel
 class CoinbaseConversionPreviewViewModel @Inject constructor(
@@ -90,13 +91,21 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             Dash.ZERO
                         }
                     } else {
+                        // The enclosing try/catch above covers only the sell branch.
+                        // Without an address the converted DASH would be sent to the
+                        // held dashj chain's frozen, already-paid address (SR-03), so
+                        // fail the commit the same way an empty trade does.
+                        val depositAddress = try {
+                            walletDataProvider.freshReceiveAddressStringOffMain()
+                        } catch (ex: ReceiveAddressUnavailableException) {
+                            commitSwapTradeFailureState.call()
+                            return@launch
+                        }
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
-                            // Off-main: this launch runs on Main, and the underlying
-                            // freshReceiveAddress() forces a synchronous full-wallet save.
-                            to = walletDataProvider.freshReceiveAddressStringOffMain(),
+                            to = depositAddress,
                             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this

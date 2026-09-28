@@ -38,6 +38,8 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
+import android.widget.Toast
 
 @AndroidEntryPoint
 class BuyAndSellIntegrationsFragment : Fragment() {
@@ -67,9 +69,21 @@ class BuyAndSellIntegrationsFragment : Fragment() {
                         },
                         onTopperClick = {
                             lifecycleScope.launch {
-                                val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-                                viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
-                                requireActivity().openCustomTab(uri)
+                                try {
+                                    val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+                                    viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
+                                    requireActivity().openCustomTab(uri)
+                                } catch (ex: ReceiveAddressUnavailableException) {
+                                    // No safe deposit address: sending the user to
+                                    // Topper with the held dashj chain's frozen
+                                    // address would have them buy into an
+                                    // already-paid address (SR-03).
+                                    Toast.makeText(
+                                        requireContext(),
+                                        org.dash.wallet.common.R.string.loading_error,
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             }
                         },
                         onUpholdClick = {

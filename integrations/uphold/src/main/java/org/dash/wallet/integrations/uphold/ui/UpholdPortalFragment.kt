@@ -25,6 +25,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -34,6 +35,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -109,9 +111,18 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
 
         binding.buyBtn.setOnClickListener {
             lifecycleScope.launch {
-                val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-                viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
-                requireActivity().openCustomTab(uri)
+                try {
+                    val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+                    viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
+                    requireActivity().openCustomTab(uri)
+                } catch (ex: ReceiveAddressUnavailableException) {
+                    // See BuyAndSellIntegrationsFragment: no safe deposit address.
+                    Toast.makeText(
+                        requireContext(),
+                        org.dash.wallet.common.R.string.loading_error,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
         binding.transferBtn.setOnClickListener {
