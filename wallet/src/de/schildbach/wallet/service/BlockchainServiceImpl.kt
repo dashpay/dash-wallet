@@ -587,6 +587,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
 
+    internal fun refuseWalletInitialization() {
+        // Commands and teardown await this latch even when initialization is refused.
+        onCreateCompleted.complete(Unit)
+        stopSelf()
+    }
+
     /**
      * True once [onCreate]'s init coroutine ran to its end with a wallet.
      * [onCreateCompleted] cannot say this: the refusal and failure paths
@@ -2420,7 +2426,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val wallet = application.wallet
                 if (wallet == null || application.isWalletLoadDegraded) {
                     log.warn("onCreate: wallet is unavailable or degraded, service cannot continue")
-                    withContext(Dispatchers.Main) { stopSelf() }
+                    withContext(Dispatchers.Main) { refuseWalletInitialization() }
                     return@launch
                 }
                 // Phase 5d: resolve the cutover engine gate ONCE, before we
