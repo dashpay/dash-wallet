@@ -57,7 +57,8 @@ public class AnrException extends Exception {
     }
 
     /**
-     * Logs the current process and all its threads
+     * Logs the saved stack of the unresponsive thread. The full process map is
+     * available through {@link #printProcessMap(PrintStream)}.
      */
     public void logProcessMap() {
         // Log only the unresponsive thread's stack, not every thread in the

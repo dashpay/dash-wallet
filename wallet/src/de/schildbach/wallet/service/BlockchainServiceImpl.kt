@@ -476,12 +476,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
 
         /**
-         * `SystemClock.elapsedRealtime()` at which the active [cleanupDeferred]
-         * was created; 0 until the first destroy. Read by the onCreate guard to
-         * measure how long a refused start has been waiting on a cleanup that
-         * never finishes.
+         * How long the cleanup that currently owns [isCleaningUp] has been
+         * running. Read by the onCreate guard to measure how long a refused
+         * start has been waiting on a cleanup that never finishes.
          */
-        private val cleanupStartedAtMs = AtomicLong(0)
+        private val cleanupClock = CleanupDeadlockClock { SystemClock.elapsedRealtime() }
 
         /**
          * Plan §37: how long a previous instance's cleanup may stay unfinished
@@ -510,6 +509,35 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          *
          * Pure, so both axes are pinned by test.
          */
+        /**
+         * The deadlock clock for the cleanup that owns [isCleaningUp] (review,
+         * 2026-09-28). It starts the moment a cleanup CLAIMS ownership, before
+         * that cleanup waits for its instance's initialization: a cleanup stuck
+         * in that wait is exactly as stuck, and used to read as 0 ms, so a
+         * refused start never reached the exit bound. It is cleared by the same
+         * owner when it finishes, by compare-and-set on the token [start]
+         * returned, so a finished cleanup's start time can never be charged to
+         * a later one (that used to end the process early), and a late finish
+         * cannot clear a newer owner's clock.
+         */
+        internal class CleanupDeadlockClock(private val nowMs: () -> Long) {
+            private val startedAtMs = AtomicLong(0L)
+
+            /** Start the clock for a cleanup that just claimed ownership; returns its token. */
+            fun start(): Long = nowMs().coerceAtLeast(1L).also { startedAtMs.set(it) }
+
+            /** The owner holding [token] finished; clears the clock unless a newer owner restarted it. */
+            fun finish(token: Long) {
+                startedAtMs.compareAndSet(token, 0L)
+            }
+
+            /** How long the current owner has been running, or 0 with no cleanup in progress. */
+            fun stuckForMs(): Long {
+                val startedAt = startedAtMs.get()
+                return if (startedAt == 0L) 0L else (nowMs() - startedAt).coerceAtLeast(0L)
+            }
+        }
+
         @JvmStatic
         fun decideOnCleanupDeadlock(stuckForMs: Long, appVisible: Boolean): CleanupDeadlockAction =
             if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS && !appVisible) {
@@ -2330,8 +2358,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // finish. With the app in the background, end the process so
                     // the next start gets a clean one; stopSelf alone left the
                     // engine off for four hours on 2026-09-22.
-                    val startedAt = cleanupStartedAtMs.get()
-                    val stuckForMs = if (startedAt == 0L) 0L else SystemClock.elapsedRealtime() - startedAt
+                    val stuckForMs = cleanupClock.stuckForMs()
                     val appVisible = AppForegroundMonitor.isForeground.value
                     if (decideOnCleanupDeadlock(stuckForMs, appVisible) == CleanupDeadlockAction.EXIT_PROCESS) {
                         log.error(
@@ -3111,6 +3138,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 cleanupMonitorJob.cancel()
                 return@launch
             }
+            // The deadlock clock starts at the claim, before the wait for
+            // initialization below, and is cleared by this owner in finally.
+            val cleanupClockToken = cleanupClock.start()
 
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
@@ -3121,7 +3151,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val existingCleanup = cleanupDeferred
                 if (existingCleanup == null || existingCleanup.isCompleted) {
                     cleanupDeferred = CompletableDeferred()
-                    cleanupStartedAtMs.set(SystemClock.elapsedRealtime())
                     log.info("Created new cleanupDeferred for coordination (previous was {})",
                         if (existingCleanup == null) "null" else "completed")
                 } else {
@@ -3245,11 +3274,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")
                         // The Kotlin-SDK engines must be provably down before the wipe
-                        // deletes app data. DEBUG builds deliberately skip the engine
-                        // stops in platformSyncService.shutdown() above (warm-SPV
-                        // battery trade-off for testing) — this explicit stop keeps the
-                        // wipe path safe on every build type (no-op when already
-                        // stopped, as on release where shutdown() stopped them).
+                        // deletes app data. platformSyncService.shutdown() above already
+                        // stops them on every build type; this explicit stop keeps the
+                        // wipe independent of that path (a no-op when already stopped).
                         platformSyncService.stopSdkEngines()
                         // Suspends for as long as the wipe takes (nearly two
                         // minutes of SDK cleanup on a live mainnet wallet)
@@ -3271,6 +3298,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (checkMutex.isLocked) {
                     checkMutex.unlock()
                 }
+                cleanupClock.finish(cleanupClockToken)
                 isCleaningUp.set(false)
                 pendingDestroys.decrementAndGet()
                 cleanupDeferred?.complete(Unit)
