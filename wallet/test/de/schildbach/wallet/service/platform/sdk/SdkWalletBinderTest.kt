@@ -1873,7 +1873,10 @@ class SdkWalletBinderTest {
 
     // -- Step 4c: one-shot address-window heal ------------------------------
 
-    /** A config whose gap-widened version behaves like the real store. */
+    /** The owed-rescan flag as the store holds it; [healConfig] reads and writes it. */
+    private var owedRescan: Boolean? = null
+
+    /** A config whose gap-widened version (and owed-rescan flag) behave like the real store. */
     private fun healConfig(recordedVersion: Int? = null): Pair<DashPayConfig, () -> Int?> {
         var recorded: Int? = recordedVersion
         val config = dashPayConfig(readsFlag = true)
@@ -1881,6 +1884,9 @@ class SdkWalletBinderTest {
         coEvery {
             config.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, any())
         } answers { recorded = secondArg() }
+        coEvery { config.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) } answers { owedRescan }
+        coEvery { config.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, any()) } answers { owedRescan = secondArg() }
+        coEvery { config.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) } answers { owedRescan = null }
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) } returns Unit
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) } returns Unit
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) } returns Unit
@@ -1944,6 +1950,9 @@ class SdkWalletBinderTest {
         binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
         assertEquals(2, sdk.widenCalls)
         assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+        // The heal's own rewind to birth pays the debt the failure recorded.
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(owedRescan)
     }
 
     /**
@@ -1965,6 +1974,66 @@ class SdkWalletBinderTest {
         assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
         coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
         coVerify(exactly = 0) { config.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, any()) }
+    }
+
+    /**
+     * Review, 2026-09-27 (CodeRabbit): on a wallet that healed long ago, a
+     * failed widening let that session scan at the default windows, and the
+     * next launch's successful widening skipped the heal — nothing ever
+     * re-scanned the blocks that session covered. The failure now leaves a
+     * persisted debt that the next successful widening pays by arming the
+     * rescan, exactly once.
+     */
+    @Test
+    fun bind_alreadyHealed_failedWiden_owesARescan_paidByTheNextSuccessfulWiden() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, recordedVersion) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.widenCalls)
+        assertEquals("nothing to arm while the windows are still narrow", 0, sdk.armRescanCalls)
+        assertEquals(true, owedRescan)
+
+        // Next launch: the widening succeeds and the debt is paid.
+        sdk.onWiden = { true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(owedRescan)
+        // The heal itself is not re-run: version and coverage untouched.
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+
+        // Paid once: a third launch arms nothing.
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun bind_alreadyHealed_owedRescanArmFails_keepsTheDebtForTheNextLaunch() = runBlocking {
+        val sdk = readySdk()
+        sdk.onArmRescan = { _, _ -> false }
+        owedRescan = true
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+        assertEquals("a failed arm must not clear the debt", true, owedRescan)
+
+        sdk.onArmRescan = { _, _ -> true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(2, sdk.armRescanCalls)
+        assertNull(owedRescan)
+    }
+
+    @Test
+    fun bind_widenThrows_alsoOwesARescan() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { throw IllegalStateException("ffi failure") }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(true, owedRescan)
     }
 
     @Test
