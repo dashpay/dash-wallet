@@ -86,8 +86,8 @@ class CreateUsernameActivity : LockScreenActivity() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         setContentView(R.layout.activity_create_username)
         val action = when (intent?.action) {

@@ -198,6 +198,7 @@
     <string name="purchase_gift_card_details">ギフトカードの詳細</string>
     <string name="purchase_original_purchase">当初の購入額</string>
     <string name="purchase_check_current_balance">カード情報を確認する</string>
+    <string name="purchase_redeem_url_challange">チャレンジ</string>
     <string name="purchase_card_number">カード番号</string>
     <string name="purchase_card_pin">カードの暗証番号</string>
     <string name="purchase_view_transaction">取引明細を見る</string>

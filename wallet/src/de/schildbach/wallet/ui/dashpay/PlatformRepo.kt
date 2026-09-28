@@ -179,13 +179,22 @@ class PlatformRepo @Inject constructor(
     }
 
     fun getVoteContenders(username: String): Contenders {
+        return getVoteContendersOrNull(username) ?: Contenders(Optional.empty(), mapOf(), 0, 0)
+    }
+
+    /**
+     * Like [getVoteContenders], but returns null when the ballot could not be read instead of an
+     * empty result, which is indistinguishable from a name that has no vote at all.
+     */
+    fun getVoteContendersOrNull(username: String): Contenders? {
         return try {
             val watch = Stopwatch.createStarted()
             val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
             log.info("getVoteContenders took {}", watch)
             contenders
         } catch (e: Exception) {
-            Contenders(Optional.empty(), mapOf(), 0, 0)
+            log.warn("getVoteContenders failed for {}", username, e)
+            null
         }
     }
 

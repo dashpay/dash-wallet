@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Bumili ng &amp; Ibenta</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash DEX</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Tumanggap</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">I-import ang private key</string>
@@ -297,11 +299,15 @@
     <string name="about_review_and_rate">Suriin at i-rate ang app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
+    <string name="about_copyright">Copyright © %1$d Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Pag-sync ng device sa huling Explore</string>
     <string name="about_last_explore_server_update">Huling pag-update ng server ng Explore</string>
+    <string name="about_app_version_label">Bersyon ng app</string>
+    <string name="about_platform_label">Plataporma</string>
     <string name="about_explore_section">Galugarin ang Dash</string>
+    <string name="about_explore_update">Pag-update</string>
     <string name="about_last_device_sync">Huling pag-sync ng device</string>
     <string name="about_last_server_update">Huling pag-update ng server</string>
     <string name="about_value_not_available">Hindi available</string>

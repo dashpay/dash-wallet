@@ -97,6 +97,8 @@ fun ActionItem(
      * Width-measured so it stays correct at any font scale, unlike a fixed character count.
      */
     subtitleMiddleEllipsis: Boolean = false,
+    /** Maximum lines for the end-ellipsized [subtitle]; ignored when [subtitleMiddleEllipsis] is set. */
+    subtitleMaxLines: Int = 1,
     /** Leading-slot drawable, rendered at the slot's 30dp size. */
     @DrawableRes icon: Int? = null,
     /** Custom leading slot (e.g. a Coil AsyncImage for coin logos); used when [icon] is null. */
@@ -167,7 +169,7 @@ fun ActionItem(
                         text = it,
                         style = MyTheme.Typography.Footnote,
                         color = colors.textSecondary,
-                        maxLines = 1,
+                        maxLines = subtitleMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth()
                     )

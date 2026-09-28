@@ -105,8 +105,10 @@ Dash</b> anda</string>
     <string name="search_user_no_results">Tidak ada pengguna yang cocok</string>
     <string name="search_user_loading">Mencari nama pengguna <b>"%"</b> di jaringan Dash</string>
     <string name="contact_request_pending">Permintaan Kontak Tertunda</string>
+    <string name="send_button_label">Kirim</string>
     <string name="pay">Bayar</string>
     <string name="contact_request_received_title">%s telah meminta pertemanan</string>
+    <string name="contact_request_received_card_title">%s telah minhirim anda permintaan kontak</string>
     <string name="contact_request_accept">Terima</string>
     <string name="contact_request_ignore">Abaikan</string>
 
@@ -544,4 +546,12 @@ Dash</b> anda</string>
     <string name="create_instant_username_button">Buat Nama Instan</string>
     <string name="create_instant_username_cancel">Batal</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Pindai QR</string>
+    <string name="dash_connect_status_disconnected">Terputus</string>
+    <string name="dash_connect_approve_verify_identity">Verifikasi identitas Anda</string>
+    <string name="dash_connect_username">Nama pengguna</string>
+    <string name="dash_connect_identity">Identitas</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Tarik dana</string>
+    <string name="dash_connect_deny">Tolak</string>
+    <string name="dash_connect_confirm">Memastikan</string>
+    </resources>

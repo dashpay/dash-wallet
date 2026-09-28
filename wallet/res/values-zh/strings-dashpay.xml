@@ -105,8 +105,10 @@
     <string name="search_user_no_results">没有找到匹配用户</string>
     <string name="search_user_loading">在 Dash 网络正在搜索用户名 <b>"%"</b> </string>
     <string name="contact_request_pending">朋友申请等待中</string>
+    <string name="send_button_label">发送</string>
     <string name="pay">支付</string>
     <string name="contact_request_received_title">%s已被邀请成为好友</string>
+    <string name="contact_request_received_card_title">%s向您发送了好友请求</string>
     <string name="contact_request_accept">同意</string>
     <string name="contact_request_ignore">忽略</string>
 
@@ -544,4 +546,12 @@
     <string name="create_instant_username_button">创建即时用户名</string>
     <string name="create_instant_username_cancel">取消</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">扫描二维码</string>
+    <string name="dash_connect_status_disconnected">连接断开</string>
+    <string name="dash_connect_approve_verify_identity">验证您的身份</string>
+    <string name="dash_connect_username">用户名</string>
+    <string name="dash_connect_identity">身份</string>
+    <string name="dash_connect_approve_no_withdraw_funds">提取资金</string>
+    <string name="dash_connect_deny">拒绝</string>
+    <string name="dash_connect_confirm">确认</string>
+    </resources>

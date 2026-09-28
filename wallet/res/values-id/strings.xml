@@ -445,4 +445,8 @@
     <string name="upgrade_pin_description">Siapkan PIN baru</string>
     <string name="upgrade_pin_continue">Teruskan</string>
 
-    </resources>
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Anda punya saldo di CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Dana ini harus ditarik dari CrowdNode. Anda bisa mentransfernya ke dompet ini atau melalui akun online Anda di perangkat lain.</string>
+    <string name="crowdnode_withdraw_funds">Tarik dana</string>
+</resources>

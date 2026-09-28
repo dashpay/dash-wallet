@@ -104,8 +104,10 @@
     <string name="search_user_no_results">該当するユーザーがいません</string>
     <string name="search_user_loading">Dashネットワークで<b>"%"</b>というユーザー名を検索中</string>
     <string name="contact_request_pending">連絡先リクエストを保留中</string>
+    <string name="send_button_label">送金する</string>
     <string name="pay">支払う</string>
     <string name="contact_request_received_title">%sさんが友達リクエストを送信しました</string>
+    <string name="contact_request_received_card_title">%sはあなたに連絡先リクエストを送信しました</string>
     <string name="contact_request_accept">承認</string>
     <string name="contact_request_ignore">無視する</string>
 
@@ -543,4 +545,12 @@
     <string name="create_instant_username_button">インスタントユーザー名を作成する</string>
     <string name="create_instant_username_cancel">キャンセル</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">QRをスキャンする</string>
+    <string name="dash_connect_status_disconnected">切断されました</string>
+    <string name="dash_connect_approve_verify_identity">本人確認を行う</string>
+    <string name="dash_connect_username">ユーザー名</string>
+    <string name="dash_connect_identity">アイデンティティ</string>
+    <string name="dash_connect_approve_no_withdraw_funds">資金を引き出す</string>
+    <string name="dash_connect_deny">拒否する</string>
+    <string name="dash_connect_confirm">確認する</string>
+    </resources>

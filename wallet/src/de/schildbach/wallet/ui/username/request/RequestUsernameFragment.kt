@@ -277,7 +277,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 binding.requestUsernameButton.isEnabled = if (usernameType == UsernameType.Secondary) {
                     !it.usernameExists && !it.usernameContestable
                 } else {
-                    it.enoughBalance && !it.usernameExists
+                    it.enoughBalance && !it.usernameExists && !it.usernameBlocked
                 }
 
                 if (it.usernameRequestSubmitting) {
@@ -458,6 +458,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     }
 
     private fun onContinue() {
+        val username = binding.usernameInput.text.toString()
+        if (!requestUserNameViewModel.hasAvailableResultFor(username)) {
+            // the button state can lag the input; never continue without a current result for this name
+            processUsername(username)
+            return
+        }
         KeyboardUtil.hideKeyboard(requireContext(), binding.usernameInput)
 
         if (requestUserNameViewModel.uiState.value.usernameContestable) {

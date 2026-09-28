@@ -445,4 +445,8 @@
     <string name="upgrade_pin_description">设置一个新PIN</string>
     <string name="upgrade_pin_continue">继续</string>
 
-    </resources>
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">您在 CrowdNode 中有余额</string>
+    <string name="crowdnode_withdrawal_reminder_message">这些资金应该从 CrowdNode 中提取. 您可以将这些资金转移到此钱包或通过您的线上账户到其他设备.</string>
+    <string name="crowdnode_withdraw_funds">提取资金</string>
+</resources>

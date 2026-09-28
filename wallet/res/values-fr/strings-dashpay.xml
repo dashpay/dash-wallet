@@ -104,8 +104,18 @@
     <string name="search_user_no_results">Aucun utilisateur ne correspond</string>
     <string name="search_user_loading">Recherche du nom d\'utilisateur <b>\"%\"</b> sur le réseau Dash</string>
     <string name="contact_request_pending">Demande de contact en attente</string>
+    <string name="send_contact_request_short">Envoyer la demande</string>
+    <string name="contact_request_sent_short">Demande envoyée</string>
+    <string name="send_button_label">Envoyer</string>
+    <string name="contact_history_disclaimer_pending_plain">Une fois que %1$s aura accepté votre demande, vous pourrez payer directement au nom d\'utilisateur</string>
     <string name="pay">Payer</string>
     <string name="contact_request_received_title">%s a demandé à devenir votre ami(e)</string>
+    <string name="contact_request_received_card_title">%s vous a envoyé une demande de contact</string>
+    <string name="contact_request_received_card_message">Si vous ne souhaitez pas que %s figure dans votre liste de contacts, vous pouvez appuyer sur le bouton \"Ignorer\". Cette personne ne sera pas informée de votre décision.</string>
+    <string name="contact_request_row_received">%s vous a envoyé une demande de contact</string>
+    <string name="contact_request_row_sent">Demande de contact envoyée</string>
+    <string name="contact_request_row_established_incoming">Vous avez accepté la demande de %s</string>
+    <string name="contact_request_row_established_outgoing">%s a accepté votre demande de contact</string>
     <string name="contact_request_accept">Accepter</string>
     <string name="contact_request_ignore">Ignorer</string>
 
@@ -542,5 +552,39 @@
     <string name="create_instant_username_description">Le nom d\'utilisateur que vous avez demandé sera soumis à un vote pendant deux semaines. Pour des contacts et des paiements immédiats, vous pouvez créer un nom d\'utilisateur instantané similaire.\n\nSi votre demande est approuvée, le nom d\'utilisateur voté remplacera le nom instantané, tout en conservant vos contacts et votre historique. Dans le cas contraire, vous pourrez continuer à utiliser votre nom d\'utilisateur instantané.</string>
     <string name="create_instant_username_button">Créer un nom d\'utilisateur instantané</string>
     <string name="create_instant_username_cancel">Annuler</string>
+    <string name="dash_connect_connections_title">Connexions</string>
+    <string name="dash_connect_empty_heading">Aucune application connectée pour l\'instant</string>
+    <string name="dash_connect_empty_message">Connectez votre nom d\'utilisateur DashPay aux applications du réseau Dash pour vous connecter sans mot de passe ni compte</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Scanner le QR-code</string>
+    <string name="dash_connect_status_approved">Approuvé</string>
+    <string name="dash_connect_status_active">Actif</string>
+    <string name="dash_connect_status_disconnected">Déconnecté</string>
+    <string name="dash_connect_hint_complete_login">Scannez le QR-code de %1$s pour terminer votre connexion</string>
+    <string name="dash_connect_scan_to_complete_banner">Scannez le QR-code pour terminer le processus de connexion</string>
+    <string name="dash_connect_hint_active">Appuyez pour vous déconnecter à tout moment</string>
+    <string name="dash_connect_hint_log_back_in">Scannez le QR-code de %1$s pour vous reconnecter</string>
+    <string name="dash_connect_approve_title">Approuver la connexion à %1$s ?</string>
+    <string name="dash_connect_approve_will_be_able">Cette application pourra :</string>
+    <string name="dash_connect_approve_see_username">Voir votre nom d\'utilisateur</string>
+    <string name="dash_connect_approve_verify_identity">Vérifier votre identité</string>
+    <string name="dash_connect_username">Nom d\'utilisateur</string>
+    <string name="dash_connect_identity">Identité</string>
+    <string name="dash_connect_approve_no_access">Cette application n\'aura PAS accès à :</string>
+    <string name="dash_connect_approve_no_private_keys">Vos clés privées</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Retirer les fonds</string>
+    <string name="dash_connect_approve">Approuver</string>
+    <string name="dash_connect_deny">Refuser</string>
+    <string name="dash_connect_unknown_app">Application inconnue</string>
+    <string name="dash_connect_login_completed">Connexion terminée</string>
+    <string name="dash_connect_error">Impossible de terminer la demande DashConnect : %1$s</string>
+    <string name="dash_connect_cancel_login_title">Annuler la connexion à %1$s ?</string>
+    <string name="dash_connect_cancel_login_message">La connexion en attente sera abandonnée. Vous pourrez recommencer à tout moment en scannant un nouveau QR-code.</string>
+    <string name="dash_connect_disconnect_title">Se déconnecter de %1$s ?</string>
+    <string name="dash_connect_disconnect_message">L\'application ne pourra plus utiliser votre connexion. Vous pourrez vous reconnecter en scannant un nouveau QR-code.</string>
+    <string name="dash_connect_remove_title">Supprimer %1$s ?</string>
+    <string name="dash_connect_remove_message">La connexion sera supprimée de cette liste. Vous pourrez vous reconnecter à tout moment en scannant un nouveau QR-code.</string>
+    <string name="dash_connect_confirm">Confirmer</string>
+    <string name="dash_connect_testnet_only_heading">Disponible uniquement sur le testnet</string>
+    <string name="dash_connect_testnet_only_message">La connexion DashConnect n\'est pas encore disponible sur le mainnet</string>
+    </resources>

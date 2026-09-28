@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Beli &amp; Jual</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash DEX</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Terima</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Impor kunci pribadi</string>
@@ -294,11 +296,15 @@
     <string name="about_review_and_rate">Tinjau dan beri peringkat aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
+    <string name="about_copyright">Hak Cipta © %1$d Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dompet DashPay %s</string>
     <string name="about_last_explore_device_sync">Sinkronisasi perangkat Explore Terakhir</string>
     <string name="about_last_explore_server_update">Pembaruan server Explore terakhir</string>
+    <string name="about_app_version_label">Versi aplikasi</string>
+    <string name="about_platform_label">Platform</string>
     <string name="about_explore_section">Jelajahi Dash</string>
+    <string name="about_explore_update">Pembaruan</string>
     <string name="about_last_device_sync">Sinkronisasi perangkat terakhir</string>
     <string name="about_last_server_update">Pembaruan server terakhir</string>
     <string name="about_value_not_available">Tak tersedia</string>

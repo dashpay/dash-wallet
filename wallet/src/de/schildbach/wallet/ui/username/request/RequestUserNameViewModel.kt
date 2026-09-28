@@ -42,6 +42,7 @@ import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,6 +84,8 @@ data class RequestUserNameUIState(
     val usernameContested: Boolean = false,
     val usernameExists: Boolean = false,
     val usernameBlocked: Boolean = false,
+    /** The name the availability flags above were checked for, or null when there is no current result. */
+    val checkedUsername: String? = null,
     val enoughBalance: Boolean = false,
     val usernameNonContestedChars: Boolean = false,
     val usernameNonContestedLength: Boolean = false,
@@ -128,6 +131,7 @@ class RequestUserNameViewModel @Inject constructor(
         get() = _walletBalance
 
     private var createUsernameArgs: CreateUsernameArgs? = null
+    private var checkUsernameJob: Job? = null
     private val inviteAssetLockTx = MutableStateFlow<AssetLockTransaction?>(null)
     private val _inviteBalance = MutableStateFlow(Coin.ZERO)
     val inviteBalance: StateFlow<Coin>
@@ -153,14 +157,23 @@ class RequestUserNameViewModel @Inject constructor(
         return hasRequestedName && creationState != IdentityCreationState.NONE && creationState.ordinal <= IdentityCreationState.VOTING.ordinal
     }
 
+    /**
+     * USERNAME_REQUESTED is only written once a contested-name request has a status other than NONE
+     * (see IdentityRepository.updateBlockchainIdentityData). While identity creation is still in
+     * progress (e.g. stuck at USERNAME_REGISTERING) the key is absent, so treat that as "no status".
+     */
+    private suspend fun getUsernameRequestStatus(): UsernameRequestStatus? {
+        return identityConfig.get(USERNAME_REQUESTED)?.let { value ->
+            runCatching { UsernameRequestStatus.valueOf(value) }.getOrNull()
+        }
+    }
+
     suspend fun isUsernameLocked(): Boolean {
-        return isUserNameRequested() &&
-                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOCKED
+        return isUserNameRequested() && getUsernameRequestStatus() == UsernameRequestStatus.LOCKED
     }
 
     suspend fun isUsernameLostAfterVoting(): Boolean {
-        return isUserNameRequested() &&
-                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOST_VOTE
+        return isUserNameRequested() && getUsernameRequestStatus() == UsernameRequestStatus.LOST_VOTE
     }
 
     suspend fun isUsernameInVotingState(): Boolean {
@@ -318,14 +331,19 @@ class RequestUserNameViewModel @Inject constructor(
         viewModelScope.launch {
             withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
+            // If an identity was already registered but the username step failed (lost vote, locked name,
+            // or the domain document was rejected), keep the identity and only register the new name.
             val reuseTransaction = identity?.let {
-                it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+                it.usernameRequested == UsernameRequestStatus.LOCKED ||
+                    it.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
+                    (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
             } ?: false
             triggerIdentityCreation(reuseTransaction)
         }
     }
 
     fun reset() {
+        checkUsernameJob?.cancel()
         _uiState.update { RequestUserNameUIState() }
     }
 
@@ -351,38 +369,69 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Checks whether [requestedUserName] can be registered. A check still running for an earlier
+     * input is cancelled first: its result would otherwise land after this one and describe a name
+     * that is no longer in the input. Cancellation is enough because each result is published from
+     * the main thread right after a withContext() call, which throws once the job is cancelled.
+     */
     fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch {
+        checkUsernameJob?.cancel()
+        checkUsernameJob = viewModelScope.launch {
             requestedUserName?.let { username ->
-                _uiState.update { it.copy(checkingUsername = true) }
+                _uiState.update { it.copy(checkingUsername = true, usernameCheckSuccess = false, checkedUsername = null) }
                 val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
-                val usernameExists = when (usernameSearchResult.status) {
-                    Status.SUCCESS -> {
-                        usernameSearchResult.data != null
-                    }
-                    else -> false
+                if (usernameSearchResult.status != Status.SUCCESS) {
+                    // A failed lookup must never be reported as "available"; leave the check unverified
+                    log.warn("username lookup failed for {}: {}", username, usernameSearchResult.message)
+                    _uiState.update { it.copy(checkingUsername = false, usernameCheckSuccess = false) }
+                    return@let
                 }
-                var usernameContested: Boolean
+                var usernameExists = usernameSearchResult.data != null
+                var usernameContested = false
+                var usernameBlocked = false
                 var firstCreatedAt = -1L
-                val usernameBlocked = withContext(Dispatchers.IO) {
-                    val contenders = platformRepo.getVoteContenders(username)
-                    usernameContested = contenders.map.isNotEmpty()
-                    var maxApprovalVotes = 0
-                    firstCreatedAt = try {
-                        contenders.map.values.minOf { contender ->
-                            val document = contender.serializedDocument?.let {
-                                DomainDocument(platformRepo.platform.names.deserialize(it))
-                            }
-                            maxApprovalVotes = max(contender.votes, maxApprovalVotes)
-                            document?.createdAt ?: -1
-                        }
-                    } catch (e: NoSuchElementException) {
-                        -1L
-                    }
-
-                    // is the name blocked
-                    firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                val contenders = withContext(Dispatchers.IO) { platformRepo.getVoteContendersOrNull(username) }
+                if (contenders == null) {
+                    // No ballot could be read, so a locked or already won name would look available
+                    log.warn("vote contenders lookup failed for {}", username)
+                    _uiState.update { it.copy(checkingUsername = false, usernameCheckSuccess = false) }
+                    return@let
                 }
+                withContext(Dispatchers.IO) {
+                    val finishedVote = contenders.winner.orElse(null)?.first
+                    when {
+                        finishedVote == null -> {
+                            // no vote, or a vote that is still in progress
+                            usernameContested = contenders.map.isNotEmpty()
+                            var maxApprovalVotes = 0
+                            firstCreatedAt = try {
+                                contenders.map.values.minOf { contender ->
+                                    val document = contender.serializedDocument?.let {
+                                        DomainDocument(platformRepo.platform.names.deserialize(it))
+                                    }
+                                    maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                                    document?.createdAt ?: -1
+                                }
+                            } catch (e: NoSuchElementException) {
+                                -1L
+                            }
+                            // is the name blocked
+                            usernameBlocked = firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                        }
+                        // masternodes voted to lock this name: nobody can register it
+                        finishedVote.isLocked -> usernameBlocked = true
+                        // the vote ended without a winner, so the name can be requested again
+                        finishedVote.noWinner -> Unit
+                        // won by another identity; the domain document should exist, but treat it as taken
+                        // even if the name lookup above has not caught up yet
+                        else -> usernameExists = true
+                    }
+                }
+                log.info(
+                    "username check {}: exists={}, contested={}, blocked={}",
+                    username, usernameExists, usernameContested, usernameBlocked
+                )
                 _uiState.update {
                     it.copy(
                         checkingUsername = false,
@@ -390,6 +439,7 @@ class RequestUserNameViewModel @Inject constructor(
                         usernameSubmittedError = false,
                         usernameContested = usernameContested, usernameExists = usernameExists,
                         usernameBlocked = usernameBlocked,
+                        checkedUsername = username,
                         votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
                     )
                 }
@@ -455,7 +505,19 @@ class RequestUserNameViewModel @Inject constructor(
         return Regex("[2-9]").containsMatchIn(uname)
     }
 
+    /**
+     * True only when the last completed check was for exactly [username] and found it available, so
+     * a result for an earlier input can never let a different name through.
+     */
+    fun hasAvailableResultFor(username: String): Boolean {
+        val state = _uiState.value
+        return state.usernameCheckSuccess && state.checkedUsername == username &&
+            !state.usernameExists && !state.usernameBlocked
+    }
+
     fun checkUsernameValid(username: String, usernameType: UsernameType): Boolean {
+        // the input changed, so any check still running is for a name that is no longer shown
+        checkUsernameJob?.cancel()
         val validLength = validateUsernameSize(username, usernameType)
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
@@ -482,7 +544,9 @@ class RequestUserNameViewModel @Inject constructor(
                 enoughBalance = enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
+                checkingUsername = false,
                 usernameCheckSuccess = false,
+                checkedUsername = null,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )

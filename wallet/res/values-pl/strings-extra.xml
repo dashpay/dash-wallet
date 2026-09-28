@@ -38,7 +38,9 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Wyślij do Kontaktu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_buy_sell">Kupuj &amp; Sprzedawaj</string>
+    <string name="shortcut_buy_sell">Kup &amp; Sprzedaj</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash DEX</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Odbierz</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -241,7 +243,7 @@
     <string name="verify_warning_screenshots_message">Inne aplikacje i urządzenia mają dostęp do twoich screenshotów. </string>
     <string name="verify_warning_do_not_show">Nie pozwól, aby ktokolwiek zobaczył twoją listę słów do odzysku portfela.</string>
     <string name="verify_warning_do_not_type">NIGDY nie wpisuj twojej frazy odzyskiwania portfela do menedżerów haseł ani w innych miejscach.</string>
-    <string name="view_seed_done">Zrobione</string>
+    <string name="view_seed_done">OK</string>
     <string name="view_seed_title">Fraza Odzyskiwania</string>
     <string name="transaction_result_view_on_explorer">Zobacz na eksplorerze bloków</string>
     <string name="transaction_result_tax_category">Kategoria Podatkowa</string>
@@ -276,7 +278,7 @@
 
     <string name="menu_invite_title">Zaproszenia</string>
     <string name="menu_invite_subtitle">Pomóż twoim przyjaciołom i rodzinie na dołączanie do Dash</string>
-    <string name="menu_buy_and_sell_title">Kupuj &amp; Sprzedawaj Dash</string>
+    <string name="menu_buy_and_sell_title">Kup &amp; Sprzedaj Dash</string>
     <string name="menu_buy_and_sell_subtitle">Połącz się z giełdą stron trzecich</string>
     <string name="liquid_unavailable">Integracja portfela Dash z serwisem Liquid jest nieaktualna</string>
     <string name="liquid_unavailable_details">Jeśli masz jakiegolwiek pytania w sprawie Dash trzymanych na serwisie Liquid, musisz skontaktować się z centrum pomocy serwisu LIquid</string>

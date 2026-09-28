@@ -376,7 +376,7 @@
     <string name="button_request_coins">Vyžiadať Dash</string>
     <string name="button_send_coins">Poslať Dash</string>
     <string name="button_pay">Poslať</string>
-    <string name="button_scan">Skenovať</string>
+    <string name="button_scan">Skenovanie</string>
     <string name="button_settings">Nastavenia</string>
     <string name="action_show_qr">Ukázať QR kód</string>
     <string name="action_browse">Otvoriť v prehliadači</string>
@@ -445,4 +445,8 @@
     <string name="upgrade_pin_description">Nastaviť nový PIN kód</string>
     <string name="upgrade_pin_continue">Pokračovať</string>
 
-    </resources>
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Máte zostatok na CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Tieto prostriedky by mali byť vybraté z CrowdNode. Tieto prostriedky môžete previesť do tejto peňaženky alebo prostredníctvom svojho online účtu na inom zariadení.</string>
+    <string name="crowdnode_withdraw_funds">Výber finančných prostriedkov</string>
+</resources>

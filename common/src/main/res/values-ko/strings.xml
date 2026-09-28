@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">닫기</string>
+    <string name="button_settings">설정</string>
     <string name="network_unavailable_return">지갑으로 돌아가기</string>
     <string name="button_continue">계속</string>
     <string name="get_quote">견적 받기</string>
     <string name="button_close">닫기</string>
     <string name="button_cancel">취소</string>
+    <string name="button_clear">삭제</string>
+    <string name="button_paste">붙여넣기</string>
     <string name="button_confirm">승인</string>
     <string name="button_retry">재시도</string>
     <string name="button_send_report">보고 전송하기</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">카메라에 문제가 있습니다. 이 기기를 재시작하십시오.</string>
     <string name="scan_camera_permission_dialog_title">카메라 접근 권한</string>
     <string name="scan_camera_permission_dialog_message">QR 코드를 스캔하기 위해서는 카메라 접근 권한을 허용해야 합니다.</string>
-
     <!-- address input -->
     <string name="address_input_title">대시 보내기</string>
     <string name="show_clipboard">클립보드 내용 보이기</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">유효하지 않은 결제 요청:\n%s</string>
     <string name="input_parser_invalid_transaction">유효하지 않은 거래:\n%s</string>
     <string name="address_input_paste_from">%s로부터 복사</string>
-    <string name="input_connect">연결</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">로그인</string>
 
     <!-- others -->
     <string name="confirm_sec">확인 (%ss)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">송금 중 알 수 없는 문제가 발생했습니다!</string>
     <string name="from_dash_wallet_on_this_device">이 기기의 대시 지갑으로부터</string>
     <string name="preposition_at">이곳에서</string>
-    </resources>
+    <string name="info">정보</string>
+</resources>

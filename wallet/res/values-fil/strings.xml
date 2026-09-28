@@ -445,4 +445,8 @@
     <string name="upgrade_pin_description">Mag set up ng bagong PIN</string>
     <string name="upgrade_pin_continue">Ipagpatuloy</string>
 
-    </resources>
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Mayroon kang balanse sa CrowdNode.</string>
+    <string name="crowdnode_withdrawal_reminder_message">Dapat kunin ang mga pondong ito mula sa CrowdNode. Maaari mong ilipat ang mga pondong ito sa wallet na ito o gamit ang iyong online account sa ibang device.</string>
+    <string name="crowdnode_withdraw_funds">Mag-withdraw ng pondo</string>
+</resources>

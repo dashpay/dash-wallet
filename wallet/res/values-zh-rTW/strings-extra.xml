@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">購買 &amp; 出售</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">達世幣去中心化交易所</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">導入私鑰</string>
@@ -294,11 +296,15 @@
     <string name="about_review_and_rate">對應用程式進行評價和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
+    <string name="about_copyright">版權所有t © %1$d 達世幣核心集團</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
     <string name="about_version_name">DashPay 錢包%s</string>
     <string name="about_last_explore_device_sync">上一次探索設備同步</string>
     <string name="about_last_explore_server_update">上一次探索服務器更新</string>
+    <string name="about_app_version_label">應用程式版本</string>
+    <string name="about_platform_label">平台</string>
     <string name="about_explore_section">瀏覽達世幣</string>
+    <string name="about_explore_update">更新</string>
     <string name="about_last_device_sync">上一次設備同步</string>
     <string name="about_last_server_update">上一次服務器更新</string>
     <string name="about_value_not_available">無法使用</string>

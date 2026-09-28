@@ -45,11 +45,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">ยกเลิก</string>
+    <string name="button_settings">ตั้งค่า</string>
     <string name="network_unavailable_return">รีเซ็ตกระเป๋าสตางค์</string>
     <string name="button_continue">ดำเนินการต่อ</string>
     <string name="get_quote">รับใบเสนอราคา</string>
     <string name="button_close">ปิด</string>
     <string name="button_cancel">ยกเลิก</string>
+    <string name="button_clear">ลบออก</string>
+    <string name="button_paste">วาง</string>
     <string name="button_confirm">ยืนยัน</string>
     <string name="button_retry">ลองอีกครั้ง</string>
     <string name="button_send_report">ส่งรายงาน</string>
@@ -113,7 +116,6 @@
     <string name="scan_camera_problem_dialog_message">กล้องถ่ายรูปมีปัญหา คุณอาจจะต้องรีสตาร์ทอุปกรณ์อีกครั้ง</string>
     <string name="scan_camera_permission_dialog_title">อนุญาตเข้าถึงกล้องถ่ายรูป</string>
     <string name="scan_camera_permission_dialog_message">ในการสแกนโค้ด  QR  คุณต้องให้สิทธิ์ในการใช้กล้องถ่ายรูป</string>
-
     <!-- address input -->
     <string name="address_input_title">ส่ง Dash </string>
     <string name="show_clipboard">แสดงเนื้อหาในคลิปบอร์ด</string>
@@ -128,8 +130,6 @@
     <string name="input_parser_unverifyable_paymentrequest">ไม่สามารถยืนยันคำขอชำระเงินได้ :\n %s</string>
     <string name="input_parser_invalid_paymentrequest">คำขอการชำระเงินไม่ถูกต้อง :\n%s</string>
     <string name="input_parser_invalid_transaction">ธุรกรรมไม่ถูกต้อง :\n %s</string>
-    <string name="input_connect">เชื่อมต่อ</string>
-
     <!-- others -->
     <string name="confirm_sec">ยืนยัน (%ss)</string>
     <string name="cancel_transaction">ยกเลิกธุรกรรม?</string>

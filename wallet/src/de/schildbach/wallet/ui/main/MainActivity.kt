@@ -136,6 +136,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         requestDisableBatteryOptimisation()
     }
 
+    private var timeChangeReceiverRegistered = false
     private val timeChangeReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_TIME_CHANGED) {
@@ -148,8 +149,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // no-op on API 35+, where edge-to-edge is enforced
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
@@ -188,6 +190,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             addAction(Intent.ACTION_TIME_CHANGED)
         }
         registerReceiver(timeChangeReceiver, timeChangedFilter)
+        timeChangeReceiverRegistered = true
 
         viewModel.rateStale.observe(this) { state ->
             log.info("updateTrigger => rateStale: {}", state)
@@ -197,6 +200,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onStart() {
         super.onStart()
+
+        if (finishedWithoutWallet) {
+            return
+        }
 
         if (!lockScreenDisplayed && config.showNotificationsExplainer) {
             explainPushNotifications()
@@ -298,6 +305,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onResume() {
         super.onResume()
+
+        if (finishedWithoutWallet) {
+            // onCreateWithWallet() never ran and checkWalletEncryptionDialog() below
+            // dereferences the wallet
+            return
+        }
+
         turnOnAutoLogout()
         checkTimeSkew(viewModel)
         checkLowStorageAlert()
@@ -572,7 +586,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(timeChangeReceiver)
+
+        // onCreateWithWallet() does not run when the activity is finished for having no wallet,
+        // so the receiver may never have been registered
+        if (timeChangeReceiverRegistered) {
+            unregisterReceiver(timeChangeReceiver)
+        }
     }
 
     override fun onLockScreenDeactivated() {

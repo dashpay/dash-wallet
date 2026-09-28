@@ -25,6 +25,8 @@
     <string name="dash_address">Adres Dash</string>
     <string name="username">Nazwa użytkownika</string>
     <string name="balance">Saldo:</string>
+    <string name="hide_balance">Ukryj saldo</string>
+    <string name="show_balance">Pokaż saldo</string>
     <string name="nothing_here">Nic tutaj nie ma</string>
 
     <!-- Local Currency List: GGP -->
@@ -48,11 +50,15 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Odrzuć</string>
+    <string name="button_not_now">Nie teraz</string>
+    <string name="button_settings">Ustawienia</string>
     <string name="network_unavailable_return">Wróć do portfela</string>
     <string name="button_continue">Dalej</string>
     <string name="get_quote">Otrzymaj wycenę</string>
     <string name="button_close">Zamknij</string>
     <string name="button_cancel">Anuluj</string>
+    <string name="button_clear">Wyczyść</string>
+    <string name="button_paste">Wklej</string>
     <string name="button_confirm">Potwierdź</string>
     <string name="button_retry">Ponów</string>
     <string name="button_send_report">Wyślij Raport</string>
@@ -100,6 +106,8 @@
     <string name="payment_request_problem_title">Płatność nie została uznana</string>
     <string name="payment_protocol_default_error_title">Błąd płatności</string>
     <string name="payment_request_problem_message">Twoja płatność nie mogła zostać uznana przez serwer, skontaktuj się ze sprzedawcą. </string>
+    <string name="payment_submission_pending_title">Status płatności nieznany</string>
+    <string name="payment_submission_pending_message">Płatność została wysłana, ale nie otrzymaliśmy potwierdzenia od sprzedawcy. Twój portfel będzie nadal sprawdzać sieć i pokaże transakcję jako wysłaną, gdy tylko zostanie znaleziona. Poczekaj, zanim ponownie wyślesz tę płatność.</string>
     <string name="exchange_rate_not_found">Kurs nie został znaleziony</string>
     <string name="send_coins_fragment_hint_replaying">Obecnie, płatności nie są możliwe, ponieważ portfel nie jest w pełni zsynchronizowany z siecią. </string>
 
@@ -120,7 +128,7 @@
     <string name="scan_camera_problem_dialog_message">Nastąpił problem z aparatem fotograficznym. Prawdopodobnie musisz zrestartować urządzenie.</string>
     <string name="scan_camera_permission_dialog_title">Pozwolenie na użycie kamery</string>
     <string name="scan_camera_permission_dialog_message">Aby skanować kody QR, wymagane jest udzielenie pozwolenia na użycie kamery.</string>
-
+    <string name="scan_camera_permission_denied_dialog_message">Aby skanować kody QR, w Ustawieniach należy włączyć dostęp do aparatu dla tej aplikacji.</string>
     <!-- address input -->
     <string name="address_input_title">Wyślij Dashe</string>
     <string name="show_clipboard">Pokaz zawartość schowka</string>
@@ -137,7 +145,8 @@
     <string name="input_parser_invalid_paymentrequest">Niewłaściwe rzadanie płatności:\\n%s</string>
     <string name="input_parser_invalid_transaction">Transakcja nie powiodła się:\n%s</string>
     <string name="address_input_paste_from">Wklej z %s</string>
-    <string name="input_connect">Połącz</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Zaloguj się</string>
 
     <!-- others -->
     <string name="confirm_sec">Potwierdź (%ss)</string>

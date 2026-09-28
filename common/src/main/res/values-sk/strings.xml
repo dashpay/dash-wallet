@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Zrušiť</string>
+    <string name="button_settings">Nastavenia</string>
     <string name="network_unavailable_return">Návrat do Peňaženky</string>
     <string name="button_continue">Pokračovať</string>
     <string name="get_quote">Získajte ponuku</string>
     <string name="button_close">Zatvoriť</string>
     <string name="button_cancel">Zrušiť</string>
+    <string name="button_clear">Vymazať</string>
+    <string name="button_paste">Vložiť</string>
     <string name="button_confirm">Potvrdiť</string>
     <string name="button_retry">Znovu</string>
     <string name="button_send_report">Poslať správu</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">Problém s fotoaparátom. Pravdepodobne je potrebný reštart zariadenia.</string>
     <string name="scan_camera_permission_dialog_title">Povolenia fotoaparátu</string>
     <string name="scan_camera_permission_dialog_message">Pre skenovanie QR kódu musíte povoliť používanie fotoaparátu.</string>
-
     <!-- address input -->
     <string name="address_input_title">Poslať Dash</string>
     <string name="show_clipboard">Zobraziť obsah v schránke</string>
@@ -132,12 +134,13 @@
     <string name="input_parser_io_error">Nepodarilo sa prečítať:\n%s</string>
     <string name="input_parser_cannot_classify">Nepodarilo sa rozpoznať vstup:\n%s</string>
     <string name="input_parser_invalid_bitcoin_uri">Neplatná Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Neplatná Dash adresa!\n(Zamenené Mainnet/Testnet?)</string>
+    <string name="input_parser_invalid_address">Neplatná Dash adresa!\n(Zamenený Mainnet za Testnet?)</string>
     <string name="input_parser_unverifyable_paymentrequest">Požiadavka na platbu sa nedá overiť:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">Neplatná žiadosť o platbu:\n%s</string>
     <string name="input_parser_invalid_transaction">Neplatná transakcia:\n%s</string>
     <string name="address_input_paste_from">Vložiť z %s</string>
-    <string name="input_connect">Pripojiť</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Prihlásiť sa</string>
 
     <!-- others -->
     <string name="confirm_sec">Potvrďte (%ss)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">Problém pri odosielaní!</string>
     <string name="from_dash_wallet_on_this_device">Z peňaženky Dash na tomto zariadení</string>
     <string name="preposition_at">v</string>
-    </resources>
+    <string name="info">Informácie</string>
+</resources>

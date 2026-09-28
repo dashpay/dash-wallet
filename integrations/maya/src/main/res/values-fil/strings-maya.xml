@@ -20,8 +20,17 @@
     <string name="maya_portal_convert_to_title">I-convert ang Dash sa</string>
     <string name="maya_portal_convert_subtitle">Mula sa Dash Wallet hanggang sa anumang crypto</string>
     <string name="maya_portal_subtitle">I-convert ang Dash mula sa Dash Wallet sa anumang crypto na sinusuportahan sa Maya at ipadala ito sa anumang wallet</string>
+    <string name="dash_dex_buy_title">Bumili ng Dash</string>
+    <string name="dash_dex_sell_title">Ibenta ang Dash</string>
+    <string name="dash_dex_sell_subtitle">Mula sa Dash Wallet hanggang sa anumang crypto</string>
     <string name="maya_address_input_hint">%s Address</string>
     <string name="maya_address_input_title">I-convert ang Dash sa %s</string>
+    <!-- Nav bar title of the convert-crypto enter-amount screen (Figma 24034:44864) -->
+    <string name="maya_convert_enter_amount_title">I-convert</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">Idikit ang address mula sa</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">Clipboard</string>
     <string name="maya_crypto_convert_title">I-convert ang Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Preview ng Order</string>
 
@@ -29,13 +38,11 @@
     <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
     <string name="cryptocurrency_dash_network">Dash</string>
     <string name="cryptocurrency_rune_network">Thorchain</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
     <string name="cryptocurrency_kuji_network">Kujira</string>
     <string name="cryptocurrency_usk_network">USK</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
     <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
@@ -56,7 +63,7 @@
     <string name="cryptocurrency_zec_network">Zcash</string>
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
-
+    <string name="cryptocurrency_ltc_network">Litecoin</string>
     <string name="maya_error">Pagkakamali sa Maya</string>
     <string name="maya_error_not_available">Hindi available ang serbisyo ng Maya. Pakisubukang muli mamaya.</string>
     <string name="maya_error_report_issue">Mangyaring iulat ang isyung ito sa koponan ng suporta ng Dash Wallet gamit ang \"Makipag-ugnayan sa Suporta\" mula sa pangunahing menu.</string>
@@ -65,6 +72,8 @@
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">Ang pinakamababang halaga ng transaksyon ay</string>
     <string name="entered_amount_is_too_high">Ang pinakamataas na halaga ng transaksyon ay</string>
+    <!-- Short form of the max-amount error on the convert-crypto enter-amount screen, e.g. "Max $205.32" (Figma 24034:44864) -->
+    <string name="maya_max_amount_error">Max</string>
     <string name="we_didnt_find_any_assets">Wala kaming nakitang anumang asset sa iyong Coinbase account.</string>
     <string name="something_wrong_title">May maling nangyari</string>
     <string name="dont_have_any_dash">Wala kang anumang Dash sa iyong Dash Wallet.</string>
@@ -103,10 +112,16 @@
     <string name="you_receive">natatanggap mo</string>
     <string name="to_dash_wallet_on_this_device">mula sa Dash Wallet sa device na ito</string>
     <string name="purchase">Bumili</string>
-    <string name="maya_fee">Bayad sa Maya</string>
+    <string name="maya_fee">Bayad</string>
+    <string name="network_label">Network</string>
     <string name="total">Kabuuan</string>
     <string name="to_external_address">sa %s</string>
 
+    <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
+    <string name="button_refresh">I-refresh</string>
+    <string name="maya_explorer_view_maya">Tingnan ang MayaChain explorer</string>
+    <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
+    <string name="maya_explorer_view_near">Tingnan ang NEAR Intents explorer</string>
     <string name="maya_error_information">%s%nCryptocurrency: %s</string>
     <string name="maya_error_invalid_destination_address">Di-wastong address ng patutunguhan</string>
     <string name="maya_error_below_recommended_minimum">Ang inilagay na halaga ay mas mababa kaysa sa inirerekomendang minimum</string>
@@ -115,6 +130,33 @@
     <string name="maya_error_quote">Hindi makakuha ng quote mula kay Maya para sa palitan na ito</string>
     <string name="maya_halted_label">Nahinto</string>
     <string name="maya_halted_coins_toast">Ang ilang mga barya ay pansamantalang itinigil at hindi magagamit para sa pangangalakal</string>
+    <string name="maya_select_coin_title">Pumili ng barya</string>
+    <string name="dex_enter_amount_checking">Sinusuri ang halaga…</string>
+    <string name="dex_enter_amount_invalid">Hindi maaaring i-swap ang halagang ito sa ngayon. Subukan ang ibang halaga, o subukan muli pagkalipas ng ilang sandali.</string>
+    <string name="maya_route_label_multiple">Maramihang network</string>
+    <string name="dex_refund_address_heading">Ilagay ang address para sa refund</string>
+    <string name="dex_refund_address_field_label">Address para sa refund</string>
+    <string name="dex_refund_address_placeholder">Pindutin nang matagal para i-paste</string>
 
+    <string name="dex_receive_description">Kapag nakumpirma na ng network ang iyong transfer, iko-convert namin ito sa Dash at ilalagay sa iyong DashPay wallet.</string>
+    <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_memo_label">Memo / Tag</string>
+    <string name="dex_receive_memo_warning">Dapat kasama sa iyong transfer ang memo na ito. Ang mga pondong ipinadala nang wala nito ay hindi maitutugma sa iyong swap at mawawala.</string>
+    <string name="dex_receive_expiry_title">Magtatapos ang bisa ng address na ito sa loob ng 10 minuto.</string>
+    <string name="dex_receive_back_home">Ibalik sa Home</string>
+
+    <!-- DashDEX buy: user-facing swap error messages (mapped from SwapKit error codes by SwapKitErrors).
+         %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
+    <string name="dex_error_generic">May naganap na problema sa pag-set up ng iyong swap. Pakisubukan muli.</string>
+    <string name="dex_error_no_route">Hindi maaaring i-swap ang halagang ito sa ngayon. Maaaring pansamantalang hindi available ang mga ruta — subukan muli pagkalipas ng ilang sandali, o subukan ang ibang halaga.</string>
+    <string name="dex_error_validation">Hindi namin ma-set up ang iyong swap. Pakisuri ang halaga at address, pagkatapos ay subukan muli.</string>
+    <string name="dex_error_unavailable">Hindi muna magagamit ang mga swap. Pakisubukan muli mamaya.</string>
+    <string name="dex_error_quote_expired">Nag-expire na ang quote na ito. Mangyaring bumalik at subukan muli.</string>
+    <string name="dex_error_sanctioned">Hindi maaaring gamitin ang address na ito para sa mga swap.</string>
+    <string name="dex_error_insufficient_balance">Ang halaga ay higit pa sa ipinapadala mo.</string>
+    <string name="dex_error_allowance">Kailangan ng pahintulot ang token na ito bago ito ma-swap.</string>
+    <string name="dex_error_build_failed">Hindi namin maihanda ang palitang ito. Pakisubukan muli.</string>
+    <string name="dex_error_invalid_destination">Hindi namin na-set up ang iyong deposito. Pakisubukan muli.</string>
+    <string name="dex_error_price_moved">Masyadong nagbago ang presyo. Mangyaring bumalik at subukang muli.</string>
 
 </resources>

@@ -34,8 +34,8 @@ class CoinJoinActivity : LockScreenActivity() {
         const val FIRST_TIME_EXTRA = "show_first_time_info"
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         val binding = ActivityCoinjoinBinding.inflate(layoutInflater)
         setContentView(binding.root)

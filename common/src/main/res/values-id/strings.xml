@@ -48,11 +48,14 @@
 
     <!-- Generic buttons -->
     <string name="button_dismiss">Tolak</string>
+    <string name="button_settings">Pengaturan</string>
     <string name="network_unavailable_return">Kembali ke dompet</string>
     <string name="button_continue">Teruskan</string>
     <string name="get_quote">Dapatkan Penawaran</string>
     <string name="button_close">Tutup</string>
     <string name="button_cancel">Batal</string>
+    <string name="button_clear">Bersihkan</string>
+    <string name="button_paste">Tempel</string>
     <string name="button_confirm">Memastikan</string>
     <string name="button_retry">Coba lagi</string>
     <string name="button_send_report">Kirim Laporan</string>
@@ -120,7 +123,6 @@
     <string name="scan_camera_problem_dialog_message">Kamera mengalami masalah. Anda mungkin harus menyalakan ulang ponsel.</string>
     <string name="scan_camera_permission_dialog_title">Izin kamera</string>
     <string name="scan_camera_permission_dialog_message">Untuk memindai kode QR, Anda perlu memberikan izin untuk menggunakan kamera.</string>
-
     <!-- address input -->
     <string name="address_input_title">Kirim Dash</string>
     <string name="show_clipboard">Tunjukkan konten dalam clipboard</string>
@@ -137,7 +139,8 @@
     <string name="input_parser_invalid_paymentrequest">Permintaan pembayaran tidak valid:\n%s</string>
     <string name="input_parser_invalid_transaction">Transaksi tidak valid:\n%s</string>
     <string name="address_input_paste_from">Tempel dari %s</string>
-    <string name="input_connect">hubungkan</string>
+    <!-- Trailing action on an address-source row for an exchange the user is not signed in to -->
+    <string name="input_log_in">Masuk</string>
 
     <!-- others -->
     <string name="confirm_sec">Konfirmasi (%ss)</string>
@@ -149,4 +152,5 @@
     <string name="send_coins_error_msg">Gagal mengirim koin!</string>
     <string name="from_dash_wallet_on_this_device">Dari dompet Dash di perangkat ini</string>
     <string name="preposition_at">pada</string>
-    </resources>
+    <string name="info">Info</string>
+</resources>

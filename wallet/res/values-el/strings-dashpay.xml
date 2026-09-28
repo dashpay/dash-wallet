@@ -105,8 +105,10 @@
     <string name="search_user_no_results">Δεν υπάρχουν χρήστες που ταιριάζουν</string>
     <string name="search_user_loading">Αναζήτηση για το όνομα χρήστη<b>"%"</b> στο δίκτυο Dash</string>
     <string name="contact_request_pending">Εκκρεμεί Αίτημα Επαφής</string>
+    <string name="send_button_label">Αποστολή</string>
     <string name="pay">πληρώστε</string>
     <string name="contact_request_received_title">%s ζήτησε να γίνει φίλος</string>
+    <string name="contact_request_received_card_title">%s σας έστειλε αίτημα επαφής</string>
     <string name="contact_request_accept">Αποδοχή</string>
     <string name="contact_request_ignore">Παράβλεψη</string>
 
@@ -544,4 +546,12 @@
     <string name="create_instant_username_button">Δημιουργία άμεσου ονόματος χρήστη</string>
     <string name="create_instant_username_cancel">Ακύρωση</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">Σάρωση QR</string>
+    <string name="dash_connect_status_disconnected">Αποσυνδεδεμένο</string>
+    <string name="dash_connect_approve_verify_identity">Επαληθεύστε την ταυτότητά σας</string>
+    <string name="dash_connect_username">Όνομα Χρήστη:</string>
+    <string name="dash_connect_identity">Ταυτότητα</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Ανάληψη χρημάτων</string>
+    <string name="dash_connect_deny">Απόρριψη</string>
+    <string name="dash_connect_confirm">Επιβεβαίωση</string>
+    </resources>

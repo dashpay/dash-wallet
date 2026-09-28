@@ -105,8 +105,10 @@
     <string name="search_user_no_results">沒有匹配的用戶</string>
     <string name="search_user_loading">在達世幣網路上搜尋用戶名<b>\"%\"</b> </string>
     <string name="contact_request_pending">有聯繫請求等待批准</string>
+    <string name="send_button_label">付款</string>
     <string name="pay">付款</string>
     <string name="contact_request_received_title">%s 已向您請求加為好友</string>
+    <string name="contact_request_received_card_title">%s 已向您發送聯絡請求</string>
     <string name="contact_request_accept">接受</string>
     <string name="contact_request_ignore">忽略</string>
 
@@ -544,4 +546,12 @@
     <string name="create_instant_username_button">創建即時用戶名</string>
     <string name="create_instant_username_cancel">取消</string>
 
-</resources>
+    <string name="dash_connect_scan_qr">掃描二維碼</string>
+    <string name="dash_connect_status_disconnected">斷開連接</string>
+    <string name="dash_connect_approve_verify_identity">驗證您的身份</string>
+    <string name="dash_connect_username">用戶名稱</string>
+    <string name="dash_connect_identity">身分</string>
+    <string name="dash_connect_approve_no_withdraw_funds">提取資金</string>
+    <string name="dash_connect_deny">拒絕</string>
+    <string name="dash_connect_confirm">確認:</string>
+    </resources>
