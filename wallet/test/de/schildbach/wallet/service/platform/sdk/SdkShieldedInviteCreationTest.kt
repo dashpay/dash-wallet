@@ -338,6 +338,49 @@ class SdkShieldedInviteCreationTest {
         assertEquals(persistedLink, inserted.single().shortDynamicLink)
     }
 
+    /** SR-02: cancellation during funding must still complete one transfer and save its key. */
+    @Test
+    fun cancellationDuringFundingStillCompletesAndPersistsRawInviteLink() = runTest {
+        val source = happySource()
+        val dao = dao()
+        val inserted = mutableListOf<Invitation>()
+        coEvery { dao.insert(capture(inserted)) } just Runs
+        val fundingStarted = CompletableDeferred<Unit>()
+        val releaseFunding = CompletableDeferred<Unit>()
+        var completedFundingAttempts = 0
+        coEvery {
+            source.fundNotesToRaw43(walletIdHex, orchardAddress, inviteFundingSplit(denominationCredits))
+        } coAnswers {
+            fundingStarted.complete(Unit)
+            releaseFunding.await()
+            completedFundingAttempts++
+            Unit
+        }
+
+        val createJob = launch {
+            service(
+                source = source,
+                invitationsDao = dao,
+                generateOneLink = { awaitCancellation() }
+            ).createShieldedInvite("alice", "Alice", "", contested = false)
+        }
+        fundingStarted.await()
+        assertEquals(0, completedFundingAttempts)
+        assertTrue(inserted.isEmpty())
+        createJob.cancel()
+        releaseFunding.complete(Unit)
+        createJob.join()
+
+        coVerify(exactly = 1) {
+            source.fundNotesToRaw43(walletIdHex, orchardAddress, inviteFundingSplit(denominationCredits))
+        }
+        assertEquals(1, completedFundingAttempts)
+        val persistedLink = inserted.single().dynamicLink!!
+        assertTrue(persistedLink.startsWith("dashpay://invite?"))
+        assertTrue(persistedLink.contains("osk=${bytes32ToHex(spendingKey)}"))
+        assertEquals(persistedLink, inserted.single().shortDynamicLink)
+    }
+
     @Test
     fun contested_fundsThePointTwentyFiveDenomination() = runTest {
         balanceFlow.value = creditsToDash(contestedRequiredCredits)
