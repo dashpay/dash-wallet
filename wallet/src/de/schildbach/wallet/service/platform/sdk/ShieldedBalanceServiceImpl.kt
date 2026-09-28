@@ -779,7 +779,13 @@ class ShieldedBalanceServiceImpl internal constructor(
      * published and verified — the window where the thread can stall (a slow
      * log write) with no generation check left. No-op in production.
      */
-    private val afterReadyCommitted: suspend () -> Unit = {}
+    private val afterReadyCommitted: suspend () -> Unit = {},
+    /**
+     * Test seam: runs in [stop]'s fallback right after its final generation
+     * bump, before the Kotlin teardown — the pause in which a newer bring-up
+     * can publish. No-op in production.
+     */
+    private val afterStopFallbackBump: suspend () -> Unit = {}
 ) : ShieldedBalanceService {
 
     @Inject
@@ -833,6 +839,16 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     /** The generation of the bring-up that published the ready latch, or [NO_GENERATION]. */
     private val readyGeneration = AtomicInteger(NO_GENERATION)
+
+    /**
+     * Makes "publish ready" and "tear ready down" atomic with respect to each
+     * other, so a teardown can decide from [readyGeneration] whether the latch
+     * it would clear belongs to a runtime older than its stop (review,
+     * 2026-09-28): a fallback that paused after its final bump must not clear
+     * the latch of a bring-up that sampled after that bump and published
+     * meanwhile. Held only for field writes — never across a suspension.
+     */
+    private val readyMonitor = Any()
 
     /**
      * A [stop] fallback tore the Kotlin side down without the lock and could
@@ -1030,10 +1046,17 @@ class ShieldedBalanceServiceImpl internal constructor(
         // removes it. Past this verify the thread can still stall (a slow
         // log write) with no check left; that window is covered by the
         // owed-stop handoff in [releaseLock], not by more checks.
-        readyGeneration.set(generation)
-        readyWalletIdHex.value = walletIdHex
+        synchronized(readyMonitor) {
+            readyGeneration.set(generation)
+            readyWalletIdHex.value = walletIdHex
+        }
         if (superseded()) {
-            readyWalletIdHex.compareAndSet(walletIdHex, null)
+            synchronized(readyMonitor) {
+                if (readyGeneration.get() == generation) {
+                    readyWalletIdHex.value = null
+                    readyGeneration.set(NO_GENERATION)
+                }
+            }
             log.warn(
                 "shielded bring-up superseded by a stop() as it published ready — withdrawing " +
                     "it and stopping the loop"
@@ -1089,13 +1112,17 @@ class ShieldedBalanceServiceImpl internal constructor(
             // CURRENT generation makes it decline, so the current generation
             // must move once more before we tear down.
             val owedThrough = stopGeneration.incrementAndGet()
+            afterStopFallbackBump()
             log.warn(
                 "shielded stop: a bring-up has held the lock for over {}s and is inside a call that " +
                     "cannot be cancelled — tearing the Kotlin side down without it; stopping the native " +
                     "loop is left to whoever releases or next takes the lock (plan §37)",
                 stopLockTimeoutMs / 1000
             )
-            tearDownReadyState()
+            // Only a runtime OLDER than this stop: a bring-up that sampled
+            // after the bump above is newer than the stop and keeps its latch
+            // (its loop is likewise spared by the owed-stop drain).
+            tearDownReadyStateOlderThan(owedThrough)
             nativeStopOwedThrough.accumulateAndGet(owedThrough) { a, b -> maxOf(a, b) }
             handOffOwedNativeStop()
             return
@@ -1137,7 +1164,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     private suspend fun drainOwedNativeStopLocked() {
         val owedThrough = nativeStopOwedThrough.getAndSet(NO_GENERATION)
         if (owedThrough == NO_GENERATION) return
-        if (readyGeneration.get() < owedThrough) tearDownReadyState()
+        tearDownReadyStateOlderThan(owedThrough)
         val owner = loopOwnerGeneration.get()
         if (owner != NO_GENERATION && owner < owedThrough) {
             log.warn("shielded: stopping the sync loop a timed-out stop() could not reach")
@@ -1180,7 +1207,14 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     /** The Kotlin-side half of [stop]: the latch, the two loops, the UI flows. */
-    private fun tearDownReadyState() {
+    /** [tearDownReadyState] only when the published latch predates [generation]; atomic with publication. */
+    private fun tearDownReadyStateOlderThan(generation: Int) {
+        synchronized(readyMonitor) {
+            if (readyGeneration.get() < generation) tearDownReadyState()
+        }
+    }
+
+    private fun tearDownReadyState() = synchronized(readyMonitor) {
         readyWalletIdHex.value = null
         readyGeneration.set(NO_GENERATION)
         syncStatusJob?.cancel()

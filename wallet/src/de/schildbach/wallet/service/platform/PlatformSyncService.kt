@@ -149,11 +149,12 @@ interface PlatformSyncService {
     /**
      * Unconditionally stop the two Kotlin-SDK background engines (the L1
      * shadow SPV and the shielded sync loop). Both stops are best-effort,
-     * failure-contained no-ops when not running. Split out of [shutdown]
-     * because DEBUG builds deliberately SKIP the engine stops on the routine
-     * service teardown (see [shutdown]) — the destructive paths (wallet
-     * wipe, before `finalizeWipe()` deletes app data) call this directly so
-     * the engines are provably down regardless of build type.
+     * failure-contained no-ops when not running. [shutdown] calls it on
+     * every build type (debug builds used to skip the engine stops on the
+     * routine teardown; that exemption was removed on 2026-09-25). The
+     * destructive paths (wallet wipe, before `finalizeWipe()` deletes app
+     * data) also call it directly, so the engines are provably down before
+     * the data goes whether or not a [shutdown] ran first.
      */
     suspend fun stopSdkEngines()
 

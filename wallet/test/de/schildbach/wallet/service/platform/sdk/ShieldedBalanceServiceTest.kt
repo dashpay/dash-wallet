@@ -335,7 +335,8 @@ class ShieldedBalanceServiceTest {
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {},
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
-        afterReadyCommitted: suspend () -> Unit = {}
+        afterReadyCommitted: suspend () -> Unit = {},
+        afterStopFallbackBump: suspend () -> Unit = {}
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs),
@@ -346,7 +347,8 @@ class ShieldedBalanceServiceTest {
         ensureL1SpvRunning = ensureL1SpvRunning,
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
         stopLockTimeoutMs = stopLockTimeoutMs,
-        afterReadyCommitted = afterReadyCommitted
+        afterReadyCommitted = afterReadyCommitted,
+        afterStopFallbackBump = afterStopFallbackBump
     )
 
     // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
@@ -634,6 +636,53 @@ class ShieldedBalanceServiceTest {
         // A fresh bring-up afterwards is whole.
         assertTrue(service.ensureShieldedReady())
         assertEquals(2, source.startCalls)
+    }
+
+    /**
+     * Review, 2026-09-28 (second pass): the fallback's Kotlin teardown used no
+     * ownership check. If it paused after its final bump, a bring-up that
+     * sampled after that bump could bind, start and publish; the teardown
+     * then cleared that NEWER runtime's latch while the generation-scoped
+     * debt rightly spared its loop — a loop running with no readiness. The
+     * teardown is now scoped to runtimes older than the stop, atomically with
+     * publication.
+     */
+    @Test
+    fun stop_fallbackPausedAfterItsBump_leavesANewerBringUpsReadinessAndLoopIntact() = runBlocking {
+        val bindGate = CompletableDeferred<Unit>()
+        val fallbackGate = CompletableDeferred<Unit>()
+        var binds = 0
+        var fallbackParked = false
+        val source = readySource().apply { onBindSuspend = { if (++binds == 1) bindGate.await() } }
+        val service = service(source, stopLockTimeoutMs = 200, afterStopFallbackBump = {
+            fallbackParked = true
+            fallbackGate.await()
+        })
+
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.bindCalls == 0) delay(10) } // #1 parked in its bind
+        val stop = async(Dispatchers.Default) { service.stop() }
+        withTimeout(5_000) { while (!fallbackParked) delay(10) } // timed out, bumped, paused before teardown
+
+        bindGate.complete(Unit)
+        assertFalse("#1 is older than the stop", first.await())
+
+        // A bring-up that sampled after the stop's final bump completes in the pause.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, source.bindCalls)
+        assertEquals(1, source.startCalls)
+
+        fallbackGate.complete(Unit) // the paused fallback resumes its teardown
+        withTimeout(5_000) { stop.await() }
+
+        // The newer runtime is untouched: still ready (no re-bind), loop not stopped.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("still ready: no re-bind", 2, source.bindCalls)
+        assertEquals("its loop was not stopped", 0, source.stopCalls)
+
+        // An ordinary stop still takes it down.
+        service.stop()
+        assertEquals(1, source.stopCalls)
     }
 
     /**
