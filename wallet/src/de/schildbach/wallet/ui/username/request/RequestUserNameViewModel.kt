@@ -42,6 +42,7 @@ import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,6 +84,8 @@ data class RequestUserNameUIState(
     val usernameContested: Boolean = false,
     val usernameExists: Boolean = false,
     val usernameBlocked: Boolean = false,
+    /** The name the availability flags above were checked for, or null when there is no current result. */
+    val checkedUsername: String? = null,
     val enoughBalance: Boolean = false,
     val usernameNonContestedChars: Boolean = false,
     val usernameNonContestedLength: Boolean = false,
@@ -128,6 +131,7 @@ class RequestUserNameViewModel @Inject constructor(
         get() = _walletBalance
 
     private var createUsernameArgs: CreateUsernameArgs? = null
+    private var checkUsernameJob: Job? = null
     private val inviteAssetLockTx = MutableStateFlow<AssetLockTransaction?>(null)
     private val _inviteBalance = MutableStateFlow(Coin.ZERO)
     val inviteBalance: StateFlow<Coin>
@@ -339,6 +343,7 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun reset() {
+        checkUsernameJob?.cancel()
         _uiState.update { RequestUserNameUIState() }
     }
 
@@ -364,10 +369,17 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Checks whether [requestedUserName] can be registered. A check still running for an earlier
+     * input is cancelled first: its result would otherwise land after this one and describe a name
+     * that is no longer in the input. Cancellation is enough because each result is published from
+     * the main thread right after a withContext() call, which throws once the job is cancelled.
+     */
     fun checkUsername(requestedUserName: String?) {
-        viewModelScope.launch {
+        checkUsernameJob?.cancel()
+        checkUsernameJob = viewModelScope.launch {
             requestedUserName?.let { username ->
-                _uiState.update { it.copy(checkingUsername = true) }
+                _uiState.update { it.copy(checkingUsername = true, usernameCheckSuccess = false, checkedUsername = null) }
                 val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
                 if (usernameSearchResult.status != Status.SUCCESS) {
                     // A failed lookup must never be reported as "available"; leave the check unverified
@@ -427,6 +439,7 @@ class RequestUserNameViewModel @Inject constructor(
                         usernameSubmittedError = false,
                         usernameContested = usernameContested, usernameExists = usernameExists,
                         usernameBlocked = usernameBlocked,
+                        checkedUsername = username,
                         votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
                     )
                 }
@@ -492,7 +505,19 @@ class RequestUserNameViewModel @Inject constructor(
         return Regex("[2-9]").containsMatchIn(uname)
     }
 
+    /**
+     * True only when the last completed check was for exactly [username] and found it available, so
+     * a result for an earlier input can never let a different name through.
+     */
+    fun hasAvailableResultFor(username: String): Boolean {
+        val state = _uiState.value
+        return state.usernameCheckSuccess && state.checkedUsername == username &&
+            !state.usernameExists && !state.usernameBlocked
+    }
+
     fun checkUsernameValid(username: String, usernameType: UsernameType): Boolean {
+        // the input changed, so any check still running is for a name that is no longer shown
+        checkUsernameJob?.cancel()
         val validLength = validateUsernameSize(username, usernameType)
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
@@ -519,7 +544,9 @@ class RequestUserNameViewModel @Inject constructor(
                 enoughBalance = enoughBalance,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
+                checkingUsername = false,
                 usernameCheckSuccess = false,
+                checkedUsername = null,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )

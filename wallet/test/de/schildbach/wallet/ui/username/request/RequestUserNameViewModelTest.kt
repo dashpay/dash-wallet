@@ -33,6 +33,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet.util.viewModels.MainCoroutineRule
 import io.mockk.coEvery
 import io.mockk.every
@@ -63,6 +64,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.Optional
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * The username availability states decide whether the user may go on to register a name, so each
@@ -238,6 +241,81 @@ class RequestUserNameViewModelTest {
         assertFalse(state.usernameContested)
     }
 
+    @Test
+    fun checkUsername_staleResultForEarlierInput_doesNotOverwriteTheCurrentName() {
+        // A slow check for a free name finishes after the input has moved on to a locked name. The
+        // late result must not report the locked name as available.
+        val freeName = "freename"
+        val lockedName = "lockedname"
+        val freeNameInFlight = CountDownLatch(1)
+        val releaseFreeName = CountDownLatch(1)
+        every { platformRepo.getUsername(freeName) } answers {
+            freeNameInFlight.countDown()
+            releaseFreeName.await(5, TimeUnit.SECONDS)
+            Resource.success(null)
+        }
+        every { platformRepo.getVoteContendersOrNull(freeName) } returns contenders()
+        every { platformRepo.getUsername(lockedName) } returns Resource.success(null)
+        every { platformRepo.getVoteContendersOrNull(lockedName) } returns contenders(
+            winner = finishedVote(isLocked = true)
+        )
+
+        viewModel.checkUsername(freeName)
+        assertTrue("the first lookup must be in flight", freeNameInFlight.await(5, TimeUnit.SECONDS))
+        // the user keeps typing: the fragment validates the new input, then checks it
+        viewModel.checkUsernameValid(lockedName, UsernameType.Primary)
+        val lockedState = checkUsername(lockedName)
+        assertTrue(lockedState.usernameBlocked)
+
+        releaseFreeName.countDown()
+        // give the superseded check every chance to publish
+        Thread.sleep(300)
+
+        val state = viewModel.uiState.value
+        assertEquals(lockedName, state.checkedUsername)
+        assertTrue("the locked name's result must survive the stale one", state.usernameBlocked)
+        assertFalse(viewModel.hasAvailableResultFor(lockedName))
+        assertFalse(viewModel.hasAvailableResultFor(freeName))
+    }
+
+    @Test
+    fun checkUsername_inputChangesWhileCheckIsRunning_leavesNoResult() {
+        // The input changed but its own check has not started yet (the fragment waits 600ms):
+        // the earlier check's result must not be taken for the new input.
+        val firstName = "firstname"
+        val firstNameInFlight = CountDownLatch(1)
+        val releaseFirstName = CountDownLatch(1)
+        every { platformRepo.getUsername(firstName) } answers {
+            firstNameInFlight.countDown()
+            releaseFirstName.await(5, TimeUnit.SECONDS)
+            Resource.success(null)
+        }
+        every { platformRepo.getVoteContendersOrNull(firstName) } returns contenders()
+
+        viewModel.checkUsername(firstName)
+        assertTrue("the first lookup must be in flight", firstNameInFlight.await(5, TimeUnit.SECONDS))
+        viewModel.checkUsernameValid("secondname", UsernameType.Primary)
+
+        releaseFirstName.countDown()
+        Thread.sleep(300)
+
+        val state = viewModel.uiState.value
+        assertFalse(state.usernameCheckSuccess)
+        assertEquals(null, state.checkedUsername)
+        assertFalse(viewModel.hasAvailableResultFor("secondname"))
+    }
+
+    @Test
+    fun hasAvailableResultFor_onlyMatchesTheCheckedAvailableName() {
+        nameLookupReturns(null)
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders()
+
+        checkUsername()
+
+        assertTrue(viewModel.hasAvailableResultFor(username))
+        assertFalse(viewModel.hasAvailableResultFor("someothername"))
+    }
+
     // --- USERNAME_REQUESTED recovery ---
 
     @Test
@@ -329,8 +407,8 @@ class RequestUserNameViewModelTest {
     // --- helpers ---
 
     /** Runs a check and waits for it to finish. checkingUsername is raised before the first suspension. */
-    private fun checkUsername(): RequestUserNameUIState {
-        viewModel.checkUsername(username)
+    private fun checkUsername(name: String = username): RequestUserNameUIState {
+        viewModel.checkUsername(name)
         return runBlocking {
             withTimeout(5_000) { viewModel.uiState.first { !it.checkingUsername } }
         }
@@ -386,11 +464,13 @@ class RequestUserNameViewModelTest {
     private fun submitAndCaptureIntent(): Intent {
         viewModel.requestedUserName = username
         val intent = slot<Intent>()
-        every { walletApplication.startService(capture(intent)) } returns null
+        every { walletApplication.startService(any()) } returns null
 
         viewModel.submit()
 
-        verify(timeout = 5_000) { walletApplication.startService(any()) }
+        // capture while verifying: MockK records the call before a stub's capture() runs, so a slot
+        // filled by the stub could still be empty when verify(timeout) returns
+        verify(timeout = 5_000) { walletApplication.startService(capture(intent)) }
         return intent.captured
     }
 }
