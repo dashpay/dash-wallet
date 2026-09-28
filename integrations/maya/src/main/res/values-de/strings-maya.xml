@@ -257,7 +257,7 @@
     <string name="dex_refund_address_placeholder">Zum Einfügen lange drücken</string>
     <string name="dex_receive_heading">Sende %1$s an diese Adresse</string>
 
-    <string name="dex_receive_description">Sobald das Netzwerk deinen Transfer bestätigt hat, konvertieren wir deine Dash und überweisen diese in deine DashPay Wallet</string>
+    <string name="dex_receive_description">Sobald das Netzwerk deinen Transfer bestätigt hat, wandeln wir den Betrag in Dash um und überweisen ihn in deine DashPay Wallet</string>
     <string name="dex_receive_uri_label">URI</string>
     <string name="dex_receive_memo_label">Memo / Tag</string>
     <string name="dex_receive_memo_warning">Dein Transfer muss eine Memo beinhalten. Guthaben ohne Memo kann dem Swap nicht zugeordnet werden und geht verloren.</string>
