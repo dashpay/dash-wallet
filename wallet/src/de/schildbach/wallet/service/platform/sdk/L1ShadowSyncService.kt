@@ -1163,6 +1163,83 @@ internal class ProbeWatchdogDecider(
 }
 
 /**
+ * Judges a filter-stall restart by its OUTCOME, not by whether the restart
+ * call returned (QA D-901b, 2026-09-28).
+ *
+ * The watchdog used to log "engine restart succeeded" the moment the new
+ * engine started. In QA run 9 it logged that twice against a filter cursor
+ * that never left 948,000: the restart worked and the wedge did not care.
+ * A restarted engine resumes from its durable watermark, often BELOW the
+ * stuck height, so "the cursor moved" is not recovery either; only passing
+ * the stuck height is.
+ *
+ * - [onRestarted] arms a verdict for the restart that just started.
+ * - [onProgress] returns [Verdict.Recovered] the first time the cursor
+ *   passes the stuck height.
+ * - [onStallDecision] returns [Verdict.NotRecovered] when the watchdog is
+ *   about to act on a stall again (another restart, or standing down) and
+ *   the cursor has not passed it. [Verdict.NotRecovered.sameHeight] marks
+ *   the deterministic shape: re-walked and wedged at the SAME height again.
+ *
+ * Pure apart from its own lock, so the semantics are host-JVM testable.
+ */
+internal class FilterStallRestartVerifier {
+    sealed class Verdict {
+        abstract val stuckAt: Long
+        abstract val elapsedMs: Long
+
+        data class Recovered(override val stuckAt: Long, val nowAt: Long, override val elapsedMs: Long) : Verdict()
+
+        data class NotRecovered(
+            override val stuckAt: Long,
+            val nowAt: Long,
+            override val elapsedMs: Long,
+            val sameHeight: Boolean,
+            /** Consecutive restarts that ended NotRecovered at this same stuck height, this one included. */
+            val consecutiveAtThisHeight: Int
+        ) : Verdict()
+    }
+
+    private var pendingStuckAt: Long = -1L
+    private var restartedAtMs: Long = 0L
+    private var lastFailedStuckAt: Long = -1L
+    private var failuresAtLastHeight: Int = 0
+
+    @Synchronized
+    fun onRestarted(stuckAt: Long, nowMs: Long) {
+        pendingStuckAt = stuckAt
+        restartedAtMs = nowMs
+    }
+
+    @Synchronized
+    fun onProgress(filterHeight: Long, nowMs: Long): Verdict? {
+        if (pendingStuckAt < 0 || filterHeight <= pendingStuckAt) return null
+        val verdict = Verdict.Recovered(pendingStuckAt, filterHeight, nowMs - restartedAtMs)
+        pendingStuckAt = -1L
+        lastFailedStuckAt = -1L
+        failuresAtLastHeight = 0
+        return verdict
+    }
+
+    @Synchronized
+    fun onStallDecision(filterHeight: Long, nowMs: Long): Verdict? {
+        if (pendingStuckAt < 0) return null
+        if (filterHeight > pendingStuckAt) return onProgress(filterHeight, nowMs)
+        val stuckAt = pendingStuckAt
+        failuresAtLastHeight = if (lastFailedStuckAt == stuckAt) failuresAtLastHeight + 1 else 1
+        lastFailedStuckAt = stuckAt
+        pendingStuckAt = -1L
+        return Verdict.NotRecovered(
+            stuckAt = stuckAt,
+            nowAt = filterHeight,
+            elapsedMs = nowMs - restartedAtMs,
+            sameHeight = filterHeight == stuckAt,
+            consecutiveAtThisHeight = failuresAtLastHeight
+        )
+    }
+}
+
+/**
  * Restart decision for the FILTER-STALL watchdog (MO-1022).
  *
  * ## The failure this exists for
@@ -2312,6 +2389,9 @@ class L1ShadowSyncService internal constructor(
     /** MO-1022: the filter-cursor stall watchdog (see [FilterStallWatchdogDecider]). */
     private val filterStallDecider = FilterStallWatchdogDecider(filterStallThresholdMs)
 
+    /** Judges each stall restart by whether the cursor then passed the stuck height (D-901b). */
+    internal val filterStallRestartVerifier = FilterStallRestartVerifier()
+
     /**
      * Wall-clock ms of the last app-initiated SDK L1 SELF-SPEND broadcast
      * ([SdkL1SendService], Phase 5b), 0 when none. While fresh
@@ -3269,10 +3349,15 @@ class L1ShadowSyncService internal constructor(
     private suspend fun checkFilterStall() {
         if (runningWalletIdHex.value == null) return
         val p = _progress.value
+        filterStallRestartVerifier.onProgress(p.filterHeight, nowMs())?.let(::logStallRestartVerdict)
         val decision = filterStallDecider.onCheck(
             nowMs(), p.filterHeight, p.filterTarget, lastWalletEventMs, p.walletSyncedHeight
         )
         if (decision == FilterStallWatchdogDecider.Decision.NONE) return
+        if (decision != FilterStallWatchdogDecider.Decision.SDK_FINAL_BATCH) {
+            // About to act on a stall again: the previous restart, if any, did not recover it.
+            filterStallRestartVerifier.onStallDecision(p.filterHeight, nowMs())?.let(::logStallRestartVerdict)
+        }
         when (decision) {
             FilterStallWatchdogDecider.Decision.RESTART -> {
                 log.error(
@@ -3392,12 +3477,21 @@ class L1ShadowSyncService internal constructor(
                 // read inside suspends, and a stop can land in that gap too.
                 startIfEnabled(expectedExternalStopGeneration = generation)
             }.onSuccess { started ->
-                if (started != null) {
-                    log.info(
-                        "L1Shadow filter-stall watchdog: engine restart {} (was stuck at {})",
-                        if (started) "succeeded" else "declined to start",
+                when (started) {
+                    true -> {
+                        // The engine is up again; that is not yet a recovery (D-901b).
+                        filterStallRestartVerifier.onRestarted(stuckAt, nowMs())
+                        log.info(
+                            "L1Shadow filter-stall watchdog: engine restarted (was stuck at {}) — not a " +
+                                "recovery yet; judged by whether the filter cursor passes {}",
+                            stuckAt, stuckAt
+                        )
+                    }
+                    false -> log.info(
+                        "L1Shadow filter-stall watchdog: engine restart declined to start (was stuck at {})",
                         stuckAt
                     )
+                    null -> Unit
                 }
             }.onFailure {
                 if (it is CancellationException) throw it
@@ -3406,6 +3500,32 @@ class L1ShadowSyncService internal constructor(
         }.logCompletion("filter-stall engine restart")
         stallRestartJob = job
         return job
+    }
+
+    private fun logStallRestartVerdict(verdict: FilterStallRestartVerifier.Verdict) {
+        when (verdict) {
+            is FilterStallRestartVerifier.Verdict.Recovered -> log.info(
+                "L1Shadow filter-stall watchdog: RECOVERED — the filter cursor passed {} (now {}) " +
+                    "{}s after the restart",
+                verdict.stuckAt, verdict.nowAt, verdict.elapsedMs / 1000
+            )
+            is FilterStallRestartVerifier.Verdict.NotRecovered -> log.error(
+                "L1Shadow filter-stall watchdog: the restart did NOT recover — {}s later the filter " +
+                    "cursor is at {}, {} the stuck height {} ({} consecutive restart(s) failed at this " +
+                    "height).{}",
+                verdict.elapsedMs / 1000,
+                verdict.nowAt,
+                if (verdict.sameHeight) "wedged again AT" else "still short of",
+                verdict.stuckAt,
+                verdict.consecutiveAtThisHeight,
+                if (verdict.sameHeight) {
+                    " A re-walk that wedges at the same height points at persisted SPV state, not a " +
+                        "transient network or peer condition (QA D-901)."
+                } else {
+                    ""
+                }
+            )
+        }
     }
 
     /**

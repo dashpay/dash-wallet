@@ -1245,6 +1245,26 @@ class L1ShadowSyncServiceTest {
     }
 
     /**
+     * QA D-901b: a restart that started the engine is not a recovery. It arms
+     * a verdict that only the cursor passing the stuck height can settle as
+     * recovered; the next stall decision below it settles it as not recovered.
+     */
+    @Test
+    fun stallRestart_armsAnOutcomeVerdict_insteadOfClaimingSuccess() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        service.launchStallRestart(stuckAt = 948_000L).join()
+        assertEquals(2, source.startCalls)
+
+        val verdict = service.filterStallRestartVerifier.onStallDecision(filterHeight = 948_000L, nowMs = Long.MAX_VALUE / 2)
+        assertTrue("armed by the restart", verdict is FilterStallRestartVerifier.Verdict.NotRecovered)
+        assertTrue((verdict as FilterStallRestartVerifier.Verdict.NotRecovered).sameHeight)
+        service.stop()
+    }
+
+    /**
      * The ordering the review named: the restart's own stop is parked inside
      * the native `stopSpv` when the foreground service's teardown calls
      * `stop()`. That external stop queues behind ours on the mutex and, once
