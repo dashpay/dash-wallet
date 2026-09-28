@@ -26,6 +26,7 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.Wallet
 import java.util.function.Consumer
 import java.util.function.Predicate
 
@@ -40,6 +41,16 @@ class DirectPayException(message: String) : Exception(message)
  */
 class PaymentSubmissionPendingException(val txId: Sha256Hash, cause: Throwable?) :
     Exception("Payment submission result unknown for $txId; verification pending", cause)
+
+/**
+ * Facts a caller wants kept with a payment so one recovered long afterwards looks like the
+ * original. Only for payments whose submission result may be unknown; ordinary payments record
+ * their metadata directly.
+ */
+data class PaymentRecoveryMetadata(
+    val isGiftCardPurchase: Boolean = false,
+    val merchantIconUrl: String? = null
+)
 
 interface SendPaymentService {
     @Throws(LeftoverBalanceException::class)
@@ -65,7 +76,24 @@ interface SendPaymentService {
         val totalAmount: String
     )
 
-    suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction
+    /**
+     * @param originWallet the wallet the user confirmed this payment on, captured by the caller
+     *   before it suspended. Coins are selected, the transaction signed and submitted from this
+     *   wallet only, and the payment is refused if a wipe has taken it away since. Null means the
+     *   wallet installed when this is called, which is right for a caller that has not waited on
+     *   anything since the user confirmed.
+     * @param onTransactionCreated invoked once the transaction is built and signed, before it is
+     *   submitted, so a caller can persist anything it will need to recover the payment later.
+     *   Runs while the payment is still recoverable: after this point the transaction may reach
+     *   the payee even if this process dies.
+     */
+    suspend fun payWithDashUrl(
+        dashUri: String,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
+        originWallet: Wallet? = null,
+        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
+    ): Transaction
     fun isFeeTooHigh(tx: Transaction): Boolean
 
     /** support manual tx creation */

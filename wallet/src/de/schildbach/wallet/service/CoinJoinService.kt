@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service
 
+import androidx.annotation.VisibleForTesting
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -25,6 +26,7 @@ import com.google.common.base.Stopwatch
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
@@ -129,7 +131,8 @@ class CoinJoinMixingService @Inject constructor(
     private val blockchainStateProvider: BlockchainStateProvider,
     private val config: CoinJoinConfig,
     private val platformRepo: PlatformRepo,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val pendingPaymentVerifier: PendingDirectPaymentVerifier
 ) : CoinJoinService {
 
     companion object {
@@ -436,8 +439,7 @@ class CoinJoinMixingService @Inject constructor(
             when {
                 mixingStatus == MixingStatus.MIXING && previousMixingStatus != MixingStatus.MIXING -> {
                     // start mixing
-                    prepareMixing()
-                    startMixing()
+                    beginMixing()
                 }
 
                 previousMixingStatus == MixingStatus.MIXING && mixingStatus != MixingStatus.MIXING -> {
@@ -651,6 +653,36 @@ class CoinJoinMixingService @Inject constructor(
             setRequestDecryptedKey(requestDecryptedKey)
             start()
         }
+    }
+
+    /**
+     * Brings mixing up, or leaves the state somewhere another attempt can start from.
+     *
+     * Mixing spends from the same wallet as a payment, so it waits at the same barrier: an
+     * uncertain payment's outpoints are unprotected until their locks are restored after a
+     * restart. The barrier is asked before [prepareMixing] rather than inside [startMixing],
+     * because preparation registers listeners and starts the client manager and is only undone by
+     * [stopMixing]; failing after it had run would leave that setup standing and the next attempt
+     * would register a second copy of every listener on top of it.
+     *
+     * The caller has already published MIXING, and its guard is that the previous status was not
+     * MIXING, so a failure that left the status there would have every later request to mix
+     * skipped as already running while nothing was: mixing would stay dead, with the UI saying
+     * otherwise, until some other event moved the state or the user toggled it by hand. PAUSED is
+     * what the rest of this class uses for "we want to mix but cannot yet", and updateBalance()
+     * runs on every new block while synced, so the next block tries again through the barrier.
+     */
+    @VisibleForTesting
+    internal suspend fun beginMixing() {
+        try {
+            pendingPaymentVerifier.awaitRestored()
+        } catch (e: Exception) {
+            log.warn("not starting mixing, pending payments are not restored yet", e)
+            _mixingState.value = MixingStatus.PAUSED
+            return
+        }
+        prepareMixing()
+        startMixing()
     }
 
     private suspend fun startMixing(): Boolean {
