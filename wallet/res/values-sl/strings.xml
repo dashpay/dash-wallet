@@ -157,7 +157,7 @@
     <string name="import_keys_dialog_failure">Zasebnih ključev ni bilo mogoče obnoviti:\n\n%s\n\nNapačno geslo?</string>
     <string name="export_keys_dialog_title">Ustvarite varnostno kopijo vaše denarnice. </string>
     <string name="backup_wallet_dialog_message">Vaši varnostna kopija bo šifrirana z izbranim geslom in shranjena na zunanji pomnilnik.</string>
-    <string name="backup_wallet_dialog_warning_encrypted">Vaša denarnica je zaščitena s PIN številko. Zapomnite si PIN številko, v kolikor boste želeli obnoviti geslo varnostne kopije. </string>
+    <string name="backup_wallet_dialog_warning_encrypted">Vaša denarnica je zaščitena s PIN številko. Zapomnite si tako PIN številko kot geslo varnostne kopije!</string>
     <string name="export_keys_dialog_button_export">Varnostna kopija</string>
     <string name="export_keys_dialog_failure">Iz vaše denarnice ni mogoče ustvariti rezervne varnostne kopije:\n%s</string>
     <string name="export_keys_dialog_button_archive">Arhiviraj</string>
