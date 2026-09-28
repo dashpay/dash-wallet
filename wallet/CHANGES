@@ -3,8 +3,7 @@ v11.9.1
   New features & redesigns
   - Dark mode support across the app: dialogs, PIN entry, DashPay cards, payment request details and Dash DEX screens (#1480)
   - Tools menu: improved and updated (#1480)
-  - DashConnect: connect your DashPay username to apps on the Dash network by scanning a QR code; log in without passwords or accounts (#1510)
-  - DashConnect: enabled on mainnet
+  - DashConnect (testnet only): connect your DashPay username to apps on the Dash network by scanning a QR code; log in without passwords or accounts (#1510)
   - Android 16 support: target SDK 36 with edge-to-edge insets on every screen (#1527)
 
   Dash DEX
