@@ -897,6 +897,14 @@ class ShieldedBalanceServiceImpl internal constructor(
     /** The last-known-balance persistence collector (see [startBalancePersistence]); null until ready. */
     private var balancePersistJob: Job? = null
 
+    /**
+     * The pending wallet-shield sweep [ensureShieldedReady] launched, so a
+     * teardown can cancel it (review, 2026-09-28): a sweep that read the latch
+     * just before a stop must not go on to resume a shield after that stop.
+     * Like the two jobs above, written and cancelled only under [readyMonitor].
+     */
+    private var sweepJob: Job? = null
+
     override suspend fun lastKnownShieldedBalance(): Dash? = try {
         dashPayConfig.getLastShieldedBalanceDuffs()?.let { Dash(it) }
     } catch (t: Throwable) {
@@ -907,8 +915,17 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override suspend fun ensureShieldedReady(): Boolean {
         if (!isEnabled()) return false
-        val ready = ensureShieldedReadyInner()
-        if (ready) {
+        val readyGen = bringUpCommittedGeneration() ?: return false
+        // The collectors and the sweep start under [readyMonitor], and only
+        // while the runtime this pass committed is still the published one
+        // (review, 2026-09-28). This runs after the lock is released, so a
+        // stop can land in between; teardown takes the same monitor, so it
+        // either runs first (the generations differ and nothing starts) or
+        // after (and cancels what started here).
+        return synchronized(readyMonitor) {
+            if (readyWalletIdHex.value == null || readyGeneration.get() != readyGen) {
+                return@synchronized false
+            }
             // Begin (or keep) polling the SDK's pass-in-flight signal so the
             // UI can distinguish "still syncing" from a real zero balance.
             startSyncStatusPolling()
@@ -919,20 +936,40 @@ class ShieldedBalanceServiceImpl internal constructor(
             // Staged-retry hook: finish any interrupted shieldFromWallet
             // (stage (b) after the L1 lock broadcast) in the background.
             // Cheap when nothing is pending (one Room query); serialized
-            // with new wallet-shield writes by [walletShieldMutex].
-            sweepScope?.launch {
-                runCatching { resumePendingWalletShieldsInner() }
-                    .onFailure {
-                        if (it is CancellationException) throw it
-                        log.warn("pending wallet-shield sweep failed; will retry on the next trigger", it)
-                    }
+            // with new wallet-shield writes by [walletShieldMutex]. One at a
+            // time: a sweep still running covers this trigger too.
+            if (sweepJob?.isActive != true) {
+                sweepJob = sweepScope?.launch {
+                    runCatching { resumePendingWalletShieldsInner() }
+                        .onFailure {
+                            if (it is CancellationException) throw it
+                            log.warn("pending wallet-shield sweep failed; will retry on the next trigger", it)
+                        }
+                }
             }
+            true
         }
-        return ready
     }
 
-    private suspend fun ensureShieldedReadyInner(): Boolean {
-        lock.lock()
+    private suspend fun ensureShieldedReadyInner(): Boolean = bringUpCommittedGeneration() != null
+
+    /**
+     * The bring-up under [lock]. Returns the generation of the runtime it
+     * committed (its own, or the one already published), or null when it did
+     * not commit or a stop superseded it.
+     */
+    private suspend fun bringUpCommittedGeneration(): Int? {
+        try {
+            lock.lock()
+        } catch (c: CancellationException) {
+            // Cancelled while queued, possibly AFTER the lock was already
+            // handed to us (review, 2026-09-28): Mutex's prompt-cancellation
+            // path then releases it itself, skipping [releaseLock], and a
+            // debt the previous holder could not pay (its tryLock lost to
+            // the handoff) would sit unpaid with the lock free. Pay it here.
+            handOffOwedNativeStop()
+            throw c
+        }
         // The fence against a stop() that timed out on [lock] and tore the
         // Kotlin side down without us (review, 2026-09-23): the generation is
         // sampled FIRST, the moment the lock is ours — before the owed-stop
@@ -949,11 +986,11 @@ class ShieldedBalanceServiceImpl internal constructor(
             // have left an older runtime's native stop owed; pay it before
             // anything new starts.
             drainOwedNativeStopLocked()
-            bringUpLocked(generation)
+            if (bringUpLocked(generation)) readyGeneration.get() else null
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("shielded bring-up failed; will retry on the next trigger", t)
-            false
+            null
         } finally {
             releaseLock()
         }
@@ -961,7 +998,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // been paid by releaseLock() (or will be by whoever holds the lock
         // next); either way this pass is not the runtime any more, so the
         // caller must not start the collectors or the sweep.
-        return committed && stopGeneration.get() == generation
+        return committed?.takeIf { stopGeneration.get() == generation }
     }
 
     /** The bring-up proper; the caller holds [lock] and sampled [generation] under it. */
@@ -1239,6 +1276,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         syncStatusJob = null
         balancePersistJob?.cancel()
         balancePersistJob = null
+        sweepJob?.cancel()
+        sweepJob = null
         _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
         _shieldedBalanceMaybeStale.value = false
     }

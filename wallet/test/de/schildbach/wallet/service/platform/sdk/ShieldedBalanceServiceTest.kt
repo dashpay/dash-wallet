@@ -21,9 +21,12 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
@@ -281,9 +284,13 @@ class ShieldedBalanceServiceTest {
             onResume(outPointTxid, outPointVout)
         }
 
+        /** Suspending hook inside the sweep's lock query — a sweep in flight (review 2026-09-28). */
+        var onShieldLocksSuspend: suspend () -> Unit = {}
+
         override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
             lockQueries++
             events += "locks"
+            onShieldLocksSuspend()
             return shieldLocks()
         }
 
@@ -743,6 +750,86 @@ class ShieldedBalanceServiceTest {
         assertEquals(1, source.stopCalls)
         assertTrue(service.ensureShieldedReady())
         assertTrue(source.nativeLoopRunning)
+    }
+
+    /**
+     * Review, 2026-09-28 (adversarial pass): a queued bring-up cancelled AFTER
+     * the lock was handed to it. Mutex's prompt-cancellation path releases the
+     * lock itself, skipping releaseLock(), and the previous holder's handoff
+     * had already lost its tryLock to that handoff — so a debt recorded by a
+     * timed-out stop sat unpaid with the lock free and the old loop running.
+     */
+    @Test
+    fun aQueuedBringUpCancelledAfterTheLockHandoff_stillPaysTheOwedStop() = runBlocking {
+        val commitGate = CompletableDeferred<Unit>()
+        var parked = false
+        var commits = 0
+        val source = readySource()
+        val service = service(source, stopLockTimeoutMs = 200, afterReadyCommitted = {
+            if (++commits == 1) {
+                parked = true
+                commitGate.await()
+            }
+        })
+
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (!parked) delay(10) }
+        withTimeout(5_000) { service.stop() } // times out: the debt against #1's loop
+        assertTrue(source.nativeLoopRunning)
+
+        // #2 queues on the lock; it resumes on THIS thread's event loop, which
+        // stays blocked below, so the handoff lands but #2 cannot run yet.
+        val second = async(start = CoroutineStart.UNDISPATCHED) { service.ensureShieldedReady() }
+        commitGate.complete(Unit)
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while (!first.isCompleted && System.nanoTime() < deadline) Thread.sleep(5) // blocking on purpose
+        assertTrue("#1 released: the lock is now #2's", first.isCompleted)
+
+        second.cancel()
+        second.join()
+
+        assertFalse("the owed stop was paid on the cancelled acquisition", source.nativeLoopRunning)
+        assertEquals(1, source.stopCalls)
+    }
+
+    /**
+     * Review, 2026-09-28 (adversarial pass): the sweep was launched after the
+     * lock was released and never tracked, so a sweep in flight when a stop
+     * ran went on to resume wallet shields after that stop. Teardown now
+     * cancels it.
+     */
+    @Test
+    fun stop_cancelsAPendingWalletShieldSweepInFlight() = runBlocking {
+        val sweepGate = CompletableDeferred<Unit>()
+        var sweepEntered = false
+        var sweepContinuedAfterStop = false
+        val source = readySource().apply {
+            onShieldLocksSuspend = {
+                sweepEntered = true
+                sweepGate.await()
+                sweepContinuedAfterStop = true
+            }
+        }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = config(true),
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (!sweepEntered) delay(10) }
+
+            service.stop()
+            sweepGate.complete(Unit)
+            delay(200)
+
+            assertFalse("the sweep did not outlive the stop", sweepContinuedAfterStop)
+        } finally {
+            sweepScope.cancel()
+        }
     }
 
     /** A failed native stop keeps the loop's ownership, so the next stop() retries instead of returning early. */
