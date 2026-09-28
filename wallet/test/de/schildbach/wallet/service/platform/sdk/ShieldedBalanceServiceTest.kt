@@ -801,13 +801,20 @@ class ShieldedBalanceServiceTest {
     @Test
     fun stop_cancelsAPendingWalletShieldSweepInFlight() = runBlocking {
         val sweepGate = CompletableDeferred<Unit>()
+        val sweepFinished = CompletableDeferred<Unit>()
         var sweepEntered = false
         var sweepContinuedAfterStop = false
         val source = readySource().apply {
             onShieldLocksSuspend = {
                 sweepEntered = true
-                sweepGate.await()
-                sweepContinuedAfterStop = true
+                try {
+                    sweepGate.await()
+                    sweepContinuedAfterStop = true
+                } finally {
+                    // Signalled on BOTH outcomes, so the assertion below waits
+                    // for the sweep to end instead of for a fixed delay.
+                    sweepFinished.complete(Unit)
+                }
             }
         }
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -824,7 +831,7 @@ class ShieldedBalanceServiceTest {
 
             service.stop()
             sweepGate.complete(Unit)
-            delay(200)
+            withTimeout(5_000) { sweepFinished.await() }
 
             assertFalse("the sweep did not outlive the stop", sweepContinuedAfterStop)
         } finally {
