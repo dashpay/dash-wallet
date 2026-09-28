@@ -472,18 +472,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * blockstore while that instance still held its file lock
          * (OverlappingFileLockException, five failed starts on the reference
          * install on 2026-09-16).
+         *
+         * It is also the deadlock clock read by the onCreate guard: it times
+         * the continuous interval in which any destroy is pending, starting in
+         * onDestroy itself. A cleanup stuck before it claims [isCleaningUp], or
+         * while it waits for its instance's initialization, is exactly as stuck
+         * and used to read as 0 ms, so a refused start never reached
+         * [CLEANUP_DEADLOCK_EXIT_MS]. The clock clears when the last pending
+         * destroy finishes, so a finished cleanup's start time is never charged
+         * to a later one.
          */
-        private val pendingDestroys = java.util.concurrent.atomic.AtomicInteger(0)
+        private val pendingDestroys = PendingServiceCleanup()
 
         /** Whether a previous instance of this service is still tearing down. */
-        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
-
-        /**
-         * How long the cleanup that currently owns [isCleaningUp] has been
-         * running. Read by the onCreate guard to measure how long a refused
-         * start has been waiting on a cleanup that never finishes.
-         */
-        private val cleanupClock = CleanupDeadlockClock { SystemClock.elapsedRealtime() }
+        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.isPending()
 
         /**
          * Plan §37: how long a previous instance's cleanup may stay unfinished
@@ -495,35 +497,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         /** What a start refused by an unfinished cleanup does next — see [decideOnCleanupDeadlock]. */
         enum class CleanupDeadlockAction { STOP_SELF, EXIT_PROCESS }
-
-        /**
-         * The deadlock clock for the cleanup that owns [isCleaningUp] (review,
-         * 2026-09-28). It starts the moment a cleanup CLAIMS ownership, before
-         * that cleanup waits for its instance's initialization: a cleanup stuck
-         * in that wait is exactly as stuck, and used to read as 0 ms, so a
-         * refused start never reached the exit bound. It is cleared by the same
-         * owner when it finishes, by compare-and-set on the token [start]
-         * returned, so a finished cleanup's start time can never be charged to
-         * a later one (that used to end the process early), and a late finish
-         * cannot clear a newer owner's clock.
-         */
-        internal class CleanupDeadlockClock(private val nowMs: () -> Long) {
-            private val startedAtMs = AtomicLong(0L)
-
-            /** Start the clock for a cleanup that just claimed ownership; returns its token. */
-            fun start(): Long = nowMs().coerceAtLeast(1L).also { startedAtMs.set(it) }
-
-            /** The owner holding [token] finished; clears the clock unless a newer owner restarted it. */
-            fun finish(token: Long) {
-                startedAtMs.compareAndSet(token, 0L)
-            }
-
-            /** How long the current owner has been running, or 0 with no cleanup in progress. */
-            fun stuckForMs(): Long {
-                val startedAt = startedAtMs.get()
-                return if (startedAt == 0L) 0L else (nowMs() - startedAt).coerceAtLeast(0L)
-            }
-        }
 
         /**
          * Plan §37 (Andrei, 2026-09-22): a shutdown parked behind a native SDK
@@ -1450,7 +1423,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     active.await()
                     continue
                 }
-                if (pendingDestroys.get() <= 0 && !isCleaningUp.get()) break
+                if (!pendingDestroys.isPending() && !isCleaningUp.get()) break
                 delay(100)
             }
             true
@@ -2505,7 +2478,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // finish. With the app in the background, end the process so
                     // the next start gets a clean one; stopSelf alone left the
                     // engine off for four hours on 2026-09-22.
-                    val stuckForMs = cleanupClock.stuckForMs()
+                    val stuckForMs = pendingDestroys.elapsedMs(SystemClock.elapsedRealtime())
                     if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS) {
                         // Logged BEFORE the decision: the visibility check and
                         // the exit run together on the main thread, with no
@@ -3259,7 +3232,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
-        pendingDestroys.incrementAndGet()
+        pendingDestroys.schedule(SystemClock.elapsedRealtime())
         super.onDestroy()
         // unregister receivers on the main thread, if they were registered
         // in some cases, onDestroy is called soon after onCreate and before its coroutine finishes
@@ -3310,14 +3283,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // file lock, which is the OverlappingFileLockException this counter exists to prevent.
             if (!isCleaningUp.compareAndSet(false, true)) {
                 log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
-                pendingDestroys.decrementAndGet()
+                pendingDestroys.finish()
                 cleanupMonitorJob.cancel()
                 return@launch
             }
-            // The deadlock clock starts at the claim, before the wait for
-            // initialization below, and is cleared by this owner in finally.
-            val cleanupClockToken = cleanupClock.start()
-
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
@@ -3471,10 +3440,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (checkMutex.isLocked) {
                     checkMutex.unlock()
                 }
-                cleanupClock.finish(cleanupClockToken)
-                isCleaningUp.set(false)
-                pendingDestroys.decrementAndGet()
                 cleanupDeferred?.complete(Unit)
+                isCleaningUp.set(false)
+                pendingDestroys.finish()
                 // Cancel the cleanup monitor since cleanup is done
                 cleanupMonitorJob.cancel()
             }
