@@ -330,7 +330,8 @@ class ShieldedBalanceServiceTest {
         progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {},
-        stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS
+        stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
+        afterReadyCommitted: suspend () -> Unit = {}
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs),
@@ -340,7 +341,8 @@ class ShieldedBalanceServiceTest {
         l1ProgressFlow = { progressFlow },
         ensureL1SpvRunning = ensureL1SpvRunning,
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
-        stopLockTimeoutMs = stopLockTimeoutMs
+        stopLockTimeoutMs = stopLockTimeoutMs,
+        afterReadyCommitted = afterReadyCommitted
     )
 
     // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
@@ -522,6 +524,75 @@ class ShieldedBalanceServiceTest {
         assertEquals(2, source.bindCalls)
         assertEquals(2, source.startCalls)
         assertEquals(2, source.warmUpCalls)
+    }
+
+    /**
+     * Review, 2026-09-27 (second pass): no generation check can close the
+     * window AFTER the last one. A bring-up that published ready and passed
+     * its final verify can still stall holding the lock (a slow log write);
+     * a stop() that times out then clears the latch but cannot reach the
+     * native loop, and before the fix nothing owed that loop a stop — later
+     * stops skipped native cleanup because the latch was already null. The
+     * fallback now records the stop as owed and the holder pays it on release.
+     */
+    @Test
+    fun stop_fallbackAfterTheFinalCheck_leavesTheNativeStopOwed_andTheReleasingBringUpPaysIt() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        var parked = false
+        var commits = 0
+        val source = readySource()
+        val service = service(source, stopLockTimeoutMs = 200, afterReadyCommitted = {
+            if (++commits == 1) {
+                parked = true
+                gate.await()
+            }
+        })
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (!parked) delay(10) }
+        assertEquals("the loop is running before the stall", 1, source.startCalls)
+
+        // Times out on the lock and completes BEFORE the bring-up resumes.
+        withTimeout(5_000) { service.stop() }
+        assertEquals("the fallback cannot reach the loop itself", 0, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        gate.complete(Unit) // the stalled bring-up resumes past every check
+        assertFalse("a bring-up whose stop was paid on release does not report ready", bringUp.await())
+        assertEquals("…and the native loop it started is stopped", 1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        // The debt is paid once: a later stop has nothing to do.
+        service.stop()
+        assertEquals(1, source.stopCalls)
+
+        // A fresh bring-up afterwards is whole and stays up.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, source.startCalls)
+        assertEquals(1, source.stopCalls)
+        service.stop()
+        assertEquals("an uncontended stop still stops the loop", 2, source.stopCalls)
+    }
+
+    /**
+     * A loop the service started must be stopped by the next stop() even when
+     * the ready latch was never published. Here the native start throws after
+     * the loop is already up; before the ownership flag, stop() saw a null
+     * latch and returned without touching the SDK, leaving the loop orphaned.
+     */
+    @Test
+    fun stop_stopsALoopFromAFailedBringUp_evenWithTheLatchNeverPublished() = runBlocking {
+        val source = readySource().apply { onStart = { throw IllegalStateException("start failed after the loop began") } }
+        val service = service(source)
+
+        assertFalse(service.ensureShieldedReady())
+        assertEquals(1, source.startCalls)
+        assertEquals(0, source.stopCalls)
+
+        service.stop()
+        assertEquals("the orphaned loop is stopped", 1, source.stopCalls)
+        service.stop()
+        assertEquals("…once", 1, source.stopCalls)
     }
 
     /** The uncontended path is unchanged: stop under the lock, and the native loop IS stopped. */
