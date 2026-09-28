@@ -35,6 +35,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -75,11 +76,12 @@ class NetworkMonitorViewModelTest {
         filterHeight: Long = 1_400_000,
         filterTarget: Long = 1_514_660,
         mnListHeight: Long = 1_514_600,
-        chainLockHeight: Int = 1_514_650
+        chainLockHeight: Int = 1_514_650,
+        scanStartDateSecs: Long? = null
     ) = L1SyncDetail(
         stage, percentage, isSynced,
         headerHeight, headerTarget, filterHeight, filterTarget,
-        mnListHeight, chainLockHeight
+        mnListHeight, chainLockHeight, scanStartDateSecs
     )
 
     // ── The pure mapping ──────────────────────────────────────────────
@@ -210,5 +212,49 @@ class NetworkMonitorViewModelTest {
 
         diagnostic.emit(true)
         assertTrue(viewModel.uiState.value.showDashjPanels)
+    }
+
+    // ── SR-22: a scan bounded by a user-supplied date may not say "Synced" ──
+
+    /** 2024-03-05 — the sort of date the restore screen's picker hands over. */
+    private val chosenDateSecs = 1_709_596_800L
+
+    @Test
+    fun build_syncedStageOnABoundedScan_saysWhichRangeItIsSyncedFor() {
+        val state = buildNetworkMonitorUiState(
+            detail(stage = L1SyncStage.SYNCED, isSynced = true, scanStartDateSecs = chosenDateSecs),
+            dashjDiagnosticOn = false
+        )
+
+        // NOT the bare "Synced": that is the claim SR-22 is about.
+        assertEquals(R.string.sync_synced_from, state.stageRes)
+        assertEquals(chosenDateSecs, state.scanStartDateSecs)
+        // The gate itself is untouched — the wallet is usable, just partial.
+        assertTrue(state.isSynced)
+    }
+
+    @Test
+    fun build_syncedStageOnAFullScan_keepsThePlainLabel() {
+        val state = buildNetworkMonitorUiState(
+            detail(stage = L1SyncStage.SYNCED, isSynced = true),
+            dashjDiagnosticOn = false
+        )
+
+        assertEquals(R.string.network_monitor_stage_synced, state.stageRes)
+        assertNull(state.scanStartDateSecs)
+    }
+
+    @Test
+    fun build_midScanOnABoundedScan_keepsTheStageLabelButStillCarriesTheDate() {
+        // Only the SYNCED label is rewritten — every other stage already says
+        // work is outstanding. The note below it is shown throughout, because
+        // a bounded scan is bounded while it runs too.
+        val state = buildNetworkMonitorUiState(
+            detail(stage = L1SyncStage.FILTERS, scanStartDateSecs = chosenDateSecs),
+            dashjDiagnosticOn = false
+        )
+
+        assertEquals(R.string.network_monitor_stage_filters, state.stageRes)
+        assertEquals(chosenDateSecs, state.scanStartDateSecs)
     }
 }

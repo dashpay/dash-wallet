@@ -17,11 +17,13 @@
 
 package de.schildbach.wallet.service
 
+import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import de.schildbach.wallet.service.platform.sdk.sdkWalletBirthTimeSecs
 import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -36,6 +38,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
 import javax.inject.Inject
@@ -57,12 +60,20 @@ import javax.inject.Singleton
  *   shortcut bar, CrowdNode staking, Join DashPay eligibility, invite
  *   revalidation) that must not wait on contact sync, so only the surfaces
  *   that TELL THE USER "still syncing" read [isFullySynced].
+ * @property scanStartDateSecs when non-null, the scan only ever covered the
+ *   chain from this date forward ([boundedScanStartSecs]) — everything the
+ *   wallet's keys could have received BEFORE it was never looked at, so the
+ *   balance and history on screen are a lower bound, not the truth. Null on
+ *   every wallet whose scan started at its own earliest key time (the normal
+ *   case). Surfaces that would otherwise say "done" must say what they
+ *   actually mean instead: "Synced from <date>". SR-22.
  */
 data class L1SyncUiStatus(
     val isSynced: Boolean = false,
     val percentage: Int = 0,
     val isFailed: Boolean = false,
-    val dashPaySynced: Boolean = true
+    val dashPaySynced: Boolean = true,
+    val scanStartDateSecs: Long? = null
 ) {
     /**
      * The USER-FACING "everything is done" predicate: the chain is caught up
@@ -72,6 +83,17 @@ data class L1SyncUiStatus(
      * balance only appeared at 17:25:00.
      */
     val isFullySynced: Boolean get() = isSynced && dashPaySynced
+
+    /**
+     * The scan skipped a range the wallet's own keys cover, so "synced" is
+     * only true of the part that was scanned. Deliberately NOT folded into
+     * [isSynced]: that flag gates funds and feature paths (sends, the
+     * shortcut bar, CrowdNode staking, Join DashPay eligibility), and a
+     * bounded scan that has caught up IS usable — permanently withholding
+     * those would be a worse bug than the one this exists to fix. It is the
+     * user-facing CLAIM that has to be honest, not the gate.
+     */
+    val isPartialScan: Boolean get() = scanStartDateSecs != null
 }
 
 /**
@@ -110,6 +132,52 @@ fun sdkL1ScanCaughtUp(progress: ShadowSyncProgress): Boolean =
     progress.synced || progress.scanCaughtUpToTip
 
 /**
+ * The date the scan actually STARTED FROM (Unix seconds) when that is later
+ * than the wallet's own earliest key time — i.e. there is a range the
+ * wallet's keys cover that no engine ever looked at. Null when nothing was
+ * skipped. Pure — host-testable.
+ *
+ * ## Why this is not simply "the user picked a date"
+ *
+ * The restore screen's date only NARROWS anything when it lands after the
+ * wallet's own floor, and neither engine uses it raw:
+ *
+ *  - SDK regime: [sdkWalletBirthTimeSecs] takes the MINIMUM of the
+ *    user's date and a genuine key creation time, so a protobuf-backup
+ *    restore whose keys predate the chosen date is scanned in full — and
+ *    must not be flagged.
+ *  - dashj regime: `BlockchainServiceImpl`'s fresh-store checkpointing
+ *    reads `serviceConfig.getWalletCreationDate() ?: wallet.earliestKeyCreationTime`
+ *    — the user's date wins OUTRIGHT there, so the same input can skip past
+ *    a genuine key time that the SDK regime would have honoured. The two
+ *    rules are reproduced separately rather than averaged, because a status
+ *    line that is honest about the wrong engine is not honest.
+ *
+ * Comparing the resulting floor against the wallet's own key time is what
+ * makes this a statement about UNSCANNED HISTORY rather than about a
+ * preference: a seed restore stamps `Constants.EARLIEST_HD_SEED_CREATION_TIME`
+ * (2015-03-29) as the key time, so any later floor provably skips chain the
+ * wallet could have been paid on.
+ *
+ * SR-22: a restore confirmed with the date picker's default (today) scanned
+ * roughly nothing, found 21.7 of 107.08 tDASH, and reported "Synced".
+ */
+internal fun boundedScanStartSecs(
+    sdkOwnsL1: Boolean,
+    configuredCreationDateSecs: Long?,
+    walletEarliestKeyCreationTimeSecs: Long?
+): Long? {
+    // No wallet loaded yet: nothing to compare against, so claim nothing.
+    val walletFloorSecs = walletEarliestKeyCreationTimeSecs ?: return null
+    val scanFloorSecs = if (sdkOwnsL1) {
+        sdkWalletBirthTimeSecs(configuredCreationDateSecs, walletEarliestKeyCreationTimeSecs)
+    } else {
+        configuredCreationDateSecs ?: walletEarliestKeyCreationTimeSecs
+    } ?: return null
+    return scanFloorSecs.takeIf { it > walletFloorSecs }
+}
+
+/**
  * dashj's own header percentage, replicating the historical rule that a
  * REPLAY reporting 100% is shown as 0 (a replay at "100%" has not started
  * re-scanning yet, and showing 100 would hide the header entirely).
@@ -144,18 +212,26 @@ internal fun dashjSyncPercentage(state: BlockchainState?): Int = when {
  * made zero calls for over half an hour. The starvation verdict holds for
  * as long as its condition does, so the banner cannot self-clear while the
  * outage persists.
+ *
+ * [scanStartDateSecs] rides through untouched ([boundedScanStartSecs] has
+ * already decided whether a range was skipped): it annotates the status
+ * rather than changing it, because a bounded scan that has caught up is
+ * genuinely caught up WITH ITS OWN RANGE — what must change is only what the
+ * UI claims. SR-22.
  */
 internal fun mergeL1SyncUiStatus(
     sdkOwnsL1: Boolean,
     sdkProgress: ShadowSyncProgress,
     dashjState: BlockchainState?,
     platformStarved: Boolean = false,
-    dashPaySynced: Boolean = true
+    dashPaySynced: Boolean = true,
+    scanStartDateSecs: Long? = null
 ): L1SyncUiStatus = L1SyncUiStatus(
     isSynced = if (sdkOwnsL1) sdkL1ScanCaughtUp(sdkProgress) else dashjState?.isSynced() == true,
     percentage = if (sdkOwnsL1) shadowSyncPercent(sdkProgress) else dashjSyncPercentage(dashjState),
     isFailed = dashjState?.syncFailed() == true || platformStarved,
-    dashPaySynced = dashPaySynced
+    dashPaySynced = dashPaySynced,
+    scanStartDateSecs = scanStartDateSecs
 )
 
 /**
@@ -303,6 +379,10 @@ enum class L1SyncStage { IDLE, CONNECTING, HEADERS, FILTER_HEADERS, MASTERNODE_L
  * @property chainLockHeight best PROVEN chainlocked height — a monotonic
  *   LOWER BOUND on the network's chainlock tip (see
  *   [BlockchainState.chainlockHeight]'s note), never a live mirror.
+ * @property scanStartDateSecs the date the scan started from when history
+ *   before it was skipped ([boundedScanStartSecs]); null when the whole of
+ *   the wallet's own range was scanned. Same field, same meaning, as
+ *   [L1SyncUiStatus.scanStartDateSecs].
  */
 data class L1SyncDetail(
     val stage: L1SyncStage = L1SyncStage.IDLE,
@@ -313,7 +393,8 @@ data class L1SyncDetail(
     val filterHeight: Long = 0,
     val filterTarget: Long = 0,
     val mnListHeight: Long = 0,
-    val chainLockHeight: Int = 0
+    val chainLockHeight: Int = 0,
+    val scanStartDateSecs: Long? = null
 )
 
 /**
@@ -373,7 +454,8 @@ internal fun mergeL1SyncDetail(
     state: BlockchainState?,
     bindRetryPending: Boolean = false,
     lastKnownFilterHeight: Long = 0,
-    lastKnownFilterTarget: Long = 0
+    lastKnownFilterTarget: Long = 0,
+    scanStartDateSecs: Long? = null
 ): L1SyncDetail = if (sdkOwnsL1) {
     val idleOrConnecting = progress.phase == ShadowSyncPhase.IDLE ||
         progress.phase == ShadowSyncPhase.CONNECTING
@@ -460,7 +542,8 @@ internal fun mergeL1SyncDetail(
             progress.filterTarget
         },
         mnListHeight = maxOf(progress.mnListHeight, (state?.mnlistHeight ?: 0).toLong()),
-        chainLockHeight = maxOf(sessionChainLockHeight, state?.chainlockHeight ?: 0)
+        chainLockHeight = maxOf(sessionChainLockHeight, state?.chainlockHeight ?: 0),
+        scanStartDateSecs = scanStartDateSecs
     )
 } else {
     L1SyncDetail(
@@ -476,7 +559,8 @@ internal fun mergeL1SyncDetail(
         isSynced = state?.isSynced() == true,
         headerHeight = (state?.bestChainHeight ?: 0).toLong(),
         mnListHeight = (state?.mnlistHeight ?: 0).toLong(),
-        chainLockHeight = state?.chainlockHeight ?: 0
+        chainLockHeight = state?.chainlockHeight ?: 0,
+        scanStartDateSecs = scanStartDateSecs
     )
 }
 
@@ -505,6 +589,8 @@ class L1SyncStatusService @Inject constructor(
     blockchainStateProvider: BlockchainStateProvider,
     dashPaySyncStatus: DashPaySyncStatus,
     sdkWalletBinder: SdkWalletBinder,
+    blockchainServiceConfig: BlockchainServiceConfig,
+    walletData: WalletData,
     scope: CoroutineScope
 ) {
     /**
@@ -578,6 +664,34 @@ class L1SyncStatusService @Inject constructor(
             }
             .stateIn(scope, SharingStarted.Eagerly, true)
 
+    /**
+     * The date the scan started from, when history before it was skipped
+     * ([boundedScanStartSecs] over the live inputs) — null on a wallet whose
+     * own range was scanned in full.
+     *
+     * All three inputs are FEEDS, not one-shot reads, and each for a reason:
+     * the engine can change under a mid-launch auto-commit; the stored date
+     * is cleared by a later full rescan (Settings → Rescan blockchain with no
+     * date), which must retire the warning without a relaunch; and the wallet
+     * is null for the first moments of every cold start, so a read taken then
+     * would decide "nothing was skipped" and never revisit it.
+     *
+     * A config read failure degrades to "no date stored", i.e. to claiming
+     * nothing — an unreadable preference must never be turned into an
+     * accusation that the user's history is missing.
+     */
+    private val scanStartDateSecs: Flow<Long?> = combine(
+        cutoverCoordinator.sdkOwnsL1Flow(),
+        blockchainServiceConfig.observeWalletCreationDate().catch { e ->
+            org.slf4j.LoggerFactory.getLogger(L1SyncStatusService::class.java)
+                .warn("wallet creation date feed failed; not flagging the scan as bounded", e)
+            emit(null)
+        },
+        walletData.observeWallet().map { it?.earliestKeyCreationTime }
+    ) { sdkOwnsL1, configuredCreationDate, walletEarliestKeyTime ->
+        boundedScanStartSecs(sdkOwnsL1, configuredCreationDate, walletEarliestKeyTime)
+    }.distinctUntilChanged()
+
     /** The engine-agnostic L1 sync status every sync-aware screen renders. */
     val status: Flow<L1SyncUiStatus> =
         combine(
@@ -585,9 +699,10 @@ class L1SyncStatusService @Inject constructor(
             l1ShadowSyncService.progress,
             blockchainStateProvider.observeState(),
             platformStarvedSustained,
-            dashPaySettled
-        ) { sdkOwnsL1, progress, state, platformStarved, dashPaySynced ->
-            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved, dashPaySynced)
+            // Two annotations share this slot: `combine` tops out at five flows.
+            combine(dashPaySettled, scanStartDateSecs) { settled, scanStart -> settled to scanStart }
+        ) { sdkOwnsL1, progress, state, platformStarved, (dashPaySynced, scanStart) ->
+            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved, dashPaySynced, scanStart)
         }.distinctUntilChanged()
 
     /**
@@ -615,11 +730,14 @@ class L1SyncStatusService @Inject constructor(
             l1ShadowSyncService.progress,
             l1ShadowSyncService.chainLockHeight,
             blockchainStateProvider.observeState(),
-            sdkWalletBinder.bindRetryPending
-        ) { sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending ->
+            // Two signals share this slot: `combine` tops out at five flows.
+            combine(sdkWalletBinder.bindRetryPending, scanStartDateSecs) { pending, scanStart ->
+                pending to scanStart
+            }
+        ) { sdkOwnsL1, progress, chainLockHeight, state, (bindRetryPending, scanStart) ->
             mergeL1SyncDetail(
                 sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending,
-                lastFilterHeight, lastFilterTarget
+                lastFilterHeight, lastFilterTarget, scanStart
             ).also { detail ->
                 // Only ever advance on a real reading; a 0 from an idle engine
                 // must not erase what we are backstopping with.
