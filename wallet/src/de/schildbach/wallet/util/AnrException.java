@@ -38,14 +38,14 @@ public class AnrException extends Exception {
 
     private static final Logger log = LoggerFactory.getLogger(AnrException.class);
 
+    /** The thread whose stack this exception carries; not the thread that logs it. */
+    private final transient Thread thread;
+
     /**
      * Creates a new instance
      *
      * @param thread the {@link Thread} which is not repsonding
      */
-    /** The thread whose stack this exception carries; not the thread that logs it. */
-    private final transient Thread thread;
-
     public AnrException(Thread thread) {
         super("ANR detected");
         this.thread = thread;
@@ -76,7 +76,12 @@ public class AnrException extends Exception {
         // No thread count: Thread.getAllStackTraces() would collect every
         // live thread's stack just to size the map, every 5 s.
         ps.println("Unresponsive thread:");
-        this.printThread(ps, Locale.getDefault(), thread, this.getStackTrace());
+        if (thread != null) {
+            this.printThread(ps, Locale.getDefault(), thread, this.getStackTrace());
+        } else {
+            // transient: absent only on a deserialized copy — print the frames unlabelled
+            this.printStack(ps, Locale.getDefault(), this.getStackTrace());
+        }
         log.info(this.getClass().getSimpleName() + " " +
                 new String(bos.toByteArray()));
     }
@@ -115,7 +120,10 @@ public class AnrException extends Exception {
                              Thread thread, StackTraceElement[] stack) {
         ps.println(String.format(l, "\t%s (%s)",
                 thread.getName(), thread.getState()));
+        printStack(ps, l, stack);
+    }
 
+    private void printStack(PrintStream ps, Locale l, StackTraceElement[] stack) {
         for (StackTraceElement element : stack) {
             ps.println(String.format(l, "\t\t%s.%s(%s:%d)",
                     element.getClassName(),
