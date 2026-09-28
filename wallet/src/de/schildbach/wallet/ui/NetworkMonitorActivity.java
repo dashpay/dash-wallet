@@ -43,9 +43,7 @@ public final class NetworkMonitorActivity extends AbstractBindServiceActivity {
     private CheckBox blocksCheckBox;
 
     @Override
-    protected void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
+    protected void onCreateWithWallet(@Nullable final Bundle savedInstanceState) {
         setContentView(R.layout.network_monitor_content);
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(getString(R.string.network_monitor_activity_title));

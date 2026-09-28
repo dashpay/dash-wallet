@@ -67,9 +67,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 	private static final String TAG_RIGHT = "sending_addresses";
 
 	@Override
-    protected void onCreate(final Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
+    protected void onCreateWithWallet(@Nullable final Bundle savedInstanceState) {
 		setContentView(R.layout.address_book_content);
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		toolbar.setTitle(getString(R.string.address_book_activity_title));

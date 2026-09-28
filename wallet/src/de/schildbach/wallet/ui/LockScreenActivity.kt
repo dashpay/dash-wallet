@@ -179,12 +179,13 @@ open class LockScreenActivity : SecureActivity() {
     protected open fun onCreateWithWallet(savedInstanceState: Bundle?) = Unit
 
     override fun setContentView(contentViewResId: Int) {
-        if (isFinishing) return
+        if (finishedWithoutWallet) return
         setContentView(layoutInflater.inflate(contentViewResId, null))
     }
 
     override fun setContentView(contentView: View?) {
-        if (isFinishing) return
+        // not isFinishing, which can still be false here - see finishedWithoutWallet
+        if (finishedWithoutWallet) return
         binding.regularContent.removeAllViews()
         binding.regularContent.addView(contentView)
     }
