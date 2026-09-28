@@ -15,8 +15,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.UsernameType
@@ -215,6 +217,11 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // binding.walletBalanceContainer.isVisible = !it.enoughBalance
                 if ((!requestUserNameViewModel.isUsingInvite() || isInviteContested) && usernameType != UsernameType.Secondary) {
                     binding.walletBalanceContainer.isVisible = !it.enoughBalance
+                    val requiredFee = if (it.usernameContestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
+                    binding.balanceRequirement.text = getString(
+                        R.string.request_username_balance_requirement,
+                        requiredFee.toPlainString()
+                    )
 
                     if (it.usernameContestable || it.usernameContested) {
                         val startDate = Date(it.votingPeriodStart)
