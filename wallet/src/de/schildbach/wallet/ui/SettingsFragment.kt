@@ -48,6 +48,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -141,7 +142,9 @@ class SettingsFragment : Fragment() {
         transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
             transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
                 val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
-                isSavingTransactionMetadata = progress != 100 && progress != -1
+                // Only running work is saving. A cancelled Resource carries no
+                // WorkInfo, so its progress reads 0 and looked like "still saving".
+                isSavingTransactionMetadata = it.status == Status.LOADING && progress != 100 && progress != -1
                 setTransactionMetadataText(isSavingTransactionMetadata, progress)
             }
         }
