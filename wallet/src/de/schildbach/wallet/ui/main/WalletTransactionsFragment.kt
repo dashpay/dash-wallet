@@ -88,6 +88,7 @@ import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 import de.schildbach.wallet.service.L1SyncUiStatus
+import de.schildbach.wallet.service.syncHeaderPercentLabel
 import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
@@ -654,7 +655,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
      */
     private fun updateSyncState(status: L1SyncUiStatus) {
         val isSynced = status.isFullySynced
-        val percentage = status.percentage
+        val percentLabel = syncHeaderPercentLabel(status)
         val scanStartDateSecs = status.scanStartDateSecs
 
         if (isSynced && scanStartDateSecs != null) {
@@ -669,11 +670,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             binding.syncing.isVisible = true
             var syncing = getString(R.string.syncing)
 
-            if (percentage == 0) {
+            if (percentLabel == null) {
                 syncing += "…"
                 binding.syncing.text = syncing
             } else {
-                val str = SpannableStringBuilder("$syncing $percentage%")
+                val str = SpannableStringBuilder("$syncing $percentLabel")
                 val start = syncing.length + 1
                 val end = str.length
                 str.setSpan(

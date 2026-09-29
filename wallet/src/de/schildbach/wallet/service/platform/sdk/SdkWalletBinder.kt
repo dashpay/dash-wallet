@@ -540,6 +540,9 @@ class SdkWalletBinder internal constructor(
             boundWalletIdHex = null
             boundWalletFingerprint = null
             completed = false
+            // A re-created SDK wallet comes up at the default windows again.
+            widenedWalletIdHex = null
+            debtRecordedWalletIdHex = null
         }
     }
 
@@ -1422,25 +1425,66 @@ class SdkWalletBinder internal constructor(
     }
 
     /**
-     * Step 4c — the one-shot migration address-window heal.
+     * Step 4c — the address-window widening, EVERY bind, plus the one-shot
+     * migration heal on top of it.
      *
-     * Widens the SDK wallet's standard-family gap limits to the Rust max
-     * ([DashSdkService.widenAddressWindows]) and, on success, invalidates
-     * the recorded DIP-15 backfill coverage so the gate's next consult
-     * forces a full rewind: the re-scan then matches history against the
-     * widened script set, recovering transactions whose addresses sat past
-     * the old window (the same-seed-client frontier gap observed in the
-     * field). Guarded by [DashPayConfig.SDK_GAP_WIDENED_VERSION] so the
-     * widening + forced rewind happen ONCE per heal version, not per
-     * launch; a failed attempt records nothing and retries on the next
-     * bind. Never throws — the bind must survive this step failing.
+     * The widening ([DashSdkService.widenAddressWindows]) raises the SDK
+     * wallet's standard-family gap limits to the Rust max. It is applied on
+     * every bind because the Rust side keeps `gap_limit` in memory only —
+     * no changeset, no persistence — so every fresh process, and every
+     * re-created SDK wallet, comes up at the defaults (30 for BIP44, 100 for
+     * CoinJoin). It used to run once per heal version; on 2026-09-23 and
+     * 2026-09-25 (plan §39.10) a process killed mid-scan resumed at those
+     * defaults, and the outputs paid to change addresses the killed session
+     * had derived past `used + 30` were never rediscovered — a fund loss
+     * that only the now-removed committed-range sweep (rust-dashcore#1016)
+     * used to mask. Idempotent and cheap (three FFI calls, deriving only up
+     * to the window), and it runs here, before the engine starts, so the
+     * resumed scan runs at the same width as the killed one.
+     *
+     * The HEAL — the retroactive part — stays once per version: on the
+     * first successful widening it arms the SPV watermark rewind to birth
+     * and invalidates the recorded DIP-15 backfill coverage, so the re-scan
+     * matches history against the widened script set (the same-seed-client
+     * frontier gap observed in the field). Guarded by
+     * [DashPayConfig.SDK_GAP_WIDENED_VERSION]; a failed attempt records
+     * nothing and retries on the next bind. Never throws — the bind must
+     * survive this step failing.
+     *
+     * A failed WIDENING leaves a debt (review, 2026-09-27): the bind goes on,
+     * the engine scans that session at the default windows, and on a wallet
+     * that healed long ago the next launch's successful widening would skip
+     * the heal — so outputs beyond the default window in the blocks that
+     * session scanned would never be looked at again. The failure is
+     * recorded ([DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED]) and the next
+     * successful widening arms the SPV rescan before clearing it. The rewind
+     * target is the wallet's birth: the app does not know where the failed
+     * session's scan began, and the Rust side never moves the watermark
+     * forward, so over-arming costs a re-scan but never skips a block.
      */
-    private suspend fun maybeWidenAddressWindows(walletIdHex: String) {
+    private suspend fun maybeWidenAddressWindows(walletIdHex: String) = wideningMutex.withLock {
+        maybeWidenAddressWindowsLocked(walletIdHex)
+    }
+
+    private suspend fun maybeWidenAddressWindowsLocked(walletIdHex: String) {
+        var widened = false
         try {
+            widened = sdkService.widenAddressWindows(walletIdHex)
+            if (!widened) {
+                log.warn(
+                    "address-window widening did not complete; this session scans at the default " +
+                        "windows — a rescan is owed to the next successful widening"
+                )
+                noteWideningFailed(walletIdHex)
+                return
+            }
+            // Wide windows: nothing this session scans can be missed.
+            widenedWalletIdHex = walletIdHex
             val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
-            if (done >= GAP_WIDEN_HEAL_VERSION) return
-            if (!sdkService.widenAddressWindows(walletIdHex)) {
-                log.warn("address-window heal did not complete; will retry next bind")
+            if (done >= GAP_WIDEN_HEAL_VERSION) {
+                // Windows re-applied; the heal already ran. Pay a rescan an
+                // earlier session's failed widening left owed, if any.
+                repayWidenRescanOwed(walletIdHex)
                 return
             }
             // Retroactivity: rewind the SPV filter watermark to the wallet's
@@ -1461,6 +1505,8 @@ class SdkWalletBinder internal constructor(
             dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT)
             dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED)
             dashPayConfig.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, GAP_WIDEN_HEAL_VERSION)
+            // The heal's rewind to birth covers any owed rescan too.
+            dashPayConfig.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED)
             log.info(
                 "address-window heal v{} applied on {}…: gaps widened, backfill coverage " +
                     "invalidated — next gate pass rewinds with the widened script set",
@@ -1470,7 +1516,111 @@ class SdkWalletBinder internal constructor(
             throw e
         } catch (t: Throwable) {
             log.warn("address-window heal failed; will retry next bind", t)
+            if (!widened) noteWideningFailed(walletIdHex)
         }
+    }
+
+    /**
+     * The widening failed: record the owed rescan. If even that cannot be
+     * persisted, nothing is noted, and [ensureScanMayAdvance] holds the SPV
+     * scan until one of the two succeeds.
+     */
+    private suspend fun noteWideningFailed(walletIdHex: String) {
+        if (recordWidenRescanOwed()) debtRecordedWalletIdHex = walletIdHex
+    }
+
+    /** Persist the owed-rescan flag; false (logged) when the write failed. Never throws except cancellation. */
+    private suspend fun recordWidenRescanOwed(): Boolean = try {
+        dashPayConfig.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, true)
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("could not record the owed address-window rescan", t)
+        false
+    }
+
+    /**
+     * Serializes the address-window widening with the SPV scan-start gate
+     * (review, 2026-09-29): a start that arrives while a bind pass is still
+     * widening waits for that outcome instead of slipping past it.
+     */
+    private val wideningMutex = Mutex()
+
+    /**
+     * The SDK wallet whose windows THIS process has widened. The Rust side
+     * keeps gap limits in memory only, so a new process, or a re-created
+     * wallet ([resetForWalletRecreation]), starts at the defaults again.
+     */
+    @Volatile
+    private var widenedWalletIdHex: String? = null
+
+    /**
+     * The SDK wallet for which a failed widening's rescan debt is durably
+     * recorded in this process, so its scan may advance at the default windows.
+     */
+    @Volatile
+    private var debtRecordedWalletIdHex: String? = null
+
+    /**
+     * The SPV scan-start gate (review, 2026-09-28 and 2026-09-29). The scan may
+     * advance only once, in this process, the wallet's windows are widened or a
+     * failed widening's rescan debt is durably recorded; otherwise outputs
+     * beyond the default windows in the blocks it scans could be lost for good.
+     *
+     * The gate does not wait for a bind pass: widening needs only the loaded
+     * wallet, not the seed, so the gate widens here itself when nothing has
+     * yet, and falls back to recording the debt. It shares [wideningMutex]
+     * with the bind's own widening, so a start during that step sees its
+     * outcome. False only when widening and the debt write both fail; the
+     * engine start then retries later. Never throws except cancellation.
+     */
+    suspend fun ensureScanMayAdvance(walletIdHex: String): Boolean = wideningMutex.withLock {
+        if (widenedWalletIdHex == walletIdHex || debtRecordedWalletIdHex == walletIdHex) {
+            return@withLock true
+        }
+        val widened = try {
+            sdkService.widenAddressWindows(walletIdHex)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("scan gate: address-window widening failed", t)
+            false
+        }
+        if (widened) {
+            widenedWalletIdHex = walletIdHex
+            log.info("scan gate: address windows widened on {}… before the SPV start", walletIdHex.take(8))
+            return@withLock true
+        }
+        if (recordWidenRescanOwed()) {
+            debtRecordedWalletIdHex = walletIdHex
+            log.warn(
+                "scan gate: widening failed on {}…; its rescan is owed and recorded, so the scan may " +
+                    "advance at the default windows",
+                walletIdHex.take(8)
+            )
+            return@withLock true
+        }
+        log.warn(
+            "scan gate: holding the SPV scan — the address windows are still narrow and the owed " +
+                "rescan cannot be recorded, so advancing now could lose outputs beyond the default windows"
+        )
+        false
+    }
+
+    /** Arm the owed rescan, then clear the debt; a failed arm keeps it for the next bind. */
+    private suspend fun repayWidenRescanOwed(walletIdHex: String) {
+        if (dashPayConfig.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) != true) return
+        if (!sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())) {
+            log.warn("owed address-window rescan: arm failed; will retry next bind")
+            return
+        }
+        dashPayConfig.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED)
+        log.info(
+            "owed address-window rescan armed on {}…: an earlier session scanned at the default " +
+                "windows after its widening failed",
+            walletIdHex.take(8)
+        )
     }
 
     // ── Bounded identity-discovery retry (restore safety net) ─────────

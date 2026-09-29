@@ -617,6 +617,16 @@ open class DashPayConfig @Inject constructor(
         val SDK_GAP_WIDENED_VERSION = intPreferencesKey("sdk_gap_widened_version")
 
         /**
+         * A bind's address-window widening failed, so that session scanned at
+         * the Rust default windows and may have stepped past outputs paid
+         * beyond them. The next SUCCESSFUL widening arms the SPV rescan and
+         * only then clears this; on an already-healed wallet nothing else
+         * would ever look at those blocks again. Best-effort flag, written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] step 4c.
+         */
+        val SDK_GAP_WIDEN_RESCAN_OWED = booleanPreferencesKey("sdk_gap_widen_rescan_owed")
+
+        /**
          * A provisioning pass ARMED but not yet accounted for: written by
          * the gate BEFORE it lets a provisioning pass run, recording the
          * pre-pass durable synced height (TARGET) and the contact set the

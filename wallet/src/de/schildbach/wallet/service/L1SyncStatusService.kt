@@ -25,6 +25,8 @@ import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.sdkWalletBirthTimeSecs
 import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
+import de.schildbach.wallet.service.platform.sdk.shadowSyncPermille
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -53,6 +55,11 @@ import javax.inject.Singleton
  *   entry points (shortcut bar, CrowdNode staking, Join DashPay).
  * @property percentage 0..100 progress for the "Syncing N%" header; 0 means
  *   "no usable figure yet" and the header renders a bare "Syncing…".
+ * @property percentageTenths the same figure in tenths of a percent
+ *   (0..1000) when the engine reports finely enough to show one decimal —
+ *   the SDK regime, where the scan measures its own session's work and a
+ *   long re-walk lives between 99.0 and 99.9 for a long time. Null in the
+ *   dashj regime, whose percent is a whole number; see [syncHeaderPercentLabel].
  * @property isFailed sync is impeded (the error pane).
  * @property dashPaySynced whether the DashPay half has settled too
  *   ([DashPaySyncStatus]). Deliberately a SEPARATE field rather than a
@@ -73,7 +80,8 @@ data class L1SyncUiStatus(
     val percentage: Int = 0,
     val isFailed: Boolean = false,
     val dashPaySynced: Boolean = true,
-    val scanStartDateSecs: Long? = null
+    val scanStartDateSecs: Long? = null,
+    val percentageTenths: Int? = null
 ) {
     /**
      * The USER-FACING "everything is done" predicate: the chain is caught up
@@ -231,8 +239,26 @@ internal fun mergeL1SyncUiStatus(
     percentage = if (sdkOwnsL1) shadowSyncPercent(sdkProgress) else dashjSyncPercentage(dashjState),
     isFailed = dashjState?.syncFailed() == true || platformStarved,
     dashPaySynced = dashPaySynced,
-    scanStartDateSecs = scanStartDateSecs
+    scanStartDateSecs = scanStartDateSecs,
+    percentageTenths = if (sdkOwnsL1) shadowSyncPermille(sdkProgress) else null
 )
+
+/**
+ * The number after "Syncing" in the home header, or null for the bare
+ * "Syncing…" (no usable figure yet). One decimal when the engine supplies
+ * tenths ("99.1%", "99.9%" — a re-walk spends most of its time there), the
+ * whole number otherwise ("42%"); a complete 1000 renders as "100%", never
+ * "100.0%". Pure — host-testable.
+ */
+fun syncHeaderPercentLabel(status: L1SyncUiStatus, locale: Locale = Locale.getDefault()): String? {
+    val tenths = status.percentageTenths
+    return when {
+        tenths == null -> status.percentage.takeIf { it > 0 }?.let { "$it%" }
+        tenths <= 0 -> null
+        tenths >= 1000 -> "100%"
+        else -> String.format(locale, "%.1f%%", tenths / 10.0)
+    }
+}
 
 /**
  * The INSTANTANEOUS masternode-list starvation condition: the SDK owns L1,

@@ -5,6 +5,13 @@ Source: QA testing by Pasta on an **int19** build. Assessed 2026-09-19 against t
 2026-09-21 at `4a0a9ea9c` (base now `feat/kotlin-sdk-phase-1`) after a day of device testing on
 release builds `12000016`/`12000017`; the entries below carry dated updates where that changed
 anything, and **A-01** (Andrei's post-upgrade "still 99%") is added at the end of the fixed list.
+**A-02** (Andrei's 2026-09-22 "resync got stuck") is fixed on the stacked branch
+`fix/sync-process-stalls`; #1568 itself takes only review fixes from here. Re-assessed
+2026-09-22 evening at `2e3e3518d` on SDK int22 after fresh restores on both devices
+(plan §38); **A-03** (the per-launch 26,000-block re-walk) is added under "Still applies" as an SDK
+defect. Re-assessed 2026-09-25 after Joel's upgrade of the reference install to `12000017` (plan
+§39): **J-01** is added under "Still applies" — the same three SDK-side rewinds at mainnet scale —
+and A-02 gets a second field sighting.
 
 "Addressed" below means *the defect's cause is fixed on this branch*. It does **not** mean
 retested — see [Retest before closing](#retest-before-closing).
@@ -13,10 +20,10 @@ retested — see [Retest before closing](#retest-before-closing).
 
 | Status | Count | IDs |
 |---|---|---|
-| Fixed on this branch | 3 | SR-01, **SR-06** (delivered on device 2026-09-21), **A-01** (Andrei's "still 99%", 2026-09-21) |
+| Fixed on this branch | 4 | SR-01, **SR-06** (delivered on device 2026-09-21), **A-01** (Andrei's "still 99%", 2026-09-21), **A-02** (Andrei's "resync got stuck", 2026-09-22 — on `fix/sync-process-stalls`) |
 | Addressed by the #1555 merge | 2 | D-056, D-031 |
 | Addressed by the pending master merge | 1 | D-011 |
-| Still applies | 7 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07 |
+| Still applies | 9 | D-037, **D-041** (SDK defect; the display hold and the seed gate are now proven on device — see the 2026-09-21 update), D-068, SR-22, SR-05, SR-03/04, SR-07, **A-03** (per-launch re-walk, SDK defect, 2026-09-22), **J-01** (Joel's "synced almost to completion, then reset", 2026-09-24 — SDK defects) |
 | Applies by deliberate decision | 1 | SR-08 |
 
 ---
@@ -101,9 +108,52 @@ read via the accessibility tree on the emulator: no "Syncing balance", no banner
 one-block blip.
 
 **What it is not.** A fix for the stall. The commit still parks; the screen now says synced and the
-log says why. The root cause is dash-spv's `pending_blocks()` never draining (plan §34), traced
-into `blocks/sync_manager.rs` and paused at the `requested` vs `from_storage` fork; the issue draft
-is repinned to the shipping engine revision and still unfiled.
+log says why. The root cause, corrected 2026-09-22 (plan §34): before it commits the final batch,
+dash-spv re-tests every committed filter since wallet birth against the scripts derived during the
+scan, inline on the filter task, with no persisted progress — a walk dominated by BIP158 false
+positives (1.66% of 1.6M mainnet filters at this wallet's 13,024 scripts) that a phone never
+finishes before something stops the engine, and which our integration branch's durable pending-sweep
+set restarts from scratch on every launch. Already open upstream as rust-dashcore#1002 and fixed
+by dropping the sweep in rust-dashcore#1016 (draft); our issue draft is retired in favour of a
+comment there.
+
+**2026-09-22 evening, int22, fresh restores (plan §38.1).** Emulator debug `12000017`: scan start
+17:18:48, `l1Synced=true` 17:22:22, seed 17:23:15 at 10,805,162,729 duffs, no sweep, no stall.
+Samsung release `12000018`: `l1Synced=true` 17:39:09 with `pipelineLagging=false`, seed 17:39:56 at
+the same figure, no watchdog verdict, no WARN. No sweep because int22 carries rust-dashcore#1016,
+which removed it (plan §34.6; the original reading here, a provisioning-order accident, was wrong
+and is corrected in plan §38.1).
+
+---
+
+### A-02 — "Mo-1022 resync got stuck" (Andrei, 2026-09-22)
+
+*Reported with logs and two screenshots from the Samsung SM-A536B (Android 16), release `12000017`.
+Not reproduced on our devices: it needs a blockchain reset AND a pending wallet shield whose
+InstantSend never arrives, together.*
+
+**The defect.** After a blockchain reset the SPV engine was stopped by the idle detector at 06:31 UTC
+and never ran again; four hours later the Network Monitor read "Network engine not started" and the
+header "Syncing balance". Not the §34 filter park — the engine was off. The service's `onDestroy`
+cleanup hung in `ShieldedBalanceServiceImpl.stop()`, waiting on a mutex held by a bring-up that was
+itself parked inside the SDK's `bindShielded`, which was queued behind a resumed wallet shield
+waiting indefinitely for a ChainLock (`shield_guard`, rs-platform-wallet). Every later start refused
+itself as a "deadlock in onDestroy". Full chain in
+[plan §37](upgrade-memory-and-sync-plan.md).
+
+**Fixed** on `fix/sync-process-stalls`: `stop()` is bounded at 5 s and makes the abandoned bring-up
+inert; a start refused by a cleanup stuck past 5 minutes ends the process when the app is in the
+background, so the next alarm start is clean. The platform half — the guard held across an unbounded
+wait — is drafted as [kotlin-sdk-issues-to-file.md §17](kotlin-sdk-issues-to-file.md).
+
+**Not yet proven on device.** Unit-pinned only (`ShieldedBalanceServiceTest`,
+`CleanupDeadlockPolicyTest`). A device proof needs the stuck asset lock's wallet, which is Andrei's.
+
+**Second sighting, 2026-09-24 (Joel, Pixel 8a, `12000017`, plan §39.5).** The idle-stop cleanup at
+23:54 UTC waited inside the shielded stop until the shielded bind returned at 00:44:40 — 50 minutes,
+seven refused starts ("deadlock in onDestroy"), four of them delivered alarms. Same app-side shape;
+the bind returned on its own, so no process death. Both halves of the fix on
+`fix/sync-process-stalls` would have applied at 23:56.
 
 ---
 
@@ -158,6 +208,59 @@ survives the merge.
 ---
 
 ## Still applies — untouched by this branch
+
+### A-03 — The engine re-walks 26,000 blocks on every launch (2026-09-22)
+
+*Found on the emulator's engine log, six sessions since the 09-21 restore. SDK defect; not
+reproducible on a wallet without DashPay contacts.*
+
+**The defect.** Every engine session starts `Starting filter download (scan_start=1532171 …)` and
+re-walks to the tip, although the previous session committed to the tip and the SDK's own Room row
+holds `syncedHeight` at the tip. 1,532,170 is `coreHeightCreatedAt` of the wallet's earliest DashPay
+contact request: at startup rs-platform-wallet's `reconcile_dashpay_rescan` lowers `synced_height`
+to that height so contact receival addresses get filter coverage, and its "already done" guard is
+in-memory only. Upstream: dashpay/platform#4302 (open since 2026-08-17), PR #4740 adjacent. Plan
+§34.1a and §38.2.
+
+**Cost.** 4–11 s per launch on the emulator with everything in storage. On a mainnet wallet with an
+old first contact it is a re-walk of hundreds of thousands of filters on every launch, growing
+forever. Not fixed by rust-dashcore#1016 or by int22; nothing on the app side can stop it.
+
+### J-01 — "Synced almost to completion, then reset" (Joel, 2026-09-24)
+
+*Reported from the reference install (Pixel 8a, Android 17, `prod` release `12000017`, 33,297
+transactions, 229 DashPay contacts) after upgrading from `12000012`. Logs and the last 2 MB of the
+engine logs at `~/Downloads/joel-stuck-at-99/`. Plan §39 has the full timeline.*
+
+**The defect.** The header reached 99.9% at 23:34 UTC (2h49m after the upgrade launch) and read
+95.1% when the report was filed at 01:47. No blockchain reset. The engine's filter cursor went
+backwards three times: 70,000 blocks when the §35 rule declared the 99.904% final-batch park synced
+and the idle rule stopped the service with the SDK's persisted height that far behind; 242,000 on an
+in-process engine restart whose origin the truncated engine log does not show; and back to
+**2,167,092** on each of the two process-fresh launches — A-03's per-launch re-walk on mainnet,
+where the anchor is this wallet's earliest DashPay contact. Every fresh launch re-walks 377,000
+filters from there, with the durable pending-sweep set (67,658 scripts) seeded into the lowest
+batch, so the sweep adds **up to 800 block fetches per 5,000-filter batch** (Andrei's wallet: 93)
+on top of the scan's own 438–817. A pass is ≈ 2.7 h of
+foreground-service time at 2 GB PSS; the process died at ~01:43 with 2.3 GB PSS (cause not in the
+evidence) and the next launch started the pass again.
+
+**What applies.** A-03 (dashpay/platform#4302) for the anchor; §34 / rust-dashcore#1016 for the
+sweep's share of the block fetches and the final-batch park — **already in int22, i.e. in
+`12000018`**, which Joel has not run; the SDK's `synced_height` persistence granularity under the
+park. The 50-minute deadlock in the middle is A-02 (fixed on `fix/sync-process-stalls`). On
+`12000018` the sweep, its re-seeded 67,658-script set and the park are gone; the per-launch
+re-walk from 2,167,092 is not, and on this wallet it is still tens of thousands of block fetches
+per launch. Needs #4302 to finish; int22 makes each attempt about half the length — and carries
+the recipe's §5 fund loss (plan §34.6 / §39.10) — whose app-side half is now fixed on
+`fix/sync-process-stalls` (`31799180b`): the SDK keeps the address-pool gap limit in memory only,
+and the app re-applied its 1000-address widening once per install, so a process killed mid-scan
+resumed at the Rust defaults (30 / 100) and never rediscovered the outputs the killed session had
+derived. The widening now runs on every bind; the same kill test then yields a store identical to
+the clean control. Joel's `12000018` predates this fix.
+
+**Also seen.** The per-minute memory line's `Debug.getPss()` blocks the main thread for 5 s or
+more on a 2 GB process — four in-app ANR-watchdog dumps in one evening. App-side; plan §39.6.
 
 ### D-037 — Historical fully-spent transactions get no history row
 
@@ -293,6 +396,13 @@ answers §28 for a battery-exempt device. Still open: §32.13 (every service tea
 alarm), §32.11 (the replay guard can prevent it arming at all), and whether a NON-exempt device
 permits the start — the Samsung turned out to be exempt (plan §36.4), so no device we have answers
 that. Kept in this section for the history; the summary table counts it as fixed.
+
+
+**2026-09-22 update (plan §36.6).** A second route to the same outcome, found on the Samsung: the
+restart alarm was armed only inside onDestroy's cleanup, so a kill that pre-empts that cleanup — the
+deferred task-removal kill, or `lowmemorykiller` on a cached process — left the app with no pending
+alarm at all; 70 minutes with no relaunch on an awake, charging, exempt device. Fixed on
+`fix/sync-process-stalls` by arming the alarm at service start as well. Device proof pending.
 
 ### SR-08 — Prod build seeds all SDK flags
 

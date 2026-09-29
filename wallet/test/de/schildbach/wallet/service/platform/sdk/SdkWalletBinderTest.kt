@@ -25,10 +25,13 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.bitcoinj.wallet.Wallet
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
@@ -36,6 +39,7 @@ import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashj.platform.dpp.identifier.Identifier
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -1873,7 +1877,10 @@ class SdkWalletBinderTest {
 
     // -- Step 4c: one-shot address-window heal ------------------------------
 
-    /** A config whose gap-widened version behaves like the real store. */
+    /** The owed-rescan flag as the store holds it; [healConfig] reads and writes it. */
+    private var owedRescan: Boolean? = null
+
+    /** A config whose gap-widened version (and owed-rescan flag) behave like the real store. */
     private fun healConfig(recordedVersion: Int? = null): Pair<DashPayConfig, () -> Int?> {
         var recorded: Int? = recordedVersion
         val config = dashPayConfig(readsFlag = true)
@@ -1881,6 +1888,9 @@ class SdkWalletBinderTest {
         coEvery {
             config.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, any())
         } answers { recorded = secondArg() }
+        coEvery { config.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) } answers { owedRescan }
+        coEvery { config.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, any()) } answers { owedRescan = secondArg() }
+        coEvery { config.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) } answers { owedRescan = null }
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) } returns Unit
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) } returns Unit
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) } returns Unit
@@ -1889,7 +1899,7 @@ class SdkWalletBinderTest {
     }
 
     @Test
-    fun bind_widensAddressWindowsOnce_thenInvalidatesBackfillCoverage() = runBlocking {
+    fun bind_widensAddressWindowsEveryBind_andHealsOnce() = runBlocking {
         val sdk = readySdk()
         val (config, recordedVersion) = healConfig()
         val binder = binder(sdk, config = config, scope = this)
@@ -1908,10 +1918,15 @@ class SdkWalletBinderTest {
         coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) }
         coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) }
 
-        // The recorded version latches ACROSS launches: a fresh binder
-        // (same config store) must not widen again.
+        // The recorded version latches the HEAL across launches — a fresh
+        // binder (same config store) must not arm a second rewind — but the
+        // widening itself runs again: the Rust side keeps the gap limit in
+        // memory only, so the next process is back at 30/100 without it
+        // (plan §39.10, the kill-test fund loss).
         binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
-        assertEquals(1, sdk.widenCalls)
+        assertEquals(2, sdk.widenCalls)
+        assertEquals(1, sdk.armRescanCalls)
+        coVerify(exactly = 1) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
     }
 
     @Test
@@ -1939,19 +1954,211 @@ class SdkWalletBinderTest {
         binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
         assertEquals(2, sdk.widenCalls)
         assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+        // The heal's own rewind to birth pays the debt the failure recorded.
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(owedRescan)
     }
 
+    /**
+     * THE KILL-TEST CASE (plan §39.10): an install that healed long ago
+     * restarts mid-scan, or re-creates its SDK wallet. The heal must not
+     * re-run, but the windows must be re-applied — before this change the
+     * resumed scan ran at the Rust defaults and lost funds.
+     */
     @Test
-    fun bind_alreadyHealed_skipsWidening() = runBlocking {
+    fun bind_alreadyHealed_stillWidensTheWindows_butNeverRearmsTheHeal() = runBlocking {
         val sdk = readySdk()
-        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val (config, recordedVersion) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
         val binder = binder(sdk, config = config, scope = this)
 
         binder.bindIfEnabled(unlock)
 
-        assertEquals(0, sdk.widenCalls)
+        assertEquals(1, sdk.widenCalls)
         assertEquals(0, sdk.armRescanCalls)
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
         coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+        coVerify(exactly = 0) { config.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, any()) }
+    }
+
+    /**
+     * Review, 2026-09-27 (CodeRabbit): on a wallet that healed long ago, a
+     * failed widening let that session scan at the default windows, and the
+     * next launch's successful widening skipped the heal — nothing ever
+     * re-scanned the blocks that session covered. The failure now leaves a
+     * persisted debt that the next successful widening pays by arming the
+     * rescan, exactly once.
+     */
+    @Test
+    fun bind_alreadyHealed_failedWiden_owesARescan_paidByTheNextSuccessfulWiden() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, recordedVersion) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.widenCalls)
+        assertEquals("nothing to arm while the windows are still narrow", 0, sdk.armRescanCalls)
+        assertEquals(true, owedRescan)
+
+        // Next launch: the widening succeeds and the debt is paid.
+        sdk.onWiden = { true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(owedRescan)
+        // The heal itself is not re-run: version and coverage untouched.
+        assertEquals(SdkWalletBinder.GAP_WIDEN_HEAL_VERSION, recordedVersion())
+        coVerify(exactly = 0) { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) }
+
+        // Paid once: a third launch arms nothing.
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun bind_alreadyHealed_owedRescanArmFails_keepsTheDebtForTheNextLaunch() = runBlocking {
+        val sdk = readySdk()
+        sdk.onArmRescan = { _, _ -> false }
+        owedRescan = true
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+        assertEquals("a failed arm must not clear the debt", true, owedRescan)
+
+        sdk.onArmRescan = { _, _ -> true }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(2, sdk.armRescanCalls)
+        assertNull(owedRescan)
+    }
+
+    /**
+     * Review, 2026-09-29: a failed widening whose rescan debt cannot be
+     * persisted leaves nothing durable. The scan must not advance at the
+     * default windows: the scan gate holds the SPV start until a retry either
+     * widens the windows or records the debt.
+     */
+    @Test
+    fun scanGate_holdsTheScan_whenAFailedWideningsDebtCannotBeRecorded() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        var debtWritesFail = true
+        coEvery { config.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, any()) } answers {
+            if (debtWritesFail) throw IllegalStateException("datastore write failed")
+            owedRescan = secondArg()
+        }
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        assertNull("the debt was not recorded", owedRescan)
+
+        assertFalse("held: narrow windows and no durable debt", binder.ensureScanMayAdvance(walletId))
+        assertEquals("the gate retried the widening", 2, sdk.widenCalls)
+
+        // The store recovers: the retry records the debt and the scan may advance.
+        debtWritesFail = false
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals(true, owedRescan)
+        assertTrue("stays open", binder.ensureScanMayAdvance(walletId))
+    }
+
+    @Test
+    fun scanGate_opens_whenTheWideningRetrySucceeds() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        coEvery {
+            config.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, any())
+        } throws IllegalStateException("datastore write failed")
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        sdk.onWiden = { true }
+        assertTrue("wide windows: nothing can be missed, no debt needed", binder.ensureScanMayAdvance(walletId))
+    }
+
+    @Test
+    fun scanGate_isOpen_whenTheDebtWasRecorded() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertEquals(true, owedRescan)
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("no retry needed", 1, sdk.widenCalls)
+    }
+
+    /**
+     * Review, 2026-09-29: a start that comes before any bind pass in this
+     * process (a shield's ensureSpvRunning, say) must not scan at the default
+     * windows. The gate widens the loaded wallet itself; widening needs no seed.
+     */
+    @Test
+    fun scanGate_widensTheWindowsItself_beforeAnyBindPass() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("the gate widened", 1, sdk.widenCalls)
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("once per process", 1, sdk.widenCalls)
+    }
+
+    /**
+     * Review, 2026-09-29: a start that arrives while a bind pass is still
+     * widening waits for that outcome, instead of passing an open gate and
+     * scanning before the widening lands.
+     */
+    @Test
+    fun scanGate_waitsForAWideningInProgress() = runBlocking {
+        val sdk = readySdk()
+        val wideningGate = CompletableDeferred<Unit>()
+        var wideningEntered = false
+        sdk.onWiden = {
+            wideningEntered = true
+            wideningGate.await()
+            true
+        }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        val bind = launch { binder.bindIfEnabled(unlock) }
+        withTimeout(5_000) { while (!wideningEntered) delay(10) }
+
+        val gate = async { binder.ensureScanMayAdvance(walletId) }
+        delay(100)
+        assertFalse("the gate waits while the bind is widening", gate.isCompleted)
+
+        wideningGate.complete(Unit)
+        assertTrue(gate.await())
+        assertEquals("it used the bind's widening, not its own", 1, sdk.widenCalls)
+        bind.join()
+    }
+
+    /** A re-created SDK wallet is back at the default windows: the gate widens it again. */
+    @Test
+    fun scanGate_widensAgainAfterWalletRecreation() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+
+        binder.resetForWalletRecreation()
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals(2, sdk.widenCalls)
+    }
+
+    @Test
+    fun bind_widenThrows_alsoOwesARescan() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { throw IllegalStateException("ffi failure") }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+        assertEquals(true, owedRescan)
     }
 
     @Test

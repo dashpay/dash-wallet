@@ -262,7 +262,9 @@ class L1ShadowSyncServiceTest {
         bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS,
         bringUpStopJoinMs: Long = L1ShadowSyncService.BRING_UP_STOP_JOIN_MS,
         destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
-        flagGate: () -> CompletableDeferred<Unit>? = { null }
+        flagGate: () -> CompletableDeferred<Unit>? = { null },
+        scanMayAdvance: suspend (String) -> Boolean = { true },
+        scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -275,7 +277,9 @@ class L1ShadowSyncServiceTest {
         recreator = recreator,
         bringUpBudgetMs = bringUpBudgetMs,
         bringUpStopJoinMs = bringUpStopJoinMs,
-        destructiveBringUpJoinMs = destructiveBringUpJoinMs
+        destructiveBringUpJoinMs = destructiveBringUpJoinMs,
+        scanMayAdvance = scanMayAdvance,
+        scanGateRetryInitialMs = scanGateRetryInitialMs
     )
 
     /**
@@ -1241,6 +1245,119 @@ class L1ShadowSyncServiceTest {
         assertEquals(1, source.stopCalls)
         assertEquals("stopped and started again", 2, source.startCalls)
         assertTrue(service.isShadowSpvRunning() || service.progress.value != ShadowSyncProgress.IDLE || source.startCalls == 2)
+        service.stop()
+    }
+
+    /**
+     * Review, 2026-09-29: the binder's scan gate. While a failed widening's
+     * rescan debt is unrecorded the engine must not start; once the gate
+     * opens, the next start proceeds.
+     */
+    @Test
+    fun startIfEnabled_declines_whileTheScanGateHoldsTheScan() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var open = false
+        val service = service(source, scanMayAdvance = { open }, scanGateRetryInitialMs = 60_000)
+
+        assertFalse(service.startIfEnabled())
+        assertEquals("SPV never started", 0, source.startCalls)
+
+        open = true
+        assertTrue(service.startIfEnabled())
+        assertEquals(1, source.startCalls)
+        service.stop()
+    }
+
+    /**
+     * Review, 2026-09-29: a refusal must carry its own recovery. Nothing else
+     * re-invokes the start once the post-bind starter has spent itself, so the
+     * refusal schedules a retry, and the engine starts as soon as the gate
+     * opens, with no other trigger and no service recreation.
+     */
+    @Test
+    fun aScanGateRefusal_retriesTheStartOnItsOwn_untilTheGateOpens() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var gateCalls = 0
+        val service = service(source, scanMayAdvance = { ++gateCalls >= 3 }, scanGateRetryInitialMs = 20)
+
+        assertFalse(service.startIfEnabled())
+        withTimeout(5_000) { while (source.startCalls == 0) delay(10) }
+
+        assertEquals("refused twice, then the retry started it", 3, gateCalls)
+        assertEquals(1, source.startCalls)
+        service.stop()
+    }
+
+    /**
+     * Review, 2026-09-29: a stop that lands while an ordinary start is parked
+     * INSIDE the scan gate. The start then refuses and schedules its retry;
+     * that retry must carry the start's own generation, not the stop's, or it
+     * restarts SPV after the stop has completed.
+     */
+    @Test
+    fun aStopDuringTheScanGate_supersedesTheRetryItsRefusalSchedules() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gateEntered = CompletableDeferred<Unit>()
+        val gateAnswer = CompletableDeferred<Boolean>()
+        var calls = 0
+        val service = service(
+            source,
+            scanMayAdvance = {
+                if (++calls == 1) {
+                    gateEntered.complete(Unit)
+                    gateAnswer.await()
+                } else {
+                    true // recovered: any retry that ran would now start SPV
+                }
+            },
+            scanGateRetryInitialMs = 20
+        )
+
+        val start = async(Dispatchers.Default) { service.startIfEnabled() }
+        withTimeout(5_000) { gateEntered.await() }
+        val stop = async(Dispatchers.Default) { service.stop() } // bumps the generation, waits for the mutex
+        delay(100)
+
+        gateAnswer.complete(false) // the parked start refuses
+        assertFalse(start.await())
+        withTimeout(5_000) { stop.await() }
+
+        delay(300) // well past the retry delay
+        assertEquals("no retry restarted SPV after the stop", 0, source.startCalls)
+    }
+
+    /** An external stop cancels a pending scan-gate retry: the engine stays down. */
+    @Test
+    fun stop_cancelsAPendingScanGateRetry() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var open = false
+        val service = service(source, scanMayAdvance = { open }, scanGateRetryInitialMs = 50)
+
+        assertFalse(service.startIfEnabled())
+        service.stop()
+        open = true
+        delay(300)
+
+        assertEquals("the cancelled retry never started SPV", 0, source.startCalls)
+    }
+
+    /**
+     * QA D-901b: a restart that started the engine is not a recovery. It arms
+     * a verdict that only the cursor passing the stuck height can settle as
+     * recovered; the next stall decision below it settles it as not recovered.
+     */
+    @Test
+    fun stallRestart_armsAnOutcomeVerdict_insteadOfClaimingSuccess() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        service.launchStallRestart(stuckAt = 948_000L).join()
+        assertEquals(2, source.startCalls)
+
+        val verdict = service.filterStallRestartVerifier.onStallDecision(filterHeight = 948_000L, nowMs = Long.MAX_VALUE / 2)
+        assertTrue("armed by the restart", verdict is FilterStallRestartVerifier.Verdict.NotRecovered)
+        assertTrue((verdict as FilterStallRestartVerifier.Verdict.NotRecovered).sameHeight)
         service.stop()
     }
 
@@ -2989,6 +3106,92 @@ class L1ShadowSyncServiceTest {
                 L1VerificationStatus.SCANNING
             )
         )
+    }
+
+    // ── The session's work, not the whole chain (Joel, 2026-09-25) ──────
+
+    /**
+     * The reference install's 2026-09-24 pass: the DashPay backfill rewound
+     * the filter cursor to 2,167,092 under a 2,544,483 tip. Over the whole
+     * chain that read 95.1% at the start and crept to 99.9% over three hours;
+     * over the session's own work it starts at 0 and 99.1 / 99.9 mean what
+     * they say.
+     */
+    @Test
+    fun shadowSyncPercent_measuresTheSessionsWork_notTheWholeChain() {
+        val tip = 2_544_483L
+        val floor = 2_167_092L
+        fun at(filters: Long) = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.0, tip, tip, filters, tip,
+            sessionHeaderStart = tip, sessionFilterStart = floor
+        )
+        assertEquals(0, shadowSyncPermille(at(floor)))
+        assertEquals(0, shadowSyncPercent(at(floor)))
+        // Half the 377,391 filters of work: 2,355,787.
+        assertEquals(500, shadowSyncPermille(at(floor + 188_696)))
+        assertEquals(50, shadowSyncPercent(at(floor + 188_696)))
+        // 99.1% of the work done — the tenths are the figure the header shows.
+        assertEquals(991, shadowSyncPermille(at(floor + 374_000)))
+        assertEquals(99, shadowSyncPercent(at(floor + 374_000)))
+        // Three short of the tip: inside the caught-up tolerance? No (2 blocks) — 99.9, not 100.
+        assertEquals(999, shadowSyncPermille(at(tip - 3)))
+        assertEquals(99, shadowSyncPercent(at(tip - 3)))
+        // Within tolerance: caught up, and only then 100.
+        assertEquals(1000, shadowSyncPermille(at(tip - 2)))
+        assertEquals(100, shadowSyncPercent(at(tip - 2)))
+
+        // The 27,000-block re-walk every launch pays (§38.2): 0 → 100 over
+        // the re-walk, instead of 99 the whole way.
+        val reWalk = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.0, 1_558_891, 1_558_891, 1_545_000, 1_558_891,
+            sessionHeaderStart = 1_558_891, sessionFilterStart = 1_532_171
+        )
+        assertEquals(480, shadowSyncPermille(reWalk))
+        // Whole-chain reading of the same snapshot, for the record.
+        assertEquals(995, shadowSyncPermille(reWalk.copy(sessionHeaderStart = 0, sessionFilterStart = 0)))
+
+        // No floor recorded (a fresh restore, an old snapshot): the whole-chain ratio, as before.
+        assertEquals(750, shadowSyncPermille(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.5, 100, 100, 50, 100)))
+        // A floor above the cursor (a rewind the floor has not caught up with yet) cannot go negative.
+        assertEquals(0, shadowSyncPermille(at(floor).copy(sessionFilterStart = floor + 10_000)))
+    }
+
+    @Test
+    fun progressFeed_anchorsTheSessionAtTheLowestCursorSeen_andEveryStopResetsIt() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        val tip = 2_544_483L
+        fun filtersAt(h: Long) = syncing(
+            headers = sub(SpvSyncState.SYNCED, tip, tip),
+            filters = sub(SpvSyncState.SYNCING, h, tip)
+        )
+
+        // First snapshot reads the wallet's stored height…
+        source.progressFlow.value = filtersAt(2_277_092)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_277_092L) delay(5) }
+        assertEquals(2_277_092L, service.progress.value.sessionFilterStart)
+        assertEquals(tip, service.progress.value.sessionHeaderStart)
+        // …then the backfill rewinds the cursor below it: the floor follows.
+        source.progressFlow.value = filtersAt(2_167_092)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_167_092L) delay(5) }
+        assertEquals(2_167_092L, service.progress.value.sessionFilterStart)
+        assertEquals(0, shadowSyncPermille(service.progress.value))
+        // Progress is measured from the floor, not from 0.
+        source.progressFlow.value = filtersAt(2_355_788)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_355_788L) delay(5) }
+        assertEquals(2_167_092L, service.progress.value.sessionFilterStart)
+        assertEquals(500, shadowSyncPermille(service.progress.value))
+
+        // A stop ends the session; the next one measures its own work.
+        service.stop()
+        assertEquals(0L, service.progress.value.sessionFilterStart)
+        source.progressFlow.value = SpvSyncProgressData.EMPTY // a stopped engine reports nothing
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = filtersAt(2_400_000)
+        withTimeout(5_000) { while (service.progress.value.sessionFilterStart != 2_400_000L) delay(5) }
+        assertEquals(tip, service.progress.value.sessionHeaderStart)
+        service.stop()
     }
 
     // ── shadowSyncPercent (post-cutover home "Syncing N%" source) ─────
