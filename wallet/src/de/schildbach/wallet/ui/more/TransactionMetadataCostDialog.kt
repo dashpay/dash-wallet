@@ -25,6 +25,8 @@ import de.schildbach.wallet_test.databinding.DialogTransactionMetadataCostsBindi
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
 class TransactionMetadataCostDialog : OffsetDialogFragment(R.layout.dialog_transaction_metadata_costs) {
@@ -33,7 +35,7 @@ class TransactionMetadataCostDialog : OffsetDialogFragment(R.layout.dialog_trans
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
+        viewModel.uiState.map { it.selectedExchangeRate }.distinctUntilChanged().observe(viewLifecycleOwner) {
             binding.costInfo.text = getString(
                 R.string.transaction_metadata_costs_description,
                 viewModel.getBalanceInLocalFormat()

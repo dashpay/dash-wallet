@@ -32,8 +32,9 @@ import kotlinx.coroutines.flow.map
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class PublishTransactionMetadataOperation(val application: Application) {
+class PublishTransactionMetadataOperation @Inject constructor(val application: Application) {
     class PublishTransactionMetadataException(message: String) : java.lang.Exception(message)
 
     companion object {

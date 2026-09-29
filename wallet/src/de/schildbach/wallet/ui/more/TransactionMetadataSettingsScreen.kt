@@ -69,12 +69,12 @@ fun TransactionMetadataSettingsScreen(
     val scrollState = rememberScrollState()
     val dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM)
 
-    val filterState by viewModel.filterState.collectAsState()
-    val lastSaveWorkId by viewModel.lastSaveWorkId.collectAsState()
-    val lastSaveDate by viewModel.lastSaveDate.collectAsState()
-    val futureSaveDate by viewModel.futureSaveDate.collectAsState()
-    val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
-    val publishingState by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled())
+    val uiState by viewModel.uiState.collectAsState()
+    val filterState = uiState.settings
+    val lastSaveDate = uiState.lastSaveDate
+    val futureSaveDate = uiState.futureSaveDate
+    val hasPastTransactionsToSave = uiState.hasPastTransactionsToSave
+    val publishingState by viewModel.observePublishOperation(uiState.lastSaveWorkId ?: "").collectAsState(Resource.canceled())
     val isSaving = BaseWorker.extractProgress(publishingState.data?.progress) != -1
     val currentDate = Date(System.currentTimeMillis())
 
@@ -300,12 +300,15 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 fun TransactionMetadataScreenPreview() {
     val viewModel = object: TransactionMetadataSettingsPreviewViewModel {
-        override val filterState: StateFlow<TransactionMetadataSettings>
-            = MutableStateFlow(TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true, modified = true))
-        override val hasPastTransactionsToSave: StateFlow<Boolean> = MutableStateFlow(true)
-        override val lastSaveWorkId = MutableStateFlow(UUID.randomUUID().toString())
-        override val lastSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2))
-        override val futureSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis())
+        override val uiState: StateFlow<TransactionMetadataSettingsUIState> = MutableStateFlow(
+            TransactionMetadataSettingsUIState(
+                settings = TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true, modified = true),
+                lastSaveWorkId = UUID.randomUUID().toString(),
+                lastSaveDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2),
+                futureSaveDate = System.currentTimeMillis(),
+                hasPastTransactionsToSave = true
+            )
+        )
         override fun updatePreferences(settings: TransactionMetadataSettings) {}
         override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>  = MutableStateFlow(Resource.canceled())
     }

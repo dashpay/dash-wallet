@@ -46,7 +46,9 @@ import de.schildbach.wallet.ui.more.SettingsViewModel
 import de.schildbach.wallet.ui.more.TransactionMetadataSettingsViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.WalletUIConfig
@@ -139,23 +141,30 @@ class SettingsFragment : Fragment() {
             transactionMetadataSettingsViewModel.loadLastWorkId()
         }
 
-        transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
-            transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
-                val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
-                // Only running work is saving. A cancelled Resource carries no
-                // WorkInfo, so its progress reads 0 and looked like "still saving".
-                isSavingTransactionMetadata = it.status == Status.LOADING && progress != 100 && progress != -1
-                setTransactionMetadataText(isSavingTransactionMetadata, progress)
+        transactionMetadataSettingsViewModel.uiState
+            .map { it.lastSaveWorkId }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .observe(viewLifecycleOwner) { workId ->
+                transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
+                    val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
+                    // Only running work is saving. A cancelled Resource carries no
+                    // WorkInfo, so its progress reads 0 and looked like "still saving".
+                    isSavingTransactionMetadata = it.status == Status.LOADING && progress != 100 && progress != -1
+                    setTransactionMetadataText(isSavingTransactionMetadata, progress)
+                }
             }
-        }
 
         // lastSaveDate arrives from DataStore after the view is built and moves
         // when a publish completes; reading it once showed a blank row forever.
-        transactionMetadataSettingsViewModel.lastSaveDate.observe(viewLifecycleOwner) {
-            if (!isSavingTransactionMetadata) {
-                setTransactionMetadataText(isSaving = false, saveProgress = -1)
+        transactionMetadataSettingsViewModel.uiState
+            .map { it.lastSaveDate }
+            .distinctUntilChanged()
+            .observe(viewLifecycleOwner) {
+                if (!isSavingTransactionMetadata) {
+                    setTransactionMetadataText(isSaving = false, saveProgress = -1)
+                }
             }
-        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -164,7 +173,7 @@ class SettingsFragment : Fragment() {
             val subtitle = if (isSaving) {
                 getString(R.string.transaction_metadata_saving_to_network, saveProgress)
             } else {
-                val lastSavedDate = transactionMetadataSettingsViewModel.lastSaveDate.value
+                val lastSavedDate = transactionMetadataSettingsViewModel.uiState.value.lastSaveDate
                 when {
                     lastSavedDate > 0  -> {
                         getString(
