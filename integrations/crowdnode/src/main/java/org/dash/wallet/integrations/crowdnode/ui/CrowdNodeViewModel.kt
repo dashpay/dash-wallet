@@ -213,12 +213,34 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.refreshBalance()
     }
 
+    /**
+     * The account address, or null when address initialisation never completed.
+     *
+     * [recheckState] contains a `ReceiveAddressUnavailableException` at staking
+     * startup, but `StakingActivity` installs its navigation graph regardless and
+     * `NewAccountFragment` enables its action on accepted terms alone — so the
+     * user can still reach signup and linking with no address. Both used to
+     * force-unwrap, turning the contained startup failure into a crash one tap
+     * later. Report the same `apiError` the startup path does instead; it is the
+     * same transient condition and the same retry.
+     */
+    private fun requireAccountAddress(): String? {
+        val address = _accountAddress.value
+        if (address == null) {
+            crowdNodeApi.apiError.value = ReceiveAddressUnavailableException(
+                "no CrowdNode account address; address initialisation has not completed"
+            )
+        }
+        return address
+    }
+
     fun signUp() {
-        crowdNodeApi.persistentSignUp(_accountAddress.value!!)
+        val address = requireAccountAddress() ?: return
+        crowdNodeApi.persistentSignUp(address)
     }
 
     fun linkOnlineAccount() {
-        val address = _accountAddress.value!!
+        val address = requireAccountAddress() ?: return
         val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
         crowdNodeApi.trackLinkingAccount(address)
         onlineAccountRequest.postValue(
@@ -366,14 +388,15 @@ class CrowdNodeViewModel @Inject constructor(
         )
     }
 
-    fun getAccountUrl(): String {
-        return CrowdNodeConstants.getFundsOpenUrl(
-            if (signUpStatus == SignUpStatus.LinkedOnline) {
-                primaryDashAddress!!
-            } else {
-                _accountAddress.value!!
-            }
-        )
+    fun getAccountUrl(): String? {
+        // Same missing-address case as [requireAccountAddress]: reachable whenever
+        // initialisation did not complete, and force-unwrapping here crashed too.
+        val address = if (signUpStatus == SignUpStatus.LinkedOnline) {
+            primaryDashAddress
+        } else {
+            _accountAddress.value
+        } ?: return null
+        return CrowdNodeConstants.getFundsOpenUrl(address)
     }
 
     fun finishSignUpToOnlineAccount() {
