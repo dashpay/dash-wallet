@@ -81,6 +81,7 @@ import de.schildbach.wallet.util.ThrottledRunner
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -545,6 +546,31 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             } else {
                 CleanupDeadlockAction.STOP_SELF
             }
+
+        /**
+         * The final foreground check and the exit, as ONE step on the main
+         * thread (review, 2026-09-29). Activity lifecycle callbacks, which
+         * flip [AppForegroundMonitor], run on the main thread; a check read on
+         * a background thread and acted on later could close an app that
+         * became visible in between. Here the read and the exit run in the
+         * same main-thread task, with nothing between them, so an activity
+         * start is either seen or cannot happen before the exit. Returns
+         * false when the app is visible (or the policy declines); on true the
+         * process is already ending.
+         */
+        internal suspend fun endProcessIfStillBackgrounded(
+            stuckForMs: Long,
+            appVisible: () -> Boolean,
+            exitProcess: () -> Unit,
+            mainDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate
+        ): Boolean = withContext(mainDispatcher) {
+            if (decideOnCleanupDeadlock(stuckForMs, appVisible()) == CleanupDeadlockAction.EXIT_PROCESS) {
+                exitProcess()
+                true
+            } else {
+                false
+            }
+        }
 
         /** Retries of a lock-blocked blockstore open before giving up. */
         private const val BLOCKSTORE_LOCK_RETRIES = 3
@@ -2359,22 +2385,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // the next start gets a clean one; stopSelf alone left the
                     // engine off for four hours on 2026-09-22.
                     val stuckForMs = cleanupClock.stuckForMs()
-                    val appVisible = AppForegroundMonitor.isForeground.value
-                    if (decideOnCleanupDeadlock(stuckForMs, appVisible) == CleanupDeadlockAction.EXIT_PROCESS) {
+                    if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS) {
+                        // Logged BEFORE the decision: the visibility check and
+                        // the exit run together on the main thread, with no
+                        // logging (or anything else) between them.
                         log.error(
-                            "The previous instance's cleanup has been stuck for {} min with the app in the " +
-                                "background — ending the process so the next start begins from a clean one " +
-                                "(plan §37)",
+                            "The previous instance's cleanup has been stuck for {} min — ending the process " +
+                                "if the app is still in the background, so the next start begins from a " +
+                                "clean one (plan §37)",
                             stuckForMs / 60_000
                         )
-                        Runtime.getRuntime().exit(0)
-                        return@launch
-                    }
-                    if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS) {
+                        if (endProcessIfStillBackgrounded(
+                                stuckForMs,
+                                appVisible = { AppForegroundMonitor.isForeground.value },
+                                exitProcess = { Runtime.getRuntime().exit(0) }
+                            )
+                        ) {
+                            return@launch
+                        }
                         log.error(
-                            "The previous instance's cleanup has been stuck for {} min; the app is visible, " +
-                                "so not ending the process now — the next background start will (plan §37)",
-                            stuckForMs / 60_000
+                            "The app is visible, so not ending the process now — the next background start " +
+                                "will (plan §37)"
                         )
                     }
 

@@ -20,7 +20,15 @@ import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.CLEANUP_DEAD
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.CleanupDeadlockAction
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.CleanupDeadlockClock
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.decideOnCleanupDeadlock
+import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.endProcessIfStillBackgrounded
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -123,5 +131,56 @@ class CleanupDeadlockPolicyTest {
     @Test
     fun clock_readsZeroBeforeAnyCleanup() {
         assertEquals(0L, CleanupDeadlockClock { 123_456L }.stuckForMs())
+    }
+
+    // ── The final check and the exit, together on the main thread (review, 2026-09-29) ──
+
+    /**
+     * Eligible in the background, then an activity starts before the
+     * main-thread decision runs: the decision reads the CURRENT visibility,
+     * so the process is not ended under a now-visible app.
+     */
+    @Test
+    fun exit_isSkipped_whenTheAppForegroundsBeforeTheMainThreadDecisionRuns() = runBlocking {
+        val main = StandardTestDispatcher()
+        var visible = false
+        var exited = false
+
+        val decision = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            endProcessIfStillBackgrounded(CLEANUP_DEADLOCK_EXIT_MS + 1, { visible }, { exited = true }, main)
+        }
+        assertFalse("nothing decided until the main thread runs it", exited)
+
+        visible = true // WalletActivityTracker.onActivityStarted, queued ahead on the main thread
+        main.scheduler.runCurrent()
+
+        assertFalse(decision.await())
+        assertFalse("a visible app is never ended", exited)
+    }
+
+    @Test
+    fun exit_runs_whenStillInTheBackgroundAtTheMainThreadDecision() = runBlocking {
+        val main = StandardTestDispatcher()
+        var exited = false
+
+        val decision = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            endProcessIfStillBackgrounded(CLEANUP_DEADLOCK_EXIT_MS + 1, { false }, { exited = true }, main)
+        }
+        main.scheduler.runCurrent()
+
+        assertTrue(decision.await())
+        assertTrue(exited)
+    }
+
+    @Test
+    fun exit_neverRuns_belowTheBound() = runBlocking {
+        val main = StandardTestDispatcher()
+        var exited = false
+        val decision = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            endProcessIfStillBackgrounded(CLEANUP_DEADLOCK_EXIT_MS - 1, { false }, { exited = true }, main)
+        }
+        main.scheduler.runCurrent()
+        assertFalse(decision.await())
+        assertFalse(exited)
     }
 }
