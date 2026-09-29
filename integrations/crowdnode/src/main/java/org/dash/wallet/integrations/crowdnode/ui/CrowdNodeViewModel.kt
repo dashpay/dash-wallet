@@ -224,30 +224,50 @@ class CrowdNodeViewModel @Inject constructor(
      * later. Report the same `apiError` the startup path does instead; it is the
      * same transient condition and the same retry.
      */
-    private fun requireAccountAddress(): String? {
-        val address = _accountAddress.value
-        if (address == null) {
-            crowdNodeApi.apiError.value = ReceiveAddressUnavailableException(
-                "no CrowdNode account address; address initialisation has not completed"
-            )
+    /**
+     * The account address, INITIALISING it if startup could not, or null with
+     * [CrowdNodeApi.apiError] set.
+     *
+     * Two things this has to do, and an earlier version did neither well enough:
+     *
+     * - RETRY. The underlying failure is transient — the SDK engine had not bound
+     *   yet — so each attempt re-runs initialisation. Latching the outage meant
+     *   repeated taps could never recover once the engine came up.
+     * - REPORT. [StakingActivity] observes [observeCrowdNodeError] for the whole
+     *   staking flow, so setting `apiError` is what puts a dialog in front of the
+     *   user on the new-account screen. Returning silently left signup doing
+     *   nothing after authentication and linking doing nothing at all.
+     */
+    private suspend fun requireAccountAddress(): String? {
+        _accountAddress.value?.let { return it }
+        val address = try {
+            getOrCreateAccountAddress()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            crowdNodeApi.apiError.value = ex
+            return null
         }
+        _accountAddress.value = address
         return address
     }
 
     fun signUp() {
-        val address = requireAccountAddress() ?: return
-        crowdNodeApi.persistentSignUp(address)
+        viewModelScope.launch {
+            val address = requireAccountAddress() ?: return@launch
+            crowdNodeApi.persistentSignUp(address)
+        }
     }
 
     fun linkOnlineAccount() {
-        val address = requireAccountAddress() ?: return
-        val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
-        crowdNodeApi.trackLinkingAccount(address)
-        onlineAccountRequest.postValue(
-            mapOf(
-                URL_ARG to apiLinkUrl
+        viewModelScope.launch {
+            val address = requireAccountAddress() ?: return@launch
+            val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
+            crowdNodeApi.trackLinkingAccount(address)
+            onlineAccountRequest.postValue(
+                mapOf(
+                    URL_ARG to apiLinkUrl
+                )
             )
-        )
+        }
     }
 
     fun cancelLinkingOnlineAccount() {
@@ -272,9 +292,8 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun retrySignup() {
         viewModelScope.launch {
-            // Only on a SUCCESSFUL reset: signUp() dereferences
-            // _accountAddress.value!!, so after a failed reset it would either
-            // sign up on the previous identity or throw on a null value.
+            // Only on a SUCCESSFUL reset: signUp() must not run on the PREVIOUS
+            // identity when the reset failed to produce a new address.
             if (resetAddressAndApi()) {
                 signUp()
             }
