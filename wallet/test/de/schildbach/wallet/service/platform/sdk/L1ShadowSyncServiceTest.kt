@@ -1288,6 +1288,44 @@ class L1ShadowSyncServiceTest {
         service.stop()
     }
 
+    /**
+     * Review, 2026-09-29: a stop that lands while an ordinary start is parked
+     * INSIDE the scan gate. The start then refuses and schedules its retry;
+     * that retry must carry the start's own generation, not the stop's, or it
+     * restarts SPV after the stop has completed.
+     */
+    @Test
+    fun aStopDuringTheScanGate_supersedesTheRetryItsRefusalSchedules() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gateEntered = CompletableDeferred<Unit>()
+        val gateAnswer = CompletableDeferred<Boolean>()
+        var calls = 0
+        val service = service(
+            source,
+            scanMayAdvance = {
+                if (++calls == 1) {
+                    gateEntered.complete(Unit)
+                    gateAnswer.await()
+                } else {
+                    true // recovered: any retry that ran would now start SPV
+                }
+            },
+            scanGateRetryInitialMs = 20
+        )
+
+        val start = async(Dispatchers.Default) { service.startIfEnabled() }
+        withTimeout(5_000) { gateEntered.await() }
+        val stop = async(Dispatchers.Default) { service.stop() } // bumps the generation, waits for the mutex
+        delay(100)
+
+        gateAnswer.complete(false) // the parked start refuses
+        assertFalse(start.await())
+        withTimeout(5_000) { stop.await() }
+
+        delay(300) // well past the retry delay
+        assertEquals("no retry restarted SPV after the stop", 0, source.startCalls)
+    }
+
     /** An external stop cancels a pending scan-gate retry: the engine stays down. */
     @Test
     fun stop_cancelsAPendingScanGateRetry() = runBlocking {

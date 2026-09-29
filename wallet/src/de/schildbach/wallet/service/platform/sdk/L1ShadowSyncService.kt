@@ -2665,6 +2665,12 @@ class L1ShadowSyncService internal constructor(
      * (review, 2026-09-23). Ordinary callers pass nothing.
      */
     suspend fun startIfEnabled(expectedExternalStopGeneration: Long? = null): Boolean {
+        // The generation this start belongs to, sampled BEFORE any suspending
+        // work (review, 2026-09-29): a scan-gate retry scheduled below carries
+        // it, so a stop() that lands while this start is suspended (in the
+        // enable read, on the mutex, or inside the gate) supersedes the retry
+        // too, instead of the retry adopting the stop's new generation.
+        val startGeneration = expectedExternalStopGeneration ?: externalStopGeneration
         if (!isEnabled()) return false
         return try {
             mutex.withLock {
@@ -2687,7 +2693,11 @@ class L1ShadowSyncService internal constructor(
                 // Bounded: this runs under [mutex], which stop() also takes.
                 val gateOpen = withTimeoutOrNull(SCAN_GATE_TIMEOUT_MS) { scanMayAdvance(walletIdHex) } == true
                 if (!gateOpen) {
-                    val retryInMs = scheduleScanGateRetry()
+                    if (externalStopGeneration != startGeneration) {
+                        log.info("L1 shadow sync not started: an external stop() arrived during the scan gate")
+                        return false
+                    }
+                    val retryInMs = scheduleScanGateRetry(startGeneration)
                     log.warn(
                         "L1 shadow sync not started: the address windows are narrow and their rescan " +
                             "debt is unrecorded (see the binder's scan gate); retrying in {}s",
@@ -2877,13 +2887,13 @@ class L1ShadowSyncService internal constructor(
     /**
      * Schedule the start again after a scan-gate refusal, with backoff; one
      * retry in flight at a time. Returns the delay. The retry carries the
-     * external-stop generation, so a stop that lands before it runs keeps the
-     * engine down.
+     * ORIGINATING start's external-stop generation, so any stop after that
+     * start began, including one that landed while it was inside the gate,
+     * keeps the engine down.
      */
-    private suspend fun scheduleScanGateRetry(): Long {
+    private suspend fun scheduleScanGateRetry(generation: Long): Long {
         val attempt = scanGateRefusals++
         val delayMs = (scanGateRetryInitialMs shl attempt.coerceAtMost(20)).coerceAtMost(scanGateRetryMaxMs)
-        val generation = externalStopGeneration
         // A refusal inside the retry itself must not cancel the job it runs in.
         val self = currentCoroutineContext()[Job]
         scanGateRetryJob?.takeIf { it !== self }?.cancel()
