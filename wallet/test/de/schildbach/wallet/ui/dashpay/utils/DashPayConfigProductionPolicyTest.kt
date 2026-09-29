@@ -47,8 +47,7 @@ class DashPayConfigProductionPolicyTest {
             Pair(DashPayConfig.USE_KOTLIN_SDK_SHIELDED, true),
             Pair(DashPayConfig.USE_KOTLIN_SDK_L1_INVITE, true),
             Pair(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW, true),
-            Pair(DashPayConfig.USE_KOTLIN_SDK_L1_SEND, false),
-            Pair(DashPayConfig.DASHJ_SYNC_DIAGNOSTIC, false)
+            Pair(DashPayConfig.USE_KOTLIN_SDK_L1_SEND, false)
         )
         // Bypass set(), as an imported or externally modified preferences file would.
         config.editPreferences { prefs -> flags.forEach { (key, value) -> prefs[key] = !value } }
@@ -59,6 +58,12 @@ class DashPayConfigProductionPolicyTest {
             config.set(key, !value)
             assertEquals(key.name, expected, config.get(key))
             assertEquals(key.name, expected, config.observe(key).first())
+        }
+        // Tools diagnostics remain functional in every variant, including prodRelease.
+        for (enabled in listOf(true, false, true)) {
+            config.setDashjSyncDiagnostic(enabled)
+            assertEquals(enabled, config.getDashjSyncDiagnostic())
+            assertEquals(enabled, config.observeDashjSyncDiagnostic().first())
         }
         val unrelated = booleanPreferencesKey("unrelated_policy_test")
         config.set(unrelated, true)

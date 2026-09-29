@@ -102,9 +102,9 @@ open class DashPayConfig @Inject constructor(
     )
 ) {
     /**
-     * Store releases always use the SDK. Persisted flags remain QA controls only:
-     * neither an old preference nor a direct file edit may change production routing
-     * or enable the second, diagnostic dashj engine. L1_SEND is the pre-cutover
+     * Store releases always use the SDK. Persisted SDK flags remain QA controls only:
+     * neither an old preference nor a direct file edit may change production routing.
+     * The separate Tools dashj diagnostic remains user-configurable. L1_SEND is the pre-cutover
      * override; normal SDK sending remains enabled by committed cutover.
      */
     private fun <T> productionFlagOverride(key: Preferences.Key<T>): T? {
@@ -115,8 +115,7 @@ open class DashPayConfig @Inject constructor(
             USE_KOTLIN_SDK_SHIELDED.name,
             USE_KOTLIN_SDK_L1_INVITE.name,
             USE_KOTLIN_SDK_L1_SHADOW.name -> true
-            USE_KOTLIN_SDK_L1_SEND.name,
-            DASHJ_SYNC_DIAGNOSTIC.name -> false
+            USE_KOTLIN_SDK_L1_SEND.name -> false
             else -> return null
         }
         @Suppress("UNCHECKED_CAST")
