@@ -29,6 +29,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
+import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import kotlinx.coroutines.CoroutineScope
@@ -126,7 +127,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     private val platformSyncService: PlatformSyncService,
-    private val applicationScope: CoroutineScope,
+    private val saveQueue: TransactionMetadataSaveQueue,
     private val publishOperation: PublishTransactionMetadataOperation
 ) : ViewModel(), TransactionMetadataSettingsPreviewViewModel {
     companion object {
@@ -170,7 +171,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
 
         dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER)
             .onEach {
-                _uiState.update { state -> state.copy(futureSaveDate = it ?: System.currentTimeMillis()) }
+                _uiState.update { state -> state.copy(futureSaveDate = it ?: 0) }
                 log.info("future save date: {}", it?.let { Date(it) })
             }
             .launchIn(viewModelScope)
@@ -281,16 +282,16 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     /**
      * save using current settings
      *
-     * Runs in the application scope, not the screen's: every caller pops the
-     * screen right after this returns, which clears the ViewModel and cancels
-     * its scopes while the DataStore writes below are still in flight — the
-     * publish was never enqueued on ~1 in 3 attempts, with no sign of it.
-     * DataStore and WorkManager are main-safe, so the scope's own dispatcher
-     * is used as is.
+     * Queued on [TransactionMetadataSaveQueue], which runs in the application
+     * scope, not the screen's: every caller pops the screen right after this
+     * returns, which clears the ViewModel and cancels its scopes while the
+     * DataStore writes below are still in flight — the publish was never
+     * enqueued on ~1 in 3 attempts, with no sign of it. The queue also keeps a
+     * save from a reopened screen from being overtaken by an earlier one.
      */
     fun saveToNetwork(forceSave: Boolean) {
         val settings = _uiState.value.settings
-        applicationScope.launch {
+        saveQueue.submit {
             val previousSettings = dashPayConfig.getTransactionMetadataSettings()
             savePreferences(settings)
             if (settings.saveToNetwork) {
