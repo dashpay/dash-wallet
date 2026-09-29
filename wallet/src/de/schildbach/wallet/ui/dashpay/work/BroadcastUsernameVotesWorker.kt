@@ -169,53 +169,51 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     votingResults.size
                 )
             }
-            when {
-                errorCount == 0 -> {
-                    // all were successful
-                    log.info("all votes succeeded: total submitted {}", errorCount, votingResults.size)
-                    Result.success(
-                        workDataOf(
-                            KEY_NORMALIZED_LABELS to arrayOfnames,
-                            KEY_LABELS to labels,
-                            KEY_VOTE_CHOICES to voteChoices,
-                            KEY_QUICK_VOTING to isQuickVoting
-                        )
+            // Any terminal failure is reported, even when other votes in the batch
+            // landed: `errorCount > 0` is exactly `terminalError != null`, so branching
+            // on the error itself both collapses the old three-way `when` and smart-casts
+            // it non-null. The previous middle branch only caught `successCount == 0`,
+            // so a batch of one fresh success plus one vote-limit failure fell through to
+            // an unqualified `Result.success` — `convertState` mapped that to
+            // `Resource.success`, `UsernameRequestsFragment` showed the success indicator
+            // and removed its observer, and the terminal error reached nobody but the log.
+            // Votes that did land are unaffected: `updateUsernameVotes` has already
+            // written them, and the batch's names and choices still ride along below.
+            if (terminalError == null) {
+                // Every vote either landed or was already cast.
+                log.info("all votes succeeded: total submitted {}", votingResults.size)
+                Result.success(
+                    workDataOf(
+                        KEY_NORMALIZED_LABELS to arrayOfnames,
+                        KEY_LABELS to labels,
+                        KEY_VOTE_CHOICES to voteChoices,
+                        KEY_QUICK_VOTING to isQuickVoting
                     )
-                }
-                successCount == 0 && terminalError != null -> {
-                    // Already-cast results cannot mask a terminal failure in this batch.
-                    log.error("no new votes succeeded: errors: {} vs total submitted {}", errorCount, votingResults.size)
-                    // errors that can be returned
+                )
+            } else {
+                log.error(
+                    "{} of {} votes succeeded; {} terminal failure(s) reported to observers",
+                    successCount,
+                    votingResults.size,
+                    errorCount
+                )
+                // errors that can be returned
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode vote is already present for masternode EbitFAjpGsuf7qKPpsQMZw2ZKZ8rs2S1PdqKvYA8J2Ux voting for ContestedDocumentResourceVotePoll(ContestedDocumentResourceVotePoll { contract_id: GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec, document_type_name: domain, index_name: parentNameAndLabel, index_values: [string dash, string test-1101] })", metadata: MetadataMap { headers: {"drive-error-data-bin": "oW9zZXJpYWxpemVkRXJyb3KYbwIYKxjKDQkQABgqGO0YuRh/GLMDGOkYexgdGLEVGIMYvhhiGLMY2xiLGGEYRxj/GKgYSxiYGDAYnxjOGHEAGOYYaBjGGFkYrxhmGK4Y4RjnGCwYGBhtGN4YexhbGH4KGB0YcRgqCRjEDRhXGCEY9hgiGL8YUxjFGDEYVQYYZBhvGG0YYRhpGG4SGHAYYRhyGGUYbhh0GE4YYRhtGGUYQRhuGGQYTBhhGGIYZRhsAhIEGGQYYRhzGGgSCRh0GGUYcxh0GC0YMRgxGDAYMQ==", "code": "40304", "grpc-accept-encoding": "identity", "grpc-encoding": "identity", "content-type": "application/grpc+proto", "date": "Mon, 28 Oct 2024 22:27:37 GMT", "x-envoy-upstream-service-time": "55", "server": "envoy"} }, source: None }, Address { ban_count: 0, banned_until: None, uri: https://52.89.154.48:1443/ })
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode with id: CmbJumQ1ALJXHYFpUdCCnvbfgvXKSajErNXGhv3H4GN1 already voted 5 times and is trying to vote again, they can only vote 5 times"
-                    logVoteFailures(votingResults, verdicts)
-                    // Keep SDK metadata from consuming WorkManager's 10 KB output budget.
-                    val errorMessage = voteFailureText(terminalError)
-                        .ifBlank { "Unknown error - ${terminalError.javaClass.simpleName}" }
-                        .take(1024)
-                    Result.failure(
-                        workDataOf(
-                            KEY_ERROR_MESSAGE to errorMessage,
-                            KEY_NORMALIZED_LABELS to arrayOfnames,
-                            KEY_LABELS to labelsFor(arrayOfnames, labelMap),
-                            KEY_VOTE_CHOICES to voteChoices,
-                            KEY_QUICK_VOTING to isQuickVoting
-                        )
+                logVoteFailures(votingResults, verdicts)
+                // Keep SDK metadata from consuming WorkManager's 10 KB output budget.
+                val errorMessage = voteFailureText(terminalError)
+                    .ifBlank { "Unknown error - ${terminalError.javaClass.simpleName}" }
+                    .take(1024)
+                Result.failure(
+                    workDataOf(
+                        KEY_ERROR_MESSAGE to errorMessage,
+                        KEY_NORMALIZED_LABELS to arrayOfnames,
+                        KEY_LABELS to labelsFor(arrayOfnames, labelMap),
+                        KEY_VOTE_CHOICES to voteChoices,
+                        KEY_QUICK_VOTING to isQuickVoting
                     )
-                }
-                else -> {
-                    // some have failed, how can we report this?
-                    log.error("not all votes succeeeded: errors: {} vs total submitted {}", errorCount, votingResults.size)
-                    logVoteFailures(votingResults, verdicts)
-                    Result.success(
-                        workDataOf(
-                            KEY_NORMALIZED_LABELS to arrayOfnames,
-                            KEY_LABELS to labelsFor(arrayOfnames, labelMap),
-                            KEY_VOTE_CHOICES to voteChoices,
-                            KEY_QUICK_VOTING to isQuickVoting
-                        )
-                    )
-                }
+                )
             }
         } catch (ex: Exception) {
             analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, mapOf())

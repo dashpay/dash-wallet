@@ -119,10 +119,49 @@ class VoteFailureOutputTest {
     }
 
     @Test
-    fun `fresh success preserves partial-success behavior with terminal and already-cast results`() {
+    fun `a fresh success does not bury a terminal failure in the same batch`() {
+        // The batch the old middle branch missed: it only fired on successCount == 0, so
+        // one landed vote was enough to send a vote-limit failure down the success path.
+        // convertState then reported Resource.success, UsernameRequestsFragment showed
+        // the success indicator and dropped its observer, and the error reached only the
+        // log. A quick-vote where Alice lands and Bob is out of votes must still tell the
+        // user about Bob.
+        val reason = "Masternode with id: Cmb already voted 5 times and is trying to " +
+            "vote again, they can only vote 5 times"
         val result = runWorker(listOf(
             Triple(AbstainVoteChoice(), null, Exception("vote is already present")),
-            Triple(AbstainVoteChoice(), null, Exception("can only vote 5 times")),
+            Triple(AbstainVoteChoice(), null, Exception(reason)),
+            Triple(AbstainVoteChoice(), successfulVote("a1ice"), null)
+        ))
+        assertTrue(result is ListenableWorker.Result.Failure)
+        val output = (result as ListenableWorker.Result.Failure).outputData
+
+        // The terminal reason reaches observers, not just logcat.
+        val info = mockk<WorkInfo> {
+            every { state } returns WorkInfo.State.FAILED
+            every { outputData } returns output
+        }
+        val resource = BroadcastUsernameVotesOperation.convertState(info)
+        assertEquals(Status.ERROR, resource.status)
+        assertEquals(reason, resource.message)
+
+        // ...and the votes that DID land are still described in the output, so the UI can
+        // name what it is reporting on. The rows themselves were persisted before this
+        // branch ran and are unaffected by the Result type.
+        assertArrayEquals(arrayOf("a1ice"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS))
+        assertArrayEquals(arrayOf("Alice"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_LABELS))
+        assertArrayEquals(
+            arrayOf(AbstainVoteChoice().toString()),
+            output.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES)
+        )
+    }
+
+    @Test
+    fun `a batch with no terminal failure is still a success`() {
+        // The complement of the test above: already-cast results are not terminal, so a
+        // mix of landed and already-cast votes must NOT be downgraded to a failure.
+        val result = runWorker(listOf(
+            Triple(AbstainVoteChoice(), null, Exception("vote is already present")),
             Triple(AbstainVoteChoice(), successfulVote("a1ice"), null)
         ))
         assertTrue(result is ListenableWorker.Result.Success)
