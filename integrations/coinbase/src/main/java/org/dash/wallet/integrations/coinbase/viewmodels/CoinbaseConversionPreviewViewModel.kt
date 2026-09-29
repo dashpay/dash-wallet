@@ -77,6 +77,24 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
 
         _showLoading.value = true
+
+        // Acquire the destination BEFORE committing the trade. The commit is the
+        // financial side effect; reading the address after it meant an
+        // unavailable address reported a SUCCEEDED conversion as a failure, with
+        // no resumable state and no withdrawal. Only the non-DASH input branch
+        // needs it — the DASH branch sells instead of depositing.
+        val depositAddress = if (inputCurrency == Constants.DASH_CURRENCY) {
+            null
+        } else {
+            try {
+                walletDataProvider.freshReceiveAddressStringOffMain()
+            } catch (ex: ReceiveAddressUnavailableException) {
+                _showLoading.value = false
+                commitSwapTradeFailureState.call()
+                return@launch
+            }
+        }
+
         when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
@@ -91,21 +109,11 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             Dash.ZERO
                         }
                     } else {
-                        // The enclosing try/catch above covers only the sell branch.
-                        // Without an address the converted DASH would be sent to the
-                        // held dashj chain's frozen, already-paid address (SR-03), so
-                        // fail the commit the same way an empty trade does.
-                        val depositAddress = try {
-                            walletDataProvider.freshReceiveAddressStringOffMain()
-                        } catch (ex: ReceiveAddressUnavailableException) {
-                            commitSwapTradeFailureState.call()
-                            return@launch
-                        }
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
-                            to = depositAddress,
+                            to = depositAddress!!,
                             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this

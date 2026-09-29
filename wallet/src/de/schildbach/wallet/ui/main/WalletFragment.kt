@@ -91,6 +91,8 @@ import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import de.schildbach.wallet.service.L1SyncUiStatus
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
+import android.widget.Toast
 
 @AndroidEntryPoint
 class WalletFragment : Fragment(R.layout.home_content) {
@@ -458,8 +460,18 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
             ShortcutOption.TOPPER -> {
                 lifecycleScope.launch {
-                    val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
-                    requireActivity().openCustomTab(uri)
+                    try {
+                        val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
+                        requireActivity().openCustomTab(uri)
+                    } catch (ex: ReceiveAddressUnavailableException) {
+                        // Same rule as the other Topper entry points: without a
+                        // safe deposit address, do not open the purchase flow.
+                        Toast.makeText(
+                            requireContext(),
+                            org.dash.wallet.common.R.string.loading_error,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
             ShortcutOption.UPHOLD -> {

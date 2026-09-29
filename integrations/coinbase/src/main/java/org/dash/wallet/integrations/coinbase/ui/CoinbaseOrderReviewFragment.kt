@@ -86,23 +86,31 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
 
         binding.confirmBtnContainer.setOnClickListener {
             lifecycleScope.launch {
-                try {
-                    if (tryBuyDash()) {
-                        val params = viewModel.getTransferDashParams()
-                        val twoFaParams = CoinbaseTransactionParams(params, TransactionType.BuyDash)
-                        safeNavigate(
-                            CoinbaseOrderReviewFragmentDirections
-                                .coinbaseBuyDashOrderReviewToTwoFaCode(twoFaParams)
-                        )
-                    }
+                // Acquire the destination BEFORE the purchase. tryBuyDash()
+                // submits placeBuyOrder() with a fresh UUID, so an address
+                // failure after it would leave a SUCCEEDED purchase with no
+                // transfer parameters and no submitted-order state — pressing
+                // confirm again would place a second, different order. Checking
+                // first means the only failure is a no-op.
+                val params = try {
+                    viewModel.getTransferDashParams()
                 } catch (ex: ReceiveAddressUnavailableException) {
-                    // The buy would deposit to the held dashj chain's frozen
-                    // address (SR-03). Stop before the 2FA step.
+                    // Depositing to the held dashj chain's frozen address is the
+                    // SR-03 defect; nothing has been bought yet, so this is safe
+                    // to retry.
                     Toast.makeText(
                         requireContext(),
                         org.dash.wallet.common.R.string.loading_error,
                         Toast.LENGTH_LONG
                     ).show()
+                    return@launch
+                }
+                if (tryBuyDash()) {
+                    val twoFaParams = CoinbaseTransactionParams(params, TransactionType.BuyDash)
+                    safeNavigate(
+                        CoinbaseOrderReviewFragmentDirections
+                            .coinbaseBuyDashOrderReviewToTwoFaCode(twoFaParams)
+                    )
                 }
             }
         }

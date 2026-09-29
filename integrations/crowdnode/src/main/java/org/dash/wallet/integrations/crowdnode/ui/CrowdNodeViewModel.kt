@@ -193,7 +193,19 @@ class CrowdNodeViewModel @Inject constructor(
 
     suspend fun recheckState() {
         crowdNodeApi.restoreStatus()
-        _accountAddress.value = getOrCreateAccountAddress()
+        // StakingActivity calls this from a bare lifecycleScope.launch while it
+        // builds its navigation graph, so an uncaught failure here crashes on
+        // opening staking. With no persisted address this reaches
+        // freshReceiveAddressStringOffMain, which now fails closed post-cutover.
+        // Report it and stop rather than continuing into screens that assume an
+        // account address exists.
+        val address = try {
+            getOrCreateAccountAddress()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            crowdNodeApi.apiError.value = ex
+            return
+        }
+        _accountAddress.value = address
         crowdNodeApi.refreshBalance()
     }
 
@@ -238,8 +250,12 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun retrySignup() {
         viewModelScope.launch {
-            resetAddressAndApi()
-            signUp()
+            // Only on a SUCCESSFUL reset: signUp() dereferences
+            // _accountAddress.value!!, so after a failed reset it would either
+            // sign up on the previous identity or throw on a null value.
+            if (resetAddressAndApi()) {
+                signUp()
+            }
         }
     }
 
@@ -408,22 +424,30 @@ class CrowdNodeViewModel @Inject constructor(
         return address
     }
 
-    private suspend fun resetAddressAndApi() {
-        // Contained HERE rather than at each of the four viewModelScope.launch
-        // entry points (resetSignUp/retrySignup/resetAddress/…), all of which are
-        // bare launches that would crash on a throw. A CrowdNode account address
-        // taken from the held dashj chain would be its frozen, already-paid
-        // address (SR-03) and would be persisted as the account's identity, so
-        // failing to reset is much better than resetting onto a bad address —
-        // the existing apiError surface carries it to the UI.
+    /**
+     * Reset the account address and the API, returning whether it SUCCEEDED.
+     *
+     * Contained here rather than at each bare `viewModelScope.launch` entry
+     * point, all of which would crash on a throw. A CrowdNode account address
+     * taken from the held dashj chain would be its frozen, already-paid address
+     * (SR-03) and is PERSISTED as the account's identity, so failing to reset is
+     * far better than resetting onto a bad one — the existing `apiError` surface
+     * carries it to the UI.
+     *
+     * The boolean matters: [retrySignup] must not sign up on the previous
+     * identity after a failed reset, and `_accountAddress.value!!` would throw
+     * outright when nothing was ever set.
+     */
+    private suspend fun resetAddressAndApi(): Boolean {
         val address = try {
             createNewAccountAddress()
         } catch (ex: ReceiveAddressUnavailableException) {
             crowdNodeApi.apiError.value = ex
-            return
+            return false
         }
         _accountAddress.value = address
         crowdNodeApi.reset()
+        return true
     }
 
     suspend fun getMasternodeAPY(): Double {

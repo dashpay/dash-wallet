@@ -268,7 +268,13 @@ class TransferDashViewModel @Inject constructor(
         } catch (ex: ReceiveAddressUnavailableException) {
             // Transferring from Coinbase to the held dashj chain's frozen address
             // would deposit to an already-paid address (SR-03).
-            onBuildTransactionParamsCallback.value = null
+            //
+            // Emit the EXISTING address-creation failure event, which the fragment
+            // already observes. Clearing the params event instead does not suppress
+            // it — SingleLiveEvent marks a null value pending just the same — and
+            // the fragment then forwards that null into a non-null navigation
+            // argument, crashing rather than showing the error.
+            onAddressCreationFailedCallback.call()
             return@launch
         }
         val sendTransactionToWalletParams = SendTransactionToWalletParams(
