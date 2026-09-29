@@ -114,8 +114,13 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         val amount = uiState.value.order ?: return
 
         analyticsService.logEvent(AnalyticsConstants.Coinbase.QUOTE_CONFIRM, mapOf())
-        val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode().roundingMode(RoundingMode.UP)
-        val amountStr = format.format(amount).toString()
+        // Locale-independent on purpose -- this string goes into the deposit and buy-order
+        // request bodies. The device-locale format this used renders "12,34" on any
+        // comma-decimal locale, which Coinbase will not accept as an amount.
+        val amountStr = CoinbaseConstants.API_AMOUNT_FORMAT
+            .roundingMode(RoundingMode.UP)
+            .format(amount)
+            .toString()
 
         if (uiState.value.paymentMethod?.paymentMethodType == PaymentMethodType.BankAccount) {
             coinBaseRepository.depositToFiatAccount(

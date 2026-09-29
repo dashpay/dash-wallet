@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
@@ -73,6 +74,12 @@ class CoinbaseServicesViewModel @Inject constructor(
         get() = preferences.format.noCode()
 
     init {
+        // The seed above can be a startup-race `false`, and the state can change under us
+        // while the screen is open, so track it rather than sampling it once (MO-995).
+        coinBaseRepository.isAuthenticatedFlow
+            .onEach { isLoggedIn -> _uiState.update { it.copy(isLoggedIn = isLoggedIn) } }
+            .launchIn(viewModelScope)
+
         config.observe(CoinbaseConfig.LAST_BALANCE)
             .map { uiState.value.copy(balance = Coin.valueOf(it ?: 0)) }
             .filterNotNull()
