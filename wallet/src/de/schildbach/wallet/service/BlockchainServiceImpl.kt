@@ -494,22 +494,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         enum class CleanupDeadlockAction { STOP_SELF, EXIT_PROCESS }
 
         /**
-         * Plan §37 (Andrei, 2026-09-22): a shutdown parked behind a native SDK
-         * call never completed, so every start for four hours logged "deadlock
-         * in onDestroy" and stopped itself — the process lived on with the
-         * engine off and nothing in it could ever recover. A cleanup that has
-         * been stuck past [CLEANUP_DEADLOCK_EXIT_MS] is not going to finish;
-         * ending the process is the only exit, and the next start (the alarm,
-         * or the user) then begins from a clean one.
-         *
-         * Never while the app is visible: the start being refused is the one
-         * the user's own foreground triggered, and exiting would close the app
-         * in their face. They get the refusal as before; the background retry
-         * gets the exit.
-         *
-         * Pure, so both axes are pinned by test.
-         */
-        /**
          * The deadlock clock for the cleanup that owns [isCleaningUp] (review,
          * 2026-09-28). It starts the moment a cleanup CLAIMS ownership, before
          * that cleanup waits for its instance's initialization: a cleanup stuck
@@ -538,6 +522,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
+        /**
+         * Plan §37 (Andrei, 2026-09-22): a shutdown parked behind a native SDK
+         * call never completed, so every start for four hours logged "deadlock
+         * in onDestroy" and stopped itself — the process lived on with the
+         * engine off and nothing in it could ever recover. A cleanup that has
+         * been stuck past [CLEANUP_DEADLOCK_EXIT_MS] is not going to finish;
+         * ending the process is the only exit, and the next start (the alarm,
+         * or the user) then begins from a clean one.
+         *
+         * Never while the app is visible: the start being refused is the one
+         * the user's own foreground triggered, and exiting would close the app
+         * in their face. They get the refusal as before; the background retry
+         * gets the exit.
+         *
+         * Pure, so both axes are pinned by test.
+         */
         @JvmStatic
         fun decideOnCleanupDeadlock(stuckForMs: Long, appVisible: Boolean): CleanupDeadlockAction =
             if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS && !appVisible) {
