@@ -2199,7 +2199,10 @@ class L1ShadowSyncService internal constructor(
      * ([SdkWalletBinder.ensureScanMayAdvance]). False holds SPV back; the
      * next start asks again. Default open for tests.
      */
-    private val scanMayAdvance: suspend (walletIdHex: String) -> Boolean = { true }
+    private val scanMayAdvance: suspend (walletIdHex: String) -> Boolean = { true },
+    /** First retry delay after the scan gate declines a start; doubles up to [scanGateRetryMaxMs]. */
+    private val scanGateRetryInitialMs: Long = SCAN_GATE_RETRY_INITIAL_MS,
+    private val scanGateRetryMaxMs: Long = SCAN_GATE_RETRY_MAX_MS
 ) {
     @Inject
     constructor(
@@ -2290,6 +2293,19 @@ class L1ShadowSyncService internal constructor(
      * that one.
      */
     private var stallRestartJob: Job? = null
+
+    /**
+     * The retry a scan-gate refusal scheduled (review, 2026-09-29). Nothing
+     * else re-invokes the start once the one-shot post-bind starter has spent
+     * itself, so without this a refusal could leave sync stopped after the
+     * widening or the debt write recovers. Cancelled by an external [stop].
+     */
+    @Volatile
+    private var scanGateRetryJob: Job? = null
+
+    /** Consecutive scan-gate refusals, for the retry backoff; reset when the gate opens or on [stop]. */
+    @Volatile
+    private var scanGateRefusals = 0
 
     /**
      * Bumped by every external [stop]. A filter-stall restart samples it when
@@ -2668,13 +2684,19 @@ class L1ShadowSyncService internal constructor(
                     log.info("L1 shadow sync not started: app wallet not bound to the SDK yet")
                     return false
                 }
-                if (!scanMayAdvance(walletIdHex)) {
+                // Bounded: this runs under [mutex], which stop() also takes.
+                val gateOpen = withTimeoutOrNull(SCAN_GATE_TIMEOUT_MS) { scanMayAdvance(walletIdHex) } == true
+                if (!gateOpen) {
+                    val retryInMs = scheduleScanGateRetry()
                     log.warn(
                         "L1 shadow sync not started: the address windows are narrow and their rescan " +
-                            "debt is unrecorded (see the binder's scan gate); the next start retries"
+                            "debt is unrecorded (see the binder's scan gate); retrying in {}s",
+                        retryInMs / 1000
                     )
                     return false
                 }
+                scanGateRefusals = 0
+                currentCoroutineContext()[Job].let { self -> scanGateRetryJob?.takeIf { it !== self }?.cancel() }
 
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
                 if (!source.isSpvRunning()) {
@@ -2846,7 +2868,30 @@ class L1ShadowSyncService internal constructor(
      */
     suspend fun stop() {
         externalStopGeneration++
+        scanGateRetryJob?.cancel()
+        scanGateRetryJob = null
+        scanGateRefusals = 0
         stopInternal()
+    }
+
+    /**
+     * Schedule the start again after a scan-gate refusal, with backoff; one
+     * retry in flight at a time. Returns the delay. The retry carries the
+     * external-stop generation, so a stop that lands before it runs keeps the
+     * engine down.
+     */
+    private suspend fun scheduleScanGateRetry(): Long {
+        val attempt = scanGateRefusals++
+        val delayMs = (scanGateRetryInitialMs shl attempt.coerceAtMost(20)).coerceAtMost(scanGateRetryMaxMs)
+        val generation = externalStopGeneration
+        // A refusal inside the retry itself must not cancel the job it runs in.
+        val self = currentCoroutineContext()[Job]
+        scanGateRetryJob?.takeIf { it !== self }?.cancel()
+        scanGateRetryJob = scope.launch {
+            delay(delayMs)
+            startIfEnabled(expectedExternalStopGeneration = generation)
+        }
+        return delayMs
     }
 
     private suspend fun stopInternal() {
@@ -4287,6 +4332,13 @@ class L1ShadowSyncService internal constructor(
          * and far below the latter.
          */
         internal const val FILTER_STALL_THRESHOLD_MS = 10 * 60_000L
+
+        /** The binder's scan gate may widen and write to DataStore; never hold [mutex] longer than this for it. */
+        internal const val SCAN_GATE_TIMEOUT_MS = 15_000L
+
+        /** Retry backoff after a scan-gate refusal: 30 s doubling to 5 min. */
+        internal const val SCAN_GATE_RETRY_INITIAL_MS = 30_000L
+        internal const val SCAN_GATE_RETRY_MAX_MS = 5 * 60_000L
 
         /**
          * WITHDRAWN: a short first wait for wallets where a restart looked

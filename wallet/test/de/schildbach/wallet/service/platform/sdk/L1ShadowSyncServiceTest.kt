@@ -263,7 +263,8 @@ class L1ShadowSyncServiceTest {
         bringUpStopJoinMs: Long = L1ShadowSyncService.BRING_UP_STOP_JOIN_MS,
         destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
         flagGate: () -> CompletableDeferred<Unit>? = { null },
-        scanMayAdvance: suspend (String) -> Boolean = { true }
+        scanMayAdvance: suspend (String) -> Boolean = { true },
+        scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -277,7 +278,8 @@ class L1ShadowSyncServiceTest {
         bringUpBudgetMs = bringUpBudgetMs,
         bringUpStopJoinMs = bringUpStopJoinMs,
         destructiveBringUpJoinMs = destructiveBringUpJoinMs,
-        scanMayAdvance = scanMayAdvance
+        scanMayAdvance = scanMayAdvance,
+        scanGateRetryInitialMs = scanGateRetryInitialMs
     )
 
     /**
@@ -1255,7 +1257,7 @@ class L1ShadowSyncServiceTest {
     fun startIfEnabled_declines_whileTheScanGateHoldsTheScan() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
         var open = false
-        val service = service(source, scanMayAdvance = { open })
+        val service = service(source, scanMayAdvance = { open }, scanGateRetryInitialMs = 60_000)
 
         assertFalse(service.startIfEnabled())
         assertEquals("SPV never started", 0, source.startCalls)
@@ -1264,6 +1266,41 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.startIfEnabled())
         assertEquals(1, source.startCalls)
         service.stop()
+    }
+
+    /**
+     * Review, 2026-09-29: a refusal must carry its own recovery. Nothing else
+     * re-invokes the start once the post-bind starter has spent itself, so the
+     * refusal schedules a retry, and the engine starts as soon as the gate
+     * opens, with no other trigger and no service recreation.
+     */
+    @Test
+    fun aScanGateRefusal_retriesTheStartOnItsOwn_untilTheGateOpens() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var gateCalls = 0
+        val service = service(source, scanMayAdvance = { ++gateCalls >= 3 }, scanGateRetryInitialMs = 20)
+
+        assertFalse(service.startIfEnabled())
+        withTimeout(5_000) { while (source.startCalls == 0) delay(10) }
+
+        assertEquals("refused twice, then the retry started it", 3, gateCalls)
+        assertEquals(1, source.startCalls)
+        service.stop()
+    }
+
+    /** An external stop cancels a pending scan-gate retry: the engine stays down. */
+    @Test
+    fun stop_cancelsAPendingScanGateRetry() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var open = false
+        val service = service(source, scanMayAdvance = { open }, scanGateRetryInitialMs = 50)
+
+        assertFalse(service.startIfEnabled())
+        service.stop()
+        open = true
+        delay(300)
+
+        assertEquals("the cancelled retry never started SPV", 0, source.startCalls)
     }
 
     /**

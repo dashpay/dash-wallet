@@ -25,10 +25,13 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.bitcoinj.wallet.Wallet
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
@@ -2084,6 +2087,68 @@ class SdkWalletBinderTest {
 
         assertTrue(binder.ensureScanMayAdvance(walletId))
         assertEquals("no retry needed", 1, sdk.widenCalls)
+    }
+
+    /**
+     * Review, 2026-09-29: a start that comes before any bind pass in this
+     * process (a shield's ensureSpvRunning, say) must not scan at the default
+     * windows. The gate widens the loaded wallet itself; widening needs no seed.
+     */
+    @Test
+    fun scanGate_widensTheWindowsItself_beforeAnyBindPass() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("the gate widened", 1, sdk.widenCalls)
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("once per process", 1, sdk.widenCalls)
+    }
+
+    /**
+     * Review, 2026-09-29: a start that arrives while a bind pass is still
+     * widening waits for that outcome, instead of passing an open gate and
+     * scanning before the widening lands.
+     */
+    @Test
+    fun scanGate_waitsForAWideningInProgress() = runBlocking {
+        val sdk = readySdk()
+        val wideningGate = CompletableDeferred<Unit>()
+        var wideningEntered = false
+        sdk.onWiden = {
+            wideningEntered = true
+            wideningGate.await()
+            true
+        }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        val bind = launch { binder.bindIfEnabled(unlock) }
+        withTimeout(5_000) { while (!wideningEntered) delay(10) }
+
+        val gate = async { binder.ensureScanMayAdvance(walletId) }
+        delay(100)
+        assertFalse("the gate waits while the bind is widening", gate.isCompleted)
+
+        wideningGate.complete(Unit)
+        assertTrue(gate.await())
+        assertEquals("it used the bind's widening, not its own", 1, sdk.widenCalls)
+        bind.join()
+    }
+
+    /** A re-created SDK wallet is back at the default windows: the gate widens it again. */
+    @Test
+    fun scanGate_widensAgainAfterWalletRecreation() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+
+        binder.resetForWalletRecreation()
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals(2, sdk.widenCalls)
     }
 
     @Test
