@@ -2192,7 +2192,14 @@ class L1ShadowSyncService internal constructor(
      * a hard [resetShadowState]) waits for a cancelled bring-up to leave its
      * native call before giving up — see [quiesceBringUpForDestruction].
      */
-    private val destructiveBringUpJoinMs: Long = DESTRUCTIVE_BRING_UP_JOIN_MS
+    private val destructiveBringUpJoinMs: Long = DESTRUCTIVE_BRING_UP_JOIN_MS,
+    /**
+     * The binder's scan-start gate for a failed address-window widening
+     * whose rescan debt could not be recorded
+     * ([SdkWalletBinder.ensureScanMayAdvance]). False holds SPV back; the
+     * next start asks again. Default open for tests.
+     */
+    private val scanMayAdvance: suspend (walletIdHex: String) -> Boolean = { true }
 ) {
     @Inject
     constructor(
@@ -2222,6 +2229,7 @@ class L1ShadowSyncService internal constructor(
             shielded = { shieldedBalanceService.get() },
             unlock = nonInteractiveWalletUnlock
         ),
+        scanMayAdvance = { walletIdHex -> sdkWalletBinder.ensureScanMayAdvance(walletIdHex) },
         historyFacts = {
             WalletHistoryFacts(
                 oldestTxTimeMs = txDisplayCacheDao.oldestTimeMs(),
@@ -2658,6 +2666,13 @@ class L1ShadowSyncService internal constructor(
                 val walletIdHex = source.boundWalletIdOrNull()
                 if (walletIdHex == null) {
                     log.info("L1 shadow sync not started: app wallet not bound to the SDK yet")
+                    return false
+                }
+                if (!scanMayAdvance(walletIdHex)) {
+                    log.warn(
+                        "L1 shadow sync not started: the address windows are narrow and their rescan " +
+                            "debt is unrecorded (see the binder's scan gate); the next start retries"
+                    )
                     return false
                 }
 

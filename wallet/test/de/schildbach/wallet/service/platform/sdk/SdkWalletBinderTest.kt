@@ -36,6 +36,7 @@ import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashj.platform.dpp.identifier.Identifier
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -2024,6 +2025,65 @@ class SdkWalletBinderTest {
         binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
         assertEquals(2, sdk.armRescanCalls)
         assertNull(owedRescan)
+    }
+
+    /**
+     * Review, 2026-09-29: a failed widening whose rescan debt cannot be
+     * persisted leaves nothing durable. The scan must not advance at the
+     * default windows: the scan gate holds the SPV start until a retry either
+     * widens the windows or records the debt.
+     */
+    @Test
+    fun scanGate_holdsTheScan_whenAFailedWideningsDebtCannotBeRecorded() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        var debtWritesFail = true
+        coEvery { config.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, any()) } answers {
+            if (debtWritesFail) throw IllegalStateException("datastore write failed")
+            owedRescan = secondArg()
+        }
+        val binder = binder(sdk, config = config, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        assertNull("the debt was not recorded", owedRescan)
+
+        assertFalse("held: narrow windows and no durable debt", binder.ensureScanMayAdvance(walletId))
+        assertEquals("the gate retried the widening", 2, sdk.widenCalls)
+
+        // The store recovers: the retry records the debt and the scan may advance.
+        debtWritesFail = false
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals(true, owedRescan)
+        assertTrue("stays open", binder.ensureScanMayAdvance(walletId))
+    }
+
+    @Test
+    fun scanGate_opens_whenTheWideningRetrySucceeds() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        coEvery {
+            config.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, any())
+        } throws IllegalStateException("datastore write failed")
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        sdk.onWiden = { true }
+        assertTrue("wide windows: nothing can be missed, no debt needed", binder.ensureScanMayAdvance(walletId))
+    }
+
+    @Test
+    fun scanGate_isOpen_whenTheDebtWasRecorded() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertEquals(true, owedRescan)
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("no retry needed", 1, sdk.widenCalls)
     }
 
     @Test

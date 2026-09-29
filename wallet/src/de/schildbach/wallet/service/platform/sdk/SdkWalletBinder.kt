@@ -1468,9 +1468,11 @@ class SdkWalletBinder internal constructor(
                     "address-window widening did not complete; this session scans at the default " +
                         "windows — a rescan is owed to the next successful widening"
                 )
-                recordWidenRescanOwed()
+                noteWideningFailed()
                 return
             }
+            // Wide windows: nothing this session scans can be missed, so no hold.
+            widenDebtUnrecorded = false
             val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
             if (done >= GAP_WIDEN_HEAL_VERSION) {
                 // Windows re-applied; the heal already ran. Pay a rescan an
@@ -1507,19 +1509,70 @@ class SdkWalletBinder internal constructor(
             throw e
         } catch (t: Throwable) {
             log.warn("address-window heal failed; will retry next bind", t)
-            if (!widened) recordWidenRescanOwed()
+            if (!widened) noteWideningFailed()
         }
     }
 
-    /** Best-effort: a failure to record must not fail the bind (it is logged). */
-    private suspend fun recordWidenRescanOwed() {
-        try {
-            dashPayConfig.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, true)
+    /**
+     * The widening failed: record the owed rescan, and if even that cannot be
+     * persisted, hold the SPV scan instead ([ensureScanMayAdvance]).
+     */
+    private suspend fun noteWideningFailed() {
+        widenDebtUnrecorded = !recordWidenRescanOwed()
+    }
+
+    /** Persist the owed-rescan flag; false (logged) when the write failed. Never throws except cancellation. */
+    private suspend fun recordWidenRescanOwed(): Boolean = try {
+        dashPayConfig.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, true)
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("could not record the owed address-window rescan", t)
+        false
+    }
+
+    /**
+     * The widening failed AND the owed rescan could not be persisted (review,
+     * 2026-09-29): nothing durable remembers that this session would scan at
+     * the default windows, so a scan that advanced now would lose, for good,
+     * any output beyond them in the blocks it covered — the next launch's
+     * successful widening would find no debt to pay.
+     */
+    @Volatile
+    private var widenDebtUnrecorded = false
+
+    /**
+     * The SPV scan-start gate for the widening debt. True when the scan may
+     * advance: the windows are wide, or a failed widening's rescan debt is
+     * durably recorded. Otherwise it retries the widening, then the debt
+     * write, and returns false only when both fail again — the engine start
+     * declines and its next trigger asks again. Never throws except
+     * cancellation.
+     */
+    suspend fun ensureScanMayAdvance(walletIdHex: String): Boolean {
+        if (!widenDebtUnrecorded) return true
+        val widened = try {
+            sdkService.widenAddressWindows(walletIdHex)
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            log.warn("could not record the owed address-window rescan", t)
+            log.warn("scan gate: address-window widening retry failed", t)
+            false
         }
+        if (widened || recordWidenRescanOwed()) {
+            widenDebtUnrecorded = false
+            log.info(
+                "scan gate: {} — the SPV scan may advance",
+                if (widened) "address windows widened on retry" else "the owed rescan is now recorded"
+            )
+            return true
+        }
+        log.warn(
+            "scan gate: holding the SPV scan — the address windows are still narrow and the owed " +
+                "rescan cannot be recorded, so advancing now could lose outputs beyond the default windows"
+        )
+        return false
     }
 
     /** Arm the owed rescan, then clear the debt; a failed arm keeps it for the next bind. */

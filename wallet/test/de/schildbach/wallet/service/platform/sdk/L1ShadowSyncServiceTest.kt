@@ -262,7 +262,8 @@ class L1ShadowSyncServiceTest {
         bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS,
         bringUpStopJoinMs: Long = L1ShadowSyncService.BRING_UP_STOP_JOIN_MS,
         destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
-        flagGate: () -> CompletableDeferred<Unit>? = { null }
+        flagGate: () -> CompletableDeferred<Unit>? = { null },
+        scanMayAdvance: suspend (String) -> Boolean = { true }
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -275,7 +276,8 @@ class L1ShadowSyncServiceTest {
         recreator = recreator,
         bringUpBudgetMs = bringUpBudgetMs,
         bringUpStopJoinMs = bringUpStopJoinMs,
-        destructiveBringUpJoinMs = destructiveBringUpJoinMs
+        destructiveBringUpJoinMs = destructiveBringUpJoinMs,
+        scanMayAdvance = scanMayAdvance
     )
 
     /**
@@ -1241,6 +1243,26 @@ class L1ShadowSyncServiceTest {
         assertEquals(1, source.stopCalls)
         assertEquals("stopped and started again", 2, source.startCalls)
         assertTrue(service.isShadowSpvRunning() || service.progress.value != ShadowSyncProgress.IDLE || source.startCalls == 2)
+        service.stop()
+    }
+
+    /**
+     * Review, 2026-09-29: the binder's scan gate. While a failed widening's
+     * rescan debt is unrecorded the engine must not start; once the gate
+     * opens, the next start proceeds.
+     */
+    @Test
+    fun startIfEnabled_declines_whileTheScanGateHoldsTheScan() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var open = false
+        val service = service(source, scanMayAdvance = { open })
+
+        assertFalse(service.startIfEnabled())
+        assertEquals("SPV never started", 0, source.startCalls)
+
+        open = true
+        assertTrue(service.startIfEnabled())
+        assertEquals(1, source.startCalls)
         service.stop()
     }
 
