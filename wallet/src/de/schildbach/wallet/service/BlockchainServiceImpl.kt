@@ -590,7 +590,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     internal fun refuseWalletInitialization() {
         // Commands and teardown await this latch even when initialization is refused.
         onCreateCompleted.complete(Unit)
-        stopSelf()
+    }
+
+    /** Called on Main after initialization settles, before ordinary command handling. */
+    internal fun handleWalletLifecycleCommand(action: String?): Boolean {
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            deleteWalletFileOnShutdown = true
+            stopSelf()
+            return true
+        }
+        if (application.wallet == null || application.isWalletLoadDegraded) {
+            stopSelf()
+            return true
+        }
+        return false
+    }
+
+    /** Refused initialization can leave no wallet, even without a degraded-state flag. */
+    internal fun saveWalletOnShutdown() {
+        if (!deleteWalletFileOnShutdown && application.wallet != null && !application.isWalletLoadDegraded) {
+            propagateContext()
+            application.saveWallet()
+        }
     }
 
     /**
@@ -3004,8 +3025,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
             log.info("onCreate completed, processing onStartCommand")
-            if (application.isWalletLoadDegraded && intent?.action != BlockchainService.ACTION_WIPE_WALLET) {
-                withContext(Dispatchers.Main) { stopSelf() }
+            if (withContext(Dispatchers.Main) { handleWalletLifecycleCommand(intent?.action) }) {
                 return@launch
             }
             if (intent != null) {
@@ -3036,10 +3056,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
                     armSdkRescanForResetIfCutOver()
-                    stopSelf()
-                } else if (BlockchainService.ACTION_WIPE_WALLET == action) {
-                    log.info("will remove blockchain and delete walletFile on service shutdown")
-                    deleteWalletFileOnShutdown = true
                     stopSelf()
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
@@ -3297,10 +3313,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
                 }
-                if (!deleteWalletFileOnShutdown && !application.isWalletLoadDegraded) {
-                    propagateContext()
-                    application.saveWallet()
-                }
+                saveWalletOnShutdown()
                 // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
                 // onCreate it may still be null, so guard rather than assert.
                 wakeLock?.let { lock ->
