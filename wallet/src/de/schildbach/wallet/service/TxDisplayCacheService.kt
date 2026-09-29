@@ -500,6 +500,14 @@ class TxDisplayCacheService @Inject constructor(
 
         walletData.observeWalletReset()
             .onEach {
+                // A rescan deletes the blockstore, so the next service start
+                // takes the missing-blockstore branch, which resets the held
+                // (empty) dashj wallet — and dashj fires this event even for
+                // an empty wallet. Post-cutover the rows are the SDK's, so the
+                // rescan's keep-the-history policy applies here too (MO-1054).
+                // A wallet wipe does not depend on this listener: it clears
+                // the caches itself (clearDatabase).
+                if (keptHistoryAcrossReset("dashj wallet reset")) return@onEach
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
                 _cachedRows.value = emptyList()
@@ -755,17 +763,27 @@ class TxDisplayCacheService @Inject constructor(
      * re-adds them as the replay proceeds, so the wipe stays.
      */
     suspend fun clearDatabaseForRescan() {
-        if (!rescanMayClearHistoryCache(cutoverCommittedOrUnknown())) {
-            log.info(
-                "rescan: keeping {} display rows / {} group rows — the cutover is committed and the " +
-                    "SDK keeps its transactions across a rescan; requesting a reconcile walk instead",
-                txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
-            )
-            runCatching { cutoverUiDataService.get().requestFullReconcile() }
-                .onFailure { log.warn("could not request an SDK reconcile pass after the rescan", it) }
-            return
-        }
+        if (keptHistoryAcrossReset("rescan")) return
         clearDatabase()
+    }
+
+    /**
+     * The shared post-cutover guard for both rescan-driven clears: the
+     * teardown's [clearDatabaseForRescan] and the dashj wallet-reset event the
+     * next service start raises. Returns true when the rows were kept (a
+     * reconcile walk is requested in their place); false when the caller
+     * should clear as before.
+     */
+    private suspend fun keptHistoryAcrossReset(trigger: String): Boolean {
+        if (rescanMayClearHistoryCache(cutoverCommittedOrUnknown())) return false
+        log.info(
+            "{}: keeping {} display rows / {} group rows — the cutover is committed and the " +
+                "SDK keeps its transactions across a rescan; requesting a reconcile walk instead",
+            trigger, txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
+        )
+        runCatching { cutoverUiDataService.get().requestFullReconcile() }
+            .onFailure { log.warn("could not request an SDK reconcile pass after the {}", trigger, it) }
+        return true
     }
 
     /** clear database tables during a wipe wallet or (pre-cutover) rescan operation */
@@ -1659,7 +1677,8 @@ internal fun dashjRebuildWouldEraseHistory(cutoverCommitted: Boolean, dashjTxCou
 
 /**
  * Whether a blockchain rescan may wipe the display/group caches — the pure
- * core of [TxDisplayCacheService.clearDatabaseForRescan] (MO-1054).
+ * core of [TxDisplayCacheService.clearDatabaseForRescan] and of the dashj
+ * wallet-reset listener the rescan's next service start triggers (MO-1054).
  *
  * Only pre-cutover: there the dashj wallet drops its transactions and the
  * replay re-adds them. Post-cutover the SDK keeps its records across the
