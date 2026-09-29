@@ -119,7 +119,7 @@ abstract class BaseConfig(
         }
     }
 
-    fun <T> observe(key: Preferences.Key<T>): Flow<T?> {
+    open fun <T> observe(key: Preferences.Key<T>): Flow<T?> {
         return data.map { preferences -> preferences[key] }
     }
 

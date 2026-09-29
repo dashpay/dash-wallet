@@ -314,7 +314,6 @@ class SdkWalletBinderTest {
         backfillGate: DashPayBackfillGate = DashPayBackfillGate.ALWAYS_RUN,
         backfillWatchIntervalMs: Long = 5L,
         deviceProvablyLocked: () -> Boolean = { false },
-        rolloutEnabled: Boolean = true,
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -325,25 +324,11 @@ class SdkWalletBinderTest {
         blockchainServiceConfig = serviceConfig,
         scope = scope,
         supportsPlatform = { supportsPlatform },
-        rolloutPolicy = SdkRolloutPolicy(
-            migrationFlagsDefaultOn = rolloutEnabled,
-            cutoverEnabled = rolloutEnabled
-        ),
         now = now,
         backfillGate = backfillGate,
         backfillWatchIntervalMs = backfillWatchIntervalMs,
         deviceProvablyLocked = deviceProvablyLocked
     )
-
-    @Test
-    fun bindIsInert_whenRolloutIsDisabledEvenWithPersistedFlags() = runBlocking {
-        val sdk = FakeSdkService(onBind = { _, _ -> error("SDK bind must stay off") })
-        val binder = binder(sdk, rolloutEnabled = false, scope = this)
-
-        binder.bindIfEnabled(unlock)
-
-        assertEquals(0, sdk.totalCalls)
-    }
 
     // ── Phase 1a item 4: no first bind while the device is locked ─────
 

@@ -50,8 +50,6 @@ import java.io.IOException
  */
 class CutoverCoordinatorTest {
 
-    private val enabledRollout = SdkRolloutPolicy(migrationFlagsDefaultOn = true, cutoverEnabled = true)
-
     private val probeIntervalMs = L1ShadowSyncService.PARITY_INTERVAL_MS
 
     /** A fully drained, caught-up, parity-proven, backed-up evidence set → Ready. */
@@ -87,8 +85,7 @@ class CutoverCoordinatorTest {
         // has succeeded at least once on this install. Defaults to true so the
         // pre-existing cases keep exercising what they were written for; the
         // gate itself has its own tests below.
-        bindEverSucceeded: Boolean? = true,
-        rolloutEnabled: Boolean = true
+        bindEverSucceeded: Boolean? = true
     ): Pair<CutoverCoordinator, () -> String?> {
         var current = stored
         val config = mockk<DashPayConfig>()
@@ -103,14 +100,7 @@ class CutoverCoordinatorTest {
         }
         val collector = mockk<CutoverEvidenceCollector>()
         coEvery { collector.collect() } returns evidence
-        return CutoverCoordinator(
-            config,
-            collector,
-            rolloutPolicy = SdkRolloutPolicy(
-                migrationFlagsDefaultOn = rolloutEnabled,
-                cutoverEnabled = rolloutEnabled
-            )
-        ) to { current }
+        return CutoverCoordinator(config, collector) to { current }
     }
 
     // ── Restore/new-wallet immediate commit ───────────────────────────
@@ -155,20 +145,6 @@ class CutoverCoordinatorTest {
         assertEquals(CutoverState.CUT_OVER.name, stored())
     }
 
-    @Test
-    fun rolloutDisabled_keepsDashjAndSkipsFreshWalletCutover() = runBlocking {
-        val (coordinator, stored) = coordinator(stored = null, flag = true, rolloutEnabled = false)
-
-        val status = coordinator.commitForFreshWalletSetup()
-
-        assertEquals(CutoverState.DUAL_RUNNING, status.state)
-        assertNull(stored())
-        assertTrue(coordinator.dashjEngineMayStart())
-        assertEquals(CutoverState.DUAL_RUNNING, coordinator.observeReadiness().state)
-        assertEquals(CutoverState.DUAL_RUNNING, coordinator.commitCutover().state)
-        assertNull("readiness paths must not write while rollout is disabled", stored())
-    }
-
     // ── Per-wallet wipe reset ─────────────────────────────────────────
 
     @Test
@@ -189,7 +165,7 @@ class CutoverCoordinatorTest {
         val setSlot: CapturingSlot<String> = slot()
         coEvery { config.set(DashPayConfig.CUTOVER_STATE, capture(setSlot)) } just Runs
         val collector = mockk<CutoverEvidenceCollector>()
-        val coordinator = CutoverCoordinator(config, collector, rolloutPolicy = enabledRollout)
+        val coordinator = CutoverCoordinator(config, collector)
 
         assertEquals(CutoverState.DUAL_RUNNING, coordinator.resetForWalletWipe().state)
         // No write when there is nothing to reset.
@@ -279,7 +255,7 @@ class CutoverCoordinatorTest {
         every { config.observe(DashPayConfig.CUTOVER_STATE) } returns stateFlow
         every { config.observe(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns shadowFlow
         val collector = mockk<CutoverEvidenceCollector>()
-        return Triple(CutoverCoordinator(config, collector, rolloutPolicy = enabledRollout), stateFlow, shadowFlow)
+        return Triple(CutoverCoordinator(config, collector), stateFlow, shadowFlow)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -343,7 +319,7 @@ class CutoverCoordinatorTest {
         val collector = mockk<CutoverEvidenceCollector>()
         // Unconfined runs the launched commit inline, so the effect is observable
         // synchronously here — the production seam is fire-and-forget (non-blocking).
-        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined), enabledRollout)
+        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
 
         coordinator.commitForFreshWalletSetupAsync()
 
@@ -405,7 +381,7 @@ class CutoverCoordinatorTest {
         // through this helper too — that is the path that actually commits on
         // a real upgrade (MO-1022), and it must be able to arm the explainer.
         coEvery { collector.collect() } returns readyEvidence()
-        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined), enabledRollout)
+        val coordinator = CutoverCoordinator(config, collector, CoroutineScope(Dispatchers.Unconfined))
         return Triple(coordinator, { current }, { noticeArmed })
     }
 
@@ -427,59 +403,6 @@ class CutoverCoordinatorTest {
      * shape (previous code 12000001 on a 12000001 build).
      */
     private val sameBuildVersionCode = CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE + 1
-
-    @Test
-    fun disabledUpgradeLatchesBoundary_forLaterEnabledCutoverNotice() = runBlocking {
-        var current: String? = null
-        var boundaryLatched = false
-        var noticeEverArmed = false
-        var noticePending = false
-        val config = mockk<DashPayConfig>()
-        coEvery { config.get(DashPayConfig.CUTOVER_STATE) } answers { current }
-        coEvery { config.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns true
-        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED) } answers { boundaryLatched }
-        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_BOUNDARY_CROSSED, any<Boolean>()) } answers {
-            boundaryLatched = secondArg()
-            Unit
-        }
-        coEvery { config.set(DashPayConfig.CUTOVER_STATE, any<String>()) } answers {
-            current = secondArg()
-            Unit
-        }
-        coEvery { config.get(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED) } answers { noticeEverArmed }
-        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_EVER_ARMED, any<Boolean>()) } answers {
-            noticeEverArmed = secondArg()
-            Unit
-        }
-        coEvery { config.set(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING, any<Boolean>()) } answers {
-            noticePending = secondArg()
-            Unit
-        }
-        val collector = mockk<CutoverEvidenceCollector>()
-        val disabled = CutoverCoordinator(
-            config,
-            collector,
-            CoroutineScope(Dispatchers.Unconfined),
-            SdkRolloutPolicy(migrationFlagsDefaultOn = false, cutoverEnabled = false)
-        )
-
-        disabled.commitForUpgradedWalletAsync(pre1110VersionCode)
-
-        assertTrue("the one observable boundary crossing must be retained", boundaryLatched)
-        assertNull("a rollout-disabled release must not cut over", current)
-        assertTrue("dashj remains the sole L1 owner", disabled.dashjEngineMayStart())
-
-        val enabled = CutoverCoordinator(
-            config,
-            collector,
-            CoroutineScope(Dispatchers.Unconfined),
-            SdkRolloutPolicy(migrationFlagsDefaultOn = true, cutoverEnabled = true)
-        )
-        enabled.commitForUpgradedWalletAsync(onOrAfterCutoverVersionCode)
-
-        assertEquals(CutoverState.CUT_OVER.name, current)
-        assertTrue("the deferred takeover still explains its one-time resync", noticePending)
-    }
 
     /**
      * REMOVED 2026-09-17 — `upgradeNotice_boundaryLatchIsRepersisted_evenWhenTheSeamDeclinesToCommit`.
@@ -674,7 +597,7 @@ class CutoverCoordinatorTest {
             pending = secondArg(); Unit
         }
         val coordinator = CutoverCoordinator(
-            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined), enabledRollout
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
         )
 
         coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
@@ -712,7 +635,7 @@ class CutoverCoordinatorTest {
             pending = secondArg(); Unit
         }
         val coordinator = CutoverCoordinator(
-            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined), enabledRollout
+            config, mockk<CutoverEvidenceCollector>(), CoroutineScope(Dispatchers.Unconfined)
         )
 
         coordinator.commitForUpgradedWalletAsync(pre1110VersionCode)
@@ -814,7 +737,7 @@ class CutoverCoordinatorTest {
             noticeArmed = secondArg()
             Unit
         }
-        val coordinator = CutoverCoordinator(config, mockk(), CoroutineScope(Dispatchers.Unconfined), enabledRollout)
+        val coordinator = CutoverCoordinator(config, mockk(), CoroutineScope(Dispatchers.Unconfined))
 
         coordinator.commitForFreshWalletSetupAsync()
         assertEquals("the fresh commit no-opped, as intended for this case", null, current)

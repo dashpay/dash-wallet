@@ -47,6 +47,7 @@ import de.schildbach.wallet.Constants
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.service.DashjDiagnosticSyncState
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.ButtonData
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -358,24 +359,26 @@ private fun ToolsScreenContent(
             // dashj sync (diagnostic): un-holds the legacy dashj engine after the
             // SDK cutover so it syncs as a backup / parity check. English-only,
             // like the rest of the SDK-migration debug instrumentation.
-            Menu {
-                MenuItem(
-                    title = "dashj sync (diagnostic)",
-                    subtitle = "Run the legacy dashj engine alongside the SDK to compare",
-                    icon = R.drawable.ic_menu_network_monitor,
-                    checked = dashjDiagnostic.enabled,
-                    onCheckedChange = onDashjDiagnosticToggle
-                )
-                if (dashjDiagnostic.enabled) {
-                    val (label, color) = dashjDiagnosticReadout(dashjDiagnostic)
-                    Text(
-                        text = label,
-                        style = MyTheme.CaptionMedium,
-                        color = color,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+            if (!DashPayConfig.sdkFlagsLocked) {
+                Menu {
+                    MenuItem(
+                        title = "dashj sync (diagnostic)",
+                        subtitle = "Run the legacy dashj engine alongside the SDK to compare",
+                        icon = R.drawable.ic_menu_network_monitor,
+                        checked = dashjDiagnostic.enabled,
+                        onCheckedChange = onDashjDiagnosticToggle
                     )
+                    if (dashjDiagnostic.enabled) {
+                        val (label, color) = dashjDiagnosticReadout(dashjDiagnostic)
+                        Text(
+                            text = label,
+                            style = MyTheme.CaptionMedium,
+                            color = color,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }

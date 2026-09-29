@@ -2202,8 +2202,7 @@ class L1ShadowSyncService internal constructor(
     private val scanMayAdvance: suspend (walletIdHex: String) -> Boolean = { true },
     /** First retry delay after the scan gate declines a start; doubles up to [scanGateRetryMaxMs]. */
     private val scanGateRetryInitialMs: Long = SCAN_GATE_RETRY_INITIAL_MS,
-    private val scanGateRetryMaxMs: Long = SCAN_GATE_RETRY_MAX_MS,
-    private val rolloutPolicy: SdkRolloutPolicy = SdkRolloutPolicy()
+    private val scanGateRetryMaxMs: Long = SCAN_GATE_RETRY_MAX_MS
 ) {
     @Inject
     constructor(
@@ -2487,10 +2486,7 @@ class L1ShadowSyncService internal constructor(
      */
     private suspend fun resolveParityPolicy(): ParityProbePolicy {
         val committed = try {
-            !dashjEngineMayStart(
-                CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)),
-                cutoverEnabled = rolloutPolicy.cutoverEnabled
-            )
+            !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("parity policy: cutover state unreadable; assuming dual-run", t)
@@ -3323,8 +3319,7 @@ class L1ShadowSyncService internal constructor(
         if (slowParityCadenceLatched) return true
         val committed = try {
             !dashjEngineMayStart(
-                CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)),
-                cutoverEnabled = rolloutPolicy.cutoverEnabled
+                CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE))
             )
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -4255,8 +4250,7 @@ class L1ShadowSyncService internal constructor(
     }
 
     private suspend fun isEnabled(): Boolean = try {
-        rolloutPolicy.cutoverEnabled &&
-            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
     } catch (e: Exception) {
         log.warn("failed to read USE_KOTLIN_SDK_L1_SHADOW; treating as off", e)
         false

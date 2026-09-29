@@ -17,25 +17,26 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
-import de.schildbach.wallet_test.BuildConfig
-
 /**
- * # Shipping ownership is selected by the build rollout gate
+ * # ⚠️ SHIPPING REALITY: there is no "pre-cutover" user
  *
  * READ THIS BEFORE REASONING ABOUT ANY STATE BELOW.
  *
- * A rollout-enabled build gives the SDK ownership immediately for new,
- * upgraded and restored wallets. A rollout-disabled build keeps dashj as the
- * sole L1 owner even when an earlier build persisted [CUT_OVER]. This lets a
- * release disable the SDK without running both SPV engines in one process.
+ * The rollout decision is that **the SDK owns the wallet for every
+ * user-facing feature immediately** — new wallets, upgraded wallets and
+ * restored wallets alike. Every shipping install is effectively [CUT_OVER]
+ * from its first launch. There is no cohort of users running with dashj as
+ * the L1 owner, and no phased flip in the field.
  *
  * The graded states below are **migration scaffolding**, not a description
  * of anything users experience. They exist because the cutover was built to
  * be staged and reversible while it was being developed and validated.
  *
- * The persisted states remain migration scaffolding. Build policy takes
- * precedence over them for engine startup; state becomes authoritative again
- * when rollout is enabled.
+ * This distinction has repeatedly misled both developers and AI agents into
+ * designing for, and gating work on, a "pre-cutover" population that does
+ * not exist — producing dependencies and sequencing constraints that are not
+ * real. If you are about to write "for pre-cutover users…", stop: that user
+ * does not exist.
  *
  * **TODO (timeframe TBD): remove this state machine and its callers.** Once
  * dashj no longer owns L1 in any code path, [DUAL_RUNNING], [READY_OBSERVED]
@@ -57,8 +58,9 @@ enum class CutoverState {
     /**
      * Both engines live; SDK is instrumentation only.
      *
-     * A migration state used while rollout is enabled. With rollout disabled,
-     * dashj ownership is selected independently of this persisted value.
+     * NOT a shipping state — see the file header. No user runs here; it is a
+     * development/validation stage only. Do not design features, migrations
+     * or dependencies around a population sitting in this state.
      */
     DUAL_RUNNING,
 
@@ -140,9 +142,10 @@ fun nextCutoverState(
 
 /**
  * The engine-start decision every start site consults (Phase 5d): may the
- * dashj L1 engine run this launch? Always true when the build rollout is off;
- * otherwise true in every state except the flipped ones. Kept trivial and
- * pure so the start sites stay obviously correct.
+ * dashj L1 engine run this launch? True in every state EXCEPT the flipped
+ * ones — post-cutover the SDK owns L1 and dashj must not start (never both
+ * SPV engines live for one user). Kept trivial + pure so the start sites
+ * stay obviously correct.
  *
  * NOTE: this gate is now LIVE-WIRED — a committed cutover actually holds the
  * dashj engine and routes L1 to the SDK. The engine-start site
@@ -151,12 +154,10 @@ fun nextCutoverState(
  * false), and the SDK send/balance/UI paths ([SdkL1SendService],
  * [SdkBlockchainStateService], [CutoverUiDataService], [CutoverTxSeamService],
  * `MainViewModel`) all consult this same predicate on the CUTOVER_STATE flow.
- * So a CUT_OVER install in a rollout-enabled build genuinely runs SDK-primary.
- * A rollout-disabled build ignores even a stale committed state and keeps
- * dashj primary.
+ * So a CUT_OVER install genuinely runs SDK-primary — this is no longer inert
+ * instrumentation. The coordinator's suspend `dashjEngineMayStart()` adds a
+ * fail-safe on top: it also allows dashj when committed but the SDK L1 engine
+ * is disabled, so the wallet is never left with no L1 engine.
  */
-fun dashjEngineMayStart(
-    state: CutoverState,
-    cutoverEnabled: Boolean = BuildConfig.SDK_CUTOVER_ENABLED
-): Boolean =
-    !cutoverEnabled || state == CutoverState.DUAL_RUNNING || state == CutoverState.READY_OBSERVED
+fun dashjEngineMayStart(state: CutoverState): Boolean =
+    state == CutoverState.DUAL_RUNNING || state == CutoverState.READY_OBSERVED

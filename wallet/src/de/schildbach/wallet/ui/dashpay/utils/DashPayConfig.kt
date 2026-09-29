@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -32,6 +33,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -99,7 +101,43 @@ open class DashPayConfig @Inject constructor(
         )
     )
 ) {
+    /**
+     * Store releases always use the SDK. Persisted flags remain QA controls only:
+     * neither an old preference nor a direct file edit may change production routing
+     * or enable the second, diagnostic dashj engine. L1_SEND is the pre-cutover
+     * override; normal SDK sending remains enabled by committed cutover.
+     */
+    private fun <T> productionFlagOverride(key: Preferences.Key<T>): T? {
+        if (!sdkFlagsLocked) return null
+        val value = when (key.name) {
+            USE_KOTLIN_SDK_DPNS_READS.name,
+            USE_KOTLIN_SDK_DASHPAY_WRITES.name,
+            USE_KOTLIN_SDK_SHIELDED.name,
+            USE_KOTLIN_SDK_L1_INVITE.name,
+            USE_KOTLIN_SDK_L1_SHADOW.name -> true
+            USE_KOTLIN_SDK_L1_SEND.name,
+            DASHJ_SYNC_DIAGNOSTIC.name -> false
+            else -> return null
+        }
+        @Suppress("UNCHECKED_CAST")
+        return value as T
+    }
+
+    override suspend fun <T> get(key: Preferences.Key<T>): T? =
+        productionFlagOverride(key) ?: super.get(key)
+
+    override fun <T> observe(key: Preferences.Key<T>): Flow<T?> =
+        productionFlagOverride(key)?.let { flowOf(it) } ?: super.observe(key)
+
+    override suspend fun <T> set(key: Preferences.Key<T>, value: T) {
+        if (productionFlagOverride(key) != null) return
+        super.set(key, value)
+    }
+
     companion object {
+        val sdkFlagsLocked: Boolean
+            get() = !BuildConfig.DEBUG && BuildConfig.FLAVOR == "prod"
+
         private val log = org.slf4j.LoggerFactory.getLogger(DashPayConfig::class.java)
 
         const val DISABLE_NOTIFICATIONS: Long = -1
@@ -360,10 +398,16 @@ open class DashPayConfig @Inject constructor(
         val USE_KOTLIN_SDK_L1_SEND = booleanPreferencesKey("use_kotlin_sdk_l1_send")
 
         /**
-         * The `USE_KOTLIN_SDK_*` flags seeded ON when the build enables SDK
-         * migration defaults. Internal/QA builds enable them; prodRelease
-         * leaves them unset unless its release invocation explicitly enables
-         * the SDK rollout. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
+         * The `USE_KOTLIN_SDK_*` flags every build seeds ON when unset — pure
+         * so [seedDebugDefaultsIfUnset]'s network split is host-testable. Per
+         * Brian's decisions: mainnet prodDebug seeds the SAME feature set as
+         * testnet (2026-07-27), and as of 2026-07-30 **all variants** seed
+         * (the `BuildConfig.DEBUG` gate was removed) so a prodRelease store
+         * build is byte-for-byte behaviourally identical to the QA builds —
+         * no divergence between what is tested and what ships. This means
+         * prodRelease exposes the SDK paths to REAL funds by default; the
+         * pre-release gates (DIP-15 friendship-xpub parity) still apply before
+         * a store rollout. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
          */
         internal fun debugSeedFlags(isMainnet: Boolean) = if (isMainnet) {
             // Mainnet: full set (real-funds validation vehicle — see KDoc).
@@ -682,6 +726,11 @@ open class DashPayConfig @Inject constructor(
     }
 
     init {
+        // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
+        // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
+        // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
+        // flag divergence between what is tested and what ships). QA can still toggle them
+        // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
         CoroutineScope(Dispatchers.IO).launch {
             seedDebugDefaultsIfUnset()
         }
@@ -694,18 +743,11 @@ open class DashPayConfig @Inject constructor(
      * `USE_KOTLIN_SDK_*` flags silently read as OFF, and every SDK path
      * (binder, shadow, shielded) goes inert with no log trail — observed
      * live: the duck-say overnight restore ran with the SDK dark. The
-     * wipe path calls this after clearing. Builds with migration defaults
-     * disabled return without touching DataStore. Which flags are seeded is
-     * network-dependent — see [debugSeedFlags].
+     * wipe path calls this after clearing (debug builds only; a no-op on
+     * release where BuildConfig.DEBUG gates the caller). Which flags are
+     * seeded is network-dependent — see [debugSeedFlags].
      */
-    suspend fun seedDebugDefaultsIfUnset(
-        defaultsEnabled: Boolean = BuildConfig.SDK_MIGRATION_FLAGS_DEFAULT_ON
-    ) {
-        if (!defaultsEnabled) {
-            log.info("SDK migration flag seeding disabled for this build")
-            return
-        }
-
+    suspend fun seedDebugDefaultsIfUnset() {
         try {
             val seeded = mutableListOf<String>()
             val alreadySet = mutableListOf<String>()
