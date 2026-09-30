@@ -187,6 +187,58 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
+    fun `replacement setup clears old recovery flags only after saving succeeds`() {
+        setField("walletLoadFailed", true)
+        setField("walletLoadSkippedSafeMode", true)
+        setField("walletRecoveryFromSeedNeeded", true)
+        setField("recoveredWalletPersistencePending", true)
+        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        val setupApp = spyk(app)
+        var failBackup = true
+        every { setupApp.backupWallet() } answers {
+            // Still protected until backup persistence has completed.
+            assertTrue(setupApp.isWalletLoadDegraded)
+            assertTrue(primary.exists())
+            if (failBackup) throw IllegalStateException("injected backup failure")
+            recovered.saveToFile(backup)
+        }
+        every { setupApp.finalizeInitialization() } answers {
+            assertFalse(setupApp.isWalletLoadDegraded)
+            assertFalse(setupApp.isWalletRecoveryFromSeedNeeded)
+            assertFalse(setupApp.isSafeModeLaunch)
+        }
+        ReflectionHelpers.setField(setupApp, "walletFile", File(directory.root, "missing/replacement"))
+        try {
+            setupApp.saveWalletAndFinalizeInitialization()
+            fail("replacement save must fail")
+        } catch (expected: RuntimeException) {
+            assertTrue(expected.cause is IOException)
+        }
+        assertTrue(setupApp.isWalletLoadDegraded)
+        assertTrue(setupApp.isWalletRecoveryFromSeedNeeded)
+        verify(exactly = 0) { setupApp.backupWallet() }
+        verify(exactly = 0) { setupApp.finalizeInitialization() }
+
+        ReflectionHelpers.setField(setupApp, "walletFile", primary)
+        try {
+            setupApp.saveWalletAndFinalizeInitialization()
+            fail("backup save must fail")
+        } catch (expected: IllegalStateException) {
+            assertTrue(setupApp.isWalletLoadDegraded)
+            assertTrue(setupApp.isWalletRecoveryFromSeedNeeded)
+        }
+        verify(exactly = 0) { setupApp.finalizeInitialization() }
+        failBackup = false
+        setupApp.saveWalletAndFinalizeInitialization()
+        verify(exactly = 1) { setupApp.finalizeInitialization() }
+        val saved = primary.inputStream().use { WalletProtobufSerializer().readWallet(it) }
+        assertTrue(saved.isPubKeyMine(recovered.currentReceiveKey().pubKey))
+        val controller = Robolectric.buildActivity(Activity::class.java).create()
+        assertFalse(controller.get().redirectDegradedWallet(setupApp))
+        controller.destroy()
+    }
+
+    @Test
     fun `successful wipe clears recovery guard but failed and unrequested wipes retain it`() = runBlocking {
         setField("walletFile", File(directory.root, "missing/primary"))
         try {
