@@ -426,7 +426,7 @@ public class WalletApplication extends MultiDexApplication
                         StartupBreadcrumbs.SAFE_MODE_THRESHOLD);
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_SKIPPED_SAFE_MODE,
                         "WALLET_LOAD_SKIPPED_SAFE_MODE");
-            } else if (DeferredWalletLoad.isBackgroundStart(this)) {
+            } else if (logStartKind(DeferredWalletLoad.isBackgroundStart(this))) {
                 // A BACKGROUND start (alarm, job, broadcast, service): parse and
                 // check the wallet on a worker so onCreate returns inside the
                 // system's start-up deadline. A 61 MB wallet took 9-11 s to
@@ -566,6 +566,12 @@ public class WalletApplication extends MultiDexApplication
         }
         log.info("background start: wallet load finished (loaded={})", wallet != null && !walletLoadFailed);
         StartupBreadcrumbs.markLaunchComplete();
+    }
+
+    /** Log how the background/foreground start decision was made; returns it unchanged. */
+    private boolean logStartKind(final boolean background) {
+        log.info("STARTUP start kind: {}", DeferredWalletLoad.getLastDecision());
+        return background;
     }
 
     /** Wait for a background start's wallet load, if one is running (see DeferredWalletLoad). */

@@ -21,7 +21,6 @@ import android.app.ActivityManager
 import android.app.ApplicationStartInfo
 import android.content.Context
 import android.os.Build
-import android.os.Process
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
@@ -200,26 +199,52 @@ class DeferredWalletLoad @JvmOverloads constructor(
         internal fun isBackgroundImportance(importance: Int): Boolean =
             importance > IMPORTANCE_FOREGROUND && importance != IMPORTANCE_VISIBLE
 
+        /** How the last [isBackgroundStart] decided, for the start-up log. */
+        @Volatile
+        @JvmStatic
+        var lastDecision: String = "not evaluated"
+            private set
+
         /**
          * Whether THIS process was started for background work, not for the
          * user. Any doubt answers false, which keeps today's synchronous load.
          * Never throws.
+         *
+         * API 35+: the NEWEST start record is this process's own, still in
+         * progress. Its `pid` is not usable: the system records 0 there (seen
+         * on API 36, 2026-09-29), so matching on `Process.myPid()` never found
+         * the record and every start fell back to "foreground". A newest record
+         * that is no longer in progress belongs to an earlier process, and the
+         * importance fallback decides instead.
          */
         @JvmStatic
         fun isBackgroundStart(context: Context): Boolean = try {
             val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
             if (activityManager == null) {
+                lastDecision = "no ActivityManager: foreground"
                 false
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                val start: ApplicationStartInfo? = activityManager.getHistoricalProcessStartReasons(1)
-                    .firstOrNull { it.pid == Process.myPid() }
-                start != null && !isForegroundStartReason(start.reason)
             } else {
-                val info = ActivityManager.RunningAppProcessInfo()
-                ActivityManager.getMyMemoryState(info)
-                isBackgroundImportance(info.importance)
+                val start: ApplicationStartInfo? =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                        activityManager.getHistoricalProcessStartReasons(1).firstOrNull()
+                            ?.takeIf { it.startupState == ApplicationStartInfo.STARTUP_STATE_STARTED }
+                    } else {
+                        null
+                    }
+                if (start != null) {
+                    val background = !isForegroundStartReason(start.reason)
+                    lastDecision = "start reason ${start.reason}: ${if (background) "background" else "foreground"}"
+                    background
+                } else {
+                    val info = ActivityManager.RunningAppProcessInfo()
+                    ActivityManager.getMyMemoryState(info)
+                    val background = isBackgroundImportance(info.importance)
+                    lastDecision = "importance ${info.importance}: ${if (background) "background" else "foreground"}"
+                    background
+                }
             }
         } catch (t: Throwable) {
+            lastDecision = "failed ($t): foreground"
             false
         }
     }
