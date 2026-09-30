@@ -109,6 +109,11 @@ object WalletApplicationExt {
     }
 
     private suspend fun WalletApplication.destroyWalletData() {
+        // A queued transaction-metadata save holds this wallet's consent and
+        // field choices. Left to run after the clears below it would write
+        // them into the next wallet and enqueue a publish, so stop it first.
+        runCatching { transactionMetadataSaveQueue.discardPending() }
+            .onFailure { rethrowCancellation(it); log.warn("tx-metadata save queue discard failed during wipe", it) }
         destroyWalletFiles()
         // Live DataStore-backed configs must be cleared through their API (one
         // atomic memory+disk edit) before the leftover files are deleted:

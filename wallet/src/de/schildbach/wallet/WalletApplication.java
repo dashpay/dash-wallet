@@ -102,6 +102,7 @@ import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.service.platform.IdentityRepository;
 import de.schildbach.wallet.service.platform.TopUpRepository;
+import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue;
 import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator;
 import de.schildbach.wallet.service.platform.sdk.CutoverDebugReadout;
 import de.schildbach.wallet.service.platform.sdk.CutoverEvidenceCollector;
@@ -259,6 +260,8 @@ public class WalletApplication extends MultiDexApplication
     IdentityRepository identityRepository;
     @Inject
     PlatformSyncService platformSyncService;
+    @Inject
+    TransactionMetadataSaveQueue transactionMetadataSaveQueue;
     @Inject
     de.schildbach.wallet.ui.dashpay.utils.DashPayConfig dashPayConfig;
     @Inject

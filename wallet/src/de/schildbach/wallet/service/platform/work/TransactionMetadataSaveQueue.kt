@@ -17,8 +17,10 @@
 
 package de.schildbach.wallet.service.platform.work
 
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -34,32 +36,62 @@ import javax.inject.Singleton
  * finished its DataStore writes, and two saves are in flight at once: without
  * ordering, the older one can land last and overwrite the newer settings and
  * the stored last work id.
+ *
+ * Because a queued save carries one wallet's consent choices, Reset Wallet
+ * calls [discardPending] before it clears anything.
  */
 @Singleton
-class TransactionMetadataSaveQueue @Inject constructor(applicationScope: CoroutineScope) {
+class TransactionMetadataSaveQueue @Inject constructor(private val applicationScope: CoroutineScope) {
     companion object {
         private val log = LoggerFactory.getLogger(TransactionMetadataSaveQueue::class.java)
     }
 
-    private val saves = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+    private class Save(val generation: Long, val block: suspend () -> Unit)
+
+    private val saves = Channel<Save>(Channel.UNLIMITED)
+    private val lock = Any()
+    /** bumped by [discardPending]; a save from an older generation never runs */
+    private var generation = 0L
+    private var running: Job? = null
+
+    // A save that throws is logged and the queue moves on to the next one.
+    private val failureHandler = CoroutineExceptionHandler { _, e ->
+        log.error("transaction metadata save failed", e)
+    }
 
     init {
         applicationScope.launch {
             for (save in saves) {
-                try {
-                    save()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // one failed save must not stop the ones queued behind it
-                    log.error("transaction metadata save failed", e)
-                }
+                // Each save is its own job, a sibling of this consumer rather
+                // than a child, so a save that fails or is cancelled ends only
+                // itself. join() throws only when the consumer itself is
+                // cancelled — then the queue is going away anyway.
+                val job = synchronized(lock) {
+                    if (save.generation != generation) {
+                        null
+                    } else {
+                        applicationScope.launch(failureHandler) { save.block() }.also { running = it }
+                    }
+                } ?: continue
+                job.join()
             }
         }
     }
 
     /** Queues [save]; the order of calls is the order the saves run in. */
     fun submit(save: suspend () -> Unit) {
-        saves.trySend(save)
+        synchronized(lock) { saves.trySend(Save(generation, save)) }
+    }
+
+    /**
+     * Drops every queued save and cancels the one running, returning once it
+     * has stopped. Saves submitted afterwards run normally.
+     */
+    suspend fun discardPending() {
+        val inFlight = synchronized(lock) {
+            generation++
+            running
+        }
+        inFlight?.cancelAndJoin()
     }
 }
