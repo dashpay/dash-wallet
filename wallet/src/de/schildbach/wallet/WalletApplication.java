@@ -31,6 +31,8 @@ import android.content.Intent;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.StrictMode;
 import androidx.preference.PreferenceManager;
 import android.text.format.DateUtils;
@@ -166,6 +168,7 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.AnrSupervisor;
 import de.schildbach.wallet.util.AtomicFileWriter;
 import de.schildbach.wallet.util.CrashReporter;
+import de.schildbach.wallet.util.DeferredWalletLoad;
 import de.schildbach.wallet.util.FriendKeyChainLookahead;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
@@ -203,6 +206,17 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+
+    /**
+     * The wallet load of a BACKGROUND process start, run off the main thread so
+     * onCreate meets the system's start-up deadline (see DeferredWalletLoad).
+     * Inactive on a foreground start, which loads synchronously as before.
+     */
+    private final DeferredWalletLoad deferredWalletLoad =
+            new DeferredWalletLoad(() -> Looper.myLooper() == Looper.getMainLooper());
+
+    /** Set by the deferred worker when the parse and consistency check passed. */
+    private volatile boolean deferredWalletChecked = false;
     private volatile AuthenticationGroupExtension authenticationGroupExtension;
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
@@ -309,6 +323,7 @@ public class WalletApplication extends MultiDexApplication
      * the crash-report path instead of onboarding/`wallet!!` routing.
      */
     public boolean isWalletLoadDegraded() {
+        awaitDeferredWalletLoad();
         return walletLoadFailed || walletLoadSkippedSafeMode;
     }
 
@@ -322,6 +337,7 @@ public class WalletApplication extends MultiDexApplication
      * from the recovery phrase can bring this wallet back.
      */
     public boolean isWalletRecoveryFromSeedNeeded() {
+        awaitDeferredWalletLoad();
         return walletRecoveryFromSeedNeeded;
     }
 
@@ -410,6 +426,26 @@ public class WalletApplication extends MultiDexApplication
                         StartupBreadcrumbs.SAFE_MODE_THRESHOLD);
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_SKIPPED_SAFE_MODE,
                         "WALLET_LOAD_SKIPPED_SAFE_MODE");
+            } else if (DeferredWalletLoad.isBackgroundStart(this)) {
+                // A BACKGROUND start (alarm, job, broadcast, service): parse and
+                // check the wallet on a worker so onCreate returns inside the
+                // system's start-up deadline. A 61 MB wallet took 9-11 s to
+                // parse plus ~4 s to check here, and every such start was
+                // killed ("[BIND APPLICATION ANR] bg anr"). The main-thread half
+                // (publish, finalizeInitialization, the milestone) follows in
+                // finishDeferredWalletLoad; anything that asks for the wallet
+                // meanwhile waits in the gate.
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN",
+                        "size=" + walletFile.length());
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_DEFERRED, "WALLET_LOAD_DEFERRED");
+                log.info("background start: loading the wallet off the main thread");
+                initEnvironment();
+                final Handler mainHandler = new Handler(Looper.getMainLooper());
+                deferredWalletLoad.start(
+                        this::runDeferredWalletLoad,
+                        this::finishDeferredWalletLoad,
+                        mainHandler::post,
+                        runnable -> new Thread(runnable, "wallet-load").start());
             } else {
                 StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN",
                         "size=" + walletFile.length());
@@ -479,7 +515,62 @@ public class WalletApplication extends MultiDexApplication
         // survival timer. A process death after this point (lowmemorykiller
         // reclaiming a backgrounded app, a swipe-away, a reboot) is not a launch
         // failure and must never latch safe mode.
+        //
+        // A deferred (background) wallet load marks it instead, from
+        // finishDeferredWalletLoad, once the load has actually finished.
+        if (!deferredWalletLoad.isInProgress()) {
+            StartupBreadcrumbs.markLaunchComplete();
+        }
+    }
+
+    /**
+     * The worker half of a background start's wallet load: the parse and the
+     * consistency check, exactly as a synchronous start runs them. Failures are
+     * handled as the synchronous path's catch handles them.
+     */
+    private void runDeferredWalletLoad() {
+        try {
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            deferredWalletChecked = loadAndCheckWallet();
+        } catch (final Throwable t) {
+            walletLoadFailed = true;
+            log.error("deferred wallet load FAILED — opening degraded for crash reporting", t);
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED,
+                    "WALLET_LOAD_FAILED", t.getClass().getName() + ": " + t.getMessage());
+            try {
+                CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+            } catch (final Throwable ignored) {
+            }
+        }
+    }
+
+    /**
+     * The main-thread half: publish the wallet and finish initialisation, as
+     * the synchronous path does right after the check, then mark the milestone.
+     * Runs once, posted by the worker or inline from the gate.
+     */
+    private void finishDeferredWalletLoad() {
+        if (deferredWalletChecked && wallet != null) {
+            try {
+                publishLoadedWallet();
+            } catch (final Throwable t) {
+                walletLoadFailed = true;
+                log.error("deferred wallet load: finishing initialisation FAILED — opening degraded", t);
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED,
+                        "WALLET_LOAD_FAILED", t.getClass().getName() + ": " + t.getMessage());
+                try {
+                    CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
+                } catch (final Throwable ignored) {
+                }
+            }
+        }
+        log.info("background start: wallet load finished (loaded={})", wallet != null && !walletLoadFailed);
         StartupBreadcrumbs.markLaunchComplete();
+    }
+
+    /** Wait for a background start's wallet load, if one is running (see DeferredWalletLoad). */
+    private void awaitDeferredWalletLoad() {
+        deferredWalletLoad.awaitForCaller();
     }
 
     /**
@@ -706,6 +797,7 @@ public class WalletApplication extends MultiDexApplication
 
     // only used by onboarding after creating or restoring a wallet
     public void setWallet(Wallet newWallet) throws GeneralSecurityException, IOException {
+        awaitDeferredWalletLoad();
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
@@ -1162,6 +1254,7 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public Wallet getWallet() {
+        awaitDeferredWalletLoad();
         return wallet;
     }
 
@@ -1176,12 +1269,14 @@ public class WalletApplication extends MultiDexApplication
     @Nullable
     @Override
     public AuthenticationGroupExtension getAuthenticationGroupExtension() {
+        awaitDeferredWalletLoad();
         return authenticationGroupExtension;
     }
 
     @Override
     @NonNull
     public TransactionBag getTransactionBag() {
+        awaitDeferredWalletLoad();
         if (wallet == null) {
             throw new IllegalStateException("Wallet is null");
         }
@@ -1190,6 +1285,24 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void loadWalletFromProtobuf() {
+        if (loadAndCheckWallet()) {
+            publishLoadedWallet();
+        }
+    }
+
+    /** Publish the loaded, checked wallet and finish initialisation. Main thread. */
+    private void publishLoadedWallet() {
+        walletStateFlow.setValue(wallet);
+        finalizeInitialization();
+    }
+
+    /**
+     * Parse the wallet file (with every recovery path) and check it. Safe off
+     * the main thread: its Toasts are posted to the main looper. Returns true
+     * when a loaded, consistent wallet is in {@link #wallet}; false when the
+     * launch opens degraded.
+     */
+    private boolean loadAndCheckWallet() {
         // PRE-PARSE SIZE GUARD (empirically grounded — see WalletFileSizeGuard):
         // the parse peaks at ~8x the file size in heap, and a >=2GB file is
         // unparseable at ANY heap size (protobuf's 2GiB CodedInputStream wall;
@@ -1270,14 +1383,14 @@ public class WalletApplication extends MultiDexApplication
             } catch (final FileNotFoundException x) {
                 log.error("problem loading wallet", x);
 
-                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+                showLoadToast(x.getClass().getName());
 
                 wallet = restoreWalletFromBackup();
                 adoptAuthenticationGroupExtension();
             } catch (final UnreadableWalletException x) {
                 log.error("problem loading wallet", x);
 
-                Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+                showLoadToast(x.getClass().getName());
 
                 wallet = restoreWalletFromBackup();
                 adoptAuthenticationGroupExtension();
@@ -1332,7 +1445,7 @@ public class WalletApplication extends MultiDexApplication
             wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
 
             if (!isWalletConsistent(wallet)) {
-                Toast.makeText(WalletApplication.this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
+                showLoadToast("inconsistent wallet: " + walletFile);
 
                 wallet = restoreWalletFromBackup();
                 adoptAuthenticationGroupExtension();
@@ -1350,14 +1463,23 @@ public class WalletApplication extends MultiDexApplication
                     + "(restore from seed required)");
             StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED, "WALLET_LOAD_FAILED",
                     "recovery exhausted; restore from seed required");
-            return;
+            return false;
         }
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
-        walletStateFlow.setValue(wallet);
-        finalizeInitialization();
+        return true;
+    }
+
+    /** A load-path Toast, safe from any thread. */
+    private void showLoadToast(final String text) {
+        final Runnable show = () -> Toast.makeText(WalletApplication.this, text, Toast.LENGTH_LONG).show();
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            show.run();
+        } else {
+            new Handler(Looper.getMainLooper()).post(show);
+        }
     }
 
     /** The device's largeHeap limit in MB (the manifest sets largeHeap="true"), conservative fallback. */
@@ -1492,6 +1614,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void saveWallet() {
+        awaitDeferredWalletLoad();
         try {
             protobufSerializeWallet(wallet);
         } catch (final IOException x) {
@@ -1508,6 +1631,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void backupWallet() {
+        awaitDeferredWalletLoad();
         final Stopwatch watch = Stopwatch.createStarted();
         final Protos.Wallet.Builder builder = new WalletProtobufSerializer().walletToProto(wallet).toBuilder();
 
@@ -1670,6 +1794,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void resetBlockchain() {
+        awaitDeferredWalletLoad();
         // reset the extensions
         if (wallet != null && authenticationGroupExtension != null) {
             authenticationGroupExtension.reset();
@@ -1706,6 +1831,7 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public void processDirectTransaction(@NonNull final Transaction tx) throws VerificationException {
+        awaitDeferredWalletLoad();
         if (wallet.isTransactionRelevant(tx)) {
             wallet.receivePending(tx, null);
             broadcastTransaction(tx);
@@ -1893,6 +2019,7 @@ public class WalletApplication extends MultiDexApplication
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void shutdownAndDeleteWallet() {
+        awaitDeferredWalletLoad();
         if (walletFile.exists()) {
             // A wipe resumed at launch never loaded a wallet, so there may be
             // no autosave to shut down — the file still has to go.
@@ -1910,6 +2037,7 @@ public class WalletApplication extends MultiDexApplication
      * databases were being destroyed.
      */
     public void detachWalletForWipe() {
+        awaitDeferredWalletLoad();
         log.info("removing wallet from memory during wipe");
         wallet = null;
         walletStateFlow.setValue(null);
@@ -2003,12 +2131,14 @@ public class WalletApplication extends MultiDexApplication
     @NotNull
     @Override
     public Address currentReceiveAddress() {
+        awaitDeferredWalletLoad();
         return wallet.currentReceiveAddress();
     }
 
     @NotNull
     @Override
     public Address freshReceiveAddress() {
+        awaitDeferredWalletLoad();
         return wallet.freshReceiveAddress();
     }
 
@@ -2032,6 +2162,7 @@ public class WalletApplication extends MultiDexApplication
 
     @NotNull
     public Coin getWalletBalance() {
+        awaitDeferredWalletLoad();
         // Phase 5d: post-cutover the dashj wallet is held/frozen, so the SDK
         // balance (non-null only after a committed cutover) wins.
         final Coin sdkBalance = cutoverUiDataService != null ? cutoverUiDataService.sdkBalanceOrNull() : null;
@@ -2059,6 +2190,7 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public int spendableUtxoCount() {
+        awaitDeferredWalletLoad();
         // Post-cutover the dashj wallet is HELD, so its UTXO set is frozen at
         // the cutover snapshot (or empty on a fresh restore) — and unlike the
         // balance this count was never overlaid. Its consumer is the shielded
@@ -2087,6 +2219,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Coin> observeTotalBalance() {
+        awaitDeferredWalletLoad();
         if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
@@ -2107,6 +2240,7 @@ public class WalletApplication extends MultiDexApplication
         @NonNull Wallet.BalanceType balanceType,
         @Nullable CoinSelector coinSelector
     ) {
+        awaitDeferredWalletLoad();
         if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
@@ -2135,6 +2269,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Coin> observeMaxOutputBalance() {
+        awaitDeferredWalletLoad();
         if (wallet == null || walletBalanceObserver == null) {
             return FlowKt.emptyFlow();
         }
@@ -2168,6 +2303,7 @@ public class WalletApplication extends MultiDexApplication
         boolean withConfidence,
         @NonNull WalletTransactionFilter... filters
     ) {
+        awaitDeferredWalletLoad();
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
@@ -2178,6 +2314,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Unit> observeWalletChanged() {
+        awaitDeferredWalletLoad();
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
@@ -2188,6 +2325,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Unit> observeWalletReset() {
+        awaitDeferredWalletLoad();
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
@@ -2198,6 +2336,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<List<AuthenticationKeyUsage>> observeAuthenticationKeyUsage() {
+        awaitDeferredWalletLoad();
         if (wallet == null || authenticationGroupExtension == null) {
             return FlowKt.emptyFlow();
         }
@@ -2207,6 +2346,7 @@ public class WalletApplication extends MultiDexApplication
     @Nullable
     @Override
     public Transaction getTransaction(@NonNull Sha256Hash hash) {
+        awaitDeferredWalletLoad();
         if (wallet == null) {
             return null;
         }
@@ -2217,6 +2357,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Collection<Transaction> getTransactions(@NonNull WalletTransactionFilter... filters) {
+        awaitDeferredWalletLoad();
         if (wallet == null) {
             return Lists.newArrayList();
         }
@@ -2243,6 +2384,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
+        awaitDeferredWalletLoad();
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
         return TransactionWrapperHelper.INSTANCE.wrapTransactions(
                 wallet.getTransactions(true),
@@ -2255,6 +2397,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Transaction> observeMostRecentTransaction() {
+        awaitDeferredWalletLoad();
         if (wallet == null) {
             return FlowKt.emptyFlow();
         }
@@ -2263,6 +2406,7 @@ public class WalletApplication extends MultiDexApplication
 
     // wallets from v5.17.5 and earlier do not have a BIP44 path
     public boolean isWalletUpgradedToBIP44() {
+        awaitDeferredWalletLoad();
         return wallet != null && wallet.hasKeyChain(Constants.BIP44_PATH);
     }
 
@@ -2302,6 +2446,7 @@ public class WalletApplication extends MultiDexApplication
 
     @Override
     public boolean lockOutput(@NotNull TransactionOutPoint outPoint) {
+        awaitDeferredWalletLoad();
         if (wallet != null) {
             wallet.lockOutput(outPoint);
             return true;

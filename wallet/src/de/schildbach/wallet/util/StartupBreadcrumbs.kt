@@ -113,6 +113,14 @@ object StartupBreadcrumbs {
     /** The UI has been up for [SURVIVAL_DELAY_MS] — the strongest health signal. */
     const val STAGE_LAUNCH_SURVIVED = 13
 
+    /**
+     * A BACKGROUND start moved the wallet parse and check to a worker thread
+     * ([DeferredWalletLoad]): stages 5-6 then come from that thread, and 7-11
+     * (finalize through the launch-complete milestone) from the main thread
+     * once the load finishes. Not a completion stage.
+     */
+    const val STAGE_WALLET_LOAD_DEFERRED = 14
+
     // Async engine lane (20-39) — may interleave with or follow the UI lane:
     const val STAGE_SDK_BIND_KICKED = 20
     const val STAGE_SDK_L1_ENGINE_STARTING = 21
