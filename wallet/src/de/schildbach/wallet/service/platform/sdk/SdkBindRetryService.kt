@@ -49,6 +49,44 @@ import javax.inject.Singleton
  * genuinely broken keystore from burning battery forever while the
  * device-unlock receiver still heals it instantly. Pure — host-testable.
  */
+/** Which background notice a blocked bind calls for; see [pendingNoticeFor]. */
+internal enum class PendingNotice {
+    /** Today's setup notice: "Unlock your phone to finish the wallet update" and its kin. Ongoing. */
+    SETUP,
+    /** "Unlock your phone to sync": a dismissible reminder for a wallet that has bound before. */
+    SYNC_REMINDER
+}
+
+/** How long a routine blocked bind waits before the sync reminder is posted. */
+internal const val ROUTINE_NOTICE_AFTER_MS = 60 * 60_000L
+
+/**
+ * Which notice, if any, a blocked bind should post while the app is in the
+ * background (2026-09-30). The setup notice used to be posted on EVERY locked
+ * background start, including the periodic sync on a wallet that set up long
+ * ago, so a Samsung user saw "finish the wallet update" all day without having
+ * updated anything.
+ *
+ * - A blocker that needs the user (a keystore problem, a failed setup) posts
+ *   the setup notice at once, as before.
+ * - So does any blocker while no bind has EVER succeeded on this install: that
+ *   is the actual upgrade, still finishing its first SDK setup.
+ * - Otherwise the phone is simply locked (or its keystore briefly out of
+ *   step) on a routine start: nothing is posted until the wallet has been
+ *   unable to bind for [afterMs], then the sync reminder.
+ */
+internal fun pendingNoticeFor(
+    blocker: SdkBindBlocker,
+    bindEverSucceeded: Boolean,
+    blockedForMs: Long,
+    afterMs: Long = ROUTINE_NOTICE_AFTER_MS
+): PendingNotice? = when {
+    blocker.needsUser -> PendingNotice.SETUP
+    !bindEverSucceeded -> PendingNotice.SETUP
+    blockedForMs >= afterMs -> PendingNotice.SYNC_REMINDER
+    else -> null
+}
+
 internal fun bindRetryDelayMs(retriesAttempted: Int): Long = when (retriesAttempted) {
     0 -> 5_000L
     1 -> 15_000L
@@ -150,10 +188,19 @@ class SdkBindRetryService internal constructor(
     private val bindEstablished: Flow<Boolean> = emptyFlow(),
     /** Durable record of the current blocker for the support report. */
     private val persistBlocker: suspend (SdkBindBlocker?) -> Unit = {},
-    /** Post / clear the "unlock your phone" notification (background only). */
-    private val showPendingNotice: (SdkBindBlocker) -> Unit = {},
+    /**
+     * Post / clear the "unlock your phone" notification (background only).
+     * The Boolean is `routine`: the dismissible sync reminder rather than the
+     * ongoing setup notice (see [pendingNoticeFor]).
+     */
+    private val showPendingNotice: (SdkBindBlocker, Boolean) -> Unit = { _, _ -> },
     private val clearPendingNotice: () -> Unit = {},
-    private val appInBackground: () -> Boolean = { false }
+    private val appInBackground: () -> Boolean = { false },
+    /** Whether a bind has EVER succeeded on this install; false is the upgrade (first setup) case. */
+    private val bindEverSucceeded: suspend () -> Boolean = { false },
+    /** [DashPayConfig.SDK_BIND_BLOCKED_SINCE_MS]: read, and write (null clears). */
+    private val blockedSinceMs: suspend () -> Long? = { null },
+    private val setBlockedSinceMs: suspend (Long?) -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -185,10 +232,27 @@ class SdkBindRetryService internal constructor(
         persistBlocker = { blocker ->
             dashPayConfig.set(DashPayConfig.SDK_BIND_BLOCKER, blocker?.name ?: "NONE")
         },
-        showPendingNotice = { blocker -> SdkBindPendingNotification.show(context, blocker) },
+        showPendingNotice = { blocker, routine -> SdkBindPendingNotification.show(context, blocker, routine) },
         clearPendingNotice = { SdkBindPendingNotification.clear(context) },
-        appInBackground = { AppForegroundMonitor.isInBackground }
+        appInBackground = { AppForegroundMonitor.isInBackground },
+        bindEverSucceeded = { dashPayConfig.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) == true },
+        blockedSinceMs = { dashPayConfig.get(DashPayConfig.SDK_BIND_BLOCKED_SINCE_MS) },
+        setBlockedSinceMs = { value ->
+            if (value == null) {
+                dashPayConfig.remove(DashPayConfig.SDK_BIND_BLOCKED_SINCE_MS)
+            } else {
+                dashPayConfig.set(DashPayConfig.SDK_BIND_BLOCKED_SINCE_MS, value)
+            }
+        }
     )
+
+    /**
+     * Whether this process has already posted the routine sync reminder: it is
+     * posted once, so a user who dismisses it is not re-notified by every
+     * retry of the same blocked episode. Reset by a successful bind.
+     */
+    @Volatile
+    private var syncReminderPosted = false
 
     /**
      * Why the bind is pending right now; null while the wallet is bound (or
@@ -304,6 +368,9 @@ class SdkBindRetryService internal constructor(
             previous ?: "no blocker recorded in this process"
         )
         clearPendingNotice()
+        syncReminderPosted = false
+        runCatching { setBlockedSinceMs(null) }
+            .onFailure { if (it is CancellationException) throw it; log.warn("failed to clear the bind blocked-since time", it) }
         runCatching { persistBlocker(null) }
             .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the cleared bind blocker", it) }
     }
@@ -379,6 +446,10 @@ class SdkBindRetryService internal constructor(
         )
         // Arm the unlock heal NOW — not on some later poll that may never come.
         armUnlockReceiver()
+        // Start the "unable to sync since" clock at the FIRST blocked pass of
+        // an episode; it survives process deaths and is cleared by a success.
+        runCatching { if (blockedSinceMs() == null) setBlockedSinceMs(now()) }
+            .onFailure { if (it is CancellationException) throw it; log.warn("failed to record the bind blocked-since time", it) }
         if (changed) {
             runCatching { persistBlocker(blocker) }
                 .onFailure { if (it is CancellationException) throw it; log.warn("failed to persist the bind blocker", it) }
@@ -390,7 +461,39 @@ class SdkBindRetryService internal constructor(
         // nothing left to dismiss it until the next failure, which on a healed
         // bind never comes. The blocker this call classified has to still be the
         // one in force.
-        if (_blocker.value == blocker && appInBackground()) showPendingNotice(blocker)
+        if (_blocker.value == blocker && appInBackground()) postPendingNoticeIfDue(blocker)
+    }
+
+    /**
+     * Post the notice [pendingNoticeFor] calls for, if any. Caller holds
+     * [outcomeMutex] and has checked the app is in the background.
+     */
+    private suspend fun postPendingNoticeIfDue(blocker: SdkBindBlocker) {
+        val everSucceeded = try {
+            bindEverSucceeded()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            false // unknowable reads as the upgrade case: today's behaviour
+        }
+        val since = runCatching { blockedSinceMs() }.getOrNull() ?: now()
+        val blockedForMs = (now() - since).coerceAtLeast(0L)
+        when (pendingNoticeFor(blocker, everSucceeded, blockedForMs)) {
+            PendingNotice.SETUP -> showPendingNotice(blocker, false)
+            PendingNotice.SYNC_REMINDER -> {
+                if (!syncReminderPosted) {
+                    syncReminderPosted = true
+                    log.info("SDK bind blocked for {} min on a wallet that has bound before — posting the sync reminder",
+                        blockedForMs / 60_000)
+                    showPendingNotice(blocker, true)
+                }
+            }
+            null -> log.info(
+                "SDK bind blocked ({}) for {} min on a wallet that has bound before — no notice yet " +
+                    "(a routine locked background start; the reminder is due after {} min)",
+                blocker, blockedForMs / 60_000, ROUTINE_NOTICE_AFTER_MS / 60_000
+            )
+        }
     }
 
     /**
@@ -414,7 +517,7 @@ class SdkBindRetryService internal constructor(
                 val blocker = _blocker.value ?: return@withLock
                 if (!bindRetryPending()) return@withLock // a success owns the state now
                 if (!appInBackground()) return@withLock // back on screen before the lock was ours
-                showPendingNotice(blocker)
+                postPendingNoticeIfDue(blocker)
             }
         }
     }

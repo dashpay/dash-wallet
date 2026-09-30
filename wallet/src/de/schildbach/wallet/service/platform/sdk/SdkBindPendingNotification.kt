@@ -52,13 +52,18 @@ object SdkBindPendingNotification {
     const val TAG = "sdk-bind-pending"
     private val NOTIFICATION_ID = TAG.hashCode()
 
-    fun show(context: Context, blocker: SdkBindBlocker) {
+    /**
+     * @param routine a sync reminder for a wallet whose bind has worked before
+     *   (see [SdkBindRetryService]): the sync wording, and dismissible, since
+     *   nothing is stuck. Otherwise the setup wording, ongoing as above.
+     */
+    fun show(context: Context, blocker: SdkBindBlocker, routine: Boolean = false) {
         try {
             if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
                 log.warn("SDK-setup-pending notification NOT shown: notifications are disabled for this app")
                 return
             }
-            val texts = SdkBindPendingTexts.forBlocker(context, blocker)
+            val texts = SdkBindPendingTexts.forBlocker(context, blocker, routine)
             val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
             val contentIntent = launch?.let {
                 PendingIntent.getActivity(
@@ -71,8 +76,8 @@ object SdkBindPendingNotification {
                 .setContentTitle(texts.title)
                 .setContentText(texts.message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(texts.message))
-                .setOngoing(true)
-                .setAutoCancel(false)
+                .setOngoing(!routine)
+                .setAutoCancel(routine)
                 .setOnlyAlertOnce(true)
                 .setContentIntent(contentIntent)
                 .build()
@@ -94,7 +99,28 @@ object SdkBindPendingNotification {
 /** Title/message pairs per blocker, shared by the notification and the sheet. */
 data class SdkBindPendingTexts(val title: String, val message: String) {
     companion object {
-        fun forBlocker(context: Context, blocker: SdkBindBlocker): SdkBindPendingTexts = when (blocker) {
+        /**
+         * @param routine the sync-reminder wording for a wallet that has bound
+         *   before (a locked or briefly refusing keystore, not an unfinished
+         *   update). Ignored for the blockers that need the user.
+         */
+        fun forBlocker(context: Context, blocker: SdkBindBlocker, routine: Boolean = false): SdkBindPendingTexts =
+            if (routine && !blocker.needsUser) routineTexts(context, blocker) else setupTexts(context, blocker)
+
+        private fun routineTexts(context: Context, blocker: SdkBindBlocker): SdkBindPendingTexts =
+            if (blocker == SdkBindBlocker.DEVICE_LOCKED) {
+                SdkBindPendingTexts(
+                    context.getString(R.string.sdk_bind_pending_sync_locked_title),
+                    context.getString(R.string.sdk_bind_pending_sync_locked_message)
+                )
+            } else {
+                SdkBindPendingTexts(
+                    context.getString(R.string.sdk_bind_pending_sync_other_title),
+                    context.getString(R.string.sdk_bind_pending_sync_other_message)
+                )
+            }
+
+        private fun setupTexts(context: Context, blocker: SdkBindBlocker): SdkBindPendingTexts = when (blocker) {
             SdkBindBlocker.DEVICE_LOCKED -> SdkBindPendingTexts(
                 context.getString(R.string.sdk_bind_pending_locked_title),
                 context.getString(R.string.sdk_bind_pending_locked_message)

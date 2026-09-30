@@ -472,6 +472,16 @@ open class DashPayConfig @Inject constructor(
         val SDK_BIND_EVER_SUCCEEDED = booleanPreferencesKey("sdk_bind_ever_succeeded")
 
         /**
+         * Wall-clock ms at which the SDK bind was first found blocked, cleared
+         * when a bind succeeds: how long the wallet has been unable to sync.
+         * Survives process deaths, so a phone that stays locked across many
+         * short-lived background starts is still measured from the first.
+         * Read by SdkBindRetryService to decide when a routine "unlock your
+         * phone to sync" reminder is due.
+         */
+        val SDK_BIND_BLOCKED_SINCE_MS = longPreferencesKey("sdk_bind_blocked_since_ms")
+
+        /**
          * The current [de.schildbach.wallet.service.platform.sdk.SdkBindBlocker]
          * name while the SDK bind is pending, "NONE" once bound. Written by
          * [de.schildbach.wallet.service.platform.sdk.SdkBindRetryService] so the
