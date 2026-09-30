@@ -2231,6 +2231,14 @@ public class WalletApplication extends MultiDexApplication
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
     }
 
+    /** Called only after wipe destruction succeeds; retain recovery protection if the marker remains. */
+    void markWalletWipeComplete() {
+        WalletWipeState.INSTANCE.complete(getFilesDir());
+        if (!WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+            recoveredWalletPersistencePending = false;
+        }
+    }
+
     /** @see #wipeInProgress */
     @NonNull
     public StateFlow<Boolean> getWipeInProgress() {
