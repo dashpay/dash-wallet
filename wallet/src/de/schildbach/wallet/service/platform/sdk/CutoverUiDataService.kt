@@ -31,6 +31,8 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -47,6 +49,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -56,6 +59,8 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.PresentableTxMetadata
@@ -2475,26 +2480,76 @@ class CutoverUiDataService internal constructor(
                 .collectLatest { active ->
                     _cutoverActive.value = active
                     if (!active) {
-                        _sdkTotalBalance.value = null
-                        _sdkConfirmedBalance.value = null
-                        _sdkMaxSendable.value = null
-                        _sdkSpendableUtxoCount.value = null
+                        resetForInactivePipeline()
                         return@collectLatest
                     }
-                    log.info("cutover committed — serving home-screen data from the SDK")
-                    try {
-                        runPipelines()
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        log.error("cutover UI pipelines failed; balance override cleared", t)
-                        _sdkTotalBalance.value = null
-                        _sdkConfirmedBalance.value = null
-                        _sdkMaxSendable.value = null
-                        _sdkSpendableUtxoCount.value = null
+                    coroutineScope {
+                        // Registered under [pipelineMutex] so [stopForWalletWipe]
+                        // either cancels this job or runs first — and then the
+                        // re-read below sees the wipe's reset and never starts it.
+                        val job = pipelineMutex.withLock {
+                            if (!cutoverUiActive().first()) return@withLock null
+                            launch {
+                                log.info("cutover committed — serving home-screen data from the SDK")
+                                try {
+                                    runPipelines()
+                                } catch (t: Throwable) {
+                                    if (t is CancellationException) throw t
+                                    log.error("cutover UI pipelines failed; balance override cleared", t)
+                                    resetForInactivePipeline()
+                                }
+                            }.also { pipelineJob = it }
+                        } ?: return@coroutineScope
+                        // A stop cancels only this child: join returns and the
+                        // collector waits for the gate's next emission.
+                        job.join()
                     }
                 }
         }
     }
+
+    /**
+     * Stop the SDK pipelines for a wallet wipe and WAIT until they are gone.
+     *
+     * The gate alone is not enough: [CutoverCoordinator.resetForWalletWipe]
+     * only persists DUAL_RUNNING, and [start]'s collectLatest cancels
+     * [runPipelines] whenever that DataStore emission arrives — nothing
+     * waits for it. A reconcile walk or change-feed pass still holding the
+     * wiped wallet's pages could then write them into tx_display_cache /
+     * tx_group_cache AFTER the wipe cleared them. Returning from here means
+     * no pipeline coroutine is left to write.
+     *
+     * Call it AFTER the cutover reset is persisted: a gate emission still in
+     * flight re-reads the persisted state before launching, so the pipeline
+     * stays stopped until the next wallet commits its own cutover — which
+     * restarts it through the normal gate path.
+     */
+    suspend fun stopForWalletWipe() {
+        pipelineMutex.withLock {
+            pipelineJob?.cancelAndJoin()
+            pipelineJob = null
+            resetForInactivePipeline()
+        }
+        log.info("SDK UI pipelines stopped for the wallet wipe")
+    }
+
+    /** Everything a stopped pipeline must not leave behind for dashj-fed UI. */
+    private fun resetForInactivePipeline() {
+        _sdkTotalBalance.value = null
+        _sdkConfirmedBalance.value = null
+        _sdkMaxSendable.value = null
+        _sdkSpendableUtxoCount.value = null
+    }
+
+    /** Guards [pipelineJob]'s start-vs-[stopForWalletWipe] handoff. */
+    private val pipelineMutex = Mutex()
+
+    /**
+     * The [runPipelines] job the gate last launched (possibly already
+     * finished — cancelling a completed job is a no-op).
+     */
+    @Volatile
+    private var pipelineJob: Job? = null
 
     private suspend fun runPipelines() = coroutineScope {
         val walletIdHex = awaitBoundWallet()

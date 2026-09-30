@@ -30,6 +30,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -870,10 +871,14 @@ class CutoverUiDataServiceTest {
         ) {
             reconcileWalks++
             val pages = reconcilePagesOverride ?: listOf(records.value)
-            for (page in pages) {
+            for ((index, page) in pages.withIndex()) {
+                beforePage?.invoke(reconcileWalks, index)
                 if (page.isNotEmpty()) onPage(page)
             }
         }
+
+        /** Called before each reconcile page is handed over: (walk number, page index). */
+        var beforePage: (suspend (walk: Int, pageIndex: Int) -> Unit)? = null
 
         /** Txids that funded a CoinJoin-account TXO (historical-mixing classification probe). */
         var coinJoinFunded: Set<String> = emptySet()
@@ -1540,6 +1545,64 @@ class CutoverUiDataServiceTest {
 
         assertEquals(setOf(displayHex(1), displayHex(2), displayHex(3)), store.keys)
         assertEquals(resolve(R.string.transaction_row_status_sent), store.getValue(displayHex(3)).title)
+    }
+
+    // ── The wallet-wipe stop ──────────────────────────────────────────
+
+    @Test
+    fun stopForWalletWipe_inFlightWalkCannotWriteAfterStop_andPipelineRestartsForNextWallet() = runTest {
+        val pageA = listOf(record(firstByte = 1, net = 100, context = 3, direction = 0))
+        val pageB = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val walkHeldBeforePageB = CompletableDeferred<Unit>()
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            reconcilePagesOverride = listOf(pageA, pageB)
+            beforePage = { walk, index -> if (walk == 1 && index == 1) walkHeldBeforePageB.await() }
+        }
+        // The gate's collector sees [gateFeed]; every later read sees the
+        // persisted value — so the test controls when the wipe's reset
+        // emission reaches the collector (the race: it has not, yet).
+        var persisted: String = "CUT_OVER"
+        val gateFeed = MutableStateFlow("CUT_OVER")
+        var observeCalls = 0
+        val config = mockk<DashPayConfig> {
+            every { observe(DashPayConfig.CUTOVER_STATE) } answers {
+                if (observeCalls++ == 0) gateFeed else kotlinx.coroutines.flow.flow { emit(persisted) }
+            }
+        }
+        val service = buildService(
+            source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        // Mid-walk: page A written, page B still held by the walker.
+        assertEquals(setOf(displayHex(1)), store.keys)
+
+        // The wipe: reset persisted, gate emission NOT delivered; stop, then clear.
+        persisted = "DUAL_RUNNING"
+        service.stopForWalletWipe()
+        store.clear()
+        walkHeldBeforePageB.complete(Unit)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
+        runCurrent()
+        assertTrue("the wiped wallet's page must not land after the stop", store.isEmpty())
+        assertEquals(1, source.reconcileWalks)
+
+        // The reset emission arrives, then the next wallet commits its cutover.
+        gateFeed.value = "DUAL_RUNNING"
+        runCurrent()
+        assertFalse(service.isCutoverActive())
+        persisted = "CUT_OVER"
+        gateFeed.value = "CUT_OVER"
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        assertEquals(2, source.reconcileWalks)
+        assertEquals(setOf(displayHex(1), displayHex(2)), store.keys)
     }
 
     // ── The engine-event (instant receive) feed ───────────────────────

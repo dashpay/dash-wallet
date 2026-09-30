@@ -188,6 +188,14 @@ object WalletApplicationExt {
             // reads, not about which engine runs.
             runCatching { cutoverCoordinator.resetForWalletWipe() }
                 .onFailure { rethrowCancellation(it); log.warn("cutover state reset failed during wipe", it) }
+            // The reset above only persists DUAL_RUNNING; the SDK tx pipeline
+            // stops when that emission reaches its gate, and nothing waits for
+            // it. Cancel AND join it here — after the reset, so a gate emission
+            // still in flight cannot relaunch it — before the display caches
+            // are cleared below, or a walk holding the wiped wallet's pages
+            // re-writes them into tx_display_cache / tx_group_cache.
+            runCatching { cutoverUiDataService.stopForWalletWipe() }
+                .onFailure { rethrowCancellation(it); log.warn("SDK UI pipeline stop failed during wipe", it) }
         }
         runCatching { identityRepository.clearDatabase(isWalletWipe) }
             .onFailure { rethrowCancellation(it); log.warn("identity/DashPay clear failed during reset", it) }
