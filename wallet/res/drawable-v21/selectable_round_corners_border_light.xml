@@ -4,7 +4,15 @@
     <item>
         <shape android:shape="rectangle">
             <corners android:radius="8dp" />
-            <solid android:color="@android:color/white" />
+            <!--
+              Must stay theme-aware despite this drawable's "_light" name: it is the
+              background of the expanded contested-name rows on Username Voting, whose
+              text uses theme-aware styles (@style/Overline). A hardcoded white here
+              left those rows white with invisible white-on-white text in dark mode.
+              background_secondary IS #FFFFFF (palette_white) by day, so this is
+              pixel-identical in light mode, and palette_black_800 at night.
+            -->
+            <solid android:color="@color/background_secondary" />
             <stroke android:color="@color/button_ripple_light" android:width="1dp"/>
         </shape>
     </item>
