@@ -26,9 +26,12 @@ import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashj.platform.dpp.voting.AbstainVoteChoice
@@ -201,6 +204,35 @@ class VoteFailureOutputTest {
         assertArrayEquals(arrayOf("Alice"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_LABELS))
     }
 
+    @Test
+    fun `analytics records a logical failure as a failure, not a success`() {
+        // VOTE_SUCCESS used to fire unconditionally before the result was known, which
+        // was harmless only while every non-exception outcome WAS a success. Now that an
+        // empty broadcast or a terminal error returns Result.failure, Firebase would have
+        // recorded a success for a vote the user saw an error for - and no failure at all,
+        // since VOTE_ERROR only fired from the outer catch.
+        val analytics = mockk<AnalyticsService>(relaxed = true)
+        val result = runWorker(emptyList(), analytics = analytics)
+
+        assertTrue(result is ListenableWorker.Result.Failure)
+        verify(exactly = 1) { analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, any()) }
+        verify(exactly = 0) { analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, any()) }
+    }
+
+    @Test
+    fun `analytics still records a success as a success`() {
+        // The complement: moving the event must not cost a genuine success its telemetry.
+        val analytics = mockk<AnalyticsService>(relaxed = true)
+        val result = runWorker(
+            listOf(Triple(AbstainVoteChoice(), successfulVote("a1ice"), null)),
+            analytics = analytics
+        )
+
+        assertTrue(result is ListenableWorker.Result.Success)
+        verify(exactly = 1) { analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, any()) }
+        verify(exactly = 0) { analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, any()) }
+    }
+
     private fun successfulVote(name: String): Vote {
         val poll = mockk<ContestedDocumentResourceVotePoll> {
             every { indexValues } returns listOf("dash", name)
@@ -219,7 +251,8 @@ class VoteFailureOutputTest {
         results: List<Triple<ResourceVoteChoice, Vote?, Exception?>>,
         names: Array<String> = arrayOf("a1ice"),
         labels: Array<String> = arrayOf("Alice"),
-        choices: Array<String> = arrayOf(AbstainVoteChoice().toString())
+        choices: Array<String> = arrayOf(AbstainVoteChoice().toString()),
+        analytics: AnalyticsService = mockk(relaxed = true)
     ): ListenableWorker.Result = runBlocking {
         val input = workDataOf(
             BroadcastUsernameVotesWorker.KEY_PASSWORD to "test-password",
@@ -238,7 +271,7 @@ class VoteFailureOutputTest {
         coEvery { broadcaster.broadcastUsernameVotes(any(), any(), any(), any()) } returns
             results
         val worker = BroadcastUsernameVotesWorker(
-            RuntimeEnvironment.getApplication(), parameters, mockk(relaxed = true), broadcaster,
+            RuntimeEnvironment.getApplication(), parameters, analytics, broadcaster,
             mockk(relaxed = true), walletData, mockk(relaxed = true), mockk(relaxed = true)
         )
         worker.doWorkWithBaseProgress()

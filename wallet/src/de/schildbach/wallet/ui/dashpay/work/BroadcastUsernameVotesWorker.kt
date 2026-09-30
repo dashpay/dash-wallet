@@ -129,7 +129,12 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             //platformSyncService.updateUsernameRequestsWithVotes()
 
             // update local database
-            analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
+            // NB: the VOTE_SUCCESS event is NOT logged here. It used to fire
+            // unconditionally at this point, which predated this branch having any
+            // logical failure path at all — every non-exception outcome was a success.
+            // Now that an empty broadcast or a terminal error returns Result.failure,
+            // firing it here would tell Firebase "success" for a vote the user was shown
+            // an error for. Both events are emitted below, beside the Result they match.
             // Results without a Vote still need their submitted name and position.
             val arrayOfnames = normalizedLabels.copyOf()
             val votes = hashMapOf<String, UsernameVote>()
@@ -205,6 +210,7 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             if (failureReason == null) {
                 // Every vote either landed or was already cast.
                 log.info("all votes succeeded: total submitted {}", votingResults.size)
+                analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
                 Result.success(
                     workDataOf(
                         KEY_NORMALIZED_LABELS to arrayOfnames,
@@ -228,6 +234,9 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode vote is already present for masternode EbitFAjpGsuf7qKPpsQMZw2ZKZ8rs2S1PdqKvYA8J2Ux voting for ContestedDocumentResourceVotePoll(ContestedDocumentResourceVotePoll { contract_id: GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec, document_type_name: domain, index_name: parentNameAndLabel, index_values: [string dash, string test-1101] })", metadata: MetadataMap { headers: {"drive-error-data-bin": "oW9zZXJpYWxpemVkRXJyb3KYbwIYKxjKDQkQABgqGO0YuRh/GLMDGOkYexgdGLEVGIMYvhhiGLMY2xiLGGEYRxj/GKgYSxiYGDAYnxjOGHEAGOYYaBjGGFkYrxhmGK4Y4RjnGCwYGBhtGN4YexhbGH4KGB0YcRgqCRjEDRhXGCEY9hgiGL8YUxjFGDEYVQYYZBhvGG0YYRhpGG4SGHAYYRhyGGUYbhh0GE4YYRhtGGUYQRhuGGQYTBhhGGIYZRhsAhIEGGQYYRhzGGgSCRh0GGUYcxh0GC0YMRgxGDAYMQ==", "code": "40304", "grpc-accept-encoding": "identity", "grpc-encoding": "identity", "content-type": "application/grpc+proto", "date": "Mon, 28 Oct 2024 22:27:37 GMT", "x-envoy-upstream-service-time": "55", "server": "envoy"} }, source: None }, Address { ban_count: 0, banned_until: None, uri: https://52.89.154.48:1443/ })
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode with id: CmbJumQ1ALJXHYFpUdCCnvbfgvXKSajErNXGhv3H4GN1 already voted 5 times and is trying to vote again, they can only vote 5 times"
                 logVoteFailures(votingResults, verdicts)
+                // Matches the outer catch, so a logical failure and a thrown one are
+                // counted the same way rather than the former passing as a success.
+                analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, mapOf())
                 Result.failure(
                     workDataOf(
                         KEY_ERROR_MESSAGE to failureReason,
