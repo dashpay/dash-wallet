@@ -109,11 +109,20 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             Dash.ZERO
                         }
                     } else {
+                        // Non-null by construction — this is the same
+                        // `inputCurrency != DASH` branch that populated it above —
+                        // but that invariant is non-local, so bind it rather than
+                        // force-unwrap. If the two branches ever drift apart this
+                        // fails the commit instead of throwing on a null address.
+                        val to = depositAddress ?: run {
+                            commitSwapTradeFailureState.call()
+                            return@launch
+                        }
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
-                            to = depositAddress!!,
+                            to = to,
                             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this
