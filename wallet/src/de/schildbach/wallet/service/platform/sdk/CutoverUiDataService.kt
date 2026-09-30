@@ -56,7 +56,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -2189,7 +2191,9 @@ class CutoverUiDataService internal constructor(
      * immediately instead of waiting for the next ticker tick. replay=0 +
      * buffer 1 + DROP_OLDEST: requests coalesce (every pass re-reads full
      * state), tryEmit never suspends/fails, and pre-cutover (no collector)
-     * signals are dropped — provably inert.
+     * signals are dropped — provably inert. [requestFullReconcile] shares
+     * this signal but must NOT be dropped that way; it also latches
+     * [fullReconcilePending], which the collector replays on subscription.
      */
     private val contactReResolveRequests = MutableSharedFlow<Unit>(
         replay = 0,
@@ -2220,11 +2224,42 @@ class CutoverUiDataService internal constructor(
      * completeness check applies when it finds rows missing post-cutover
      * ([de.schildbach.wallet.service.TxDisplayCacheService]). Same idempotent
      * pass the 60s ticker runs, so an unnecessary request costs one walk.
-     * Fire-and-forget, non-suspending, inert pre-cutover (no collector).
+     * Fire-and-forget and non-suspending. A request made while no pipeline
+     * collects is kept pending ([fullReconcilePending]) and walked as soon as
+     * one does, instead of being dropped.
      */
     fun requestFullReconcile() {
+        // Latch BEFORE the emit: a collector that subscribes in between
+        // replays the latch (onSubscription in [txPipeline]); one already
+        // subscribed takes the emit. Either way the request is seen, at worst
+        // twice — which the reconcile lane's coalescing folds into one extra
+        // idempotent walk.
+        fullReconcilePending.set(true)
         contactReResolveRequests.tryEmit(Unit)
     }
+
+    /**
+     * A [requestFullReconcile] no collector has consumed yet (Review on
+     * #1579). The shared signal is replay=0, so a request made while
+     * [txPipeline] is not collecting — before the wallet binds, during the
+     * pipeline's error-retry backoff, or before a restart's pipeline starts
+     * at all — was silently dropped, and the MO-1054 rescan's kept rows then
+     * waited for the first reconcile tick (10 s after activation) plus the
+     * walk. Set by the request, replayed into the reconcile lane when the
+     * collector subscribes, cleared by EVERY reconcile the collector handles
+     * (any walk that starts after the request covers it — the coalescing
+     * guarantees a mid-walk request still gets a full walk), and cleared on
+     * cutover deactivation (the wallet wipe path: a wiped wallet's request
+     * must not carry over to the next wallet's activation). Pre-cutover no
+     * collector ever consumes it, and it is harmless there: at worst one
+     * extra idempotent walk when the cutover later commits.
+     *
+     * Not a replay=1 signal on purpose: that would re-deliver a stale,
+     * already-walked request to every re-collection after the retry loop.
+     * [requestContactReResolution] deliberately does not latch — its
+     * "inert pre-cutover" contract is unchanged.
+     */
+    private val fullReconcilePending = AtomicBoolean(false)
 
     /**
      * The SDK's own wallet-relevant record count
@@ -2475,34 +2510,45 @@ class CutoverUiDataService internal constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            cutoverUiActive()
-                .distinctUntilChanged()
+            // [stopGeneration] re-runs the block after a wipe stop even when the
+            // gate itself never changes: DataStore emissions conflate, so the
+            // wipe's DUAL_RUNNING can be skipped if the next wallet's CUT_OVER
+            // lands first — and a distinct-only gate would then never restart.
+            combine(cutoverUiActive().distinctUntilChanged(), stopGeneration) { active, _ -> active }
                 .collectLatest { active ->
-                    _cutoverActive.value = active
                     if (!active) {
+                        _cutoverActive.value = false
                         resetForInactivePipeline()
                         return@collectLatest
                     }
                     coroutineScope {
-                        // Registered under [pipelineMutex] so [stopForWalletWipe]
-                        // either cancels this job or runs first — and then the
-                        // re-read below sees the wipe's reset and never starts it.
-                        val job = pipelineMutex.withLock {
-                            if (!cutoverUiActive().first()) return@withLock null
-                            launch {
-                                log.info("cutover committed — serving home-screen data from the SDK")
-                                try {
-                                    runPipelines()
-                                } catch (t: Throwable) {
-                                    if (t is CancellationException) throw t
-                                    log.error("cutover UI pipelines failed; balance override cleared", t)
-                                    resetForInactivePipeline()
-                                }
-                            }.also { pipelineJob = it }
-                        } ?: return@coroutineScope
-                        // A stop cancels only this child: join returns and the
-                        // collector waits for the gate's next emission.
-                        job.join()
+                        while (true) {
+                            // Registered under [pipelineMutex] so [stopForWalletWipe]
+                            // either cancels this job or runs first — and then the
+                            // persisted re-read sees the wipe's reset and waits.
+                            val job = pipelineMutex.withLock {
+                                if (!cutoverUiActive().first()) return@withLock null
+                                _cutoverActive.value = true
+                                launch {
+                                    log.info("cutover committed — serving home-screen data from the SDK")
+                                    try {
+                                        runPipelines()
+                                    } catch (t: Throwable) {
+                                        if (t is CancellationException) throw t
+                                        log.error("cutover UI pipelines failed; balance override cleared", t)
+                                        clearSdkBalanceOverrides()
+                                    }
+                                }.also { pipelineJob = it }
+                            }
+                            if (job != null) {
+                                job.join()
+                                return@coroutineScope
+                            }
+                            // Stopped by a wipe, and the gate has not caught up:
+                            // wait on a fresh read for the next wallet's commit.
+                            _cutoverActive.value = false
+                            cutoverUiActive().firstOrNull { it } ?: return@coroutineScope
+                        }
                     }
                 }
         }
@@ -2519,22 +2565,34 @@ class CutoverUiDataService internal constructor(
      * tx_group_cache AFTER the wipe cleared them. Returning from here means
      * no pipeline coroutine is left to write.
      *
-     * Call it AFTER the cutover reset is persisted: a gate emission still in
-     * flight re-reads the persisted state before launching, so the pipeline
-     * stays stopped until the next wallet commits its own cutover — which
-     * restarts it through the normal gate path.
+     * Call it AFTER the cutover reset is persisted: the gate re-reads the
+     * persisted state before (re)launching, so the pipeline stays stopped
+     * until the next wallet commits its own cutover, then restarts.
      */
     suspend fun stopForWalletWipe() {
         pipelineMutex.withLock {
             pipelineJob?.cancelAndJoin()
             pipelineJob = null
             resetForInactivePipeline()
+            stopGeneration.update { it + 1 }
         }
         log.info("SDK UI pipelines stopped for the wallet wipe")
     }
 
-    /** Everything a stopped pipeline must not leave behind for dashj-fed UI. */
+    /** Bumped by [stopForWalletWipe] so [start]'s gate re-evaluates. */
+    private val stopGeneration = MutableStateFlow(0)
+
+    /**
+     * Everything a stopped pipeline must not leave behind: the SDK overrides
+     * for dashj-fed UI, and a [fullReconcilePending] walk — it belongs to the
+     * wallet whose pipeline just stopped (a wipe resets the cutover state).
+     */
     private fun resetForInactivePipeline() {
+        fullReconcilePending.set(false)
+        clearSdkBalanceOverrides()
+    }
+
+    private fun clearSdkBalanceOverrides() {
         _sdkTotalBalance.value = null
         _sdkConfirmedBalance.value = null
         _sdkMaxSendable.value = null
@@ -2948,6 +3006,14 @@ class CutoverUiDataService internal constructor(
     @Volatile
     private var activeWalletIdHex: String? = null
 
+    /**
+     * The tx-list feed for the bound wallet: one sequential collector over
+     * the change feed, the reconcile lane and the engine's instant events
+     * (see the comment below). Re-collects after a failure; returns only if
+     * every upstream completes, and is cancelled with [runPipelines] when the
+     * cutover deactivates. A [requestFullReconcile] made while it was not
+     * collecting ([fullReconcilePending]) walks as soon as it subscribes.
+     */
     private suspend fun txPipeline(walletIdHex: String) {
         activeWalletIdHex = walletIdHex
         // Three feeds, one sequential collector (merge never runs two
@@ -2985,7 +3051,15 @@ class CutoverUiDataService internal constructor(
                         source.observeWalletTxRecords(walletIdHex)
                             .map { TxFeedAction.Snapshot(it) as TxFeedAction },
                         reconcilePages.map { TxFeedAction.Snapshot(it) as TxFeedAction },
-                        merge(reconcileTicker(), contactReResolveRequests)
+                        merge(
+                            reconcileTicker(),
+                            // Replay a request made while nothing collected. Checked
+                            // AFTER the subscription is live, so no request can fall
+                            // between the check and the subscribe.
+                            contactReResolveRequests.onSubscription {
+                                if (fullReconcilePending.get()) emit(Unit)
+                            }
+                        )
                             .map { TxFeedAction.Reconcile as TxFeedAction },
                         txEvents.map { TxFeedAction.EngineEvent(it) }
                     ).collect { action ->
@@ -2993,6 +3067,9 @@ class CutoverUiDataService internal constructor(
                             is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
                             is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
                             TxFeedAction.Reconcile -> {
+                                // Whatever triggered this, the walk it starts (or
+                                // the one more it queues) covers a pending request.
+                                fullReconcilePending.set(false)
                                 // Coalesce: a request landing mid-walk re-runs ONE
                                 // more full walk when the current one finishes (a
                                 // re-resolution request must still see a complete

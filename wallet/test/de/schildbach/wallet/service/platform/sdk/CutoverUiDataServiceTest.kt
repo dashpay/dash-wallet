@@ -1547,7 +1547,98 @@ class CutoverUiDataServiceTest {
         assertEquals(resolve(R.string.transaction_row_status_sent), store.getValue(displayHex(3)).title)
     }
 
+    // A full-reconcile request made while no pipeline collects (Review on
+    // #1579): the MO-1054 rescan asks for one from the teardown and from the
+    // restart's dashj reset event, both of which can land before the wallet
+    // binds. It must stay pending and run once the pipeline collects —
+    // not wait for the first ticker tick.
+
+    @Test
+    fun reconcile_requestBeforeThePipelineCollects_walksAsSoonAsItDoes() = runTest {
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals("nothing collects while unbound", 0, source.reconcileWalks)
+
+        // The bind lands on the next poll — well inside the ticker's startup
+        // grace, so only the pending request can explain a walk here.
+        source.boundWalletId = "cd".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the pending request walks on subscription", 1, source.reconcileWalks)
+
+        // Consumed: nothing re-delivers it; the next walk is the ticker's.
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS)
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS)
+        runCurrent()
+        assertEquals("then the ticker's first walk", 2, source.reconcileWalks)
+    }
+
+    @Test
+    fun reconcile_requestWithAnActiveCollector_walksOnceImmediately() = runTest {
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("startup grace: no walk yet", 0, source.reconcileWalks)
+
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals("each request is one walk, never replayed", 2, source.reconcileWalks)
+    }
+
+    @Test
+    fun reconcile_pendingRequestDoesNotSurviveADeactivation() = runTest {
+        // The wipe path resets the cutover state, which stops the pipelines;
+        // a request the wiped wallet left pending must not walk the next one.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val config = mockk<DashPayConfig> {
+            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+        }
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, config, backgroundScope)
+        service.start()
+        runCurrent()
+        service.requestFullReconcile()
+        runCurrent()
+
+        state.value = "DUAL_RUNNING"
+        runCurrent()
+        state.value = "CUT_OVER"
+        source.boundWalletId = "cd".repeat(32)
+        runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the pending request was dropped with the deactivation", 0, source.reconcileWalks)
+    }
+
     // ── The wallet-wipe stop ──────────────────────────────────────────
+
+    /**
+     * The gate's collector sees [gateFeed]; every later read sees [persisted]
+     * — so a test controls when (or whether) the wipe's reset emission reaches
+     * the collector.
+     */
+    private fun laggingGateConfig(
+        gateFeed: Flow<String?>,
+        persisted: Flow<String?>
+    ): DashPayConfig {
+        var observeCalls = 0
+        return mockk {
+            every { observe(DashPayConfig.CUTOVER_STATE) } answers {
+                if (observeCalls++ == 0) gateFeed else persisted
+            }
+        }
+    }
 
     @Test
     fun stopForWalletWipe_inFlightWalkCannotWriteAfterStop_andPipelineRestartsForNextWallet() = runTest {
@@ -1562,19 +1653,11 @@ class CutoverUiDataServiceTest {
             reconcilePagesOverride = listOf(pageA, pageB)
             beforePage = { walk, index -> if (walk == 1 && index == 1) walkHeldBeforePageB.await() }
         }
-        // The gate's collector sees [gateFeed]; every later read sees the
-        // persisted value — so the test controls when the wipe's reset
-        // emission reaches the collector (the race: it has not, yet).
-        var persisted: String = "CUT_OVER"
+        val persisted = MutableStateFlow("CUT_OVER")
         val gateFeed = MutableStateFlow("CUT_OVER")
-        var observeCalls = 0
-        val config = mockk<DashPayConfig> {
-            every { observe(DashPayConfig.CUTOVER_STATE) } answers {
-                if (observeCalls++ == 0) gateFeed else kotlinx.coroutines.flow.flow { emit(persisted) }
-            }
-        }
         val service = buildService(
-            source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao
+            source, laggingGateConfig(gateFeed, persisted), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
         )
         service.start()
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
@@ -1583,7 +1666,7 @@ class CutoverUiDataServiceTest {
         assertEquals(setOf(displayHex(1)), store.keys)
 
         // The wipe: reset persisted, gate emission NOT delivered; stop, then clear.
-        persisted = "DUAL_RUNNING"
+        persisted.value = "DUAL_RUNNING"
         service.stopForWalletWipe()
         store.clear()
         walkHeldBeforePageB.complete(Unit)
@@ -1596,13 +1679,46 @@ class CutoverUiDataServiceTest {
         gateFeed.value = "DUAL_RUNNING"
         runCurrent()
         assertFalse(service.isCutoverActive())
-        persisted = "CUT_OVER"
+        persisted.value = "CUT_OVER"
         gateFeed.value = "CUT_OVER"
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
         runCurrent()
         assertTrue(service.isCutoverActive())
         assertEquals(2, source.reconcileWalks)
         assertEquals(setOf(displayHex(1), displayHex(2)), store.keys)
+    }
+
+    @Test
+    fun stopForWalletWipe_conflatedReset_restartsForNextWallet_withoutTheWipedWalletsPendingWalk() = runTest {
+        // The wipe's DUAL_RUNNING never reaches the gate (DataStore conflated
+        // it under the next wallet's CUT_OVER): the gate stays "active" the
+        // whole time, so only the stop can drop the old pending request, and
+        // only the stop's re-evaluation can restart the pipeline.
+        val persisted = MutableStateFlow("CUT_OVER")
+        val gateFeed = MutableStateFlow("CUT_OVER")
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, laggingGateConfig(gateFeed, persisted), backgroundScope)
+        service.start()
+        runCurrent()
+        service.requestFullReconcile() // pending: the pipeline is still waiting for a bind
+        runCurrent()
+
+        persisted.value = "DUAL_RUNNING"
+        service.stopForWalletWipe()
+        runCurrent()
+        assertFalse("the persisted reset is honoured before the gate sees it", service.isCutoverActive())
+
+        // The next wallet binds and commits; the gate still never changed.
+        source.boundWalletId = "ef".repeat(32)
+        persisted.value = "CUT_OVER"
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the wiped wallet's pending walk was dropped by the stop", 0, source.reconcileWalks)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS)
+        runCurrent()
+        assertEquals("the restarted pipeline runs its own ticker walk", 1, source.reconcileWalks)
     }
 
     // ── The engine-event (instant receive) feed ───────────────────────

@@ -199,7 +199,16 @@ object WalletApplicationExt {
         }
         runCatching { identityRepository.clearDatabase(isWalletWipe) }
             .onFailure { rethrowCancellation(it); log.warn("identity/DashPay clear failed during reset", it) }
-        runCatching { txDisplayCacheService.clearDatabase() }
+        // A wipe starts a new wallet, so its history must go. A rescan keeps
+        // the rows post-cutover — the SDK still holds every transaction
+        // (MO-1054); see clearDatabaseForRescan.
+        runCatching {
+            if (isWalletWipe) {
+                txDisplayCacheService.clearDatabase()
+            } else {
+                txDisplayCacheService.clearDatabaseForRescan()
+            }
+        }
             .onFailure { rethrowCancellation(it); log.warn("tx-display-cache clear failed during reset", it) }
         WorkManager.getInstance(this).cancelAllWork()
         // The wipe just emptied the DashPay DataStore mid-process, and the
