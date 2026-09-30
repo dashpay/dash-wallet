@@ -510,12 +510,19 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void saveWalletAndFinalizeInitialization() {
+        saveWalletAndBackup();
+        finalizeInitialization();
+    }
+
+    /**
+     * Serializes the wallet twice - once to the wallet file and once to the key backup - which
+     * takes seconds on a large wallet, so this must not be called on the main thread.
+     */
+    public void saveWalletAndBackup() {
         saveWallet();
         backupWallet();
 
         config.armBackupReminder();
-
-        finalizeInitialization();
     }
 
     public void finalizeInitialization() {

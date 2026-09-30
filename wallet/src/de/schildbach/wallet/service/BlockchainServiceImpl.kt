@@ -1485,9 +1485,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 mnlistinfoBootStrapStream = loadStream(Constants.Files.MNLIST_BOOTSTRAP_FILENAME)
                 qrinfoBootStrapStream = loadStream(Constants.Files.QRINFO_BOOTSTRAP_FILENAME)
                 if (!blockChainFileExists) {
-                    log.info("blockchain does not exist, resetting wallet")
                     propagateContext()
-                    wallet.reset()
+                    // A wallet filled by LargeWalletGenerator has transactions but has never
+                    // synced, so the usual reset would throw its synthetic history away.
+                    val keepSyntheticHistory = LargeWalletGenerator.isEnabled &&
+                        wallet.getTransactions(true).isNotEmpty()
+                    if (keepSyntheticHistory) {
+                        log.info(
+                            "blockchain does not exist, but keeping the {} transactions of a generated wallet",
+                            wallet.getTransactions(true).size
+                        )
+                    } else {
+                        log.info("blockchain does not exist, resetting wallet")
+                        wallet.reset()
+                    }
                     resetMNLists(false)
                     resetMNListsOnPeerGroupStart = true
                 }
