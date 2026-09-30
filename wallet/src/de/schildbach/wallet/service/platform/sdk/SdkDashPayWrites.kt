@@ -159,9 +159,10 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // both with the same `UserNotAuthenticatedException("User not
     // authenticated")`:
     //
-    //  - `setUserAuthenticationRequired` — the ~30 s auth window. This app
-    //    does NOT use it: it runs KeySecurityPolicy.DEVICE_BOUND (see
-    //    DashSdkServiceImpl), whose alias has no auth gate at all.
+    //  - `setUserAuthenticationRequired` — the ~30 s auth window. This app's
+    //    current policy does NOT use it: it runs KeySecurityPolicy.DEVICE_BOUND
+    //    (see DashSdkServiceImpl), whose alias has no auth gate at all. Only
+    //    legacy blobs still under the old auth-gated alias carry it (below).
     //  - `setUnlockedDeviceRequired` — "the device must be unlocked right
     //    now", which the SDK stamps on every alias including the DEVICE_BOUND
     //    one. Some OEM builds deny it while KeyguardManager reports the device
@@ -189,12 +190,15 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // "Keystore auth window expired"; the field log (2026-09-10, testnet
     // 12000007, HONOR PTP-N49) shows the biometric at 11:49:16 and this at
     // 11:49:17 — one second, on a policy with no window to expire. Report
-    // what Keystore said, not a cause we inferred.
+    // what Keystore said, not a cause we inferred. Nor may it assert the
+    // opposite ("no auth window"): a bare "User not authenticated" does not
+    // say which gate or alias refused, and on the legacy alias it really is
+    // the auth window.
     t.message?.contains("User not authenticated") == true ->
         SdkWriteResult.NotBroadcast(
             "signing failure (pre-broadcast): Keystore refused the signing key as " +
-                "unauthenticated (the device's Keystore gate rejected it; on this app's " +
-                "DEVICE_BOUND policy there is no auth window to expire) — ${t.message}",
+                "unauthenticated (the device's Keystore authentication or lock gate " +
+                "rejected it) — ${t.message}",
             t
         )
     // TYPED funding shortfalls — checked BEFORE the message arms because

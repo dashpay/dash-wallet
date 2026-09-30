@@ -219,7 +219,8 @@ class SdkDashPayWritesTest {
      * OEM actually denies is the UNLOCKED_DEVICE_REQUIRED gate, which Android
      * reports with the identical exception — the same defect family as the
      * false-locked master alias. The label sent diagnosis the wrong way for
-     * weeks.
+     * weeks. Nor may it claim the opposite: legacy blobs under the old
+     * auth-gated alias reach this same arm, and for them the window is real.
      */
     @Test
     fun classify_userNotAuthenticated_doesNotClaimTheWindowExpired() {
@@ -232,7 +233,11 @@ class SdkDashPayWritesTest {
 
         assertFalse(
             "must not state an expiry as fact, got: ${result.reason}",
-            result.reason.contains("auth window expired")
+            result.reason.contains("expired")
+        )
+        assertFalse(
+            "must not deny an auth window the legacy alias does have, got: ${result.reason}",
+            result.reason.contains("no auth window")
         )
         assertTrue(
             "must still be recognisable as the auth-gate refusal, got: ${result.reason}",
