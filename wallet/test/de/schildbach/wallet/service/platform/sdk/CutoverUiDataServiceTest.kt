@@ -929,7 +929,9 @@ class CutoverUiDataServiceTest {
         /** Presentable metadata store for the build-time row join; default = none known. */
         metadata: Map<String, PresentableTxMetadata> = emptyMap(),
         /** MO-995: the bind-retry consultation the bound-wallet wait loop drives. */
-        retryBind: suspend () -> Unit = {}
+        retryBind: suspend () -> Unit = {},
+        /** [SdkWalletBinder.completedBindPasses]; default never advances. */
+        completedBindPasses: kotlinx.coroutines.flow.StateFlow<Long> = MutableStateFlow(0L)
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -955,6 +957,7 @@ class CutoverUiDataServiceTest {
         resolveWalletNets = walletNets,
         resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
         retryBind = retryBind,
+        completedBindPasses = completedBindPasses,
         nowMs = { now }
     )
 
@@ -1668,6 +1671,7 @@ class CutoverUiDataServiceTest {
         // The wipe: reset persisted, gate emission NOT delivered; stop, then clear.
         persisted.value = "DUAL_RUNNING"
         service.stopForWalletWipe()
+        source.boundWalletId = null // the SDK wallet clear succeeded
         store.clear()
         service.resumeAfterWalletWipe()
         walkHeldBeforePageB.complete(Unit)
@@ -1680,8 +1684,12 @@ class CutoverUiDataServiceTest {
         gateFeed.value = "DUAL_RUNNING"
         runCurrent()
         assertFalse(service.isCutoverActive())
+        // Commit lands before the bind (fresh-wallet setup order).
         persisted.value = "CUT_OVER"
         gateFeed.value = "CUT_OVER"
+        runCurrent()
+        source.boundWalletId = "cd".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
         runCurrent()
         assertTrue(service.isCutoverActive())
@@ -1710,11 +1718,11 @@ class CutoverUiDataServiceTest {
         runCurrent()
         assertFalse("the persisted reset is honoured before the gate sees it", service.isCutoverActive())
 
-        // The next wallet binds and commits; the gate still never changed.
-        source.boundWalletId = "ef".repeat(32)
+        // The next wallet commits, then binds; the gate still never changed.
         persisted.value = "CUT_OVER"
         runCurrent()
         assertTrue(service.isCutoverActive())
+        source.boundWalletId = "ef".repeat(32)
         testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
         runCurrent()
         assertEquals("the wiped wallet's pending walk was dropped by the stop", 0, source.reconcileWalks)
@@ -1745,6 +1753,7 @@ class CutoverUiDataServiceTest {
         assertEquals(setOf(displayHex(1)), store.keys)
 
         service.stopForWalletWipe() // the reset failed: state is still CUT_OVER
+        source.boundWalletId = null // ...but the SDK wallet clear succeeded
         store.clear()
         source.records.value = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
@@ -1754,6 +1763,54 @@ class CutoverUiDataServiceTest {
         assertEquals(0, source.reconcileWalks)
 
         service.resumeAfterWalletWipe()
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        // No bind pass needed: nothing survived the wipe, so the next bind is used as-is.
+        source.boundWalletId = "ef".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals(setOf(displayHex(2)), store.keys)
+    }
+
+    @Test
+    fun stopForWalletWipe_sdkClearAlsoFailed_waitsForTheNextWalletsBind() = runTest {
+        // Double failure: CUT_OVER stays AND the wiped SDK wallet stays loaded.
+        // Resuming must not read it back into the caches just cleared; only
+        // the next app wallet's bind pass may release the pipeline.
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val wipedRows = listOf(record(firstByte = 1, net = 100, context = 3, direction = 0))
+        val source = FakeSource(records = MutableStateFlow(wipedRows))
+        val bindPasses = MutableStateFlow(3L)
+        var bindRetries = 0
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val config = mockk<DashPayConfig> {
+            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+        }
+        val service = buildService(
+            source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao,
+            retryBind = { bindRetries++ }, completedBindPasses = bindPasses
+        )
+        service.start()
+        runCurrent()
+        assertEquals(setOf(displayHex(1)), store.keys)
+
+        service.stopForWalletWipe()
+        store.clear()
+        service.resumeAfterWalletWipe()
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
+        runCurrent()
+        assertFalse(service.isCutoverActive())
+        assertTrue("the wiped wallet's rows must not come back", store.isEmpty())
+        assertEquals(0, source.reconcileWalks)
+        assertTrue("the hold drives the bind retry", bindRetries > 0)
+
+        // The next wallet (a different seed) binds; its pass prunes the orphan.
+        source.boundWalletId = "ef".repeat(32)
+        source.records.value = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
+        bindPasses.value = 4L
         runCurrent()
         assertTrue(service.isCutoverActive())
         assertEquals(setOf(displayHex(2)), store.keys)

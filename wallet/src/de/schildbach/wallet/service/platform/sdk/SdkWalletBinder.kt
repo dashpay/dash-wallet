@@ -29,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -418,6 +419,16 @@ class SdkWalletBinder internal constructor(
      */
     private val _bindEstablished = MutableStateFlow(false)
     val bindEstablished: StateFlow<Boolean> = _bindEstablished.asStateFlow()
+
+    /**
+     * Bind passes that RAN [bindLocked] (revalidation, seed hand-off, orphan
+     * prune) and left the app wallet bound — latched passes, which return
+     * early, do not count. [CutoverUiDataService] waits on it after a wipe
+     * whose SDK clear left the wiped wallet loaded: only a pass for the NEXT
+     * app wallet proves which SDK wallet the pipeline may read.
+     */
+    private val _completedBindPasses = MutableStateFlow(0L)
+    val completedBindPasses: StateFlow<Long> = _completedBindPasses.asStateFlow()
 
     /**
      * CONSECUTIVE bind passes that attempted and failed without leaving a
@@ -1161,6 +1172,7 @@ class SdkWalletBinder internal constructor(
                     if (t !is CancellationException) noteMissingMnemonic(t)
                     throw t
                 }
+                if (boundWalletIdHex != null) _completedBindPasses.update { it + 1 }
             }
             // MO-995: a non-throwing pass that left the wallet bound clears
             // the retry pressure (a pass the eligibility gate skipped left
