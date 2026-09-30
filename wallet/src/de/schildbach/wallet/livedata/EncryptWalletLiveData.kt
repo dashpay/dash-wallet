@@ -23,6 +23,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.LargeWalletGenerator
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
@@ -130,9 +131,15 @@ class EncryptWalletLiveData(
         @Deprecated("Deprecated in Java")
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
             val wallet = walletApplication.wallet as WalletEx
+            val initialize = args.firstOrNull() as? Boolean ?: true
             val password = securityGuard.generateRandomPassword()
             return try {
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+                // Debug builds only: inflate a brand new wallet to the target size before it is
+                // encrypted, so that the app can be exercised against a very large wallet.
+                if (initialize && LargeWalletGenerator.isEnabled && wallet.getTransactions(true).isEmpty()) {
+                    LargeWalletGenerator.fillWallet(wallet)
+                }
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)

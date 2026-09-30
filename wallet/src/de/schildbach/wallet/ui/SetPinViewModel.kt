@@ -16,13 +16,19 @@
 
 package de.schildbach.wallet.ui
 
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.EncryptWalletLiveData
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.ui.util.SingleLiveEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Context
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -90,8 +96,16 @@ class SetPinViewModel @Inject constructor(
     }
 
     fun initWallet() {
-        walletApplication.saveWalletAndFinalizeInitialization()
-        startNextActivity.call(configuration.remindBackupSeed)
+        viewModelScope.launch {
+            // Saving the wallet and its key backup serializes it twice, which takes seconds on a
+            // large wallet and used to block the main thread long enough to trigger an ANR.
+            withContext(Dispatchers.IO) {
+                Context.propagate(Constants.CONTEXT)
+                walletApplication.saveWalletAndBackup()
+            }
+            walletApplication.finalizeInitialization()
+            startNextActivity.call(configuration.remindBackupSeed)
+        }
     }
 
     fun checkPin() {
