@@ -57,12 +57,16 @@ open class CoinJoinMixingTxSet(
             return false
         }
 
-        // Only logged when a tx is about to be GROUPED as CoinJoin, so the
-        // volume is bounded by actual (mis)classifications, not by list size.
+        // Only logged when a tx is about to be GROUPED as CoinJoin. It must
+        // stay cheap: it used to include wallet.coinJoinBalance, which walks
+        // every output's mixing rounds under the wallet lock. On a heavy
+        // mixing wallet nearly every tx is CoinJoin, so building the display
+        // cache computed that balance thousands of times and held the lock
+        // long enough to block Application.onCreate on autosaveToFile until
+        // the system killed the launch (23,440-tx CoinJoin wallet, 2026-09-29).
         log.info(
-            "coinjoin grouping {} as {} (inputs={} outputs={} dashjCoinJoinBalance={})",
-            tx.txId, type, raw.inputs.size, raw.outputs.size,
-            runCatching { wallet.coinJoinBalance }.getOrNull()
+            "coinjoin grouping {} as {} (inputs={} outputs={})",
+            tx.txId, type, raw.inputs.size, raw.outputs.size
         )
 
         val txDate = tx.groupDate
