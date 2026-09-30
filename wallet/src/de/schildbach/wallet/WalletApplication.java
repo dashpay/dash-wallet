@@ -349,8 +349,12 @@ public class WalletApplication extends MultiDexApplication
         // Numbered, PERSISTED launch-stage markers. Also decides whether this
         // launch runs in SAFE MODE (two consecutive launches died before the
         // main UI → skip the wallet load + engine starts so the app opens and
-        // offers the crash report — see StartupBreadcrumbs).
-        StartupBreadcrumbs.init(getFilesDir());
+        // offers the crash report — see StartupBreadcrumbs). The system's
+        // record of how the previous process ended decides whether a launch
+        // that died early was a crash at all: a background start the system
+        // killed for missing its start-up deadline, or a low-memory kill, is
+        // not (one binder call, no logging, null below API 30).
+        StartupBreadcrumbs.init(getFilesDir(), ProcessExitReasons.previousExitOrNull(this));
 
         runStartupStage(StartupBreadcrumbs.STAGE_LOGGING_INITIALIZED, "LOGGING_INITIALIZED", this::initLogging);
         // WHY THE PREVIOUS PROCESS DIED (LMK / ANR / crash / user) — asked of the

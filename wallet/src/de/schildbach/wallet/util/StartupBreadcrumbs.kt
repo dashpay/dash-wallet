@@ -189,7 +189,8 @@ object StartupBreadcrumbs {
      * safe-mode verdict for this launch from the previous launch's trail.
      */
     @JvmStatic
-    fun init(filesDir: File) {
+    @JvmOverloads
+    fun init(filesDir: File, previousExit: ProcessExitReasons.PreviousExit? = null) {
         try {
             synchronized(lock) {
                 initTimeMs = System.currentTimeMillis()
@@ -203,10 +204,17 @@ object StartupBreadcrumbs {
                 this.safeModeRunsFile = runsFile
 
                 val previousContent = if (f.exists()) runCatching { f.readText() }.getOrNull() else null
-                val previous = classifyPrevious(previousContent)
+                // The system's own account of the previous process's death,
+                // when it is provably THAT launch's death (it came after the
+                // trail's last write). See [classifyPrevious].
+                val trailLastWriteMs = if (f.exists()) runCatching { f.lastModified() }.getOrDefault(0L) else 0L
+                val endedBySystem = previousExit != null &&
+                    ProcessExitReasons.exitEndsTrail(previousExit.timestampMs, trailLastWriteMs) &&
+                    ProcessExitReasons.isSystemKillNotCrash(previousExit.reason, previousExit.importance)
+                val previous = classifyPrevious(previousContent, endedBySystem)
                 previousVerdict = previous
                 val previousLastStage = previousContent?.let { lastStage(it) }
-                if (previous == PreviousLaunch.INCOMPLETE_PRE_MILESTONE) {
+                if (previous == PreviousLaunch.INCOMPLETE_PRE_MILESTONE || previous == PreviousLaunch.SYSTEM_KILLED) {
                     // Preserve the DYING launch's trail for the support report.
                     // A safe-mode trail is deliberately NOT preserved — it would
                     // overwrite the crashed launch's evidence with a boring one.
@@ -224,6 +232,7 @@ object StartupBreadcrumbs {
                     f.writeText(
                         "# launch ${java.util.Date(initTimeMs)} " +
                             "(previous=$previous prevLastStage=${previousLastStage ?: "none"} " +
+                            "prevExit=${previousExit?.tag() ?: "unknown"} " +
                             "failures=${next.failures} safeModeRuns=${next.safeModeRuns} " +
                             "safeMode=${next.safeMode})\n"
                     )
@@ -411,11 +420,23 @@ object StartupBreadcrumbs {
          * pre-milestone death, so this is NEUTRAL rather than a strike: a
          * filesystem hiccup must never be able to latch safe mode.
          */
-        INCOMPLETE_UNKNOWN
+        INCOMPLETE_UNKNOWN,
+        /**
+         * Died before the milestone, but the SYSTEM ended it for a reason that
+         * says nothing about whether the app can start: reaped by the
+         * low-memory killer, stopped or updated, killed from outside, or a
+         * background start that missed the start-up deadline with nobody
+         * waiting (see [ProcessExitReasons.isSystemKillNotCrash]). Neutral:
+         * a 61 MB wallet whose background starts miss that deadline is not a
+         * crashing app, and safe mode would only hide the wallet from its
+         * user and stop the sync (review, 2026-09-29, the 12000022 reports).
+         */
+        SYSTEM_KILLED
     }
 
     @JvmStatic
-    internal fun classifyPrevious(content: String?): PreviousLaunch = when {
+    @JvmOverloads
+    internal fun classifyPrevious(content: String?, endedBySystem: Boolean = false): PreviousLaunch = when {
         content == null || content.isBlank() -> PreviousLaunch.NONE
         // Header check FIRST: a safe-mode launch is neutral whatever it reached
         // — unless its in-process retry proved the wallet load actually works.
@@ -423,6 +444,7 @@ object StartupBreadcrumbs {
             if (hasStage(content, STAGE_SAFE_MODE_RETRY_OK)) PreviousLaunch.COMPLETE else PreviousLaunch.SAFE_MODE
         isLaunchComplete(content) -> PreviousLaunch.COMPLETE
         lastStage(content) == null -> PreviousLaunch.INCOMPLETE_UNKNOWN
+        endedBySystem -> PreviousLaunch.SYSTEM_KILLED
         else -> PreviousLaunch.INCOMPLETE_PRE_MILESTONE
     }
 
@@ -483,6 +505,8 @@ object StartupBreadcrumbs {
      *   normal retry → … instead of locking into safe mode;
      * - previous launch INCOMPLETE_UNKNOWN → neutral: an unreadable trail is
      *   not evidence of a death, so it must not push a user toward safe mode;
+     * - previous launch SYSTEM_KILLED → neutral: the system, not the app,
+     *   ended it (low-memory kill, background start-up deadline, update…);
      * - previous launch INCOMPLETE_PRE_MILESTONE → strike; at
      *   [SAFE_MODE_THRESHOLD] safe mode is advised and the stored counter
      *   decays by one (the retry after the safe-mode launch needs only ONE
@@ -497,7 +521,7 @@ object StartupBreadcrumbs {
         storedSafeModeRuns: Int
     ): LaunchState = when (previous) {
         PreviousLaunch.NONE, PreviousLaunch.COMPLETE -> LaunchState(0, 0, false)
-        PreviousLaunch.SAFE_MODE, PreviousLaunch.INCOMPLETE_UNKNOWN ->
+        PreviousLaunch.SAFE_MODE, PreviousLaunch.INCOMPLETE_UNKNOWN, PreviousLaunch.SYSTEM_KILLED ->
             LaunchState(storedCounter, storedSafeModeRuns, false)
         PreviousLaunch.INCOMPLETE_PRE_MILESTONE -> {
             val incremented = storedCounter + 1
