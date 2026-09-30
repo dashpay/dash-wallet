@@ -1542,6 +1542,80 @@ class CutoverUiDataServiceTest {
         assertEquals(resolve(R.string.transaction_row_status_sent), store.getValue(displayHex(3)).title)
     }
 
+    // A full-reconcile request made while no pipeline collects (Review on
+    // #1579): the MO-1054 rescan asks for one from the teardown and from the
+    // restart's dashj reset event, both of which can land before the wallet
+    // binds. It must stay pending and run once the pipeline collects —
+    // not wait for the first ticker tick.
+
+    @Test
+    fun reconcile_requestBeforeThePipelineCollects_walksAsSoonAsItDoes() = runTest {
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals("nothing collects while unbound", 0, source.reconcileWalks)
+
+        // The bind lands on the next poll — well inside the ticker's startup
+        // grace, so only the pending request can explain a walk here.
+        source.boundWalletId = "cd".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the pending request walks on subscription", 1, source.reconcileWalks)
+
+        // Consumed: nothing re-delivers it; the next walk is the ticker's.
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS)
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS)
+        runCurrent()
+        assertEquals("then the ticker's first walk", 2, source.reconcileWalks)
+    }
+
+    @Test
+    fun reconcile_requestWithAnActiveCollector_walksOnceImmediately() = runTest {
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        runCurrent()
+        assertEquals("startup grace: no walk yet", 0, source.reconcileWalks)
+
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals("each request is one walk, never replayed", 2, source.reconcileWalks)
+    }
+
+    @Test
+    fun reconcile_pendingRequestDoesNotSurviveADeactivation() = runTest {
+        // The wipe path resets the cutover state, which stops the pipelines;
+        // a request the wiped wallet left pending must not walk the next one.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val config = mockk<DashPayConfig> {
+            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+        }
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, config, backgroundScope)
+        service.start()
+        runCurrent()
+        service.requestFullReconcile()
+        runCurrent()
+
+        state.value = "DUAL_RUNNING"
+        runCurrent()
+        state.value = "CUT_OVER"
+        source.boundWalletId = "cd".repeat(32)
+        runCurrent()
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the pending request was dropped with the deactivation", 0, source.reconcileWalks)
+    }
+
     // ── The engine-event (instant receive) feed ───────────────────────
 
     @Test

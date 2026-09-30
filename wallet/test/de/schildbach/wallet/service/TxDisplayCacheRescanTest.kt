@@ -58,6 +58,10 @@ class TxDisplayCacheRescanTest {
     private val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
     private var service: TxDisplayCacheService? = null
 
+    /**
+     * A real [TxDisplayCacheService] at [cutover] with every feed but the
+     * dashj reset event ([walletReset]) empty, so only the rescan paths act.
+     */
     private fun service(cutover: CutoverState): TxDisplayCacheService {
         coEvery { dashPayConfig.get(DashPayConfig.CUTOVER_STATE) } returns cutover.name
         coEvery { displayDao.getAll() } returns emptyList()
