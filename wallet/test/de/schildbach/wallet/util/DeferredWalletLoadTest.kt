@@ -175,8 +175,42 @@ class DeferredWalletLoadTest {
         val g = gate(h, timeoutMs = 200)
         g.start(Runnable {}, Runnable {}, h.mainExecutor, Executor { Thread(it).start() })
         val returned = CountDownLatch(1)
-        Thread { g.awaitForCaller(); returned.countDown() }.start() // main never drains
+        val result = AtomicInteger(-1)
+        Thread { result.set(if (g.awaitForCaller()) 1 else 0); returned.countDown() }.start() // main never drains
         assertTrue(returned.await(3, TimeUnit.SECONDS))
+        assertEquals("reports that the completion had not run", 0, result.get())
+    }
+
+    /**
+     * The timeout covers only the main-thread completion. A reader never gets
+     * past the parse and check, however long they take and even when
+     * interrupted, so it never sees a null or unchecked wallet (review,
+     * 2026-09-30: SendInviteWorker's `wallet!!`, BootstrapReceiver's upgrade).
+     */
+    @Test
+    fun anOffMainReader_neverProceedsBeforeTheLoad_evenPastTheTimeout() {
+        val h = Harness()
+        val g = gate(h, timeoutMs = 100)
+        val loadGate = CountDownLatch(1)
+        val loadedValue = AtomicInteger(0)
+        g.start(
+            Runnable { loadGate.await(); loadedValue.set(42) },
+            Runnable {},
+            h.mainExecutor,
+            Executor { Thread(it).start() }
+        )
+        val seen = AtomicInteger(-1)
+        val reader = Thread { g.awaitForCaller(); seen.set(loadedValue.get()) }.apply { start() }
+        Thread.sleep(400) // well past the timeout
+        assertTrue("still waiting for the load past the timeout", reader.isAlive)
+        reader.interrupt()
+        Thread.sleep(100)
+        assertTrue("an interrupt does not release it either", reader.isAlive)
+
+        loadGate.countDown() // the load finishes; main never runs the completion
+        reader.join(5_000)
+        assertFalse(reader.isAlive)
+        assertEquals("saw the loaded state", 42, seen.get())
     }
 
     // ── What counts as a background start ──

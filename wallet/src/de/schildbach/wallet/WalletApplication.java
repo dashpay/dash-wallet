@@ -46,6 +46,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.StringRes;
+import androidx.annotation.WorkerThread;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -597,7 +598,12 @@ public class WalletApplication extends MultiDexApplication
         return background;
     }
 
-    /** Wait for a background start's wallet load, if one is running (see DeferredWalletLoad). */
+    /**
+     * A reader's wait for a background start's wallet load, if one is running
+     * (see DeferredWalletLoad): always past the parse and check, so the field
+     * is never null-because-loading or provisional; the main-thread completion
+     * after that only up to the gate's bound.
+     */
     private void awaitDeferredWalletLoad() {
         deferredWalletLoad.awaitForCaller();
     }
@@ -607,12 +613,24 @@ public class WalletApplication extends MultiDexApplication
      * the wallet (setWallet, resetBlockchain, the wipe steps, saveWallet,
      * backupWallet, processDirectTransaction): never bounded, so it cannot run
      * against an unfinished load or race the worker's assignment of the
-     * wallet it is loading. Pure readers keep the bounded wait, which is the
-     * deadlock guard for a reader holding the dashj wallet lock, and all of
-     * them handle a null wallet.
+     * wallet it is loading. Pure readers keep the bound on the main-thread
+     * completion, which is the deadlock guard for a reader holding the dashj
+     * wallet lock.
      */
     private void awaitDeferredWalletLoadForMutation() {
         deferredWalletLoad.awaitForCaller(true);
+    }
+
+    /**
+     * For a background component that changes the wallet it got from
+     * {@link #getWallet()} (BootstrapReceiver's upgrade and maintenance on
+     * MY_PACKAGE_REPLACED): wait until a background start's load has finished
+     * completely, main-thread initialisation included, as it would have before
+     * any receiver ran in a synchronous start. A no-op otherwise.
+     */
+    @WorkerThread
+    public void awaitWalletReadyForMutation() {
+        awaitDeferredWalletLoadForMutation();
     }
 
     /**

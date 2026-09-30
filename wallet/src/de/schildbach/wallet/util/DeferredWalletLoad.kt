@@ -56,8 +56,11 @@ import java.util.function.BooleanSupplier
  *    runs the main-thread completion INLINE. The completion is main-thread work
  *    anyway, so this cannot deadlock, and the caller sees exactly what a
  *    synchronous start would have given it;
- *  - on any other thread, it waits for the completion to finish, bounded by
- *    [offMainTimeoutMs] so no unforeseen lock cycle can turn into a hang.
+ *  - on any other thread, it waits for the worker's parse and check WITHOUT
+ *    a bound (the worker depends on no other thread and takes no lock a
+ *    caller could hold), so it never sees a null or unchecked wallet; then it
+ *    waits for the main-thread completion, bounded by [offMainTimeoutMs], so
+ *    no unforeseen lock cycle through the main thread can turn into a hang.
  *
  * A foreground start (the user opening the app) is left exactly as it was.
  */
@@ -123,12 +126,18 @@ class DeferredWalletLoad @JvmOverloads constructor(
 
     /**
      * Block until the wallet is usable by the calling thread; a no-op when no
-     * deferred load is running. See the class docs for the two cases.
+     * deferred load is running. See the class docs for the two cases. Returns
+     * true when the whole load, main-thread completion included, has finished.
      *
-     * Off the main thread the wait is bounded by [offMainTimeoutMs] for a
-     * READER, so a reader that holds the dashj wallet lock while it asks
-     * cannot deadlock against the completion's `autosaveToFile`: it proceeds
-     * after the timeout instead. A caller that REPLACES, DESTROYS, WRITES or
+     * Off the main thread a READER always waits for the worker's parse and
+     * check, however long they take, and uninterruptibly: before that the
+     * wallet field is null or provisional (assigned before the check and
+     * before any backup replacement), and a background job handed either
+     * could fail permanently (review, 2026-09-30). Only the wait for the
+     * main-thread completion is bounded by [offMainTimeoutMs], so a reader
+     * that holds the dashj wallet lock while it asks cannot deadlock against
+     * the completion's `autosaveToFile`: it proceeds after the timeout with
+     * the loaded, checked wallet, and this returns false. A caller that REPLACES, DESTROYS, WRITES or
      * PERSISTS the wallet passes [untilComplete] = true and waits for the
      * completion however long it takes, uninterruptibly (reviews, 2026-09-30):
      * a timed-out setWallet could otherwise assign the restored wallet while
@@ -138,15 +147,18 @@ class DeferredWalletLoad @JvmOverloads constructor(
      * a write.
      */
     @JvmOverloads
-    fun awaitForCaller(untilComplete: Boolean = false) {
-        if (!isInProgress()) return
-        if (Thread.currentThread() === workerThread) return
+    fun awaitForCaller(untilComplete: Boolean = false): Boolean {
+        if (!isInProgress()) return true
+        if (Thread.currentThread() === workerThread) return true
         if (isMainThread.asBoolean) {
             awaitUninterruptibly(loaded)
             runCompletion()
+            return true
         } else if (untilComplete) {
             awaitUninterruptibly(completed)
+            return true
         } else {
+            awaitUninterruptibly(loaded)
             val finished = try {
                 completed.await(offMainTimeoutMs, TimeUnit.MILLISECONDS)
             } catch (e: InterruptedException) {
@@ -160,6 +172,7 @@ class DeferredWalletLoad @JvmOverloads constructor(
                     offMainTimeoutMs
                 )
             }
+            return finished
         }
     }
 
@@ -179,7 +192,7 @@ class DeferredWalletLoad @JvmOverloads constructor(
     companion object {
         private val log = LoggerFactory.getLogger(DeferredWalletLoad::class.java)
 
-        /** How long an off-main caller waits for the completion before proceeding. */
+        /** How long an off-main reader waits for the main-thread completion (after the load) before proceeding. */
         const val OFF_MAIN_TIMEOUT_MS = 60_000L
 
         // ApplicationStartInfo.START_REASON_* (API 35).
