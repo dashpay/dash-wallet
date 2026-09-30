@@ -128,11 +128,14 @@ class DeferredWalletLoad @JvmOverloads constructor(
      * Off the main thread the wait is bounded by [offMainTimeoutMs] for a
      * READER, so a reader that holds the dashj wallet lock while it asks
      * cannot deadlock against the completion's `autosaveToFile`: it proceeds
-     * after the timeout instead. A caller that REPLACES or DESTROYS the wallet
-     * passes [untilComplete] = true and waits for the completion however long
-     * it takes, uninterruptibly (review, 2026-09-30): a timed-out setWallet
-     * could otherwise assign the restored wallet while the worker is still
-     * parsing, and the worker would then overwrite and publish the stale one.
+     * after the timeout instead. A caller that REPLACES, DESTROYS, WRITES or
+     * PERSISTS the wallet passes [untilComplete] = true and waits for the
+     * completion however long it takes, uninterruptibly (reviews, 2026-09-30):
+     * a timed-out setWallet could otherwise assign the restored wallet while
+     * the worker is still parsing, and the worker would then overwrite and
+     * publish the stale one; a timed-out save or direct transaction would act
+     * on a wallet that has not finished its check. A timeout never authorizes
+     * a write.
      */
     @JvmOverloads
     fun awaitForCaller(untilComplete: Boolean = false) {
