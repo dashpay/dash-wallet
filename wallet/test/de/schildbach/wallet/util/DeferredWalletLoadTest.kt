@@ -148,6 +148,27 @@ class DeferredWalletLoadTest {
         assertEquals(1, completions.get())
     }
 
+    /** A caller that replaces or destroys the wallet never proceeds before the completion. */
+    @Test
+    fun anOffMainMutatingCaller_waitsPastTheTimeout_untilTheCompletionRuns() {
+        val h = Harness()
+        val g = gate(h, timeoutMs = 100)
+        val completed = AtomicInteger()
+        g.start(Runnable {}, Runnable { completed.incrementAndGet() }, h.mainExecutor, Executor { Thread(it).start() })
+        val sawCompletion = AtomicInteger(-1)
+        val caller = Thread { g.awaitForCaller(untilComplete = true); sawCompletion.set(completed.get()) }.apply { start() }
+        Thread.sleep(400) // well past the reader timeout
+        assertTrue("still waiting past the timeout", caller.isAlive)
+        caller.interrupt()
+        Thread.sleep(100)
+        assertTrue("an interrupt does not release it either", caller.isAlive)
+
+        while (h.mainQueue.isEmpty()) Thread.sleep(5)
+        h.drainMain()
+        caller.join(5_000)
+        assertEquals(1, sawCompletion.get())
+    }
+
     @Test
     fun anOffMainCaller_proceedsAfterTheTimeout_ifTheCompletionNeverRuns() {
         val h = Harness()

@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet;
 
+import android.app.Activity;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
@@ -30,6 +31,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -406,6 +408,27 @@ public class WalletApplication extends MultiDexApplication
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
+        // A background start's deferred wallet load must be finished before
+        // ANY activity is created (review, 2026-09-30). UI lifecycle code reads
+        // the wallet synchronously (fragments' onAttach, view models); blocked
+        // there with a window already showing, a mid-load open could take an
+        // input-dispatch ANR. Waiting in onActivityPreCreated happens before
+        // the activity has a window, which is exactly where the old
+        // synchronous load made the user wait, and only for what is left of
+        // the load. A no-op when no deferred load is running.
+        registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
+            @Override
+            public void onActivityPreCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
+                awaitDeferredWalletLoad();
+            }
+            @Override public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) { }
+            @Override public void onActivityStarted(@NonNull Activity activity) { }
+            @Override public void onActivityResumed(@NonNull Activity activity) { }
+            @Override public void onActivityPaused(@NonNull Activity activity) { }
+            @Override public void onActivityStopped(@NonNull Activity activity) { }
+            @Override public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) { }
+            @Override public void onActivityDestroyed(@NonNull Activity activity) { }
+        });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_CONFIG_LOADED, "CONFIG_LOADED");
         if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
@@ -577,6 +600,15 @@ public class WalletApplication extends MultiDexApplication
     /** Wait for a background start's wallet load, if one is running (see DeferredWalletLoad). */
     private void awaitDeferredWalletLoad() {
         deferredWalletLoad.awaitForCaller();
+    }
+
+    /**
+     * The same wait for a caller that replaces or destroys the wallet: never
+     * bounded, so it cannot run while the worker may still assign and publish
+     * the wallet it is loading.
+     */
+    private void awaitDeferredWalletLoadForMutation() {
+        deferredWalletLoad.awaitForCaller(true);
     }
 
     /**
@@ -803,7 +835,7 @@ public class WalletApplication extends MultiDexApplication
 
     // only used by onboarding after creating or restoring a wallet
     public void setWallet(Wallet newWallet) throws GeneralSecurityException, IOException {
-        awaitDeferredWalletLoad();
+        awaitDeferredWalletLoadForMutation();
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
@@ -1800,7 +1832,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void resetBlockchain() {
-        awaitDeferredWalletLoad();
+        awaitDeferredWalletLoadForMutation();
         // reset the extensions
         if (wallet != null && authenticationGroupExtension != null) {
             authenticationGroupExtension.reset();
@@ -2025,7 +2057,7 @@ public class WalletApplication extends MultiDexApplication
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void shutdownAndDeleteWallet() {
-        awaitDeferredWalletLoad();
+        awaitDeferredWalletLoadForMutation();
         if (walletFile.exists()) {
             // A wipe resumed at launch never loaded a wallet, so there may be
             // no autosave to shut down — the file still has to go.
@@ -2043,7 +2075,7 @@ public class WalletApplication extends MultiDexApplication
      * databases were being destroyed.
      */
     public void detachWalletForWipe() {
-        awaitDeferredWalletLoad();
+        awaitDeferredWalletLoadForMutation();
         log.info("removing wallet from memory during wipe");
         wallet = null;
         walletStateFlow.setValue(null);
