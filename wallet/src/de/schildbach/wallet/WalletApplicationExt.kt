@@ -81,7 +81,7 @@ object WalletApplicationExt {
                     pending = { WalletWipeState.isPending(filesDir) },
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
                     destroy = { destroyWalletData() },
-                    markComplete = { WalletWipeState.complete(filesDir) }
+                    markComplete = { markWalletWipeComplete() }
                 )
             }.onFailure {
                 rethrowCancellation(it)

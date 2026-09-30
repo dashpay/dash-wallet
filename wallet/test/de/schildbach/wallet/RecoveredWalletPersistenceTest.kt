@@ -28,6 +28,9 @@ import org.robolectric.util.ReflectionHelpers
 import org.robolectric.annotation.Config
 import java.io.File
 import java.io.IOException
+import de.schildbach.wallet.util.WalletWipeSequence
+import de.schildbach.wallet.util.WalletWipeState
+import kotlinx.coroutines.runBlocking
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
@@ -181,5 +184,54 @@ class RecoveredWalletPersistenceTest {
             isAccessible = true
             set(app, value)
         }
+    }
+
+    @Test
+    fun `successful wipe clears recovery guard but failed and unrequested wipes retain it`() = runBlocking {
+        setField("walletFile", File(directory.root, "missing/primary"))
+        try {
+            app.persistRecoveredWallet(recovered)
+            fail("save must fail")
+        } catch (expected: IOException) {
+            assertTrue(app.isWalletLoadDegraded)
+        }
+        val wipeApp = spyk(app)
+        every { wipeApp.filesDir } returns directory.root
+        suspend fun wipe(destroy: suspend () -> Unit): Boolean = WalletWipeSequence.finish(
+            pending = { WalletWipeState.isPending(directory.root) },
+            detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
+            destroy = destroy,
+            markComplete = { wipeApp.markWalletWipeComplete() }
+        )
+
+        assertFalse(wipe { fail("unrequested wipe must not destroy data") })
+        assertTrue(wipeApp.isWalletLoadDegraded)
+        assertTrue(WalletWipeState.begin(directory.root))
+        try {
+            wipe { throw IOException("injected destruction failure") }
+            fail("wipe must fail")
+        } catch (expected: IOException) {
+            assertTrue(wipeApp.isWalletLoadDegraded)
+            assertTrue(WalletWipeState.isPending(directory.root))
+        }
+
+        // A nonempty directory at the marker path makes marker removal fail.
+        val marker = File(directory.root, WalletWipeState.MARKER_FILE_NAME)
+        assertTrue(marker.delete())
+        assertTrue(marker.mkdir())
+        val child = File(marker, "block-delete").apply { writeText("test") }
+        assertTrue(wipe { })
+        assertTrue(wipeApp.isWalletLoadDegraded)
+        assertTrue(WalletWipeState.isPending(directory.root))
+        assertTrue(child.delete())
+
+        assertTrue(wipe { assertTrue(backup.delete()) })
+        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(wipeApp.isWalletLoadDegraded)
+        assertNull(wipeApp.wallet)
+        val controller = Robolectric.buildActivity(Activity::class.java).create()
+        assertFalse(controller.get().redirectDegradedWallet(wipeApp))
+        controller.destroy()
+        Unit
     }
 }
