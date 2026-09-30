@@ -254,6 +254,13 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                 workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast username vote", ex),
                     KEY_NORMALIZED_LABELS to normalizedLabels,
+                    // KEY_LABELS belongs here too: UsernameRequestsFragment reads it for
+                    // EVERY outcome, and its ERROR branch dereferences it. Omitting it
+                    // meant a throw inside the try (bad masternode key, say) produced a
+                    // failure the fragment could not render — it threw on the null and
+                    // logged "error processing vote information", swallowing the real
+                    // reason. That is the same symptom this PR exists to fix, one layer out.
+                    KEY_LABELS to labels,
                     KEY_VOTE_CHOICES to voteChoices,
                     KEY_QUICK_VOTING to isQuickVoting
                 )

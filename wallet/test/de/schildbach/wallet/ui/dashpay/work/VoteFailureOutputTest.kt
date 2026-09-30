@@ -233,6 +233,31 @@ class VoteFailureOutputTest {
         verify(exactly = 0) { analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, any()) }
     }
 
+    @Test
+    fun `a thrown failure still carries the labels the fragment needs to render it`() {
+        // The outer catch used to omit KEY_LABELS while every other path supplied it.
+        // UsernameRequestsFragment reads KEY_LABELS for every outcome and dereferences it
+        // in the ERROR branch, so a throw inside the try produced a failure the fragment
+        // could not render: it threw on the null and logged "error processing vote
+        // information" - the very symptom this PR exists to fix, one layer further out.
+        val result = runWorker(emptyList(), thrown = IllegalStateException("bad masternode key"))
+        assertTrue(result is ListenableWorker.Result.Failure)
+        val output = (result as ListenableWorker.Result.Failure).outputData
+
+        assertArrayEquals(arrayOf("Alice"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_LABELS))
+        assertArrayEquals(arrayOf("a1ice"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS))
+        assertArrayEquals(
+            arrayOf(AbstainVoteChoice().toString()),
+            output.getStringArray(BroadcastUsernameVotesWorker.KEY_VOTE_CHOICES)
+        )
+
+        val info = mockk<WorkInfo> {
+            every { state } returns WorkInfo.State.FAILED
+            every { outputData } returns output
+        }
+        assertEquals(Status.ERROR, BroadcastUsernameVotesOperation.convertState(info).status)
+    }
+
     private fun successfulVote(name: String): Vote {
         val poll = mockk<ContestedDocumentResourceVotePoll> {
             every { indexValues } returns listOf("dash", name)
@@ -252,7 +277,8 @@ class VoteFailureOutputTest {
         names: Array<String> = arrayOf("a1ice"),
         labels: Array<String> = arrayOf("Alice"),
         choices: Array<String> = arrayOf(AbstainVoteChoice().toString()),
-        analytics: AnalyticsService = mockk(relaxed = true)
+        analytics: AnalyticsService = mockk(relaxed = true),
+        thrown: Exception? = null
     ): ListenableWorker.Result = runBlocking {
         val input = workDataOf(
             BroadcastUsernameVotesWorker.KEY_PASSWORD to "test-password",
@@ -268,8 +294,12 @@ class VoteFailureOutputTest {
         val walletData = mockk<WalletData>(relaxed = true)
         every { walletData.wallet!!.keyCrypter!!.deriveKey("test-password") } returns KeyParameter(ByteArray(32))
         val broadcaster = mockk<PlatformBroadcastService>()
-        coEvery { broadcaster.broadcastUsernameVotes(any(), any(), any(), any()) } returns
-            results
+        if (thrown == null) {
+            coEvery { broadcaster.broadcastUsernameVotes(any(), any(), any(), any()) } returns
+                results
+        } else {
+            coEvery { broadcaster.broadcastUsernameVotes(any(), any(), any(), any()) } throws thrown
+        }
         val worker = BroadcastUsernameVotesWorker(
             RuntimeEnvironment.getApplication(), parameters, analytics, broadcaster,
             mockk(relaxed = true), walletData, mockk(relaxed = true), mockk(relaxed = true)
