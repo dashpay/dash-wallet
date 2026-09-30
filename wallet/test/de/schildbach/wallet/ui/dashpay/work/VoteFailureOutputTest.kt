@@ -173,6 +173,34 @@ class VoteFailureOutputTest {
         assertTrue(result is ListenableWorker.Result.Success)
     }
 
+    @Test
+    fun `an empty broadcast result for a real submission is a failure, not a silent success`() {
+        // broadcastUsernameVotes builds its list inside the per-masternode loop, so it
+        // returns EMPTY for a non-empty submission when no proTxHash matched the voting
+        // key, or when its per-masternode catch swallowed an identity fetch before any
+        // entry was added. Nothing was broadcast and nothing was confirmed already cast.
+        //
+        // This only became user-visible once KEY_VOTE_CHOICES started carrying the
+        // SUBMITTED choices: it used to be derived from the (empty) results, and
+        // showVoteIndicator returns early on an empty list, so the old output happened
+        // not to claim success. Now the claim would be explicit.
+        val result = runWorker(emptyList())
+        assertTrue(result is ListenableWorker.Result.Failure)
+        val output = (result as ListenableWorker.Result.Failure).outputData
+
+        val info = mockk<WorkInfo> {
+            every { state } returns WorkInfo.State.FAILED
+            every { outputData } returns output
+        }
+        val resource = BroadcastUsernameVotesOperation.convertState(info)
+        assertEquals(Status.ERROR, resource.status)
+        assertEquals("No masternode was able to broadcast a vote", resource.message)
+
+        // The submitted batch is still described, so the UI can name what failed.
+        assertArrayEquals(arrayOf("a1ice"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_NORMALIZED_LABELS))
+        assertArrayEquals(arrayOf("Alice"), output.getStringArray(BroadcastUsernameVotesWorker.KEY_LABELS))
+    }
+
     private fun successfulVote(name: String): Vote {
         val poll = mockk<ContestedDocumentResourceVotePoll> {
             every { indexValues } returns listOf("dash", name)

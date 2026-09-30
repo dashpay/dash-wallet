@@ -169,17 +169,40 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     votingResults.size
                 )
             }
-            // Any terminal failure is reported, even when other votes in the batch
-            // landed: `errorCount > 0` is exactly `terminalError != null`, so branching
-            // on the error itself both collapses the old three-way `when` and smart-casts
-            // it non-null. The previous middle branch only caught `successCount == 0`,
-            // so a batch of one fresh success plus one vote-limit failure fell through to
-            // an unqualified `Result.success` — `convertState` mapped that to
-            // `Resource.success`, `UsernameRequestsFragment` showed the success indicator
-            // and removed its observer, and the terminal error reached nobody but the log.
-            // Votes that did land are unaffected: `updateUsernameVotes` has already
-            // written them, and the batch's names and choices still ride along below.
-            if (terminalError == null) {
+            // `broadcastUsernameVotes` returns one entry per (masternode x name) it
+            // actually attempted, so it hands back an EMPTY list for a non-empty
+            // submission whenever no proTxHash matched the voting key, or its
+            // per-masternode catch swallowed an identity fetch before any entry was
+            // added. Nothing was broadcast and nothing was confirmed already cast, so
+            // that is a failure — not a silent success.
+            //
+            // It only became user-visible with the label fix above: KEY_VOTE_CHOICES
+            // used to be derived from votingResults and so came out empty, and
+            // `UsernameRequestsFragment.showVoteIndicator` returns early on an empty
+            // list. Now it carries the SUBMITTED choices, so the fragment would show
+            // "vote submitted" and drop its observer for a vote that never left the
+            // device.
+            val nothingBroadcast = votingResults.isEmpty() && normalizedLabels.isNotEmpty()
+
+            // Any terminal failure is reported even when other votes in the batch
+            // landed: `errorCount > 0` is exactly `terminalError != null`. The older
+            // `successCount == 0` branch let a batch of one fresh success plus one
+            // vote-limit failure return an unqualified `Result.success` — convertState
+            // mapped that to `Resource.success`, the fragment showed the success
+            // indicator and removed its observer, and the error reached only the log.
+            // Votes that DID land are unaffected either way: `updateUsernameVotes` has
+            // already written them, and the batch's names and choices still ride along.
+            val failureReason: String? = when {
+                nothingBroadcast -> "No masternode was able to broadcast a vote"
+                terminalError != null ->
+                    // Keep SDK metadata from consuming WorkManager's 10 KB output budget.
+                    voteFailureText(terminalError)
+                        .ifBlank { "Unknown error - ${terminalError.javaClass.simpleName}" }
+                        .take(1024)
+                else -> null
+            }
+
+            if (failureReason == null) {
                 // Every vote either landed or was already cast.
                 log.info("all votes succeeded: total submitted {}", votingResults.size)
                 Result.success(
@@ -191,23 +214,23 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                     )
                 )
             } else {
-                log.error(
-                    "{} of {} votes succeeded; {} terminal failure(s) reported to observers",
-                    successCount,
-                    votingResults.size,
-                    errorCount
-                )
+                if (nothingBroadcast) {
+                    log.error("no vote was broadcast for {} submitted name(s)", normalizedLabels.size)
+                } else {
+                    log.error(
+                        "{} of {} votes succeeded; {} terminal failure(s) reported to observers",
+                        successCount,
+                        votingResults.size,
+                        errorCount
+                    )
+                }
                 // errors that can be returned
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode vote is already present for masternode EbitFAjpGsuf7qKPpsQMZw2ZKZ8rs2S1PdqKvYA8J2Ux voting for ContestedDocumentResourceVotePoll(ContestedDocumentResourceVotePoll { contract_id: GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec, document_type_name: domain, index_name: parentNameAndLabel, index_values: [string dash, string test-1101] })", metadata: MetadataMap { headers: {"drive-error-data-bin": "oW9zZXJpYWxpemVkRXJyb3KYbwIYKxjKDQkQABgqGO0YuRh/GLMDGOkYexgdGLEVGIMYvhhiGLMY2xiLGGEYRxj/GKgYSxiYGDAYnxjOGHEAGOYYaBjGGFkYrxhmGK4Y4RjnGCwYGBhtGN4YexhbGH4KGB0YcRgqCRjEDRhXGCEY9hgiGL8YUxjFGDEYVQYYZBhvGG0YYRhpGG4SGHAYYRhyGGUYbhh0GE4YYRhtGGUYQRhuGGQYTBhhGGIYZRhsAhIEGGQYYRhzGGgSCRh0GGUYcxh0GC0YMRgxGDAYMQ==", "code": "40304", "grpc-accept-encoding": "identity", "grpc-encoding": "identity", "content-type": "application/grpc+proto", "date": "Mon, 28 Oct 2024 22:27:37 GMT", "x-envoy-upstream-service-time": "55", "server": "envoy"} }, source: None }, Address { ban_count: 0, banned_until: None, uri: https://52.89.154.48:1443/ })
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode with id: CmbJumQ1ALJXHYFpUdCCnvbfgvXKSajErNXGhv3H4GN1 already voted 5 times and is trying to vote again, they can only vote 5 times"
                 logVoteFailures(votingResults, verdicts)
-                // Keep SDK metadata from consuming WorkManager's 10 KB output budget.
-                val errorMessage = voteFailureText(terminalError)
-                    .ifBlank { "Unknown error - ${terminalError.javaClass.simpleName}" }
-                    .take(1024)
                 Result.failure(
                     workDataOf(
-                        KEY_ERROR_MESSAGE to errorMessage,
+                        KEY_ERROR_MESSAGE to failureReason,
                         KEY_NORMALIZED_LABELS to arrayOfnames,
                         KEY_LABELS to labelsFor(arrayOfnames, labelMap),
                         KEY_VOTE_CHOICES to voteChoices,
