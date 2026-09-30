@@ -95,6 +95,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.security.SecurityInitializer;
+import de.schildbach.wallet.service.PeriodicAlarmTier;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.TxDisplayCacheService;
 import de.schildbach.wallet.service.DashSystemService;
@@ -1748,13 +1749,7 @@ public class WalletApplication extends MultiDexApplication
         final long lastUsedAgo = config.getLastUsedAgo();
 
         // apply some backoff
-        final long alarmInterval;
-        if (lastUsedAgo < Constants.LAST_USAGE_THRESHOLD_JUST_MS)
-            alarmInterval = AlarmManager.INTERVAL_FIFTEEN_MINUTES;
-        else if (lastUsedAgo < Constants.LAST_USAGE_THRESHOLD_RECENTLY_MS)
-            alarmInterval = AlarmManager.INTERVAL_HALF_DAY;
-        else
-            alarmInterval = AlarmManager.INTERVAL_DAY;
+        final long alarmInterval = PeriodicAlarmTier.intervalMs(lastUsedAgo);
 
         final long alarmIntervalMinutes = TimeUnit.MILLISECONDS.toMinutes(alarmInterval);
 
@@ -1769,7 +1764,7 @@ public class WalletApplication extends MultiDexApplication
         // upgrade memory and sync plan): stamp the reason so a delivered start is
         // distinguishable from an app-opened one in a field log.
         serviceIntent.putExtra(BlockchainServiceImpl.START_REASON_EXTRA,
-                "periodic-" + alarmIntervalMinutes + "min");
+                PeriodicAlarmTier.startReason(alarmInterval));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
             alarmIntent = PendingIntent.getForegroundService(context,
