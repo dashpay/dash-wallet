@@ -1669,6 +1669,7 @@ class CutoverUiDataServiceTest {
         persisted.value = "DUAL_RUNNING"
         service.stopForWalletWipe()
         store.clear()
+        service.resumeAfterWalletWipe()
         walkHeldBeforePageB.complete(Unit)
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
         runCurrent()
@@ -1705,6 +1706,7 @@ class CutoverUiDataServiceTest {
 
         persisted.value = "DUAL_RUNNING"
         service.stopForWalletWipe()
+        service.resumeAfterWalletWipe()
         runCurrent()
         assertFalse("the persisted reset is honoured before the gate sees it", service.isCutoverActive())
 
@@ -1719,6 +1721,42 @@ class CutoverUiDataServiceTest {
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS)
         runCurrent()
         assertEquals("the restarted pipeline runs its own ticker walk", 1, source.reconcileWalks)
+    }
+
+    @Test
+    fun stopForWalletWipe_failedReset_staysStoppedUntilResume_thenRestarts() = runTest {
+        // resetForWalletWipe failed: CUT_OVER never leaves the store, so no
+        // commit will ever change the gate. The stop must still hold through
+        // the cache clears, and the resume must restart the pipeline.
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val source = FakeSource(
+            records = MutableStateFlow(listOf(record(firstByte = 1, net = 100, context = 3, direction = 0)))
+        )
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val config = mockk<DashPayConfig> {
+            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+        }
+        val service = buildService(source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao)
+        service.start()
+        runCurrent()
+        assertEquals(setOf(displayHex(1)), store.keys)
+
+        service.stopForWalletWipe() // the reset failed: state is still CUT_OVER
+        store.clear()
+        source.records.value = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
+        runCurrent()
+        assertFalse(service.isCutoverActive())
+        assertTrue("no relaunch before the wipe resumes the pipeline", store.isEmpty())
+        assertEquals(0, source.reconcileWalks)
+
+        service.resumeAfterWalletWipe()
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        assertEquals(setOf(displayHex(2)), store.keys)
     }
 
     // ── The engine-event (instant receive) feed ───────────────────────

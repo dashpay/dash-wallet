@@ -2525,8 +2525,9 @@ class CutoverUiDataService internal constructor(
                         while (true) {
                             // Registered under [pipelineMutex] so [stopForWalletWipe]
                             // either cancels this job or runs first — and then the
-                            // persisted re-read sees the wipe's reset and waits.
+                            // wipe fence (or the persisted reset) keeps it stopped.
                             val job = pipelineMutex.withLock {
+                                if (wipeFenced) return@withLock null
                                 if (!cutoverUiActive().first()) return@withLock null
                                 _cutoverActive.value = true
                                 launch {
@@ -2544,9 +2545,11 @@ class CutoverUiDataService internal constructor(
                                 job.join()
                                 return@coroutineScope
                             }
+                            _cutoverActive.value = false
+                            // Mid-wipe: [resumeAfterWalletWipe] re-runs this block.
+                            if (wipeFenced) return@coroutineScope
                             // Stopped by a wipe, and the gate has not caught up:
                             // wait on a fresh read for the next wallet's commit.
-                            _cutoverActive.value = false
                             cutoverUiActive().firstOrNull { it } ?: return@coroutineScope
                         }
                     }
@@ -2565,12 +2568,16 @@ class CutoverUiDataService internal constructor(
      * tx_group_cache AFTER the wipe cleared them. Returning from here means
      * no pipeline coroutine is left to write.
      *
-     * Call it AFTER the cutover reset is persisted: the gate re-reads the
-     * persisted state before (re)launching, so the pipeline stays stopped
-     * until the next wallet commits its own cutover, then restarts.
+     * The pipeline stays stopped until [resumeAfterWalletWipe] — which the
+     * wipe calls once the caches are cleared, whether or not the cutover
+     * reset persisted. After that the gate re-reads the persisted state:
+     * DUAL_RUNNING (the reset landed) waits for the next wallet's commit;
+     * CUT_OVER (the reset failed, so no commit will ever change the value)
+     * restarts at once, for whichever wallet binds next.
      */
     suspend fun stopForWalletWipe() {
         pipelineMutex.withLock {
+            wipeFenced = true
             pipelineJob?.cancelAndJoin()
             pipelineJob = null
             resetForInactivePipeline()
@@ -2579,8 +2586,23 @@ class CutoverUiDataService internal constructor(
         log.info("SDK UI pipelines stopped for the wallet wipe")
     }
 
-    /** Bumped by [stopForWalletWipe] so [start]'s gate re-evaluates. */
+    /**
+     * Lift [stopForWalletWipe]'s fence and re-arm the gate. Non-suspending so
+     * the wipe can call it from a `finally`: a wipe that fails or is cancelled
+     * after the stop must not leave the pipeline dead for the next wallet.
+     */
+    fun resumeAfterWalletWipe() {
+        wipeFenced = false
+        stopGeneration.update { it + 1 }
+        log.info("SDK UI pipelines re-armed after the wallet wipe")
+    }
+
+    /** Bumped by the wipe stop/resume so [start]'s gate re-evaluates. */
     private val stopGeneration = MutableStateFlow(0)
+
+    /** Set by [stopForWalletWipe] until [resumeAfterWalletWipe]: no relaunch mid-wipe. */
+    @Volatile
+    private var wipeFenced = false
 
     /**
      * Everything a stopped pipeline must not leave behind: the SDK overrides

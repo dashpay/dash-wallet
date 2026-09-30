@@ -190,26 +190,33 @@ object WalletApplicationExt {
                 .onFailure { rethrowCancellation(it); log.warn("cutover state reset failed during wipe", it) }
             // The reset above only persists DUAL_RUNNING; the SDK tx pipeline
             // stops when that emission reaches its gate, and nothing waits for
-            // it. Cancel AND join it here — after the reset, so a gate emission
-            // still in flight cannot relaunch it — before the display caches
-            // are cleared below, or a walk holding the wiped wallet's pages
-            // re-writes them into tx_display_cache / tx_group_cache.
+            // it. Cancel AND join it here — even when the reset failed —
+            // before the display caches are cleared below, or a walk holding
+            // the wiped wallet's pages re-writes them into tx_display_cache /
+            // tx_group_cache. It stays fenced until resumeAfterWalletWipe.
             runCatching { cutoverUiDataService.stopForWalletWipe() }
                 .onFailure { rethrowCancellation(it); log.warn("SDK UI pipeline stop failed during wipe", it) }
         }
-        runCatching { identityRepository.clearDatabase(isWalletWipe) }
-            .onFailure { rethrowCancellation(it); log.warn("identity/DashPay clear failed during reset", it) }
-        // A wipe starts a new wallet, so its history must go. A rescan keeps
-        // the rows post-cutover — the SDK still holds every transaction
-        // (MO-1054); see clearDatabaseForRescan.
-        runCatching {
-            if (isWalletWipe) {
-                txDisplayCacheService.clearDatabase()
-            } else {
-                txDisplayCacheService.clearDatabaseForRescan()
+        try {
+            runCatching { identityRepository.clearDatabase(isWalletWipe) }
+                .onFailure { rethrowCancellation(it); log.warn("identity/DashPay clear failed during reset", it) }
+            // A wipe starts a new wallet, so its history must go. A rescan keeps
+            // the rows post-cutover — the SDK still holds every transaction
+            // (MO-1054); see clearDatabaseForRescan.
+            runCatching {
+                if (isWalletWipe) {
+                    txDisplayCacheService.clearDatabase()
+                } else {
+                    txDisplayCacheService.clearDatabaseForRescan()
+                }
             }
+                .onFailure { rethrowCancellation(it); log.warn("tx-display-cache clear failed during reset", it) }
+        } finally {
+            // Caches are clear: re-arm the SDK pipeline for the next wallet
+            // explicitly — a failed cutover reset leaves CUT_OVER unchanged,
+            // so the gate alone would never see a commit to restart on.
+            if (isWalletWipe) cutoverUiDataService.resumeAfterWalletWipe()
         }
-            .onFailure { rethrowCancellation(it); log.warn("tx-display-cache clear failed during reset", it) }
         WorkManager.getInstance(this).cancelAllWork()
         // The wipe just emptied the DashPay DataStore mid-process, and the
         // debug-flag seeding only runs in DashPayConfig's init — without
