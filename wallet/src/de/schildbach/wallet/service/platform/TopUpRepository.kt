@@ -671,9 +671,7 @@ class TopUpRepositoryImpl @Inject constructor(
                 mapOf(
                     "af_og_title" to title,
                     "af_og_description" to description,
-                    "af_og_image" to imageUrl.toString(),
-                    // what AppsFlyer Unified Deep Linking hands to a freshly installed app
-                    "deep_link_value" to invitationLinkData.link.toString()
+                    "af_og_image" to imageUrl.toString()
                 )
             )
             linkGenerator.generateLink(walletApplication, object : ResponseListener {
