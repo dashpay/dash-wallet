@@ -1069,6 +1069,14 @@ public class WalletApplication extends MultiDexApplication
 
         config.armBackupReminder();
 
+        // Onboarding may have replaced a wallet after a degraded startup.
+        // Clear that old verdict only after the replacement and its backup
+        // have been saved; any persistence failure above must retain it.
+        walletLoadFailed = false;
+        walletLoadSkippedSafeMode = false;
+        walletRecoveryFromSeedNeeded = false;
+        recoveredWalletPersistencePending = false;
+
         finalizeInitialization();
     }
 
