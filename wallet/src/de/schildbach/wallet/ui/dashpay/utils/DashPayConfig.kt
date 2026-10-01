@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -31,7 +32,9 @@ import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -99,7 +102,45 @@ open class DashPayConfig @Inject constructor(
         )
     )
 ) {
+    /**
+     * Store releases always use the SDK. Persisted SDK flags remain QA controls only:
+     * neither an old preference nor a direct file edit may change production routing.
+     * The separate Tools dashj diagnostic remains user-configurable. L1_SEND is the pre-cutover
+     * override; normal SDK sending remains enabled by committed cutover.
+     */
+    private fun <T> productionFlagOverride(key: Preferences.Key<T>): T? {
+        if (!sdkFlagsLocked) return null
+        // By identity, not name or equals() (Preferences.Key compares names only):
+        // only these Boolean key objects match, so T is Boolean and the cast holds.
+        // A same-named key of another type falls through to the store.
+        val value = when {
+            key === USE_KOTLIN_SDK_DPNS_READS ||
+                key === USE_KOTLIN_SDK_DASHPAY_WRITES ||
+                key === USE_KOTLIN_SDK_SHIELDED ||
+                key === USE_KOTLIN_SDK_L1_INVITE ||
+                key === USE_KOTLIN_SDK_L1_SHADOW -> true
+            key === USE_KOTLIN_SDK_L1_SEND -> false
+            else -> return null
+        }
+        @Suppress("UNCHECKED_CAST")
+        return value as T
+    }
+
+    override suspend fun <T> get(key: Preferences.Key<T>): T? =
+        productionFlagOverride(key) ?: super.get(key)
+
+    override fun <T> observe(key: Preferences.Key<T>): Flow<T?> =
+        productionFlagOverride(key)?.let { flowOf(it) } ?: super.observe(key)
+
+    override suspend fun <T> set(key: Preferences.Key<T>, value: T) {
+        if (productionFlagOverride(key) != null) return
+        super.set(key, value)
+    }
+
     companion object {
+        val sdkFlagsLocked: Boolean
+            get() = !BuildConfig.DEBUG && BuildConfig.FLAVOR == "prod"
+
         private val log = org.slf4j.LoggerFactory.getLogger(DashPayConfig::class.java)
 
         const val DISABLE_NOTIFICATIONS: Long = -1
@@ -687,15 +728,14 @@ open class DashPayConfig @Inject constructor(
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
     }
 
-    init {
-        // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
-        // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
-        // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
-        // flag divergence between what is tested and what ships). QA can still toggle them
-        // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
-        CoroutineScope(Dispatchers.IO).launch {
-            seedDebugDefaultsIfUnset()
-        }
+    // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
+    // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
+    // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
+    // flag divergence between what is tested and what ships). QA can still toggle them
+    // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
+    // Kept so a test can let it finish before editing the flags it seeds.
+    internal val initialSeeding: Job = CoroutineScope(Dispatchers.IO).launch {
+        seedDebugDefaultsIfUnset()
     }
 
     /**
