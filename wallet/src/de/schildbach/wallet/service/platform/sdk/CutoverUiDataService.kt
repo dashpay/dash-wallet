@@ -119,8 +119,17 @@ data class L1TxUiRecord(
      * unconfirmed (or for a stub row). Kept apart from [timestampMs] so a
      * planner can tell a block-backed time from a first-sighting time.
      */
-    val blockTimestampMs: Long = 0L
+    val blockTimestampMs: Long = 0L,
+    /**
+     * The SDK's `transactions.transactionTypeKind` (Rust `TransactionType`
+     * discriminant, e.g. [TX_TYPE_KIND_COINBASE]); [TX_TYPE_KIND_UNKNOWN] when
+     * not populated or not known to the producing feed.
+     */
+    val transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
 ) {
+    /** A coinbase payout: shown as "Mining Reward", as the dashj path does. */
+    val isCoinbase: Boolean get() = transactionTypeKind == TX_TYPE_KIND_COINBASE
+
     /**
      * The SDK's TXO-parent STUB, not a transaction yet. When an output lands
      * before its transaction, the SDK writes `TransactionEntity(txid,
@@ -146,7 +155,8 @@ fun l1TxUiRecord(
     contextCode: Int,
     directionCode: Int,
     firstSeenSec: Long,
-    blockTimestampSec: Int
+    blockTimestampSec: Int,
+    transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
 ): L1TxUiRecord {
     val status = when (contextCode) {
         1 -> L1TxUiStatus.INSTANT_LOCKED
@@ -180,7 +190,8 @@ fun l1TxUiRecord(
         timestampMs = timestampMs,
         status = status,
         direction = direction,
-        blockTimestampMs = if (blockTimestampSec > 0) blockTimestampSec * 1000L else 0L
+        blockTimestampMs = if (blockTimestampSec > 0) blockTimestampSec * 1000L else 0L,
+        transactionTypeKind = transactionTypeKind
     )
 }
 
@@ -372,7 +383,13 @@ internal fun planL1TxRow(
         )
     } else L1TxRowPlan(
         rowId = record.txidHex,
-        titleRes = R.string.transaction_row_status_received,
+        // dashj parity (TxResourceMapper): every coinbase reads "Mining Reward" —
+        // neither path can tell a masternode payout from a miner's.
+        titleRes = if (record.isCoinbase) {
+            R.string.transaction_row_status_mining_reward
+        } else {
+            R.string.transaction_row_status_received
+        },
         statusRes = if (record.status == L1TxUiStatus.PENDING) {
             R.string.transaction_row_status_processing
         } else {
@@ -407,9 +424,13 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.INVITE -> R.string.transaction_row_invitation
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
-    // Same label as the self-move — the arrow, not the title, carries the
-    // internal/external distinction (product decision, 2026-08-10).
-    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded
+    // Every AssetUnlock without evidence that THIS wallet's pool authored it.
+    // That is not only a foreign pool's unshield: a Platform identity credit
+    // withdrawal (evonode reward withdrawals included) is an AssetUnlock too,
+    // and plain "Unshielded" on it read as a shielded-pool move the user never
+    // made (field report, 2026-09-30). Product decision, 2026-09-30, replacing
+    // the shared label of 2026-08-10; the arrow still carries the receive.
+    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded_withdrawal
 }
 
 /**
@@ -856,6 +877,15 @@ internal fun planL1DisplaySync(
                     statusText = if (keepConfirming) updated.statusText else desiredStatus
                 )
             }
+        }
+        // A coinbase cached as plain "Received" — before records carried their kind,
+        // or by the dashj-side writer — takes its "Mining Reward" title. Title only:
+        // the shape (receive arrow, value) is already right. Idempotent, since the
+        // relabelled title is no longer "Received".
+        if (record.isCoinbase && contact == null && updated.contactUserId == null &&
+            updated.title == resolve(R.string.transaction_row_status_received)
+        ) {
+            updated = updated.copy(title = resolve(R.string.transaction_row_status_mining_reward))
         }
         if (contact != null) {
             // Always attach the contact IDENTITY the insert could not (identity/

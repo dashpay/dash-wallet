@@ -222,15 +222,15 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun rowPlan_externalUnshieldKeepsReceiveSemantics() {
-        // A FOREIGN pool's AssetUnlock paying this wallet (field case: an
-        // unshield from a different seed) is a genuine receive: same
-        // "Unshielded" label as the self-move, but the green inbound arrow,
-        // Received treatment and the coins-received notification.
+        // An AssetUnlock this wallet's pool did not author (a foreign pool's
+        // unshield, or a Platform identity credit withdrawal) is a genuine
+        // receive: "Unshielded Withdrawal", the green inbound arrow, Received
+        // treatment and the coins-received notification.
         val plan = planL1TxRow(
             record(net = 300_000, context = 1, direction = 0),
             AssetLockKind.UNSHIELD_EXTERNAL
         )
-        assertEquals(R.string.transaction_row_unshielded, plan.titleRes)
+        assertEquals(R.string.transaction_row_unshielded_withdrawal, plan.titleRes)
         assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, plan.iconType)
         assertEquals(TxDisplayCacheEntry.BG_RECEIVED, plan.iconBgType)
         assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, plan.filterFlags)
@@ -355,6 +355,64 @@ class CutoverUiDataServiceTest {
         // An unconfirmed record has no block time to re-date against.
         val late = cacheEntry(displayHex(7), sent).copy(time = now)
         assertEquals(late, redatedFromBlock(late, record(firstByte = 7, context = 0, firstSeenSec = blockSec)))
+    }
+
+    // ── coinbase payouts ("Mining Reward", dashj parity) ──
+
+    private fun coinbaseRecord(firstByte: Int, kind: Int = TX_TYPE_KIND_COINBASE) =
+        l1TxUiRecord(wireTxid(firstByte), 450_000_000, null, 3, 0, now / 1000, (now / 1000).toInt(), kind)
+
+    @Test
+    fun syncPlan_coinbaseInsertsAsMiningReward() {
+        val plan = planL1DisplaySync(listOf(coinbaseRecord(7)), emptyMap(), emptySet(), resolve, now)
+        val row = plan.inserts.single()
+        assertEquals(resolve(R.string.transaction_row_status_mining_reward), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, row.filterFlags)
+        assertEquals(450_000_000L, row.valueSatoshis)
+        // Any other kind, or an unpopulated one, stays a plain receive.
+        for (kind in listOf(TX_TYPE_KIND_STANDARD, TX_TYPE_KIND_UNKNOWN)) {
+            val other = planL1DisplaySync(listOf(coinbaseRecord(7, kind)), emptyMap(), emptySet(), resolve, now)
+            assertEquals(resolve(R.string.transaction_row_status_received), other.inserts.single().title)
+        }
+    }
+
+    @Test
+    fun syncPlan_cachedReceivedCoinbaseIsRelabelled() {
+        val cached = cacheEntry(displayHex(7), resolve(R.string.transaction_row_status_received)).copy(
+            valueSatoshis = 450_000_000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED,
+            time = now
+        )
+        val plan = planL1DisplaySync(listOf(coinbaseRecord(7)), mapOf(cached.rowId to cached), emptySet(), resolve, now)
+        assertEquals(
+            cached.copy(title = resolve(R.string.transaction_row_status_mining_reward)),
+            plan.updates.single()
+        )
+        // Idempotent: the relabelled row produces no further update.
+        val again = planL1DisplaySync(
+            listOf(coinbaseRecord(7)), mapOf(cached.rowId to plan.updates.single()), emptySet(), resolve, now
+        )
+        assertTrue(again.updates.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_cachedUnshieldedRowTakesTheWithdrawalLabel() {
+        // A row cached under the old shared label is relabelled by the kind re-stamp.
+        val cached = cacheEntry(displayHex(7), resolve(R.string.transaction_row_unshielded)).copy(
+            valueSatoshis = 300_000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        )
+        val plan = planL1DisplaySync(
+            listOf(record(firstByte = 7, net = 300_000, context = 3, direction = 0)),
+            mapOf(cached.rowId to cached), emptySet(), resolve, now,
+            kindByTxid = mapOf(displayHex(7) to AssetLockKind.UNSHIELD_EXTERNAL)
+        )
+        assertEquals(resolve(R.string.transaction_row_unshielded_withdrawal), plan.updates.single().title)
     }
 
     @Test
@@ -749,6 +807,7 @@ class CutoverUiDataServiceTest {
         val richTitles = listOf(
             R.string.transaction_row_shielded,
             R.string.transaction_row_unshielded,
+            R.string.transaction_row_unshielded_withdrawal,
             R.string.transaction_row_invitation,
             R.string.dashpay_upgrade_fee,
             R.string.dashpay_topup_fee,
