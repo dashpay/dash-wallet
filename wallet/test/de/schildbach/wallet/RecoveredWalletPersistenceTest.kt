@@ -8,7 +8,11 @@ import de.schildbach.wallet.ui.WalletUriHandlerActivity
 import de.schildbach.wallet.ui.degradedScreenActions
 import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.util.SafeModeRetryWaiters
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import io.mockk.spyk
 import io.mockk.mockk
 import io.mockk.verify
@@ -346,15 +350,12 @@ class RecoveredWalletPersistenceTest {
 
     @Test
     fun `wipe recovery outranks seed recovery and no replacement wallet is installed or saved`() {
-        // A failed primary and backup load latched seed recovery; a Reset
-        // Wallet then stopped with its marker on disk (review, PR #1576). The
-        // recovered-wallet persistence latch is NOT set: the wipe guard alone
-        // must refuse the replacement.
+        // A failed load latched seed recovery; a stopped or unverified wipe then
+        // set the wipe guard without clearing it (review, PR #1577).
         ReflectionHelpers.setField(app, "wallet", null)
         setField("walletLoadFailed", true)
         setField("walletRecoveryFromSeedNeeded", true)
-        setField("walletWipeIncomplete", true)
-        setField("recoveredWalletPersistencePending", false)
+        setField("walletWipeRecoveryRequired", true)
         assertTrue(app.isWalletLoadDegraded)
         assertTrue(app.isWalletRecoveryFromSeedNeeded)
 
@@ -380,7 +381,6 @@ class RecoveredWalletPersistenceTest {
         assertFalse(app.isSafeModeRetryInProgress)
         assertTrue(app.isSafeModeLaunch)
         assertTrue("the seed-recovery verdict is kept, not consumed", app.isWalletRecoveryFromSeedNeeded)
-        assertFalse(ReflectionHelpers.getField<Boolean>(app, "recoveredWalletPersistencePending"))
         assertTrue(app.isWalletLoadDegraded)
     }
 
@@ -655,15 +655,18 @@ class RecoveredWalletPersistenceTest {
             assertTrue(WalletWipeState.isPending(directory.root, noBackupDir))
         }
 
-        // A nonempty directory at the marker path makes marker removal fail.
-        val marker = File(directory.root, WalletWipeState.MARKER_FILE_NAME)
-        assertTrue(marker.delete())
-        assertTrue(marker.mkdir())
-        val child = File(marker, "block-delete").apply { writeText("test") }
-        assertTrue(wipe { })
+        // Marker removal fails: the valid marker stays on disk. (A directory at
+        // the marker path no longer simulates this — the marker would be
+        // unverified, and the wipe would not run at all.)
+        mockkObject(WalletWipeState)
+        try {
+            every { WalletWipeState.complete(any()) } just Runs
+            assertTrue(wipe { })
+        } finally {
+            unmockkObject(WalletWipeState)
+        }
         assertTrue(wipeApp.isWalletLoadDegraded)
         assertTrue(WalletWipeState.isPending(directory.root, noBackupDir))
-        assertTrue(child.delete())
 
         assertTrue(wipe { assertTrue(backup.delete()) })
         assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
@@ -713,6 +716,7 @@ class RecoveredWalletPersistenceTest {
         // onboarding off create/restore.
         ReflectionHelpers.setField(wipeApp, "recoveredWalletPersistencePending", false)
         assertTrue(wipeApp.isWalletLoadDegraded)
+        assertTrue(wipeApp.isWalletWipeRecoveryRequired)
         ReflectionHelpers.setField(wipeApp, "recoveredWalletPersistencePending", true)
 
         assertTrue(child.delete())
@@ -721,6 +725,7 @@ class RecoveredWalletPersistenceTest {
         assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
         assertFalse(ReflectionHelpers.getField<Boolean>(wipeApp, "recoveredWalletPersistencePending"))
         assertFalse(wipeApp.isWalletLoadDegraded)
+        assertFalse(wipeApp.isWalletWipeRecoveryRequired)
         Unit
     }
 
@@ -917,5 +922,36 @@ class RecoveredWalletPersistenceTest {
         assertFalse(keyBackup.exists())
         assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
         Unit
+    }
+
+    @Test
+    fun `a wipe that stops with an unverified marker keeps onboarding off create and restore`() {
+        val wipeApp = spyk(app)
+        every { wipeApp.filesDir } returns directory.root
+        every { wipeApp.noBackupFilesDir } returns noBackupDir
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
+        // The marker is left unreadable (here: a directory at its path), so it
+        // can neither authorize finishing the wipe nor be treated as absent.
+        val marker = File(directory.root, WalletWipeState.MARKER_FILE_NAME)
+        assertTrue(marker.delete())
+        assertTrue(marker.mkdir())
+        assertEquals(
+            WalletWipeState.State.RECOVERY_REQUIRED,
+            WalletWipeState.inspect(directory.root, noBackupDir)
+        )
+
+        wipeApp.recordWalletWipeStopped()
+        assertTrue(wipeApp.isWalletWipeRecoveryRequired)
+        assertTrue(wipeApp.isWalletLoadDegraded)
+        val originalBackup = backup.readBytes()
+        wipeApp.fullInitialization()
+        assertArrayEquals(originalBackup, backup.readBytes())
+        assertTrue(marker.isDirectory)
+
+        // Only a marker that is actually gone clears it.
+        assertTrue(marker.delete())
+        wipeApp.recordWalletWipeStopped()
+        assertFalse(wipeApp.isWalletWipeRecoveryRequired)
+        assertFalse(wipeApp.isWalletLoadDegraded)
     }
 }
