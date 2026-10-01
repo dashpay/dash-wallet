@@ -2332,6 +2332,16 @@ class L1ShadowSyncService internal constructor(
     private var lastWalletEventMs: Long = 0L
 
     /**
+     * [lastWalletEventMs] for readers outside the watchdog: when the engine
+     * last delivered any wallet event this run, on [nowMs]'s clock, 0 before
+     * the first one. The progress snapshot carries no block-download
+     * sub-phase, so during a long block tail this is the only sign that the
+     * engine is still working — [SdkBlockchainStateService]'s stall clock
+     * reads it so that tail does not raise "unable to connect".
+     */
+    fun lastEngineActivityMs(): Long = lastWalletEventMs
+
+    /**
      * Parsed per-transaction engine events ([L1TxEvent]), live while the
      * shadow runs — the INSTANT receive feed [CutoverUiDataService]'s tx
      * pipeline consumes to insert mempool receives / flip IS-lock state

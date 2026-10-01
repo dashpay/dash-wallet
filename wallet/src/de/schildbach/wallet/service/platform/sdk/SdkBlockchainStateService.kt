@@ -98,7 +98,19 @@ class SdkBlockchainStateService internal constructor(
      * that supplies no feed keeps the old "preserve the row's chainlock
      * height" behavior exactly.
      */
-    private val chainLockHeight: Flow<Int> = flowOf(0)
+    private val chainLockHeight: Flow<Int> = flowOf(0),
+    /**
+     * When the engine last delivered a wallet event
+     * ([L1ShadowSyncService.lastEngineActivityMs]), on the [nowMs] clock; 0
+     * when none. Polled once per tick rather than combined, so a busy event
+     * stream adds no emissions. The stall clock counts it as movement: the
+     * progress snapshot has no block-download sub-phase, so through a long
+     * block tail the filter height can sit still for minutes while blocks
+     * are processed, and without this the header read "unable to connect"
+     * on a wallet that was syncing (field report, 2026-09-30: the banner at
+     * 98% while dash-spv logged `Blocks ... last_activity: 0s`).
+     */
+    private val lastEngineActivityMs: () -> Long = { 0L }
 ) {
     @Inject
     constructor(
@@ -122,7 +134,8 @@ class SdkBlockchainStateService internal constructor(
         },
         applyUpdate = blockchainStateDataProvider::updateSdkBlockchainState,
         clearDerivedState = blockchainStateDataProvider::clearSdkDerivedState,
-        chainLockHeight = l1ShadowSyncService.chainLockHeight
+        chainLockHeight = l1ShadowSyncService.chainLockHeight,
+        lastEngineActivityMs = l1ShadowSyncService::lastEngineActivityMs
     )
 
     private val started = AtomicBoolean(false)
@@ -210,7 +223,10 @@ class SdkBlockchainStateService internal constructor(
                     lastProgressChangeMs = now
                     stallSpellLogged = false
                 }
-                val stillMs = now - lastProgressChangeMs
+                // Still = neither the snapshot nor the engine's event stream has
+                // moved (see [lastEngineActivityMs]). The final-batch park below
+                // is unaffected: its event stream goes quiet too.
+                val stillMs = now - maxOf(lastProgressChangeMs, lastEngineActivityMs())
                 // The phase-based verdict decides whether the snapshot is
                 // STATIC; the aggregate-aware one decides whether that is
                 // reported as a NETWORK impediment. When they disagree the
