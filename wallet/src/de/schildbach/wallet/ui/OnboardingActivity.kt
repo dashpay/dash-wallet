@@ -34,6 +34,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -143,6 +146,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private val inviteHandlerViewModel by viewModels<InviteHandlerViewModel>()
     private lateinit var binding: ActivityOnboardingBinding
 
+    /** A safe-mode retry is loading the wallet off the main thread; drives the button's spinner. */
+    private var safeModeRetryInProgress by mutableStateOf(false)
+
     @Inject
     lateinit var walletApplication: WalletApplication
     @Inject
@@ -216,7 +222,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
         // instead of showing the same dead end.
         if (degraded && walletApplication.isSafeModeLaunch && degradedScreenShownInProcess) {
             log.warn("safe mode: degraded screen re-entered in the same process — retrying the wallet load")
-            degraded = !walletApplication.retryWalletLoadAfterSafeMode()
+            // The load runs off the main thread; stay on this screen, showing
+            // the retry in progress, until it reports back.
+            showDegradedStartupScreen()
+            retryNormalStartAfterSafeMode()
+            return
         }
 
         if (degraded) {
@@ -447,7 +457,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
                         modifier = Modifier.fillMaxWidth(),
                         text = stringResource(R.string.try_again),
                         style = Style.FilledWhiteBlue,
-                        size = Size.Large
+                        size = Size.Large,
+                        isEnabled = !safeModeRetryInProgress,
+                        isLoading = safeModeRetryInProgress
                     )
                 }
                 if (recoveryFromSeedNeeded) {
@@ -499,15 +511,25 @@ class OnboardingActivity : RestoreFromFileActivity() {
      * safe mode skipped — the SAME load a normal launch performs, nothing is
      * wiped — and, when it succeeds, re-enters the activity so the normal
      * routing takes over and the safe-mode latch is cleared for good.
+     *
+     * The load runs off the main thread (see
+     * WalletApplication.retryWalletLoadAfterSafeMode): the button shows it is
+     * working, and the result arrives on the main thread.
      */
     private fun retryNormalStartAfterSafeMode() {
-        if (walletApplication.retryWalletLoadAfterSafeMode()) {
-            log.info("safe mode: the retried wallet load SUCCEEDED — continuing into the normal flow")
-            degradedScreenShownInProcess = false
-            recreate()
-        } else {
-            log.warn("safe mode: the retried wallet load FAILED — staying on the crash-report screen")
-            showDegradedStartupScreen()
+        if (safeModeRetryInProgress) return
+        safeModeRetryInProgress = true
+        walletApplication.retryWalletLoadAfterSafeMode { loaded ->
+            safeModeRetryInProgress = false
+            if (isFinishing || isDestroyed) return@retryWalletLoadAfterSafeMode
+            if (loaded) {
+                log.info("safe mode: the retried wallet load SUCCEEDED — continuing into the normal flow")
+                degradedScreenShownInProcess = false
+                recreate()
+            } else {
+                log.warn("safe mode: the retried wallet load FAILED — staying on the crash-report screen")
+                showDegradedStartupScreen()
+            }
         }
     }
 

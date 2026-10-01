@@ -42,6 +42,7 @@ import android.util.Log;
 import android.webkit.CookieManager;
 import android.widget.Toast;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -145,6 +146,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
@@ -214,9 +216,18 @@ public class WalletApplication extends MultiDexApplication
      * The wallet load of a BACKGROUND process start, run off the main thread so
      * onCreate meets the system's start-up deadline (see DeferredWalletLoad).
      * Inactive on a foreground start, which loads synchronously as before.
+     * Replaced by a fresh one-shot gate for each safe-mode retry
+     * ({@link #retryWalletLoadAfterSafeMode}), which loads the same way.
      */
-    private final DeferredWalletLoad deferredWalletLoad =
-            new DeferredWalletLoad(() -> Looper.myLooper() == Looper.getMainLooper());
+    private volatile DeferredWalletLoad deferredWalletLoad = newDeferredWalletLoad();
+
+    private static DeferredWalletLoad newDeferredWalletLoad() {
+        return new DeferredWalletLoad(() -> Looper.myLooper() == Looper.getMainLooper());
+    }
+
+    /** Main thread only: a safe-mode retry is loading, and who to tell when it ends. */
+    private boolean safeModeRetryInProgress = false;
+    private final List<Consumer<Boolean>> safeModeRetryCallbacks = new ArrayList<>();
 
     /** Set by the deferred worker when the parse and consistency check passed. */
     private volatile boolean deferredWalletChecked = false;
@@ -588,8 +599,13 @@ public class WalletApplication extends MultiDexApplication
                 }
             }
         }
-        log.info("background start: wallet load finished (loaded={})", wallet != null && !walletLoadFailed);
-        StartupBreadcrumbs.markLaunchComplete();
+        log.info("deferred wallet load finished (loaded={}, safeModeRetry={})",
+                wallet != null && !walletLoadFailed, safeModeRetryInProgress);
+        // A safe-mode retry runs long after this launch was declared complete;
+        // only a deferred background start still owes the milestone.
+        if (!safeModeRetryInProgress) {
+            StartupBreadcrumbs.markLaunchComplete();
+        }
     }
 
     /** Log how the background/foreground start decision was made; returns it unchanged. */
@@ -645,38 +661,79 @@ public class WalletApplication extends MultiDexApplication
      * is exactly what a QA device hit. NOTHING is wiped: this is the same load
      * a normal launch performs.
      *
-     * @return true when the wallet is loaded and normal routing may proceed.
+     * OFF THE MAIN THREAD (2026-10-01, Joel's build-22 logs): the retry ran
+     * fullInitialization() inline from the button's click handler, so a large
+     * wallet's 5-13 s parse blocked the main thread and both of his retries
+     * died of "Input dispatching timed out". It now loads the way a
+     * background start does: the parse and check on a worker behind a fresh
+     * {@link DeferredWalletLoad} gate, the publish and initialisation posted
+     * back to the main thread.
+     *
+     * Main thread only. {@code onDone} runs on the main thread, with true
+     * when the wallet is loaded and normal routing may proceed; a call made
+     * while a retry is already loading is answered when that one finishes.
      */
-    public boolean retryWalletLoadAfterSafeMode() {
-        if (!walletLoadSkippedSafeMode) {
-            return wallet != null;
+    @MainThread
+    public void retryWalletLoadAfterSafeMode(@NonNull final Consumer<Boolean> onDone) {
+        if (safeModeRetryInProgress) {
+            safeModeRetryCallbacks.add(onDone);
+            return;
         }
-        log.warn("SAFE MODE ESCAPE: retrying the skipped wallet load in-process");
+        if (!walletLoadSkippedSafeMode) {
+            onDone.accept(wallet != null);
+            return;
+        }
+        log.warn("SAFE MODE ESCAPE: retrying the skipped wallet load in-process, off the main thread");
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SAFE_MODE_RETRY, "SAFE_MODE_RETRY");
         walletLoadSkippedSafeMode = false;
+        safeModeRetryInProgress = true;
+        safeModeRetryCallbacks.add(onDone);
         try {
-            fullInitialization();
+            initEnvironmentIfNeeded();
         } catch (final Throwable t) {
-            // Same handling as the onCreate load: open degraded for crash
+            // Same handling as a failed load: stay degraded for crash
             // reporting, never crash and never touch the wallet file.
             walletLoadFailed = true;
-            log.error("safe-mode retry FAILED — staying degraded", t);
+            log.error("safe-mode retry FAILED before the load — staying degraded", t);
             StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_FAILED,
                     "WALLET_LOAD_FAILED", t.getClass().getName() + ": " + t.getMessage());
             try {
                 CrashReporter.saveBackgroundTrace(t, packageInfoProvider.getPackageInfo());
             } catch (final Throwable ignored) {
             }
-            return false;
+            completeSafeModeRetry();
+            return;
         }
-        if (wallet != null) {
+        final Handler mainHandler = new Handler(Looper.getMainLooper());
+        final DeferredWalletLoad load = newDeferredWalletLoad();
+        deferredWalletLoad = load;
+        load.start(
+                this::runDeferredWalletLoad,
+                () -> {
+                    finishDeferredWalletLoad();
+                    completeSafeModeRetry();
+                },
+                mainHandler::post,
+                runnable -> new Thread(runnable, "wallet-load-retry").start());
+    }
+
+    /** Main thread: the retry's load is over, either way; tell every waiter. */
+    private void completeSafeModeRetry() {
+        final boolean loaded = wallet != null && !walletLoadFailed;
+        if (loaded) {
             // The load works: the strikes that engaged safe mode were a false
             // alarm (a killed background process, not a failing launch). Clear
             // the latch on disk so no later launch engages off that history.
             StartupBreadcrumbs.clearSafeModeLatch();
-            return true;
+        } else {
+            log.warn("safe-mode retry FAILED — staying degraded");
         }
-        return false;
+        safeModeRetryInProgress = false;
+        final List<Consumer<Boolean>> waiters = new ArrayList<>(safeModeRetryCallbacks);
+        safeModeRetryCallbacks.clear();
+        for (final Consumer<Boolean> waiter : waiters) {
+            waiter.accept(loaded);
+        }
     }
 
     /**
