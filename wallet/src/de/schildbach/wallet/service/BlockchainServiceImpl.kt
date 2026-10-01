@@ -613,12 +613,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * bound (MainActivity binds in onResume), so a teardown-only reset could
      * stall with the app in the foreground.
      *
-     * The marker is removed only when both SPV stores are gone, the
-     * databases cleared and, when the SDK owns L1, its rescan is durably
-     * owed; otherwise the failure is counted and, below
-     * [RecoveryResetState.MAX_FAILED_ATTEMPTS], this returns false and the
-     * caller refuses initialization so the next start retries. At the cap
-     * the marker is dropped so the wallet can still sync.
+     * The reset is complete only when both SPV stores are gone, the
+     * databases cleared, the SDK rescan durably owed (when the SDK owns L1)
+     * and the marker actually deleted. Otherwise the failure is counted, this
+     * returns false and the caller refuses initialization so the next start
+     * retries. Only a failing database clear is waived after
+     * [RecoveryResetState.MAX_FAILED_ATTEMPTS], so the wallet can still sync;
+     * an undeleted store or an SDK rescan that could not be owed never is.
      *
      * @return true when initialization may proceed.
      */
@@ -632,31 +633,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val databasesCleared = application.clearDatabasesForRecoveryReset()
         val sdkRescanOwed = oweSdkRescanIfCutOver()
         resetBlockchainState()
-        if (storesDeleted && databasesCleared && sdkRescanOwed) {
-            application.markRecoveryResetComplete()
-            log.info("recovery reset complete")
-            return true
+        // The parts a stale-state reset cannot do without.
+        val requiredPartsDone = storesDeleted && sdkRescanOwed
+        if (requiredPartsDone && databasesCleared) {
+            if (application.markRecoveryResetComplete()) {
+                log.info("recovery reset complete")
+                return true
+            }
+            log.warn("recovery reset ran, but its marker could not be removed")
         }
         val attempts = application.recordRecoveryResetFailure()
-        if (attempts < RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+        if (attempts == RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+            runCatching {
+                CrashReporter.saveBackgroundTrace(
+                    IllegalStateException(
+                        "recovery reset failed $attempts times (storesDeleted=$storesDeleted, " +
+                            "databasesCleared=$databasesCleared, sdkRescanOwed=$sdkRescanOwed)"
+                    ),
+                    packageInfoProvider.packageInfo
+                )
+            }
+        }
+        if (!requiredPartsDone || attempts < RecoveryResetState.MAX_FAILED_ATTEMPTS) {
             log.warn(
                 "recovery reset failed (attempt {}: storesDeleted={}, databasesCleared={}, sdkRescanOwed={}) — " +
                     "the reset stays owed", attempts, storesDeleted, databasesCleared, sdkRescanOwed
             )
             return false
         }
-        log.error("recovery reset failed {} times — giving up so the wallet can sync", attempts)
-        runCatching {
-            CrashReporter.saveBackgroundTrace(
-                IllegalStateException(
-                    "recovery reset failed $attempts times (storesDeleted=$storesDeleted, " +
-                        "databasesCleared=$databasesCleared, sdkRescanOwed=$sdkRescanOwed)"
-                ),
-                packageInfoProvider.packageInfo
-            )
-        }
-        application.markRecoveryResetComplete()
-        return true
+        // Only the best-effort database clear keeps failing: waive it.
+        log.error("recovery reset: database clear failed {} times — waiving it so the wallet can sync", attempts)
+        return application.markRecoveryResetComplete()
     }
 
     /**
