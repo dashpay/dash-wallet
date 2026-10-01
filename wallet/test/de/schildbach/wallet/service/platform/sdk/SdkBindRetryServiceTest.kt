@@ -105,6 +105,10 @@ class SdkBindRetryServiceTest {
         val routineFlags = mutableListOf<Boolean>()
         var everSucceeded = false
         var blockedSince: Long? = null
+        /** When set, reading the blocked-since time throws it, from read number [blockedSinceThrowFromRead] on. */
+        var blockedSinceThrows: Throwable? = null
+        var blockedSinceThrowFromRead = 1
+        var blockedSinceReads = 0
         var noticeClears = 0
         val persisted = mutableListOf<SdkBindBlocker?>()
         /** When set, [persistBlocker] parks on it — holds the outcome mutex open at a known point. */
@@ -131,7 +135,11 @@ class SdkBindRetryServiceTest {
             clearPendingNotice = { noticeClears++ },
             appInBackground = { appInBackground },
             bindEverSucceeded = { everSucceeded },
-            blockedSinceMs = { blockedSince },
+            blockedSinceMs = {
+                blockedSinceReads++
+                blockedSinceThrows?.takeIf { blockedSinceReads >= blockedSinceThrowFromRead }?.let { throw it }
+                blockedSince
+            },
             setBlockedSinceMs = { blockedSince = it }
         )
 
@@ -582,6 +590,41 @@ class SdkBindRetryServiceTest {
         assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
         assertTrue("no 'finish the wallet update' on a routine start", h.notices.isEmpty())
         assertEquals("the clock starts at the first blocked pass", h.nowMs, h.blockedSince)
+    }
+
+    /** Review (PR 1590): a cancelled read must not fall through and post during teardown. */
+    @Test
+    fun cancelledBlockedSinceRead_postsNothing() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = false // first setup: any fallthrough would post the setup notice at once
+        h.blockedSince = 1_000L // the clock is already running, so the first-pass stamp only reads
+        h.blockedSinceThrows = kotlinx.coroutines.CancellationException("service stopping")
+        h.blockedSinceThrowFromRead = 2 // the stamp's read succeeds; the notice's read is cancelled
+        h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertEquals("both reads ran", 2, h.blockedSinceReads)
+        assertTrue("cancellation is not read as 'unknown, use now'", h.notices.isEmpty())
+    }
+
+    @Test
+    fun failedBlockedSinceRead_countsFromNow_soNoReminderYet() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS
+        h.blockedSinceThrows = IllegalStateException("store unreadable")
+        h.blockedSinceThrowFromRead = 2
+        h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertTrue("an unreadable time restarts the hour, it does not post", h.notices.isEmpty())
     }
 
     @Test

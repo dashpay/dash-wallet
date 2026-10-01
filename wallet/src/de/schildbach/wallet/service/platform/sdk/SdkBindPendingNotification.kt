@@ -30,7 +30,14 @@ import org.slf4j.LoggerFactory
  * on screen and the SDK bind is blocked, this is the only thing that can tell
  * the user what the wallet is waiting for.
  *
- * ONGOING, and that is load-bearing rather than cosmetic. The design assumed
+ * Two forms (see [SdkBindRetryService.pendingNoticeFor]): the SETUP notice
+ * ("finish the wallet update") for a wallet still finishing its first SDK
+ * setup, or a blocker that needs the user; and the routine SYNC reminder
+ * ("unlock your phone to sync"), posted once per process after a wallet that
+ * has bound before has been unable to bind for an hour. Only the setup notice
+ * is ongoing; the reminder is dismissible and cancels itself on tap.
+ *
+ * The SETUP notice is ONGOING, and that is load-bearing rather than cosmetic. The design assumed
  * the `ACTION_USER_PRESENT` receiver would heal a locked-keystore deferral
  * without the user. It cannot: the 2026-09-16 emulator upgrade test showed the
  * cached-app freezer suspending the wallet process 30 seconds after the
@@ -42,9 +49,10 @@ import org.slf4j.LoggerFactory
  * OEM reason. So the notification, not the receiver, is what actually gets the
  * wallet bound — it must not be swiped away while the bind is still blocked.
  *
- * Re-posted on every classified failure (see [SdkBindRetryService]), so a
- * dismissal on a platform that allows one is repaired by the next retry, and
- * cleared the moment the bind succeeds or the app comes to the foreground.
+ * The setup notice is re-posted on every classified failure (see
+ * [SdkBindRetryService]), so a dismissal on a platform that allows one is
+ * repaired by the next retry. Both forms are cleared the moment the bind
+ * succeeds or the app comes to the foreground.
  */
 object SdkBindPendingNotification {
     private val log = LoggerFactory.getLogger(SdkBindPendingNotification::class.java)

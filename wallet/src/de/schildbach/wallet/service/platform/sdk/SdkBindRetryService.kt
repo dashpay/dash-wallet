@@ -476,7 +476,13 @@ class SdkBindRetryService internal constructor(
         } catch (t: Throwable) {
             false // unknowable reads as the upgrade case: today's behaviour
         }
-        val since = runCatching { blockedSinceMs() }.getOrNull() ?: now()
+        val since = try {
+            blockedSinceMs()
+        } catch (e: CancellationException) {
+            throw e // the service is stopping: post nothing
+        } catch (t: Throwable) {
+            null
+        } ?: now()
         val blockedForMs = (now() - since).coerceAtLeast(0L)
         when (pendingNoticeFor(blocker, everSucceeded, blockedForMs)) {
             PendingNotice.SETUP -> showPendingNotice(blocker, false)
