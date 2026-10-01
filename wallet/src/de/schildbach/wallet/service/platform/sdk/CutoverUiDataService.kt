@@ -3252,8 +3252,12 @@ class CutoverUiDataService internal constructor(
         data class Snapshot(val records: List<L1TxUiRecord>) : TxFeedAction()
         data class EngineEvent(val event: L1TxEvent) : TxFeedAction()
 
-        /** Request for a FULL paged reconcile walk (ticker / contact re-resolution). */
-        object Reconcile : TxFeedAction()
+        /**
+         * Request for a FULL paged reconcile walk. [requested] is true for an
+         * explicit request (completeness check / contact re-resolution), false
+         * for the 60s ticker — only for the log line.
+         */
+        data class Reconcile(val requested: Boolean) : TxFeedAction()
     }
 
     /**
@@ -3307,26 +3311,28 @@ class CutoverUiDataService internal constructor(
                     val reconcilePages = MutableSharedFlow<List<L1TxUiRecord>>()
                     var reconcileJob: kotlinx.coroutines.Job? = null
                     val reconcileAgain = AtomicBoolean(false)
+                    // Whether a request (not the ticker) is among the walks
+                    // coalesced into [reconcileAgain] — for the log line only.
+                    val reconcileAgainRequested = AtomicBoolean(false)
                     merge(
                         source.observeWalletTxRecords(walletIdHex)
                             .map { TxFeedAction.Snapshot(it) as TxFeedAction },
                         reconcilePages.map { TxFeedAction.Snapshot(it) as TxFeedAction },
                         merge(
-                            reconcileTicker(),
+                            reconcileTicker().map { false },
                             // Replay a request made while nothing collected. Checked
                             // AFTER the subscription is live, so no request can fall
                             // between the check and the subscribe.
                             contactReResolveRequests.onSubscription {
                                 if (fullReconcilePending.get()) emit(Unit)
-                            }
-                        )
-                            .map { TxFeedAction.Reconcile as TxFeedAction },
+                            }.map { true }
+                        ).map { TxFeedAction.Reconcile(requested = it) as TxFeedAction },
                         txEvents.map { TxFeedAction.EngineEvent(it) }
                     ).collect { action ->
                         when (action) {
                             is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
                             is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
-                            TxFeedAction.Reconcile -> {
+                            is TxFeedAction.Reconcile -> {
                                 // Whatever triggered this, the walk it starts (or
                                 // the one more it queues) covers a pending request.
                                 fullReconcilePending.set(false)
@@ -3336,14 +3342,30 @@ class CutoverUiDataService internal constructor(
                                 // pass over freshly-busted caches).
                                 if (reconcileJob?.isActive == true) {
                                     reconcileAgain.set(true)
+                                    if (action.requested) {
+                                        reconcileAgainRequested.set(true)
+                                        log.info("full reconcile walk requested mid-walk; one more walk follows it")
+                                    }
                                 } else {
                                     reconcileJob = launch {
+                                        var requested = action.requested
                                         do {
                                             reconcileAgain.set(false)
+                                            val walk = reconcileWalkCount.incrementAndGet()
+                                            if (requested) log.info("full reconcile walk #{} started (requested)", walk)
+                                            val startedMs = System.currentTimeMillis()
+                                            var pages = 0
+                                            var records = 0
                                             try {
                                                 source.forEachWalletTxRecordPage(walletIdHex) { page ->
+                                                    pages++
+                                                    records += page.size
                                                     reconcilePages.emit(page)
                                                 }
+                                                logReconcileWalk(
+                                                    walk, requested, records, pages,
+                                                    System.currentTimeMillis() - startedMs
+                                                )
                                             } catch (t: Throwable) {
                                                 if (t is CancellationException) throw t
                                                 log.warn(
@@ -3351,6 +3373,7 @@ class CutoverUiDataService internal constructor(
                                                     t
                                                 )
                                             }
+                                            requested = reconcileAgainRequested.getAndSet(false)
                                         } while (reconcileAgain.get())
                                     }
                                 }
@@ -3607,6 +3630,30 @@ class CutoverUiDataService internal constructor(
      * change feed alone carries the launch window; thereafter one walk per
      * [refreshIntervalMs] preserves the 60s convergence semantics.
      */
+    /** Full reconcile walks started by this service — the `#n` in their log lines. */
+    private val reconcileWalkCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** Record count of the last logged ticker walk; -1 before the first. */
+    @Volatile
+    private var lastLoggedTickerWalkRecords = -1
+
+    /**
+     * One line per finished walk, so a QA log shows whether the reconcile ran
+     * and what it covered — before this a successful walk logged nothing, and
+     * "never ran" read the same as "ran fine" (D-M-01 §5). Requested walks
+     * always log; the 60s ticker logs its first walk and any walk whose record
+     * count moved, so a settled wallet does not log once a minute forever.
+     */
+    private fun logReconcileWalk(walk: Int, requested: Boolean, records: Int, pages: Int, elapsedMs: Long) {
+        if (requested || records != lastLoggedTickerWalkRecords) {
+            log.info(
+                "full reconcile walk #{} ({}) finished: {} records over {} pages in {}ms",
+                walk, if (requested) "requested" else "ticker", records, pages, elapsedMs
+            )
+        }
+        if (!requested) lastLoggedTickerWalkRecords = records
+    }
+
     private fun reconcileTicker(): Flow<Unit> = flow {
         delay(reconcileInitialDelayMs)
         while (true) {
