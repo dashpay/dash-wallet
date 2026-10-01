@@ -2119,6 +2119,66 @@ class SdkWalletBinderTest {
      * default windows: the scan gate holds the SPV start until a retry either
      * widens the windows or records the debt.
      */
+    /**
+     * Review, 2026-10-01: a backup-recovered wallet's reset runs in the
+     * blockchain service's onCreate, before any bind, so it cannot arm the
+     * SDK rescan directly. It owes it durably; the next bind's successful
+     * widening pays it and only then clears it.
+     */
+    @Test
+    fun recoveryReset_owesTheRescanToTheNextBind_beforeAnyWidening() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        assertTrue(binder.oweSpvRescanForRecoveryReset())
+        assertEquals(true, owedRescan)
+        assertEquals("nothing widened yet: not paid at narrow windows", 0, sdk.armRescanCalls)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals("the bind paid the debt", 1, sdk.armRescanCalls)
+        assertNull(owedRescan)
+    }
+
+    @Test
+    fun recoveryReset_keepsTheDebt_whenTheBindsArmFails() = runBlocking {
+        val sdk = readySdk()
+        sdk.onArmRescan = { _, _ -> false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+
+        assertTrue(binder.oweSpvRescanForRecoveryReset())
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+        assertEquals("a failed arm keeps the debt for the next bind", true, owedRescan)
+    }
+
+    @Test
+    fun recoveryReset_paysAtOnce_whenThisProcessAlreadyWidenedTheBoundWallet() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertEquals("no debt, no arm", 0, sdk.armRescanCalls)
+
+        assertTrue(binder.oweSpvRescanForRecoveryReset())
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(owedRescan)
+    }
+
+    @Test
+    fun recoveryReset_reportsFailure_whenTheDebtCannotBeRecorded() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        coEvery {
+            config.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, any())
+        } throws IllegalStateException("datastore write failed")
+        val binder = binder(sdk, config = config, scope = this)
+
+        assertFalse(binder.oweSpvRescanForRecoveryReset())
+        assertEquals(0, sdk.armRescanCalls)
+    }
+
     @Test
     fun scanGate_holdsTheScan_whenAFailedWideningsDebtCannotBeRecorded() = runBlocking {
         val sdk = readySdk()

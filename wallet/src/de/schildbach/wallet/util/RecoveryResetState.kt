@@ -34,9 +34,11 @@ import java.io.IOException
  * wallet whose `lastBlockSeenHeight` is -1.
  *
  * The marker is written BEFORE the recovered primary is saved (a failed
- * write fails the recovery save), every launch that finds it re-queues the
- * reset, and only the blockchain service removes it, after the reset's
- * teardown ran. A bare file beside the wallet file, like [WalletWipeState].
+ * write fails the recovery save). While it is present, every blockchain
+ * service start performs the reset in its onCreate before opening any store,
+ * and only that reset removes it, once every part succeeded (or after
+ * [MAX_FAILED_ATTEMPTS]). A bare file beside the wallet file, like
+ * [WalletWipeState].
  */
 object RecoveryResetState {
     private val log = LoggerFactory.getLogger(RecoveryResetState::class.java)
@@ -85,7 +87,7 @@ object RecoveryResetState {
         MAX_FAILED_ATTEMPTS
     }
 
-    /** Call ONLY after the reset ran: while the marker is present every launch re-queues it. */
+    /** Call ONLY after the reset ran: while the marker is present every service start resets again. */
     fun complete(dir: File) {
         try {
             val file = marker(dir)

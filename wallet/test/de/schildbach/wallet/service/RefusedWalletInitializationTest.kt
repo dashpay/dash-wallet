@@ -22,23 +22,16 @@ import org.robolectric.util.ReflectionHelpers
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplicationExt
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRecoveryReset
-import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
-@OptIn(ExperimentalCoroutinesApi::class)
 class RefusedWalletInitializationTest {
     @get:Rule val directory = TemporaryFolder()
     @Test
@@ -137,73 +130,123 @@ class RefusedWalletInitializationTest {
         }
     }
 
-    @Test
-    fun `owed recovery reset gates initialization and every command`() = runBlocking {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+    private class RecoveryResetFixture(val directory: File) {
         val service = spyk(BlockchainServiceImpl())
         val application = mockk<WalletApplication>(relaxed = true)
-        service.application = application
-        val wallet = mockk<org.bitcoinj.wallet.Wallet>()
-        every { application.wallet } returns wallet
-        every { application.isWalletLoadDegraded } returns false
-        every { application.isRecoveryResetPending } returns true
-        every { service.getDir("blockstore", any()) } returns directory.root
-        every { service.stopSelf() } answers { }
-        val latch = ReflectionHelpers.getField<CompletableDeferred<Unit>>(service, "onCreateCompleted")
-        try {
-            service.refuseForRecoveryReset()
+        val binder = mockk<de.schildbach.wallet.service.platform.sdk.SdkWalletBinder>()
+        val coordinator = mockk<de.schildbach.wallet.service.platform.sdk.CutoverCoordinator>()
+        val blockChain = File(directory, de.schildbach.wallet.Constants.Files.BLOCKCHAIN_FILENAME)
+        val headers = File(directory, de.schildbach.wallet.Constants.Files.HEADERS_FILENAME)
+        var sdkOwnsL1 = true
+        var databasesCleared = true
+        var sdkDebtRecorded = true
+        var failures = 0
 
-            assertTrue(latch.isCompleted)
-            assertFalse(ReflectionHelpers.getField<Boolean>(service, "initCompleted"))
-            assertTrue(ReflectionHelpers.getField<Boolean>(service, "resetBlockchainOnShutdown"))
-            assertTrue(ReflectionHelpers.getField<File>(service, "blockChainFile").parentFile == directory.root)
-            verify(exactly = 1) { service.stopSelf() }
-            // The queued reset and any other start are refused until the reset ran.
-            assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
-            assertTrue(service.handleWalletLifecycleCommand(null))
-            verify(exactly = 3) { service.stopSelf() }
-            every { application.isRecoveryResetPending } returns false
-            assertFalse(service.handleWalletLifecycleCommand(null))
-        } finally {
-            Dispatchers.resetMain()
+        init {
+            service.application = application
+            service.sdkWalletBinder = binder
+            service.cutoverCoordinator = coordinator
+            service.packageInfoProvider = mockk(relaxed = true)
+            every { service.getDir("blockstore", any()) } returns directory
+            every { coordinator.sdkOwnsL1Flow() } answers { kotlinx.coroutines.flow.flowOf(sdkOwnsL1) }
+            coEvery { binder.oweSpvRescanForRecoveryReset() } answers { sdkDebtRecorded }
+            every { application.recordRecoveryResetFailure() } answers { ++failures }
+            coEvery { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } } answers {
+                databasesCleared
+            }
+            blockChain.writeText("stale chain")
+            headers.writeText("stale headers")
+        }
+
+        fun close() {
             ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
             ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
         }
     }
 
+    private fun withRecoveryReset(block: suspend RecoveryResetFixture.() -> Unit) = runBlocking {
+        mockkObject(WalletApplicationExt)
+        val fixture = RecoveryResetFixture(directory.newFolder())
+        try {
+            fixture.block()
+        } finally {
+            fixture.close()
+            unmockkObject(WalletApplicationExt)
+        }
+    }
+
     @Test
-    fun `recovery reset marker is removed only after every database clear succeeded`() = runBlocking {
+    fun `recovery reset runs before initialization and completes only when every part succeeded`() =
+        withRecoveryReset {
+            assertTrue(service.performRecoveryReset())
+            assertFalse(blockChain.exists())
+            assertFalse(headers.exists())
+            coVerify(exactly = 1) { binder.oweSpvRescanForRecoveryReset() }
+            verify(exactly = 1) { application.markRecoveryResetComplete() }
+            verify(exactly = 0) { application.recordRecoveryResetFailure() }
+            // Done inline, never by teardown, so it needs no stopSelf().
+            verify(exactly = 0) { service.stopSelf() }
+        }
+
+    @Test
+    fun `recovery reset stays owed when the SDK rescan cannot be owed`() = withRecoveryReset {
+        sdkDebtRecorded = false
+        assertFalse(service.performRecoveryReset())
+        verify(exactly = 0) { application.markRecoveryResetComplete() }
+        verify(exactly = 1) { application.recordRecoveryResetFailure() }
+    }
+
+    @Test
+    fun `recovery reset stays owed when the databases do not all clear`() = withRecoveryReset {
+        databasesCleared = false
+        assertFalse(service.performRecoveryReset())
+        verify(exactly = 0) { application.markRecoveryResetComplete() }
+    }
+
+    @Test
+    fun `recovery reset stays owed when a blockstore cannot be deleted`() = withRecoveryReset {
+        // A non-empty directory at the store's path cannot be deleted.
+        assertTrue(blockChain.delete())
+        assertTrue(File(blockChain, "locked").apply { parentFile!!.mkdirs() }.createNewFile())
+        assertFalse(service.performRecoveryReset())
+        assertTrue(blockChain.exists())
+        verify(exactly = 0) { application.markRecoveryResetComplete() }
+    }
+
+    @Test
+    fun `recovery reset owes no SDK rescan before the cutover`() = withRecoveryReset {
+        sdkOwnsL1 = false
+        assertTrue(service.performRecoveryReset())
+        coVerify(exactly = 0) { binder.oweSpvRescanForRecoveryReset() }
+        verify(exactly = 1) { application.markRecoveryResetComplete() }
+    }
+
+    @Test
+    fun `recovery reset gives up after the bounded attempts so the wallet can sync`() = withRecoveryReset {
+        sdkDebtRecorded = false
+        repeat(de.schildbach.wallet.util.RecoveryResetState.MAX_FAILED_ATTEMPTS - 1) {
+            assertFalse(service.performRecoveryReset())
+        }
+        verify(exactly = 0) { application.markRecoveryResetComplete() }
+        assertTrue(service.performRecoveryReset())
+        verify(exactly = 1) { application.markRecoveryResetComplete() }
+    }
+
+    @Test
+    fun `commands are refused while a recovery reset is still owed`() {
         val service = spyk(BlockchainServiceImpl())
         val application = mockk<WalletApplication>(relaxed = true)
         service.application = application
-        mockkObject(WalletApplicationExt)
+        every { application.wallet } returns mockk()
+        every { application.isWalletLoadDegraded } returns false
+        every { application.isRecoveryResetPending } returns true
+        every { service.stopSelf() } answers { }
         try {
-            every { application.isRecoveryResetPending } returns true
-            coEvery { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } } returns false
-            every { application.recordRecoveryResetFailure() } returns 1
-            service.clearDatabasesAfterReset()
-            verify(exactly = 0) { application.markRecoveryResetComplete() }
-
-            coEvery { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } } returns true
-            service.clearDatabasesAfterReset()
-            verify(exactly = 1) { application.markRecoveryResetComplete() }
-
-            // A clear that keeps failing must not stop the wallet syncing forever.
-            coEvery { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } } returns false
-            every { application.recordRecoveryResetFailure() } returns de.schildbach.wallet.util.RecoveryResetState.MAX_FAILED_ATTEMPTS
-            service.packageInfoProvider = mockk(relaxed = true)
-            service.clearDatabasesAfterReset()
-            verify(exactly = 2) { application.markRecoveryResetComplete() }
-
-            // An ordinary reset keeps the fire-and-forget clear.
+            assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
+            assertTrue(service.handleWalletLifecycleCommand(null))
             every { application.isRecoveryResetPending } returns false
-            every { with(WalletApplicationExt) { application.clearDatabasesForRescan() } } answers { }
-            service.clearDatabasesAfterReset()
-            verify(exactly = 1) { with(WalletApplicationExt) { application.clearDatabasesForRescan() } }
-            coVerify(exactly = 3) { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } }
-            verify(exactly = 2) { application.markRecoveryResetComplete() }
+            assertFalse(service.handleWalletLifecycleCommand(null))
         } finally {
-            unmockkObject(WalletApplicationExt)
             ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
             ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
         }

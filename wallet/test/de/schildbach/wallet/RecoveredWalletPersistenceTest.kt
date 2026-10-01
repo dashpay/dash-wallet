@@ -157,43 +157,39 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
-    fun `owed recovery reset is replayed on later launches until the service completes it`() {
+    fun `owed recovery reset survives later launches without queueing a second reset`() {
         val marker = File(directory.root, RecoveryResetState.MARKER_FILE_NAME)
         app.persistRecoveredWallet(recovered)
         assertTrue(primary.exists())
         assertTrue(marker.exists())
 
         // The process died before the reset ran: the next launch loads the
-        // saved primary as an ordinary wallet and must still queue the reset.
+        // saved primary as an ordinary wallet. The marker keeps the reset
+        // owed for the blockchain service's onCreate, which performs it; the
+        // load does only the in-process half and queues no reset intent.
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         setField("walletFactory", mockk<WalletFactory> {
             every { getExtensions(any()) } returns emptyArray()
         })
         val launchApp = spyk(app)
-        every { launchApp.resetBlockchain() } answers { }
+        every { launchApp.resetBlockchain() } answers { fail("must not queue ACTION_RESET_BLOCKCHAIN") }
+        every { launchApp.resetBlockchainInProcess() } answers { }
         every { launchApp.finalizeInitialization() } answers { }
         val load = WalletApplication::class.java.getDeclaredMethod("loadWalletFromProtobuf").apply {
             isAccessible = true
         }
         load.invoke(launchApp)
-        verify(exactly = 1) { launchApp.resetBlockchain() }
-        verify(exactly = 1) { launchApp.finalizeInitialization() }
         load.invoke(launchApp)
-        verify(exactly = 2) { launchApp.resetBlockchain() }
-
-        // A launch that cannot start the service still loads normally.
-        every { launchApp.resetBlockchain() } throws IllegalStateException("background start not allowed")
-        load.invoke(launchApp)
-        verify(exactly = 3) { launchApp.resetBlockchain() }
-        verify(exactly = 3) { launchApp.finalizeInitialization() }
+        verify(exactly = 2) { launchApp.resetBlockchainInProcess() }
+        verify(exactly = 2) { launchApp.finalizeInitialization() }
         assertTrue(marker.exists())
-        every { launchApp.resetBlockchain() } answers { }
 
         launchApp.markRecoveryResetComplete()
         assertFalse(marker.exists())
         load.invoke(launchApp)
-        verify(exactly = 3) { launchApp.resetBlockchain() }
-        verify(exactly = 4) { launchApp.finalizeInitialization() }
+        verify(exactly = 2) { launchApp.resetBlockchainInProcess() }
+        verify(exactly = 3) { launchApp.finalizeInitialization() }
+        verify(exactly = 0) { launchApp.resetBlockchain() }
     }
 
     @Test
@@ -324,7 +320,6 @@ class RecoveredWalletPersistenceTest {
         } catch (expected: RuntimeException) {
             assertTrue(expected.cause is IOException)
         }
-
         // Still the recovery input at the path a later launch restores from.
         assertArrayEquals(previousBackup, backup.readBytes())
         assertEquals(listOf(backup.name), directory.root.listFiles()!!.filter { it.isFile }.map { it.name })

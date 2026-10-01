@@ -1686,17 +1686,13 @@ public class WalletApplication extends MultiDexApplication
         if (recoveredWalletPersistencePending)
             return false;
         // Covers both a backup recovery in this launch and one whose reset a
-        // previous process died before completing.
+        // previous process died before completing. Only the in-process half:
+        // the blockchain service performs the store/database reset in its
+        // onCreate, before it opens anything, whichever start creates it, so
+        // no ACTION_RESET_BLOCKCHAIN is queued (it would reset a second time).
         if (isRecoveryResetPending()) {
-            log.info("recovered wallet still owes a blockchain reset — queueing it");
-            try {
-                resetBlockchain();
-            } catch (final RuntimeException x) {
-                // e.g. a background launch may not start the service. The
-                // marker stays, so the next launch queues the reset again;
-                // escaping here would open this healthy wallet degraded.
-                log.warn("could not queue the owed recovery reset — retrying next launch", x);
-            }
+            log.info("recovered wallet still owes a blockchain reset — the blockchain service performs it");
+            resetBlockchainInProcess();
         }
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
         return true;
@@ -1817,9 +1813,9 @@ public class WalletApplication extends MultiDexApplication
                 return wallet;
             }
 
-            // persistRecoveredWallet() armed the reset; loadWalletFromProtobuf()
-            // queues it once the wallet passes its remaining checks, so the
-            // service-backed reset never escapes the persistence failure guard.
+            // persistRecoveredWallet() armed the reset; the blockchain service
+            // performs it before opening any store, and a failed save above
+            // returns first, so the reset never escapes the persistence guard.
             // May run on the deferred load's worker, which has no Looper: a
             // direct Toast would throw here and fail a recovery that worked.
             showLoadToast(getString(R.string.toast_wallet_reset));
@@ -1899,7 +1895,7 @@ public class WalletApplication extends MultiDexApplication
         return RecoveryResetState.INSTANCE.recordFailedAttempt(walletFile.getParentFile());
     }
 
-    /** Called by the blockchain service once a reset's teardown has run. */
+    /** Called by the blockchain service once the owed reset has run. */
     public void markRecoveryResetComplete() {
         RecoveryResetState.INSTANCE.complete(walletFile.getParentFile());
     }
@@ -2100,6 +2096,18 @@ public class WalletApplication extends MultiDexApplication
 
     public void resetBlockchain() {
         awaitDeferredWalletLoadForMutation();
+        resetBlockchainInProcess();
+        Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
+                BlockchainServiceImpl.class);
+        startService(blockchainServiceResetBlockchainIntent);
+    }
+
+    /**
+     * The half of {@link #resetBlockchain()} that needs no blockchain service.
+     * Also called from inside the wallet load (on its worker in a background
+     * start), so it must not wait for that load.
+     */
+    void resetBlockchainInProcess() {
         // reset the extensions
         if (wallet != null && authenticationGroupExtension != null) {
             authenticationGroupExtension.reset();
@@ -2109,9 +2117,6 @@ public class WalletApplication extends MultiDexApplication
         txDisplayCacheService.clearInMemoryCache();
         // implicitly stops blockchain service
         resetBlockchainState();
-        Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,
-                BlockchainServiceImpl.class);
-        startService(blockchainServiceResetBlockchainIntent);
     }
 
     private void resetBlockchainSyncProgress() {
