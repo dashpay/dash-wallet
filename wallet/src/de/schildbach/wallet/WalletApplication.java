@@ -370,6 +370,34 @@ public class WalletApplication extends MultiDexApplication
                 || walletWipeIncomplete;
     }
 
+    /**
+     * Whether a Reset Wallet stopped with its marker on disk in this process
+     * (see {@link #walletWipeIncomplete}). Onboarding's degraded screen reads
+     * this to drop every recovery action that would create, restore or load a
+     * wallet under the marker.
+     */
+    public boolean isWalletWipeRecoveryRequired() {
+        return walletWipeIncomplete;
+    }
+
+    /**
+     * Whether a wallet created or restored now must be refused because a wipe
+     * marker is on disk. The next cold launch would treat it as an unfinished
+     * Reset Wallet and destroy the replacement. Re-reads the marker rather
+     * than trusting {@link #walletWipeIncomplete} alone, and latches that flag
+     * when it finds one, so the degraded screen takes over from here on.
+     */
+    public boolean isWalletReplacementRefused() {
+        if (walletWipeIncomplete) {
+            return true;
+        }
+        if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+            walletWipeIncomplete = true;
+            return true;
+        }
+        return false;
+    }
+
     /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
     public boolean isSafeModeLaunch() {
         return walletLoadSkippedSafeMode;
@@ -723,6 +751,15 @@ public class WalletApplication extends MultiDexApplication
      */
     @MainThread
     public void retryWalletLoadAfterSafeMode(@NonNull final Consumer<Boolean> onDone) {
+        if (walletWipeIncomplete) {
+            // The next cold launch finishes the wipe; loading the wallet under
+            // its marker now would present a half-destroyed wallet. Keep the
+            // safe-mode verdict and the breadcrumbs as they are, and start no
+            // load. Answered at once, on the main thread like every answer.
+            log.warn("SAFE MODE ESCAPE refused: a wipe marker blocks loading the wallet");
+            onDone.accept(false);
+            return;
+        }
         if (safeModeRetryInProgress) {
             safeModeRetryCallbacks.add(onDone);
             return;
@@ -992,8 +1029,21 @@ public class WalletApplication extends MultiDexApplication
         blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
     }
 
-    // only used by onboarding after creating or restoring a wallet
-    public void setWallet(Wallet newWallet) throws GeneralSecurityException, IOException {
+    /**
+     * Only used by onboarding after creating or restoring a wallet, so it is
+     * the one point every replacement wallet passes before anything is
+     * persisted: {@link #saveWalletAndFinalizeInitialization} saves whatever
+     * this installed.
+     *
+     * @return false, with nothing changed, when {@link #isWalletReplacementRefused}
+     *   says a wipe marker forbids a replacement. Callers must stop their flow
+     *   and send the user back to the degraded screen.
+     */
+    public boolean setWallet(Wallet newWallet) throws GeneralSecurityException, IOException {
+        if (isWalletReplacementRefused()) {
+            log.warn("refusing to install a created or restored wallet: a wipe marker is on disk");
+            return false;
+        }
         awaitDeferredWalletLoadForMutation();
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
@@ -1065,6 +1115,7 @@ public class WalletApplication extends MultiDexApplication
         // "freshWalletSetupThisLaunch" inside the coordinator, which suppresses
         // the one-time UPGRADE sync explainer the other seam would otherwise arm.
         cutoverCoordinator.commitForFreshWalletSetupAsync();
+        return true;
     }
 
     public void saveWalletAndFinalizeInitialization() {

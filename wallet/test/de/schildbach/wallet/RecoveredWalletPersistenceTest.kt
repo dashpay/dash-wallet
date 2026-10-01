@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.WalletUriHandlerActivity
+import de.schildbach.wallet.ui.degradedScreenActions
 import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.util.SafeModeRetryWaiters
 import io.mockk.every
@@ -232,6 +233,63 @@ class RecoveredWalletPersistenceTest {
         verify(exactly = 0) { savingWallet.saveToFile(any()) }
         assertTrue(app.isWalletLoadDegraded)
         assertFalse(primaryInMissingDir.exists())
+    }
+
+    @Test
+    fun `wipe recovery outranks seed recovery and no replacement wallet is installed or saved`() {
+        // A failed primary and backup load latched seed recovery; a Reset
+        // Wallet then stopped with its marker on disk (review, PR #1576). The
+        // recovered-wallet persistence latch is NOT set: the wipe guard alone
+        // must refuse the replacement.
+        ReflectionHelpers.setField(app, "wallet", null)
+        setField("walletLoadFailed", true)
+        setField("walletRecoveryFromSeedNeeded", true)
+        setField("walletWipeIncomplete", true)
+        setField("recoveredWalletPersistencePending", false)
+        assertTrue(app.isWalletLoadDegraded)
+        assertTrue(app.isWalletRecoveryFromSeedNeeded)
+
+        val actions = degradedScreenActions(
+            wipeRecoveryRequired = app.isWalletWipeRecoveryRequired,
+            safeMode = app.isSafeModeLaunch,
+            recoveryFromSeedNeeded = app.isWalletRecoveryFromSeedNeeded,
+            firstShow = true
+        )
+        assertTrue(actions.showWipeRecoveryMessage)
+        assertFalse("Restore Wallet must not be offered", actions.offerSeedRecovery)
+        assertFalse(actions.offerSafeModeRetry)
+
+        // Every create/restore flow installs its wallet through setWallet.
+        assertTrue(app.isWalletReplacementRefused)
+        assertFalse(app.setWallet(Wallet(Constants.NETWORK_PARAMETERS)))
+        assertNull(app.wallet)
+        assertFalse(primary.exists())
+        // The retry refuses at once, starting no load, and keeps the
+        // safe-mode verdict.
+        setField("walletLoadSkippedSafeMode", true)
+        assertEquals(false, retryResult(app))
+        assertFalse(app.isSafeModeRetryInProgress)
+        assertTrue(app.isSafeModeLaunch)
+        assertTrue("the seed-recovery verdict is kept, not consumed", app.isWalletRecoveryFromSeedNeeded)
+        assertFalse(ReflectionHelpers.getField<Boolean>(app, "recoveredWalletPersistencePending"))
+        assertTrue(app.isWalletLoadDegraded)
+    }
+
+    @Test
+    fun `a wipe marker on disk refuses a replacement wallet and latches the guard`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        val guardedApp = spyk(app)
+        every { guardedApp.filesDir } returns directory.root
+        assertFalse(guardedApp.isWalletReplacementRefused)
+
+        // The next cold launch would read this marker as an unfinished Reset
+        // Wallet and wipe whatever wallet it found.
+        assertTrue(WalletWipeState.begin(directory.root))
+        assertFalse(guardedApp.setWallet(Wallet(Constants.NETWORK_PARAMETERS)))
+        assertNull(guardedApp.wallet)
+        assertFalse(primary.exists())
+        assertTrue(guardedApp.isWalletWipeRecoveryRequired)
+        assertTrue(guardedApp.isWalletLoadDegraded)
     }
 
     @Test
