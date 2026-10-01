@@ -1644,6 +1644,34 @@ class SdkWalletBinder internal constructor(
         false
     }
 
+    /**
+     * The SDK half of a backup-recovered wallet's owed reset. Arming
+     * directly ([armSpvRescanForBlockchainReset]) needs a bound or loaded
+     * wallet, which the blockchain service does not have when it performs
+     * that reset, so the rescan is owed through the same durable debt a
+     * failed widening records: the next bind's successful widening arms the
+     * rewind to birth and only then clears it. When this process already
+     * widened a bound wallet, it is paid at once.
+     *
+     * Returns whether the debt is recorded (or already paid); false when the
+     * write failed. Never throws except cancellation.
+     */
+    suspend fun oweSpvRescanForRecoveryReset(): Boolean = wideningMutex.withLock {
+        if (!recordWidenRescanOwed()) return@withLock false
+        try {
+            val walletIdHex = boundWalletIdHex ?: sdkService.loadedWalletIds().singleOrNull()
+            // Repaying at narrow windows would also clear a widening's debt.
+            if (walletIdHex != null && walletIdHex == widenedWalletIdHex) {
+                repayWidenRescanOwed(walletIdHex)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("recovery reset: immediate rescan arm failed; the next bind pays it", t)
+        }
+        true
+    }
+
     /** Arm the owed rescan, then clear the debt; a failed arm keeps it for the next bind. */
     private suspend fun repayWidenRescanOwed(walletIdHex: String) {
         if (dashPayConfig.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) != true) return
