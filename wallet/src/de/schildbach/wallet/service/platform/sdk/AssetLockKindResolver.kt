@@ -315,6 +315,9 @@ class AssetLockKindResolver @Inject constructor(
             if (topUpsDao.getByTxId(sha) != null) return AssetLockKind.TOPUP
             if (invitationsDao.loadByUsername(sha) != null) return AssetLockKind.INVITE
 
+            // Set when a probe could not run for want of the active SDK wallet
+            // id: a partial verdict, like db == null, so it is never cached.
+            var walletUnknown = false
             // Durable fallback — the SDK's own asset_locks funding type, for a
             // lock the app-side records never captured (e.g. after a restore).
             val kind = when (db?.assetLockDao()?.fundingTypeForTxid(hex)) {
@@ -330,7 +333,13 @@ class AssetLockKindResolver @Inject constructor(
                 // credit output pays a key on one of the wallet's identity accounts —
                 // the same evidence dashj's TxResourceMapper used (the credit key's
                 // keychain), read from the SDK's own address→account derivation.
-                creditAccountKind(db, hex)
+                val walletId = activeSdkWalletIdOrNull()
+                if (walletId == null) {
+                    walletUnknown = true
+                    null
+                } else {
+                    creditAccountKind(db, hex, walletId)
+                }
             } else {
                 null
             }
@@ -349,8 +358,12 @@ class AssetLockKindResolver @Inject constructor(
             //     TTL lapsed. A genuine external receive is upserted into the same
             //     table (a non-null Standard kind), so it still caches normally —
             //     only the not-yet-recorded window is spared, which self-limits once
-            //     the SDK persists the row.
-            if (kind == null && db != null && txKind != null) negative.markNegative(hex)
+            //     the SDK persists the row;
+            //   • the active SDK wallet id is unknown or ambiguous (walletUnknown) —
+            //     the credit-account probe was skipped, not answered.
+            if (kind == null && db != null && txKind != null && !walletUnknown) {
+                negative.markNegative(hex)
+            }
             kind
         } catch (e: CancellationException) {
             throw e
@@ -368,10 +381,16 @@ class AssetLockKindResolver @Inject constructor(
      * and looked up in `core_addresses`, which holds every address the SDK has
      * derived and the account it belongs to. Any failure returns null — the
      * row keeps its plain label, never a wrong one.
+     *
+     * `core_addresses` carries no walletId, only accountId, and the SDK store
+     * can hold more than one wallet (an orphan left by an earlier restore), so
+     * the join is scoped to [walletId] through `accounts.walletId`: another
+     * wallet's identity account must not label this wallet's row.
      */
     private suspend fun creditAccountKind(
         db: org.dashfoundation.dashsdk.persistence.DashDatabase,
-        displayHex: String
+        displayHex: String,
+        walletId: ByteArray
     ): AssetLockKind? = try {
         val wireTxid = hexToBytesOrNull(displayHex)?.reversedArray()
         if (wireTxid == null) {
@@ -395,12 +414,16 @@ class AssetLockKindResolver @Inject constructor(
                     null
                 } else {
                     val accountTypes = HashSet<Int>()
+                    val args = ArrayList<Any?>(1 + addresses.size)
+                    args.add(walletId)
+                    args.addAll(addresses)
                     readable.query(
                         androidx.sqlite.db.SimpleSQLiteQuery(
                             "SELECT DISTINCT a.accountType FROM core_addresses ca " +
                                 "JOIN accounts a ON a.id = ca.accountId " +
-                                "WHERE ca.address IN (${addresses.joinToString(",") { "?" }})",
-                            addresses.toTypedArray()
+                                "WHERE a.walletId = ? " +
+                                "AND ca.address IN (${addresses.joinToString(",") { "?" }})",
+                            args.toTypedArray()
                         )
                     ).use { c -> while (c.moveToNext()) accountTypes += c.getInt(0) }
                     assetLockKindForCreditAccountTypes(accountTypes)
@@ -413,6 +436,16 @@ class AssetLockKindResolver @Inject constructor(
         log.warn("credit-account probe failed for {}; leaving the asset lock unclassified", displayHex, t)
         null
     }
+
+    /**
+     * The SDK wallet this app is bound to, as the 32-byte id the SDK tables
+     * key on, or null when it cannot be named: none loaded yet, or more than
+     * one (stale leftovers of an earlier app wallet) — the same
+     * `singleOrNull()` rule every bound-wallet lookup uses. A non-blocking
+     * snapshot; never triggers an SDK bring-up.
+     */
+    private fun activeSdkWalletIdOrNull(): ByteArray? =
+        sdkService.loadedWalletIds().singleOrNull()?.let { walletIdFromHex(it) }
 
     /**
      * Whether this AssetUnlock was authored by THIS wallet's shielded pool.
