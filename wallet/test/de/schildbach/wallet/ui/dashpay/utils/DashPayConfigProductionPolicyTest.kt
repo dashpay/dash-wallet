@@ -49,6 +49,9 @@ class DashPayConfigProductionPolicyTest {
             Pair(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW, true),
             Pair(DashPayConfig.USE_KOTLIN_SDK_L1_SEND, false)
         )
+        // The constructor seeds unset flags on Dispatchers.IO; in unlocked
+        // variants it could otherwise write a default over the edit below.
+        config.initialSeeding.join()
         // Bypass set(), as an imported or externally modified preferences file would.
         config.editPreferences { prefs -> flags.forEach { (key, value) -> prefs[key] = !value } }
         flags.forEach { (key, value) ->
