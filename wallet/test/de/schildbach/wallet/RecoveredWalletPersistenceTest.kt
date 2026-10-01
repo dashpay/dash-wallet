@@ -28,6 +28,7 @@ import org.robolectric.util.ReflectionHelpers
 import org.robolectric.annotation.Config
 import java.io.File
 import java.io.IOException
+import de.schildbach.wallet.util.RecoveryResetState
 import de.schildbach.wallet.util.WalletWipeSequence
 import de.schildbach.wallet.util.WalletWipeState
 import kotlinx.coroutines.runBlocking
@@ -153,6 +154,63 @@ class RecoveredWalletPersistenceTest {
         assertFalse(recoveryApp.isWalletRecoveryFromSeedNeeded)
         assertArrayEquals(originalBackup, backup.readBytes())
         verify(exactly = 0) { recoveryApp.resetBlockchain() }
+    }
+
+    @Test
+    fun `owed recovery reset is replayed on later launches until the service completes it`() {
+        val marker = File(directory.root, RecoveryResetState.MARKER_FILE_NAME)
+        app.persistRecoveredWallet(recovered)
+        assertTrue(primary.exists())
+        assertTrue(marker.exists())
+
+        // The process died before the reset ran: the next launch loads the
+        // saved primary as an ordinary wallet and must still queue the reset.
+        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        setField("walletFactory", mockk<WalletFactory> {
+            every { getExtensions(any()) } returns emptyArray()
+        })
+        val launchApp = spyk(app)
+        every { launchApp.resetBlockchain() } answers { }
+        every { launchApp.finalizeInitialization() } answers { }
+        val load = WalletApplication::class.java.getDeclaredMethod("loadWalletFromProtobuf").apply {
+            isAccessible = true
+        }
+        load.invoke(launchApp)
+        verify(exactly = 1) { launchApp.resetBlockchain() }
+        verify(exactly = 1) { launchApp.finalizeInitialization() }
+        load.invoke(launchApp)
+        verify(exactly = 2) { launchApp.resetBlockchain() }
+
+        // A launch that cannot start the service still loads normally.
+        every { launchApp.resetBlockchain() } throws IllegalStateException("background start not allowed")
+        load.invoke(launchApp)
+        verify(exactly = 3) { launchApp.resetBlockchain() }
+        verify(exactly = 3) { launchApp.finalizeInitialization() }
+        assertTrue(marker.exists())
+        every { launchApp.resetBlockchain() } answers { }
+
+        launchApp.markRecoveryResetComplete()
+        assertFalse(marker.exists())
+        load.invoke(launchApp)
+        verify(exactly = 3) { launchApp.resetBlockchain() }
+        verify(exactly = 4) { launchApp.finalizeInitialization() }
+    }
+
+    @Test
+    fun `recovered primary is not saved when the reset marker cannot be written`() {
+        // A missing directory makes the marker write fail before the save.
+        val primaryInMissingDir = File(directory.root, "missing/primary")
+        setField("walletFile", primaryInMissingDir)
+        val savingWallet = spyk(recovered)
+        try {
+            app.persistRecoveredWallet(savingWallet)
+            fail("marker write must fail")
+        } catch (expected: IOException) {
+            // The primary save never ran, so this came from the marker write.
+        }
+        verify(exactly = 0) { savingWallet.saveToFile(any()) }
+        assertTrue(app.isWalletLoadDegraded)
+        assertFalse(primaryInMissingDir.exists())
     }
 
     @Test

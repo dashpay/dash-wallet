@@ -179,6 +179,7 @@ import de.schildbach.wallet.util.FriendKeyChainLookahead;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.ProcessExitReasons;
+import de.schildbach.wallet.util.RecoveryResetState;
 import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
@@ -1679,6 +1680,19 @@ public class WalletApplication extends MultiDexApplication
         // or publish a usable wallet until the primary copy is durable.
         if (recoveredWalletPersistencePending)
             return false;
+        // Covers both a backup recovery in this launch and one whose reset a
+        // previous process died before completing.
+        if (RecoveryResetState.INSTANCE.isPending(walletFile.getParentFile())) {
+            log.info("recovered wallet still owes a blockchain reset — queueing it");
+            try {
+                resetBlockchain();
+            } catch (final RuntimeException x) {
+                // e.g. a background launch may not start the service. The
+                // marker stays, so the next launch queues the reset again;
+                // escaping here would open this healthy wallet degraded.
+                log.warn("could not queue the owed recovery reset — retrying next launch", x);
+            }
+        }
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_CONSISTENCY_CHECKED, "WALLET_CONSISTENCY_CHECKED");
         return true;
     }
@@ -1798,8 +1812,9 @@ public class WalletApplication extends MultiDexApplication
                 return wallet;
             }
 
-            // Service-backed reset must not escape the persistence failure guard.
-            resetBlockchain();
+            // persistRecoveredWallet() armed the reset; loadWalletFromProtobuf()
+            // queues it once the wallet passes its remaining checks, so the
+            // service-backed reset never escapes the persistence failure guard.
             // May run on the deferred load's worker, which has no Looper: a
             // direct Toast would throw here and fail a recovery that worked.
             showLoadToast(getString(R.string.toast_wallet_reset));
@@ -1862,8 +1877,16 @@ public class WalletApplication extends MultiDexApplication
 
     void persistRecoveredWallet(final Wallet recoveredWallet) throws IOException {
         recoveredWalletPersistencePending = true;
+        // Before the save: once the primary exists, a later launch loads it as
+        // an ordinary wallet and only this marker says its reset is still owed.
+        RecoveryResetState.INSTANCE.arm(walletFile.getParentFile());
         protobufSerializeWallet(recoveredWallet);
         recoveredWalletPersistencePending = false;
+    }
+
+    /** Called by the blockchain service once a reset's teardown has run. */
+    public void markRecoveryResetComplete() {
+        RecoveryResetState.INSTANCE.complete(walletFile.getParentFile());
     }
 
     private void protobufSerializeWallet(final Wallet wallet) throws IOException {
@@ -2254,6 +2277,8 @@ public class WalletApplication extends MultiDexApplication
         WalletWipeState.INSTANCE.complete(getFilesDir());
         if (!WalletWipeState.INSTANCE.isPending(getFilesDir())) {
             recoveredWalletPersistencePending = false;
+            // The wiped wallet's owed reset must not carry over to its replacement.
+            RecoveryResetState.INSTANCE.complete(getFilesDir());
         }
     }
 

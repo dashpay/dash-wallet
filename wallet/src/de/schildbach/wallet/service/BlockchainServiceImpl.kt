@@ -3352,6 +3352,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     } else {
                         //Clear the blockchain identity
                         application.clearDatabasesForRescan()
+                        // A backup-recovered wallet's owed reset has now run.
+                        application.markRecoveryResetComplete()
                     }
                     resetBlockchainState()
                 }
