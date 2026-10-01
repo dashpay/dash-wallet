@@ -270,6 +270,93 @@ class CutoverUiDataServiceTest {
         assertTrue(plan.updates.isEmpty())
     }
 
+    // ── store stubs and block-time re-dating (restore "today" history) ──
+
+    /** A confirmed record whose SDK row carries the block time in both timestamp columns. */
+    private fun minedRecord(firstByte: Int, net: Long, blockSec: Long, direction: Int = 0) =
+        l1TxUiRecord(wireTxid(firstByte), net, null, 3, direction, blockSec, blockSec.toInt())
+
+    /** The SDK's TXO-parent stub: every column at its entity default. */
+    private fun stubRecord(firstByte: Int) = l1TxUiRecord(wireTxid(firstByte), 0, null, 0, 0, 0, 0)
+
+    private val twoYearsAgoSec = (now - 2L * 365 * 24 * 60 * 60 * 1000) / 1000
+
+    @Test
+    fun record_carriesBlockTimeAndFlagsTheStoreStub() {
+        val mined = minedRecord(1, 1_000, twoYearsAgoSec)
+        assertEquals(twoYearsAgoSec * 1000, mined.blockTimestampMs)
+        assertFalse(mined.isStoreStub)
+        // A mempool record has a first-seen time but no block time, and is no stub.
+        assertEquals(0L, record(context = 0).blockTimestampMs)
+        assertFalse(record(context = 0).isStoreStub)
+        assertTrue(stubRecord(1).isStoreStub)
+    }
+
+    @Test
+    fun syncPlan_skipsTheStoreStub() {
+        val plan = planL1DisplaySync(listOf(stubRecord(7)), emptyMap(), emptySet(), resolve, now)
+        // Before the fix this inserted a "Received 0" row stamped `now`.
+        assertTrue(plan.inserts.isEmpty())
+        assertTrue(plan.updates.isEmpty())
+        assertTrue(plan.notifyIncoming.isEmpty())
+        assertTrue(plan.sdkAuthoritative.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_stubDoesNotDisturbAnExistingRow() {
+        val row = cacheEntry(displayHex(7), resolve(R.string.transaction_row_status_sent))
+        val plan = planL1DisplaySync(
+            listOf(stubRecord(7)), mapOf(row.rowId to row), emptySet(), resolve, now
+        )
+        assertTrue(plan.updates.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_restoreStampedRowIsRedatedToItsBlock() {
+        // The field shape: a stub was cached as "Received 0" at restore time, then
+        // the real record arrived for a tx mined two years earlier.
+        val stamped = cacheEntry(displayHex(7), resolve(R.string.transaction_row_status_received))
+            .copy(valueSatoshis = 0L, time = now, filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED)
+        val mined = minedRecord(7, 1_000_000, twoYearsAgoSec)
+        val plan = planL1DisplaySync(listOf(mined), mapOf(stamped.rowId to stamped), emptySet(), resolve, now)
+
+        val updated = plan.updates.single()
+        assertEquals(twoYearsAgoSec * 1000, updated.time)
+        // The existing value re-stamp still applies alongside the new date.
+        assertEquals(1_000_000L, updated.valueSatoshis)
+        assertEquals("memo", updated.comment)
+    }
+
+    @Test
+    fun syncPlan_neverTouchRowsTakeOnlyTheRedate() {
+        val giftCard = cacheEntry(
+            displayHex(7), "Gift card", filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD
+        ).copy(time = now)
+        val mined = minedRecord(7, -1_000_000, twoYearsAgoSec, direction = 1)
+        val plan = planL1DisplaySync(listOf(mined), mapOf(giftCard.rowId to giftCard), emptySet(), resolve, now)
+
+        assertEquals(giftCard.copy(time = twoYearsAgoSec * 1000), plan.updates.single())
+    }
+
+    @Test
+    fun syncPlan_genuineSightingTimesAreNotRedated() {
+        val blockSec = (now - 24L * 60 * 60 * 1000) / 1000
+        val blockMs = blockSec * 1000
+        val sent = resolve(R.string.transaction_row_status_sent)
+        val mined = minedRecord(7, -1_000_000, blockSec, direction = 1)
+        // Seen in the mempool days before it was mined: earlier than the block.
+        val early = cacheEntry(displayHex(7), sent).copy(time = blockMs - 3L * 24 * 60 * 60 * 1000)
+        // Seen an hour after its header time (a lagging header): inside the tolerance.
+        val lagging = cacheEntry(displayHex(7), sent).copy(time = blockMs + 60L * 60 * 1000)
+
+        for (row in listOf(early, lagging)) {
+            assertEquals(row, redatedFromBlock(row, mined))
+        }
+        // An unconfirmed record has no block time to re-date against.
+        val late = cacheEntry(displayHex(7), sent).copy(time = now)
+        assertEquals(late, redatedFromBlock(late, record(firstByte = 7, context = 0, firstSeenSec = blockSec)))
+    }
+
     @Test
     fun syncPlan_oldIncomingInsertedButNotNotified() {
         val old = record(firstByte = 7, net = 1_000_000, firstSeenSec = (now - 3 * 24 * 60 * 60 * 1000L) / 1000)
