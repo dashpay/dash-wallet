@@ -1698,6 +1698,40 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun stopForWalletWipe_cancelsTheWipedWalletsDeferredCoinsReceivedNotify() = runTest {
+        val txid = displayHex(7)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val notified = mutableListOf<Long>()
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao,
+            notify = { notified += it }, txEvents = events
+        )
+        service.start()
+        runCurrent()
+
+        // A mempool receive: the row renders, the push waits out the grace.
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+        assertTrue(txid in store)
+        assertTrue(notified.isEmpty())
+
+        // "Reset Wallet" lands inside the grace.
+        service.stopForWalletWipe()
+        source.boundWalletId = null
+        store.clear()
+        service.resumeAfterWalletWipe()
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS * 3)
+        runCurrent()
+        assertTrue("the wiped wallet's receive must not notify after the stop", notified.isEmpty())
+    }
+
+    @Test
     fun stopForWalletWipe_conflatedReset_restartsForNextWallet_withoutTheWipedWalletsPendingWalk() = runTest {
         // The wipe's DUAL_RUNNING never reaches the gate (DataStore conflated
         // it under the next wallet's CUT_OVER): the gate stays "active" the
