@@ -2342,6 +2342,27 @@ class L1ShadowSyncService internal constructor(
     fun lastEngineActivityMs(): Long = lastWalletEventMs
 
     /**
+     * When the in-flight engine start began, on [nowMs]'s clock; 0 when no
+     * start is in progress. Set once [startIfEnabled] is committed to bringing
+     * the engine up (wallet bound, scan gate open) and cleared when it returns.
+     *
+     * That span has no progress to show: the DashPay bring-up runs first, then
+     * the SPV client loads its stored header chain before it reports anything.
+     * On a large chain that load is long — field report, 2026-09-30: the
+     * client was constructed at 22:24:31 and its header manager came up at
+     * 22:37:54. The idle rule read the empty progress as idle and stopped the
+     * service at 22:26:01 with the start still running; with no foreground
+     * service left, the process was frozen until the user reopened the app.
+     * [de.schildbach.wallet.service.BlockchainServiceImpl] reads this to keep
+     * the service up through the start.
+     */
+    @Volatile
+    private var engineStartingSinceMs: Long = 0L
+
+    /** See [engineStartingSinceMs]. */
+    fun engineStartingSinceMs(): Long = engineStartingSinceMs
+
+    /**
      * Parsed per-transaction engine events ([L1TxEvent]), live while the
      * shadow runs — the INSTANT receive feed [CutoverUiDataService]'s tx
      * pipeline consumes to insert mempool receives / flip IS-lock state
@@ -2682,6 +2703,10 @@ class L1ShadowSyncService internal constructor(
         // too, instead of the retry adopting the stop's new generation.
         val startGeneration = expectedExternalStopGeneration ?: externalStopGeneration
         if (!isEnabled()) return false
+        // Whether THIS call set [engineStartingSinceMs]. A caller cancelled while
+        // waiting on [mutex] also runs the finally, and must not clear the mark of
+        // the start that holds the lock.
+        var markedStarting = false
         return try {
             mutex.withLock {
                 if (runningWalletIdHex.value != null) return true
@@ -2718,6 +2743,9 @@ class L1ShadowSyncService internal constructor(
                 scanGateRefusals = 0
                 currentCoroutineContext()[Job].let { self -> scanGateRetryJob?.takeIf { it !== self }?.cancel() }
 
+                // Cleared in the outer finally, whichever way this start ends.
+                engineStartingSinceMs = nowMs()
+                markedStarting = true
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
                 if (!source.isSpvRunning()) {
                     // Ordered DashPay bring-up BEFORE SPV: register the
@@ -2868,6 +2896,8 @@ class L1ShadowSyncService internal constructor(
             if (t is CancellationException) throw t
             log.warn("L1 shadow sync start failed; dashj behavior unchanged", t)
             false
+        } finally {
+            if (markedStarting) engineStartingSinceMs = 0L
         }
     }
 

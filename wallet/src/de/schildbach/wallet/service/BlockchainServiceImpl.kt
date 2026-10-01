@@ -2218,7 +2218,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // receiver / foreground edge bring it back.
             val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
             val replaying = blockchainState?.replaying == true && !bindBlocked
-            holdWakeLockWhileReplaying(replaying)
+            // An SDK engine start in flight reports no progress, so it reads idle too.
+            // Same treatment as a replay — stay up, and hold the wake lock so the
+            // start is not dozed — but capped (see [engineStartHoldsService]).
+            val engineStartingSinceMs = if (dashjHeldByCutover) l1ShadowSyncService.engineStartingSinceMs() else 0L
+            val engineStarting = engineStartHoldsService(engineStartingSinceMs, System.currentTimeMillis())
+            holdWakeLockWhileReplaying(replaying || engineStarting)
 
             if (isSyncIdle(activityHistory) && replaying) {
                 log.info(
@@ -2226,6 +2231,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         "until it completes",
                     blockchainState?.percentageSync
                 )
+                return
+            }
+            if (isSyncIdle(activityHistory) && engineStarting) {
+                log.info(
+                    "idle counters, but the SDK engine start begun {}s ago is still running — keeping " +
+                        "the service alive until it finishes (at most {} min)",
+                    (System.currentTimeMillis() - engineStartingSinceMs) / 1000,
+                    ENGINE_START_KEEPALIVE_MS / 60_000
+                )
+                // The zero samples of the start window must not carry over: without
+                // this the first tick after the start finishes, before the engine has
+                // reported anything, would read the full history as idle and stop.
+                activityHistory.clear()
                 return
             }
             if (isSyncIdle(activityHistory) && bindBlocked) {
@@ -2254,11 +2272,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val lock = wakeLock ?: return
             try {
                 if (replaying && !replayWakeLockHeld) {
-                    log.info("replay in progress on the SDK path — acquiring the wake lock")
+                    log.info("replay or engine start in progress on the SDK path — acquiring the wake lock")
                     lock.acquire()
                     replayWakeLockHeld = true
                 } else if (!replaying && replayWakeLockHeld) {
-                    log.info("replay complete — releasing the wake lock")
+                    log.info("replay / engine start complete — releasing the wake lock")
                     replayWakeLockHeld = false
                     if (lock.isHeld) lock.release()
                 }

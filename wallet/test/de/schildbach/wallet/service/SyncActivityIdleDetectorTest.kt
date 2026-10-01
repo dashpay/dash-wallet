@@ -187,4 +187,15 @@ class SyncActivityIdleDetectorTest {
         assertEquals(0, sdkActivitySample(before, after, 0).blocksDownloaded)
         assertEquals(0, sdkActivitySample(before, after, -5).transactionsReceived)
     }
+
+    @Test
+    fun engineStart_holdsTheServiceOnlyWhileInFlightAndUnderTheCap() {
+        val began = 1_000_000L
+        assertFalse("no start in flight", engineStartHoldsService(0L, began + 60_000))
+        // The field shape: idle-stopped two minutes into a start that took 14.
+        assertTrue("two minutes in", engineStartHoldsService(began, began + 2 * 60_000))
+        assertTrue("just under the cap", engineStartHoldsService(began, began + ENGINE_START_KEEPALIVE_MS - 1))
+        assertFalse("a hung start stops holding at the cap", engineStartHoldsService(began, began + ENGINE_START_KEEPALIVE_MS))
+        assertFalse("custom cap", engineStartHoldsService(began, began + 5_000, capMs = 5_000))
+    }
 }

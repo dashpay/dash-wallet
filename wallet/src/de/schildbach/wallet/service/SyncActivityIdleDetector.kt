@@ -109,6 +109,33 @@ fun shouldStopForIdle(history: List<SyncActivitySample>, replaying: Boolean): Bo
     !replaying && isSyncIdle(history)
 
 /**
+ * The longest an in-flight SDK engine start keeps an idle service alive
+ * ([engineStartHoldsService]). A healthy start is the DashPay bring-up
+ * (budgeted at 20 s) plus the SPV client's load of its stored header chain,
+ * which takes minutes on a large chain on a slow phone but not this long; past
+ * it the start is treated as hung, and the idle rule applies again so a wedged
+ * native call cannot pin the foreground service for good.
+ */
+const val ENGINE_START_KEEPALIVE_MS = 15L * 60 * 1000
+
+/**
+ * Whether an SDK engine start that began at [startingSinceMs] (0 = none in
+ * flight; see `L1ShadowSyncService.engineStartingSinceMs`) should keep the
+ * service from stopping for idleness. A start reports no progress at all, so
+ * every counter reads zero and [isSyncIdle] trips about two minutes in —
+ * field report, 2026-09-30: the service stopped two minutes after a restart
+ * with the engine still loading its headers, the process was frozen without
+ * its foreground service, and sync stood still for 14 minutes until the user
+ * reopened the app. Capped at [capMs] so a hung start cannot hold the service
+ * forever. Pure — host-testable.
+ */
+fun engineStartHoldsService(
+    startingSinceMs: Long,
+    nowMs: Long,
+    capMs: Long = ENGINE_START_KEEPALIVE_MS
+): Boolean = startingSinceMs > 0L && nowMs - startingSinceMs < capMs
+
+/**
  * One activity sample taken from the KOTLIN SDK L1 engine — the
  * post-cutover replacement for the dashj counters, mapped onto the same
  * four slots so [isSyncIdle] is untouched:
