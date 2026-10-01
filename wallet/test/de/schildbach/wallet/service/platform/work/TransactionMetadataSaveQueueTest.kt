@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -92,6 +93,27 @@ class TransactionMetadataSaveQueueTest {
         advanceUntilIdle()
 
         assertEquals(listOf("running: started"), ran)
+    }
+
+    @Test
+    fun discardPendingNow_stopsSavesWithoutWaiting() = runTest(dispatcher) {
+        // what confirming Reset Wallet does, on the main thread
+        val ran = mutableListOf<String>()
+        val gate = CompletableDeferred<Unit>()
+        queue.submit {
+            ran += "running: started"
+            gate.await()
+            ran += "running: finished"
+        }
+        queue.submit { ran += "queued" }
+        advanceUntilIdle()
+
+        val stopping = queue.discardPendingNow()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(listOf("running: started"), ran)
+        assertTrue(stopping?.isCancelled == true)
     }
 
     @Test

@@ -55,6 +55,12 @@ object WalletApplicationExt {
      * with "Fragment SecurityFragment not attached to Activity".
      */
     fun WalletApplication.beginWalletWipe() {
+        // Stop transaction-metadata saves now, not at the destroy phase: the
+        // service teardown in between can take minutes, and a save of this
+        // wallet's settings must not write or enqueue a publish once the user
+        // has confirmed the reset. destroyWalletData() discards again and
+        // waits, before anything is cleared.
+        transactionMetadataSaveQueue.discardPendingNow()
         WalletWipeSequence.begin(
             markPending = { WalletWipeState.begin(filesDir) },
             handOffUi = {

@@ -20,7 +20,6 @@ package de.schildbach.wallet.service.platform.work
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -38,7 +37,8 @@ import javax.inject.Singleton
  * the stored last work id.
  *
  * Because a queued save carries one wallet's consent choices, Reset Wallet
- * calls [discardPending] before it clears anything.
+ * calls [discardPendingNow] the moment it is confirmed and [discardPending]
+ * again before it clears anything.
  */
 @Singleton
 class TransactionMetadataSaveQueue @Inject constructor(private val applicationScope: CoroutineScope) {
@@ -84,14 +84,22 @@ class TransactionMetadataSaveQueue @Inject constructor(private val applicationSc
     }
 
     /**
-     * Drops every queued save and cancels the one running, returning once it
-     * has stopped. Saves submitted afterwards run normally.
+     * Drops every queued save and cancels the one running, without waiting for
+     * it to stop — for callers that cannot suspend. Saves submitted afterwards
+     * run normally.
+     *
+     * @return the cancelled save, still winding down, or null if none ran
+     */
+    fun discardPendingNow(): Job? = synchronized(lock) {
+        generation++
+        running?.also { it.cancel() }
+    }
+
+    /**
+     * [discardPendingNow], returning once the cancelled save has stopped, so
+     * nothing it does can land after the caller resumes.
      */
     suspend fun discardPending() {
-        val inFlight = synchronized(lock) {
-            generation++
-            running
-        }
-        inFlight?.cancelAndJoin()
+        discardPendingNow()?.join()
     }
 }
