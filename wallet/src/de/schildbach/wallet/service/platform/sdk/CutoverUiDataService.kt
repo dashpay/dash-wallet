@@ -127,6 +127,19 @@ data class L1TxUiRecord(
      */
     val transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
 ) {
+    /**
+     * The value a history row shows: a send WITHOUT its fee, as dashj's
+     * `TransactionRowView.fromTransaction` has always rendered one (its
+     * `removeFee`: `value.add(fee)` whenever the value is negative). Applies to
+     * every sent shape — Sent, Internal and the asset-lock "…Fee"/Invitation
+     * rows alike — so a wallet shows the same figure whichever engine wrote the
+     * row (D-M-01: an upgraded wallet kept dashj's fee-free −0.03 Invitation
+     * while a restore of the same phrase showed −0.03000241). [netAmountDuffs]
+     * unchanged when the fee is unknown or the value is not negative.
+     */
+    val sentValueWithoutFeeDuffs: Long
+        get() = if (netAmountDuffs < 0L && feeDuffs != null) netAmountDuffs + feeDuffs else netAmountDuffs
+
     /** A coinbase payout: shown as "Mining Reward", as the dashj path does. */
     val isCoinbase: Boolean get() = transactionTypeKind == TX_TYPE_KIND_COINBASE
 
@@ -295,9 +308,7 @@ internal fun planL1TxRow(
         iconType = TxDisplayCacheEntry.ICON_SENT,
         iconBgType = TxDisplayCacheEntry.BG_SENT,
         filterFlags = TxDisplayCacheEntry.FLAG_SENT,
-        // netAmount includes the fee; the dashj list shows the amount
-        // without it (TransactionRowView's removeFee: value.add(fee)).
-        valueDuffs = record.netAmountDuffs + (record.feeDuffs ?: 0L),
+        valueDuffs = record.sentValueWithoutFeeDuffs,
         timestampMs = record.timestampMs,
         isIncoming = false
     )
@@ -319,7 +330,7 @@ internal fun planL1TxRow(
             },
             iconBgType = TxDisplayCacheEntry.BG_SENT,
             filterFlags = TxDisplayCacheEntry.FLAG_SENT,
-            valueDuffs = record.netAmountDuffs,
+            valueDuffs = record.sentValueWithoutFeeDuffs,
             timestampMs = record.timestampMs,
             isIncoming = false
         )
@@ -330,7 +341,7 @@ internal fun planL1TxRow(
         iconType = TxDisplayCacheEntry.ICON_INTERNAL,
         iconBgType = TxDisplayCacheEntry.BG_SENT,
         filterFlags = 0,
-        valueDuffs = record.netAmountDuffs,
+        valueDuffs = record.sentValueWithoutFeeDuffs,
         timestampMs = record.timestampMs,
         isIncoming = false
     )
@@ -539,6 +550,9 @@ internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecor
  * - SDK store stubs ([L1TxUiRecord.isStoreStub]) are skipped outright.
  * - Every existing row, the never-touch ones included, takes
  *   [redatedFromBlock]: a time later than the tx's own block is reset to it.
+ * - A non-contact sent row holding exactly the fee-included net takes the
+ *   fee-free value ([L1TxUiRecord.sentValueWithoutFeeDuffs]) once the fee is
+ *   known.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -789,6 +803,22 @@ internal fun planL1DisplaySync(
                     filterFlags = plan.filterFlags
                 )
             }
+        }
+        // Drop the fee from a sent row cached WITH it (D-M-01). Rows authored while
+        // the store's fee column was NULL hold the fee-included net; once the fee is
+        // known ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free
+        // value every other row shows. This is the only value edit an asset-lock or
+        // "Internal" row ever takes — the shape re-stamps above and below keep their
+        // value — so it fires on the exact fee-included figure alone: a row holding
+        // anything else (dashj's own fee-free value on an upgraded wallet, a contact
+        // amount) is left as it is. Contact rows are excluded outright: their value
+        // comes from the engine's signed net ([contactSignedNet]), not this record.
+        // Idempotent: the corrected value no longer equals the net.
+        if (contact == null && updated.contactUserId == null &&
+            record.sentValueWithoutFeeDuffs != record.netAmountDuffs &&
+            updated.valueSatoshis == record.netAmountDuffs
+        ) {
+            updated = updated.copy(valueSatoshis = record.sentValueWithoutFeeDuffs)
         }
         // Re-shape a PLAIN cached row into an INTERNAL (self-transfer) row once the
         // record is known INTERNAL. The SDK classifies PER ACCOUNT, so one

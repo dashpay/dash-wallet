@@ -179,12 +179,7 @@ internal fun reattributeIncomingRecord(
     if (net >= 0L) {
         return if (record.netAmountDuffs == net) record else record.copy(netAmountDuffs = net)
     }
-    val allInputsOurs = payload != null && payload.inputCount == spentOwnedCount
-    val fee = if (payload != null && allInputsOurs && spentOwnedDuffs >= payload.outputsTotalDuffs) {
-        spentOwnedDuffs - payload.outputsTotalDuffs
-    } else {
-        null
-    }
+    val fee = payload?.let { recoveredFeeDuffs(it, spentOwnedCount, spentOwnedDuffs) }
     val internal = fundedForeignDuffs == 0L && payload != null &&
         payload.outputsTotalDuffs == fundedOwnedDuffs
     return record.copy(
@@ -193,6 +188,39 @@ internal fun reattributeIncomingRecord(
         feeDuffs = fee ?: record.feeDuffs
     )
 }
+
+/**
+ * The fee this wallet paid for a transaction: `spentOwned − outputsTotal`,
+ * or null when it cannot be known. Only valid when the payload proves ALL
+ * inputs were ours (`inputCount == spentOwnedCount`) — otherwise other
+ * participants funded part of the tx (a CoinJoin round) and the difference
+ * is not our fee. Every output counts, a value-bearing OP_RETURN credit burn
+ * included, so an AssetLock's fee is the miner fee, not the burn. Pure —
+ * host-testable.
+ */
+internal fun recoveredFeeDuffs(payload: TxPayloadFacts, spentOwnedCount: Int, spentOwnedDuffs: Long): Long? =
+    if (spentOwnedCount > 0 &&
+        payload.inputCount == spentOwnedCount &&
+        spentOwnedDuffs >= payload.outputsTotalDuffs
+    ) {
+        spentOwnedDuffs - payload.outputsTotalDuffs
+    } else {
+        null
+    }
+
+/**
+ * Whether [record] is a send whose fee the store left unset and the walker
+ * should recover ([recoveredFeeDuffs]). The SDK persists `transactions.fee`
+ * as NULL for every row (run 17, Wallet B: 7460/7460), so the display — which
+ * shows a send WITHOUT its fee, as dashj's `TransactionRowView` always has —
+ * otherwise renders fee-included values. OUTGOING and INTERNAL only: a
+ * COINJOIN-direction round is multi-party, so its fee is never ours to show,
+ * and a receive has no fee to remove. Pure — host-testable.
+ */
+internal fun needsFeeRecovery(record: L1TxUiRecord): Boolean =
+    record.feeDuffs == null &&
+        record.netAmountDuffs < 0L &&
+        (record.direction == L1TxUiDirection.OUTGOING || record.direction == L1TxUiDirection.INTERNAL)
 
 /**
  * Rust `TransactionType` discriminant for a classic (Standard) transaction —
@@ -618,7 +646,94 @@ internal class SdkTxStoreWalker(
      * (which stays flagged and is recomputed every pass anyway, so a gap
      * self-heals) are unchanged.
      */
-    private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> {
+    private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> =
+        withRecoveredFees(rows, reattributedStored(rows))
+
+    /**
+     * Fill the fee the store left NULL ([needsFeeRecovery]) on [records]
+     * (index-aligned with [rows]), so the display can show a send without its
+     * fee. One chunked payload fetch, paid only for sends still missing a fee.
+     *
+     * Durable like [persistCorrections]: a fee recovered from CONFIRMED spent
+     * marks is written into the store row (`fee IS NULL` guarded, so a value
+     * the engine wrote is never replaced), and the row then never qualifies
+     * again. A fee that needs a `pending_inputs` reservation is served from
+     * memory only — the reservation is an in-flight claim, the same rule as
+     * reattribution. A send whose fee is unrecoverable (not every input was
+     * ours) is remembered process-wide in [feeUnrecoverable], so it costs one
+     * parse per launch rather than one per walk.
+     */
+    private fun withRecoveredFees(rows: List<RecordRow>, records: List<L1TxUiRecord>): List<L1TxUiRecord> {
+        val candidates = records.indices.filter {
+            needsFeeRecovery(records[it]) && records[it].txidHex !in feeUnrecoverable
+        }
+        if (candidates.isEmpty()) return records
+        val pending = if (candidates.any { rows[it].spentOwnedCount == 0 }) pendingSpentAggregates() else emptyMap()
+        val withEvidence = candidates.filter {
+            rows[it].spentOwnedCount + (pending[records[it].txidHex]?.count ?: 0) > 0
+        }
+        if (withEvidence.isEmpty()) return records
+
+        val facts = HashMap<String, TxPayloadFacts>()
+        for (chunk in withEvidence.chunked(TXID_IN_CHUNK)) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            rawQuery(
+                "SELECT txid, transactionData FROM transactions WHERE txid IN ($placeholders)",
+                chunk.map<Int, Any?> { rows[it].wireTxid }.toTypedArray()
+            ) { c ->
+                while (c.moveToNext()) {
+                    if (c.isNull(1)) continue
+                    payloadFacts(c.getBlob(1))?.let { facts[displayHexOf(c.getBlob(0))] = it }
+                }
+            }
+        }
+
+        val out = records.toMutableList()
+        val toPersist = ArrayList<Pair<ByteArray, Long>>()
+        for (i in withEvidence) {
+            val row = rows[i]
+            val hex = records[i].txidHex
+            val pend = pending[hex]
+            val fact = facts[hex]
+            val fee = fact?.let {
+                recoveredFeeDuffs(it, row.spentOwnedCount + (pend?.count ?: 0), row.spentOwnedDuffs + (pend?.duffs ?: 0L))
+            }
+            if (fee == null) {
+                // Only CONFIRMED evidence proves the fee unrecoverable: a
+                // pending send may simply not have all its marks yet.
+                if (pend == null) feeUnrecoverable += hex
+                continue
+            }
+            out[i] = records[i].copy(feeDuffs = fee)
+            if (pend == null) toPersist += row.wireTxid to fee
+        }
+        persistRecoveredFees(toPersist)
+        return out
+    }
+
+    /** Write recovered fees into the store's NULL `fee` columns — see [withRecoveredFees]. */
+    private fun persistRecoveredFees(fees: List<Pair<ByteArray, Long>>) {
+        if (fees.isEmpty()) return
+        try {
+            val writable = db.openHelper.writableDatabase
+            writable.beginTransaction()
+            try {
+                val sql = "UPDATE transactions SET fee = ? WHERE txid = ? AND fee IS NULL"
+                for ((wireTxid, fee) in fees) {
+                    onQuery?.invoke(sql)
+                    writable.execSQL(sql, arrayOf(fee, wireTxid))
+                }
+                writable.setTransactionSuccessful()
+            } finally {
+                writable.endTransaction()
+            }
+            log.info("persisted {} recovered fee(s) into the SDK store's NULL fee column", fees.size)
+        } catch (t: Throwable) {
+            log.warn("failed to persist recovered fees; served from memory, recovered again next pass", t)
+        }
+    }
+
+    private fun reattributedStored(rows: List<RecordRow>): List<L1TxUiRecord> {
         // Pending-input reservations ([pendingSpentAggregates]) supplement the
         // confirmed spent marks for DISPLAY, so a just-broadcast send is
         // corrected the moment it is planned instead of after its block lands.
@@ -1206,6 +1321,21 @@ internal class SdkTxStoreWalker(
                     object : LinkedHashMap<String, Boolean>() {
                         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
                             size > 1_024
+                    }
+                )
+            )
+
+        /**
+         * Sends whose fee [withRecoveredFees] proved unrecoverable (an input
+         * was not ours), process-wide for the same reason as
+         * [reattributionLogged]. Bounded; an evicted txid costs one re-parse.
+         */
+        private val feeUnrecoverable: MutableSet<String> =
+            java.util.Collections.synchronizedSet(
+                java.util.Collections.newSetFromMap(
+                    object : LinkedHashMap<String, Boolean>() {
+                        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
+                            size > WALK_DEDUP_LRU_MAX
                     }
                 )
             )
