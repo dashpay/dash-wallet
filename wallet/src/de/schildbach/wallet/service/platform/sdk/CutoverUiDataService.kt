@@ -1955,11 +1955,11 @@ class CutoverUiDataService internal constructor(
      */
     private val retryBind: suspend () -> Unit = {},
     /**
-     * [SdkWalletBinder.completedBindPasses]: after a wipe whose SDK clear left
-     * the wiped wallet loaded, the pipeline waits for a pass past the value
-     * [resumeAfterWalletWipe] recorded. Default: a flow that never advances.
+     * [SdkWalletBinder.walletBindConfirmations]: after a wipe whose SDK clear
+     * left the wiped wallet loaded, the pipeline waits for a confirmation past
+     * the value [resumeAfterWalletWipe] recorded. Default: never advances.
      */
-    private val completedBindPasses: StateFlow<Long> = MutableStateFlow(0L),
+    private val walletBindConfirmations: StateFlow<Long> = MutableStateFlow(0L),
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
     private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
@@ -2030,7 +2030,7 @@ class CutoverUiDataService internal constructor(
         // now applied to the durable seed only — see [pipelineLagging].
         pipelineLagging = l1SyncStatusService.sdkPipelineLagging,
         retryBind = { sdkBindRetryService.maybeRetry("cutover-ui bound-wallet wait") },
-        completedBindPasses = sdkWalletBinder.completedBindPasses,
+        walletBindConfirmations = sdkWalletBinder.walletBindConfirmations,
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
@@ -2564,10 +2564,10 @@ class CutoverUiDataService internal constructor(
                             if (passes != null) {
                                 // The wiped wallet is still loaded: wait for the next
                                 // one's bind, driving the bind retry as [awaitBoundWallet] does.
-                                while (completedBindPasses.value <= passes) {
+                                while (walletBindConfirmations.value <= passes) {
                                     retryBind()
                                     withTimeoutOrNull(walletBindRetryMs) {
-                                        completedBindPasses.first { it > passes }
+                                        walletBindConfirmations.first { it > passes }
                                     }
                                 }
                                 continue
@@ -2616,7 +2616,7 @@ class CutoverUiDataService internal constructor(
      * after the stop must not leave the pipeline dead for the next wallet.
      */
     fun resumeAfterWalletWipe() {
-        bindPassesAtWipe = completedBindPasses.value
+        confirmationsAtWipe = walletBindConfirmations.value
         wipeFenced = false
         stopGeneration.update { it + 1 }
         log.info("SDK UI pipelines re-armed after the wallet wipe")
@@ -2630,11 +2630,11 @@ class CutoverUiDataService internal constructor(
     private var wipeFenced = false
 
     /**
-     * [completedBindPasses] when the last wipe resumed, until the gate has
+     * [walletBindConfirmations] when the last wipe resumed, until the gate has
      * checked for a wallet that wipe failed to remove. Null = nothing to check.
      */
     @Volatile
-    private var bindPassesAtWipe: Long? = null
+    private var confirmationsAtWipe: Long? = null
 
     /**
      * The double failure: the cutover reset AND the SDK wallet clear
@@ -2642,19 +2642,22 @@ class CutoverUiDataService internal constructor(
      * failures) both failed, so the resumed pipeline would find the WIPED
      * wallet still loaded and re-write its rows into the caches just cleared.
      * No next wallet can exist before the wipe finishes, so any wallet the SDK
-     * still reports here is the wiped one. Returns the bind-pass count to wait
-     * past, or null to proceed.
+     * still reports here is the wiped one. Returns the confirmation count to
+     * wait past, or null to proceed.
      *
-     * The wait ends with the next app wallet's own bind pass, which binds its
-     * seed and prunes the orphan. A different seed then leaves the new wallet
-     * alone (or two loaded, which [awaitBoundWallet] never binds); the same
-     * seed re-derives the same id, whose rows then genuinely belong to it.
+     * The wait ends with a bind confirmed against the NEXT app wallet — not
+     * just any pass: a clear that failed early also skipped the binder latch
+     * reset, so a pass before the next wallet exists would still report the
+     * wiped wallet bound. A different seed fails the fingerprint check, so its
+     * confirmation comes from a full rebind that prunes the orphan (or leaves
+     * two loaded, which [awaitBoundWallet] never binds); the same seed
+     * re-derives the same id, whose rows then genuinely belong to it.
      * Caller holds [pipelineMutex].
      */
     private suspend fun staleWipedWalletHold(): Long? {
-        val passes = bindPassesAtWipe ?: return null
-        if (completedBindPasses.value > passes) {
-            bindPassesAtWipe = null
+        val passes = confirmationsAtWipe ?: return null
+        if (walletBindConfirmations.value > passes) {
+            confirmationsAtWipe = null
             return null
         }
         val stale = try {
@@ -2665,7 +2668,7 @@ class CutoverUiDataService internal constructor(
             return passes
         }
         if (stale == null) {
-            bindPassesAtWipe = null
+            confirmationsAtWipe = null
             return null
         }
         log.warn(

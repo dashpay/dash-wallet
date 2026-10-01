@@ -930,8 +930,8 @@ class CutoverUiDataServiceTest {
         metadata: Map<String, PresentableTxMetadata> = emptyMap(),
         /** MO-995: the bind-retry consultation the bound-wallet wait loop drives. */
         retryBind: suspend () -> Unit = {},
-        /** [SdkWalletBinder.completedBindPasses]; default never advances. */
-        completedBindPasses: kotlinx.coroutines.flow.StateFlow<Long> = MutableStateFlow(0L)
+        /** [SdkWalletBinder.walletBindConfirmations]; default never advances. */
+        walletBindConfirmations: kotlinx.coroutines.flow.StateFlow<Long> = MutableStateFlow(0L)
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -957,7 +957,7 @@ class CutoverUiDataServiceTest {
         resolveWalletNets = walletNets,
         resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
         retryBind = retryBind,
-        completedBindPasses = completedBindPasses,
+        walletBindConfirmations = walletBindConfirmations,
         nowMs = { now }
     )
 
@@ -1791,7 +1791,7 @@ class CutoverUiDataServiceTest {
         }
         val service = buildService(
             source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao,
-            retryBind = { bindRetries++ }, completedBindPasses = bindPasses
+            retryBind = { bindRetries++ }, walletBindConfirmations = bindPasses
         )
         service.start()
         runCurrent()

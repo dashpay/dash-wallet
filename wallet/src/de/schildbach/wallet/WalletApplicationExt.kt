@@ -215,8 +215,9 @@ object WalletApplicationExt {
             // Caches are clear: re-arm the SDK pipeline for the next wallet
             // explicitly — a failed cutover reset leaves CUT_OVER unchanged,
             // so the gate alone would never see a commit to restart on. If the
-            // SDK wallet clear failed too, the pipeline keeps holding until the
-            // next wallet's bind pass (see CutoverUiDataService.staleWipedWalletHold).
+            // SDK wallet clear failed too, the pipeline keeps holding until a
+            // bind is confirmed against the next app wallet (see
+            // CutoverUiDataService.staleWipedWalletHold).
             if (isWalletWipe) cutoverUiDataService.resumeAfterWalletWipe()
         }
         WorkManager.getInstance(this).cancelAllWork()
