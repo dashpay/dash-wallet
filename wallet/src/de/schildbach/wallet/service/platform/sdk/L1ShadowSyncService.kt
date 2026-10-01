@@ -2344,7 +2344,10 @@ class L1ShadowSyncService internal constructor(
     /**
      * When the in-flight engine start began, on [nowMs]'s clock; 0 when no
      * start is in progress. Set once [startIfEnabled] is committed to bringing
-     * the engine up (wallet bound, scan gate open) and cleared when it returns.
+     * the engine up (wallet bound, scan gate open) and cleared when it returns;
+     * the in-place restart in [ensureSpvRunning] and the restart at the end of
+     * [resetShadowState] hold it across their `startSpv` too. Every path goes
+     * through [holdingEngineStart].
      *
      * That span has no progress to show: the DashPay bring-up runs first, then
      * the SPV client loads its stored header chain before it reports anything.
@@ -2355,6 +2358,11 @@ class L1ShadowSyncService internal constructor(
      * service left, the process was frozen until the user reopened the app.
      * [de.schildbach.wallet.service.BlockchainServiceImpl] reads this to keep
      * the service up through the start.
+     *
+     * The hold ends when `startSpv` returns, not at first progress: the native
+     * start constructs the SPV client, header-chain load included, before it
+     * returns, and only then spawns the sync loop. In the same report the
+     * header manager came up at 22:37:54 and the start returned at 22:38:04.
      */
     @Volatile
     private var engineStartingSinceMs: Long = 0L
@@ -3138,7 +3146,7 @@ class L1ShadowSyncService internal constructor(
                 if (runningWalletIdHex.value == null) return@withLock false
                 if (source.isSpvRunning()) return@withLock true
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
-                source.startSpv(dataDir.absolutePath)
+                holdingEngineStart { source.startSpv(dataDir.absolutePath) }
                 log.info("ensureSpvRunning: restarted the shadow SPV client for a shield-from-wallet broadcast")
                 true
             }
@@ -4038,7 +4046,7 @@ class L1ShadowSyncService internal constructor(
                 runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
                     .onFailure { log.warn("shadow reset: failed to persist the reset marker", it) }
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
-                source.startSpv(dataDir.absolutePath)
+                holdingEngineStart { source.startSpv(dataDir.absolutePath) }
                 log.info(
                     "L1 shadow SPV restarted after reset (dataDir={}, fresh full scan from the " +
                         "wallet's stored birth height)",

@@ -1497,6 +1497,29 @@ class L1ShadowSyncServiceTest {
         assertEquals(0L, service.engineStartingSinceMs())
     }
 
+    @Test
+    fun startMarker_coversTheInPlaceRestartAndTheResetRestart() = runBlocking {
+        // Both restart the SPV client without going through startIfEnabled, and
+        // its start loads the stored header chain just the same.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val seenAtStartSpv = mutableListOf<Long>()
+        source.onStart = {
+            seenAtStartSpv += service.engineStartingSinceMs()
+            source.spvRunning = true
+        }
+        assertTrue(service.startIfEnabled())
+
+        source.spvRunning = false // stopped underneath, the latch survives
+        assertTrue(service.ensureSpvRunning())
+        assertEquals(0L, service.engineStartingSinceMs())
+
+        assertTrue(service.resetShadowState(hard = false))
+        assertEquals(0L, service.engineStartingSinceMs())
+
+        assertEquals(listOf(1_000_000L, 1_000_000L, 1_000_000L), seenAtStartSpv)
+    }
+
     // ── ensureSpvRunning: the shield-from-wallet broadcast guard ───────
 
     @Test
