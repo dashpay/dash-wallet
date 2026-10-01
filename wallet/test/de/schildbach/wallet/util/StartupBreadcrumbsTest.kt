@@ -486,4 +486,109 @@ class StartupBreadcrumbsTest {
         StartupBreadcrumbs.clearSafeModeLatch()
         StartupBreadcrumbs.reportText()
     }
+
+    // ── System kills are not crashes (review, 2026-09-29, the 12000022 reports) ──
+
+    private val trailDyingAfterTheParse = "# launch header\n0 APP_ONCREATE +6ms\n4 WALLET_LOAD_BEGIN +21ms\n" +
+        "5 WALLET_PROTOBUF_PARSED +9298ms took=9.139 s\n"
+
+    @Test
+    fun classifyPrevious_aPreMilestoneDeathTheSystemCaused_isSystemKilled() {
+        assertEquals(
+            StartupBreadcrumbs.PreviousLaunch.SYSTEM_KILLED,
+            StartupBreadcrumbs.classifyPrevious(trailDyingAfterTheParse, endedBySystem = true)
+        )
+        assertEquals(
+            "without the system's word it is still a strike",
+            StartupBreadcrumbs.PreviousLaunch.INCOMPLETE_PRE_MILESTONE,
+            StartupBreadcrumbs.classifyPrevious(trailDyingAfterTheParse, endedBySystem = false)
+        )
+    }
+
+    @Test
+    fun classifyPrevious_theSystemsWordNeverOverridesTheOtherVerdicts() {
+        val complete = trail("# launch header", "0 APP_ONCREATE +1ms", "11 ONCREATE_COMPLETE +9000ms")
+        assertEquals(StartupBreadcrumbs.PreviousLaunch.COMPLETE, StartupBreadcrumbs.classifyPrevious(complete, true))
+        val safeMode = trail("# launch (previous=X safeMode=true)", "0 APP_ONCREATE +1ms")
+        assertEquals(StartupBreadcrumbs.PreviousLaunch.SAFE_MODE, StartupBreadcrumbs.classifyPrevious(safeMode, true))
+        assertEquals(
+            StartupBreadcrumbs.PreviousLaunch.INCOMPLETE_UNKNOWN,
+            StartupBreadcrumbs.classifyPrevious("# header only\n", true)
+        )
+    }
+
+    @Test
+    fun systemKilledPreviousLaunch_isNeutral_countersKept_noSafeMode() {
+        assertEquals(
+            StartupBreadcrumbs.LaunchState(1, 1, false),
+            StartupBreadcrumbs.nextLaunchState(StartupBreadcrumbs.PreviousLaunch.SYSTEM_KILLED, 1, 1)
+        )
+    }
+
+    private fun bgStartupAnr(atMs: Long) =
+        ProcessExitReasons.PreviousExit(reason = 6, importance = 400, timestampMs = atMs, description = "[BIND APPLICATION ANR] bg anr")
+
+    private fun crash(atMs: Long) =
+        ProcessExitReasons.PreviousExit(reason = 4, importance = 100, timestampMs = atMs, description = null)
+
+    /**
+     * THE FIELD LOOP (Pixel 8a, 12000022, 61.6 MB wallet): every background
+     * start is killed right after the wallet parse for missing the start-up
+     * deadline. Those deaths must never trip safe mode.
+     */
+    @Test
+    fun init_repeatedBackgroundStartupKills_neverTripSafeMode() {
+        val dir = freshDir()
+        try {
+            var exit: ProcessExitReasons.PreviousExit? = null
+            repeat(6) {
+                StartupBreadcrumbs.init(dir, exit)
+                assertFalse("launch ${it + 1} must not be safe mode", StartupBreadcrumbs.isSafeModeAdvised())
+                StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN")
+                StartupBreadcrumbs.mark(5, "WALLET_PROTOBUF_PARSED", "took=9.139 s")
+                exit = bgStartupAnr(System.currentTimeMillis() + 5_000) // (killed here by the system)
+            }
+            assertEquals("0", File(dir, "startup.failures").readText().trim())
+            assertTrue(
+                "the trail still carries the verdict and the exit for the support report",
+                File(dir, "startup.breadcrumbs").readText().contains("previous=SYSTEM_KILLED prevLastStage=5 prevExit=ANR/CACHED")
+            )
+            assertTrue("the dying trail is still preserved", File(dir, "startup.breadcrumbs.prev").exists())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun init_realCrashes_stillTripSafeModeOnTheSecondDeath() {
+        val dir = freshDir()
+        try {
+            StartupBreadcrumbs.init(dir, null)
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN")
+            StartupBreadcrumbs.init(dir, crash(System.currentTimeMillis() + 5_000))
+            assertFalse(StartupBreadcrumbs.isSafeModeAdvised())
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN")
+            StartupBreadcrumbs.init(dir, crash(System.currentTimeMillis() + 5_000))
+            assertTrue(StartupBreadcrumbs.isSafeModeAdvised())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    /** An exit older than the trail's last write is an EARLIER process's death: it cannot excuse this one. */
+    @Test
+    fun init_anExitThatPredatesTheTrail_doesNotExcuseIt() {
+        val dir = freshDir()
+        try {
+            val longAgo = System.currentTimeMillis() - 3_600_000
+            StartupBreadcrumbs.init(dir, null)
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN")
+            StartupBreadcrumbs.init(dir, bgStartupAnr(longAgo))
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_LOAD_BEGIN, "WALLET_LOAD_BEGIN")
+            StartupBreadcrumbs.init(dir, bgStartupAnr(longAgo))
+            assertTrue("two unexcused deaths trip safe mode", StartupBreadcrumbs.isSafeModeAdvised())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }

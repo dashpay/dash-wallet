@@ -18,6 +18,7 @@
 package de.schildbach.wallet.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -206,5 +207,40 @@ class ProcessExitReasonsTest {
     @Test
     fun summaryPrefix_isDistinct() {
         assertEquals("PROCESS EXIT REASON:", ProcessExitReasons.SUMMARY_PREFIX)
+    }
+
+    // ── isSystemKillNotCrash / exitEndsTrail (review, 2026-09-29) ──
+
+    @Test
+    fun systemKills_areNotCrashes() {
+        for (reason in listOf(1, 2, 3, 8, 10, 11, 14, 15, 16)) {
+            assertTrue("reason $reason", ProcessExitReasons.isSystemKillNotCrash(reason, importance = 100))
+        }
+    }
+
+    @Test
+    fun crashesAndUnknowns_stillCount() {
+        for (reason in listOf(0, 4, 5, 7, 9, 12, 13, 99)) {
+            assertFalse("reason $reason", ProcessExitReasons.isSystemKillNotCrash(reason, importance = 400))
+        }
+    }
+
+    /** The field case: "[BIND APPLICATION ANR] bg anr … failed to complete startup" at CACHED importance. */
+    @Test
+    fun anAnr_isASystemKillOnlyInTheBackground() {
+        assertTrue("cached", ProcessExitReasons.isSystemKillNotCrash(6, importance = 400))
+        assertTrue("service", ProcessExitReasons.isSystemKillNotCrash(6, importance = 300))
+        assertFalse("perceptible", ProcessExitReasons.isSystemKillNotCrash(6, importance = 230))
+        assertFalse("visible", ProcessExitReasons.isSystemKillNotCrash(6, importance = 200))
+        assertFalse("foreground service: the user saw the ANR dialog", ProcessExitReasons.isSystemKillNotCrash(6, importance = 125))
+        assertFalse("foreground", ProcessExitReasons.isSystemKillNotCrash(6, importance = 100))
+    }
+
+    @Test
+    fun exitEndsTrail_onlyForAnExitAfterTheTrailsLastWrite() {
+        assertTrue(ProcessExitReasons.exitEndsTrail(exitTimestampMs = 10_000, trailLastWriteMs = 9_000))
+        assertTrue("within the slack", ProcessExitReasons.exitEndsTrail(exitTimestampMs = 8_500, trailLastWriteMs = 9_000))
+        assertFalse("an earlier process", ProcessExitReasons.exitEndsTrail(exitTimestampMs = 1_000, trailLastWriteMs = 9_000))
+        assertFalse("no trail", ProcessExitReasons.exitEndsTrail(exitTimestampMs = 10_000, trailLastWriteMs = 0))
     }
 }

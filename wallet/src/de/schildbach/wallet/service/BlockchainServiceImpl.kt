@@ -2947,6 +2947,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info(".onStartCommand($intent)")
         intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
             log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
+            // A periodic fire into a running service is not a service start, so
+            // nothing else re-arms the alarm: step the cadence down here once
+            // the usage tier has moved (see PeriodicAlarmTier).
+            try {
+                if (PeriodicAlarmTier.needsRearm(reason, config.lastUsedAgo)) {
+                    log.info("ALARM-DIAG periodic tier changed since {} — re-arming", reason)
+                    WalletApplication.scheduleStartBlockchainService(this)
+                }
+            } catch (t: Throwable) {
+                log.warn("could not re-arm the periodic alarm after a tier change", t)
+            }
         }
         super.onStartCommand(intent, flags, startId)
         // MO-995 CRASH FIX — this MUST stay synchronous, before the coroutine.
