@@ -836,6 +836,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var balance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
 
+    /** Holds the sync-complete demotion while the idle rule holds the service (see the tick). */
+    private val foregroundDemotionGate = ForegroundDemotionGate()
+
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
 
@@ -2233,6 +2236,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
             )
             holdWakeLockWhileReplaying(replaying || engineStarting || durableLagging)
+            // Those two holds also keep the service in the foreground: the scan reads
+            // synced while they last, and a demoted service would be stopped anyway.
+            if (foregroundDemotionGate.onHold(dashjHeldByCutover && (engineStarting || durableLagging))) {
+                blockchainState?.let { state ->
+                    log.info("SDK engine start / scan save finished — re-checking the foreground notification")
+                    updateSyncNotification(state)
+                }
+            }
 
             if (isSyncIdle(activityHistory) && replaying) {
                 log.info(
@@ -3648,10 +3659,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val broadcast = Intent(BlockchainService.ACTION_BLOCKCHAIN_STATE)
         broadcast.setPackage(packageName)
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null && blockchainState.bestChainDate != null) {
+        if (blockchainState != null) {
+            updateSyncNotification(blockchainState)
+        }
+        this.blockchainState = blockchainState
+        maybeRecoverIdentityPostCutover(blockchainState)
+    }
+
+    /**
+     * Show the ongoing sync notification while syncing, and leave the
+     * foreground once sync has finished — unless [foregroundDemotionGate] is
+     * holding it, in which case the tick calls this again when the hold ends.
+     */
+    private fun updateSyncNotification(blockchainState: BlockchainState) {
+        val bestChainDate = blockchainState.bestChainDate
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bestChainDate != null) {
             //Handle Ongoing notification state
             val syncing =
-                blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
+                bestChainDate.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
             // NotificationManager calls are synchronous binder IPC and this
             // observer runs on MAIN for every blockchain-state DB write — same
             // blocked-binder ANR shape as the peer-connectivity listener. Ship
@@ -3659,10 +3684,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             notificationHandler.post {
                 try {
                     if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver) {
-                        //Remove ongoing notification if blockchain sync finished
-                        stopForeground(true)
-                        foregroundService = ForegroundService.NONE
-                        nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+                        if (foregroundDemotionGate.mayDemote()) {
+                            //Remove ongoing notification if blockchain sync finished
+                            stopForeground(true)
+                            foregroundService = ForegroundService.NONE
+                            nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+                        } else {
+                            log.info(
+                                "sync finished, but the SDK engine is still starting or saving the scan — " +
+                                    "staying in the foreground until it is done"
+                            )
+                        }
                     } else if (blockchainState.replaying || syncing) {
                         //Shows ongoing notification when synchronizing the blockchain
                         val notification = createNetworkSyncNotification(blockchainState)
@@ -3673,8 +3705,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
-        this.blockchainState = blockchainState
-        maybeRecoverIdentityPostCutover(blockchainState)
     }
 
     /**

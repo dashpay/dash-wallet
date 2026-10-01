@@ -221,4 +221,19 @@ class SyncActivityIdleDetectorTest {
         assertEquals(0L, tracker.observe(2_000_000, 95_000)) // a rescan rewind is a change too
         assertEquals(5_000L, tracker.observe(2_000_000, 100_000))
     }
+
+    @Test
+    fun foregroundDemotion_waitsForTheHoldAndRunsWhenItEnds() {
+        val gate = ForegroundDemotionGate()
+        assertTrue("no hold reported (pre-cutover): demote as before", gate.mayDemote())
+        assertFalse("nothing pending", gate.onHold(false))
+
+        // The field shape: the scan goes SYNCED while the SDK is still saving it.
+        assertFalse(gate.onHold(true))
+        assertFalse("synced, but the durable-lag hold is active", gate.mayDemote())
+        assertFalse("hold still active: nothing to re-run", gate.onHold(true))
+        assertTrue("hold ended with a demotion pending: re-run it", gate.onHold(false))
+        assertFalse("re-run once only", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
 }

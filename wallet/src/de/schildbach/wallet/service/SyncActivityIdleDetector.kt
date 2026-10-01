@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service
 
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The foreground blockchain service's IDLE detector, extracted from
@@ -231,5 +232,44 @@ class DurableHeightTracker {
             lastChangeMs = nowMs
         }
         return nowMs - lastChangeMs
+    }
+}
+
+/**
+ * Keeps the sync-complete path from taking the service out of the foreground
+ * while the idle rule is holding it ([engineStartHoldsService],
+ * [durableLagHoldsService]). Those holds only skip `stopSelf()`; the
+ * blockchain-state observer separately calls `stopForeground()` once the chain
+ * reads synced, and the durable-lag hold starts exactly then — the scan has
+ * gone SYNCED while the SDK is still saving it. A background service is
+ * stopped by the system within minutes, so the hold would not have held.
+ *
+ * The tick reports the hold ([onHold]); the observer asks [mayDemote] before
+ * demoting. A demotion refused under a hold is remembered, and [onHold]
+ * returns true when the hold ends with one pending, so the caller re-runs the
+ * sync-complete check then. Thread-safe: the tick and the observer run on
+ * different threads. A demotion refused in the instant the hold ends is picked
+ * up by the next tick. Pre-cutover the hold is never reported, so [mayDemote]
+ * is always true.
+ */
+class ForegroundDemotionGate {
+    @Volatile
+    private var holding = false
+    private val pending = AtomicBoolean(false)
+
+    /** Whether the sync-complete path may demote now; if not, remember it. */
+    fun mayDemote(): Boolean {
+        if (holding) {
+            pending.set(true)
+            return false
+        }
+        pending.set(false)
+        return true
+    }
+
+    /** Record the tick's hold verdict; true when the caller should re-run a refused demotion. */
+    fun onHold(active: Boolean): Boolean {
+        holding = active
+        return !active && pending.getAndSet(false)
     }
 }
