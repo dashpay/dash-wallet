@@ -60,6 +60,7 @@ import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -2174,16 +2175,11 @@ class CutoverUiDataService internal constructor(
      * history, wallet-wide records) stay immediate. Map mutations happen
      * only on [txPipeline]'s sequential collector; the launched job itself
      * touches no shared state (cancellation is the only interaction).
-     * Bounded eldest-evicted (an evicted entry merely becomes
-     * non-cancellable — with the cap at [SEEN_TX_DIRECTIONS_MAX] and a
-     * seconds-long grace that is unreachable in practice).
+     * Every unfinished job stays in the map — cancellation leaves it in
+     * place, and only completed jobs are pruned — so [clearWipedWalletTxState]
+     * can join them all; the prune bounds it to the jobs of one grace window.
      */
-    private val pendingNotifyJobs =
-        object : LinkedHashMap<String, kotlinx.coroutines.Job>() {
-            override fun removeEldestEntry(
-                eldest: MutableMap.MutableEntry<String, kotlinx.coroutines.Job>
-            ): Boolean = size > SEEN_TX_DIRECTIONS_MAX
-        }
+    private val pendingNotifyJobs = mutableMapOf<String, kotlinx.coroutines.Job>()
 
     /** Once-per-process latch for the [runPipelines] tap-mismatch WARN (FIX: silent gate mismatch). */
     private val tapGapWarned = AtomicBoolean(false)
@@ -2721,10 +2717,14 @@ class CutoverUiDataService internal constructor(
      * keyed by its txids (nets and directions are THIS wallet's view of a tx).
      * Those are only touched from [txPipeline]'s sequential collector, so this
      * is safe only once [pipelineJob] has been joined (caller holds
-     * [pipelineMutex] after the join).
+     * [pipelineMutex] after the join). The jobs are joined, not just
+     * cancelled: one already past its grace and inside [notifyCoinsReceived]
+     * finishes that call before the wipe proceeds.
      */
-    private fun clearWipedWalletTxState() {
-        pendingNotifyJobs.values.forEach { it.cancel() }
+    private suspend fun clearWipedWalletTxState() {
+        val jobs = pendingNotifyJobs.values.toList()
+        jobs.forEach { it.cancel() }
+        jobs.joinAll()
         pendingNotifyJobs.clear()
         notifiedTxIds.clear()
         noNetWarnedTxids.clear()
@@ -3376,7 +3376,9 @@ class CutoverUiDataService internal constructor(
                     // incoming-first sibling already scheduled (the grace in
                     // [scheduleDeferredCoinsReceivedNotify] exists for exactly
                     // this moment).
-                    pendingNotifyJobs.remove(record.txidHex)?.cancel()
+                    // Cancelled in place, not removed: a job already inside
+                    // the callback must still be joined by a wipe.
+                    pendingNotifyJobs[record.txidHex]?.cancel()
                     if (notifiedTxIds.add(record.txidHex)) {
                         log.info(
                             "tx {} touched both directions of this wallet (self-spend) — " +

@@ -49,6 +49,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * Host-JVM tests for the Phase 5d post-cutover UI data source:
@@ -1729,6 +1732,69 @@ class CutoverUiDataServiceTest {
         testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS * 3)
         runCurrent()
         assertTrue("the wiped wallet's receive must not notify after the stop", notified.isEmpty())
+    }
+
+    @Test
+    fun stopForWalletWipe_waitsForADeferredCoinsReceivedNotifyAlreadyInProgress() = runTest {
+        val txid = displayHex(8)
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val gate = MutableStateFlow<String?>("CUT_OVER")
+        val config = mockk<DashPayConfig> { every { observe(DashPayConfig.CUTOVER_STATE) } returns gate }
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val source = FakeSource(records = MutableStateFlow(emptyList()))
+        val stopReturned = CountDownLatch(1)
+        var stopThread: Thread? = null
+        var stopReturnedDuringCallback: Boolean? = null
+        lateinit var service: CutoverUiDataService
+        service = buildService(
+            source, config, backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events,
+            notify = {
+                // The callback is in progress on the test thread; the wipe's
+                // stop runs on another and must not return before this does.
+                val stopper = thread(name = "wipe-stop") {
+                    runBlocking { service.stopForWalletWipe() }
+                    stopReturned.countDown()
+                }
+                stopThread = stopper
+                // Until the stop returned or parked (its only park is the
+                // notify-job join) — a progress signal, not a timed sleep.
+                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+                while (stopReturned.count > 0 &&
+                    stopper.state != Thread.State.WAITING &&
+                    stopper.state != Thread.State.TIMED_WAITING &&
+                    System.nanoTime() < deadline
+                ) {
+                    Thread.yield()
+                }
+                stopReturnedDuringCallback = stopReturned.count == 0L
+            }
+        )
+        service.start()
+        runCurrent()
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+        assertTrue(txid in store)
+
+        // The wipe's reset emission stops the pipeline first (pipelineJob is
+        // done), leaving the deferred push armed on the service scope.
+        gate.value = "DUAL_RUNNING"
+        runCurrent()
+        assertFalse(service.isCutoverActive())
+
+        // The grace elapses: the push starts, and the stop lands mid-callback.
+        testScheduler.advanceTimeBy(CutoverUiDataService.SELF_SPEND_NOTIFY_GRACE_MS * 2)
+        runCurrent()
+        assertTrue("the stop must have returned once the callback finished", stopReturned.await(10, TimeUnit.SECONDS))
+        stopThread?.join()
+        assertEquals(
+            "stopForWalletWipe returned while the notification callback was still running",
+            false,
+            stopReturnedDuringCallback
+        )
     }
 
     @Test
