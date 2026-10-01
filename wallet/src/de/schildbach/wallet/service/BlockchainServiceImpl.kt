@@ -592,10 +592,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         onCreateCompleted.complete(Unit)
     }
 
+    /**
+     * Called synchronously by [onStartCommand], before its command coroutine.
+     * Every command coroutine awaits the same latch, so a refused normal
+     * command can resume first and stopSelf(); cleanup then cancels the
+     * wipe's coroutine. Recording the wipe here lets cleanup run it anyway.
+     */
+    internal fun recordWipeRequest(action: String?) {
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            deleteWalletFileOnShutdown = true
+        }
+    }
+
     /** Called on Main after initialization settles, before ordinary command handling. */
     internal fun handleWalletLifecycleCommand(action: String?): Boolean {
         if (action == BlockchainService.ACTION_WIPE_WALLET) {
-            deleteWalletFileOnShutdown = true
+            recordWipeRequest(action)
             stopSelf()
             return true
         }
@@ -852,6 +864,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val mnListDiffsReceived = AtomicInteger()
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
+    // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
+    @Volatile
     private var deleteWalletFileOnShutdown = false
 
     // Settings to bypass dashj default dns seeds
@@ -3021,6 +3035,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldPromoteToForeground(intent)) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
+        recordWipeRequest(intent?.action)
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished

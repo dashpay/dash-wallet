@@ -94,4 +94,29 @@ class RefusedWalletInitializationTest {
             ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
         }
     }
+
+    @Test
+    fun `wipe recorded at start survives a refused normal command that stops first`() {
+        val service = spyk(BlockchainServiceImpl())
+        val application = mockk<WalletApplication>(relaxed = true)
+        service.application = application
+        every { application.isWalletLoadDegraded } returns true
+        every { service.stopSelf() } answers {
+            // Cleanup reads this flag; it must already be set when any command stops the service.
+            assertTrue(ReflectionHelpers.getField<Boolean>(service, "deleteWalletFileOnShutdown"))
+        }
+        try {
+            // onStartCommand's synchronous part, for the wipe and then a normal start.
+            service.recordWipeRequest(BlockchainService.ACTION_WIPE_WALLET)
+            service.recordWipeRequest(null)
+            // The normal command's coroutine resumes first and stops the service.
+            assertTrue(service.handleWalletLifecycleCommand(null))
+            verify(exactly = 1) { service.stopSelf() }
+            service.saveWalletOnShutdown()
+            verify(exactly = 0) { application.saveWallet() }
+        } finally {
+            ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
+            ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
+        }
+    }
 }
