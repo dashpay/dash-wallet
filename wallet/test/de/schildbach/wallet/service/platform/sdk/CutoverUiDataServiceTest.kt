@@ -1791,7 +1791,9 @@ class CutoverUiDataServiceTest {
         }
         val service = buildService(
             source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao,
-            retryBind = { bindRetries++ }, walletBindConfirmations = bindPasses
+            // Throws every time: the hold must survive it (the gate collector is once-per-process).
+            retryBind = { bindRetries++; throw IllegalStateException("retry service broke") },
+            walletBindConfirmations = bindPasses
         )
         service.start()
         runCurrent()

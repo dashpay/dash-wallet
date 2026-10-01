@@ -968,6 +968,22 @@ class SdkWalletBinderTest {
     }
 
     @Test
+    fun bindConfirmations_publishedEvenWhenDiscoveryThrowsAfterTheBind() = runBlocking {
+        // The wallet is bound (and matches the loaded app wallet) before
+        // discovery runs; a discovery network error must not withhold the
+        // confirmation a post-wipe pipeline hold is waiting on.
+        val sdk = readySdk()
+        sdk.onDiscover = { _, _ -> throw java.io.IOException("network down") }
+        val walletData: WalletData = mockk { every { wallet } returns walletWithFingerprint(1) }
+        val binder = binder(sdk, walletData = walletData, scope = this)
+
+        binder.bindIfEnabled(unlock) // never throws; the failure is logged inside
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1L, binder.walletBindConfirmations.value)
+    }
+
+    @Test
     fun identityAlreadyManaged_skipsDiscovery_andLatches() = runBlocking {
         val sdk = FakeSdkService()
         sdk.onBind = { _, _ -> walletId }

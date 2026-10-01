@@ -2565,7 +2565,14 @@ class CutoverUiDataService internal constructor(
                                 // The wiped wallet is still loaded: wait for the next
                                 // one's bind, driving the bind retry as [awaitBoundWallet] does.
                                 while (walletBindConfirmations.value <= passes) {
-                                    retryBind()
+                                    try {
+                                        retryBind()
+                                    } catch (t: Throwable) {
+                                        if (t is CancellationException) throw t
+                                        // Same belt as [awaitBoundWallet]: a throw here would end
+                                        // the once-per-process gate collector for good.
+                                        log.warn("bind retry consultation failed; the post-wipe hold continues", t)
+                                    }
                                     withTimeoutOrNull(walletBindRetryMs) {
                                         walletBindConfirmations.first { it > passes }
                                     }

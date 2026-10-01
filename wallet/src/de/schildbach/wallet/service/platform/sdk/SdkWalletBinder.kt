@@ -1190,8 +1190,13 @@ class SdkWalletBinder internal constructor(
                 } catch (t: Throwable) {
                     if (t !is CancellationException) noteMissingMnemonic(t)
                     throw t
+                } finally {
+                    // Also when a LATER stage (discovery, key heal) threw: the
+                    // binding itself may already match the loaded wallet, and
+                    // the bind retry will not re-drive a bound wallet. After
+                    // noteMissingMnemonic, which drops the bound id, this is a no-op.
+                    noteBindConfirmedForCurrentWallet()
                 }
-                noteBindConfirmedForCurrentWallet()
             }
             // MO-995: a non-throwing pass that left the wallet bound clears
             // the retry pressure (a pass the eligibility gate skipped left
