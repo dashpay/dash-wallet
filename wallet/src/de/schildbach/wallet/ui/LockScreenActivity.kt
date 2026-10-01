@@ -108,8 +108,24 @@ open class LockScreenActivity : SecureActivity() {
     private lateinit var binding: ActivityLockScreenRootBinding
     private val pinLength by lazy { configuration.pinLength }
 
+    /**
+     * False when onCreate took its early finish (no wallet, or a degraded
+     * launch) and never built the lock-screen UI. The activity is finishing,
+     * but the system can still call into it: a "user leaving" pause calls
+     * [onUserInteraction], which threw UninitializedPropertyAccessException on
+     * [binding] (a dash: link opened during a safe-mode retry). Everything that
+     * can run after that early finish and touches the UI checks this first.
+     */
+    private val lockScreenUiReady: Boolean
+        get() = ::binding.isInitialized
+
+    /**
+     * Without the lock-screen UI (see [lockScreenUiReady]) nothing is
+     * unlocked, so this reports locked: callers then skip the work meant for
+     * an unlocked wallet screen.
+     */
     val lockScreenDisplayed: Boolean
-        get() = binding.rootViewSwitcher.displayedChild == 0
+        get() = !lockScreenUiReady || binding.rootViewSwitcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -212,7 +228,7 @@ open class LockScreenActivity : SecureActivity() {
      * instead of null.
      */
     override fun setContentView(contentViewResId: Int) {
-        if (!::binding.isInitialized) {
+        if (!lockScreenUiReady) {
             super.setContentView(contentViewResId)
             return
         }
@@ -220,7 +236,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     override fun setContentView(contentView: View?) {
-        if (!::binding.isInitialized) {
+        if (!lockScreenUiReady) {
             if (contentView != null) super.setContentView(contentView)
             return
         }
@@ -242,6 +258,7 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onUserInteraction() {
         super.onUserInteraction()
+        if (!lockScreenUiReady) return // early finish in onCreate
 
         if (!lockScreenDisplayed) {
             resetAutoLogoutTimer()
@@ -300,6 +317,9 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Early finish in onCreate: no UI to lock or unlock, and no wallet to
+        // start the blockchain service for.
+        if (!lockScreenUiReady) return
 
         // A Reset Wallet is destroying this wallet's data. Nothing below may
         // run: not the unlock (its keys are being deleted), not
@@ -529,6 +549,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun setLockState(suggestedState: State) {
+        if (!lockScreenUiReady) return // early finish in onCreate
         binding.lockScreen.apply {
             actionScanToPay.isEnabled = true
             var lockState = suggestedState
