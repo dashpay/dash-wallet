@@ -278,8 +278,14 @@ public class WalletApplication extends MultiDexApplication
     /** The wallet protobuf load threw past the internal recovery (e.g. OOM on a huge wallet). */
     private volatile boolean walletLoadFailed = false;
     private volatile boolean recoveredWalletPersistencePending = false;
-    /** A Reset Wallet stopped this process with its marker still on disk (see {@link #recordWalletWipeStopped}). */
-    private volatile boolean walletWipeIncomplete = false;
+    /**
+     * A wipe marker is on disk that this process must not act on: an
+     * unverified marker found at launch or by {@link #triggerWipe} (neither
+     * loading nor deleting the wallet is safe), or any marker a Reset Wallet
+     * left behind when it stopped (see {@link #recordWalletWipeStopped}).
+     * Either way onboarding must not create or restore a replacement wallet
+     * in this process, and {@link #fullInitialization} refuses to run.
+     */
     private volatile boolean walletWipeRecoveryRequired = false;
     /** Safe mode skipped the wallet load after consecutive launch deaths (see StartupBreadcrumbs). */
     private volatile boolean walletLoadSkippedSafeMode = false;
@@ -378,7 +384,8 @@ public class WalletApplication extends MultiDexApplication
 
     /**
      * True when loading was unsuccessful, skipped, a recovered wallet could
-     * not be persisted, or a Reset Wallet stopped unfinished. OnboardingActivity must show
+     * not be persisted, or a wipe marker is unverified or left by a stopped
+     * Reset Wallet. OnboardingActivity must show
      * the crash-report path instead of onboarding/`wallet!!` routing.
      */
     public boolean isWalletLoadDegraded() {
@@ -389,33 +396,29 @@ public class WalletApplication extends MultiDexApplication
             awaitDeferredWalletLoad();
         }
         return walletLoadFailed || walletLoadSkippedSafeMode || recoveredWalletPersistencePending
-                || walletWipeIncomplete || walletWipeRecoveryRequired;
+                || walletWipeRecoveryRequired;
     }
 
-    /**
-     * Whether a Reset Wallet stopped with its marker on disk in this process
-     * (see {@link #walletWipeIncomplete}), or an unverified wipe marker was
-     * found (see {@link #walletWipeRecoveryRequired}). Onboarding's degraded screen reads
-     * this to drop every recovery action that would create, restore or load a
-     * wallet under the marker.
-     */
+    /** @see #walletWipeRecoveryRequired */
     public boolean isWalletWipeRecoveryRequired() {
-        return walletWipeIncomplete || walletWipeRecoveryRequired;
+        return walletWipeRecoveryRequired;
     }
 
     /**
      * Whether a wallet created or restored now must be refused because a wipe
-     * marker is on disk. The next cold launch would treat it as an unfinished
-     * Reset Wallet and destroy the replacement. Re-reads the marker rather
-     * than trusting {@link #walletWipeIncomplete} alone, and latches that flag
-     * when it finds one, so the degraded screen takes over from here on.
+     * marker is on disk. The next cold launch would treat a valid marker as
+     * an unfinished Reset Wallet and destroy the replacement, and an
+     * unverified one forbids touching the wallet files at all. Re-reads the
+     * marker rather than trusting {@link #walletWipeRecoveryRequired} alone,
+     * and latches that flag when it finds one, so the degraded screen takes
+     * over from here on.
      */
     public boolean isWalletReplacementRefused() {
-        if (walletWipeIncomplete || walletWipeRecoveryRequired) {
+        if (walletWipeRecoveryRequired) {
             return true;
         }
-        if (WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
-            walletWipeIncomplete = true;
+        if (WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir()) != WalletWipeState.State.NONE) {
+            walletWipeRecoveryRequired = true;
             return true;
         }
         return false;
@@ -778,11 +781,10 @@ public class WalletApplication extends MultiDexApplication
      */
     @MainThread
     public void retryWalletLoadAfterSafeMode(@NonNull final Consumer<Boolean> onDone) {
-        if (walletWipeIncomplete || walletWipeRecoveryRequired) {
-            // The next cold launch finishes the wipe; loading the wallet under
-            // its marker now would present a half-destroyed wallet. Keep the
-            // safe-mode verdict and the breadcrumbs as they are, and start no
-            // load. Answered at once, on the main thread like every answer.
+        if (walletWipeRecoveryRequired) {
+            // fullInitialization() would refuse anyway; keep the safe-mode
+            // verdict and the breadcrumbs as they are, and start no load.
+            // Answered at once, on the main thread like every answer.
             log.warn("SAFE MODE ESCAPE refused: a wipe marker blocks loading the wallet");
             onDone.accept(false);
             return;
@@ -2292,7 +2294,10 @@ public class WalletApplication extends MultiDexApplication
     void writeKeyBackupProto(final Wallet backedUpWallet, final Protos.Wallet walletProto) throws IOException {
         final IOException[] failure = new IOException[1];
         AtomicFileWriter.runExclusive(() -> {
-            if (WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
+            // Any marker blocks the write, an unverified one included: it may be
+            // a wipe that already destroyed data.
+            if (WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir())
+                    != WalletWipeState.State.NONE) {
                 failure[0] = new IOException("a Reset Wallet has begun — the wallet's key backup is not written");
                 return;
             }
@@ -2707,14 +2712,19 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
-     * Called once the wipe teardown has stopped, finished or not. A marker
-     * still on disk means a relaunch must finish the wipe, so until then
-     * onboarding must not create or restore a replacement wallet.
+     * Called once the wipe teardown has stopped, finished or not, and BEFORE
+     * {@link #setWipeInProgress} drops the flag that onboarding re-routes on.
+     * Any marker still on disk blocks a replacement wallet in this process: a
+     * valid one means a relaunch must finish the wipe, and an unverified one
+     * (e.g. a failed marker deletion that left it unreadable) requires manual
+     * recovery. A new wallet created under either could be deleted by the
+     * next launch.
      */
     void recordWalletWipeStopped() {
-        walletWipeIncomplete = WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir());
-        if (walletWipeIncomplete) {
-            log.warn("Reset Wallet stopped with its marker on disk — staying degraded until a relaunch finishes it");
+        WalletWipeState.State state = WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir());
+        walletWipeRecoveryRequired = state != WalletWipeState.State.NONE;
+        if (walletWipeRecoveryRequired) {
+            log.warn("Reset Wallet stopped with its marker on disk ({}) — staying degraded in this process", state);
         }
     }
 
@@ -2731,12 +2741,6 @@ public class WalletApplication extends MultiDexApplication
 
     /** @see #wipeInProgress */
     public void setWipeInProgress(boolean inProgress) {
-        if (!inProgress) {
-            // A failed wipe or marker deletion must not allow a new wallet to be
-            // created under a marker that could delete it on the next launch.
-            walletWipeRecoveryRequired = WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir())
-                    != WalletWipeState.State.NONE;
-        }
         wipeInProgress.setValue(inProgress);
     }
 
