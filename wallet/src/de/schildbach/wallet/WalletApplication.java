@@ -1065,6 +1065,17 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void saveWalletAndFinalizeInitialization() {
+        // The flags below are process state only. Move the previous key backup
+        // out of the way BEFORE the replacement primary lands, so a process
+        // death after that save but before the new backup leaves the backup
+        // missing (afterLoadWallet() regenerates it from the primary) rather
+        // than a stale backup of another wallet that a later primary failure
+        // would restore. cleanupFiles() removes the moved copy once setup
+        // completes.
+        final File previousBackup = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+        if (previousBackup.exists() && WalletFileSizeGuard.preserveAside(previousBackup, "replaced") == null) {
+            throw new RuntimeException(new IOException("could not move the previous key backup aside"));
+        }
         saveWallet();
         // Unlike backupWallet(), a failure here propagates: the flags below
         // must not be cleared while the replacement has no key backup.
