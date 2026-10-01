@@ -1445,6 +1445,58 @@ class L1ShadowSyncServiceTest {
         assertFalse(service.isShadowSpvRunning())
     }
 
+    // ── engine-start hold: engineStartingSinceMs ───────────────────────
+
+    @Test
+    fun startMarker_spansTheStart_andIsClearedWhenItReturns() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        var seenAtStartSpv = -1L
+        source.onStart = { seenAtStartSpv = service.engineStartingSinceMs() }
+
+        assertTrue(service.startIfEnabled())
+        assertEquals(1_000_000L, seenAtStartSpv)
+        assertEquals(0L, service.engineStartingSinceMs())
+    }
+
+    @Test
+    fun startMarker_ofAQueuedStart_survivesTheEndOfTheStartBeforeIt() = runBlocking {
+        // A start that fails leaves the engine down, so the start queued on the
+        // mutex behind it runs a full start of its own. The first start's clear
+        // used to run after the lock was released, wiping the second's marker
+        // while the second was still inside its bring-up.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val firstGate = CompletableDeferred<Unit>()
+        val secondEntered = CompletableDeferred<Unit>()
+        val secondGate = CompletableDeferred<Unit>()
+        source.onStartWalletSubsystems = {
+            if (source.subsystemsCalls == 1) {
+                firstGate.await()
+            } else {
+                secondEntered.complete(Unit)
+                secondGate.await()
+            }
+            null
+        }
+        source.onStart = { if (source.startCalls == 1) throw IllegalStateException("first start fails") }
+
+        // The first start runs on this test's event loop, the second unconfined:
+        // releasing the mutex then runs the second start, up to its bring-up,
+        // before the first start's own code after the lock resumes.
+        val first = launch { service.startIfEnabled() }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        val second = scope.async { service.startIfEnabled() }
+        delay(20) // the second start is now queued on the mutex
+        firstGate.complete(Unit)
+        withTimeout(5_000) { first.join(); secondEntered.await() }
+
+        assertEquals("the second start is in flight and owns the marker", 1_000_000L, service.engineStartingSinceMs())
+        secondGate.complete(Unit)
+        assertTrue(withTimeout(5_000) { second.await() })
+        assertEquals(0L, service.engineStartingSinceMs())
+    }
+
     // ── ensureSpvRunning: the shield-from-wallet broadcast guard ───────
 
     @Test

@@ -2363,6 +2363,24 @@ class L1ShadowSyncService internal constructor(
     fun engineStartingSinceMs(): Long = engineStartingSinceMs
 
     /**
+     * Runs [block], an engine start, with [engineStartingSinceMs] set. Call
+     * only while holding [mutex]: the marker is set and cleared inside the
+     * same critical section, so a start queued on the lock can never have its
+     * marker cleared by the one before it (review, 2026-10-01 — the clear used
+     * to sit in a finally outside the lock). A nested call leaves the marker
+     * to the enclosing start that set it.
+     */
+    private inline fun <T> holdingEngineStart(block: () -> T): T {
+        if (engineStartingSinceMs != 0L) return block()
+        engineStartingSinceMs = nowMs()
+        try {
+            return block()
+        } finally {
+            engineStartingSinceMs = 0L
+        }
+    }
+
+    /**
      * Parsed per-transaction engine events ([L1TxEvent]), live while the
      * shadow runs — the INSTANT receive feed [CutoverUiDataService]'s tx
      * pipeline consumes to insert mempool receives / flip IS-lock state
@@ -2727,10 +2745,6 @@ class L1ShadowSyncService internal constructor(
         // too, instead of the retry adopting the stop's new generation.
         val startGeneration = expectedExternalStopGeneration ?: externalStopGeneration
         if (!isEnabled()) return false
-        // Whether THIS call set [engineStartingSinceMs]. A caller cancelled while
-        // waiting on [mutex] also runs the finally, and must not clear the mark of
-        // the start that holds the lock.
-        var markedStarting = false
         return try {
             mutex.withLock {
                 if (runningWalletIdHex.value != null) return true
@@ -2767,163 +2781,160 @@ class L1ShadowSyncService internal constructor(
                 scanGateRefusals = 0
                 currentCoroutineContext()[Job].let { self -> scanGateRetryJob?.takeIf { it !== self }?.cancel() }
 
-                // Cleared in the outer finally, whichever way this start ends.
-                engineStartingSinceMs = nowMs()
-                markedStarting = true
-                val dataDir = File(spvDataDirPath()).apply { mkdirs() }
-                if (!source.isSpvRunning()) {
-                    // Ordered DashPay bring-up BEFORE SPV: register the
-                    // contact receival/external accounts so their DIP-15
-                    // addresses are in the very first filter set, instead of
-                    // registering them in a post-sync drain that the scan has
-                    // already run past (FIXES-restored-wallets.md #1). Runs
-                    // once per process here (guarded by runningWalletIdHex
-                    // above). Best-effort: it returns a status rather than
-                    // throwing, and any failure must not hold back SPV — Core
-                    // sync is the wallet's primary function.
-                    //
-                    // Phase 1b item 10 (docs/upgrade-memory-and-sync-plan.md):
-                    // …and with a BUDGET. The bring-up needs the seed, and the
-                    // seed needs the lock-bound keystore (§12): on the reference
-                    // install's locked overnight starts it ran 766 s, 1,438 s
-                    // and 10,139 s with the filter position frozen, 0 of 177
-                    // accounts drained, and the idle rule tore the service down
-                    // before SPV ever began. Past the budget SPV starts; the
-                    // bring-up finishes in the background and logs when it
-                    // does, and the SDK marks late accounts covered at
-                    // synced_height=0 so the next scan picks them up.
-                    // A bring-up DETACHED by an earlier start may still be
-                    // running. The runningWalletIdHex guard above does not
-                    // cover that: a start which detached one and then failed
-                    // (startSpv throwing, say) leaves it in flight with
-                    // runningWalletIdHex still null. Adding a second
-                    // startWalletSubsystems on top of it is exactly the
-                    // overlap this must not create, so join the one in flight.
-                    // A bring-up an earlier start left behind comes in two kinds:
-                    // still ACTIVE (its start detached it at the budget), or
-                    // CANCELLED but not COMPLETED — a stop() cancelled it and its
-                    // native call has not returned yet. `isActive` is false for
-                    // the second kind, and that is precisely the straggler a new
-                    // bring-up must not run alongside (review, 2026-09-24), so
-                    // the test is "not completed".
-                    //
-                    // Owned by the service from the moment one is created — not
-                    // only once its budget expires. A caller cancelled during the
-                    // wait (BindHealL1Starter.cancel() from shutdown, say) used to
-                    // rethrow with the deferred neither recorded nor cancelled,
-                    // so stop() saw nothing to stop while startWalletSubsystems
-                    // was still live (review, 2026-09-23).
-                    val straggler = detachedBringUp?.takeIf { !it.isCompleted }
-                    val (bringUp, joined) = when {
-                        straggler == null -> newBringUp(walletIdHex) to false
-                        straggler.isCancelled -> {
-                            log.info(
-                                "a cancelled DashPay bring-up is still inside its native call; waiting up to " +
-                                    "{} ms for it before starting another",
-                                bringUpBudgetMs
-                            )
-                            val ended = withTimeoutOrNull(bringUpBudgetMs) { straggler.join(); true } == true
-                            if (ended) {
-                                if (detachedBringUp === straggler) detachedBringUp = null
-                                newBringUp(walletIdHex) to false
-                            } else {
-                                log.warn(
-                                    "the cancelled DashPay bring-up is still running after the budget — starting " +
-                                        "SPV without a new bring-up; it stays recorded until it ends"
+                holdingEngineStart {
+                    val dataDir = File(spvDataDirPath()).apply { mkdirs() }
+                    if (!source.isSpvRunning()) {
+                        // Ordered DashPay bring-up BEFORE SPV: register the
+                        // contact receival/external accounts so their DIP-15
+                        // addresses are in the very first filter set, instead of
+                        // registering them in a post-sync drain that the scan has
+                        // already run past (FIXES-restored-wallets.md #1). Runs
+                        // once per process here (guarded by runningWalletIdHex
+                        // above). Best-effort: it returns a status rather than
+                        // throwing, and any failure must not hold back SPV — Core
+                        // sync is the wallet's primary function.
+                        //
+                        // Phase 1b item 10 (docs/upgrade-memory-and-sync-plan.md):
+                        // …and with a BUDGET. The bring-up needs the seed, and the
+                        // seed needs the lock-bound keystore (§12): on the reference
+                        // install's locked overnight starts it ran 766 s, 1,438 s
+                        // and 10,139 s with the filter position frozen, 0 of 177
+                        // accounts drained, and the idle rule tore the service down
+                        // before SPV ever began. Past the budget SPV starts; the
+                        // bring-up finishes in the background and logs when it
+                        // does, and the SDK marks late accounts covered at
+                        // synced_height=0 so the next scan picks them up.
+                        // A bring-up DETACHED by an earlier start may still be
+                        // running. The runningWalletIdHex guard above does not
+                        // cover that: a start which detached one and then failed
+                        // (startSpv throwing, say) leaves it in flight with
+                        // runningWalletIdHex still null. Adding a second
+                        // startWalletSubsystems on top of it is exactly the
+                        // overlap this must not create, so join the one in flight.
+                        // A bring-up an earlier start left behind comes in two kinds:
+                        // still ACTIVE (its start detached it at the budget), or
+                        // CANCELLED but not COMPLETED — a stop() cancelled it and its
+                        // native call has not returned yet. `isActive` is false for
+                        // the second kind, and that is precisely the straggler a new
+                        // bring-up must not run alongside (review, 2026-09-24), so
+                        // the test is "not completed".
+                        //
+                        // Owned by the service from the moment one is created — not
+                        // only once its budget expires. A caller cancelled during the
+                        // wait (BindHealL1Starter.cancel() from shutdown, say) used to
+                        // rethrow with the deferred neither recorded nor cancelled,
+                        // so stop() saw nothing to stop while startWalletSubsystems
+                        // was still live (review, 2026-09-23).
+                        val straggler = detachedBringUp?.takeIf { !it.isCompleted }
+                        val (bringUp, joined) = when {
+                            straggler == null -> newBringUp(walletIdHex) to false
+                            straggler.isCancelled -> {
+                                log.info(
+                                    "a cancelled DashPay bring-up is still inside its native call; waiting up to " +
+                                        "{} ms for it before starting another",
+                                    bringUpBudgetMs
                                 )
-                                null to false
-                            }
-                        }
-                        else -> {
-                            log.info("DashPay bring-up from an earlier start is still running; joining it")
-                            straggler to true
-                        }
-                    }
-                    if (bringUp != null) {
-                        val outcome = try {
-                            withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
-                        } catch (e: CancellationException) {
-                            if (currentCoroutineContext().isActive) {
-                                // This caller is fine; the DEFERRED was cancelled —
-                                // a stop() took the bring-up down under us. No SPV.
-                                if (detachedBringUp === bringUp) detachedBringUp = null
-                                log.info("DashPay bring-up was cancelled by a stop; not starting SPV")
-                                return false
-                            }
-                            // Genuine caller cancellation: take the bring-up we
-                            // created down with us; a joined one belongs to the
-                            // start that detached it.
-                            if (!joined) bringUp.cancel()
-                            throw e
-                        }
-                        when {
-                            outcome == null -> {
-                                log.warn(
-                                    "DashPay bring-up before SPV exceeded its {} s budget — starting SPV now; " +
-                                        "the bring-up continues in the background",
-                                    bringUpBudgetMs / 1000
-                                )
-                                // Service-owned from here: nobody is awaiting it
-                                // any more, so stop() is the only thing that can
-                                // end it.
-                                detachedBringUp = bringUp
-                                scope.launch {
-                                    bringUp.await()
-                                        .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
-                                        .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
-                                    if (detachedBringUp === bringUp) detachedBringUp = null
+                                val ended = withTimeoutOrNull(bringUpBudgetMs) { straggler.join(); true } == true
+                                if (ended) {
+                                    if (detachedBringUp === straggler) detachedBringUp = null
+                                    newBringUp(walletIdHex) to false
+                                } else {
+                                    log.warn(
+                                        "the cancelled DashPay bring-up is still running after the budget — starting " +
+                                            "SPV without a new bring-up; it stays recorded until it ends"
+                                    )
+                                    null to false
                                 }
                             }
-                            outcome.isSuccess -> {
-                                if (detachedBringUp === bringUp) detachedBringUp = null
-                                outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
-                            }
                             else -> {
-                                if (detachedBringUp === bringUp) detachedBringUp = null
-                                val t = outcome.exceptionOrNull()
-                                if (t is CancellationException) throw t
-                                log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                                log.info("DashPay bring-up from an earlier start is still running; joining it")
+                                straggler to true
                             }
                         }
+                        if (bringUp != null) {
+                            val outcome = try {
+                                withTimeoutOrNull(bringUpBudgetMs) { bringUp.await() }
+                            } catch (e: CancellationException) {
+                                if (currentCoroutineContext().isActive) {
+                                    // This caller is fine; the DEFERRED was cancelled —
+                                    // a stop() took the bring-up down under us. No SPV.
+                                    if (detachedBringUp === bringUp) detachedBringUp = null
+                                    log.info("DashPay bring-up was cancelled by a stop; not starting SPV")
+                                    return false
+                                }
+                                // Genuine caller cancellation: take the bring-up we
+                                // created down with us; a joined one belongs to the
+                                // start that detached it.
+                                if (!joined) bringUp.cancel()
+                                throw e
+                            }
+                            when {
+                                outcome == null -> {
+                                    log.warn(
+                                        "DashPay bring-up before SPV exceeded its {} s budget — starting SPV now; " +
+                                            "the bring-up continues in the background",
+                                        bringUpBudgetMs / 1000
+                                    )
+                                    // Service-owned from here: nobody is awaiting it
+                                    // any more, so stop() is the only thing that can
+                                    // end it.
+                                    detachedBringUp = bringUp
+                                    scope.launch {
+                                        bringUp.await()
+                                            .onSuccess { if (it != null) log.info("DashPay bring-up (finished after SPV start): $it") }
+                                            .onFailure { if (it !is CancellationException) log.warn("DashPay bring-up (after SPV start) failed", it) }
+                                        if (detachedBringUp === bringUp) detachedBringUp = null
+                                    }
+                                }
+                                outcome.isSuccess -> {
+                                    if (detachedBringUp === bringUp) detachedBringUp = null
+                                    outcome.getOrNull()?.let { log.info("DashPay bring-up before SPV: $it") }
+                                }
+                                else -> {
+                                    if (detachedBringUp === bringUp) detachedBringUp = null
+                                    val t = outcome.exceptionOrNull()
+                                    if (t is CancellationException) throw t
+                                    log.warn("DashPay bring-up before SPV failed; starting SPV anyway", t)
+                                }
+                            }
+                        }
+                        source.startSpv(dataDir.absolutePath)
                     }
-                    source.startSpv(dataDir.absolutePath)
+                    runningWalletIdHex.value = walletIdHex
+                    // Seed the committed-cursor tracker from the durable
+                    // watermark so the drain predicate has evidence before the
+                    // session's first SyncHeightAdvanced event; a failed read
+                    // leaves 0 (= unknown, never treated as lagging).
+                    _engineWalletSyncedHeight.value = runCatching {
+                        source.sdkWalletSyncedHeight(walletIdHex) ?: 0L
+                    }.getOrElse { t ->
+                        log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
+                        0L
+                    }
+                    durableSyncedHeight = _engineWalletSyncedHeight.value
+                    durableHeightReadAtMs = nowMs()
+                    lastProbeHeartbeatMs = nowMs()
+                    logEngineDowntimeIfResuming()
+                    startedAtMs = nowMs()
+                    monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
+                    parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
+                    watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
+                    eventTapJob = scope.launch { tapWalletEvents() }.logCompletion("wallet-event tap")
+                    log.info(
+                        "L1 shadow SPV started for SDK wallet {}… (dataDir={}, default peer discovery); " +
+                            "debug-only instrumentation — two SPV engines are now running",
+                        walletIdHex.take(8), dataDir.absolutePath
+                    )
+                    // One-shot wallet-history facts at wallet load (once per
+                    // process; runs after this mutex-held block returns).
+                    scope.launch { logWalletHistoryFactsOnce() }
+                    true
                 }
-                runningWalletIdHex.value = walletIdHex
-                // Seed the committed-cursor tracker from the durable
-                // watermark so the drain predicate has evidence before the
-                // session's first SyncHeightAdvanced event; a failed read
-                // leaves 0 (= unknown, never treated as lagging).
-                _engineWalletSyncedHeight.value = runCatching {
-                    source.sdkWalletSyncedHeight(walletIdHex) ?: 0L
-                }.getOrElse { t ->
-                    log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
-                    0L
-                }
-                durableSyncedHeight = _engineWalletSyncedHeight.value
-                durableHeightReadAtMs = nowMs()
-                lastProbeHeartbeatMs = nowMs()
-                logEngineDowntimeIfResuming()
-                startedAtMs = nowMs()
-                monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
-                parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
-                watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
-                eventTapJob = scope.launch { tapWalletEvents() }.logCompletion("wallet-event tap")
-                log.info(
-                    "L1 shadow SPV started for SDK wallet {}… (dataDir={}, default peer discovery); " +
-                        "debug-only instrumentation — two SPV engines are now running",
-                    walletIdHex.take(8), dataDir.absolutePath
-                )
-                // One-shot wallet-history facts at wallet load (once per
-                // process; runs after this mutex-held block returns).
-                scope.launch { logWalletHistoryFactsOnce() }
-                true
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("L1 shadow sync start failed; dashj behavior unchanged", t)
             false
-        } finally {
-            if (markedStarting) engineStartingSinceMs = 0L
         }
     }
 
