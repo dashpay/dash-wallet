@@ -2605,7 +2605,8 @@ class CutoverUiDataService internal constructor(
      * waits for it. A reconcile walk or change-feed pass still holding the
      * wiped wallet's pages could then write them into tx_display_cache /
      * tx_group_cache AFTER the wipe cleared them. Returning from here means
-     * no pipeline coroutine is left to write.
+     * no pipeline coroutine is left to write, and no deferred coins-received
+     * push for the wiped wallet is left to fire ([clearWipedWalletTxState]).
      *
      * The pipeline stays stopped until [resumeAfterWalletWipe] — which the
      * wipe calls once the caches are cleared, whether or not the cutover
@@ -2620,6 +2621,7 @@ class CutoverUiDataService internal constructor(
             pipelineJob?.cancelAndJoin()
             pipelineJob = null
             resetForInactivePipeline()
+            clearWipedWalletTxState()
             stopGeneration.update { it + 1 }
         }
         log.info("SDK UI pipelines stopped for the wallet wipe")
@@ -2709,6 +2711,26 @@ class CutoverUiDataService internal constructor(
     private fun resetForInactivePipeline() {
         fullReconcilePending.set(false)
         clearSdkBalanceOverrides()
+    }
+
+    /**
+     * The wiped wallet's per-txid state, which must not carry over to the next
+     * wallet: its deferred coins-received pushes ([pendingNotifyJobs] run on
+     * the service [scope], outside [pipelineJob], so the join alone leaves
+     * them armed to fire after the wipe), and the dedup/classification maps
+     * keyed by its txids (nets and directions are THIS wallet's view of a tx).
+     * Those are only touched from [txPipeline]'s sequential collector, so this
+     * is safe only once [pipelineJob] has been joined (caller holds
+     * [pipelineMutex] after the join).
+     */
+    private fun clearWipedWalletTxState() {
+        pendingNotifyJobs.values.forEach { it.cancel() }
+        pendingNotifyJobs.clear()
+        notifiedTxIds.clear()
+        noNetWarnedTxids.clear()
+        terminalResolvedTxids.clear()
+        seenEventDirections.clear()
+        engineNetByTxid.clear()
     }
 
     private fun clearSdkBalanceOverrides() {
