@@ -202,8 +202,19 @@ class RecoveredWalletPersistenceTest {
         // A later recovery re-arms without resetting the count.
         app.persistRecoveredWallet(recovered)
         assertEquals(3, app.recordRecoveryResetFailure())
-        app.markRecoveryResetComplete()
+        assertTrue(app.markRecoveryResetComplete())
         assertFalse(app.isRecoveryResetPending)
+        assertTrue("already absent", app.markRecoveryResetComplete())
+    }
+
+    @Test
+    fun `a recovery marker that cannot be deleted reports it`() {
+        // A non-empty directory at the marker path cannot be deleted.
+        val marker = File(directory.root, RecoveryResetState.MARKER_FILE_NAME)
+        assertTrue(File(marker, "block").apply { parentFile!!.mkdirs() }.createNewFile())
+        assertTrue(app.isRecoveryResetPending)
+        assertFalse(app.markRecoveryResetComplete())
+        assertTrue(app.isRecoveryResetPending)
     }
 
     @Test

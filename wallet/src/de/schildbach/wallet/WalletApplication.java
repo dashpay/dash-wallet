@@ -1898,9 +1898,13 @@ public class WalletApplication extends MultiDexApplication
         return RecoveryResetState.INSTANCE.recordFailedAttempt(walletFile.getParentFile());
     }
 
-    /** Called by the blockchain service once the owed reset has run. */
-    public void markRecoveryResetComplete() {
-        RecoveryResetState.INSTANCE.complete(walletFile.getParentFile());
+    /**
+     * Called by the blockchain service once the owed reset has run.
+     *
+     * @return whether the marker is now absent; false means the reset is still owed.
+     */
+    public boolean markRecoveryResetComplete() {
+        return RecoveryResetState.INSTANCE.complete(walletFile.getParentFile());
     }
 
     private void protobufSerializeWallet(final Wallet wallet) throws IOException {

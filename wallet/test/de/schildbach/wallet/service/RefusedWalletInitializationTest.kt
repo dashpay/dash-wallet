@@ -140,6 +140,7 @@ class RefusedWalletInitializationTest {
         var sdkOwnsL1 = true
         var databasesCleared = true
         var sdkDebtRecorded = true
+        var markerDeleted = true
         var failures = 0
 
         init {
@@ -151,6 +152,7 @@ class RefusedWalletInitializationTest {
             every { coordinator.sdkOwnsL1Flow() } answers { kotlinx.coroutines.flow.flowOf(sdkOwnsL1) }
             coEvery { binder.oweSpvRescanForRecoveryReset() } answers { sdkDebtRecorded }
             every { application.recordRecoveryResetFailure() } answers { ++failures }
+            every { application.markRecoveryResetComplete() } answers { markerDeleted }
             coEvery { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } } answers {
                 databasesCleared
             }
@@ -222,14 +224,43 @@ class RefusedWalletInitializationTest {
     }
 
     @Test
-    fun `recovery reset gives up after the bounded attempts so the wallet can sync`() = withRecoveryReset {
-        sdkDebtRecorded = false
+    fun `only a failing database clear is waived after the bounded attempts`() = withRecoveryReset {
+        databasesCleared = false
         repeat(de.schildbach.wallet.util.RecoveryResetState.MAX_FAILED_ATTEMPTS - 1) {
             assertFalse(service.performRecoveryReset())
         }
         verify(exactly = 0) { application.markRecoveryResetComplete() }
-        assertTrue(service.performRecoveryReset())
+        assertTrue("the re-syncable stores' clear is waived", service.performRecoveryReset())
         verify(exactly = 1) { application.markRecoveryResetComplete() }
+    }
+
+    @Test
+    fun `a missing SDK rescan debt is never waived`() = withRecoveryReset {
+        sdkDebtRecorded = false
+        repeat(de.schildbach.wallet.util.RecoveryResetState.MAX_FAILED_ATTEMPTS + 2) {
+            assertFalse(service.performRecoveryReset())
+        }
+        verify(exactly = 0) { application.markRecoveryResetComplete() }
+    }
+
+    @Test
+    fun `an undeleted blockstore is never waived`() = withRecoveryReset {
+        assertTrue(blockChain.delete())
+        assertTrue(File(blockChain, "locked").apply { parentFile!!.mkdirs() }.createNewFile())
+        repeat(de.schildbach.wallet.util.RecoveryResetState.MAX_FAILED_ATTEMPTS + 2) {
+            assertFalse(service.performRecoveryReset())
+        }
+        verify(exactly = 0) { application.markRecoveryResetComplete() }
+    }
+
+    @Test
+    fun `a marker that cannot be deleted fails the reset`() = withRecoveryReset {
+        markerDeleted = false
+        assertFalse(service.performRecoveryReset())
+        verify(exactly = 1) { application.markRecoveryResetComplete() }
+        verify(exactly = 1) { application.recordRecoveryResetFailure() }
+        markerDeleted = true
+        assertTrue(service.performRecoveryReset())
     }
 
     @Test

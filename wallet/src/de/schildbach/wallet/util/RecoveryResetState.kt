@@ -48,8 +48,11 @@ object RecoveryResetState {
     /**
      * While the marker is pending the blockchain service resets instead of
      * syncing, so a database clear that fails every time would leave the
-     * wallet never syncing. After this many failed resets the marker is
-     * dropped and the wallet syncs on whatever the partial clear left.
+     * wallet never syncing. After this many failed resets a failing database
+     * clear is waived (those stores are re-syncable) and the wallet syncs on
+     * whatever the partial clear left. Nothing else is ever waived: an SPV
+     * store that cannot be deleted, or an SDK rescan that cannot be owed,
+     * keeps the reset owed.
      */
     const val MAX_FAILED_ATTEMPTS = 3
 
@@ -87,15 +90,22 @@ object RecoveryResetState {
         MAX_FAILED_ATTEMPTS
     }
 
-    /** Call ONLY after the reset ran: while the marker is present every service start resets again. */
-    fun complete(dir: File) {
-        try {
-            val file = marker(dir)
-            if (file.exists() && !file.delete()) {
-                log.warn("could not delete the recovery-reset marker at {} — the next launch resets again", file)
-            }
-        } catch (t: Throwable) {
-            log.warn("could not delete the recovery-reset marker", t)
+    /**
+     * Call ONLY after the reset ran: while the marker is present every service
+     * start resets again. Returns whether the marker is now absent; false
+     * (logged) when it could not be deleted, so the caller must not treat the
+     * reset as complete.
+     */
+    fun complete(dir: File): Boolean = try {
+        val file = marker(dir)
+        if (!file.exists() || file.delete()) {
+            true
+        } else {
+            log.warn("could not delete the recovery-reset marker at {} — the reset stays owed", file)
+            false
         }
+    } catch (t: Throwable) {
+        log.warn("could not delete the recovery-reset marker", t)
+        false
     }
 }
