@@ -195,11 +195,11 @@ class RecoveredWalletPersistenceTest {
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         val setupApp = spyk(app)
         var failBackup = true
-        every { setupApp.backupWallet() } answers {
+        every { setupApp.writeWalletBackup() } answers {
             // Still protected until backup persistence has completed.
             assertTrue(setupApp.isWalletLoadDegraded)
             assertTrue(primary.exists())
-            if (failBackup) throw IllegalStateException("injected backup failure")
+            if (failBackup) throw IOException("injected backup failure")
             recovered.saveToFile(backup)
         }
         every { setupApp.finalizeInitialization() } answers {
@@ -216,14 +216,16 @@ class RecoveredWalletPersistenceTest {
         }
         assertTrue(setupApp.isWalletLoadDegraded)
         assertTrue(setupApp.isWalletRecoveryFromSeedNeeded)
-        verify(exactly = 0) { setupApp.backupWallet() }
+        verify(exactly = 0) { setupApp.writeWalletBackup() }
         verify(exactly = 0) { setupApp.finalizeInitialization() }
 
         ReflectionHelpers.setField(setupApp, "walletFile", primary)
         try {
             setupApp.saveWalletAndFinalizeInitialization()
             fail("backup save must fail")
-        } catch (expected: IllegalStateException) {
+        } catch (expected: RuntimeException) {
+            // The real IOException path, which backupWallet() alone would swallow.
+            assertTrue(expected.cause is IOException)
             assertTrue(setupApp.isWalletLoadDegraded)
             assertTrue(setupApp.isWalletRecoveryFromSeedNeeded)
         }

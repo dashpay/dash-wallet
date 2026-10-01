@@ -1065,7 +1065,13 @@ public class WalletApplication extends MultiDexApplication
 
     public void saveWalletAndFinalizeInitialization() {
         saveWallet();
-        backupWallet();
+        // Unlike backupWallet(), a failure here propagates: the flags below
+        // must not be cleared while the replacement has no key backup.
+        try {
+            writeWalletBackup();
+        } catch (final IOException x) {
+            throw new RuntimeException(x);
+        }
 
         config.armBackupReminder();
 
@@ -1869,6 +1875,14 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void backupWallet() {
+        try {
+            writeWalletBackup();
+        } catch (final IOException x) {
+            log.error("problem writing wallet backup", x);
+        }
+    }
+
+    void writeWalletBackup() throws IOException {
         awaitDeferredWalletLoadForMutation();
         final Stopwatch watch = Stopwatch.createStarted();
         final Protos.Wallet.Builder builder = new WalletProtobufSerializer().walletToProto(wallet).toBuilder();
@@ -1887,13 +1901,9 @@ public class WalletApplication extends MultiDexApplication
         // restoreWalletFromBackup() -> Error("cannot read backup") thrown straight out of
         // Application.onCreate — an unrecoverable crash-loop with both copies unusable.
         // dashj already writes the primary wallet this way (Wallet.saveToFile temp+rename).
-        try {
-            AtomicFileWriter.write(this, Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, walletProto::writeTo);
-            watch.stop();
-            log.info("wallet backed up to: '{}', took {}", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, watch);
-        } catch (final IOException x) {
-            log.error("problem writing wallet backup", x);
-        }
+        AtomicFileWriter.write(this, Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, walletProto::writeTo);
+        watch.stop();
+        log.info("wallet backed up to: '{}', took {}", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, watch);
     }
 
     private void cleanupFiles() {
