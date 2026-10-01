@@ -252,6 +252,7 @@ class RecoveredWalletPersistenceTest {
         setField("recoveredWalletPersistencePending", true)
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         val setupApp = spyk(app)
+        every { setupApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
         var failBackup = true
         every { setupApp.writeWalletBackup() } answers {
             // Still protected until backup persistence has completed.
@@ -296,6 +297,55 @@ class RecoveredWalletPersistenceTest {
         val controller = Robolectric.buildActivity(Activity::class.java).create()
         assertFalse(controller.get().redirectDegradedWallet(setupApp))
         controller.destroy()
+    }
+
+    @Test
+    fun `replacement setup never leaves the previous wallet's backup beside the new primary`() {
+        // The previous wallet's valid key backup is on disk; the replacement is a different wallet.
+        val previousBackup = backup.readBytes()
+        val replacement = Wallet(Constants.NETWORK_PARAMETERS).apply { freshReceiveKey() }
+        setField("wallet", replacement)
+        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        val setupApp = spyk(app)
+        every { setupApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
+        every { setupApp.writeWalletBackup() } throws IOException("injected backup failure")
+        every { setupApp.finalizeInitialization() } answers { fail("must not finalize") }
+
+        try {
+            setupApp.saveWalletAndFinalizeInitialization()
+            fail("backup save must fail")
+        } catch (expected: RuntimeException) {
+            assertTrue(expected.cause is IOException)
+        }
+
+        // As after a process death here: the new primary is on disk and the
+        // old backup is no longer where a later recovery would read it, so the
+        // next launch regenerates the backup from the primary.
+        val saved = primary.inputStream().use { WalletProtobufSerializer().readWallet(it) }
+        assertTrue(saved.isPubKeyMine(replacement.currentReceiveKey().pubKey))
+        assertFalse(backup.exists())
+        val moved = directory.root.listFiles()!!.single { it.name.startsWith("key-backup-protobuf.replaced.") }
+        assertArrayEquals(previousBackup, moved.readBytes())
+    }
+
+    @Test
+    fun `replacement setup keeps the old files when the previous backup cannot be moved aside`() {
+        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        val setupApp = spyk(app)
+        // A backup that exists but cannot be renamed.
+        val stuck = spyk(backup)
+        every { stuck.renameTo(any()) } returns false
+        every { setupApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns stuck
+        try {
+            setupApp.saveWalletAndFinalizeInitialization()
+            fail("must refuse to replace")
+        } catch (expected: RuntimeException) {
+            assertTrue(expected.cause is IOException)
+        }
+        assertFalse(primary.exists())
+        assertTrue(backup.exists())
+        verify(exactly = 0) { setupApp.writeWalletBackup() }
+        verify(exactly = 0) { setupApp.finalizeInitialization() }
     }
 
     @Test
