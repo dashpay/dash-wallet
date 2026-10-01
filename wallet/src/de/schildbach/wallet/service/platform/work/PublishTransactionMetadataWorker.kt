@@ -89,7 +89,9 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
             val saveInfo = publishUnlessWalletReset(
                 ::walletResetInProgress,
                 publish = {
-                    platformSynchronizationService.publishPastTxMetadata() { progress ->
+                    // checked again before each document: the SDK publishes
+                    // them one by one and cannot be cancelled part way
+                    platformSynchronizationService.publishPastTxMetadata(::walletResetInProgress) { progress ->
                         setProgress(progress)
                     }
                 },

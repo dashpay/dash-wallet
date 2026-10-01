@@ -32,10 +32,8 @@ import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOper
 import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +41,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -137,28 +136,25 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TransactionMetadataSettingsUIState())
     override val uiState: StateFlow<TransactionMetadataSettingsUIState> = _uiState.asStateFlow()
     private var originalState: TransactionMetadataSettings? = null
-    private val workerJob = SupervisorJob()
-    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
-
-    override fun onCleared() {
-        // viewModelScope is cancelled by the framework, but the IO worker
-        // scope is ours to stop — its launchIn collectors never complete on
-        // their own and would outlive the screen.
-        workerJob.cancel()
-        super.onCleared()
-    }
 
     private var selectedCurrency: String = Constants.USD_CURRENCY
     private val _oldUnsavedTransactions = MutableStateFlow<List<org.dash.wallet.common.transactions.TxInfo>>(listOf())
 
     init {
+        // Re-emits on every DashPayConfig write, and a save queued by an
+        // earlier visit to this screen can still be writing after the user
+        // has started editing here. Edits are the user's: once the draft is
+        // modified, persisted settings no longer replace it.
         dashPayConfig.observeTransactionMetadataSettings()
-            .onEach {
-                _uiState.update { state -> state.copy(settings = it) }
+            .distinctUntilChanged()
+            .onEach { persisted ->
                 if (originalState == null) {
-                    originalState = it
+                    originalState = persisted
                 }
-            }.launchIn(viewModelWorkerScope)
+                _uiState.update { state ->
+                    if (state.settings.modified) state else state.copy(settings = persisted)
+                }
+            }.launchIn(viewModelScope)
 
         // Written by PublishTransactionMetadataWorker on a complete publish;
         // this is the only thing that tells a saved wallet from an unsaved one.
@@ -216,7 +212,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                     unsavedTxCount, cachedCount, neverPublishedCount
                 )
             }
-            .launchIn(viewModelWorkerScope)
+            .launchIn(viewModelScope)
 
         viewModelScope.launch(Dispatchers.IO) {
             val (oldUnsavedList, firstUnsavedDate) = platformSyncService.getUnsavedTransactions()

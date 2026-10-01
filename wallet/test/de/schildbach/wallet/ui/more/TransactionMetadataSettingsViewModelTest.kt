@@ -43,6 +43,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -230,6 +231,41 @@ class TransactionMetadataSettingsViewModelTest {
 
         assertEquals(2, createdWorkIds.size)
         assertEquals(createdWorkIds[1], workId.await())
+    }
+
+    @Test
+    fun updatePreferences_editSurvivesALaterPersistedEmission() = runTest(dispatcher) {
+        // An earlier screen's queued save is still writing when the user
+        // reopens the screen and edits: each of its writes re-emits the
+        // persisted settings, which must not replace the edit.
+        val persisted = MutableStateFlow(TransactionMetadataSettings(saveAfterTimestamp = 1L))
+        every { dashPayConfig.observeTransactionMetadataSettings() } returns persisted
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        val edited = TransactionMetadataSettings(saveAfterTimestamp = 1L, savePastTxToNetwork = true, saveTaxCategory = false)
+        viewModel.updatePreferences(edited)
+        assertTrue(viewModel.uiState.value.settings.modified)
+
+        persisted.value = TransactionMetadataSettings(saveAfterTimestamp = 1L, saveToNetwork = true)
+        advanceUntilIdle()
+
+        val settings = viewModel.uiState.value.settings
+        assertEquals(edited.copy(modified = true), settings)
+        assertTrue("Save must stay enabled", settings.modified)
+    }
+
+    @Test
+    fun persistedSettingsStillReachAnUneditedScreen() = runTest(dispatcher) {
+        val persisted = MutableStateFlow(TransactionMetadataSettings(saveAfterTimestamp = 1L))
+        every { dashPayConfig.observeTransactionMetadataSettings() } returns persisted
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        val written = TransactionMetadataSettings(saveAfterTimestamp = 1L, saveToNetwork = true)
+        persisted.value = written
+        advanceUntilIdle()
+
+        assertEquals(written, viewModel.uiState.value.settings)
     }
 
     @Test

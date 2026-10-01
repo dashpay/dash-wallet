@@ -2024,9 +2024,15 @@ class PlatformSynchronizationService @Inject constructor(
         )
     }
 
+    /**
+     * @param shouldStop checked before each document is submitted; the SDK
+     *   publishes on this thread, so this and cancellation of the caller are
+     *   the only ways to stop it part way (see [publishStoppingBetweenDocuments])
+     */
     private suspend fun publishTransactionMetadata(
         txMetadataItems: List<TransactionMetadataCacheItem>,
         myEncryptionKey: KeyParameter?,
+        shouldStop: () -> Boolean = { false },
         progressListener: (suspend (Int) -> Unit)? = null
     ): Int {
         if (!identityRepository.hasBlockchainIdentity) {
@@ -2060,15 +2066,21 @@ class PlatformSynchronizationService @Inject constructor(
         progressListener?.invoke(10)
         //val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
         val keyIndex = 1 + transactionMetadataDocumentDao.countAllRequests()
-        identityRepository.blockchainIdentity!!.publishTxMetaData(
-            metadataList,
-            myEncryptionKey,
-            keyIndex,
-            TxMetadataDocument.VERSION_PROTOBUF
-        ) { progress ->
-            syncScope.launch(Dispatchers.IO) {
-                progressListener?.invoke(10 + progress * 90 / 100)
+        publishStoppingBetweenDocuments(
+            shouldStop,
+            onProgress = { progress ->
+                syncScope.launch(Dispatchers.IO) {
+                    progressListener?.invoke(10 + progress * 90 / 100)
+                }
             }
+        ) { sdkProgressListener ->
+            identityRepository.blockchainIdentity!!.publishTxMetaData(
+                metadataList,
+                myEncryptionKey,
+                keyIndex,
+                TxMetadataDocument.VERSION_PROTOBUF,
+                sdkProgressListener
+            )
         }
         return txMetadataItems.size
     }
@@ -2220,7 +2232,15 @@ class PlatformSynchronizationService @Inject constructor(
         return Pair(listOfUnsaved, firstUnsavedTxDate)
     }
 
-    suspend fun publishPastTxMetadata(progressListener: suspend (Int) -> Unit): TxMetadataSaveInfo {
+    /**
+     * @param shouldStop checked before each metadata document is submitted;
+     *   once it returns true nothing more is published and the change cache
+     *   is left as it is
+     */
+    suspend fun publishPastTxMetadata(
+        shouldStop: () -> Boolean = { false },
+        progressListener: suspend (Int) -> Unit
+    ): TxMetadataSaveInfo {
         // determine any changes that haven't been saved before [DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE]
         val alreadySaved = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE) ?: 0L
         // add to those changes to the change cache
@@ -2260,13 +2280,18 @@ class PlatformSynchronizationService @Inject constructor(
             }
         }
         // call publishChangeCache
-        val itemsSaved = publishChangeCache(System.currentTimeMillis(), saveAll = true) { progress ->
+        val itemsSaved = publishChangeCache(System.currentTimeMillis(), saveAll = true, shouldStop) { progress ->
             progressListener.invoke(50 + progress / 2)
         }
         return itemsSaved
     }
 
-    private suspend fun publishChangeCache(before: Long, saveAll: Boolean, progressListener: (suspend (Int) -> Unit)? = null): TxMetadataSaveInfo {
+    private suspend fun publishChangeCache(
+        before: Long,
+        saveAll: Boolean,
+        shouldStop: () -> Boolean = { false },
+        progressListener: (suspend (Int) -> Unit)? = null
+    ): TxMetadataSaveInfo {
         if (!Constants.SUPPORTS_TXMETADATA) {
             return TxMetadataSaveInfo.NONE
         }
@@ -2354,7 +2379,7 @@ class PlatformSynchronizationService @Inject constructor(
 
             // publish non-empty items
             val myEncryptionKey = platformRepo.getWalletEncryptionKey()
-            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() }, myEncryptionKey) {
+            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() }, myEncryptionKey, shouldStop) {
                 progressListener?.invoke(10 + it * 90 / 100)
             }
             log.info("published ${itemsToPublish.values.size} tx metadata items to platform")
