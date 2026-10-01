@@ -33,6 +33,14 @@ import org.junit.Test
  * regression this pins down: the Secondary confirm of a shielded dual
  * creation showed "0.00 DASH / $0.00" while the submit actually spent the
  * 0.3 DASH shielded denomination (observed live).
+ *
+ * The L1 contested cases are exercised under BOTH [ContestedUsernameFees]
+ * branches (MO-1069): [ContestedUsernameFees.LEGACY] is what testnet/mainnet
+ * actually charge today (protocol 13 / Drive 4.1.x, 0.25/0.20), and
+ * [ContestedUsernameFees.CURRENT] is the Platform v4.2 rate (protocol >= 14,
+ * 0.15/0.10) a live [de.schildbach.wallet.service.platform.sdk.DashSdkService
+ * .currentProtocolVersion] read activates. The sheet must always show
+ * whichever pair was actually resolved, never a hardcoded one.
  */
 class UsernameConfirmCostTest {
 
@@ -40,13 +48,29 @@ class UsernameConfirmCostTest {
     private val shieldedNonContestedDenomination = Coin.valueOf(3_000_000) // 0.03 DASH
 
     @Test
-    fun `L1 contested primary creation shows the contested fee`() {
+    fun `L1 contested primary creation shows the legacy contested fee`() {
         val cost = resolveUsernameConfirmCost(
             UsernameType.Primary,
             isContestable = true,
             hasIdentity = false,
-            paymentSource = UsernamePaymentSource.DASH_BALANCE
+            paymentSource = UsernamePaymentSource.DASH_BALANCE,
+            contestedFees = ContestedUsernameFees.LEGACY
         )
+        assertEquals(ContestedUsernameFees.LEGACY.contested, cost.amount)
+        assertEquals(Constants.DASH_PAY_FEE_CONTESTED_LEGACY, cost.amount)
+        assertFalse(cost.fromShieldedBalance)
+    }
+
+    @Test
+    fun `L1 contested primary creation shows the current (v4_2) contested fee`() {
+        val cost = resolveUsernameConfirmCost(
+            UsernameType.Primary,
+            isContestable = true,
+            hasIdentity = false,
+            paymentSource = UsernamePaymentSource.DASH_BALANCE,
+            contestedFees = ContestedUsernameFees.CURRENT
+        )
+        assertEquals(ContestedUsernameFees.CURRENT.contested, cost.amount)
         assertEquals(Constants.DASH_PAY_FEE_CONTESTED, cost.amount)
         assertFalse(cost.fromShieldedBalance)
     }
@@ -57,31 +81,66 @@ class UsernameConfirmCostTest {
             UsernameType.Primary,
             isContestable = false,
             hasIdentity = false,
-            paymentSource = UsernamePaymentSource.DASH_BALANCE
+            paymentSource = UsernamePaymentSource.DASH_BALANCE,
+            contestedFees = ContestedUsernameFees.LEGACY
         )
         assertEquals(Constants.DASH_PAY_FEE, cost.amount)
         assertFalse(cost.fromShieldedBalance)
     }
 
     @Test
-    fun `contested name on an existing identity shows the name-only fee`() {
+    fun `contested name on an existing identity shows the legacy name-only fee`() {
         val cost = resolveUsernameConfirmCost(
             UsernameType.Primary,
             isContestable = true,
             hasIdentity = true,
-            paymentSource = UsernamePaymentSource.DASH_BALANCE
+            paymentSource = UsernamePaymentSource.DASH_BALANCE,
+            contestedFees = ContestedUsernameFees.LEGACY
         )
+        assertEquals(ContestedUsernameFees.LEGACY.contestedName, cost.amount)
+        assertEquals(Constants.DASH_PAY_FEE_CONTESTED_NAME_LEGACY, cost.amount)
+        assertFalse(cost.fromShieldedBalance)
+    }
+
+    @Test
+    fun `contested name on an existing identity shows the current (v4_2) name-only fee`() {
+        val cost = resolveUsernameConfirmCost(
+            UsernameType.Primary,
+            isContestable = true,
+            hasIdentity = true,
+            paymentSource = UsernamePaymentSource.DASH_BALANCE,
+            contestedFees = ContestedUsernameFees.CURRENT
+        )
+        assertEquals(ContestedUsernameFees.CURRENT.contestedName, cost.amount)
         assertEquals(Constants.DASH_PAY_FEE_CONTESTED_NAME, cost.amount)
         assertFalse(cost.fromShieldedBalance)
     }
 
     @Test
-    fun `shielded contested creation shows the 0_25 exit denomination from the shielded balance`() {
+    fun `shielded contested creation shows the 0_25 exit denomination under legacy fees`() {
         val cost = resolveUsernameConfirmCost(
             UsernameType.Primary,
             isContestable = true,
             hasIdentity = false,
-            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+            contestedFees = ContestedUsernameFees.LEGACY
+        )
+        assertEquals(shieldedContestedDenomination, cost.amount)
+        assertTrue(cost.fromShieldedBalance)
+    }
+
+    @Test
+    fun `shielded contested creation shows the same 0_25 exit denomination under current fees`() {
+        // The shielded exit-denomination set is a Drive consensus value
+        // independent of the transparent contested fee: 0.15 (current) and
+        // 0.25 (legacy) both round UP to the same 0.25 denomination, so the
+        // shielded sheet is invariant across the protocol-gate branches.
+        val cost = resolveUsernameConfirmCost(
+            UsernameType.Primary,
+            isContestable = true,
+            hasIdentity = false,
+            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+            contestedFees = ContestedUsernameFees.CURRENT
         )
         assertEquals(shieldedContestedDenomination, cost.amount)
         assertTrue(cost.fromShieldedBalance)
@@ -93,7 +152,8 @@ class UsernameConfirmCostTest {
             UsernameType.Primary,
             isContestable = false,
             hasIdentity = false,
-            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+            contestedFees = ContestedUsernameFees.LEGACY
         )
         assertEquals(shieldedNonContestedDenomination, cost.amount)
         assertTrue(cost.fromShieldedBalance)
@@ -108,7 +168,8 @@ class UsernameConfirmCostTest {
             UsernameType.Secondary,
             isContestable = true,
             hasIdentity = false,
-            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+            contestedFees = ContestedUsernameFees.LEGACY
         )
         assertEquals(Coin.ZERO, cost.amount)
         assertFalse(cost.fromShieldedBalance)
@@ -120,7 +181,8 @@ class UsernameConfirmCostTest {
             UsernameType.Secondary,
             isContestable = true,
             hasIdentity = false,
-            paymentSource = UsernamePaymentSource.DASH_BALANCE
+            paymentSource = UsernamePaymentSource.DASH_BALANCE,
+            contestedFees = ContestedUsernameFees.CURRENT
         )
         assertEquals(Coin.ZERO, cost.amount)
         assertFalse(cost.fromShieldedBalance)
@@ -132,7 +194,8 @@ class UsernameConfirmCostTest {
             UsernameType.Secondary,
             isContestable = true,
             hasIdentity = true,
-            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+            paymentSource = UsernamePaymentSource.SHIELDED_BALANCE,
+            contestedFees = ContestedUsernameFees.LEGACY
         )
         assertEquals(Coin.ZERO, cost.amount)
         assertFalse(cost.fromShieldedBalance)
