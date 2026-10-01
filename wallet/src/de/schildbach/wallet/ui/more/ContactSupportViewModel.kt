@@ -48,7 +48,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
-import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
@@ -83,7 +82,6 @@ enum class ReportGenerationStatus {
 class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
-    walletDataProvider: WalletData,
     private val packageInfoProvider: PackageInfoProvider,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
     private val dashPayConfig: DashPayConfig,
@@ -116,12 +114,44 @@ class ContactSupportViewModel @Inject constructor(
         private const val LOGCAT_TIMEOUT_SECS = 20L
     }
 
-    val wallet: Wallet? = walletDataProvider.wallet
+    /**
+     * The wallet the report describes, or null. Read once when the dialog
+     * opens and again when the report is generated, so a wallet that loaded
+     * meanwhile is included. See [refreshWallet].
+     */
+    @Volatile
+    var wallet: Wallet? = null
+        private set
+
+    /** [wallet] is null because the launch is degraded, not because there is no wallet. */
+    @Volatile
+    private var walletLoadDegraded = false
+
     var contextualData: String? = null
     var stackTrace: String? = null
     var isCrash: Boolean = false
     private val _status = MutableStateFlow(ReportGenerationStatus.NotStarted)
     val status = _status.asStateFlow()
+
+    init {
+        refreshWallet()
+    }
+
+    /**
+     * Takes the wallet without ever waiting for one. This view model is
+     * created on the main thread, and the recovery screen offers the report
+     * while a safe-mode retry loads the wallet. During that retry
+     * isWalletLoadDegraded answers at once, but reading the wallet waits for
+     * the retry's parse (minutes on a large wallet: an input-dispatch ANR on
+     * the main thread, a report that never comes on the IO thread). A degraded
+     * launch has no usable wallet anyway, so the report goes without the
+     * wallet sections and says so.
+     */
+    private fun refreshWallet() {
+        val degraded = application.isWalletLoadDegraded
+        walletLoadDegraded = degraded
+        wallet = if (degraded) null else application.wallet
+    }
 
     suspend fun createReport(
         userIssueDescription: String,
@@ -131,6 +161,7 @@ class ContactSupportViewModel @Inject constructor(
         collectWalletDump: Boolean
     ): Pair<String, ArrayList<Uri>> = withContext(Dispatchers.IO) {
         log.info("createReport({})", collectWalletDump)
+        refreshWallet() // a retry may have loaded it since the dialog opened
         val text = StringBuilder()
         val attachments = ArrayList<Uri>()
         val cacheDir = application.cacheDir
@@ -692,7 +723,11 @@ class ContactSupportViewModel @Inject constructor(
                 Transaction.SORT_TX_BY_UPDATE_TIME
             )
             walletDump + txDump
-        } ?: "No wallet loaded"
+        } ?: if (walletLoadDegraded) {
+            "No wallet loaded: degraded launch (the load failed, or safe mode skipped it and no retry has finished)"
+        } else {
+            "No wallet loaded"
+        }
     }
 
     @Throws(IOException::class)
