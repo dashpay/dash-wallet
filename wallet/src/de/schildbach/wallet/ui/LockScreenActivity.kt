@@ -142,7 +142,12 @@ open class LockScreenActivity : SecureActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (walletData.wallet == null) {
+        // Degraded FIRST, and the wallet only after it: during a safe-mode
+        // retry isWalletLoadDegraded answers at once, while reading the wallet
+        // waits on the main thread for the retry's parse (minutes on a large
+        // wallet), which is an input-dispatch ANR.
+        val degraded = walletApplication.isWalletLoadDegraded
+        if (degraded || walletData.wallet == null) {
             // SAFE-MODE / DEGRADED LAUNCH. Android restores whatever activity
             // was on top of the task straight into a fresh process, so any
             // subclass of this class can be the FIRST activity of a launch
@@ -158,7 +163,7 @@ open class LockScreenActivity : SecureActivity() {
             // crash-report path, so send the user there instead of finishing
             // into nothing. CLEAR_TASK drops the restored back stack, whose
             // every entry would hit this same branch.
-            if (walletApplication.isWalletLoadDegraded) {
+            if (degraded) {
                 log.warn(
                     "degraded launch: {} was restored without a wallet — routing to onboarding",
                     javaClass.simpleName

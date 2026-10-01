@@ -60,6 +60,7 @@ import de.schildbach.wallet.ui.onboarding.WelcomePagerAdapter
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.StartupBreadcrumbs
 import java.io.IOException
+import java.util.function.Consumer
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
@@ -148,6 +149,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     /** A safe-mode retry is loading the wallet off the main thread; drives the button's spinner. */
     private var safeModeRetryInProgress by mutableStateOf(false)
+
+    /** This screen's callback in the running safe-mode retry; removed in [onDestroy]. */
+    private var safeModeRetryCallback: Consumer<Boolean>? = null
 
     @Inject
     lateinit var walletApplication: WalletApplication
@@ -323,6 +327,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // The retry can outlive this screen by minutes (a rotation recreates
+        // it mid-load). Don't leave the application holding the destroyed
+        // instance: the load carries on, and the recreated screen joins it.
+        safeModeRetryCallback?.let { walletApplication.removeSafeModeRetryCallback(it) }
+        safeModeRetryCallback = null
         binding.viewpager.unregisterOnPageChangeCallback(onPageChanged)
     }
 
@@ -519,9 +528,12 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun retryNormalStartAfterSafeMode() {
         if (safeModeRetryInProgress) return
         safeModeRetryInProgress = true
-        walletApplication.retryWalletLoadAfterSafeMode { loaded ->
+        val callback = Consumer<Boolean> { loaded ->
+            safeModeRetryCallback = null
             safeModeRetryInProgress = false
-            if (isFinishing || isDestroyed) return@retryWalletLoadAfterSafeMode
+            // Backstop: onDestroy removes this callback, so it should not run
+            // for a dead screen.
+            if (isFinishing || isDestroyed) return@Consumer
             if (loaded) {
                 log.info("safe mode: the retried wallet load SUCCEEDED — continuing into the normal flow")
                 degradedScreenShownInProcess = false
@@ -531,6 +543,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 showDegradedStartupScreen()
             }
         }
+        // Set before the call: it may answer inline (nothing to retry, or a
+        // failure before the load starts).
+        safeModeRetryCallback = callback
+        walletApplication.retryWalletLoadAfterSafeMode(callback)
     }
 
     /**

@@ -58,7 +58,11 @@ class WalletUriHandlerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        wallet = (application as WalletApplication).wallet
+        // Degraded first (see LockScreenActivity.onCreate): during a safe-mode
+        // retry reading the wallet would wait on the main thread for the
+        // retry's parse. A degraded launch has no usable wallet either way.
+        val walletApplication = application as WalletApplication
+        wallet = if (walletApplication.isWalletLoadDegraded) null else walletApplication.wallet
         walletUriResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             var resultIntent: Intent? = null
             if (result.resultCode == Activity.RESULT_OK) {

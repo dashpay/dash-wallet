@@ -178,6 +178,7 @@ import de.schildbach.wallet.util.FriendKeyChainLookahead;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.ProcessExitReasons;
+import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
 import de.schildbach.wallet.util.WalletLoadBudget;
@@ -227,10 +228,13 @@ public class WalletApplication extends MultiDexApplication
 
     /**
      * A safe-mode retry is loading, and who to tell when it ends. Written on
-     * the main thread only; read by the status getters from any thread.
+     * the main thread only; read by the status getters from any thread. A
+     * waiter whose screen is destroyed is removed
+     * ({@link #removeSafeModeRetryCallback}), so the list holds no dead
+     * activity for the rest of the load.
      */
     private volatile boolean safeModeRetryInProgress = false;
-    private final List<Consumer<Boolean>> safeModeRetryCallbacks = new ArrayList<>();
+    private final SafeModeRetryWaiters safeModeRetryCallbacks = new SafeModeRetryWaiters();
 
     /** Set by the deferred worker when the parse and consistency check passed. */
     private volatile boolean deferredWalletChecked = false;
@@ -688,6 +692,8 @@ public class WalletApplication extends MultiDexApplication
      * Main thread only. {@code onDone} runs on the main thread, with true
      * when the wallet is loaded and normal routing may proceed; a call made
      * while a retry is already loading is answered when that one finishes.
+     * A caller that goes away first removes it with
+     * {@link #removeSafeModeRetryCallback}.
      */
     @MainThread
     public void retryWalletLoadAfterSafeMode(@NonNull final Consumer<Boolean> onDone) {
@@ -752,11 +758,19 @@ public class WalletApplication extends MultiDexApplication
             log.warn("safe-mode retry FAILED — staying degraded");
         }
         safeModeRetryInProgress = false;
-        final List<Consumer<Boolean>> waiters = new ArrayList<>(safeModeRetryCallbacks);
-        safeModeRetryCallbacks.clear();
-        for (final Consumer<Boolean> waiter : waiters) {
-            waiter.accept(loaded);
-        }
+        safeModeRetryCallbacks.complete(loaded);
+    }
+
+    /**
+     * Main thread: {@code onDone}, passed to {@link #retryWalletLoadAfterSafeMode},
+     * no longer wants the answer (its screen was destroyed, e.g. by a rotation
+     * during a multi-minute parse). It will not be called, and the application
+     * stops holding it. The retry itself keeps loading; a recreated screen
+     * joins it with a new callback.
+     */
+    @MainThread
+    public void removeSafeModeRetryCallback(@NonNull final Consumer<Boolean> onDone) {
+        safeModeRetryCallbacks.remove(onDone);
     }
 
     /**
