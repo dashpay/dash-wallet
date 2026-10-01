@@ -58,9 +58,10 @@ object WalletApplicationExt {
         // Stop transaction-metadata saves now, not at the destroy phase: the
         // service teardown in between can take minutes, and a save of this
         // wallet's settings must not write or enqueue a publish once the user
-        // has confirmed the reset. destroyWalletData() discards again and
-        // waits, before anything is cleared.
-        transactionMetadataSaveQueue.discardPendingNow()
+        // has confirmed the reset. The queue stays paused — refusing new saves
+        // — until finishWalletWipe() is done; destroyWalletData() also waits
+        // for the cancelled save to stop before anything is cleared.
+        transactionMetadataSaveQueue.pause()
         WalletWipeSequence.begin(
             markPending = { WalletWipeState.begin(filesDir) },
             handOffUi = {
@@ -98,6 +99,9 @@ object WalletApplicationExt {
             // threw; a launch that finds the marker still there re-runs the
             // wipe from the top.
             withContext(NonCancellable) {
+                // paused by beginWalletWipe() / destroyWalletData(); the next
+                // wallet's saves may run now
+                transactionMetadataSaveQueue.resume()
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
@@ -117,9 +121,11 @@ object WalletApplicationExt {
     private suspend fun WalletApplication.destroyWalletData() {
         // A queued transaction-metadata save holds this wallet's consent and
         // field choices. Left to run after the clears below it would write
-        // them into the next wallet and enqueue a publish, so stop it first.
-        runCatching { transactionMetadataSaveQueue.discardPending() }
-            .onFailure { rethrowCancellation(it); log.warn("tx-metadata save queue discard failed during wipe", it) }
+        // them into the next wallet and enqueue a publish, so stop it and wait.
+        // Pausing again covers a wipe resumed at launch, which never went
+        // through beginWalletWipe().
+        runCatching { transactionMetadataSaveQueue.pauseAndJoin() }
+            .onFailure { rethrowCancellation(it); log.warn("tx-metadata save queue pause failed during wipe", it) }
         destroyWalletFiles()
         // Live DataStore-backed configs must be cleared through their API (one
         // atomic memory+disk edit) before the leftover files are deleted:

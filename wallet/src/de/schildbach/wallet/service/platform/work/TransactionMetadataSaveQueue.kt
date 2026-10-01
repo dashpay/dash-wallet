@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.service.platform.work
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -37,8 +39,8 @@ import javax.inject.Singleton
  * the stored last work id.
  *
  * Because a queued save carries one wallet's consent choices, Reset Wallet
- * calls [discardPendingNow] the moment it is confirmed and [discardPending]
- * again before it clears anything.
+ * [pause]s the queue the moment it is confirmed, [pauseAndJoin]s before it
+ * clears anything, and [resume]s once the old wallet is gone.
  */
 @Singleton
 class TransactionMetadataSaveQueue @Inject constructor(private val applicationScope: CoroutineScope) {
@@ -46,18 +48,46 @@ class TransactionMetadataSaveQueue @Inject constructor(private val applicationSc
         private val log = LoggerFactory.getLogger(TransactionMetadataSaveQueue::class.java)
     }
 
-    private class Save(val generation: Long, val block: suspend () -> Unit)
+    /** A save was refused, dropped or stopped because the queue was paused. */
+    class SaveDiscardedException : CancellationException("transaction metadata save discarded")
+
+    /** The receiver of every save. */
+    inner class SaveScope internal constructor(private val generation: Long) {
+        /**
+         * Runs [step], the save's final side effect (enqueuing a publish), only
+         * if the queue has not been paused since the save was submitted — and
+         * atomically with [pause], so once [pause] returns no step from before
+         * it can run. Cancellation alone cannot promise that: [step] has no
+         * suspension point to be cancelled at.
+         *
+         * @return the step's result, or null if it was skipped
+         */
+        fun <T> commit(step: () -> T): T? = synchronized(lock) {
+            if (isCurrent(generation)) step() else null
+        }
+    }
+
+    private class Save(
+        val generation: Long,
+        val block: suspend SaveScope.() -> Unit,
+        /** called with the failure, or null when the save is dropped unrun */
+        val onEnd: (Throwable?) -> Unit = {}
+    )
 
     private val saves = Channel<Save>(Channel.UNLIMITED)
     private val lock = Any()
-    /** bumped by [discardPending]; a save from an older generation never runs */
+    /** bumped by [pause]; a save from an older generation never runs or commits */
     private var generation = 0L
+    private var paused = false
     private var running: Job? = null
 
     // A save that throws is logged and the queue moves on to the next one.
     private val failureHandler = CoroutineExceptionHandler { _, e ->
         log.error("transaction metadata save failed", e)
     }
+
+    /** Call with [lock] held. */
+    private fun isCurrent(saveGeneration: Long) = !paused && saveGeneration == generation
 
     init {
         applicationScope.launch {
@@ -67,39 +97,87 @@ class TransactionMetadataSaveQueue @Inject constructor(private val applicationSc
                 // itself. join() throws only when the consumer itself is
                 // cancelled — then the queue is going away anyway.
                 val job = synchronized(lock) {
-                    if (save.generation != generation) {
-                        null
+                    if (isCurrent(save.generation)) {
+                        applicationScope.launch(failureHandler) { SaveScope(save.generation).(save.block)() }
+                            .also { running = it }
                     } else {
-                        applicationScope.launch(failureHandler) { save.block() }.also { running = it }
+                        null
                     }
-                } ?: continue
+                }
+                if (job == null) {
+                    save.onEnd(null)
+                    continue
+                }
+                job.invokeOnCompletion(save.onEnd)
                 job.join()
             }
         }
     }
 
-    /** Queues [save]; the order of calls is the order the saves run in. */
-    fun submit(save: suspend () -> Unit) {
-        synchronized(lock) { saves.trySend(Save(generation, save)) }
+    /**
+     * Queues [save]; the order of calls is the order the saves run in.
+     *
+     * @return false if the queue is paused and the save was refused
+     */
+    fun submit(save: suspend SaveScope.() -> Unit): Boolean = enqueue(Save(currentGeneration(), save))
+
+    /**
+     * Queues [save] like [submit] and waits for its result. Cancelling the
+     * caller stops only the wait; the save runs on.
+     *
+     * @throws SaveDiscardedException if the save was refused, dropped or
+     *   stopped because the queue was paused
+     */
+    suspend fun <T> submitAndAwait(save: suspend SaveScope.() -> T): T {
+        val result = CompletableDeferred<T>()
+        val queued = enqueue(
+            Save(
+                currentGeneration(),
+                block = { result.complete(save()) },
+                onEnd = { cause ->
+                    if (!result.isCompleted) {
+                        result.completeExceptionally(
+                            if (cause == null || cause is CancellationException) SaveDiscardedException() else cause
+                        )
+                    }
+                }
+            )
+        )
+        if (!queued) throw SaveDiscardedException()
+        return result.await()
     }
 
     /**
-     * Drops every queued save and cancels the one running, without waiting for
-     * it to stop — for callers that cannot suspend. Saves submitted afterwards
-     * run normally.
+     * Drops every queued save, cancels the one running, makes sure none of them
+     * can [SaveScope.commit], and refuses new saves until [resume]. Does not
+     * wait for the cancelled save to stop — for callers that cannot suspend.
      *
      * @return the cancelled save, still winding down, or null if none ran
      */
-    fun discardPendingNow(): Job? = synchronized(lock) {
+    fun pause(): Job? = synchronized(lock) {
+        paused = true
         generation++
         running?.also { it.cancel() }
     }
 
-    /**
-     * [discardPendingNow], returning once the cancelled save has stopped, so
-     * nothing it does can land after the caller resumes.
-     */
-    suspend fun discardPending() {
-        discardPendingNow()?.join()
+    /** [pause], returning once the cancelled save has stopped. */
+    suspend fun pauseAndJoin() {
+        pause()?.join()
+    }
+
+    /** Accepts saves again after [pause]. */
+    fun resume() {
+        synchronized(lock) { paused = false }
+    }
+
+    private fun currentGeneration() = synchronized(lock) { generation }
+
+    private fun enqueue(save: Save): Boolean = synchronized(lock) {
+        if (paused || save.generation != generation) {
+            log.info("transaction metadata save refused: the queue is paused")
+            false
+        } else {
+            saves.trySend(save).isSuccess
+        }
     }
 }

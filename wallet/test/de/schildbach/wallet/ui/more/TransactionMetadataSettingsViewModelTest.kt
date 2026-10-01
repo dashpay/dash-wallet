@@ -41,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -55,6 +56,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -201,6 +203,33 @@ class TransactionMetadataSettingsViewModelTest {
             dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID, any())
         }
         verify(exactly = 2) { continuation.enqueue() }
+    }
+
+    @Test
+    fun saveToNetworkNow_publishesBehindAQueuedSaveAndReturnsItsWorkId() = runTest(dispatcher) {
+        // "Save and reset" must not overtake a save the settings screen queued
+        val gate = CompletableDeferred<Unit>()
+        coEvery { dashPayConfig.getTransactionMetadataSettings() } coAnswers {
+            gate.await()
+            TransactionMetadataSettings()
+        }
+        val createdWorkIds = mutableListOf<String>()
+        every { publishOperation.create(capture(createdWorkIds)) } returns continuation
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.updatePreferences(TransactionMetadataSettings(savePastTxToNetwork = true))
+        viewModel.saveToNetwork(forceSave = false)
+        advanceUntilIdle()
+
+        val workId = async { viewModel.saveToNetworkNow() }
+        advanceUntilIdle()
+        assertTrue(createdWorkIds.isEmpty())
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(2, createdWorkIds.size)
+        assertEquals(createdWorkIds[1], workId.await())
     }
 
     @Test

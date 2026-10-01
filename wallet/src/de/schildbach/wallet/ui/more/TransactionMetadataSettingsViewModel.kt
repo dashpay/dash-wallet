@@ -287,7 +287,8 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
      * returns, which clears the ViewModel and cancels its scopes while the
      * DataStore writes below are still in flight — the publish was never
      * enqueued on ~1 in 3 attempts, with no sign of it. The queue also keeps a
-     * save from a reopened screen from being overtaken by an earlier one.
+     * save from a reopened screen from being overtaken by an earlier one, and
+     * lets Reset Wallet stop it.
      */
     fun saveToNetwork(forceSave: Boolean) {
         val settings = _uiState.value.settings
@@ -300,21 +301,24 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                 }
             }
             if (forceSave || settings.savePastTxToNetwork) {
-                // TODO: save here
-                publishOperation.create(
-                    getNextWorkId()
-                ).enqueue()
+                val workId = getNextWorkId()
+                commit { publishOperation.create(workId).enqueue() }
             }
         }
     }
 
-    /** save using current settings */
-    suspend fun saveToNetworkNow(): String {
-        val nextId = getNextWorkId()
-        publishOperation.create(
-            nextId
-        ).enqueue()
-        return nextId
+    /**
+     * Publish now, behind any save already queued, and return the publish's
+     * work id.
+     *
+     * @throws TransactionMetadataSaveQueue.SaveDiscardedException if a wallet
+     *   reset stopped it
+     */
+    suspend fun saveToNetworkNow(): String = saveQueue.submitAndAwait {
+        val workId = getNextWorkId()
+        commit { publishOperation.create(workId).enqueue() }
+            ?: throw TransactionMetadataSaveQueue.SaveDiscardedException()
+        workId
     }
 
     override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>> = PublishTransactionMetadataOperation.operationStatusFlow(
