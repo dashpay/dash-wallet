@@ -108,6 +108,10 @@ object WalletApplicationExt {
                 resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, wipeFinished) {
                     WalletWipeState.pendingOrNull(filesDir)
                 }
+                // Before the flag drops: onboarding re-routes on it, and an
+                // unfinished wipe must route to the degraded screen, not to
+                // create/restore.
+                recordWalletWipeStopped()
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
