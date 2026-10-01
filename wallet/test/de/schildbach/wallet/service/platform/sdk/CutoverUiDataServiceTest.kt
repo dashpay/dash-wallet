@@ -30,6 +30,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -870,10 +871,14 @@ class CutoverUiDataServiceTest {
         ) {
             reconcileWalks++
             val pages = reconcilePagesOverride ?: listOf(records.value)
-            for (page in pages) {
+            for ((index, page) in pages.withIndex()) {
+                beforePage?.invoke(reconcileWalks, index)
                 if (page.isNotEmpty()) onPage(page)
             }
         }
+
+        /** Called before each reconcile page is handed over: (walk number, page index). */
+        var beforePage: (suspend (walk: Int, pageIndex: Int) -> Unit)? = null
 
         /** Txids that funded a CoinJoin-account TXO (historical-mixing classification probe). */
         var coinJoinFunded: Set<String> = emptySet()
@@ -924,7 +929,9 @@ class CutoverUiDataServiceTest {
         /** Presentable metadata store for the build-time row join; default = none known. */
         metadata: Map<String, PresentableTxMetadata> = emptyMap(),
         /** MO-995: the bind-retry consultation the bound-wallet wait loop drives. */
-        retryBind: suspend () -> Unit = {}
+        retryBind: suspend () -> Unit = {},
+        /** [SdkWalletBinder.walletBindConfirmations]; default never advances. */
+        walletBindConfirmations: kotlinx.coroutines.flow.StateFlow<Long> = MutableStateFlow(0L)
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -950,6 +957,7 @@ class CutoverUiDataServiceTest {
         resolveWalletNets = walletNets,
         resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
         retryBind = retryBind,
+        walletBindConfirmations = walletBindConfirmations,
         nowMs = { now }
     )
 
@@ -1614,6 +1622,235 @@ class CutoverUiDataServiceTest {
         testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
         runCurrent()
         assertEquals("the pending request was dropped with the deactivation", 0, source.reconcileWalks)
+    }
+
+    // ── The wallet-wipe stop ──────────────────────────────────────────
+
+    /**
+     * The gate's collector sees [gateFeed]; every later read sees [persisted]
+     * — so a test controls when (or whether) the wipe's reset emission reaches
+     * the collector.
+     */
+    private fun laggingGateConfig(
+        gateFeed: Flow<String?>,
+        persisted: Flow<String?>
+    ): DashPayConfig {
+        var observeCalls = 0
+        return mockk {
+            every { observe(DashPayConfig.CUTOVER_STATE) } answers {
+                if (observeCalls++ == 0) gateFeed else persisted
+            }
+        }
+    }
+
+    @Test
+    fun stopForWalletWipe_inFlightWalkCannotWriteAfterStop_andPipelineRestartsForNextWallet() = runTest {
+        val pageA = listOf(record(firstByte = 1, net = 100, context = 3, direction = 0))
+        val pageB = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val walkHeldBeforePageB = CompletableDeferred<Unit>()
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            reconcilePagesOverride = listOf(pageA, pageB)
+            beforePage = { walk, index -> if (walk == 1 && index == 1) walkHeldBeforePageB.await() }
+        }
+        val persisted = MutableStateFlow("CUT_OVER")
+        val gateFeed = MutableStateFlow("CUT_OVER")
+        val service = buildService(
+            source, laggingGateConfig(gateFeed, persisted), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        // Mid-walk: page A written, page B still held by the walker.
+        assertEquals(setOf(displayHex(1)), store.keys)
+
+        // The wipe: reset persisted, gate emission NOT delivered; stop, then clear.
+        persisted.value = "DUAL_RUNNING"
+        service.stopForWalletWipe()
+        source.boundWalletId = null // the SDK wallet clear succeeded
+        store.clear()
+        service.resumeAfterWalletWipe()
+        walkHeldBeforePageB.complete(Unit)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
+        runCurrent()
+        assertTrue("the wiped wallet's page must not land after the stop", store.isEmpty())
+        assertEquals(1, source.reconcileWalks)
+
+        // The reset emission arrives, then the next wallet commits its cutover.
+        gateFeed.value = "DUAL_RUNNING"
+        runCurrent()
+        assertFalse(service.isCutoverActive())
+        // Commit lands before the bind (fresh-wallet setup order).
+        persisted.value = "CUT_OVER"
+        gateFeed.value = "CUT_OVER"
+        runCurrent()
+        source.boundWalletId = "cd".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        assertEquals(2, source.reconcileWalks)
+        assertEquals(setOf(displayHex(1), displayHex(2)), store.keys)
+    }
+
+    @Test
+    fun stopForWalletWipe_conflatedReset_restartsForNextWallet_withoutTheWipedWalletsPendingWalk() = runTest {
+        // The wipe's DUAL_RUNNING never reaches the gate (DataStore conflated
+        // it under the next wallet's CUT_OVER): the gate stays "active" the
+        // whole time, so only the stop can drop the old pending request, and
+        // only the stop's re-evaluation can restart the pipeline.
+        val persisted = MutableStateFlow("CUT_OVER")
+        val gateFeed = MutableStateFlow("CUT_OVER")
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, laggingGateConfig(gateFeed, persisted), backgroundScope)
+        service.start()
+        runCurrent()
+        service.requestFullReconcile() // pending: the pipeline is still waiting for a bind
+        runCurrent()
+
+        persisted.value = "DUAL_RUNNING"
+        service.stopForWalletWipe()
+        service.resumeAfterWalletWipe()
+        runCurrent()
+        assertFalse("the persisted reset is honoured before the gate sees it", service.isCutoverActive())
+
+        // The next wallet commits, then binds; the gate still never changed.
+        persisted.value = "CUT_OVER"
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        source.boundWalletId = "ef".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the wiped wallet's pending walk was dropped by the stop", 0, source.reconcileWalks)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS)
+        runCurrent()
+        assertEquals("the restarted pipeline runs its own ticker walk", 1, source.reconcileWalks)
+    }
+
+    @Test
+    fun stopForWalletWipe_reconcileRequestedMidWipe_isNotReplayedForTheNextWallet() = runTest {
+        // A completeness check that started before the wipe can finish while
+        // the caches are being cleared and request a full reconcile. It
+        // belongs to the wiped wallet: the next wallet's pipeline must not
+        // replay it on subscription (only the ticker's first walk runs).
+        val persisted = MutableStateFlow("CUT_OVER")
+        val gateFeed = MutableStateFlow("CUT_OVER")
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, laggingGateConfig(gateFeed, persisted), backgroundScope)
+        service.start()
+        runCurrent()
+
+        persisted.value = "DUAL_RUNNING"
+        service.stopForWalletWipe()
+        service.requestFullReconcile() // after the stop's clear, inside the fence
+        service.resumeAfterWalletWipe()
+        runCurrent()
+
+        persisted.value = "CUT_OVER"
+        runCurrent()
+        source.boundWalletId = "ef".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the mid-wipe request was dropped", 0, source.reconcileWalks)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS)
+        runCurrent()
+        assertEquals("the next wallet's own ticker walk", 1, source.reconcileWalks)
+
+        // After the wipe, requests latch again as usual.
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals(2, source.reconcileWalks)
+    }
+
+    @Test
+    fun stopForWalletWipe_failedReset_staysStoppedUntilResume_thenRestarts() = runTest {
+        // resetForWalletWipe failed: CUT_OVER never leaves the store, so no
+        // commit will ever change the gate. The stop must still hold through
+        // the cache clears, and the resume must restart the pipeline.
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val source = FakeSource(
+            records = MutableStateFlow(listOf(record(firstByte = 1, net = 100, context = 3, direction = 0)))
+        )
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val config = mockk<DashPayConfig> {
+            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+        }
+        val service = buildService(source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao)
+        service.start()
+        runCurrent()
+        assertEquals(setOf(displayHex(1)), store.keys)
+
+        service.stopForWalletWipe() // the reset failed: state is still CUT_OVER
+        source.boundWalletId = null // ...but the SDK wallet clear succeeded
+        store.clear()
+        source.records.value = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
+        runCurrent()
+        assertFalse(service.isCutoverActive())
+        assertTrue("no relaunch before the wipe resumes the pipeline", store.isEmpty())
+        assertEquals(0, source.reconcileWalks)
+
+        service.resumeAfterWalletWipe()
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        // No bind pass needed: nothing survived the wipe, so the next bind is used as-is.
+        source.boundWalletId = "ef".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals(setOf(displayHex(2)), store.keys)
+    }
+
+    @Test
+    fun stopForWalletWipe_sdkClearAlsoFailed_waitsForTheNextWalletsBind() = runTest {
+        // Double failure: CUT_OVER stays AND the wiped SDK wallet stays loaded.
+        // Resuming must not read it back into the caches just cleared; only
+        // the next app wallet's bind pass may release the pipeline.
+        val store = mutableMapOf<String, TxDisplayCacheEntry>()
+        val displayDao = statefulDisplayDao(store)
+        val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
+        val wipedRows = listOf(record(firstByte = 1, net = 100, context = 3, direction = 0))
+        val source = FakeSource(records = MutableStateFlow(wipedRows))
+        val bindPasses = MutableStateFlow(3L)
+        var bindRetries = 0
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val config = mockk<DashPayConfig> {
+            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+        }
+        val service = buildService(
+            source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao,
+            // Throws every time: the hold must survive it (the gate collector is once-per-process).
+            retryBind = { bindRetries++; throw IllegalStateException("retry service broke") },
+            walletBindConfirmations = bindPasses
+        )
+        service.start()
+        runCurrent()
+        assertEquals(setOf(displayHex(1)), store.keys)
+
+        service.stopForWalletWipe()
+        store.clear()
+        service.resumeAfterWalletWipe()
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS * 3)
+        runCurrent()
+        assertFalse(service.isCutoverActive())
+        assertTrue("the wiped wallet's rows must not come back", store.isEmpty())
+        assertEquals(0, source.reconcileWalks)
+        assertTrue("the hold drives the bind retry", bindRetries > 0)
+
+        // The next wallet (a different seed) binds; its pass prunes the orphan.
+        source.boundWalletId = "ef".repeat(32)
+        source.records.value = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
+        bindPasses.value = 4L
+        runCurrent()
+        assertTrue(service.isCutoverActive())
+        assertEquals(setOf(displayHex(2)), store.keys)
     }
 
     // ── The engine-event (instant receive) feed ───────────────────────

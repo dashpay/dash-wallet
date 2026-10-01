@@ -31,6 +31,8 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -47,6 +49,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -55,8 +58,12 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.PresentableTxMetadata
@@ -1947,6 +1954,12 @@ class CutoverUiDataService internal constructor(
      * no-op for the fake-fed tests.
      */
     private val retryBind: suspend () -> Unit = {},
+    /**
+     * [SdkWalletBinder.walletBindConfirmations]: after a wipe whose SDK clear
+     * left the wiped wallet loaded, the pipeline waits for a confirmation past
+     * the value [resumeAfterWalletWipe] recorded. Default: never advances.
+     */
+    private val walletBindConfirmations: StateFlow<Long> = MutableStateFlow(0L),
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val refreshIntervalMs: Long = REFRESH_INTERVAL_MS,
     private val walletBindRetryMs: Long = WALLET_BIND_RETRY_MS,
@@ -1982,7 +1995,8 @@ class CutoverUiDataService internal constructor(
         instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao,
         dashPayBackfillGate: DashPayBackfillGate,
         dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
-        sdkBindRetryService: SdkBindRetryService
+        sdkBindRetryService: SdkBindRetryService,
+        sdkWalletBinder: SdkWalletBinder
     ) : this(
         source = DashSdkCutoverUiSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -2016,6 +2030,7 @@ class CutoverUiDataService internal constructor(
         // now applied to the durable seed only — see [pipelineLagging].
         pipelineLagging = l1SyncStatusService.sdkPipelineLagging,
         retryBind = { sdkBindRetryService.maybeRetry("cutover-ui bound-wallet wait") },
+        walletBindConfirmations = sdkWalletBinder.walletBindConfirmations,
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
@@ -2228,7 +2243,15 @@ class CutoverUiDataService internal constructor(
         // subscribed takes the emit. Either way the request is seen, at worst
         // twice — which the reconcile lane's coalescing folds into one extra
         // idempotent walk.
-        fullReconcilePending.set(true)
+        synchronized(wipeFenceLock) {
+            // Dropped mid-wipe (Review on #1588): it belongs to the wiped
+            // wallet, and a latch set after the stop's clear would replay into
+            // the next wallet's pipeline. Under the lock with the fence, so a
+            // request is either latched before the stop sets the fence (and
+            // then cleared by the stop) or sees the fence — never in between.
+            if (wipeFenced) return
+            fullReconcilePending.set(true)
+        }
         contactReResolveRequests.tryEmit(Unit)
     }
 
@@ -2504,34 +2527,206 @@ class CutoverUiDataService internal constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            cutoverUiActive()
-                .distinctUntilChanged()
+            // [stopGeneration] re-runs the block after a wipe stop even when the
+            // gate itself never changes: DataStore emissions conflate, so the
+            // wipe's DUAL_RUNNING can be skipped if the next wallet's CUT_OVER
+            // lands first — and a distinct-only gate would then never restart.
+            combine(cutoverUiActive().distinctUntilChanged(), stopGeneration) { active, _ -> active }
                 .collectLatest { active ->
-                    _cutoverActive.value = active
                     if (!active) {
-                        // A pending walk belongs to the wallet whose pipeline
-                        // just stopped (a wipe resets the cutover state).
-                        fullReconcilePending.set(false)
-                        _sdkTotalBalance.value = null
-                        _sdkConfirmedBalance.value = null
-                        _sdkMaxSendable.value = null
-                        _sdkSpendableUtxoCount.value = null
+                        _cutoverActive.value = false
+                        resetForInactivePipeline()
                         return@collectLatest
                     }
-                    log.info("cutover committed — serving home-screen data from the SDK")
-                    try {
-                        runPipelines()
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        log.error("cutover UI pipelines failed; balance override cleared", t)
-                        _sdkTotalBalance.value = null
-                        _sdkConfirmedBalance.value = null
-                        _sdkMaxSendable.value = null
-                        _sdkSpendableUtxoCount.value = null
+                    coroutineScope {
+                        while (true) {
+                            // Registered under [pipelineMutex] so [stopForWalletWipe]
+                            // either cancels this job or runs first — and then the
+                            // wipe fence (or the persisted reset) keeps it stopped.
+                            var heldForBindPass: Long? = null
+                            val job = pipelineMutex.withLock {
+                                if (wipeFenced) return@withLock null
+                                heldForBindPass = staleWipedWalletHold()
+                                if (heldForBindPass != null) return@withLock null
+                                if (!cutoverUiActive().first()) return@withLock null
+                                _cutoverActive.value = true
+                                launch {
+                                    log.info("cutover committed — serving home-screen data from the SDK")
+                                    try {
+                                        runPipelines()
+                                    } catch (t: Throwable) {
+                                        if (t is CancellationException) throw t
+                                        log.error("cutover UI pipelines failed; balance override cleared", t)
+                                        clearSdkBalanceOverrides()
+                                    }
+                                }.also { pipelineJob = it }
+                            }
+                            if (job != null) {
+                                job.join()
+                                return@coroutineScope
+                            }
+                            _cutoverActive.value = false
+                            // Mid-wipe: [resumeAfterWalletWipe] re-runs this block.
+                            if (wipeFenced) return@coroutineScope
+                            val passes = heldForBindPass
+                            if (passes != null) {
+                                // The wiped wallet is still loaded: wait for the next
+                                // one's bind, driving the bind retry as [awaitBoundWallet] does.
+                                while (walletBindConfirmations.value <= passes) {
+                                    try {
+                                        retryBind()
+                                    } catch (t: Throwable) {
+                                        if (t is CancellationException) throw t
+                                        // Same belt as [awaitBoundWallet]: a throw here would end
+                                        // the once-per-process gate collector for good.
+                                        log.warn("bind retry consultation failed; the post-wipe hold continues", t)
+                                    }
+                                    withTimeoutOrNull(walletBindRetryMs) {
+                                        walletBindConfirmations.first { it > passes }
+                                    }
+                                }
+                                continue
+                            }
+                            // Stopped by a wipe, and the gate has not caught up:
+                            // wait on a fresh read for the next wallet's commit.
+                            cutoverUiActive().firstOrNull { it } ?: return@coroutineScope
+                        }
                     }
                 }
         }
     }
+
+    /**
+     * Stop the SDK pipelines for a wallet wipe and WAIT until they are gone.
+     *
+     * The gate alone is not enough: [CutoverCoordinator.resetForWalletWipe]
+     * only persists DUAL_RUNNING, and [start]'s collectLatest cancels
+     * [runPipelines] whenever that DataStore emission arrives — nothing
+     * waits for it. A reconcile walk or change-feed pass still holding the
+     * wiped wallet's pages could then write them into tx_display_cache /
+     * tx_group_cache AFTER the wipe cleared them. Returning from here means
+     * no pipeline coroutine is left to write.
+     *
+     * The pipeline stays stopped until [resumeAfterWalletWipe] — which the
+     * wipe calls once the caches are cleared, whether or not the cutover
+     * reset persisted. After that the gate re-reads the persisted state:
+     * DUAL_RUNNING (the reset landed) waits for the next wallet's commit;
+     * CUT_OVER (the reset failed, so no commit will ever change the value)
+     * restarts at once, for whichever wallet binds next.
+     */
+    suspend fun stopForWalletWipe() {
+        pipelineMutex.withLock {
+            synchronized(wipeFenceLock) { wipeFenced = true }
+            pipelineJob?.cancelAndJoin()
+            pipelineJob = null
+            resetForInactivePipeline()
+            stopGeneration.update { it + 1 }
+        }
+        log.info("SDK UI pipelines stopped for the wallet wipe")
+    }
+
+    /**
+     * Lift [stopForWalletWipe]'s fence and re-arm the gate. Non-suspending so
+     * the wipe can call it from a `finally`: a wipe that fails or is cancelled
+     * after the stop must not leave the pipeline dead for the next wallet.
+     */
+    fun resumeAfterWalletWipe() {
+        confirmationsAtWipe = walletBindConfirmations.value
+        synchronized(wipeFenceLock) { wipeFenced = false }
+        stopGeneration.update { it + 1 }
+        log.info("SDK UI pipelines re-armed after the wallet wipe")
+    }
+
+    /** Bumped by the wipe stop/resume so [start]'s gate re-evaluates. */
+    private val stopGeneration = MutableStateFlow(0)
+
+    /**
+     * Set by [stopForWalletWipe] until [resumeAfterWalletWipe]: no relaunch,
+     * and no [requestFullReconcile] latch, mid-wipe. Written under
+     * [wipeFenceLock]; volatile for the gate's lock-free reads.
+     */
+    @Volatile
+    private var wipeFenced = false
+
+    /** Makes [requestFullReconcile]'s fence check and latch atomic against the wipe stop. */
+    private val wipeFenceLock = Any()
+
+    /**
+     * [walletBindConfirmations] when the last wipe resumed, until the gate has
+     * checked for a wallet that wipe failed to remove. Null = nothing to check.
+     */
+    @Volatile
+    private var confirmationsAtWipe: Long? = null
+
+    /**
+     * The double failure: the cutover reset AND the SDK wallet clear
+     * ([L1ShadowSyncService.clearForWalletWipe], which contains its own
+     * failures) both failed, so the resumed pipeline would find the WIPED
+     * wallet still loaded and re-write its rows into the caches just cleared.
+     * No next wallet can exist before the wipe finishes, so any wallet the SDK
+     * still reports here is the wiped one. Returns the confirmation count to
+     * wait past, or null to proceed.
+     *
+     * The wait ends with a bind confirmed against the NEXT app wallet — not
+     * just any pass: a clear that failed early also skipped the binder latch
+     * reset, so a pass before the next wallet exists would still report the
+     * wiped wallet bound. A different seed fails the fingerprint check, so its
+     * confirmation comes from a full rebind that prunes the orphan (or leaves
+     * two loaded, which [awaitBoundWallet] never binds); the same seed
+     * re-derives the same id, whose rows then genuinely belong to it.
+     * Caller holds [pipelineMutex].
+     */
+    private suspend fun staleWipedWalletHold(): Long? {
+        val passes = confirmationsAtWipe ?: return null
+        if (walletBindConfirmations.value > passes) {
+            confirmationsAtWipe = null
+            return null
+        }
+        val stale = try {
+            source.boundWalletIdOrNull()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("post-wipe SDK wallet check failed; holding the pipeline for the next bind", t)
+            return passes
+        }
+        if (stale == null) {
+            confirmationsAtWipe = null
+            return null
+        }
+        log.warn(
+            "SDK wallet {}… survived the wallet wipe; the UI pipeline waits for the next " +
+                "wallet's bind instead of re-writing its rows into the cleared caches",
+            stale.take(8)
+        )
+        return passes
+    }
+
+    /**
+     * Everything a stopped pipeline must not leave behind: the SDK overrides
+     * for dashj-fed UI, and a [fullReconcilePending] walk — it belongs to the
+     * wallet whose pipeline just stopped (a wipe resets the cutover state).
+     */
+    private fun resetForInactivePipeline() {
+        fullReconcilePending.set(false)
+        clearSdkBalanceOverrides()
+    }
+
+    private fun clearSdkBalanceOverrides() {
+        _sdkTotalBalance.value = null
+        _sdkConfirmedBalance.value = null
+        _sdkMaxSendable.value = null
+        _sdkSpendableUtxoCount.value = null
+    }
+
+    /** Guards [pipelineJob]'s start-vs-[stopForWalletWipe] handoff. */
+    private val pipelineMutex = Mutex()
+
+    /**
+     * The [runPipelines] job the gate last launched (possibly already
+     * finished — cancelling a completed job is a no-op).
+     */
+    @Volatile
+    private var pipelineJob: Job? = null
 
     private suspend fun runPipelines() = coroutineScope {
         val walletIdHex = awaitBoundWallet()

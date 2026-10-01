@@ -900,6 +900,89 @@ class SdkWalletBinderTest {
         assertEquals(1, sdk.bindCalls) // same wallet — still latched
     }
 
+    // ── walletBindConfirmations: the post-wipe release signal ─────────
+
+    @Test
+    fun bindConfirmations_countOnlyPassesConfirmedAgainstTheLoadedAppWallet() = runBlocking {
+        val sdk = readySdk()
+        var currentWallet: Wallet? = walletWithFingerprint(1)
+        val walletData: WalletData = mockk { every { wallet } answers { currentWallet } }
+        val binder = binder(sdk, walletData = walletData, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals("a fresh bind from the loaded wallet confirms", 1L, binder.walletBindConfirmations.value)
+        binder.bindIfEnabled(unlock)
+        assertEquals("a latched pass for the same wallet confirms", 2L, binder.walletBindConfirmations.value)
+
+        // A wipe whose SDK clear failed before the latch reset: the app wallet
+        // is gone, the wiped wallet's id is still latched. Passes now must not
+        // confirm — the pipeline would read the wiped wallet back.
+        currentWallet = null
+        binder.bindIfEnabled(unlock)
+        binder.bindIfEnabled(unlock)
+        assertEquals(2L, binder.walletBindConfirmations.value)
+    }
+
+    @Test
+    fun bindConfirmations_staleLatch_differentSeedConfirmsOnlyAfterTheRebind() = runBlocking {
+        val oldSdkWalletId = "ab".repeat(32)
+        val sdk = FakeSdkService()
+        var currentSdkWalletId = oldSdkWalletId
+        sdk.onBind = { _, _ -> currentSdkWalletId }
+        sdk.managed = { _, _ -> sdk.discoverCalls > 0 }
+        sdk.onDiscover = { _, _ -> listOf(Identifier.from(userId).toBuffer()) }
+        var currentWallet: Wallet? = walletWithFingerprint(1)
+        val walletData: WalletData = mockk { every { wallet } answers { currentWallet } }
+        val binder = binder(sdk, walletData = walletData, scope = this)
+        binder.bindIfEnabled(unlock)
+        val atWipe = binder.walletBindConfirmations.value
+
+        // The latch was never reset; the next wallet is a different seed.
+        currentWallet = walletWithFingerprint(2)
+        currentSdkWalletId = walletId
+        sdk.loadedWallets = setOf(oldSdkWalletId, walletId)
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(2, sdk.bindCalls) // revalidation forced the full rebind…
+        assertEquals(listOf(oldSdkWalletId), sdk.removedWallets) // …which pruned the wiped wallet
+        assertEquals(atWipe + 1, binder.walletBindConfirmations.value)
+    }
+
+    @Test
+    fun bindConfirmations_staleLatch_sameSeedRestoreConfirmsWithoutARebind() = runBlocking {
+        // Same phrase restored: the latched SDK wallet IS the restored wallet's,
+        // so the latched pass must still release a post-wipe hold.
+        val sdk = readySdk()
+        var currentWallet: Wallet? = walletWithFingerprint(1)
+        val walletData: WalletData = mockk { every { wallet } answers { currentWallet } }
+        val binder = binder(sdk, walletData = walletData, scope = this)
+        binder.bindIfEnabled(unlock)
+        currentWallet = null // wiped
+        binder.bindIfEnabled(unlock)
+        val atWipe = binder.walletBindConfirmations.value
+
+        currentWallet = walletWithFingerprint(1) // restored, same seed
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(atWipe + 1, binder.walletBindConfirmations.value)
+    }
+
+    @Test
+    fun bindConfirmations_publishedEvenWhenDiscoveryThrowsAfterTheBind() = runBlocking {
+        // The wallet is bound (and matches the loaded app wallet) before
+        // discovery runs; a discovery network error must not withhold the
+        // confirmation a post-wipe pipeline hold is waiting on.
+        val sdk = readySdk()
+        sdk.onDiscover = { _, _ -> throw java.io.IOException("network down") }
+        val walletData: WalletData = mockk { every { wallet } returns walletWithFingerprint(1) }
+        val binder = binder(sdk, walletData = walletData, scope = this)
+
+        binder.bindIfEnabled(unlock) // never throws; the failure is logged inside
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1L, binder.walletBindConfirmations.value)
+    }
+
     @Test
     fun identityAlreadyManaged_skipsDiscovery_andLatches() = runBlocking {
         val sdk = FakeSdkService()

@@ -29,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -418,6 +419,32 @@ class SdkWalletBinder internal constructor(
      */
     private val _bindEstablished = MutableStateFlow(false)
     val bindEstablished: StateFlow<Boolean> = _bindEstablished.asStateFlow()
+
+    /**
+     * Bind passes that ended with the bound SDK wallet CONFIRMED against the
+     * app wallet loaded right now: an app wallet is loaded and its
+     * fingerprint is the one the binding was made from — so a fresh bind,
+     * a revalidated rebind after an in-process replacement, AND a latched
+     * pass for a same-seed restore all count, while a pass with no app
+     * wallet loaded never does.
+     *
+     * [CutoverUiDataService] waits on it after a wipe whose SDK clear left
+     * the wiped wallet loaded. That clear may also have skipped the latch
+     * reset, so "a pass ran" proves nothing: a pass between the wipe and the
+     * next wallet would still find the wiped wallet's id latched. Only a
+     * confirmation against the NEXT app wallet says which SDK wallet the
+     * pipeline may read.
+     */
+    private val _walletBindConfirmations = MutableStateFlow(0L)
+    val walletBindConfirmations: StateFlow<Long> = _walletBindConfirmations.asStateFlow()
+
+    /** Bumps [walletBindConfirmations] if the binding matches the loaded app wallet. Caller holds [mutex]. */
+    private fun noteBindConfirmedForCurrentWallet() {
+        if (boundWalletIdHex == null) return
+        val current = currentWalletFingerprint() ?: return
+        if (boundWalletFingerprint != current) return
+        _walletBindConfirmations.update { it + 1 }
+    }
 
     /**
      * CONSECUTIVE bind passes that attempted and failed without leaving a
@@ -1154,12 +1181,21 @@ class SdkWalletBinder internal constructor(
                 // latch — a latch for a replaced wallet is worse than no
                 // latch (it pins every consumer to the wrong SDK wallet).
                 revalidateBoundWallet()
-                if (completed) return
+                if (completed) {
+                    noteBindConfirmedForCurrentWallet()
+                    return
+                }
                 try {
                     bindLocked(unlockProvider)
                 } catch (t: Throwable) {
                     if (t !is CancellationException) noteMissingMnemonic(t)
                     throw t
+                } finally {
+                    // Also when a LATER stage (discovery, key heal) threw: the
+                    // binding itself may already match the loaded wallet, and
+                    // the bind retry will not re-drive a bound wallet. After
+                    // noteMissingMnemonic, which drops the bound id, this is a no-op.
+                    noteBindConfirmedForCurrentWallet()
                 }
             }
             // MO-995: a non-throwing pass that left the wallet bound clears
