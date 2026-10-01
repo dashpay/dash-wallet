@@ -256,6 +256,8 @@ public class WalletApplication extends MultiDexApplication
     /** The wallet protobuf load threw past the internal recovery (e.g. OOM on a huge wallet). */
     private volatile boolean walletLoadFailed = false;
     private volatile boolean recoveredWalletPersistencePending = false;
+    /** A Reset Wallet stopped this process with its marker still on disk (see {@link #recordWalletWipeStopped}). */
+    private volatile boolean walletWipeIncomplete = false;
     /** Safe mode skipped the wallet load after consecutive launch deaths (see StartupBreadcrumbs). */
     private volatile boolean walletLoadSkippedSafeMode = false;
     /** An optional startup stage failed and was skipped (catch-degrade). */
@@ -350,8 +352,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
-     * True when loading was unsuccessful, skipped, or a recovered wallet could
-     * not be persisted. OnboardingActivity must show
+     * True when loading was unsuccessful, skipped, a recovered wallet could
+     * not be persisted, or a Reset Wallet stopped unfinished. OnboardingActivity must show
      * the crash-report path instead of onboarding/`wallet!!` routing.
      */
     public boolean isWalletLoadDegraded() {
@@ -361,7 +363,8 @@ public class WalletApplication extends MultiDexApplication
         if (!safeModeRetryInProgress) {
             awaitDeferredWalletLoad();
         }
-        return walletLoadFailed || walletLoadSkippedSafeMode || recoveredWalletPersistencePending;
+        return walletLoadFailed || walletLoadSkippedSafeMode || recoveredWalletPersistencePending
+                || walletWipeIncomplete;
     }
 
     /** Whether safe mode (crash-loop breaker) skipped the wallet load this launch. */
@@ -2317,11 +2320,28 @@ public class WalletApplication extends MultiDexApplication
 
     /** Called only after wipe destruction succeeds; retain recovery protection if the marker remains. */
     void markWalletWipeComplete() {
+        // The wiped wallet's owed reset must not carry over to its replacement,
+        // so its marker goes first: while the wipe marker stays, the next
+        // launch re-runs the wipe and retries this delete.
+        if (!RecoveryResetState.INSTANCE.complete(getFilesDir())) {
+            log.warn("wipe destroyed the wallet but its recovery-reset marker remains — keeping the wipe marker");
+            return;
+        }
         WalletWipeState.INSTANCE.complete(getFilesDir());
         if (!WalletWipeState.INSTANCE.isPending(getFilesDir())) {
             recoveredWalletPersistencePending = false;
-            // The wiped wallet's owed reset must not carry over to its replacement.
-            RecoveryResetState.INSTANCE.complete(getFilesDir());
+        }
+    }
+
+    /**
+     * Called once the wipe teardown has stopped, finished or not. A marker
+     * still on disk means a relaunch must finish the wipe, so until then
+     * onboarding must not create or restore a replacement wallet.
+     */
+    void recordWalletWipeStopped() {
+        walletWipeIncomplete = WalletWipeState.INSTANCE.isPending(getFilesDir());
+        if (walletWipeIncomplete) {
+            log.warn("Reset Wallet stopped with its marker on disk — staying degraded until a relaunch finishes it");
         }
     }
 

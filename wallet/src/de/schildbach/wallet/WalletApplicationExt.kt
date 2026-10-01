@@ -92,6 +92,10 @@ object WalletApplicationExt {
             // threw; a launch that finds the marker still there re-runs the
             // wipe from the top.
             withContext(NonCancellable) {
+                // Before the flag drops: onboarding re-routes on it, and an
+                // unfinished wipe must route to the degraded screen, not to
+                // create/restore.
+                recordWalletWipeStopped()
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }

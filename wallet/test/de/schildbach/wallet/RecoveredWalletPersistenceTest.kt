@@ -403,4 +403,52 @@ class RecoveredWalletPersistenceTest {
         controller.destroy()
         Unit
     }
+
+    @Test
+    fun `wipe stays pending until the wiped wallet's recovery marker is removed`() = runBlocking {
+        // The recovered wallet's reset is still owed when the user resets it.
+        setField("walletFile", File(directory.root, "missing/primary"))
+        try {
+            app.persistRecoveredWallet(recovered)
+            fail("save must fail")
+        } catch (expected: IOException) {
+            assertTrue(app.isWalletLoadDegraded)
+        }
+        val wipeApp = spyk(app)
+        every { wipeApp.filesDir } returns directory.root
+        // As finishWalletWipe does: the sequence, then the stopped-wipe verdict.
+        suspend fun wipe(): Boolean = WalletWipeSequence.finish(
+            pending = { WalletWipeState.isPending(directory.root) },
+            detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
+            destroy = { },
+            markComplete = { wipeApp.markWalletWipeComplete() }
+        ).also { wipeApp.recordWalletWipeStopped() }
+
+        // A nonempty directory at the recovery marker path cannot be deleted.
+        val recoveryMarker = File(directory.root, RecoveryResetState.MARKER_FILE_NAME)
+        val child = File(recoveryMarker, "block-delete").apply {
+            parentFile!!.mkdirs()
+            writeText("test")
+        }
+        assertTrue(WalletWipeState.begin(directory.root))
+        assertTrue(wipe())
+        assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root))
+        assertTrue(recoveryMarker.exists())
+        assertTrue(wipeApp.isWalletLoadDegraded)
+        assertTrue(ReflectionHelpers.getField<Boolean>(wipeApp, "recoveredWalletPersistencePending"))
+
+        // Without the recovered-wallet guard, the unfinished wipe alone keeps
+        // onboarding off create/restore.
+        ReflectionHelpers.setField(wipeApp, "recoveredWalletPersistencePending", false)
+        assertTrue(wipeApp.isWalletLoadDegraded)
+        ReflectionHelpers.setField(wipeApp, "recoveredWalletPersistencePending", true)
+
+        assertTrue(child.delete())
+        assertTrue(wipe())
+        assertFalse(recoveryMarker.exists())
+        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(ReflectionHelpers.getField<Boolean>(wipeApp, "recoveredWalletPersistencePending"))
+        assertFalse(wipeApp.isWalletLoadDegraded)
+        Unit
+    }
 }
