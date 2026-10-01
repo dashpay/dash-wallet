@@ -70,7 +70,7 @@ class SdkShieldedUsernameCreationTest {
             "denomination 30000000000 is not a member of the allowed exit-denomination set " +
             "[3000000000, 10000000000, 25000000000, 50000000000, 100000000000]"
 
-    /** 0.25 DASH in credits — Constants.DASH_PAY_FEE_CONTESTED without loading Constants. */
+    /** 0.25 DASH in credits — the LEGACY contested fee, without loading Constants. */
     private val contestedFeeCredits = 25_000_000_000L
 
     /** The smallest covering denomination: 0.03 DASH (an exact member since v13). */

@@ -20,6 +20,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
@@ -123,7 +125,7 @@ data class InviteShieldedFundingUIState(
     val walletBalance: Dash = Dash.ZERO,
     /** L1 cost of a non-contested invitation (`DASH_PAY_FEE`). */
     val nonContestedFee: Dash = Dash.ZERO,
-    /** L1 cost of a contested invitation (`DASH_PAY_FEE_CONTESTED`). */
+    /** L1 cost of a contested invitation (the protocol-gated [ContestedUsernameFees] contested fee). */
     val contestedFee: Dash = Dash.ZERO,
     /** True once the resolving `shieldedEnabled` read has completed (see [prompt]). */
     val resolved: Boolean = false
@@ -253,7 +255,8 @@ data class InviteShieldedFundingUIState(
 class InviteShieldedFundingViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val shieldedBalanceService: ShieldedBalanceService,
-    private val walletData: org.dash.wallet.common.WalletDataProvider
+    private val walletData: org.dash.wallet.common.WalletDataProvider,
+    private val dashSdkService: DashSdkService
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(InviteShieldedFundingViewModel::class.java)
@@ -262,12 +265,18 @@ class InviteShieldedFundingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(
         InviteShieldedFundingUIState(
             nonContestedFee = Dash(Constants.DASH_PAY_FEE.value),
-            contestedFee = Dash(Constants.DASH_PAY_FEE_CONTESTED.value)
+            // Protocol-gated (MO-1069) default — the safe pre-resolve LEGACY
+            // fallback, refreshed below once the live read lands.
+            contestedFee = Dash(ContestedUsernameFees.LEGACY.contested.value)
         )
     )
     val uiState = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            val fees = ContestedUsernameFees.current(dashSdkService)
+            _uiState.update { it.copy(contestedFee = Dash(fees.contested.value)) }
+        }
         viewModelScope.launch {
             val enabled = runCatching {
                 dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true

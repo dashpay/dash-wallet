@@ -326,9 +326,11 @@ class SdkL1InviteCreation internal constructor(
     /**
      * Invitation-voucher funding amount in Core DUFFS for the given
      * contested-ness — the same fee the dashj path funds the voucher with
-     * (contested → `DASH_PAY_FEE_CONTESTED`, non-contested → `DASH_PAY_FEE`).
+     * (contested → [ContestedUsernameFees.current]'s protocol-gated fee
+     * (MO-1069), non-contested → `DASH_PAY_FEE`). Suspend: resolving the
+     * contested fee needs a live protocol-version read.
      */
-    private val feeDuffs: (contested: Boolean) -> Long,
+    private val feeDuffs: suspend (contested: Boolean) -> Long,
     /**
      * Wraps the raw invite deep link in an AppsFlyer OneLink, returning the
      * OneLink short URL — or `null` when generation fails/times out (raw
@@ -369,7 +371,11 @@ class SdkL1InviteCreation internal constructor(
         dashPayConfig = dashPayConfig,
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
         feeDuffs = { contested ->
-            if (contested) Constants.DASH_PAY_FEE_CONTESTED.value else Constants.DASH_PAY_FEE.value
+            if (contested) {
+                ContestedUsernameFees.current(sdkService).contested.value
+            } else {
+                Constants.DASH_PAY_FEE.value
+            }
         },
         generateOneLink = { link ->
             // Bounded so a stuck AppsFlyer callback can't hang the invite;
