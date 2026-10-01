@@ -1732,6 +1732,41 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun stopForWalletWipe_reconcileRequestedMidWipe_isNotReplayedForTheNextWallet() = runTest {
+        // A completeness check that started before the wipe can finish while
+        // the caches are being cleared and request a full reconcile. It
+        // belongs to the wiped wallet: the next wallet's pipeline must not
+        // replay it on subscription (only the ticker's first walk runs).
+        val persisted = MutableStateFlow("CUT_OVER")
+        val gateFeed = MutableStateFlow("CUT_OVER")
+        val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
+        val service = buildService(source, laggingGateConfig(gateFeed, persisted), backgroundScope)
+        service.start()
+        runCurrent()
+
+        persisted.value = "DUAL_RUNNING"
+        service.stopForWalletWipe()
+        service.requestFullReconcile() // after the stop's clear, inside the fence
+        service.resumeAfterWalletWipe()
+        runCurrent()
+
+        persisted.value = "CUT_OVER"
+        runCurrent()
+        source.boundWalletId = "ef".repeat(32)
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        assertEquals("the mid-wipe request was dropped", 0, source.reconcileWalks)
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS)
+        runCurrent()
+        assertEquals("the next wallet's own ticker walk", 1, source.reconcileWalks)
+
+        // After the wipe, requests latch again as usual.
+        service.requestFullReconcile()
+        runCurrent()
+        assertEquals(2, source.reconcileWalks)
+    }
+
+    @Test
     fun stopForWalletWipe_failedReset_staysStoppedUntilResume_thenRestarts() = runTest {
         // resetForWalletWipe failed: CUT_OVER never leaves the store, so no
         // commit will ever change the gate. The stop must still hold through

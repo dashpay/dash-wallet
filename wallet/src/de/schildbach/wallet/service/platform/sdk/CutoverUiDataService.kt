@@ -2243,7 +2243,15 @@ class CutoverUiDataService internal constructor(
         // subscribed takes the emit. Either way the request is seen, at worst
         // twice — which the reconcile lane's coalescing folds into one extra
         // idempotent walk.
-        fullReconcilePending.set(true)
+        synchronized(wipeFenceLock) {
+            // Dropped mid-wipe (Review on #1588): it belongs to the wiped
+            // wallet, and a latch set after the stop's clear would replay into
+            // the next wallet's pipeline. Under the lock with the fence, so a
+            // request is either latched before the stop sets the fence (and
+            // then cleared by the stop) or sees the fence — never in between.
+            if (wipeFenced) return
+            fullReconcilePending.set(true)
+        }
         contactReResolveRequests.tryEmit(Unit)
     }
 
@@ -2608,7 +2616,7 @@ class CutoverUiDataService internal constructor(
      */
     suspend fun stopForWalletWipe() {
         pipelineMutex.withLock {
-            wipeFenced = true
+            synchronized(wipeFenceLock) { wipeFenced = true }
             pipelineJob?.cancelAndJoin()
             pipelineJob = null
             resetForInactivePipeline()
@@ -2624,7 +2632,7 @@ class CutoverUiDataService internal constructor(
      */
     fun resumeAfterWalletWipe() {
         confirmationsAtWipe = walletBindConfirmations.value
-        wipeFenced = false
+        synchronized(wipeFenceLock) { wipeFenced = false }
         stopGeneration.update { it + 1 }
         log.info("SDK UI pipelines re-armed after the wallet wipe")
     }
@@ -2632,9 +2640,16 @@ class CutoverUiDataService internal constructor(
     /** Bumped by the wipe stop/resume so [start]'s gate re-evaluates. */
     private val stopGeneration = MutableStateFlow(0)
 
-    /** Set by [stopForWalletWipe] until [resumeAfterWalletWipe]: no relaunch mid-wipe. */
+    /**
+     * Set by [stopForWalletWipe] until [resumeAfterWalletWipe]: no relaunch,
+     * and no [requestFullReconcile] latch, mid-wipe. Written under
+     * [wipeFenceLock]; volatile for the gate's lock-free reads.
+     */
     @Volatile
     private var wipeFenced = false
+
+    /** Makes [requestFullReconcile]'s fence check and latch atomic against the wipe stop. */
+    private val wipeFenceLock = Any()
 
     /**
      * [walletBindConfirmations] when the last wipe resumed, until the gate has
