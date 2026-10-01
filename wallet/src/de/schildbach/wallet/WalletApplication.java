@@ -1693,7 +1693,7 @@ public class WalletApplication extends MultiDexApplication
             return false;
         // Covers both a backup recovery in this launch and one whose reset a
         // previous process died before completing.
-        if (RecoveryResetState.INSTANCE.isPending(walletFile.getParentFile())) {
+        if (isRecoveryResetPending()) {
             log.info("recovered wallet still owes a blockchain reset — queueing it");
             try {
                 resetBlockchain();
@@ -1893,6 +1893,16 @@ public class WalletApplication extends MultiDexApplication
         RecoveryResetState.INSTANCE.arm(walletFile.getParentFile());
         protobufSerializeWallet(recoveredWallet);
         recoveredWalletPersistencePending = false;
+    }
+
+    /** A backup-recovered wallet still owes its blockchain reset; see {@link RecoveryResetState}. */
+    public boolean isRecoveryResetPending() {
+        return RecoveryResetState.INSTANCE.isPending(walletFile.getParentFile());
+    }
+
+    /** @return the number of owed resets whose database clear has failed so far. */
+    public int recordRecoveryResetFailure() {
+        return RecoveryResetState.INSTANCE.recordFailedAttempt(walletFile.getParentFile());
     }
 
     /** Called by the blockchain service once a reset's teardown has run. */

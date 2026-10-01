@@ -43,6 +43,14 @@ object RecoveryResetState {
 
     const val MARKER_FILE_NAME = "recovery-reset.pending"
 
+    /**
+     * While the marker is pending the blockchain service resets instead of
+     * syncing, so a database clear that fails every time would leave the
+     * wallet never syncing. After this many failed resets the marker is
+     * dropped and the wallet syncs on whatever the partial clear left.
+     */
+    const val MAX_FAILED_ATTEMPTS = 3
+
     private fun marker(dir: File) = File(dir, MARKER_FILE_NAME)
 
     /** Records that a reset is owed. Throws, unlike the other methods: the caller must not save without it. */
@@ -60,6 +68,21 @@ object RecoveryResetState {
     } catch (t: Throwable) {
         log.warn("could not read the recovery-reset marker", t)
         false
+    }
+
+    /**
+     * Records one reset whose database clear failed, as a count inside the
+     * marker. Returns the new count; a marker that cannot be read or written
+     * counts as exhausted, since its retries cannot be bounded.
+     */
+    fun recordFailedAttempt(dir: File): Int = try {
+        val file = marker(dir)
+        val attempts = (file.readText().trim().toIntOrNull() ?: 0) + 1
+        file.writeText(attempts.toString())
+        attempts
+    } catch (t: Throwable) {
+        log.warn("could not record a failed recovery reset", t)
+        MAX_FAILED_ATTEMPTS
     }
 
     /** Call ONLY after the reset ran: while the marker is present every launch re-queues it. */

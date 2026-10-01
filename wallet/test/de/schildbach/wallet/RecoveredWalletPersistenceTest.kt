@@ -197,6 +197,20 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
+    fun `failed recovery resets are counted in the marker`() {
+        app.persistRecoveredWallet(recovered)
+        assertTrue(app.isRecoveryResetPending)
+        assertEquals(1, app.recordRecoveryResetFailure())
+        assertEquals(2, app.recordRecoveryResetFailure())
+        assertTrue(app.isRecoveryResetPending)
+        // A later recovery re-arms without resetting the count.
+        app.persistRecoveredWallet(recovered)
+        assertEquals(3, app.recordRecoveryResetFailure())
+        app.markRecoveryResetComplete()
+        assertFalse(app.isRecoveryResetPending)
+    }
+
+    @Test
     fun `recovered primary is not saved when the reset marker cannot be written`() {
         // A missing directory makes the marker write fail before the save.
         val primaryInMissingDir = File(directory.root, "missing/primary")
