@@ -1062,17 +1062,11 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void saveWalletAndFinalizeInitialization() {
-        // The flags below are process state only. Move the previous key backup
-        // out of the way BEFORE the replacement primary lands, so a process
-        // death after that save but before the new backup leaves the backup
-        // missing (afterLoadWallet() regenerates it from the primary) rather
-        // than a stale backup of another wallet that a later primary failure
-        // would restore. cleanupFiles() removes the moved copy once setup
-        // completes.
-        final File previousBackup = getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
-        if (previousBackup.exists() && WalletFileSizeGuard.preserveAside(previousBackup, "replaced") == null) {
-            throw new RuntimeException(new IOException("could not move the previous key backup aside"));
-        }
+        // The previous key backup stays in place until the replacement's is
+        // written over it: it is the only recovery input if this primary save
+        // fails. A death between the two saves leaves a backup of another
+        // wallet beside the new primary; afterLoadWallet()'s maintenance
+        // rewrites a backup that does not hold the primary's keys.
         saveWallet();
         // Unlike backupWallet(), a failure here propagates: the flags below
         // must not be cleared while the replacement has no key backup.
@@ -1304,8 +1298,11 @@ public class WalletApplication extends MultiDexApplication
                     }
                 }
 
-                // make sure there is at least one recent backup
-                if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists())
+                // make sure there is at least one recent backup, and that it
+                // is this wallet's: a replacement whose backup write was cut
+                // short leaves the previous wallet's backup in place.
+                if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists()
+                        || !keyBackupMatches(walletForMaintenance))
                     backupWallet();
             } catch (final Throwable t) {
                 log.error("deferred wallet maintenance failed — continuing degraded", t);
@@ -1913,6 +1910,25 @@ public class WalletApplication extends MultiDexApplication
         watch.stop();
 
         log.info("wallet saved to: '{}', took {}", walletFile, watch);
+    }
+
+    /**
+     * Whether the key backup holds {@code primary}'s keys, compared by the
+     * active chain's watching key (public, so stable across encryption).
+     * The backup is small and transaction-free, so cheap to read. An
+     * unreadable backup does not match; a false mismatch (say, a chain
+     * added since the backup was written) only costs a rewrite from the
+     * primary, while two wallets never share a watching key.
+     */
+    boolean keyBackupMatches(final Wallet primary) {
+        try (InputStream is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF)) {
+            final Wallet backup = new WalletProtobufSerializer().readWallet(is, true,
+                    walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
+            return backup.getWatchingKey().equals(primary.getWatchingKey());
+        } catch (final Exception x) {
+            log.warn("key backup could not be checked against the primary wallet — rewriting it", x);
+            return false;
+        }
     }
 
     public void backupWallet() {

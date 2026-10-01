@@ -266,7 +266,6 @@ class RecoveredWalletPersistenceTest {
         setField("recoveredWalletPersistencePending", true)
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         val setupApp = spyk(app)
-        every { setupApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
         var failBackup = true
         every { setupApp.writeWalletBackup() } answers {
             // Still protected until backup persistence has completed.
@@ -314,52 +313,40 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
-    fun `replacement setup never leaves the previous wallet's backup beside the new primary`() {
-        // The previous wallet's valid key backup is on disk; the replacement is a different wallet.
+    fun `failed replacement primary save leaves the previous backup in place`() {
         val previousBackup = backup.readBytes()
-        val replacement = Wallet(Constants.NETWORK_PARAMETERS).apply { freshReceiveKey() }
-        setField("wallet", replacement)
-        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        setField("wallet", Wallet(Constants.NETWORK_PARAMETERS).apply { freshReceiveKey() })
+        setField("walletFile", File(directory.root, "missing/primary"))
         val setupApp = spyk(app)
-        every { setupApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
-        every { setupApp.writeWalletBackup() } throws IOException("injected backup failure")
-        every { setupApp.finalizeInitialization() } answers { fail("must not finalize") }
-
         try {
             setupApp.saveWalletAndFinalizeInitialization()
-            fail("backup save must fail")
+            fail("primary save must fail")
         } catch (expected: RuntimeException) {
             assertTrue(expected.cause is IOException)
         }
 
-        // As after a process death here: the new primary is on disk and the
-        // old backup is no longer where a later recovery would read it, so the
-        // next launch regenerates the backup from the primary.
-        val saved = primary.inputStream().use { WalletProtobufSerializer().readWallet(it) }
-        assertTrue(saved.isPubKeyMine(replacement.currentReceiveKey().pubKey))
-        assertFalse(backup.exists())
-        val moved = directory.root.listFiles()!!.single { it.name.startsWith("key-backup-protobuf.replaced.") }
-        assertArrayEquals(previousBackup, moved.readBytes())
+        // Still the recovery input at the path a later launch restores from.
+        assertArrayEquals(previousBackup, backup.readBytes())
+        assertEquals(listOf(backup.name), directory.root.listFiles()!!.filter { it.isFile }.map { it.name })
+        verify(exactly = 0) { setupApp.writeWalletBackup() }
     }
 
     @Test
-    fun `replacement setup keeps the old files when the previous backup cannot be moved aside`() {
-        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
-        val setupApp = spyk(app)
-        // A backup that exists but cannot be renamed.
-        val stuck = spyk(backup)
-        every { stuck.renameTo(any()) } returns false
-        every { setupApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns stuck
-        try {
-            setupApp.saveWalletAndFinalizeInitialization()
-            fail("must refuse to replace")
-        } catch (expected: RuntimeException) {
-            assertTrue(expected.cause is IOException)
-        }
-        assertFalse(primary.exists())
-        assertTrue(backup.exists())
-        verify(exactly = 0) { setupApp.writeWalletBackup() }
-        verify(exactly = 0) { setupApp.finalizeInitialization() }
+    fun `startup maintenance recognises a key backup that belongs to another wallet`() {
+        setField("walletFactory", mockk<WalletFactory> {
+            every { getExtensions(any()) } returns emptyArray()
+        })
+        val checkApp = spyk(app)
+        every { checkApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } answers { backup.inputStream() }
+
+        assertTrue(checkApp.keyBackupMatches(recovered))
+        // A replacement whose backup write was cut short: the previous
+        // wallet's backup beside the new primary must be rewritten.
+        assertFalse(checkApp.keyBackupMatches(Wallet(Constants.NETWORK_PARAMETERS)))
+
+        every { checkApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } throws
+            java.io.FileNotFoundException("no backup")
+        assertFalse(checkApp.keyBackupMatches(recovered))
     }
 
     @Test
