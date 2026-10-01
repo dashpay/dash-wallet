@@ -340,6 +340,14 @@ public final class Constants {
     public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.10");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
 
+    // Pre-Platform-v4.2 contested-username fee (protocol < 14). Testnet and
+    // mainnet still run protocol 13 (Drive 4.1.x) as of MO-1069, so the
+    // transparent identity-create balance check / confirm sheet / top-up
+    // fall back to this pair until a live protocol-version query confirms
+    // v4.2 is active — see ContestedUsernameFees.kt.
+    public static final Coin DASH_PAY_FEE_CONTESTED_LEGACY = Coin.parseCoin("0.25");
+    public static final Coin DASH_PAY_FEE_CONTESTED_NAME_LEGACY = Coin.parseCoin("0.20");
+
     // Fee margin one shielded operation costs ON TOP of its denomination /
     // shielded amount. Derived from the consensus fee constants
     // (rs-platform-version / rs-dpp compute_minimum_shielded_fee, current

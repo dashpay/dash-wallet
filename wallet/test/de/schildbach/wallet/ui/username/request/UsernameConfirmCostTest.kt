@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.username.request
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.ui.username.UsernameType
 import org.bitcoinj.core.Coin
 import org.junit.Assert.assertEquals

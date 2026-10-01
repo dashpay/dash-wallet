@@ -20,17 +20,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.Dash
@@ -82,23 +86,24 @@ internal fun resolveUsernameConfirmCost(
     usernameType: UsernameType,
     isContestable: Boolean,
     hasIdentity: Boolean,
-    paymentSource: UsernamePaymentSource
+    paymentSource: UsernamePaymentSource,
+    contestedFees: ContestedUsernameFees
 ): UsernameConfirmCost = when {
     // The instant/secondary name is always free — the identity funding is
     // disclosed on the primary confirm and is unchanged by adding it.
     usernameType == UsernameType.Secondary ->
         UsernameConfirmCost(Coin.ZERO, fromShieldedBalance = false)
     paymentSource == UsernamePaymentSource.SHIELDED_BALANCE -> {
-        val fee = if (isContestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+        val fee = if (isContestable) contestedFees.contested else Constants.DASH_PAY_FEE
         val denomination = shieldedIdentityFundingRequirement(Dash(fee.value))
             ?.let { Coin.valueOf(it.duffs) }
             ?: fee
         UsernameConfirmCost(denomination, fromShieldedBalance = true)
     }
     isContestable && hasIdentity ->
-        UsernameConfirmCost(Constants.DASH_PAY_FEE_CONTESTED_NAME, fromShieldedBalance = false)
+        UsernameConfirmCost(contestedFees.contestedName, fromShieldedBalance = false)
     isContestable ->
-        UsernameConfirmCost(Constants.DASH_PAY_FEE_CONTESTED, fromShieldedBalance = false)
+        UsernameConfirmCost(contestedFees.contested, fromShieldedBalance = false)
     else ->
         UsernameConfirmCost(Constants.DASH_PAY_FEE, fromShieldedBalance = false)
 }
@@ -108,7 +113,8 @@ internal fun resolveUsernameConfirmCost(
 class ConfirmUserNameDialogViewModel @Inject constructor(
     var configuration: Configuration,
     private val exchangeRatesProvider: ExchangeRatesProvider,
-    private val walletUIConfig: WalletUIConfig
+    private val walletUIConfig: WalletUIConfig,
+    private val dashSdkService: DashSdkService
 ) : ViewModel() {
 
     var usernameType: UsernameType = UsernameType.Primary
@@ -124,25 +130,40 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
     var paymentSource: UsernamePaymentSource = UsernamePaymentSource.DASH_BALANCE
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
     val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
-    private val cost: UsernameConfirmCost
-        get() = resolveUsernameConfirmCost(usernameType, isContestableUsername, hasIdentity, paymentSource)
-    init {
 
-        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-            .filterNotNull()
-            .flatMapLatest { code ->
-                exchangeRatesProvider.observeExchangeRate(code)
-                    .filterNotNull()
-            }
-            .onEach {
-                updateFees(it)
+    /**
+     * Protocol-gated contested fee (MO-1069), refreshed once from a live
+     * [DashSdkService.currentProtocolVersion] read. Defaults to [ContestedUsernameFees.LEGACY]
+     * (the safe fallback for "not resolved yet") until that read lands.
+     */
+    private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
+
+    private fun cost(fees: ContestedUsernameFees): UsernameConfirmCost =
+        resolveUsernameConfirmCost(usernameType, isContestableUsername, hasIdentity, paymentSource, fees)
+
+    init {
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+        }
+
+        combine(
+            walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+                .filterNotNull()
+                .flatMapLatest { code ->
+                    exchangeRatesProvider.observeExchangeRate(code)
+                        .filterNotNull()
+                },
+            _contestedFees
+        ) { exchangeRate, fees -> exchangeRate to fees }
+            .onEach { (exchangeRate, fees) ->
+                updateFees(exchangeRate, fees)
             }
             .launchIn(viewModelScope)
     }
 
 
-    private fun updateFees(exchangeRateData: ExchangeRate) {
-        val cost = this.cost
+    private fun updateFees(exchangeRateData: ExchangeRate, fees: ContestedUsernameFees) {
+        val cost = cost(fees)
         val amountStr = MonetaryFormat.BTC.noCode().format(cost.amount.toNeutralCoin()).toString()
 
         val exchangeRate = exchangeRateData.run {
