@@ -52,7 +52,9 @@ import org.slf4j.LoggerFactory
  * The setup notice is re-posted on every classified failure (see
  * [SdkBindRetryService]), so a dismissal on a platform that allows one is
  * repaired by the next retry. Both forms are cleared the moment the bind
- * succeeds or the app comes to the foreground.
+ * succeeds or the app comes to the foreground. Both share one notification id,
+ * so the service tracks which form is shown: a setup notice is cleared once the
+ * policy calls for no notice, and replaced once it calls for the reminder.
  */
 object SdkBindPendingNotification {
     private val log = LoggerFactory.getLogger(SdkBindPendingNotification::class.java)
