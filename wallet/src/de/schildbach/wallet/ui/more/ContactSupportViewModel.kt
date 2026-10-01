@@ -123,9 +123,9 @@ class ContactSupportViewModel @Inject constructor(
     var wallet: Wallet? = null
         private set
 
-    /** [wallet] is null because the launch is degraded, not because there is no wallet. */
+    /** [wallet] is null because a safe-mode retry was still loading it. */
     @Volatile
-    private var walletLoadDegraded = false
+    private var walletSkippedForRetry = false
 
     var contextualData: String? = null
     var stackTrace: String? = null
@@ -138,19 +138,20 @@ class ContactSupportViewModel @Inject constructor(
     }
 
     /**
-     * Takes the wallet without ever waiting for one. This view model is
-     * created on the main thread, and the recovery screen offers the report
-     * while a safe-mode retry loads the wallet. During that retry
-     * isWalletLoadDegraded answers at once, but reading the wallet waits for
-     * the retry's parse (minutes on a large wallet: an input-dispatch ANR on
-     * the main thread, a report that never comes on the IO thread). A degraded
-     * launch has no usable wallet anyway, so the report goes without the
-     * wallet sections and says so.
+     * Takes the wallet without waiting for a safe-mode retry. This view model
+     * is created on the main thread, and the recovery screen offers the report
+     * while a retry loads the wallet; reading it then waits for the retry's
+     * parse (minutes on a large wallet: an input-dispatch ANR on the main
+     * thread, a report that never comes on the IO thread). So mid-retry the
+     * report goes without the wallet sections and says why. Otherwise the
+     * wallet is read as before, which does not wait for a degraded launch: a
+     * wallet assigned before a failed publish or initialisation is exactly
+     * what a crash report needs.
      */
     private fun refreshWallet() {
-        val degraded = application.isWalletLoadDegraded
-        walletLoadDegraded = degraded
-        wallet = if (degraded) null else application.wallet
+        val retrying = application.isSafeModeRetryInProgress
+        walletSkippedForRetry = retrying
+        wallet = if (retrying) null else application.wallet
     }
 
     suspend fun createReport(
@@ -723,10 +724,13 @@ class ContactSupportViewModel @Inject constructor(
                 Transaction.SORT_TX_BY_UPDATE_TIME
             )
             walletDump + txDump
-        } ?: if (walletLoadDegraded) {
-            "No wallet loaded: degraded launch (the load failed, or safe mode skipped it and no retry has finished)"
-        } else {
-            "No wallet loaded"
+        } ?: when {
+            walletSkippedForRetry -> "No wallet loaded: a safe-mode retry was still loading it"
+            // Does not wait: the wallet read already passed the gate, or a
+            // retry has started since, and then this answers at once.
+            application.isWalletLoadDegraded ->
+                "No wallet loaded: degraded launch (the load failed, or safe mode skipped it and no retry has finished)"
+            else -> "No wallet loaded"
         }
     }
 

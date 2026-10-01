@@ -45,9 +45,9 @@ class ContactSupportViewModelTest {
     )
 
     @Test
-    fun degradedLaunch_takesNoWallet_andNeverReadsIt() {
+    fun safeModeRetryInProgress_takesNoWallet_andNeverReadsIt() {
         val application = mockk<WalletApplication> {
-            every { isWalletLoadDegraded } returns true
+            every { isSafeModeRetryInProgress } returns true
             every { wallet } throws AssertionError("getWallet() would wait for the retry's parse")
         }
 
@@ -58,9 +58,24 @@ class ContactSupportViewModelTest {
     }
 
     @Test
-    fun loadedWallet_isTaken() {
+    fun degradedButNotRetrying_withAWalletAssigned_takesIt() {
+        // publish or finalizeInitialization failed after the wallet was set:
+        // the crash report wants that wallet.
+        val assigned = mockk<Wallet>()
+        val application = mockk<WalletApplication> {
+            every { isSafeModeRetryInProgress } returns false
+            every { isWalletLoadDegraded } returns true
+            every { wallet } returns assigned
+        }
+
+        assertSame(assigned, viewModel(application).wallet)
+    }
+
+    @Test
+    fun normalLaunch_takesTheLoadedWallet() {
         val loaded = mockk<Wallet>()
         val application = mockk<WalletApplication> {
+            every { isSafeModeRetryInProgress } returns false
             every { isWalletLoadDegraded } returns false
             every { wallet } returns loaded
         }

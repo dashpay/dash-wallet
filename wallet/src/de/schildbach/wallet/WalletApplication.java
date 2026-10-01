@@ -359,6 +359,15 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
+     * A safe-mode retry ({@link #retryWalletLoadAfterSafeMode}) is loading the
+     * wallet right now, so {@link #getWallet()} would wait for its parse.
+     * Never waits; any thread.
+     */
+    public boolean isSafeModeRetryInProgress() {
+        return safeModeRetryInProgress;
+    }
+
+    /**
      * Both the primary wallet AND the key backup are unusable — only a restore
      * from the recovery phrase can bring this wallet back.
      */
