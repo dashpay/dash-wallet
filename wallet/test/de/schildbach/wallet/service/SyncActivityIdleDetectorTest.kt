@@ -198,4 +198,27 @@ class SyncActivityIdleDetectorTest {
         assertFalse("a hung start stops holding at the cap", engineStartHoldsService(began, began + ENGINE_START_KEEPALIVE_MS))
         assertFalse("custom cap", engineStartHoldsService(began, began + 5_000, capMs = 5_000))
     }
+
+    @Test
+    fun durableLag_holdsWhileBehindAndAdvancing() {
+        // The field numbers at the 22:23 stop.
+        assertTrue(durableLagHoldsService(2_421_000, 2_547_694, msSinceDurableAdvanced = 60_000))
+        assertFalse("a persister that stopped no longer holds",
+            durableLagHoldsService(2_421_000, 2_547_694, msSinceDurableAdvanced = DURABLE_LAG_STALL_MS))
+        assertFalse("within the 5,000-block persist steps is normal",
+            durableLagHoldsService(2_540_000, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("caught up", durableLagHoldsService(2_547_694, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("unknown durable", durableLagHoldsService(0, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("unknown committed", durableLagHoldsService(2_421_000, 0, msSinceDurableAdvanced = 0))
+    }
+
+    @Test
+    fun durableHeightTracker_measuresSinceTheLastChange() {
+        val tracker = DurableHeightTracker()
+        assertEquals("first sighting counts as movement", 0L, tracker.observe(2_400_000, 1_000))
+        assertEquals(60_000L, tracker.observe(2_400_000, 61_000))
+        assertEquals(0L, tracker.observe(2_410_000, 90_000))
+        assertEquals(0L, tracker.observe(2_000_000, 95_000)) // a rescan rewind is a change too
+        assertEquals(5_000L, tracker.observe(2_000_000, 100_000))
+    }
 }

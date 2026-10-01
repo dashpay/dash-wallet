@@ -173,3 +173,63 @@ fun sdkActivitySample(
         mnListDiffsDownloaded = delta(current.mnListHeight, previous.mnListHeight)
     )
 }
+
+/**
+ * How far the SDK's durable synced height may trail the committed scan cursor
+ * before it holds an idle service ([durableLagHoldsService]). The SDK persists
+ * that height in 5,000-block steps, so a lag of a step or two is the normal
+ * resting state; past this it is unpersisted work a stop would throw away.
+ */
+const val DURABLE_LAG_MARGIN_BLOCKS = 10_000L
+
+/**
+ * How long the durable height may stand still before the lag stops holding the
+ * service. In the field report it advanced every couple of minutes while it
+ * caught up, so this is generous for a draining persister and still bounds one
+ * that has stopped.
+ */
+const val DURABLE_LAG_STALL_MS = 10L * 60 * 1000
+
+/**
+ * Whether the SDK's DURABLE synced height ([durableHeight], where a restart
+ * resumes) trailing the committed scan cursor ([committedHeight]) should keep
+ * the service from stopping for idleness. Once the scan reports SYNCED every
+ * idle counter can read zero while the SDK is still persisting what it scanned;
+ * a stop then re-walks everything unpersisted on the next start. Field report,
+ * 2026-09-30: stopped 126,694 blocks behind, catching up at ~10,000 a minute.
+ *
+ * Holds only while the lag exceeds [marginBlocks] AND the durable height has
+ * advanced within [stallMs] ([msSinceDurableAdvanced]), so a persister that has
+ * stopped cannot pin the service. Unknown heights (0) never hold. Pure —
+ * host-testable.
+ */
+fun durableLagHoldsService(
+    durableHeight: Long,
+    committedHeight: Long,
+    msSinceDurableAdvanced: Long,
+    marginBlocks: Long = DURABLE_LAG_MARGIN_BLOCKS,
+    stallMs: Long = DURABLE_LAG_STALL_MS
+): Boolean = durableHeight > 0L && committedHeight > 0L &&
+    committedHeight - durableHeight > marginBlocks &&
+    msSinceDurableAdvanced < stallMs
+
+/**
+ * Tracks when the durable synced height last moved, the input
+ * [durableLagHoldsService] needs. The first observation counts as movement, so
+ * a lag seen for the first time gets the full [DURABLE_LAG_STALL_MS] to prove it
+ * is draining. Any change counts, a decrease included: a rescan rewinds it.
+ * Not thread-safe; the service's tick is its only caller.
+ */
+class DurableHeightTracker {
+    private var lastHeight = -1L
+    private var lastChangeMs = 0L
+
+    /** Record [height] observed at [nowMs]; returns ms since it last changed. */
+    fun observe(height: Long, nowMs: Long): Long {
+        if (height != lastHeight) {
+            lastHeight = height
+            lastChangeMs = nowMs
+        }
+        return nowMs - lastChangeMs
+    }
+}

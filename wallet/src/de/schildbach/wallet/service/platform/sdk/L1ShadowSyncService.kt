@@ -2410,6 +2410,30 @@ class L1ShadowSyncService internal constructor(
     private val _engineWalletSyncedHeight = MutableStateFlow(0L)
 
     /**
+     * The SDK's DURABLE `WalletEntity.syncedHeight` — where a restart would
+     * resume — cached for synchronous readers; 0 = unknown. Seeded at start
+     * and refreshed by [monitorProgress] at most every
+     * [DURABLE_HEIGHT_REFRESH_MS], so a reader on the main thread never touches
+     * the database. Reset on [stop].
+     *
+     * It trails [_engineWalletSyncedHeight] by however much the SDK has not yet
+     * persisted, and on a large restore that is a lot: field report,
+     * 2026-09-30, the scan reported SYNCED at 22:16 with the durable height
+     * ~176,000 blocks behind, still catching up at ~10,000 blocks a minute when
+     * the service idle-stopped at 22:23 — 126,694 blocks behind, all re-walked
+     * on the next start.
+     */
+    @Volatile
+    private var durableSyncedHeight: Long = 0L
+    private var durableHeightReadAtMs: Long = 0L
+
+    /** See [durableSyncedHeight]. */
+    fun durableSyncedHeight(): Long = durableSyncedHeight
+
+    /** The committed scan cursor ([ShadowSyncProgress.walletSyncedHeight]); 0 = unknown. */
+    fun engineCommittedHeight(): Long = _engineWalletSyncedHeight.value
+
+    /**
      * Whether the wallet-event tap coroutine feeding [txEvents] is live.
      * Observability seam for [CutoverUiDataService]: the tap is gated on
      * USE_KOTLIN_SDK_L1_SHADOW ([startIfEnabled]) while the cutover UI
@@ -2875,6 +2899,8 @@ class L1ShadowSyncService internal constructor(
                     log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
                     0L
                 }
+                durableSyncedHeight = _engineWalletSyncedHeight.value
+                durableHeightReadAtMs = nowMs()
                 lastProbeHeartbeatMs = nowMs()
                 logEngineDowntimeIfResuming()
                 startedAtMs = nowMs()
@@ -2999,6 +3025,8 @@ class L1ShadowSyncService internal constructor(
             sessionHeaderStart = 0L // the next session measures its own work
             sessionFilterStart = 0L
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
+            durableSyncedHeight = 0L
+            durableHeightReadAtMs = 0L
             lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
             lastStopAtMs = nowMs()
             stopCount++
@@ -3018,6 +3046,17 @@ class L1ShadowSyncService internal constructor(
      * cursor the engine had committed in this session. WARN when progress
      * will be re-walked. Never throws.
      */
+    /** One cached read for [durableSyncedHeight]; a failed read keeps the last value. */
+    private suspend fun refreshDurableSyncedHeight() {
+        val walletIdHex = runningWalletIdHex.value ?: return
+        runCatching { source.sdkWalletSyncedHeight(walletIdHex) }
+            .onSuccess { height -> if (height != null) durableSyncedHeight = height }
+            .onFailure { t ->
+                if (t is CancellationException) throw t
+                log.debug("durable syncedHeight refresh failed; keeping {}", durableSyncedHeight, t)
+            }
+    }
+
     private suspend fun logWatermarkAtStop(walletIdHex: String, committed: Long, filter: Long) {
         val durable = runCatching { source.sdkWalletSyncedHeight(walletIdHex) }.getOrNull()
         when {
@@ -3169,6 +3208,10 @@ class L1ShadowSyncService internal constructor(
                         syncedEdgeSignal.trySend(Unit)
                     }
                     val now = nowMs()
+                    if (now - durableHeightReadAtMs >= DURABLE_HEIGHT_REFRESH_MS) {
+                        durableHeightReadAtMs = now
+                        refreshDurableSyncedHeight()
+                    }
                     val terminalTransition = mapped.phase != lastPhase &&
                         (mapped.phase == ShadowSyncPhase.SYNCED || mapped.phase == ShadowSyncPhase.ERROR)
                     if (terminalTransition || now - lastLogMs >= progressLogIntervalMs) {
@@ -4330,6 +4373,9 @@ class L1ShadowSyncService internal constructor(
          * background start ran into the minutes-to-hours range.
          */
         internal const val BRING_UP_BUDGET_MS = 20_000L
+
+        /** How often [monitorProgress] re-reads the durable synced height (one indexed row). */
+        internal const val DURABLE_HEIGHT_REFRESH_MS = 30_000L
 
         /**
          * Downtime past which [logEngineDowntimeIfResuming] escalates to WARN.

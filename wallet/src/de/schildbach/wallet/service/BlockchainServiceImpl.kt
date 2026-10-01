@@ -2089,6 +2089,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private var lastSdkProgress: de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress? = null
         private var sdkSampled = false
         private val activityHistory = arrayListOf<SyncActivitySample>()
+        private val durableHeightTracker = DurableHeightTracker()
         private val memorySampleInFlight = AtomicBoolean(false)
 
         override fun onReceive(context: Context, intent: Intent) {
@@ -2223,7 +2224,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // start is not dozed — but capped (see [engineStartHoldsService]).
             val engineStartingSinceMs = if (dashjHeldByCutover) l1ShadowSyncService.engineStartingSinceMs() else 0L
             val engineStarting = engineStartHoldsService(engineStartingSinceMs, System.currentTimeMillis())
-            holdWakeLockWhileReplaying(replaying || engineStarting)
+            // …and so does the SDK still persisting what the scan already covered.
+            val durableHeight = if (dashjHeldByCutover) l1ShadowSyncService.durableSyncedHeight() else 0L
+            val committedHeight = if (dashjHeldByCutover) l1ShadowSyncService.engineCommittedHeight() else 0L
+            val durableLagging = durableLagHoldsService(
+                durableHeight,
+                committedHeight,
+                durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
+            )
+            holdWakeLockWhileReplaying(replaying || engineStarting || durableLagging)
 
             if (isSyncIdle(activityHistory) && replaying) {
                 log.info(
@@ -2244,6 +2253,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // this the first tick after the start finishes, before the engine has
                 // reported anything, would read the full history as idle and stop.
                 activityHistory.clear()
+                return
+            }
+            if (isSyncIdle(activityHistory) && durableLagging) {
+                log.info(
+                    "idle counters, but the SDK's saved height {} is {} blocks behind the committed " +
+                        "cursor {} and still advancing — keeping the service alive so a stop does not " +
+                        "re-walk them",
+                    durableHeight, committedHeight - durableHeight, committedHeight
+                )
                 return
             }
             if (isSyncIdle(activityHistory) && bindBlocked) {
