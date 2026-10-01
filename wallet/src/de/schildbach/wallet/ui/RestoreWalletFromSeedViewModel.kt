@@ -43,6 +43,14 @@ import javax.inject.Inject
 
 data class RecoveryData(val pin: String?, val requiresReset: Boolean)
 
+enum class SeedRestoreResult {
+    RESTORED,
+    INVALID_SEED,
+
+    /** The app refused the replacement (see WalletApplication.isWalletReplacementRefused); nothing was written. */
+    REFUSED
+}
+
 @HiltViewModel
 class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
@@ -188,19 +196,22 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return words.map { it.lowercase(Locale.getDefault()) }
     }
 
-    suspend fun restoreWalletFromSeed(words: List<String>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun restoreWalletFromSeed(words: List<String>): SeedRestoreResult = withContext(Dispatchers.IO) {
         if (isSeedValid(words)) {
             val creationTime = selectedCreationDate.value
             val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words), creationTime)
-            walletApplication.setWallet(wallet)
+            if (!walletApplication.setWallet(wallet)) {
+                log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
+                return@withContext SeedRestoreResult.REFUSED
+            }
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()
             configuration.isRestoringBackup = true
             viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
-            true
+            SeedRestoreResult.RESTORED
         } else {
-            false
+            SeedRestoreResult.INVALID_SEED
         }
     }
 

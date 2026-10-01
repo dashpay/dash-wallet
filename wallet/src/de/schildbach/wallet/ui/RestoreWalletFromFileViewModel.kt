@@ -55,6 +55,9 @@ class RestoreWalletFromFileViewModel @Inject constructor(
     val restoreWallet = SingleLiveEvent<Wallet>()
     val retryRequest = SingleLiveEvent<Void>()
 
+    /** The app refused the restored wallet (see WalletApplication.isWalletReplacementRefused). */
+    val walletReplacementRefused = SingleLiveEvent<Unit>()
+
     @Throws(IOException::class)
     fun restoreWalletFromUri(backupUri: Uri, password: String) : Wallet {
         val (wallet, fromKeys) = walletFactory.restoreFromFile(Constants.NETWORK_PARAMETERS, backupUri, password)
@@ -70,8 +73,10 @@ class RestoreWalletFromFileViewModel @Inject constructor(
     fun restoreWallet(wallet: Wallet, password: String?) {
         if (!wallet.hasKeyChain(Constants.BIP44_PATH) && wallet.isEncrypted) {
             showUpgradeWalletAction.call(wallet)
+        } else if (!walletApplication.setWallet(wallet)) {
+            log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
+            walletReplacementRefused.call(Unit)
         } else {
-            walletApplication.setWallet(wallet)
             viewModelScope.launch { dashPayConfig.disableNotifications() }
             log.info("successfully restored wallet from file")
             walletApplication.resetBlockchainState()
