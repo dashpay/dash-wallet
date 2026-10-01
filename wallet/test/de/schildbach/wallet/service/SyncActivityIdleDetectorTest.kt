@@ -224,16 +224,59 @@ class SyncActivityIdleDetectorTest {
 
     @Test
     fun foregroundDemotion_waitsForTheHoldAndRunsWhenItEnds() {
-        val gate = ForegroundDemotionGate()
-        assertTrue("no hold reported (pre-cutover): demote as before", gate.mayDemote())
+        var hold = false
+        val gate = ForegroundDemotionGate { hold }
+        assertTrue("no hold (pre-cutover): demote as before", gate.mayDemote())
         assertFalse("nothing pending", gate.onHold(false))
 
         // The field shape: the scan goes SYNCED while the SDK is still saving it.
+        hold = true
         assertFalse(gate.onHold(true))
         assertFalse("synced, but the durable-lag hold is active", gate.mayDemote())
         assertFalse("hold still active: nothing to re-run", gate.onHold(true))
+        hold = false
         assertTrue("hold ended with a demotion pending: re-run it", gate.onHold(false))
         assertFalse("re-run once only", gate.onHold(false))
         assertTrue(gate.mayDemote())
+    }
+
+    @Test
+    fun foregroundDemotion_beforeTheFirstTick_followsTheLiveHold() {
+        // The SDK path skips its first tick, so a synced state can arrive
+        // before the tick has reported anything while a start is in flight.
+        var hold = true
+        val gate = ForegroundDemotionGate { hold }
+        assertFalse("refused under the live hold, with no tick yet", gate.mayDemote())
+        hold = false
+        assertTrue("the first tick to see the hold over re-runs it", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
+
+    @Test
+    fun foregroundDemotion_holdBeginningBetweenTicks_isRefused() {
+        var hold = false
+        val gate = ForegroundDemotionGate { hold }
+        assertFalse(gate.onHold(false)) // the last tick saw no hold
+        hold = true // the durable lag crosses the margin before the next tick
+        assertFalse(gate.mayDemote())
+        assertFalse("still held at the next tick", gate.onHold(true))
+        hold = false
+        assertTrue(gate.onHold(false))
+    }
+
+    @Test
+    fun durableHeightTracker_readOnlyAccessor_isFreshForUnseenHeightsAndAgesOtherwise() {
+        val tracker = DurableHeightTracker()
+        assertEquals("never observed: a lag seen before the first tick holds", 0L, tracker.msSinceChange(2_400_000, 1_000))
+        assertEquals("the read recorded nothing", 0L, tracker.observe(2_400_000, 5_000))
+        assertEquals("ages while the tick keeps seeing it", 60_000L, tracker.msSinceChange(2_400_000, 65_000))
+        assertEquals("a height the tick has not seen yet is movement", 0L, tracker.msSinceChange(2_410_000, 65_000))
+
+        // A stalled persister: the tick keeps observing the same height, and the
+        // read-only view ages past the stall limit, so the lag stops holding.
+        tracker.observe(2_400_000, 5_000 + DURABLE_LAG_STALL_MS)
+        val age = tracker.msSinceChange(2_400_000, 5_000 + DURABLE_LAG_STALL_MS)
+        assertEquals(DURABLE_LAG_STALL_MS, age)
+        assertFalse(durableLagHoldsService(2_400_000, 2_547_694, age))
     }
 }

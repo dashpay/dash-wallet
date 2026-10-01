@@ -219,13 +219,15 @@ fun durableLagHoldsService(
  * [durableLagHoldsService] needs. The first observation counts as movement, so
  * a lag seen for the first time gets the full [DURABLE_LAG_STALL_MS] to prove it
  * is draining. Any change counts, a decrease included: a rescan rewinds it.
- * Not thread-safe; the service's tick is its only caller.
+ * The service's tick is the only writer ([observe]); [msSinceChange] lets
+ * another thread read it without recording anything.
  */
 class DurableHeightTracker {
     private var lastHeight = -1L
     private var lastChangeMs = 0L
 
     /** Record [height] observed at [nowMs]; returns ms since it last changed. */
+    @Synchronized
     fun observe(height: Long, nowMs: Long): Long {
         if (height != lastHeight) {
             lastHeight = height
@@ -233,6 +235,17 @@ class DurableHeightTracker {
         }
         return nowMs - lastChangeMs
     }
+
+    /**
+     * What [observe] would return for [height] at [nowMs], without recording
+     * it. A height the tick has not seen yet (including before its first
+     * observation) counts as fresh movement, so a lag that appears between
+     * ticks holds; a height the tick keeps seeing ages, so a stalled persister
+     * still releases.
+     */
+    @Synchronized
+    fun msSinceChange(height: Long, nowMs: Long): Long =
+        if (height != lastHeight) 0L else nowMs - lastChangeMs
 }
 
 /**
@@ -244,22 +257,23 @@ class DurableHeightTracker {
  * gone SYNCED while the SDK is still saving it. A background service is
  * stopped by the system within minutes, so the hold would not have held.
  *
- * The tick reports the hold ([onHold]); the observer asks [mayDemote] before
- * demoting. A demotion refused under a hold is remembered, and [onHold]
- * returns true when the hold ends with one pending, so the caller re-runs the
+ * [mayDemote] evaluates [liveHold] at the moment of the decision rather than
+ * the tick's last verdict: the tick runs once a minute and the SDK path skips
+ * its first one, so a synced state arriving during startup, or a lag that
+ * opened since the last tick, would otherwise demote under an active hold —
+ * and nothing re-promotes. A demotion refused under a hold is remembered;
+ * the tick reports the same predicate through [onHold], which returns true
+ * when the hold has ended with one pending, so the caller re-runs the
  * sync-complete check then. Thread-safe: the tick and the observer run on
- * different threads. A demotion refused in the instant the hold ends is picked
- * up by the next tick. Pre-cutover the hold is never reported, so [mayDemote]
+ * different threads. Pre-cutover [liveHold] is always false, so [mayDemote]
  * is always true.
  */
-class ForegroundDemotionGate {
-    @Volatile
-    private var holding = false
+class ForegroundDemotionGate(private val liveHold: () -> Boolean) {
     private val pending = AtomicBoolean(false)
 
     /** Whether the sync-complete path may demote now; if not, remember it. */
     fun mayDemote(): Boolean {
-        if (holding) {
+        if (liveHold()) {
             pending.set(true)
             return false
         }
@@ -267,9 +281,6 @@ class ForegroundDemotionGate {
         return true
     }
 
-    /** Record the tick's hold verdict; true when the caller should re-run a refused demotion. */
-    fun onHold(active: Boolean): Boolean {
-        holding = active
-        return !active && pending.getAndSet(false)
-    }
+    /** The tick's hold verdict; true when the caller should re-run a refused demotion. */
+    fun onHold(active: Boolean): Boolean = !active && pending.getAndSet(false)
 }

@@ -836,8 +836,29 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var balance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
 
+    /** When the SDK's durable height last moved; written by the tick only. */
+    private val durableHeightTracker = DurableHeightTracker()
+
     /** Holds the sync-complete demotion while the idle rule holds the service (see the tick). */
-    private val foregroundDemotionGate = ForegroundDemotionGate()
+    private val foregroundDemotionGate = ForegroundDemotionGate { sdkHoldsService(System.currentTimeMillis()) }
+
+    /**
+     * Whether an SDK engine start in flight ([engineStartHoldsService]) or the
+     * SDK still saving the scan ([durableLagHoldsService]) holds the service
+     * now. Read from the live sources so it is current on any thread — the
+     * tick and the sync-complete demotion share this one definition. Never
+     * reads the database, and never true pre-cutover.
+     */
+    private fun sdkHoldsService(nowMs: Long): Boolean {
+        if (!dashjHeldByCutover) return false
+        if (engineStartHoldsService(l1ShadowSyncService.engineStartingSinceMs(), nowMs)) return true
+        val durableHeight = l1ShadowSyncService.durableSyncedHeight()
+        return durableLagHoldsService(
+            durableHeight,
+            l1ShadowSyncService.engineCommittedHeight(),
+            durableHeightTracker.msSinceChange(durableHeight, nowMs)
+        )
+    }
 
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
@@ -2092,7 +2113,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private var lastSdkProgress: de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress? = null
         private var sdkSampled = false
         private val activityHistory = arrayListOf<SyncActivitySample>()
-        private val durableHeightTracker = DurableHeightTracker()
         private val memorySampleInFlight = AtomicBoolean(false)
 
         override fun onReceive(context: Context, intent: Intent) {
@@ -2238,7 +2258,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             holdWakeLockWhileReplaying(replaying || engineStarting || durableLagging)
             // Those two holds also keep the service in the foreground: the scan reads
             // synced while they last, and a demoted service would be stopped anyway.
-            if (foregroundDemotionGate.onHold(dashjHeldByCutover && (engineStarting || durableLagging))) {
+            if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
                 blockchainState?.let { state ->
                     log.info("SDK engine start / scan save finished — re-checking the foreground notification")
                     updateSyncNotification(state)
