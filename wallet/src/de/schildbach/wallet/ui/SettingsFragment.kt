@@ -137,6 +137,9 @@ class SettingsFragment : Fragment() {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun setupTransactionMetadataObservers() {
+        // The field outlives the view; a rebuilt view must not inherit a
+        // "saving" its publish observer may never clear.
+        isSavingTransactionMetadata = false
         lifecycleScope.launch {
             transactionMetadataSettingsViewModel.loadLastWorkId()
         }

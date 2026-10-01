@@ -20,6 +20,8 @@
 package de.schildbach.wallet
 
 import androidx.work.WorkManager
+import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
+import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
 import de.schildbach.wallet.util.WalletWipeSequence
 import de.schildbach.wallet.util.WalletWipeState
 import kotlinx.coroutines.CancellationException
@@ -32,6 +34,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.BaseConfig
 import org.slf4j.LoggerFactory
+import java.io.File
 
 object WalletApplicationExt {
     private val log = LoggerFactory.getLogger(WalletApplicationExt::class.java)
@@ -62,6 +65,9 @@ object WalletApplicationExt {
         // — until finishWalletWipe() is done; destroyWalletData() also waits
         // for the cancelled save to stop before anything is cleared.
         transactionMetadataSaveQueue.pause()
+        // ...and publishes already handed to WorkManager: the cancelAllWork()
+        // in the destroy phase comes after the same teardown.
+        PublishTransactionMetadataOperation.cancelAll(this)
         WalletWipeSequence.begin(
             markPending = { WalletWipeState.begin(filesDir) },
             handOffUi = {
@@ -99,9 +105,7 @@ object WalletApplicationExt {
             // threw; a launch that finds the marker still there re-runs the
             // wipe from the top.
             withContext(NonCancellable) {
-                // paused by beginWalletWipe() / destroyWalletData(); the next
-                // wallet's saves may run now
-                transactionMetadataSaveQueue.resume()
+                resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, filesDir)
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
@@ -219,6 +223,20 @@ object WalletApplicationExt {
         runCatching { dashPayConfig.seedDebugDefaultsIfUnset() }
             .onFailure { rethrowCancellation(it); log.warn("debug-flag re-seed failed after reset", it) }
         log.info("databases cleared (isWalletWipe = {})", isWalletWipe)
+    }
+
+    /**
+     * The queue was paused by beginWalletWipe() / destroyWalletData(). Only a
+     * wipe that finished — its marker cleared — lets the next wallet's saves
+     * run; after a failed one the old wallet is still half there and the next
+     * launch re-runs the wipe, so saves stay refused until then.
+     */
+    internal fun resumeMetadataSavesIfWipeComplete(queue: TransactionMetadataSaveQueue, filesDir: File) {
+        if (WalletWipeState.isPending(filesDir)) {
+            log.warn("Reset Wallet did not finish — transaction metadata saves stay paused")
+        } else {
+            queue.resume()
+        }
     }
 
     private fun rethrowCancellation(t: Throwable) {

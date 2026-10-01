@@ -165,6 +165,10 @@ class TransactionMetadataSaveQueue @Inject constructor(private val applicationSc
         pause()?.join()
     }
 
+    /** True from [pause] until [resume]: a wallet reset is under way. */
+    val isPaused: Boolean
+        get() = synchronized(lock) { paused }
+
     /** Accepts saves again after [pause]. */
     fun resume() {
         synchronized(lock) { paused = false }
