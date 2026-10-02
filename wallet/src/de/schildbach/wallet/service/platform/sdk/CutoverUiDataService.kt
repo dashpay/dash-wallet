@@ -2475,6 +2475,65 @@ class CutoverUiDataService internal constructor(
     }
 
     /**
+     * Serializes the ownership DECISION — the grant in [start]'s gated collector
+     * against the revocation in its independent deactivation collector — and
+     * makes each decision from a persisted-state read taken while it is held.
+     *
+     * The two collectors observe the same key but are deliberately SEPARATE (see
+     * [start]), so until this existed nothing ordered them against each other.
+     * Observing an emitted `false` and applying it are not one step: the
+     * collector is resumed on [scope]'s dispatcher, and in that gap a CUT_OVER
+     * can commit, the gated collector pass its own fresh-state check, publish
+     * [_cutoverActive] and bind the pipeline. The stale `false` then landed on
+     * the NEW binding and tore it down — and because that collector is
+     * deactivation-only, the `true` that followed it did nothing, while the
+     * gated collector had already consumed its own `true` and was parked on the
+     * running job. Nothing re-granted: [beginReceiveRead] refuses every ticker
+     * and tx-event refresh while the flag is false, so live receive and
+     * self-transfer reads waited and failed until the next activation trigger or
+     * a process restart. Revoking EARLY is safe; revoking LATE is not.
+     *
+     * Holding this across the read is what makes "older" decidable without a
+     * version stamp the DataStore does not give us: whichever decision runs
+     * second also READ second, so it decides on the newer state, and an
+     * observation that has been overtaken can no longer undo what overtook it.
+     *
+     * It is held only across that read and the flag write — never across a
+     * pipeline run or a blocking engine call — so the deactivation collector
+     * keeps the independence it exists for: a [runPipelines] parked in an
+     * uncancellable FFI read still cannot delay a revocation.
+     */
+    private val ownershipDecisionMutex = Mutex()
+
+    /**
+     * Apply an observed deactivation unless the persisted state has moved on
+     * since: a `false` older than the activation now in force is stale, and
+     * applying it would revoke a binding the gated collector just granted.
+     * See [ownershipDecisionMutex].
+     */
+    private suspend fun revokeReceiveOwnershipIfStillDashjOwned() =
+        ownershipDecisionMutex.withLock {
+            if (cutoverUiActive().first()) {
+                log.info("a dashj-ownership observation was overtaken by a newer cutover; ownership stands")
+                return@withLock
+            }
+            revokeReceiveOwnership()
+        }
+
+    /**
+     * Publish engine ownership for a pipeline about to start, deciding on a
+     * state read taken under [ownershipDecisionMutex] so that a deactivation
+     * observed BEFORE this grant cannot be applied after it. Returns whether
+     * ownership was granted.
+     */
+    private suspend fun grantReceiveOwnershipIfStillCommitted(): Boolean =
+        ownershipDecisionMutex.withLock {
+            if (!cutoverUiActive().first()) return@withLock false
+            _cutoverActive.value = true
+            true
+        }
+
+    /**
      * The last AUTHORITATIVE ownership observation of the persisted
      * [DashPayConfig.CUTOVER_STATE] — TRI-STATE, and the three states are not
      * interchangeable:
@@ -3215,12 +3274,17 @@ class CutoverUiDataService internal constructor(
         // wipe's whole point is that nothing answers for the wiped wallet. The
         // asymmetry is deliberate — revoking early is always safe, granting
         // early is not.
+        //
+        // Revoking LATE is not safe either, and nothing here orders this
+        // collector against the gated one, so the revocation is applied through
+        // [revokeReceiveOwnershipIfStillDashjOwned] — which decides under
+        // [ownershipDecisionMutex] and so cannot undo a newer activation.
         scope.launch {
             cutoverUiActive()
                 .distinctUntilChanged()
                 .collect { active ->
                     if (!active) {
-                        revokeReceiveOwnership()
+                        revokeReceiveOwnershipIfStillDashjOwned()
                     }
                 }
         }
@@ -3264,8 +3328,11 @@ class CutoverUiDataService internal constructor(
                                 if (wipeFenced) return@withLock null
                                 heldForBindPass = staleWipedWalletHold()
                                 if (heldForBindPass != null) return@withLock null
-                                if (!cutoverUiActive().first()) return@withLock null
-                                _cutoverActive.value = true
+                                // The fresh-state check AND the grant, under
+                                // [ownershipDecisionMutex]: a `false` the
+                                // deactivation collector observed before this
+                                // read must not be applied after it.
+                                if (!grantReceiveOwnershipIfStillCommitted()) return@withLock null
                                 launch {
                                     log.info("cutover committed — serving home-screen data from the SDK")
                                     try {

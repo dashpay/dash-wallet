@@ -1853,6 +1853,59 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun aDeactivationAppliedLateCannotRevokeANewerActivation() = runTest {
+        // The independent deactivation collector exists so that a revocation
+        // never waits behind a pipeline parked in an uncancellable FFI read —
+        // but applying its `false` was ordered against nothing. The production
+        // scope is Dispatchers.Default, so between observing `false` and
+        // revoking, the collector can be descheduled while CUT_OVER commits, the
+        // gated collector passes its own fresh-state check, publishes ownership
+        // and binds. The stale `false` then landed on the NEW binding and tore
+        // it down. Being deactivation-only, the `true` behind it did nothing,
+        // and the gated collector was already parked on its running job, so
+        // nothing re-granted: `beginReceiveRead` refuses every ticker and
+        // tx-event refresh while the flag is false, and live receive and
+        // self-transfer reads waited and failed until the next activation
+        // trigger or a process restart. Revoking early is safe; revoking LATE is
+        // not, which is what the previous round assumed away.
+        //
+        // Modelled by DELAYING the `false`: it is withheld from the deactivation
+        // collector until the newer activation has COMPLETED (ownership granted,
+        // engine address bound), while the persisted state everything else reads
+        // stays CUT_OVER throughout. Nothing in the service revokes on a state
+        // that never leaves CUT_OVER, so a revocation here could only be that
+        // stale observation being applied over the activation that overtook it.
+        val persisted = MutableStateFlow<String?>("CUT_OVER")
+        val delayedDeactivation = kotlinx.coroutines.flow.MutableSharedFlow<String?>(
+            replay = 1,
+            extraBufferCapacity = 8
+        )
+        check(delayedDeactivation.tryEmit("CUT_OVER"))
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(
+            source,
+            laggingGateConfig(delayedDeactivation, persisted),
+            backgroundScope
+        )
+        service.start()
+        assertTrue(
+            "precondition: the newer activation completed — ownership granted and the engine bound",
+            pumpUntil { service.isCutoverActive() && service.sdkReceiveAddressOrNull() != null }
+        )
+
+        // The older observation, delivered after the activation it predates.
+        check(delayedDeactivation.tryEmit("DUAL_RUNNING"))
+        assertFalse(
+            "a deactivation older than the activation in force must not revoke it",
+            pumpUntil(1_000) { !service.isCutoverActive() }
+        )
+        assertTrue(
+            "...and the binding that activation granted must still serve the engine address",
+            service.sdkReceiveAddressOrNull() != null
+        )
+    }
+
+    @Test
     fun deactivationRevokesTheCacheBeforeItPublishesDisabledOwnership() {
         // ORDER, not just eventual consistency. [sdkReceiveAddressOrNull] serves
         // the cache on the binding generation alone, so between a bare
@@ -2532,9 +2585,11 @@ class CutoverUiDataServiceTest {
     // ── The wallet-wipe stop ──────────────────────────────────────────
 
     /**
-     * The gate's collector sees [gateFeed]; every later read sees [persisted]
-     * — so a test controls when (or whether) the wipe's reset emission reaches
-     * the collector.
+     * The FIRST collector [CutoverUiDataService.start] launches — the
+     * independent deactivation collector — sees [gateFeed]; the ownership feed,
+     * the gated pipeline collector and every later point read see [persisted].
+     * So a test controls when (or whether) a state change reaches the
+     * deactivation collector, independently of the state everything else reads.
      */
     private fun laggingGateConfig(
         gateFeed: Flow<String?>,
