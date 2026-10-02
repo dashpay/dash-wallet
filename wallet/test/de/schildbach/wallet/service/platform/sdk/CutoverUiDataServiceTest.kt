@@ -1849,6 +1849,64 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun anOlderReadCannotPublishAfterANewerReadCompletedEmpty() = runTest {
+        // The COLD-cache hole in the completion-order fence: it advanced only
+        // when a read succeeded, so a newer read that came back empty left it
+        // where it was and an older read released afterwards published anyway.
+        //   read 1 takes A and parks in the FFI
+        //   a payment lands on A — the engine's pointer has moved on
+        //   read 2 finds the engine unavailable and publishes nothing
+        //   read 1 returns and publishes A
+        // …which puts an already-paid address on the Receive screen AFTER a newer
+        // read had established that the engine was no longer answering. A read
+        // that completes is a completed read whether or not it succeeded, so the
+        // fence advances for both; the cache is still HELD (not cleared) on
+        // failure, which `postCutover_failedEngineReadHoldsTheLastAddress` pins.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        // The pipeline's own startup read finds nothing, so the cache stays COLD.
+        source.nextReceiveAddress = null
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        assertTrue(
+            "the pipeline's own read must have been attempted and found nothing",
+            pumpUntil { source.nextReceiveAddressReads > 0 }
+        )
+        assertNull("precondition: the cache is cold", service.sdkReceiveAddressOrNull())
+
+        // Start the OLDER read and park it holding A.
+        val readThreadName = "sr03-cold-older-read"
+        source.nextReceiveAddress = "yENGINEaddressA"
+        source.gatedReadThreadName = readThreadName
+        val older = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, readThreadName)
+        }
+        val olderResult = older.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        val deadline = System.nanoTime() + 10_000_000_000L
+        while (!source.receiveAddressReadParked && System.nanoTime() < deadline) Thread.sleep(5)
+        assertTrue("the older read never reached the FFI", source.receiveAddressReadParked)
+
+        // A NEWER read completes while it is parked — and the engine has nothing
+        // for it, which is the whole point: this read publishes NOTHING, and the
+        // old fence therefore did not move.
+        source.gatedReadThreadName = null
+        source.nextReceiveAddress = null
+        assertNull(service.sdkReceiveAddressLiveBlockingOrNull())
+
+        source.receiveAddressGate.countDown()
+        val olderAnswer = olderResult.get()
+        older.shutdown()
+
+        assertNull(
+            "an older read must not publish after a newer read has completed",
+            service.sdkReceiveAddressOrNull()
+        )
+        assertNull(
+            "…and must not hand its own superseded answer to its caller either",
+            olderAnswer
+        )
+    }
+
+    @Test
     fun rollback_clearsTheReceiveAddressOverlayAndTheBoundWallet() = runTest {
         // A rollback (CUT_OVER → DUAL_RUNNING) hands the key chain back to
         // dashj, whose pointer is live again. If the overlay kept serving, the

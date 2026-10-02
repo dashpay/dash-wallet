@@ -2684,20 +2684,35 @@ class CutoverUiDataService internal constructor(
      */
     private fun completeReceiveRead(generation: Long, ticket: Long, address: String?): String? {
         if (generation != receiveAddressGeneration) return null
-        if (address != null && ticket > lastPublishedReceiveTicket) {
-            cachedReceiveAddress = ReceiveAddressSnapshot(generation, address)
+        if (ticket > lastPublishedReceiveTicket) {
+            // The fence advances for EVERY completed read, not only a successful
+            // one, because what it records is COMPLETION ORDER — and a failed
+            // read completes just as definitively as a successful one. Advancing
+            // it on success alone left a cold-cache hole: read 1 takes A and
+            // parks in the FFI, a payment lands on A, read 2 finds the engine
+            // unavailable and publishes nothing, and read 1 then arrives and
+            // publishes A — putting an address the chain has already paid on the
+            // Receive screen, after a newer read had established that the engine
+            // was no longer answering.
             lastPublishedReceiveTicket = ticket
+            if (address != null) {
+                cachedReceiveAddress = ReceiveAddressSnapshot(generation, address)
+            }
+            // A FAILED read still HOLDS whatever the cache has: clearing it would
+            // send the synchronous overlay back to the frozen dashj address,
+            // which is the defect. It simply does not get to publish.
         }
-        // Answer from the CACHE, not from this read's own result. Rejecting an
+        // Answer from the CACHE, never from this read's own result. Rejecting an
         // out-of-order publication is only half the job: an older read that
         // handed its own stale address back to its caller would still put an
         // already-used address on the Receive screen, because
         // [de.schildbach.wallet.WalletApplication]'s live accessors return a
         // non-null result unchanged. After the gate the cache holds the newest
-        // address for this binding, so every caller — including one whose own
-        // read lost the ordering — gets that. The `?: address` residual covers
-        // only the case where nothing has ever been cached.
-        return cachedReceiveAddress?.takeIf { it.generation == generation }?.address ?: address
+        // address this binding ACCEPTED, so every caller — including one whose
+        // own read lost the ordering — gets that, and a rejected read with
+        // nothing cached answers nothing rather than smuggling its own result
+        // past the fence.
+        return cachedReceiveAddress?.takeIf { it.generation == generation }?.address
     }
 
     /**
