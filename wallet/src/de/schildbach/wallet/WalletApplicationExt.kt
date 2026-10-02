@@ -34,7 +34,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.BaseConfig
 import org.slf4j.LoggerFactory
-import java.io.File
 
 object WalletApplicationExt {
     private val log = LoggerFactory.getLogger(WalletApplicationExt::class.java)
@@ -84,12 +83,13 @@ object WalletApplicationExt {
      * SDK cleanup inside it ran for nearly two minutes on a live device.
      */
     suspend fun WalletApplication.finishWalletWipe() {
+        var wipeFinished = false
         try {
             // A failure here must not become an uncaught exception in the
             // service-teardown coroutine that calls this — the process dying
             // in the middle of a wipe is the failure mode being fixed. The
             // marker stays behind instead, and the next launch re-runs it.
-            runCatching {
+            wipeFinished = runCatching {
                 WalletWipeSequence.finish(
                     pending = { WalletWipeState.isPending(filesDir) },
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
@@ -99,13 +99,15 @@ object WalletApplicationExt {
             }.onFailure {
                 rethrowCancellation(it)
                 log.error("Reset Wallet did not finish — the next launch will complete it", it)
-            }
+            }.getOrDefault(false)
         } finally {
             // The UI is waiting on this flag whether the wipe finished or
             // threw; a launch that finds the marker still there re-runs the
             // wipe from the top.
             withContext(NonCancellable) {
-                resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, filesDir)
+                resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, wipeFinished) {
+                    WalletWipeState.pendingOrNull(filesDir)
+                }
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
@@ -227,15 +229,26 @@ object WalletApplicationExt {
 
     /**
      * The queue was paused by beginWalletWipe() / destroyWalletData(). Only a
-     * wipe that finished — its marker cleared — lets the next wallet's saves
-     * run; after a failed one the old wallet is still half there and the next
-     * launch re-runs the wipe, so saves stay refused until then.
+     * wipe that ran its destruction to the end AND whose marker is confirmed
+     * cleared lets the next wallet's saves run. Fails closed: an absent marker
+     * alone is not proof — if [WalletWipeState.begin] could not write it,
+     * finish() skipped the destroy and the old wallet is still in place — and
+     * a marker that cannot be read ([markerPending] null or throwing) counts
+     * as still pending.
+     *
+     * @param wipeFinished what WalletWipeSequence.finish() returned; false if it threw.
+     * @param markerPending true/false when the marker could be read, null when not.
      */
-    internal fun resumeMetadataSavesIfWipeComplete(queue: TransactionMetadataSaveQueue, filesDir: File) {
-        if (WalletWipeState.isPending(filesDir)) {
-            log.warn("Reset Wallet did not finish — transaction metadata saves stay paused")
-        } else {
+    internal fun resumeMetadataSavesIfWipeComplete(
+        queue: TransactionMetadataSaveQueue,
+        wipeFinished: Boolean,
+        markerPending: () -> Boolean?
+    ) {
+        val markerCleared = wipeFinished && runCatching { markerPending() }.getOrNull() == false
+        if (markerCleared) {
             queue.resume()
+        } else {
+            log.warn("Reset Wallet did not finish — transaction metadata saves stay paused")
         }
     }
 

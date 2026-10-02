@@ -30,6 +30,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.IOException
 
 /** After Reset Wallet, transaction metadata saves resume only if the wipe finished. */
 class WalletWipeMetadataSavesTest {
@@ -47,9 +48,18 @@ class WalletWipeMetadataSavesTest {
 
     @Test
     fun aFinishedWipeResumesSaves() {
-        resumeMetadataSavesIfWipeComplete(queue, filesDir.root)
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { WalletWipeState.pendingOrNull(filesDir.root) }
 
         assertFalse(queue.isPaused)
+    }
+
+    @Test
+    fun aWipeThatNeverRanKeepsSavesPaused() {
+        // begin() could not write the marker, so finish() saw nothing pending
+        // and skipped the destroy: the marker is absent but the old wallet is still there
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = false) { WalletWipeState.pendingOrNull(filesDir.root) }
+
+        assertTrue(queue.isPaused)
     }
 
     @Test
@@ -57,7 +67,31 @@ class WalletWipeMetadataSavesTest {
         // a failed destroy leaves the marker so the next launch re-runs the wipe
         WalletWipeState.begin(filesDir.root)
 
-        resumeMetadataSavesIfWipeComplete(queue, filesDir.root)
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = false) { WalletWipeState.pendingOrNull(filesDir.root) }
+
+        assertTrue(queue.isPaused)
+    }
+
+    @Test
+    fun aMarkerLeftBehindAfterAFinishedWipeKeepsSavesPaused() {
+        // complete() could not delete the marker; the next launch re-runs the wipe
+        WalletWipeState.begin(filesDir.root)
+
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { WalletWipeState.pendingOrNull(filesDir.root) }
+
+        assertTrue(queue.isPaused)
+    }
+
+    @Test
+    fun anUnreadableMarkerKeepsSavesPaused() {
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { null }
+
+        assertTrue(queue.isPaused)
+    }
+
+    @Test
+    fun aMarkerCheckThatThrowsKeepsSavesPaused() {
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { throw IOException("unreadable") }
 
         assertTrue(queue.isPaused)
     }

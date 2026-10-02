@@ -84,6 +84,18 @@ object WalletWipeState {
     }
 
     /**
+     * Fail-closed twin of [isPending]: null when the marker cannot be read, so
+     * a caller that must not proceed on an unknown state can tell "absent"
+     * from "could not check".
+     */
+    fun pendingOrNull(filesDir: File): Boolean? = try {
+        marker(filesDir).exists()
+    } catch (t: Throwable) {
+        log.warn("could not read the wallet-wipe marker", t)
+        null
+    }
+
+    /**
      * Records that the wipe ran to the end. Call ONLY after the last
      * destructive step returned: while this marker is present the next launch
      * re-runs the wipe, and re-running it is always safe, whereas clearing it
