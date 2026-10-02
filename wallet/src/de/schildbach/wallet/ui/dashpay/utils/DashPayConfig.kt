@@ -835,14 +835,26 @@ open class DashPayConfig @Inject constructor(
         )
     }
 
+    /**
+     * Persist [settings] — all seven keys in ONE DataStore transaction.
+     *
+     * Seven [set] calls are seven `dataStore.edit`s, and
+     * [observeTransactionMetadataSettings] emits after each one, so observers
+     * would see every half-written combination. The settings screen compares
+     * its draft against each emission: an intermediate state that happens to
+     * equal a reopened screen's draft clears its `modified` flag, and the next
+     * intermediate state then overwrites that draft as if it were unedited.
+     */
     suspend fun setTransactionMetadataSettings(settings: TransactionMetadataSettings) {
-        set(TRANSACTION_METADATA_SAVE_TO_NETWORK, settings.saveToNetwork)
-        set(TRANSACTION_METADATA_SAVE_FREQUENCY, settings.saveFrequency.name)
-        set(TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY, settings.savePaymentCategory)
-        set(TRANSACTION_METADATA_SAVE_TAX_CATEGORY, settings.saveTaxCategory)
-        set(TRANSACTION_METADATA_SAVE_EXCHANGE, settings.saveExchangeRates)
-        set(TRANSACTION_METADATA_SAVE_MEMOS, settings.savePrivateMemos)
-        set(TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO, settings.saveGiftcardInfo)
+        editPreferences { preferences ->
+            preferences[TRANSACTION_METADATA_SAVE_TO_NETWORK] = settings.saveToNetwork
+            preferences[TRANSACTION_METADATA_SAVE_FREQUENCY] = settings.saveFrequency.name
+            preferences[TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY] = settings.savePaymentCategory
+            preferences[TRANSACTION_METADATA_SAVE_TAX_CATEGORY] = settings.saveTaxCategory
+            preferences[TRANSACTION_METADATA_SAVE_EXCHANGE] = settings.saveExchangeRates
+            preferences[TRANSACTION_METADATA_SAVE_MEMOS] = settings.savePrivateMemos
+            preferences[TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO] = settings.saveGiftcardInfo
+        }
     }
 
     suspend fun shouldSaveOnReset(): Boolean = get(TRANSACTION_METADATA_SAVE_ON_RESET) == true
