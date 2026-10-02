@@ -668,6 +668,18 @@ open class DashPayConfig @Inject constructor(
         val SDK_GAP_WIDEN_RESCAN_OWED = booleanPreferencesKey("sdk_gap_widen_rescan_owed")
 
         /**
+         * A backup-recovered wallet's reset owes the SDK SPV rewind to birth:
+         * the recovered wallet must re-scan its history, so its scan may not
+         * resume from the previous watermark. MANDATORY, unlike
+         * [SDK_GAP_WIDEN_RESCAN_OWED]: the scan gate holds the SPV scan until
+         * the rewind is armed (at the default windows if widening fails, in
+         * which case the widening's own debt is kept for a later, wider
+         * rescan), and only then clears this. Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForRecoveryReset].
+         */
+        val SDK_RECOVERY_RESCAN_OWED = booleanPreferencesKey("sdk_recovery_rescan_owed")
+
+        /**
          * A provisioning pass ARMED but not yet accounted for: written by
          * the gate BEFORE it lets a provisioning pass run, recording the
          * pre-pass durable synced height (TARGET) and the contact set the
