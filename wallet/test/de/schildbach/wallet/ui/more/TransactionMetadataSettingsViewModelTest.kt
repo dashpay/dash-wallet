@@ -266,6 +266,11 @@ class TransactionMetadataSettingsViewModelTest {
         advanceUntilIdle()
 
         assertEquals(written, viewModel.uiState.value.settings)
+
+        // Turning it back off differs from what is now persisted, though it
+        // matches the value the screen first loaded: Save must be enabled.
+        viewModel.updatePreferences(written.copy(saveToNetwork = false))
+        assertTrue("Save must be enabled", viewModel.uiState.value.settings.modified)
     }
 
     @Test

@@ -144,11 +144,13 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
         // Re-emits on every DashPayConfig write, and a save queued by an
         // earlier visit to this screen can still be writing after the user
         // has started editing here. Edits are the user's: once the draft is
-        // modified, persisted settings no longer replace it.
+        // modified, persisted settings no longer replace it. An unedited draft
+        // that adopts them rebases on them too, or reversing that write back
+        // to the older value would read as unmodified and disable Save.
         dashPayConfig.observeTransactionMetadataSettings()
             .distinctUntilChanged()
             .onEach { persisted ->
-                if (originalState == null) {
+                if (originalState == null || !_uiState.value.settings.modified) {
                     originalState = persisted
                 }
                 _uiState.update { state ->
