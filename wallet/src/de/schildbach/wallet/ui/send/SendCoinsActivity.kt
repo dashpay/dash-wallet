@@ -100,17 +100,13 @@ open class SendCoinsActivity : LockScreenActivity() {
     private var buyCredits: Boolean = false
     private var isQuickScan: Boolean = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // LockScreenActivity finished: no usable wallet (none at all, or a
-        // degraded launch, possibly with a safe-mode retry still loading). A
-        // dash: link can open this then, so build nothing: the send screens'
-        // view model reads the wallet when it is created
-        // (SendCoinsBaseViewModel), which would wait on the main thread for
-        // the retry's parse. See finishedForNoWallet.
-        if (finishedForNoWallet) {
-            return
-        }
+    // Runs only with a usable wallet. A dash: link can open this during a
+    // degraded launch (possibly with a safe-mode retry still loading); then
+    // LockScreenActivity finishes it and nothing here runs: the send screens'
+    // view model reads the wallet when it is created (SendCoinsBaseViewModel),
+    // which would wait on the main thread for the retry's parse.
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         // only set INTENT_EXTRA_KEEP_UNLOCKED if it is not yet set
         // if this Activity is started by a dash: uri, then it will not be set

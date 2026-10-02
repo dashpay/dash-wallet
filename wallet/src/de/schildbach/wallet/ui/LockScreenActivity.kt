@@ -127,12 +127,12 @@ open class LockScreenActivity : SecureActivity() {
      * THE SUBCLASS CONTRACT. Such an activity can be opened during a retry
      * (a notification, a widget or shortcut, a link) or restored into a
      * safe-mode process, and the system still calls into it after the early
-     * finish (pause, stop, destroy, user-leaving). Every subclass returns
-     * right after super.onCreate when this is set, and every callback it
-     * overrides checks it before touching its own UI or view models. A
-     * `by viewModels()` access creates the view model, and wallet-backed view
-     * models read the wallet on creation, which during a retry waits on the
-     * main thread for the whole parse.
+     * finish (pause, stop, destroy, user-leaving). Subclasses put their
+     * creation in [onCreateWithWallet], which is not called then, and every
+     * other callback they override checks this flag before touching their own
+     * UI or view models. A `by viewModels()` access creates the view model,
+     * and wallet-backed view models read the wallet on creation, which during
+     * a retry waits on the main thread for the whole parse.
      */
     protected var finishedForNoWallet: Boolean = false
         private set
@@ -173,6 +173,13 @@ open class LockScreenActivity : SecureActivity() {
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
     private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
 
+    /**
+     * Subclasses must not override this; they override [onCreateWithWallet].
+     * Hilt forbids making it final (it overrides onCreate to inject the
+     * SavedStateHandle). A `return` here only leaves this method: a subclass
+     * override would carry on after its super.onCreate() call into a screen
+     * whose wallet is missing or unusable.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -208,6 +215,8 @@ open class LockScreenActivity : SecureActivity() {
                     javaClass.simpleName
                 )
                 if (redirectDegradedWallet(walletApplication)) return
+            } else {
+                log.warn("no wallet, finishing {}", javaClass.simpleName)
             }
             finish()
             return
@@ -225,7 +234,19 @@ open class LockScreenActivity : SecureActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
+
+        onCreateWithWallet(savedInstanceState)
     }
+
+    /**
+     * Subclasses override this instead of [onCreate]. It runs where onCreate
+     * used to hand control back to the subclass, once the lock screen is set
+     * up, and only with a usable wallet: when the launch is degraded (see
+     * [WalletApplication.isWalletLoadDegraded]) or there is no wallet,
+     * onCreate redirects or finishes and never calls it, and
+     * [finishedForNoWallet] is set for the remaining callbacks.
+     */
+    protected open fun onCreateWithWallet(savedInstanceState: Bundle?) = Unit
 
     /**
      * These two wrap the subclass's content view in the lock-screen root, so
