@@ -1557,9 +1557,10 @@ class CutoverUiDataServiceTest {
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
         service.start()
-        runCurrent()
-
-        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+        assertTrue(
+            "the overlay must serve the engine address once the pipeline's first read lands",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
+        )
     }
 
     @Test
@@ -1573,8 +1574,10 @@ class CutoverUiDataServiceTest {
             source, configWithState("CUT_OVER"), backgroundScope, txEvents = events
         )
         service.start()
-        runCurrent()
-        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+        assertTrue(
+            "the overlay must serve the engine address once the pipeline's first read lands",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
+        )
 
         source.nextReceiveAddress = "yENGINEsecondUnusedAddress"
         events.emit(
@@ -1602,8 +1605,10 @@ class CutoverUiDataServiceTest {
             source, configWithState("CUT_OVER"), backgroundScope, txEvents = events
         )
         service.start()
-        runCurrent()
-        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+        assertTrue(
+            "the overlay must serve the engine address once the pipeline's first read lands",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
+        )
 
         source.nextReceiveAddress = null
         val readsBefore = source.nextReceiveAddressReads
@@ -1705,11 +1710,9 @@ class CutoverUiDataServiceTest {
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
         service.start()
-        runCurrent()
-        assertEquals(
+        assertTrue(
             "precondition: the receive cache is warm",
-            "yENGINEnextUnusedAddress",
-            service.sdkReceiveAddressOrNull()
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
         )
 
         source.nextChangeAddress = null
@@ -1961,8 +1964,10 @@ class CutoverUiDataServiceTest {
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val service = buildService(source, configWithMutableState(state), backgroundScope)
         service.start()
-        runCurrent()
-        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+        assertTrue(
+            "the overlay must serve the engine address once the pipeline's first read lands",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
+        )
 
         state.value = "DUAL_RUNNING"
         runCurrent()
@@ -1990,8 +1995,10 @@ class CutoverUiDataServiceTest {
             source, configWithMutableState(state), backgroundScope, txEvents = events
         )
         service.start()
-        runCurrent()
-        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
+        assertTrue(
+            "the overlay must serve the engine address once the pipeline's first read lands",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
+        )
 
         // ACTUALLY park a pipeline read. `refreshNativeSplit` only reads at
         // pipeline start, on a tx event, or on the ticker — so without emitting
