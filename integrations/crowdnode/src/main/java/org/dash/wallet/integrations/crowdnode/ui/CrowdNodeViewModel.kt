@@ -214,7 +214,8 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     /**
-     * The account address, or null when address initialisation never completed.
+     * The account address, INITIALISING it if startup could not, or null with
+     * [CrowdNodeApi.apiError] set.
      *
      * [recheckState] contains a `ReceiveAddressUnavailableException` at staking
      * startup, but `StakingActivity` installs its navigation graph regardless and
@@ -223,10 +224,6 @@ class CrowdNodeViewModel @Inject constructor(
      * force-unwrap, turning the contained startup failure into a crash one tap
      * later. Report the same `apiError` the startup path does instead; it is the
      * same transient condition and the same retry.
-     */
-    /**
-     * The account address, INITIALISING it if startup could not, or null with
-     * [CrowdNodeApi.apiError] set.
      *
      * Two things this has to do, and an earlier version did neither well enough:
      *

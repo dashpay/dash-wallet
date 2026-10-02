@@ -126,7 +126,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this
-                            transactionMetadataProvider.markAddressAsTransferInAsync(to!!, ServiceName.Coinbase)
+                            transactionMetadataProvider.markAddressAsTransferInAsync(to, ServiceName.Coinbase)
                         }
                     }
                 }
