@@ -91,7 +91,8 @@ class TxDisplayCacheRescanTest {
             blockchainStateProvider = blockchainState,
             displayCacheRefreshBus = DisplayCacheRefreshBus(),
             dashPayConfig = dashPayConfig,
-            cutoverUiDataService = { cutoverUi }
+            cutoverUiDataService = { cutoverUi },
+            l1SyncStatusService = { mockk<L1SyncStatusService>(relaxed = true) }
         ).also { service = it }
     }
 
