@@ -20,8 +20,10 @@ package de.schildbach.wallet.util
 import androidx.annotation.VisibleForTesting
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.StandardCopyOption
 import java.security.SecureRandom
 
 /**
@@ -121,17 +123,51 @@ object WalletWipeState {
      */
     fun begin(filesDir: File, noBackupFilesDir: File): Boolean {
         return try {
-            if (inspect(filesDir, noBackupFilesDir) == State.RECOVERY_REQUIRED) {
-                log.warn("refusing to replace an unverified wallet-wipe marker")
-                return false
+            when (inspect(filesDir, noBackupFilesDir)) {
+                // A retried reset (e.g. reached again past a permanent PIN
+                // lock) must not rewrite the marker that already authorizes
+                // it: a death or failed write after truncation would turn a
+                // valid marker into a partial one.
+                State.PENDING -> return true
+                State.RECOVERY_REQUIRED -> {
+                    log.warn("refusing to replace an unverified wallet-wipe marker")
+                    return false
+                }
+                State.NONE -> Unit
             }
-            val file = marker(filesDir)
             val token = installToken(noBackupFilesDir) ?: return false
-            file.writeText(markerBody(token), Charsets.UTF_8)
+            writeMarker(marker(filesDir), markerBody(token))
             isPending(filesDir, noBackupFilesDir)
         } catch (t: Throwable) {
             log.warn("could not create the wallet-wipe marker", t)
             false
+        }
+    }
+
+    /**
+     * How a new marker is written. A seam for tests that need to see whether
+     * a write happened; production code never replaces it.
+     */
+    @VisibleForTesting
+    internal var writeMarker: (File, String) -> Unit = ::writeAtomically
+
+    /**
+     * Temp file, fsync, then rename(2) over the destination, so a death at any
+     * point leaves either no marker or a complete one — never a partial marker
+     * that would read as unverified. The `.tmp` name is swept by
+     * `WalletApplication.cleanupFiles()` if a kill abandons it.
+     */
+    private fun writeAtomically(file: File, body: String) {
+        val temp = File(file.parentFile, file.name + AtomicFileWriter.TEMP_SUFFIX)
+        try {
+            FileOutputStream(temp).use { out ->
+                out.write(body.toByteArray(Charsets.UTF_8))
+                out.flush()
+                out.fd.sync()
+            }
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE)
+        } finally {
+            temp.delete()
         }
     }
 
