@@ -120,6 +120,24 @@ open class LockScreenActivity : SecureActivity() {
         get() = ::binding.isInitialized
 
     /**
+     * onCreate took its early finish: no wallet, or a degraded launch (which
+     * includes a safe-mode retry still loading). Set before that branch calls
+     * startActivity/finish, so subclass overrides of those see it too.
+     *
+     * THE SUBCLASS CONTRACT. Such an activity can be opened during a retry
+     * (a notification, a widget or shortcut, a link) or restored into a
+     * safe-mode process, and the system still calls into it after the early
+     * finish (pause, stop, destroy, user-leaving). Every subclass returns
+     * right after super.onCreate when this is set, and every callback it
+     * overrides checks it before touching its own UI or view models. A
+     * `by viewModels()` access creates the view model, and wallet-backed view
+     * models read the wallet on creation, which during a retry waits on the
+     * main thread for the whole parse.
+     */
+    protected var finishedForNoWallet: Boolean = false
+        private set
+
+    /**
      * Without the lock-screen UI (see [lockScreenUiReady]) nothing is
      * unlocked, so this reports locked: callers then skip the work meant for
      * an unlocked wallet screen.
@@ -179,6 +197,7 @@ open class LockScreenActivity : SecureActivity() {
             // crash-report path, so send the user there instead of finishing
             // into nothing. CLEAR_TASK drops the restored back stack, whose
             // every entry would hit this same branch.
+            finishedForNoWallet = true
             if (degraded) {
                 log.warn(
                     "degraded launch: {} was restored without a wallet — routing to onboarding",

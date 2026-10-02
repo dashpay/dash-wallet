@@ -71,6 +71,7 @@ class SweepWalletActivity: AbstractBindServiceActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
 
         binding = ActivitySweepWalletBinding.inflate(layoutInflater)
         setContentView(binding.root)

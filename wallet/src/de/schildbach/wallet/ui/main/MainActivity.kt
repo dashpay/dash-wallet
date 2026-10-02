@@ -187,10 +187,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // LockScreenActivity finishes the activity when there is no wallet
-        // (e.g. a direct launch on a fresh install); its setContentView
-        // override is a no-op while finishing, so nothing below can run.
-        if (isFinishing) {
+        // LockScreenActivity finishes the activity when there is no usable
+        // wallet (a direct launch on a fresh install, a degraded launch, a
+        // safe-mode retry still loading); nothing below may run, and the
+        // callbacks below check the same flag (see finishedForNoWallet).
+        if (finishedForNoWallet) {
             log.warn("started without a wallet - closing (launch onboarding instead)")
             return
         }
@@ -279,6 +280,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onStart() {
         super.onStart()
+        if (finishedForNoWallet) return
 
         if (!lockScreenDisplayed && config.showNotificationsExplainer) {
             explainPushNotifications()
@@ -433,6 +435,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onResume() {
         super.onResume()
+        if (finishedForNoWallet) return // viewModel reads the wallet when created
         turnOnAutoLogout()
         checkTimeSkew(viewModel)
         checkLowStorageAlert()
@@ -455,6 +458,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         intent ?: return
+        if (finishedForNoWallet) return
         // Keep getIntent() in step with what is actually being handled: the
         // activity replays getIntent() when it is recreated, so the extras
         // handleIntent consumes must be consumed from that same instance.

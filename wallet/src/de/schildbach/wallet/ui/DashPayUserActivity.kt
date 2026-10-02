@@ -112,6 +112,7 @@ class DashPayUserActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
 
         binding = ActivityDashpayUserBinding.inflate(layoutInflater)
         setContentView(binding.root)

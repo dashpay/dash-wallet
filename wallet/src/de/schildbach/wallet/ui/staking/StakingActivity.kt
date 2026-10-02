@@ -70,6 +70,7 @@ class StakingActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
 
         binding = ActivityStakingBinding.inflate(layoutInflater)
         lifecycleScope.launch {
@@ -192,12 +193,17 @@ class StakingActivity : LockScreenActivity() {
 
     override fun onPause() {
         super.onPause()
+        // CrowdNodeViewModel reads the wallet balance when created; an
+        // early-finished instance (e.g. opened from a CrowdNode notification
+        // during a safe-mode retry) must not create it.
+        if (finishedForNoWallet) return
         viewModel.changeNotifyWhenDone(true)
         viewModel.cancelLinkingOnlineAccount()
     }
 
     override fun onResume() {
         super.onResume()
+        if (finishedForNoWallet) return // see onPause
         viewModel.changeNotifyWhenDone(false)
 
         if (this::navController.isInitialized &&
