@@ -33,7 +33,6 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Context
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.params.TestNet3Params
-import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -42,7 +41,6 @@ import java.io.IOException
 class WalletFactoryTest {
     private val contentResolver = mockk<ContentResolver>()
     private val application = mockk<WalletApplication>()
-    private val blockchainServiceConfig = mockk<BlockchainServiceConfig>()
 
     @Before
     fun setup() {
@@ -58,14 +56,14 @@ class WalletFactoryTest {
 
     @Test
     fun createTest() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val context = Context(MainNetParams.get())
         walletFactory.create(context.params, 12)
     }
 
     @Test
     fun restoreFromSeedTest() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val contextMocked = mockk<Context>()
         every { contextMocked.params } returns MainNetParams.get()
         every { Context.getOrCreate(any()) } returns contextMocked
@@ -86,7 +84,7 @@ class WalletFactoryTest {
 
     @Test
     fun restoreFromEncryptedFileTest() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val context = Context(MainNetParams.get())
 
         val withPinUri = mockk<Uri>()
@@ -130,7 +128,7 @@ class WalletFactoryTest {
 
     @Test
     fun restoreFromKeyFileTest() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val context = Context(TestNet3Params.get())
         val keysUri = mockk<Uri>()
 
@@ -147,7 +145,7 @@ class WalletFactoryTest {
 
     @Test(expected = IOException::class)
     fun restoreFromEncryptedFileTest_wrongNetwork() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val contextTestnet = Context(TestNet3Params.get())
 
         val withoutPinUri = mockk<Uri>()
@@ -163,7 +161,7 @@ class WalletFactoryTest {
 
     @Test(expected = IOException::class)
     fun restoreFromKeyFileTest_wrongNetwork() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val context = Context(MainNetParams.get())
         val keysUri = mockk<Uri>()
 
@@ -178,7 +176,7 @@ class WalletFactoryTest {
 
     @Test(expected = IOException::class)
     fun restoreFromFileTest_wrongCoin() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val contextTestnet = Context(TestNet3Params.get())
 
         val withoutPinUri = mockk<Uri>()
@@ -194,7 +192,7 @@ class WalletFactoryTest {
 
     @Test(expected = IOException::class)
     fun restoreFromKeyFileTest_wrongCoin() {
-        val walletFactory = DashWalletFactory(application, blockchainServiceConfig)
+        val walletFactory = DashWalletFactory(application)
         val context = Context(MainNetParams.get())
         val keysUri = mockk<Uri>()
 
