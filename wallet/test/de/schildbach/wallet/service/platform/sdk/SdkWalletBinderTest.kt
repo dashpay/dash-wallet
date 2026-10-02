@@ -2166,6 +2166,74 @@ class SdkWalletBinderTest {
         assertNull(owedRescan)
     }
 
+    /**
+     * Review, 2026-10-02: the application's background bind can complete and
+     * widen before the blockchain service performs the recovery reset. When
+     * the immediate arm then fails, the reset must not report success, and
+     * the latched bind and the scan gate must still repay the debt before the
+     * scan resumes from the old watermark.
+     */
+    @Test
+    fun recoveryReset_afterACompletedBind_failedImmediateArm_holdsTheScanUntilRepaid() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertTrue("the bind widened", binder.ensureScanMayAdvance(walletId))
+        assertEquals(0, sdk.armRescanCalls)
+
+        sdk.onArmRescan = { _, _ -> false }
+        assertFalse("a failed immediate arm keeps the reset pending", binder.oweSpvRescanForRecoveryReset())
+        assertEquals(1, sdk.armRescanCalls)
+        assertEquals(true, owedRescan)
+
+        assertFalse("the scan may not resume from the old watermark", binder.ensureScanMayAdvance(walletId))
+        assertEquals(2, sdk.armRescanCalls)
+        binder.bindIfEnabled(unlock)
+        assertEquals("the latched bind retried the arm", 3, sdk.armRescanCalls)
+        assertEquals(true, owedRescan)
+
+        // The arm recovers: the next resume repays the debt and may advance.
+        sdk.onArmRescan = { _, _ -> true }
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals(4, sdk.armRescanCalls)
+        assertNull(owedRescan)
+        assertTrue("paid once, open after", binder.ensureScanMayAdvance(walletId))
+        assertEquals(4, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun recoveryReset_afterACompletedBind_failedImmediateArm_latchedBindRepays() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        sdk.onArmRescan = { _, _ -> false }
+        assertFalse(binder.oweSpvRescanForRecoveryReset())
+
+        sdk.onArmRescan = { _, _ -> true }
+        binder.bindIfEnabled(unlock)
+        assertEquals("the completed fast path repaid", 2, sdk.armRescanCalls)
+        assertNull(owedRescan)
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("nothing left to repay", 2, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun scanGate_atNarrowWindowsWithDebtRecorded_doesNotRepay() = runBlocking {
+        val sdk = readySdk()
+        sdk.onWiden = { false }
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertTrue(binder.oweSpvRescanForRecoveryReset())
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("a narrow-window arm would clear the widening's debt", 0, sdk.armRescanCalls)
+        assertEquals(true, owedRescan)
+    }
+
     @Test
     fun recoveryReset_reportsFailure_whenTheDebtCannotBeRecorded() = runBlocking {
         val sdk = readySdk()

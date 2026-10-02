@@ -1183,6 +1183,9 @@ class SdkWalletBinder internal constructor(
                 revalidateBoundWallet()
                 if (completed) {
                     noteBindConfirmedForCurrentWallet()
+                    // A recovery reset in this process can owe a rescan after
+                    // the bind latched; the latch must not skip repaying it.
+                    boundWalletIdHex?.let { repayOwedIfWidened(it) }
                     return
                 }
                 try {
@@ -1610,9 +1613,20 @@ class SdkWalletBinder internal constructor(
      * with the bind's own widening, so a start during that step sees its
      * outcome. False only when widening and the debt write both fail; the
      * engine start then retries later. Never throws except cancellation.
+     *
+     * Once the windows are wide, a recorded rescan debt (a recovery reset's,
+     * or an earlier session's failed widening) is repaid here before the scan
+     * may advance (review, 2026-10-02): a recovery reset in a process whose
+     * wallet is already bound and widened has no later bind pass to pay it,
+     * so a failed arm holds the scan instead of letting it resume from the
+     * old watermark. A debt recorded at narrow windows this process is left
+     * to the next successful widening, as before.
      */
     suspend fun ensureScanMayAdvance(walletIdHex: String): Boolean = wideningMutex.withLock {
-        if (widenedWalletIdHex == walletIdHex || debtRecordedWalletIdHex == walletIdHex) {
+        if (widenedWalletIdHex == walletIdHex) {
+            return@withLock repayBeforeScan(walletIdHex)
+        }
+        if (debtRecordedWalletIdHex == walletIdHex) {
             return@withLock true
         }
         val widened = try {
@@ -1626,7 +1640,7 @@ class SdkWalletBinder internal constructor(
         if (widened) {
             widenedWalletIdHex = walletIdHex
             log.info("scan gate: address windows widened on {}… before the SPV start", walletIdHex.take(8))
-            return@withLock true
+            return@withLock repayBeforeScan(walletIdHex)
         }
         if (recordWidenRescanOwed()) {
             debtRecordedWalletIdHex = walletIdHex
@@ -1653,8 +1667,12 @@ class SdkWalletBinder internal constructor(
      * rewind to birth and only then clears it. When this process already
      * widened a bound wallet, it is paid at once.
      *
-     * Returns whether the debt is recorded (or already paid); false when the
-     * write failed. Never throws except cancellation.
+     * Returns whether the debt is recorded and, when this process already
+     * widened the wallet, paid; false when the write failed or the immediate
+     * arm failed (review, 2026-10-02). In the latter case the debt stays
+     * recorded, so the caller keeps the reset pending, and
+     * [ensureScanMayAdvance] holds the scan until it is repaid. Never throws
+     * except cancellation.
      */
     suspend fun oweSpvRescanForRecoveryReset(): Boolean = wideningMutex.withLock {
         if (!recordWidenRescanOwed()) return@withLock false
@@ -1663,28 +1681,53 @@ class SdkWalletBinder internal constructor(
             // Repaying at narrow windows would also clear a widening's debt.
             if (walletIdHex != null && walletIdHex == widenedWalletIdHex) {
                 repayWidenRescanOwed(walletIdHex)
+            } else {
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            log.warn("recovery reset: immediate rescan arm failed; the next bind pays it", t)
+            log.warn("recovery reset: immediate rescan arm failed; the debt stays owed", t)
+            false
         }
-        true
     }
 
-    /** Arm the owed rescan, then clear the debt; a failed arm keeps it for the next bind. */
-    private suspend fun repayWidenRescanOwed(walletIdHex: String) {
-        if (dashPayConfig.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) != true) return
+    /** Repay a recorded debt on a wallet this process widened; the completed-bind path. Never throws except cancellation. */
+    private suspend fun repayOwedIfWidened(walletIdHex: String) {
+        wideningMutex.withLock {
+            if (widenedWalletIdHex == walletIdHex) repayBeforeScan(walletIdHex)
+        }
+    }
+
+    /** [repayWidenRescanOwed] for the scan gate: false (hold) on any failure. Caller holds [wideningMutex]. */
+    private suspend fun repayBeforeScan(walletIdHex: String): Boolean = try {
+        repayWidenRescanOwed(walletIdHex).also { repaid ->
+            if (!repaid) log.warn("scan gate: holding the SPV scan until the owed rescan is armed")
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("scan gate: holding the SPV scan — the owed rescan could not be checked or armed", t)
+        false
+    }
+
+    /**
+     * Arm the owed rescan, then clear the debt; a failed arm keeps it. True
+     * when nothing was owed or the rescan was armed.
+     */
+    private suspend fun repayWidenRescanOwed(walletIdHex: String): Boolean {
+        if (dashPayConfig.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) != true) return true
         if (!sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())) {
-            log.warn("owed address-window rescan: arm failed; will retry next bind")
-            return
+            log.warn("owed address-window rescan: arm failed; the debt stays owed")
+            return false
         }
         dashPayConfig.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED)
         log.info(
             "owed address-window rescan armed on {}…: an earlier session scanned at the default " +
-                "windows after its widening failed",
+                "windows after its widening failed, or a recovery reset owed it",
             walletIdHex.take(8)
         )
+        return true
     }
 
     // ── Bounded identity-discovery retry (restore safety net) ─────────
