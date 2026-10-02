@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import androidx.core.app.NotificationCompat
@@ -94,6 +95,24 @@ object SdkBindPendingNotification {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
         } catch (t: Throwable) {
             log.warn("could not post the SDK-setup-pending notification", t)
+        }
+    }
+
+    /**
+     * Which form is on screen right now, read from the system; null if none or
+     * unknowable. The ongoing flag tells them apart: every version that posted
+     * the setup notice posted it ongoing, and the reminder is not.
+     */
+    internal fun shown(context: Context): PendingNotice? {
+        return try {
+            val ours = context.getSystemService(NotificationManager::class.java)
+                ?.activeNotifications
+                ?.firstOrNull { it.id == NOTIFICATION_ID && it.tag == null }
+                ?: return null
+            if (ours.isOngoing) PendingNotice.SETUP else PendingNotice.SYNC_REMINDER
+        } catch (t: Throwable) {
+            log.warn("could not read the SDK-setup-pending notification state", t)
+            null
         }
     }
 

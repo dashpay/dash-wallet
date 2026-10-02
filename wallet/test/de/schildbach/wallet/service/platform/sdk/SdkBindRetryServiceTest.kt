@@ -111,6 +111,8 @@ class SdkBindRetryServiceTest {
         var blockedSinceThrowFromRead = 1
         var blockedSinceReads = 0
         var noticeClears = 0
+        /** The system's notification state: outlives a [service] instance, as it outlives the process. */
+        var onScreen: PendingNotice? = null
         val persisted = mutableListOf<SdkBindBlocker?>()
         /** When set, [persistBlocker] parks on it — holds the outcome mutex open at a known point. */
         var persistGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
@@ -132,8 +134,13 @@ class SdkBindRetryServiceTest {
             bindFailures = failures,
             bindEstablished = established,
             persistBlocker = { persistGate?.await(); persisted += it },
-            showPendingNotice = { blocker, routine -> notices += blocker; routineFlags += routine },
-            clearPendingNotice = { noticeClears++ },
+            showPendingNotice = { blocker, routine ->
+                notices += blocker
+                routineFlags += routine
+                onScreen = if (routine) PendingNotice.SYNC_REMINDER else PendingNotice.SETUP
+            },
+            clearPendingNotice = { noticeClears++; onScreen = null },
+            noticeOnScreen = { onScreen },
             appInBackground = { appInBackground },
             bindEverSucceeded = { everSucceeded },
             blockedSinceMs = {
@@ -743,6 +750,54 @@ class SdkBindRetryServiceTest {
         runCurrent()
         assertEquals("a reminder is never cleared by a selection of none", 0, h.noticeClears)
         assertEquals(3, h.notices.size)
+    }
+
+    /**
+     * Review on #1590 (thepastaclaw), across a process restart: an earlier
+     * process (or a version before #1590) posted the ongoing setup notice and
+     * died. The new process starts with nothing recorded, and a routine locked
+     * start inside the hour selects no notice, so the old "finish the wallet
+     * update" notice used to stay on screen.
+     */
+    @Test
+    fun aSetupNoticeLeftByAnEarlierProcess_isCleared_onARoutineStartInsideTheHour() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS / 2 // inside the hour
+        h.onScreen = PendingNotice.SETUP // posted by the process that died
+        h.service(backgroundScope) // the new process
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertTrue("nothing is posted", h.notices.isEmpty())
+        assertEquals("the leftover setup notice is cleared", 1, h.noticeClears)
+        assertNull(h.onScreen)
+    }
+
+    /** The same restart with the dismissible reminder on screen: it is still valid, so it stays. */
+    @Test
+    fun aReminderLeftByAnEarlierProcess_isLeftAlone_onARoutineStartInsideTheHour() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        // Inside the hour as this process reads it: an unreadable blocked-since
+        // time counts from now, though the earlier process had posted the reminder.
+        h.blockedSinceThrows = IllegalStateException("store unreadable")
+        h.blockedSinceThrowFromRead = 2
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS
+        h.onScreen = PendingNotice.SYNC_REMINDER
+        h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertTrue("nothing is posted", h.notices.isEmpty())
+        assertEquals("the reminder is not cleared", 0, h.noticeClears)
+        assertEquals(PendingNotice.SYNC_REMINDER, h.onScreen)
     }
 
     /**

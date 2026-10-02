@@ -195,6 +195,8 @@ class SdkBindRetryService internal constructor(
      */
     private val showPendingNotice: (SdkBindBlocker, Boolean) -> Unit = { _, _ -> },
     private val clearPendingNotice: () -> Unit = {},
+    /** Which form of the notice the system is showing right now, if any ([SdkBindPendingNotification.shown]). */
+    private val noticeOnScreen: () -> PendingNotice? = { null },
     private val appInBackground: () -> Boolean = { false },
     /** Whether a bind has EVER succeeded on this install; false is the upgrade (first setup) case. */
     private val bindEverSucceeded: suspend () -> Boolean = { false },
@@ -234,6 +236,7 @@ class SdkBindRetryService internal constructor(
         },
         showPendingNotice = { blocker, routine -> SdkBindPendingNotification.show(context, blocker, routine) },
         clearPendingNotice = { SdkBindPendingNotification.clear(context) },
+        noticeOnScreen = { SdkBindPendingNotification.shown(context) },
         appInBackground = { AppForegroundMonitor.isInBackground },
         bindEverSucceeded = { dashPayConfig.get(DashPayConfig.SDK_BIND_EVER_SUCCEEDED) == true },
         blockedSinceMs = { dashPayConfig.get(DashPayConfig.SDK_BIND_BLOCKED_SINCE_MS) },
@@ -267,6 +270,10 @@ class SdkBindRetryService internal constructor(
      * A reminder the user swiped away still reads SYNC_REMINDER here; the app
      * is not told about the dismissal, and treating it as still shown is what
      * keeps it from being re-posted. Read and written under [outcomeMutex].
+     *
+     * Null is also where every process starts, while the system keeps a posted
+     * notification after the process dies (review on #1590), so when this is
+     * null [postPendingNoticeIfDue] reads what is actually on screen instead.
      */
     @Volatile
     private var displayedNotice: PendingNotice? = null
@@ -519,7 +526,12 @@ class SdkBindRetryService internal constructor(
             null
         } ?: now()
         val blockedForMs = (now() - since).coerceAtLeast(0L)
-        when (pendingNoticeFor(blocker, everSucceeded, blockedForMs)) {
+        val selected = pendingNoticeFor(blocker, everSucceeded, blockedForMs)
+        // A setup notice left by an earlier process, or by a version before
+        // #1590 that tracked nothing, is still on screen: read it, so it is
+        // cleared or replaced below like one this process posted.
+        if (displayedNotice == null && selected != PendingNotice.SETUP) displayedNotice = noticeOnScreen()
+        when (selected) {
             PendingNotice.SETUP -> {
                 showPendingNotice(blocker, false)
                 displayedNotice = PendingNotice.SETUP
