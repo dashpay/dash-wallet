@@ -54,15 +54,24 @@ class OnboardingViewModel @Inject constructor(
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
+    /** The app refused the new wallet (see WalletApplication.isWalletReplacementRefused). */
+    internal val walletReplacementRefusedAction = SingleLiveEvent<Unit>()
+
     fun createNewWallet(seedWordCount: Int) {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
+            val installed = withContext(Dispatchers.IO) {
                 walletApplication.initEnvironmentIfNeeded()
-        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
+                val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
                 log.info("successfully created new wallet")
-                walletApplication.setWallet(wallet)
-                configuration.armBackupSeedReminder()
+                walletApplication.setWallet(wallet).also { installed ->
+                    if (installed) configuration.armBackupSeedReminder()
+                }
+            }
+            if (!installed) {
+                log.warn("new wallet refused: a wallet reset is unfinished or unverified")
+                walletReplacementRefusedAction.call(Unit)
+                return@launch
             }
             analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
             finishCreateNewWalletAction.call(Unit)

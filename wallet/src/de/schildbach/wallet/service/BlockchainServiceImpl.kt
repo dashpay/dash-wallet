@@ -54,6 +54,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRecoveryReset
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
 import de.schildbach.wallet.WalletApplicationExt.finishWalletWipe
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -76,6 +77,7 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.RecoveryResetState
 import de.schildbach.wallet.util.FriendKeyChainLookahead
 import de.schildbach.wallet.util.ThrottledRunner
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
@@ -587,6 +589,123 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
 
+    internal fun refuseWalletInitialization() {
+        // Commands and teardown await this latch even when initialization is refused.
+        onCreateCompleted.complete(Unit)
+    }
+
+    /**
+     * Called synchronously by [onStartCommand], before its command coroutine.
+     * Every command coroutine awaits the same latch, so a refused normal
+     * command can resume first and stopSelf(); cleanup then cancels the
+     * wipe's coroutine. Recording the wipe here lets cleanup run it anyway.
+     */
+    internal fun recordWipeRequest(action: String?) {
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            deleteWalletFileOnShutdown = true
+        }
+    }
+
+    /**
+     * The [onCreate] gate for a backup-recovered wallet's owed reset, run
+     * before any store is opened. The reset is done HERE, not by teardown:
+     * stopSelf() does not destroy a started service while an activity is
+     * bound (MainActivity binds in onResume), so a teardown-only reset could
+     * stall with the app in the foreground.
+     *
+     * The reset is complete only when both SPV stores are gone, the
+     * databases cleared, the SDK rescan durably owed (when the SDK owns L1)
+     * and the marker actually deleted. Otherwise the failure is counted, this
+     * returns false and the caller refuses initialization so the next start
+     * retries. Only a failing database clear is waived after
+     * [RecoveryResetState.MAX_FAILED_ATTEMPTS], so the wallet can still sync;
+     * an undeleted store or an SDK rescan that could not be owed never is.
+     *
+     * @return true when initialization may proceed.
+     */
+    internal suspend fun performRecoveryReset(): Boolean {
+        log.warn("onCreate: recovered wallet owes a blockchain reset — resetting before initialization")
+        val blockstoreDir = getDir("blockstore", MODE_PRIVATE)
+        val storesDeleted = listOf(Constants.Files.BLOCKCHAIN_FILENAME, Constants.Files.HEADERS_FILENAME)
+            .map { File(blockstoreDir, it) }
+            .all { !it.exists() || it.delete() }
+        resetMNLists(false)
+        val databasesCleared = application.clearDatabasesForRecoveryReset()
+        val sdkRescanOwed = oweSdkRescanIfCutOver()
+        resetBlockchainState()
+        // The parts a stale-state reset cannot do without.
+        val requiredPartsDone = storesDeleted && sdkRescanOwed
+        if (requiredPartsDone && databasesCleared) {
+            if (application.markRecoveryResetComplete()) {
+                log.info("recovery reset complete")
+                return true
+            }
+            log.warn("recovery reset ran, but its marker could not be removed")
+        }
+        val attempts = application.recordRecoveryResetFailure()
+        if (attempts == RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+            runCatching {
+                CrashReporter.saveBackgroundTrace(
+                    IllegalStateException(
+                        "recovery reset failed $attempts times (storesDeleted=$storesDeleted, " +
+                            "databasesCleared=$databasesCleared, sdkRescanOwed=$sdkRescanOwed)"
+                    ),
+                    packageInfoProvider.packageInfo
+                )
+            }
+        }
+        if (!requiredPartsDone || attempts < RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+            log.warn(
+                "recovery reset failed (attempt {}: storesDeleted={}, databasesCleared={}, sdkRescanOwed={}) — " +
+                    "the reset stays owed", attempts, storesDeleted, databasesCleared, sdkRescanOwed
+            )
+            return false
+        }
+        // Only the best-effort database clear keeps failing: waive it.
+        log.error("recovery reset: database clear failed {} times — waiving it so the wallet can sync", attempts)
+        return application.markRecoveryResetComplete()
+    }
+
+    /**
+     * The SDK half of the recovery reset: when the SDK owns L1 its filter
+     * watermark must rewind, owed durably to the next bind
+     * ([SdkWalletBinder.oweSpvRescanForRecoveryReset]). True when nothing is
+     * owed (pre-cutover, dashj's store wipe is the whole reset) or the debt
+     * is recorded. A failed ownership read counts as a failure.
+     */
+    private suspend fun oweSdkRescanIfCutOver(): Boolean = try {
+        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForRecoveryReset()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("recovery reset: SDK rescan could not be owed", t)
+        false
+    }
+
+    /** Called on Main after initialization settles, before ordinary command handling. */
+    internal fun handleWalletLifecycleCommand(action: String?): Boolean {
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            recordWipeRequest(action)
+            stopSelf()
+            return true
+        }
+        // isRecoveryResetPending is also true for a marker that cannot be
+        // inspected: no command runs until it is confirmed absent.
+        if (application.wallet == null || application.isWalletLoadDegraded || application.isRecoveryResetPending) {
+            stopSelf()
+            return true
+        }
+        return false
+    }
+
+    /** Refused initialization can leave no wallet, even without a degraded-state flag. */
+    internal fun saveWalletOnShutdown() {
+        if (!deleteWalletFileOnShutdown && application.wallet != null && !application.isWalletLoadDegraded) {
+            propagateContext()
+            application.saveWallet()
+        }
+    }
+
     /**
      * True once [onCreate]'s init coroutine ran to its end with a wallet.
      * [onCreateCompleted] cannot say this: the refusal and failure paths
@@ -825,6 +944,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val mnListDiffsReceived = AtomicInteger()
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
+    // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
+    @Volatile
     private var deleteWalletFileOnShutdown = false
 
     // Settings to bypass dashj default dns seeds
@@ -2418,8 +2539,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                 propagateContext()
                 val wallet = application.wallet
-                if (wallet == null) {
-                    log.error("onCreate: wallet is null after cleanup, service cannot continue")
+                if (wallet == null || application.isWalletLoadDegraded) {
+                    log.warn("onCreate: wallet is unavailable or degraded, service cannot continue")
+                    withContext(Dispatchers.Main) { refuseWalletInitialization() }
+                    return@launch
+                }
+                // A backup-recovered wallet still owes its reset: opening the
+                // existing stores and starting sync would expose their stale
+                // state to the transaction-stripped wallet. A marker that
+                // cannot be inspected counts as owed (fail closed), and the
+                // reset only completes once the marker is confirmed gone.
+                if (application.isRecoveryResetPending && !performRecoveryReset()) {
+                    withContext(Dispatchers.Main) {
+                        refuseWalletInitialization()
+                        stopSelf()
+                    }
                     return@launch
                 }
                 // Phase 5d: resolve the cutover engine gate ONCE, before we
@@ -2993,10 +3127,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldPromoteToForeground(intent)) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
+        recordWipeRequest(intent?.action)
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
             log.info("onCreate completed, processing onStartCommand")
+            if (withContext(Dispatchers.Main) { handleWalletLifecycleCommand(intent?.action) }) {
+                return@launch
+            }
             if (intent != null) {
                 propagateContext()
                 log.info(
@@ -3025,10 +3163,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
                     armSdkRescanForResetIfCutOver()
-                    stopSelf()
-                } else if (BlockchainService.ACTION_WIPE_WALLET == action) {
-                    log.info("will remove blockchain and delete walletFile on service shutdown")
-                    deleteWalletFileOnShutdown = true
                     stopSelf()
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
@@ -3286,10 +3420,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
                 }
-                if (!deleteWalletFileOnShutdown) {
-                    propagateContext()
-                    application.saveWallet()
-                }
+                saveWalletOnShutdown()
                 // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
                 // onCreate it may still be null, so guard rather than assert.
                 wakeLock?.let { lock ->
