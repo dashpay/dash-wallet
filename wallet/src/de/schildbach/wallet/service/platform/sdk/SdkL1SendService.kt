@@ -108,6 +108,16 @@ internal const val ADDRESS_POOL_TAG_EXTERNAL = 0
  * network", blocking the safe dashj fallback). The message-prefix rules
  * below stay for the transition window.
  *
+ * [DashSdkError.PlatformWallet.StaleReservationToken] (code 34) joins them
+ * for the same reason (dashpay/platform#4309). It used to reach only the
+ * DEFERRED surface, so its arm lived only in
+ * [classifyDeferredBroadcastFailure]; #4309 age-guards the atomic
+ * finalize → broadcast path against the same reservation bound and reuses
+ * the same code, so it now reaches the plain send and the drain as well.
+ * Both classifiers keep an arm: this one is the general case, and the
+ * deferred one stays ahead of it only to name the deferred surface in the
+ * reason string.
+ *
  * Everything else defers to [classifyBroadcastFailure]; notably
  * [DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed] (code 20 —
  * the SDK's own "may already be on the network, inputs stay reserved, do
@@ -164,6 +174,27 @@ internal fun classifyCoreSendFailure(t: Throwable): SdkWriteResult<Nothing> = wh
     t is DashSdkError.PlatformWallet.TransactionBroadcastRejected ->
         SdkWriteResult.NotBroadcast(
             "core send definitively rejected before reaching the network: ${t.message}", t
+        )
+    // Typed stale funding reservation (code 34). Until dashpay/platform#4309
+    // this code could only come from the DEFERRED token surface, so the arm
+    // lived only in [classifyDeferredBroadcastFailure]; #4309 age-guards the
+    // ATOMIC finalize → broadcast path against the same bound and reuses the
+    // same code, which puts it on this classifier's paths too — the plain
+    // send (`sendToAddresses`) and the drain ([CoreSendAllNative]).
+    //
+    // Definitive pre-network by the SDK contract: the guard refuses BEFORE
+    // touching the broadcaster, and releases the still-owned reservation
+    // owner-guarded on the way out, so the freed inputs are immediately
+    // reselectable. Without this arm it falls through to
+    // [classifyBroadcastFailure] and returns Ambiguous — surfacing a payment
+    // that provably never left the device as "may be on the network" and
+    // blocking the safe dashj fallback.
+    //
+    // NOT retryable in place (the handle is consumed on this outcome); the
+    // caller must rebuild, which the reason string says.
+    t is DashSdkError.PlatformWallet.StaleReservationToken ->
+        SdkWriteResult.NotBroadcast(
+            "core send refused pre-network (funding reservation aged out — rebuild): ${t.message}", t
         )
     t is DashSdkError.PlatformWallet.WalletOperation &&
         (t.message?.startsWith("set_funding failed") == true ||
