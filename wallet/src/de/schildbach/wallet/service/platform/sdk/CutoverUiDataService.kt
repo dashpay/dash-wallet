@@ -2474,10 +2474,26 @@ class CutoverUiDataService internal constructor(
     }
 
     /**
-     * The ownership the GATE last published ([cutoverUiActive], i.e. the
-     * persisted [DashPayConfig.CUTOVER_STATE]), or null before its first
-     * emission has landed. Deliberately NOT [_cutoverActive], which is the
-     * pipeline's flag and stays false until the pipeline has bound.
+     * The last AUTHORITATIVE ownership observation of the persisted
+     * [DashPayConfig.CUTOVER_STATE] — TRI-STATE, and the three states are not
+     * interchangeable:
+     *
+     * - `true`  — observed: the ENGINE owns the key chain;
+     * - `false` — observed: DASHJ owns it;
+     * - `null`  — UNKNOWN: never observed yet, or the state could not be read.
+     *
+     * The distinction is the whole point. This is fed from
+     * [cutoverOwnershipCommitted], which has no fail-open `catch`, precisely so
+     * a failed read cannot be recorded as `false`: a `false` here is what
+     * authorises [de.schildbach.wallet.WalletApplication.decideLiveReceiveAddress]
+     * to serve the HELD dashj chain's frozen address, and "we could not read the
+     * state" is not a licence to do that. The GATE's own feed ([cutoverUiActive])
+     * keeps its fail-open `catch` for the pipeline, which must not START on a
+     * state it could not read — the opposite failure direction, which is why the
+     * two feeds are separate collectors over the same key.
+     *
+     * Deliberately NOT [_cutoverActive], which is the pipeline's flag and stays
+     * false until the pipeline has bound.
      */
     @Volatile
     private var observedCutoverOwnership: Boolean? = null
@@ -2497,21 +2513,36 @@ class CutoverUiDataService internal constructor(
      * Resolution order:
      * - the pipeline flag when it is already true (the engine is demonstrably
      *   serving; nothing more authoritative is needed and it costs nothing);
-     * - the ownership [start]'s gate collector last observed;
-     * - a bounded blocking read of the persisted state — for the window before
-     *   that collector's first emission, and for builds where [start] is never
-     *   called at all, where this is the ONLY answer;
+     * - an OBSERVED `true` from [observedCutoverOwnership] — the startup window
+     *   this exists for, where the persisted state says CUT_OVER and the
+     *   pipeline has not published yet;
+     * - otherwise a bounded blocking read of the persisted state;
      * - and FAIL CLOSED (owned) if even that cannot be resolved. Unknown
      *   ownership answered as "dashj" is how the frozen address gets served;
      *   answered as "engine" it costs a retry on a screen.
      *
-     * BLOCKS (a DataStore read) in the unresolved case only — off-main callers
-     * only, which every caller of this already is.
+     * ## Why a REMEMBERED `false` is not an answer
+     *
+     * Only the fail-CLOSED direction may be served from memory. A remembered
+     * `false` is the one answer that authorises the dashj fallback, and it can
+     * be out of date in exactly the way that matters: the service starts on
+     * DUAL_RUNNING, observes `false`, the cutover then COMMITS, and the gate
+     * collector has not been resumed yet. Short-circuiting on that `false`
+     * returns "dashj owns the chain" for a wallet whose key chain the engine has
+     * already taken over — a cold-cache receive read then falls through to the
+     * held dashj chain's frozen address, which is SR-03 itself. So the
+     * dashj-authorising answer always comes from the persisted state, and the
+     * memory is only allowed to skip work in the direction that cannot cause it.
+     * The read it costs is a DataStore hit served from memory after the first
+     * one, on a path that is already blocking in the FFI.
+     *
+     * BLOCKS (a DataStore read) unless the engine's ownership is already
+     * established — off-main callers only, which every caller of this already is.
      */
     @JvmOverloads
     fun cutoverOwnershipCommittedBlocking(timeoutMs: Long = OWNERSHIP_WAIT_MS): Boolean {
         if (_cutoverActive.value) return true
-        observedCutoverOwnership?.let { return it }
+        if (observedCutoverOwnership == true) return true
         return try {
             val resolved = runBlocking {
                 withTimeoutOrNull(timeoutMs) { cutoverOwnershipCommitted().first() }
@@ -3115,14 +3146,28 @@ class CutoverUiDataService internal constructor(
             cutoverUiActive()
                 .distinctUntilChanged()
                 .collect { active ->
-                    // The gate is the ONLY writer of committed ownership: it is
-                    // the persisted state, and the receive refusal keys off it
-                    // precisely because the pipeline flag lags it on startup.
-                    observedCutoverOwnership = active
                     if (!active) {
                         revokeReceiveOwnership()
                     }
                 }
+        }
+        // The ownership FEED, deliberately a separate collector over the same
+        // key. It reads [cutoverOwnershipCommitted] — the gate's flow WITHOUT the
+        // fail-open `catch` — because the two consumers need opposite failure
+        // directions, and sharing one feed gave the receive refusal the gate's:
+        // a state that could not be read arrived here as `false`, i.e. "dashj
+        // owns the key chain", which is the one answer that authorises serving
+        // the held dashj chain's frozen address. An unreadable state is recorded
+        // as UNKNOWN instead, and [cutoverOwnershipCommittedBlocking] then
+        // resolves it authoritatively (and fails closed if it cannot).
+        scope.launch {
+            cutoverOwnershipCommitted()
+                .catch { e ->
+                    if (e is CancellationException) throw e
+                    log.warn("the cutover state feed failed; ownership is UNKNOWN, not dashj", e)
+                    observedCutoverOwnership = null
+                }
+                .collect { owned -> observedCutoverOwnership = owned }
         }
         scope.launch {
             // [stopGeneration] re-runs the block after a wipe stop even when the

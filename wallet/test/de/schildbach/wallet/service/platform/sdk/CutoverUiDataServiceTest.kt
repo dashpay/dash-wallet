@@ -1780,6 +1780,63 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun aCommitRightAfterAPreCutoverObservationIsNotAnsweredFromTheStaleFalse() = runTest {
+        // The remembered ownership may only answer in the FAIL-CLOSED direction.
+        // A remembered `false` is the one answer that authorises
+        // WalletApplication.decideLiveReceiveAddress to serve the HELD dashj
+        // chain's frozen address, and it goes out of date in exactly the window
+        // the service lives in: start on DUAL_RUNNING, observe `false`, the
+        // cutover COMMITS, and the observing collector has not been resumed yet.
+        // Answered from that `false`, a cold-cache receive read falls straight
+        // back onto the already-paid address — SR-03 itself.
+        val state = MutableStateFlow<String?>("DUAL_RUNNING")
+        val service = buildService(FakeSource(), configWithMutableState(state), backgroundScope)
+        service.start()
+        // Let the ownership feed observe — and remember — the pre-cutover state.
+        pumpUntil(200) { false }
+        assertFalse(
+            "precondition: dashj owns the chain before the cutover",
+            service.cutoverOwnershipCommittedBlocking()
+        )
+
+        // The cutover COMMITS. Nothing resumes the collector until this test
+        // pumps the scheduler again, so the observation is now stale — which is
+        // precisely the state a process is in between the commit and the next
+        // dispatch of the collector that watches for it.
+        state.value = "CUT_OVER"
+
+        assertTrue(
+            "a remembered pre-cutover observation must not answer for a state that has committed",
+            service.cutoverOwnershipCommittedBlocking()
+        )
+    }
+
+    @Test
+    fun anUnreadableCutoverStateIsNeverRememberedAsDashjOwnership() = runTest {
+        // The gate and the receive refusal need OPPOSITE failure directions, so
+        // they cannot share one feed. The gate must not START the SDK on a state
+        // it could not read, so its flow catches and emits `false`; when the
+        // ownership memory was fed from THAT flow, an unreadable state was
+        // remembered as "dashj owns the key chain" — the answer that serves the
+        // held chain's frozen address. A failed read is UNKNOWN, and unknown
+        // ownership fails closed.
+        val unreadable: DashPayConfig = mockk {
+            every { observe(DashPayConfig.CUTOVER_STATE) } returns kotlinx.coroutines.flow.flow {
+                throw IllegalStateException("the cutover state could not be read")
+            }
+        }
+        val service = buildService(FakeSource(), unreadable, backgroundScope)
+        service.start()
+        // Let the feed run and fail.
+        pumpUntil(200) { false }
+
+        assertTrue(
+            "an unreadable cutover state must fail closed, not authorise the held dashj chain",
+            service.cutoverOwnershipCommittedBlocking(200L)
+        )
+    }
+
+    @Test
     fun deactivationRevokesTheCacheBeforeItPublishesDisabledOwnership() {
         // ORDER, not just eventual consistency. [sdkReceiveAddressOrNull] serves
         // the cache on the binding generation alone, so between a bare
