@@ -174,7 +174,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (pinRetryController.isLockedForever) {
+        if (pinRetryController.isLockedForever && !walletApplication.isWalletWipeRecoveryRequired) {
             val binding = ActivityOnboardingPermLockBinding.inflate(layoutInflater)
             setContentView(binding.root)
             getStatusBarHeightPx()
@@ -224,8 +224,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
         // screen within the same safe-mode process is not new evidence of
         // anything — it means the user is trying again. Retry the skipped load
         // instead of showing the same dead end.
-        // Not under a wipe marker: no load may run there, so re-entering is
-        // not a reason to try again.
+        // Not under a wipe marker: no load may run there (fullInitialization
+        // refuses too), so re-entering is not a reason to try again.
         if (degraded && walletApplication.isSafeModeLaunch && degradedScreenShownInProcess &&
             !walletApplication.isWalletWipeRecoveryRequired
         ) {
@@ -447,8 +447,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
         // not re-open it on top of the screen the user just came back to.
         val firstShow = !degradedScreenShownInProcess
         degradedScreenShownInProcess = true
-        // An unfinished wipe outranks every other recovery action here: see
-        // degradedScreenActions.
+        // An unfinished or unverified wipe outranks every other recovery
+        // action here: see degradedScreenActions.
         val actions = degradedScreenActions(
             wipeRecoveryRequired = walletApplication.isWalletWipeRecoveryRequired,
             safeMode = walletApplication.isSafeModeLaunch,
@@ -591,7 +591,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         if (walletApplication.isWalletReplacementRefused) {
             // A wipe marker is on disk: renaming the old file or restoring a
             // replacement under it is exactly what must not happen.
-            log.warn("degraded startup: restore-from-seed refused — a wallet reset is unfinished")
+            log.warn("degraded startup: restore-from-seed refused — a wallet reset is unfinished or unverified")
             showDegradedStartupScreen()
             return
         }
