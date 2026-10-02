@@ -689,18 +689,38 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             stopSelf()
             return true
         }
+        // Order matters: this runs on Main.
+        // 1. An instance that never initialized (refused, or its init failed)
+        //    is rejected first. Its latch is complete, but it opened no stores,
+        //    receivers or SDK resume, so a later recovery of the application
+        //    (a safe-mode retry that clears the degradation flags) must not
+        //    make it accept commands.
+        // 2. The degraded check before the wallet read: during a safe-mode
+        //    retry isWalletLoadDegraded answers without waiting, whereas the
+        //    wallet getter waits on Main for the retry's whole parse and check
+        //    (DeferredWalletLoad) and could freeze the recovery screen into an
+        //    ANR.
         // isRecoveryResetPending is also true for a marker that cannot be
         // inspected: no command runs until it is confirmed absent.
-        if (application.wallet == null || application.isWalletLoadDegraded || application.isRecoveryResetPending) {
+        if (!initCompleted ||
+            application.isWalletLoadDegraded ||
+            application.wallet == null ||
+            application.isRecoveryResetPending
+        ) {
             stopSelf()
             return true
         }
         return false
     }
 
-    /** Refused initialization can leave no wallet, even without a degraded-state flag. */
+    /**
+     * Refused initialization can leave no wallet, even without a degraded-state flag.
+     * The degraded check comes before the wallet read for the same reason as in
+     * [handleWalletLifecycleCommand]: it answers without waiting during a
+     * safe-mode retry, while the wallet getter would wait for that retry's parse.
+     */
     internal fun saveWalletOnShutdown() {
-        if (!deleteWalletFileOnShutdown && application.wallet != null && !application.isWalletLoadDegraded) {
+        if (!deleteWalletFileOnShutdown && !application.isWalletLoadDegraded && application.wallet != null) {
             propagateContext()
             application.saveWallet()
         }

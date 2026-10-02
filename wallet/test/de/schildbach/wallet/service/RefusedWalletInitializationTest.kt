@@ -74,6 +74,7 @@ class RefusedWalletInitializationTest {
         val service = spyk(BlockchainServiceImpl())
         val application = mockk<WalletApplication>(relaxed = true)
         service.application = application
+        markInitialized(service)
         every { service.stopSelf() } answers { }
         try {
             every { application.wallet } returns null
@@ -280,6 +281,7 @@ class RefusedWalletInitializationTest {
         every { application.wallet } returns mockk()
         every { application.isWalletLoadDegraded } returns false
         every { service.stopSelf() } answers { }
+        markInitialized(service)
         val onDisk = de.schildbach.wallet.util.RecoveryResetState.inspect
         de.schildbach.wallet.util.RecoveryResetState.inspect = {
             de.schildbach.wallet.util.RecoveryResetState.Marker.UNKNOWN
@@ -311,6 +313,7 @@ class RefusedWalletInitializationTest {
         every { application.isWalletLoadDegraded } returns false
         every { application.isRecoveryResetPending } returns true
         every { service.stopSelf() } answers { }
+        markInitialized(service)
         try {
             assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
             assertTrue(service.handleWalletLifecycleCommand(null))
@@ -320,5 +323,74 @@ class RefusedWalletInitializationTest {
             ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
             ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
         }
+    }
+    /**
+     * Review, 2026-10-02: onStartCommand runs this check on Main once the latch
+     * is released, and a refusal releases it without initializing. A safe-mode
+     * retry started meanwhile must not make the refused instance read the
+     * wallet (the getter waits on Main for the retry's whole parse) nor, once
+     * the retry has cleared the degradation, accept commands it never
+     * initialized for.
+     */
+    @Test
+    fun `a refused instance stops without entering the wallet getter while a safe-mode retry loads`() =
+        runBlocking {
+            val service = spyk(BlockchainServiceImpl())
+            val application = mockk<WalletApplication>(relaxed = true)
+            service.application = application
+            val latch = ReflectionHelpers.getField<CompletableDeferred<Unit>>(service, "onCreateCompleted")
+            // The paused retry: degraded answers at once (as WalletApplication
+            // does while safeModeRetryInProgress), the getter would block Main.
+            var retryLoading = true
+            val wallet = mockk<org.bitcoinj.wallet.Wallet>()
+            every { application.isWalletLoadDegraded } answers { retryLoading }
+            every { application.isRecoveryResetPending } returns false
+            every { application.wallet } answers {
+                if (retryLoading) error("entered the wallet getter during the safe-mode retry")
+                wallet
+            }
+            every { service.stopSelf() } answers { }
+            try {
+                service.refuseWalletInitialization()
+                withTimeout(1_000) { latch.await() }
+
+                // The queued command reaches the check while the retry is paused.
+                assertTrue(service.handleWalletLifecycleCommand(null))
+                // The retry succeeds and clears the application's degradation:
+                // this instance still never initialized, so it still stops.
+                retryLoading = false
+                assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
+                verify(exactly = 2) { service.stopSelf() }
+                verify(exactly = 0) { application.wallet }
+                // A wipe on the refused instance is still recorded and stops.
+                assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_WIPE_WALLET))
+                assertTrue(ReflectionHelpers.getField<Boolean>(service, "deleteWalletFileOnShutdown"))
+                verify(exactly = 3) { service.stopSelf() }
+            } finally {
+                ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
+                ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
+            }
+        }
+
+    @Test
+    fun `shutdown save checks the degraded state before reading the wallet`() {
+        val service = spyk(BlockchainServiceImpl())
+        val application = mockk<WalletApplication>(relaxed = true)
+        service.application = application
+        every { application.isWalletLoadDegraded } returns true
+        every { application.wallet } answers { error("entered the wallet getter during the safe-mode retry") }
+        try {
+            service.saveWalletOnShutdown()
+            verify(exactly = 0) { application.wallet }
+            verify(exactly = 0) { application.saveWallet() }
+        } finally {
+            ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
+            ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
+        }
+    }
+
+    /** What onCreate's init coroutine sets when it runs to its end with a wallet. */
+    private fun markInitialized(service: BlockchainServiceImpl) {
+        ReflectionHelpers.setField(service, "initCompleted", true)
     }
 }
