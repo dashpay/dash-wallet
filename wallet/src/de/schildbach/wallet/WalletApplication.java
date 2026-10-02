@@ -1838,7 +1838,8 @@ public class WalletApplication extends MultiDexApplication
      * Restore the transaction-stripped KEY backup ({@code key-backup-protobuf})
      * — the deliberate recovery for an unusable primary wallet file. Returns
      * {@code null} (and latches {@link #walletRecoveryFromSeedNeeded}) when the
-     * backup itself is missing, unreadable or inconsistent: this method must
+     * backup itself is missing, unreadable, inconsistent or of another
+     * network, before anything is persisted: this method must
      * NEVER throw out of {@code Application.onCreate} — the old
      * {@code Error("cannot read backup")} was itself a guaranteed crash loop.
      * The caller degrades into the safe-mode/report path instead.
@@ -1850,6 +1851,17 @@ public class WalletApplication extends MultiDexApplication
         try {
             is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
             final Wallet wallet = new WalletProtobufSerializer().readWallet(is, true, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
+
+            // Before anything is persisted: a recovery arms the reset marker
+            // and overwrites the primary, and loadAndCheckWallet()'s own
+            // network check only runs after this returns. A backup of another
+            // network cannot recover this wallet, so it is unusable like an
+            // unreadable one: seed recovery, primary and markers untouched.
+            // (Not loadAndCheckWallet()'s Error: this must never throw out of
+            // Application.onCreate.)
+            if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
+                throw new UnreadableWalletException("backup is for network " + wallet.getParams().getId()
+                        + ", expected " + Constants.NETWORK_PARAMETERS.getId());
 
             if (!isWalletConsistent(wallet))
                 throw new UnreadableWalletException("inconsistent backup");

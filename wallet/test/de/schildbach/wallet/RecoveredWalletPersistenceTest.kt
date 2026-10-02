@@ -712,4 +712,46 @@ class RecoveredWalletPersistenceTest {
         assertFalse(wipeApp.isWalletWipeRecoveryRequired)
         Unit
     }
+
+    @Test
+    fun `a backup of another network leaves the primary and recovery state untouched`() {
+        // A self-consistent backup written with another network's parameters.
+        val otherNetwork = org.bitcoinj.params.MainNetParams.get()
+        assertNotEquals(Constants.NETWORK_PARAMETERS, otherNetwork)
+        val otherContext = Context(otherNetwork)
+        Wallet(otherContext).apply {
+            freshReceiveKey()
+            saveToFile(backup)
+        }
+        val originalPrimary = "UNREADABLE-PRIMARY".toByteArray()
+        primary.writeBytes(originalPrimary)
+        val recoveryMarker = File(directory.root, RecoveryResetState.MARKER_FILE_NAME)
+        setField("walletFactory", mockk<WalletFactory> {
+            every { getExtensions(any()) } returns emptyArray()
+        })
+        val recoveryApp = spyk(app)
+        every { recoveryApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } answers { backup.inputStream() }
+        every { recoveryApp.persistRecoveredWallet(any()) } answers { fail("must not persist another network's wallet") }
+
+        // dashj's reader only rejects another network when the thread's
+        // Context disagrees; a thread whose Context matches the backup (or a
+        // reader that creates one implicitly) parses it, so the network check
+        // must be the app's own.
+        Context.propagate(otherContext)
+        val restored = try {
+            WalletApplication::class.java.getDeclaredMethod("restoreWalletFromBackup").run {
+                isAccessible = true
+                invoke(recoveryApp) as Wallet?
+            }
+        } finally {
+            Context.propagate(Constants.CONTEXT)
+        }
+
+        assertNull(restored)
+        assertArrayEquals(originalPrimary, primary.readBytes())
+        assertFalse(recoveryMarker.exists())
+        assertFalse(ReflectionHelpers.getField<Boolean>(recoveryApp, "recoveredWalletPersistencePending"))
+        assertTrue("an unusable backup latches seed recovery", recoveryApp.isWalletRecoveryFromSeedNeeded)
+        verify(exactly = 0) { recoveryApp.persistRecoveredWallet(any()) }
+    }
 }
