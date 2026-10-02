@@ -22,6 +22,7 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNull
@@ -101,7 +102,17 @@ class SdkBindRetryServiceTest {
         val established = kotlinx.coroutines.flow.MutableStateFlow(false)
         var appInBackground = false
         val notices = mutableListOf<SdkBindBlocker>()
+        /** The `routine` flag of each posted notice, parallel to [notices]. */
+        val routineFlags = mutableListOf<Boolean>()
+        var everSucceeded = false
+        var blockedSince: Long? = null
+        /** When set, reading the blocked-since time throws it, from read number [blockedSinceThrowFromRead] on. */
+        var blockedSinceThrows: Throwable? = null
+        var blockedSinceThrowFromRead = 1
+        var blockedSinceReads = 0
         var noticeClears = 0
+        /** The system's notification state: outlives a [service] instance, as it outlives the process. */
+        var onScreen: PendingNotice? = null
         val persisted = mutableListOf<SdkBindBlocker?>()
         /** When set, [persistBlocker] parks on it — holds the outcome mutex open at a known point. */
         var persistGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
@@ -123,9 +134,21 @@ class SdkBindRetryServiceTest {
             bindFailures = failures,
             bindEstablished = established,
             persistBlocker = { persistGate?.await(); persisted += it },
-            showPendingNotice = { notices += it },
-            clearPendingNotice = { noticeClears++ },
-            appInBackground = { appInBackground }
+            showPendingNotice = { blocker, routine ->
+                notices += blocker
+                routineFlags += routine
+                onScreen = if (routine) PendingNotice.SYNC_REMINDER else PendingNotice.SETUP
+            },
+            clearPendingNotice = { noticeClears++; onScreen = null },
+            noticeOnScreen = { onScreen },
+            appInBackground = { appInBackground },
+            bindEverSucceeded = { everSucceeded },
+            blockedSinceMs = {
+                blockedSinceReads++
+                blockedSinceThrows?.takeIf { blockedSinceReads >= blockedSinceThrowFromRead }?.let { throw it }
+                blockedSince
+            },
+            setBlockedSinceMs = { blockedSince = it }
         )
 
         /** Publish one failed pass the way the binder does. */
@@ -541,6 +564,298 @@ class SdkBindRetryServiceTest {
         assertEquals("armed on the failure itself, no poll needed", 1, h.registrations)
         assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
         assertEquals(listOf<SdkBindBlocker?>(SdkBindBlocker.DEVICE_LOCKED), h.persisted)
+    }
+
+    // ── Upgrade vs routine: when the notice is posted (2026-09-30) ──
+
+    @Test
+    fun pendingNoticeFor_table() {
+        val hour = ROUTINE_NOTICE_AFTER_MS
+        // The actual upgrade (no bind has ever succeeded): today's notice, at once.
+        assertEquals(PendingNotice.SETUP, pendingNoticeFor(SdkBindBlocker.DEVICE_LOCKED, false, 0))
+        // Blockers that need the user: at once, whatever the history.
+        assertEquals(PendingNotice.SETUP, pendingNoticeFor(SdkBindBlocker.KEYSTORE_PROBLEM, true, 0))
+        assertEquals(PendingNotice.SETUP, pendingNoticeFor(SdkBindBlocker.SETUP_FAILED, true, 0))
+        // A routine locked start: nothing until the wallet has been unable to bind for a while…
+        assertNull(pendingNoticeFor(SdkBindBlocker.DEVICE_LOCKED, true, hour - 1))
+        assertNull(pendingNoticeFor(SdkBindBlocker.KEYSTORE_DENIED_UNLOCKED, true, 0))
+        // …then the sync reminder.
+        assertEquals(PendingNotice.SYNC_REMINDER, pendingNoticeFor(SdkBindBlocker.DEVICE_LOCKED, true, hour))
+        assertEquals(PendingNotice.SYNC_REMINDER, pendingNoticeFor(SdkBindBlocker.OTHER, true, 3 * hour))
+    }
+
+    /** The field report: a Samsung that set up long ago, locked, synced by the periodic alarm. */
+    @Test
+    fun routineLockedStart_postsNothing_andStartsTheBlockedClock() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        val service = h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        assertTrue("no 'finish the wallet update' on a routine start", h.notices.isEmpty())
+        assertEquals("the clock starts at the first blocked pass", h.nowMs, h.blockedSince)
+    }
+
+    /** Review (PR 1590): a cancelled read must not fall through and post during teardown. */
+    @Test
+    fun cancelledBlockedSinceRead_postsNothing() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = false // first setup: any fallthrough would post the setup notice at once
+        h.blockedSince = 1_000L // the clock is already running, so the first-pass stamp only reads
+        h.blockedSinceThrows = kotlinx.coroutines.CancellationException("service stopping")
+        h.blockedSinceThrowFromRead = 2 // the stamp's read succeeds; the notice's read is cancelled
+        h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertEquals("both reads ran", 2, h.blockedSinceReads)
+        assertTrue("cancellation is not read as 'unknown, use now'", h.notices.isEmpty())
+    }
+
+    @Test
+    fun failedBlockedSinceRead_countsFromNow_soNoReminderYet() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS
+        h.blockedSinceThrows = IllegalStateException("store unreadable")
+        h.blockedSinceThrowFromRead = 2
+        h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertTrue("an unreadable time restarts the hour, it does not post", h.notices.isEmpty())
+    }
+
+    @Test
+    fun routineBind_blockedForAnHour_postsTheSyncReminderOnce() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L // an earlier process found it blocked…
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS // …an hour ago
+        val service = h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
+        assertEquals("the dismissible sync reminder, not the setup notice", listOf(true), h.routineFlags)
+        assertEquals("measured from the FIRST blocked pass, not reset", 1_000L, h.blockedSince)
+
+        // A later retry of the same episode does not re-post a dismissed reminder.
+        h.fail(lockedDenial())
+        runCurrent()
+        service.noteAppBackground()
+        runCurrent()
+        assertEquals(1, h.notices.size)
+    }
+
+    /**
+     * Review on #1590 (thepastaclaw, CodeRabbit): on a wallet that has bound
+     * before, five non-keystore failures post the ongoing setup-failure notice;
+     * the phone then locks and the next pass is a DEVICE_LOCKED deferral inside
+     * the hour, for which the policy selects no notice. The setup notice used
+     * to stay up, ongoing, with no success or foreground edge in this
+     * background-only sequence to clear it.
+     */
+    @Test
+    fun setupNotice_isCleared_whenTheBlockerTurnsRoutineInsideTheHour() = runTest {
+        val h = Harness(deviceLocked = false)
+        h.appInBackground = true
+        h.everSucceeded = true
+        val service = h.service(backgroundScope)
+
+        repeat(5) { h.fail(IllegalStateException("Room: database is locked")); runCurrent() }
+        assertEquals(SdkBindBlocker.SETUP_FAILED, service.blocker.value)
+        assertEquals("the setup-failure notice, at once", listOf(SdkBindBlocker.SETUP_FAILED), h.notices)
+        assertEquals(listOf(false), h.routineFlags)
+        assertEquals(0, h.noticeClears)
+
+        h.deviceLocked = true
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        assertTrue("still inside the hour", h.nowMs - checkNotNull(h.blockedSince) < ROUTINE_NOTICE_AFTER_MS)
+        assertEquals("the obsolete ongoing setup notice is cleared", 1, h.noticeClears)
+        assertEquals("…and nothing is posted in its place", 1, h.notices.size)
+
+        // With nothing on screen, further routine passes neither post nor clear.
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals(1, h.noticeClears)
+        assertEquals(1, h.notices.size)
+    }
+
+    /**
+     * Review on #1590, the second gap: once the reminder had been posted,
+     * `syncReminderPosted` blocked every later reminder, so a setup notice
+     * posted for a user-action blocker in between could never be replaced by
+     * the reminder when the blocker turned routine again, and the obsolete
+     * ongoing notice survived on the shared notification id.
+     */
+    @Test
+    fun setupNotice_isReplacedByTheReminder_evenAfterAReminderWasPostedThisEpisode() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS // past the hour
+        val service = h.service(backgroundScope)
+
+        replayReminderThenSetupThenRoutine(h)
+
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
+        assertEquals(
+            listOf(SdkBindBlocker.DEVICE_LOCKED, SdkBindBlocker.KEYSTORE_PROBLEM, SdkBindBlocker.DEVICE_LOCKED),
+            h.notices
+        )
+        assertEquals("reminder, setup, then the reminder over the setup notice", listOf(true, false, true), h.routineFlags)
+    }
+
+    /**
+     * The replacement above is a single post: once the reminder is back on
+     * screen, more routine failures and a background edge leave it alone, and
+     * a selection of no notice does not clear it either (it is dismissible,
+     * and the wallet is still waiting).
+     */
+    @Test
+    fun aReminderThatReplacedTheSetupNotice_isNotRepostedOrCleared() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS
+        val service = h.service(backgroundScope)
+        replayReminderThenSetupThenRoutine(h)
+        assertEquals(listOf(true, false, true), h.routineFlags)
+
+        repeat(3) { h.fail(lockedDenial()); runCurrent() }
+        service.noteAppBackground()
+        runCurrent()
+        assertEquals("an unchanged reminder is not re-posted", listOf(true, false, true), h.routineFlags)
+
+        // An unreadable blocked-since time counts from now: no notice is due.
+        h.blockedSinceThrows = IllegalStateException("store unreadable")
+        h.blockedSinceThrowFromRead = h.blockedSinceReads + 1
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals("a reminder is never cleared by a selection of none", 0, h.noticeClears)
+        assertEquals(3, h.notices.size)
+    }
+
+    /**
+     * Review on #1590 (thepastaclaw), across a process restart: an earlier
+     * process (or a version before #1590) posted the ongoing setup notice and
+     * died. The new process starts with nothing recorded, and a routine locked
+     * start inside the hour selects no notice, so the old "finish the wallet
+     * update" notice used to stay on screen.
+     */
+    @Test
+    fun aSetupNoticeLeftByAnEarlierProcess_isCleared_onARoutineStartInsideTheHour() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS / 2 // inside the hour
+        h.onScreen = PendingNotice.SETUP // posted by the process that died
+        h.service(backgroundScope) // the new process
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertTrue("nothing is posted", h.notices.isEmpty())
+        assertEquals("the leftover setup notice is cleared", 1, h.noticeClears)
+        assertNull(h.onScreen)
+    }
+
+    /** The same restart with the dismissible reminder on screen: it is still valid, so it stays. */
+    @Test
+    fun aReminderLeftByAnEarlierProcess_isLeftAlone_onARoutineStartInsideTheHour() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        // Inside the hour as this process reads it: an unreadable blocked-since
+        // time counts from now, though the earlier process had posted the reminder.
+        h.blockedSinceThrows = IllegalStateException("store unreadable")
+        h.blockedSinceThrowFromRead = 2
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS
+        h.onScreen = PendingNotice.SYNC_REMINDER
+        h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+
+        assertTrue("nothing is posted", h.notices.isEmpty())
+        assertEquals("the reminder is not cleared", 0, h.noticeClears)
+        assertEquals(PendingNotice.SYNC_REMINDER, h.onScreen)
+    }
+
+    /**
+     * Reminder (routine, past the hour) → three unlocked keystore denials,
+     * escalating to KEYSTORE_PROBLEM and its setup notice → a locked deferral.
+     */
+    private fun TestScope.replayReminderThenSetupThenRoutine(h: Harness) {
+        h.deviceLocked = true
+        h.fail(lockedDenial()); runCurrent()
+        assertEquals("the reminder is posted", listOf(true), h.routineFlags)
+
+        h.deviceLocked = false
+        repeat(3) { h.fail(unlockedDenial()); runCurrent() }
+        assertEquals("KEYSTORE_PROBLEM needs the user: the setup notice", listOf(true, false), h.routineFlags)
+
+        h.deviceLocked = true
+        h.fail(lockedDenial()); runCurrent()
+    }
+
+    @Test
+    fun theActualUpgrade_stillPostsTheSetupNoticeAtOnce() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = false
+        h.service(backgroundScope)
+
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals(listOf(SdkBindBlocker.DEVICE_LOCKED), h.notices)
+        assertEquals(listOf(false), h.routineFlags)
+    }
+
+    @Test
+    fun aSuccessfulBind_clearsTheBlockedClock_andReArmsTheReminder() = runTest {
+        val h = Harness(deviceLocked = true)
+        h.appInBackground = true
+        h.everSucceeded = true
+        h.blockedSince = 1_000L
+        h.nowMs = 1_000L + ROUTINE_NOTICE_AFTER_MS
+        val service = h.service(backgroundScope)
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals(1, h.notices.size)
+
+        h.succeed()
+        runCurrent()
+        assertNull("bound: nothing is blocked any more", h.blockedSince)
+
+        // A new blocked episode an hour later earns its own reminder.
+        h.nowMs += 1
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals("a fresh episode starts a fresh clock: no reminder yet", 1, h.notices.size)
+        h.nowMs += ROUTINE_NOTICE_AFTER_MS
+        h.fail(lockedDenial())
+        runCurrent()
+        assertEquals(2, h.notices.size)
+        assertEquals(SdkBindBlocker.DEVICE_LOCKED, service.blocker.value)
     }
 
     @Test
