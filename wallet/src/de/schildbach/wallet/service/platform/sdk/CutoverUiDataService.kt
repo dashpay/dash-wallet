@@ -62,6 +62,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -2448,6 +2449,63 @@ class CutoverUiDataService internal constructor(
     /** Synchronous [cutoverActive] read for non-reactive call sites. */
     fun isCutoverActive(): Boolean = _cutoverActive.value
 
+    /**
+     * The ownership the GATE last published ([cutoverUiActive], i.e. the
+     * persisted [DashPayConfig.CUTOVER_STATE]), or null before its first
+     * emission has landed. Deliberately NOT [_cutoverActive], which is the
+     * pipeline's flag and stays false until the pipeline has bound.
+     */
+    @Volatile
+    private var observedCutoverOwnership: Boolean? = null
+
+    /**
+     * Whether the cutover is COMMITTED — whether the ENGINE, not dashj, owns the
+     * key chain — answered from authoritative state rather than from the
+     * pipeline flag.
+     *
+     * [isCutoverActive] cannot answer this, and using it for the post-cutover
+     * receive refusal was the SR-03 defect in another costume: on startup with a
+     * persisted CUT_OVER the flag is false until the gated collector has bound
+     * and published, so a receive or integration request landing in that window
+     * got null from the SDK, passed the refusal, and fell through to the HELD
+     * dashj wallet's frozen — already-paid — address.
+     *
+     * Resolution order:
+     * - the pipeline flag when it is already true (the engine is demonstrably
+     *   serving; nothing more authoritative is needed and it costs nothing);
+     * - the ownership [start]'s gate collector last observed;
+     * - a bounded blocking read of the persisted state — for the window before
+     *   that collector's first emission, and for builds where [start] is never
+     *   called at all, where this is the ONLY answer;
+     * - and FAIL CLOSED (owned) if even that cannot be resolved. Unknown
+     *   ownership answered as "dashj" is how the frozen address gets served;
+     *   answered as "engine" it costs a retry on a screen.
+     *
+     * BLOCKS (a DataStore read) in the unresolved case only — off-main callers
+     * only, which every caller of this already is.
+     */
+    @JvmOverloads
+    fun cutoverOwnershipCommittedBlocking(timeoutMs: Long = OWNERSHIP_WAIT_MS): Boolean {
+        if (_cutoverActive.value) return true
+        observedCutoverOwnership?.let { return it }
+        return try {
+            val resolved = runBlocking {
+                withTimeoutOrNull(timeoutMs) { cutoverOwnershipCommitted().first() }
+            }
+            if (resolved == null) {
+                log.warn("cutover ownership unresolved after {}ms; failing closed", timeoutMs)
+                true
+            } else {
+                resolved
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("the persisted cutover state could not be read; failing closed", t)
+            true
+        }
+    }
+
+
     private val _sdkSpendableUtxoCount = MutableStateFlow<Int?>(null)
 
     /**
@@ -2557,11 +2615,21 @@ class CutoverUiDataService internal constructor(
         timeoutMs: Long = BINDING_WAIT_MS
     ): Triple<Long, Long, String>? {
         val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+        // Resolved ONCE per call (the blocking read below is a DataStore hit, not
+        // something to repeat every poll); a rollback during the wait is not
+        // missed, because it bumps the generation and the read is rejected on the
+        // way out — it only costs the remainder of the wait.
+        var cutoverOwned: Boolean? = null
         while (true) {
             beginReceiveRead()?.let { return it }
-            // Not bound. Only worth waiting while the cutover is actually active;
+            // Not bound. Only worth waiting while the ENGINE owns the key chain;
             // otherwise dashj is the rightful owner and the caller should use it.
-            if (!_cutoverActive.value) return null
+            // Asked of the COMMITTED ownership rather than [_cutoverActive]: on
+            // startup with a persisted CUT_OVER the pipeline flag is still false,
+            // and giving up there is exactly the window that drops the caller
+            // onto the held dashj chain's frozen address.
+            val owned = cutoverOwned ?: cutoverOwnershipCommittedBlocking().also { cutoverOwned = it }
+            if (!owned) return null
             if (System.nanoTime() >= deadline) {
                 log.warn("no SDK wallet bound after {}ms; the caller must fail closed", timeoutMs)
                 return null
@@ -2914,12 +2982,25 @@ class CutoverUiDataService internal constructor(
      * on any read error.
      */
     internal fun cutoverUiActive(): Flow<Boolean> =
-        dashPayConfig.observe(DashPayConfig.CUTOVER_STATE)
-            .map { stored -> !dashjEngineMayStart(CutoverState.fromStored(stored)) }
+        cutoverOwnershipCommitted()
             .catch { e ->
                 log.warn("failed to read the cutover state; UI stays on dashj", e)
                 emit(false)
             }
+
+    /**
+     * [cutoverUiActive] WITHOUT the fail-open catch.
+     *
+     * The two consumers need opposite failure directions. The pipeline GATE must
+     * not start the SDK on a state it could not read, so it treats an error as
+     * "dashj". The receive refusal ([cutoverOwnershipCommittedBlocking]) must not
+     * report "dashj owns the chain" on a state it could not read, because that
+     * answer serves the held chain's frozen address. So the error reaches that
+     * caller, which fails closed on it.
+     */
+    private fun cutoverOwnershipCommitted(): Flow<Boolean> =
+        dashPayConfig.observe(DashPayConfig.CUTOVER_STATE)
+            .map { stored -> !dashjEngineMayStart(CutoverState.fromStored(stored)) }
 
     /**
      * Idempotent once-per-process start (call site:
@@ -2953,6 +3034,10 @@ class CutoverUiDataService internal constructor(
             cutoverUiActive()
                 .distinctUntilChanged()
                 .collect { active ->
+                    // The gate is the ONLY writer of committed ownership: it is
+                    // the persisted state, and the receive refusal keys off it
+                    // precisely because the pipeline flag lags it on startup.
+                    observedCutoverOwnership = active
                     if (!active) {
                         _cutoverActive.value = false
                         unbindReceiveAddressWallet()
@@ -4357,6 +4442,15 @@ class CutoverUiDataService internal constructor(
 
         /** Poll granularity for [BINDING_WAIT_MS]. */
         internal const val BINDING_POLL_MS = 50L
+
+        /**
+         * How long [cutoverOwnershipCommittedBlocking] waits on the persisted
+         * cutover state before failing closed. Only ever paid before the gate
+         * collector's first emission, against a DataStore read that is served
+         * from memory after the first one — generous enough that a slow cold
+         * read resolves rather than guesses.
+         */
+        internal const val OWNERSHIP_WAIT_MS = 2_000L
 
         internal const val REFRESH_INTERVAL_MS = 60_000L
 

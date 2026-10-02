@@ -1737,6 +1737,41 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun committedOwnershipComesFromThePersistedStateNotThePipelineFlag() = runTest {
+        // THE startup window. The wallet persisted CUT_OVER, so the engine owns
+        // the key chain — but the SDK pipeline has not started, let alone bound,
+        // so [isCutoverActive] is still false. A receive or integration request
+        // landing here got null from the SDK, passed a refusal keyed on that flag
+        // and fell through to the HELD dashj wallet's frozen, already-paid
+        // address: SR-03 itself, with the fail-closed change in place.
+        val service = buildService(
+            FakeSource(balanceDuffs = MutableStateFlow(123_456L)),
+            configWithState("CUT_OVER"),
+            backgroundScope
+        )
+        // start() deliberately NOT called: this is the state before it runs.
+
+        assertFalse(
+            "precondition: the pipeline flag has not been published yet",
+            service.isCutoverActive()
+        )
+        assertTrue(
+            "ownership must be answered from the persisted state, not the pipeline flag",
+            service.cutoverOwnershipCommittedBlocking()
+        )
+    }
+
+    @Test
+    fun preCutover_committedOwnershipIsFalseSoDashjStillAnswers() = runTest {
+        // The other direction, and the reason this cannot simply fail closed
+        // always: pre-cutover dashj owns the chain, and a refusal there would
+        // break every Receive screen on a wallet that never cut over.
+        val service = buildService(FakeSource(), configWithState("DUAL_RUNNING"), backgroundScope)
+
+        assertFalse(service.cutoverOwnershipCommittedBlocking())
+    }
+
+    @Test
     fun rollback_clearsTheReceiveAddressOverlayAndTheBoundWallet() = runTest {
         // A rollback (CUT_OVER → DUAL_RUNNING) hands the key chain back to
         // dashj, whose pointer is live again. If the overlay kept serving, the

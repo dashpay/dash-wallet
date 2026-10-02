@@ -2444,25 +2444,63 @@ public class WalletApplication extends MultiDexApplication
     @NotNull
     @Override
     public Address currentReceiveAddressLive() {
-        final Address live = liveSdkReceiveAddressOrNull();
-        if (live != null) {
-            return live;
-        }
-        requireNoEngineAddressExpected("current");
-        return currentReceiveAddress();
+        // Ownership is consulted AFTER the SDK read (and only if it came back
+        // empty), so a cutover committing during the read is honoured rather
+        // than raced, and the happy path never pays for it.
+        return decideLiveReceiveAddress(
+                liveSdkReceiveAddressOrNull(), this::cutoverOwnershipCommitted, "current",
+                this::currentReceiveAddress);
     }
 
     /**
-     * Throw if the cutover is active, i.e. if an engine answer was required and
-     * did not arrive. Checked AFTER the SDK read so a cutover committing during
-     * the read is honoured rather than raced.
+     * Whether the cutover is COMMITTED, i.e. whether the ENGINE owns the key
+     * chain — the question the refusal below has to ask.
+     *
+     * <p>NOT {@code isCutoverActive()}. That is the SDK pipeline's own flag, and
+     * on startup with a persisted CUT_OVER state it is false until the pipeline
+     * has bound and published. A receive or integration request landing in that
+     * window got null from the SDK, sailed through a refusal keyed on the flag,
+     * and fell through to the HELD dashj wallet's frozen — already-paid —
+     * address: SR-03 itself, with the fail-closed change in place. See
+     * {@code CutoverUiDataService.cutoverOwnershipCommittedBlocking}, which
+     * answers from the persisted state and fails closed when it cannot.
+     *
+     * <p>BLOCKS (a DataStore read) in the window before that state has been
+     * observed; every caller is already contracted off-main.
      */
-    private void requireNoEngineAddressExpected(final String which) {
-        if (cutoverUiDataService != null && cutoverUiDataService.isCutoverActive()) {
+    private boolean cutoverOwnershipCommitted() {
+        return cutoverUiDataService != null && cutoverUiDataService.cutoverOwnershipCommittedBlocking();
+    }
+
+    /**
+     * The live-receive decision behind {@link #currentReceiveAddressLive()} and
+     * {@link #freshReceiveAddressLive()}, extracted so the rule is unit-testable
+     * without the Hilt graph this Application needs.
+     *
+     * <p>The invariant is not merely "throws on null" but that the post-cutover
+     * arm NEVER reaches {@code dashjFallback}: both fallbacks ({@link
+     * #currentReceiveAddress()}, {@link #freshReceiveAddress()}) read the HELD
+     * dashj chain, whose pointer is frozen wherever the restore left it.
+     *
+     * @throws ReceiveAddressUnavailableException when the engine owns the chain
+     *     and had no answer.
+     */
+    @VisibleForTesting
+    @NotNull
+    static Address decideLiveReceiveAddress(
+            @Nullable final Address live,
+            @NotNull final java.util.function.BooleanSupplier cutoverOwned,
+            @NotNull final String which,
+            @NotNull final java.util.function.Supplier<Address> dashjFallback) {
+        if (live != null) {
+            return live;
+        }
+        if (cutoverOwned.getAsBoolean()) {
             throw new ReceiveAddressUnavailableException(
                     "no engine " + which + " receive address after cutover; refusing to serve the "
                             + "held dashj chain's frozen address");
         }
+        return dashjFallback.get();
     }
 
     /**
@@ -2477,12 +2515,9 @@ public class WalletApplication extends MultiDexApplication
     @NotNull
     @Override
     public Address freshReceiveAddressLive() {
-        final Address live = liveSdkReceiveAddressOrNull();
-        if (live != null) {
-            return live;
-        }
-        requireNoEngineAddressExpected("fresh");
-        return freshReceiveAddress();
+        return decideLiveReceiveAddress(
+                liveSdkReceiveAddressOrNull(), this::cutoverOwnershipCommitted, "fresh",
+                this::freshReceiveAddress);
     }
 
     /**
