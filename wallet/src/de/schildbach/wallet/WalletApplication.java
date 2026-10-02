@@ -137,6 +137,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.util.ArrayList;
@@ -2512,6 +2514,45 @@ public class WalletApplication extends MultiDexApplication
         // The wiped wallet's owed backup goes with it. Left behind it would
         // only make the replacement's first startup rewrite its own backup.
         BackupReplacementState.INSTANCE.complete(getFilesDir());
+    }
+
+    /**
+     * Wipe phase 4, last step: the wipe is complete only once BOTH persistent
+     * wallet sources are confirmed gone. Either one surviving would bring the
+     * wiped wallet back: a primary loads as the user's wallet, and a key
+     * backup alone makes the next cold launch recover from it and save it as
+     * the primary again. Retries each delete (the earlier ones ignore their
+     * result), then confirms the absence without following links, since
+     * {@code File.exists()} also answers false when it cannot tell.
+     *
+     * @throws IOException when either source may still be on disk. The wipe
+     *   marker then stays, this process stays degraded
+     *   ({@link #recordWalletWipeStopped}), and the next launch re-runs the
+     *   wipe before it ever considers recovering a wallet.
+     */
+    void confirmWalletSourcesDestroyed() throws IOException {
+        final List<File> remaining = new ArrayList<>();
+        for (final File source : new File[] {
+                walletFile, getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) }) {
+            try {
+                //noinspection ResultOfMethodCallIgnored
+                source.delete();
+            } catch (final SecurityException x) {
+                log.warn("could not delete wallet source {} during wipe", source, x);
+            }
+            boolean absent;
+            try {
+                absent = Files.notExists(source.toPath(), LinkOption.NOFOLLOW_LINKS);
+            } catch (final SecurityException x) {
+                absent = false;
+            }
+            if (!absent) {
+                remaining.add(source);
+            }
+        }
+        if (!remaining.isEmpty()) {
+            throw new IOException("wipe could not confirm these wallet files are gone: " + remaining);
+        }
     }
 
     /** The wipe listeners, for the coroutine that awaits them. */
