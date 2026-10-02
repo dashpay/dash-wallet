@@ -135,7 +135,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     }
     private val _uiState = MutableStateFlow(TransactionMetadataSettingsUIState())
     override val uiState: StateFlow<TransactionMetadataSettingsUIState> = _uiState.asStateFlow()
-    private var originalState: TransactionMetadataSettings? = null
+    private var persistedSettings: TransactionMetadataSettings? = null
 
     private var selectedCurrency: String = Constants.USD_CURRENCY
     private val _oldUnsavedTransactions = MutableStateFlow<List<org.dash.wallet.common.transactions.TxInfo>>(listOf())
@@ -143,18 +143,21 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     init {
         // Re-emits on every DashPayConfig write, and a save queued by an
         // earlier visit to this screen can still be writing after the user
-        // has started editing here. Edits are the user's: once the draft is
-        // modified, persisted settings no longer replace it. An unedited draft
-        // that adopts them rebases on them too, or reversing that write back
-        // to the older value would read as unmodified and disable Save.
+        // has started editing here. Edits are always compared against the
+        // latest persisted settings. An unedited draft adopts them; an edited
+        // one is kept, since edits are the user's, but is re-compared, so it
+        // reads as unmodified only once it matches what is now persisted.
         dashPayConfig.observeTransactionMetadataSettings()
             .distinctUntilChanged()
             .onEach { persisted ->
-                if (originalState == null || !_uiState.value.settings.modified) {
-                    originalState = persisted
-                }
+                persistedSettings = persisted
                 _uiState.update { state ->
-                    if (state.settings.modified) state else state.copy(settings = persisted)
+                    val draft = state.settings
+                    if (draft.modified) {
+                        state.copy(settings = draft.copy(modified = !draft.isEqual(persisted)))
+                    } else {
+                        state.copy(settings = persisted)
+                    }
                 }
             }.launchIn(viewModelScope)
 
@@ -239,9 +242,9 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     }
 
     override fun updatePreferences(settings: TransactionMetadataSettings) {
-        val modified = !settings.isEqual(originalState)
+        val modified = !settings.isEqual(persistedSettings)
         _uiState.update { it.copy(settings = settings.copy(modified = modified)) }
-        log.info("modified $modified\n  ${_uiState.value.settings}\n  $originalState")
+        log.info("modified $modified\n  ${_uiState.value.settings}\n  $persistedSettings")
     }
 
     val saveToNetwork = dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK)

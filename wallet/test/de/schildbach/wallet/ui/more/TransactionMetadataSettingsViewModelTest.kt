@@ -274,6 +274,44 @@ class TransactionMetadataSettingsViewModelTest {
     }
 
     @Test
+    fun updatePreferences_comparesAnEditedDraftAgainstALaterPersistedEmission() = runTest(dispatcher) {
+        // Another screen's save of saveToNetwork lands while this screen's
+        // draft has made the same edit. Turning it back off here now differs
+        // from what is persisted, though it matches what this screen loaded.
+        val persisted = MutableStateFlow(TransactionMetadataSettings(saveAfterTimestamp = 1L))
+        every { dashPayConfig.observeTransactionMetadataSettings() } returns persisted
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        val edited = TransactionMetadataSettings(saveAfterTimestamp = 1L, saveToNetwork = true)
+        viewModel.updatePreferences(edited)
+        assertTrue(viewModel.uiState.value.settings.modified)
+
+        persisted.value = TransactionMetadataSettings(saveAfterTimestamp = 1L, saveToNetwork = true)
+        advanceUntilIdle()
+
+        viewModel.updatePreferences(edited.copy(saveToNetwork = false))
+        assertTrue("Save must be enabled", viewModel.uiState.value.settings.modified)
+    }
+
+    @Test
+    fun updatePreferences_editedDraftMatchingALaterPersistedEmissionIsUnmodified() = runTest(dispatcher) {
+        val persisted = MutableStateFlow(TransactionMetadataSettings(saveAfterTimestamp = 1L))
+        every { dashPayConfig.observeTransactionMetadataSettings() } returns persisted
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        val edited = TransactionMetadataSettings(saveAfterTimestamp = 1L, saveToNetwork = true)
+        viewModel.updatePreferences(edited)
+        assertTrue(viewModel.uiState.value.settings.modified)
+
+        persisted.value = TransactionMetadataSettings(saveAfterTimestamp = 1L, saveToNetwork = true)
+        advanceUntilIdle()
+
+        val settings = viewModel.uiState.value.settings
+        assertTrue(settings.saveToNetwork)
+        assertFalse("Nothing left to save", settings.modified)
+    }
+
+    @Test
     fun futureSaveDate_staysUnsetWhenNothingIsStored() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
