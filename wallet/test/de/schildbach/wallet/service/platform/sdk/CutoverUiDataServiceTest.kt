@@ -2733,7 +2733,9 @@ class CutoverUiDataServiceTest {
         val groupDao = mockk<TxGroupCacheDao>(relaxed = true)
         coEvery { groupDao.getGroupsForTxIds(any()) } returns emptyList<TxGroupCacheEntry>()
         val gate = MutableStateFlow<String?>("CUT_OVER")
-        val config = mockk<DashPayConfig> { every { observe(DashPayConfig.CUTOVER_STATE) } returns gate }
+        val config = mockk<DashPayConfig> {
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } returns gate
+        }
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
         val source = FakeSource(records = MutableStateFlow(emptyList()))
         val stopReturned = CountDownLatch(1)
