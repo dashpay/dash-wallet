@@ -21,10 +21,19 @@ import de.schildbach.wallet.WalletApplication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.bitcoinj.wallet.Wallet
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
+import java.util.Collections
+import java.util.concurrent.Executors
 
 /**
  * The support report's wallet acquisition. The recovery screen opens the report
@@ -81,5 +90,49 @@ class ContactSupportViewModelTest {
         }
 
         assertSame(loaded, viewModel(application).wallet)
+    }
+
+    /**
+     * The report's re-read runs on the main thread, where a retry starts, so
+     * no retry can start between the "is a retry running" check and the
+     * wallet read (review, #1594: on IO one could, and the read would then
+     * wait for the whole parse).
+     */
+    private fun onMain(mainThread: Thread) = if (Thread.currentThread() === mainThread) "main" else "off-main"
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun reportSnapshot_readsTheWalletOnTheMainThread() {
+        lateinit var mainThread: Thread
+        val mainExecutor = Executors.newSingleThreadExecutor { Thread(it, "fake-main").also { t -> mainThread = t } }
+        val mainDispatcher = mainExecutor.asCoroutineDispatcher()
+        Dispatchers.setMain(mainDispatcher)
+        try {
+            val readThreads = Collections.synchronizedList(ArrayList<String>())
+            val application = mockk<WalletApplication> {
+                every { isSafeModeRetryInProgress } answers {
+                    readThreads.add("retry:" + onMain(mainThread))
+                    false
+                }
+                every { wallet } answers {
+                    readThreads.add("wallet:" + onMain(mainThread))
+                    null
+                }
+                every { isWalletLoadDegraded } answers {
+                    readThreads.add("degraded:" + onMain(mainThread))
+                    true
+                }
+            }
+            // Created on the main thread, as the dialog does.
+            val viewModel = mainExecutor.submit<ContactSupportViewModel> { viewModel(application) }.get()
+            readThreads.clear()
+
+            runBlocking(Dispatchers.IO) { viewModel.snapshotWallet() }
+
+            assertEquals(listOf("retry:main", "wallet:main", "degraded:main"), readThreads)
+        } finally {
+            Dispatchers.resetMain()
+            mainDispatcher.close()
+        }
     }
 }
