@@ -1890,10 +1890,12 @@ class CutoverUiDataServiceTest {
         )
         check(delayedDeactivation.tryEmit("CUT_OVER"))
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val service = buildService(
             source,
             laggingGateConfig(delayedDeactivation, persisted),
-            backgroundScope
+            backgroundScope,
+            txEvents = events
         )
         service.start()
         assertTrue(
@@ -1910,6 +1912,30 @@ class CutoverUiDataServiceTest {
         assertTrue(
             "...and the binding that activation granted must still serve the engine address",
             service.sdkReceiveAddressOrNull() != null
+        )
+
+        // The activation must survive INTACT, pipeline included — not merely keep
+        // its flag.
+        //
+        // KNOWN LIMITATION, measured not assumed: this test is attached to the
+        // deactivation collector only POSITIONALLY. `laggingGateConfig` routes by
+        // call order and `start()` launches that collector first. Swapping the two
+        // `scope.launch` blocks leaves this test PASSING (verified by doing it) —
+        // because both collectors re-read the state under the fix and both then
+        // decline, so the stale observation reaches a different path and nothing
+        // observable changes. It would therefore stop exercising the scenario
+        // above without going red. The mutation that matters still bites:
+        // deleting the overtaken-observation guard in
+        // `revokeReceiveOwnershipIfStillDashjOwned` fails this test. Addressing
+        // the positional coupling needs the two collectors to be distinguishable
+        // at the config seam, which a mock on one key cannot do.
+        source.nextReceiveAddress = "yENGINEaddressAfterTheStaleFalse"
+        events.emit(
+            L1TxEvent.Detected(displayHex(11), 1_000_000L, null, contextCode = 0, directionCode = 0)
+        )
+        assertTrue(
+            "the pipeline that activation started must still be running and following the engine",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEaddressAfterTheStaleFalse" }
         )
     }
 
