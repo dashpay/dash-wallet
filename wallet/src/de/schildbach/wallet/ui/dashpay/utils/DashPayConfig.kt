@@ -670,8 +670,10 @@ open class DashPayConfig @Inject constructor(
         /**
          * A bind's address-window widening failed, so that session scanned at
          * the Rust default windows and may have stepped past outputs paid
-         * beyond them. The next SUCCESSFUL widening arms the SPV rescan and
-         * only then clears this; on an already-healed wallet nothing else
+         * beyond them. The next SUCCESSFUL widening arms the SPV rescan, and
+         * this clears once that rewind is durable (see [SDK_OWED_RESCAN_ARMED]);
+         * the address-window heal owes its own rewind here too. On an
+         * already-healed wallet nothing else
          * would ever look at those blocks again. Best-effort flag, written by
          * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] step 4c.
          */
@@ -684,10 +686,21 @@ open class DashPayConfig @Inject constructor(
          * [SDK_GAP_WIDEN_RESCAN_OWED]: the scan gate holds the SPV scan until
          * the rewind is armed (at the default windows if widening fails, in
          * which case the widening's own debt is kept for a later, wider
-         * rescan), and only then clears this. Written by
+         * rescan). It is cleared only once the armed rewind is durable
+         * (see [SDK_OWED_RESCAN_ARMED]). Written by
          * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForRecoveryReset].
          */
         val SDK_RECOVERY_RESCAN_OWED = booleanPreferencesKey("sdk_recovery_rescan_owed")
+
+        /**
+         * An owed SPV rewind ([SDK_RECOVERY_RESCAN_OWED], [SDK_GAP_WIDEN_RESCAN_OWED])
+         * that was ARMED but is not yet known to be durable. The SDK arm only
+         * rewinds the in-memory checkpoint, so the debts stay set until the
+         * durable `WalletEntity.syncedHeight` shows the rewind persisted; this
+         * record says what the arm was measured against. Encoded by
+         * [de.schildbach.wallet.service.platform.sdk.ArmedOwedRescan].
+         */
+        val SDK_OWED_RESCAN_ARMED = stringPreferencesKey("sdk_owed_rescan_armed")
 
         /**
          * A provisioning pass ARMED but not yet accounted for: written by
