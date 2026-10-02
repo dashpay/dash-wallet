@@ -2557,14 +2557,28 @@ public class WalletApplication extends MultiDexApplication
         // cutover that commits before it runs is honoured; taking the snapshot
         // first meant a cutover committing just after it would skip the SDK and
         // issue a dashj key that is NOT guaranteed to differ from the engine's
-        // advertised address. This narrows that window to the read itself — a
-        // strict guarantee across arbitrary ownership changes would need
-        // coordination with the transition, which this seam does not have.
-        final Address unadvertised = cutoverUiDataService != null
-                ? toDashjAddressOrNull(cutoverUiDataService.sdkUnadvertisedAddressLiveBlockingOrNull())
-                : null;
-        final boolean cutoverActive =
-                cutoverUiDataService != null && cutoverUiDataService.isCutoverActive();
+        // advertised address.
+        final de.schildbach.wallet.service.platform.sdk.CutoverUiDataService service =
+                cutoverUiDataService;
+        final de.schildbach.wallet.service.platform.sdk.CutoverUiDataService.BoundEngineAddress bound =
+                service != null ? service.sdkUnadvertisedAddressLiveBlockingWithBinding() : null;
+        final boolean cutoverActive = cutoverOwnershipCommitted();
+        // The binding is re-validated HERE — after the ownership answer the
+        // decision below is made with, as late as this seam can manage. The read
+        // validates its own generation on the way out, but that left a gap: a
+        // Reset Wallet could wipe wallet A and activate wallet B in between, and
+        // B's true ownership then ACCEPTED A's address — a self-transfer of B's
+        // funds to an address only the erased wallet can spend. Carrying the
+        // generation with the address closes that: a bumped generation is
+        // refused, and the refusal post-cutover is a throw, never a dashj key.
+        //
+        // What remains is the window after this check, which no snapshot can
+        // close — the funding wallet is chosen downstream, so a strict guarantee
+        // would need the destination to be re-validated at spend time.
+        final Address unadvertised =
+                bound != null && service.receiveBindingStillCurrent(bound.getGeneration())
+                        ? toDashjAddressOrNull(bound.getAddress())
+                        : null;
         return decideUnadvertisedDestination(cutoverActive, unadvertised, () -> {
             // NOT freshReceiveAddress(): that accessor is overlaid and would
             // serve the cached engine RECEIVE address. Go straight to dashj.

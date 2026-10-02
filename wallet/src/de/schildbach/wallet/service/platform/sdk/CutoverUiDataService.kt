@@ -2584,6 +2584,14 @@ class CutoverUiDataService internal constructor(
      */
     private data class ReceiveAddressSnapshot(val generation: Long, val address: String)
 
+    /**
+     * An engine address together with the binding GENERATION it was read under,
+     * so a caller that cannot consume it immediately can re-validate the binding
+     * at the last possible moment — see
+     * [sdkUnadvertisedAddressLiveBlockingWithBinding].
+     */
+    data class BoundEngineAddress(val address: String, val generation: Long)
+
     /** Guards [receiveAddressGeneration], [activeWalletIdHex] and [cachedReceiveAddress]. */
     private val receiveAddressLock = Any()
 
@@ -2868,7 +2876,24 @@ class CutoverUiDataService internal constructor(
      * an answer produced for a binding that has since been wiped is discarded
      * rather than returned. BLOCKS on the FFI — off-main only.
      */
-    fun sdkUnadvertisedAddressLiveBlockingOrNull(): String? {
+    fun sdkUnadvertisedAddressLiveBlockingOrNull(): String? =
+        sdkUnadvertisedAddressLiveBlockingWithBinding()?.address
+
+    /**
+     * [sdkUnadvertisedAddressLiveBlockingOrNull] keeping the BINDING IDENTITY the
+     * answer was produced under, for a caller that still has a decision to make
+     * before it can use the address.
+     *
+     * [de.schildbach.wallet.WalletApplication.unadvertisedDestinationLive] is
+     * that caller: it must also decide whether the engine owns the chain at all.
+     * Validating the generation here and then reading ownership separately left a
+     * gap wide enough for a Reset Wallet — wallet A's address validated, A wiped,
+     * wallet B activated, ownership read as true, and B's self-transfer paid to
+     * an address only the ERASED wallet can spend. The generation travels with
+     * the address so that caller can re-check it ([receiveBindingStillCurrent])
+     * after everything else it needs, as late as it possibly can.
+     */
+    fun sdkUnadvertisedAddressLiveBlockingWithBinding(): BoundEngineAddress? {
         // Takes a ticket like the receive reads so the binding check is identical,
         // but publishes nothing — there is no cache on this side, so ordering
         // between two of these cannot matter.
@@ -2879,8 +2904,25 @@ class CutoverUiDataService internal constructor(
             // address belongs to a wallet that is no longer current, and paying
             // our own funds to it would send them somewhere the CURRENT wallet
             // cannot spend. Answer nothing; the caller falls back to dashj.
-            if (generation != receiveAddressGeneration) null else address
+            if (address == null || generation != receiveAddressGeneration) {
+                null
+            } else {
+                BoundEngineAddress(address, generation)
+            }
         }
+    }
+
+    /**
+     * Whether [generation] is STILL the binding the engine is serving — i.e.
+     * whether an address read under it may still be used.
+     *
+     * Both halves are required and both are read in one critical section: a
+     * generation that is still current under a cutover that has since rolled
+     * back belongs to dashj again, and a live cutover over a bumped generation
+     * belongs to a DIFFERENT wallet.
+     */
+    fun receiveBindingStillCurrent(generation: Long): Boolean = synchronized(receiveAddressLock) {
+        _cutoverActive.value && generation == receiveAddressGeneration
     }
 
     /**

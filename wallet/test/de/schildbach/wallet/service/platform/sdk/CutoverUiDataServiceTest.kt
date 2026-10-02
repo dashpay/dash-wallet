@@ -1907,6 +1907,50 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun unadvertisedDestinationIsRefusedOnceAnotherWalletOwnsTheChain() = runTest {
+        // Reset Wallet clears the cutover state IN-PROCESS and the next wallet
+        // commits, so this service outlives the wallet a destination was read
+        // for. Validating the generation inside the read and then reading
+        // ownership separately left a gap exactly that wide: wallet A's address
+        // validated, A wiped, wallet B activated, ownership read as true — and
+        // B's self-transfer paid to an address only the ERASED wallet can spend.
+        // The binding identity therefore travels WITH the address so the caller
+        // can reject it after everything else it needs to know.
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, configWithMutableState(state), backgroundScope)
+        service.start()
+        runCurrent()
+
+        val boundToA = service.sdkUnadvertisedAddressLiveBlockingWithBinding()
+        assertEquals("yENGINEinternalChangeAddress", boundToA?.address)
+        assertTrue(
+            "precondition: wallet A's binding is current while A is the wallet",
+            service.receiveBindingStillCurrent(boundToA!!.generation)
+        )
+
+        // The wipe, and then wallet B commits its own cutover.
+        state.value = "DUAL_RUNNING"
+        assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == null })
+        source.boundWalletId = "ab".repeat(32)
+        state.value = "CUT_OVER"
+        assertTrue(
+            "wallet B must take over the binding",
+            pumpUntil { service.isCutoverActive() && service.sdkReceiveAddressOrNull() != null }
+        )
+
+        assertFalse(
+            "wallet A's destination must be refused once B owns the chain",
+            service.receiveBindingStillCurrent(boundToA.generation)
+        )
+        // …and B's own destination is accepted, so the refusal is about the
+        // retired binding and not a blanket no.
+        val boundToB = service.sdkUnadvertisedAddressLiveBlockingWithBinding()
+        assertNotEquals(boundToA.generation, boundToB?.generation)
+        assertTrue(service.receiveBindingStillCurrent(boundToB!!.generation))
+    }
+
+    @Test
     fun rollback_clearsTheReceiveAddressOverlayAndTheBoundWallet() = runTest {
         // A rollback (CUT_OVER → DUAL_RUNNING) hands the key chain back to
         // dashj, whose pointer is live again. If the overlay kept serving, the
