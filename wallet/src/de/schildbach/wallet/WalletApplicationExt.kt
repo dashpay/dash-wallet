@@ -126,6 +126,9 @@ object WalletApplicationExt {
         notifyWalletWipeListeners()
         destroyWalletSecrets()
         clearDatabasesInner(isWalletWipe = true)
+        // Last, so every other step still runs: a surviving primary or key
+        // backup throws here, keeping the wipe marker for the next launch.
+        confirmWalletSourcesDestroyed()
     }
 
     /**

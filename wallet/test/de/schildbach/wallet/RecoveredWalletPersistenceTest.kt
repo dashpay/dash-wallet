@@ -666,4 +666,50 @@ class RecoveredWalletPersistenceTest {
         assertFalse(wipeApp.isWalletLoadDegraded)
         Unit
     }
+
+    @Test
+    fun `a wipe whose key backup survives keeps its marker and retries instead of recovering`() = runBlocking {
+        // The wiped wallet's primary is on disk; its backup cannot be deleted
+        // (a nonempty directory at its path), as when delete() fails.
+        recovered.saveToFile(primary)
+        assertTrue(backup.delete())
+        val child = File(backup, "block-delete").apply {
+            parentFile!!.mkdirs()
+            writeText("test")
+        }
+        val wipeApp = spyk(app)
+        every { wipeApp.filesDir } returns directory.root
+        every { wipeApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
+        // As finishWalletWipe does: the sequence (failures caught), then the
+        // stopped-wipe verdict; destroyWalletData ends with the confirmation.
+        suspend fun wipe(): Result<Boolean> = runCatching {
+            WalletWipeSequence.finish(
+                pending = { WalletWipeState.isPending(directory.root) },
+                detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
+                destroy = { wipeApp.confirmWalletSourcesDestroyed() },
+                markComplete = { wipeApp.markWalletWipeComplete() }
+            )
+        }.also { wipeApp.recordWalletWipeStopped() }
+
+        assertTrue(WalletWipeState.begin(directory.root))
+        val failed = wipe()
+        assertTrue("an unconfirmed backup deletion fails the wipe", failed.exceptionOrNull() is IOException)
+        assertFalse("the primary is deleted", primary.exists())
+        assertTrue(backup.exists())
+        // onCreate checks this marker before any recoverable wallet file, so
+        // the next launch re-runs the wipe rather than recovering the backup.
+        assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root))
+        assertTrue(wipeApp.isWalletWipeRecoveryRequired)
+        assertTrue(wipeApp.isWalletLoadDegraded)
+        assertTrue(wipeApp.isWalletReplacementRefused)
+
+        // The retry deletes the backup once it can be, and only then completes.
+        assertTrue(child.delete())
+        assertEquals(true, wipe().getOrThrow())
+        assertFalse(backup.exists())
+        assertFalse(primary.exists())
+        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(wipeApp.isWalletWipeRecoveryRequired)
+        Unit
+    }
 }
