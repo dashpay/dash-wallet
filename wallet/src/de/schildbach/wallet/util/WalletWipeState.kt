@@ -19,6 +19,10 @@ package de.schildbach.wallet.util
 
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.NoSuchFileException
+import java.nio.file.attribute.BasicFileAttributes
 
 /**
  * The PERSISTED "a Reset Wallet is in flight" marker.
@@ -84,12 +88,22 @@ object WalletWipeState {
     }
 
     /**
-     * Fail-closed twin of [isPending]: null when the marker cannot be read, so
-     * a caller that must not proceed on an unknown state can tell "absent"
-     * from "could not check".
+     * Fail-closed twin of [isPending], for a caller that must not proceed on
+     * an unknown state: true only when the marker is confirmed present, false
+     * only when it is confirmed absent, null for any other lookup outcome.
+     *
+     * Not built on [File.exists]: that also returns false when the lookup
+     * itself fails (permission denied, I/O error, a parent that is not a
+     * directory), so it cannot tell "absent" from "could not check".
+     * [Files.readAttributes] reports those as distinct exceptions; only
+     * [NoSuchFileException] means absent — including when `filesDir` itself
+     * does not exist, in which case there is genuinely no marker.
      */
     fun pendingOrNull(filesDir: File): Boolean? = try {
-        marker(filesDir).exists()
+        Files.readAttributes(marker(filesDir).toPath(), BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+        true
+    } catch (e: NoSuchFileException) {
+        false
     } catch (t: Throwable) {
         log.warn("could not read the wallet-wipe marker", t)
         null
