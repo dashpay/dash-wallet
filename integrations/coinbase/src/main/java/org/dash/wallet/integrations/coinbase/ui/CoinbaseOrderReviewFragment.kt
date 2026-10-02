@@ -25,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -59,6 +60,12 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
     ).noCode().minDecimals(6).optionalDecimals()
     private var onBackPressedCallback: OnBackPressedCallback? = null
 
+    /**
+     * The confirm coroutine, so [onResume] can tell "finished, the user came
+     * back from 2FA" from "still running".
+     */
+    private var confirmJob: Job? = null
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -85,32 +92,62 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
         }
 
         binding.confirmBtnContainer.setOnClickListener {
-            lifecycleScope.launch {
-                // Acquire the destination BEFORE the purchase. tryBuyDash()
-                // submits placeBuyOrder() with a fresh UUID, so an address
-                // failure after it would leave a SUCCEEDED purchase with no
-                // transfer parameters and no submitted-order state — pressing
-                // confirm again would place a second, different order. Checking
-                // first means the only failure is a no-op.
-                val params = try {
-                    viewModel.getTransferDashParams()
-                } catch (ex: ReceiveAddressUnavailableException) {
-                    // Depositing to the held dashj chain's frozen address is the
-                    // SR-03 defect; nothing has been bought yet, so this is safe
-                    // to retry.
-                    Toast.makeText(
-                        requireContext(),
-                        org.dash.wallet.common.R.string.loading_error,
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
-                }
-                if (tryBuyDash()) {
-                    val twoFaParams = CoinbaseTransactionParams(params, TransactionType.BuyDash)
-                    safeNavigate(
-                        CoinbaseOrderReviewFragmentDirections
-                            .coinbaseBuyDashOrderReviewToTwoFaCode(twoFaParams)
-                    )
+            // Taken SYNCHRONOUSLY, on the tap, BEFORE anything is launched. The
+            // destination read below blocks (post-cutover it waits for the SDK
+            // engine to bind, then takes the engine's wallet-manager lock) and
+            // nothing is on screen while it does, so a second tap used to start a
+            // second coroutine — and a second placeBuyOrder under its own
+            // idempotency UUID, which Coinbase bills as a second purchase.
+            // Launching first and disabling inside the coroutine would not help:
+            // the taps race in exactly the window before the first suspension.
+            if (!viewModel.tryBeginConfirm()) {
+                return@setOnClickListener
+            }
+            binding.confirmBtnContainer.isEnabled = false
+            confirmJob = lifecycleScope.launch {
+                // The guard is held through address preparation, the purchase and
+                // the handoff to 2FA, and released only where nothing was bought.
+                // Deliberately NOT released after navigating: the navigation
+                // transaction has not executed when this coroutine ends, so this
+                // view is still attached and still clickable — a queued tap would
+                // place the second order. [onResume] re-arms it if the user comes
+                // back to this screen.
+                var release = true
+                try {
+                    // Acquire the destination BEFORE the purchase. tryBuyDash()
+                    // submits placeBuyOrder() with a fresh UUID, so an address
+                    // failure after it would leave a SUCCEEDED purchase with no
+                    // transfer parameters and no submitted-order state — pressing
+                    // confirm again would place a second, different order. Checking
+                    // first means the only failure is a no-op.
+                    val params = try {
+                        viewModel.getTransferDashParams()
+                    } catch (ex: ReceiveAddressUnavailableException) {
+                        // Depositing to the held dashj chain's frozen address is the
+                        // SR-03 defect; nothing has been bought yet, so this is safe
+                        // to retry.
+                        Toast.makeText(
+                            requireContext(),
+                            org.dash.wallet.common.R.string.loading_error,
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
+                    }
+                    if (tryBuyDash()) {
+                        release = false
+                        val twoFaParams = CoinbaseTransactionParams(params, TransactionType.BuyDash)
+                        safeNavigate(
+                            CoinbaseOrderReviewFragmentDirections
+                                .coinbaseBuyDashOrderReviewToTwoFaCode(twoFaParams)
+                        )
+                    }
+                } finally {
+                    // Covers the early return, a declined purchase AND an
+                    // unexpected throw: a latch left set by a failure path would
+                    // leave the button dead for the rest of the screen's life.
+                    if (release) {
+                        releaseConfirm()
+                    }
                 }
             }
         }
@@ -179,6 +216,29 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
             }
         }
         transactionStateDialog.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Back from the 2FA screen (cancelled, or back-pressed) with no confirm
+        // running: the next tap is a new intent, so the latch the navigation kept
+        // is dropped HERE rather than in the coroutine, which ends while this
+        // view is still on screen.
+        if (confirmJob?.isActive != true) {
+            releaseConfirm()
+        }
+    }
+
+    /**
+     * Give the confirm single-flight back and re-enable the button. The view can
+     * already be gone — [lifecycleScope] outlives it — so the button half is
+     * conditional while the guard half is not.
+     */
+    private fun releaseConfirm() {
+        viewModel.endConfirm()
+        if (view != null) {
+            binding.confirmBtnContainer.isEnabled = true
+        }
     }
 
     private fun setNetworkState(hasInternet: Boolean) {

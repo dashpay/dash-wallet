@@ -44,6 +44,7 @@ import org.dash.wallet.integrations.coinbase.model.SendTransactionToWalletParams
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import java.math.RoundingMode
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 data class CoinbaseBuyUIState(
@@ -63,6 +64,39 @@ class CoinbaseBuyDashViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CoinbaseBuyUIState())
     val uiState: StateFlow<CoinbaseBuyUIState> = _uiState.asStateFlow()
+
+    /**
+     * Single-flight over the whole confirm sequence: the destination read, the
+     * fiat deposit, [buyDash]'s `placeBuyOrder`, and the handoff to 2FA.
+     *
+     * The confirm button launches a coroutine, and the first thing that
+     * coroutine does — [getTransferDashParams] — can block for seconds: post
+     * cutover it waits for the SDK engine to bind and then takes the engine's
+     * wallet-manager lock. Nothing is on screen for that wait, so repeated taps
+     * each started their own coroutine, and every one that got an address went
+     * on to place its OWN order under a fresh idempotency UUID (and, on the bank
+     * path, to repeat the deposit). Coinbase cannot collapse those: different
+     * UUIDs are different orders by definition, so the user is charged twice.
+     *
+     * Acquired SYNCHRONOUSLY on the tap — before anything is launched, which is
+     * the only point at which two taps are ordered against each other — and
+     * released only when the attempt failed in a way the user may retry.
+     */
+    private val confirmInFlight = AtomicBoolean(false)
+
+    /**
+     * Take the confirm single-flight, or false if one is already running. Call
+     * this on the tap itself, not inside the coroutine it starts.
+     */
+    fun tryBeginConfirm(): Boolean = confirmInFlight.compareAndSet(false, true)
+
+    /**
+     * Release the single-flight after a RETRYABLE failure — one where nothing
+     * was bought. Never after an order went out.
+     */
+    fun endConfirm() {
+        confirmInFlight.set(false)
+    }
 
     suspend fun validateBuyDash(amount: Dash, retryWithDeposit: Boolean): CoinbaseErrorType {
         previewBuyOrder(amount)
@@ -111,6 +145,14 @@ class CoinbaseBuyDashViewModel @Inject constructor(
     }
 
     suspend fun buyDash() {
+        // The tripwire for the guard above: this method deposits and places an
+        // order with a fresh UUID, so reaching it twice IS the double purchase.
+        // Failing here turns a wiring mistake into a caught error on the review
+        // screen instead of a second charge.
+        check(confirmInFlight.get()) {
+            "buyDash() outside the confirm single-flight — a second order under a new " +
+                "idempotency UUID is a second purchase"
+        }
         val amount = uiState.value.order ?: return
 
         analyticsService.logEvent(AnalyticsConstants.Coinbase.QUOTE_CONFIRM, mapOf())
