@@ -3241,9 +3241,25 @@ class CutoverUiDataService internal constructor(
      * report "dashj owns the chain" on a state it could not read, because that
      * answer serves the held chain's frozen address. So the error reaches that
      * caller, which fails closed on it.
+     *
+     * ## Why [DashPayConfig.observePreservingErrors] and not `observe`
+     *
+     * `observe` is served from [org.dash.wallet.common.data.BaseConfig.data],
+     * which CATCHES IOException and emits `emptyPreferences()`. An unreadable
+     * preferences file therefore arrived here as a MISSING key, which
+     * [CutoverState.fromStored] maps to DUAL_RUNNING, which this maps to
+     * `false` — "dashj owns the key chain". That is the one answer that
+     * authorises [de.schildbach.wallet.WalletApplication.decideLiveReceiveAddress]
+     * to serve the held dashj chain's frozen, possibly already-funded address,
+     * and it was being produced by a read that never succeeded: on a cold start
+     * with CUT_OVER persisted, no binding and nothing remembered,
+     * [cutoverOwnershipCommittedBlocking] accepted that `false` and its
+     * fail-closed handler was never reached. The error-preserving read keeps a
+     * genuinely ABSENT key (`null` → DUAL_RUNNING, a real answer) apart from a
+     * FAILED one (a throw), so only the former can authorise dashj.
      */
     private fun cutoverOwnershipCommitted(): Flow<Boolean> =
-        dashPayConfig.observe(DashPayConfig.CUTOVER_STATE)
+        dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE)
             .map { stored -> !dashjEngineMayStart(CutoverState.fromStored(stored)) }
 
     /**

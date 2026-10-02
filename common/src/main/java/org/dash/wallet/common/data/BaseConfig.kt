@@ -123,6 +123,26 @@ abstract class BaseConfig(
         return data.map { preferences -> preferences[key] }
     }
 
+    /**
+     * [observe] WITHOUT [data]'s IOException rescue — an unreadable store is
+     * delivered as the THROW it was instead of arriving as an absent key.
+     *
+     * [data] catches IOException and emits [emptyPreferences], so a corrupt,
+     * truncated or unreadable preferences file reaches [observe] exactly as a
+     * key that was never written does: `null`. For a preference that is only a
+     * hint that is the right trade — the unset default is harmless. For one that
+     * AUTHORISES something it is the wrong one: the caller cannot tell "nobody
+     * ever set this" from "we could not find out", so it takes the unset default
+     * on a read that never succeeded.
+     *
+     * Callers that must keep those apart collect this instead. `null` still
+     * means ABSENT, exactly as in [observe]; a FAILED read arrives as the
+     * IOException, for the caller to fail closed on.
+     */
+    open fun <T> observePreservingErrors(key: Preferences.Key<T>): Flow<T?> {
+        return context.dataStore.data.map { preferences -> preferences[key] }
+    }
+
     open suspend fun <T> get(key: Preferences.Key<T>): T? {
         return data.map { preferences -> preferences[key] }.first()
     }

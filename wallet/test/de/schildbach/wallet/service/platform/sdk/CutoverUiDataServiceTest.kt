@@ -978,7 +978,7 @@ class CutoverUiDataServiceTest {
     }
 
     private fun configWithState(state: String?): DashPayConfig = mockk {
-        every { observe(DashPayConfig.CUTOVER_STATE) } returns flowOf(state)
+        every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } returns flowOf(state)
     }
 
     /**
@@ -1012,7 +1012,7 @@ class CutoverUiDataServiceTest {
     }
 
     private fun configWithMutableState(state: MutableStateFlow<String?>): DashPayConfig = mockk {
-        every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+        every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } returns state
     }
 
     private fun buildService(
@@ -1836,8 +1836,16 @@ class CutoverUiDataServiceTest {
         // remembered as "dashj owns the key chain" — the answer that serves the
         // held chain's frozen address. A failed read is UNKNOWN, and unknown
         // ownership fails closed.
+        //
+        // This throws from the config boundary, so it covers only what the
+        // service does with an error that REACHES it. It cannot show that one
+        // ever does: `BaseConfig.data` rescues IOException into
+        // `emptyPreferences()` below this seam, which is why the ownership read
+        // uses `observePreservingErrors`. That path — a real DataStore
+        // IOException, through the real BaseConfig — is
+        // CutoverOwnershipUnreadableStateTest.
         val unreadable: DashPayConfig = mockk {
-            every { observe(DashPayConfig.CUTOVER_STATE) } returns kotlinx.coroutines.flow.flow {
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } returns kotlinx.coroutines.flow.flow {
                 throw IllegalStateException("the cutover state could not be read")
             }
         }
@@ -2563,7 +2571,7 @@ class CutoverUiDataServiceTest {
         // a request the wiped wallet left pending must not walk the next one.
         val state = MutableStateFlow<String?>("CUT_OVER")
         val config = mockk<DashPayConfig> {
-            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } returns state
         }
         val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
         val service = buildService(source, config, backgroundScope)
@@ -2597,7 +2605,7 @@ class CutoverUiDataServiceTest {
     ): DashPayConfig {
         var observeCalls = 0
         return mockk {
-            every { observe(DashPayConfig.CUTOVER_STATE) } answers {
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
                 if (observeCalls++ == 0) gateFeed else persisted
             }
         }
@@ -2837,7 +2845,7 @@ class CutoverUiDataServiceTest {
         )
         val state = MutableStateFlow<String?>("CUT_OVER")
         val config = mockk<DashPayConfig> {
-            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } returns state
         }
         val service = buildService(source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao)
         service.start()
@@ -2879,7 +2887,7 @@ class CutoverUiDataServiceTest {
         var bindRetries = 0
         val state = MutableStateFlow<String?>("CUT_OVER")
         val config = mockk<DashPayConfig> {
-            every { observe(DashPayConfig.CUTOVER_STATE) } returns state
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } returns state
         }
         val service = buildService(
             source, config, backgroundScope, displayDao = displayDao, groupDao = groupDao,
