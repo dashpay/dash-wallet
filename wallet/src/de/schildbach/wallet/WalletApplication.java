@@ -178,6 +178,7 @@ import de.schildbach.wallet.util.FriendKeyChainLookahead;
 import de.schildbach.wallet.util.LogMarkerFilter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.ProcessExitReasons;
+import de.schildbach.wallet.util.BackupReplacementState;
 import de.schildbach.wallet.util.RecoveryResetState;
 import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
@@ -1119,8 +1120,15 @@ public class WalletApplication extends MultiDexApplication
         // The previous key backup stays in place until the replacement's is
         // written over it: it is the only recovery input if this primary save
         // fails. A death between the two saves leaves a backup of another
-        // wallet beside the new primary; afterLoadWallet()'s maintenance
-        // rewrites a backup that does not hold the primary's keys.
+        // wallet beside the new primary, so the replacement's backup is owed
+        // durably BEFORE the primary save, and afterLoadWallet()'s maintenance
+        // pays it (see BackupReplacementState). Without the marker the
+        // primary must not be saved, exactly as when the save itself fails.
+        try {
+            BackupReplacementState.INSTANCE.arm(walletFile.getParentFile());
+        } catch (final IOException x) {
+            throw new RuntimeException(x);
+        }
         saveWallet();
         // Unlike backupWallet(), a failure here propagates: the flags below
         // must not be cleared while the replacement has no key backup.
@@ -1129,6 +1137,9 @@ public class WalletApplication extends MultiDexApplication
         } catch (final IOException x) {
             throw new RuntimeException(x);
         }
+        // The backup is this wallet's now; a marker that cannot be removed
+        // only costs the next startup a rewrite.
+        BackupReplacementState.INSTANCE.complete(walletFile.getParentFile());
 
         config.armBackupReminder();
 
@@ -1352,12 +1363,7 @@ public class WalletApplication extends MultiDexApplication
                     }
                 }
 
-                // make sure there is at least one recent backup, and that it
-                // is this wallet's: a replacement whose backup write was cut
-                // short leaves the previous wallet's backup in place.
-                if (!getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists()
-                        || !keyBackupMatches(walletForMaintenance))
-                    backupWallet();
+                maintainKeyBackup();
             } catch (final Throwable t) {
                 log.error("deferred wallet maintenance failed — continuing degraded", t);
                 try {
@@ -1975,21 +1981,27 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
-     * Whether the key backup holds {@code primary}'s keys, compared by the
-     * active chain's watching key (public, so stable across encryption).
-     * The backup is small and transaction-free, so cheap to read. An
-     * unreadable backup does not match; a false mismatch (say, a chain
-     * added since the backup was written) only costs a rewrite from the
-     * primary, while two wallets never share a watching key.
+     * Startup maintenance: make sure there is a key backup, and that it is
+     * this wallet's. A replacement whose backup write was cut short left the
+     * previous wallet's backup in place with its {@link BackupReplacementState}
+     * marker still on disk; the backup is rewritten from the loaded wallet and
+     * only then is the marker removed. Nothing is read or written when the
+     * backup exists and the marker is confirmed absent.
+     *
+     * @throws IOException when the rewrite failed; the marker then stays.
      */
-    boolean keyBackupMatches(final Wallet primary) {
-        try (InputStream is = openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF)) {
-            final Wallet backup = new WalletProtobufSerializer().readWallet(is, true,
-                    walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
-            return backup.getWatchingKey().equals(primary.getWatchingKey());
-        } catch (final Exception x) {
-            log.warn("key backup could not be checked against the primary wallet — rewriting it", x);
-            return false;
+    void maintainKeyBackup() throws IOException {
+        final File markerDir = walletFile.getParentFile();
+        final boolean replacementOwed = BackupReplacementState.INSTANCE.isPending(markerDir);
+        if (!replacementOwed && getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists()) {
+            return;
+        }
+        if (replacementOwed) {
+            log.warn("a replacement wallet's key backup is still owed — rewriting it");
+        }
+        writeWalletBackup();
+        if (replacementOwed) {
+            BackupReplacementState.INSTANCE.complete(markerDir);
         }
     }
 
@@ -2479,6 +2491,9 @@ public class WalletApplication extends MultiDexApplication
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
+        // The wiped wallet's owed backup goes with it. Left behind it would
+        // only make the replacement's first startup rewrite its own backup.
+        BackupReplacementState.INSTANCE.complete(getFilesDir());
     }
 
     /** The wipe listeners, for the coroutine that awaits them. */

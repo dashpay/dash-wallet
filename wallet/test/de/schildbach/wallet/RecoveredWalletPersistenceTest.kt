@@ -29,6 +29,7 @@ import org.robolectric.util.ReflectionHelpers
 import org.robolectric.annotation.Config
 import java.io.File
 import java.io.IOException
+import de.schildbach.wallet.util.BackupReplacementState
 import de.schildbach.wallet.util.RecoveryResetState
 import de.schildbach.wallet.util.WalletWipeSequence
 import de.schildbach.wallet.util.WalletWipeState
@@ -449,22 +450,124 @@ class RecoveredWalletPersistenceTest {
         verify(exactly = 0) { setupApp.writeWalletBackup() }
     }
 
+    private val replacementMarker get() = File(directory.root, BackupReplacementState.MARKER_FILE_NAME)
+
+    /** An app whose key backup lives at [backup] and whose backup writes copy [recovered] there, or fail. */
+    private fun maintenanceApp(failWrite: () -> Boolean = { false }): WalletApplication {
+        val maintenanceApp = spyk(app)
+        every { maintenanceApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
+        every { maintenanceApp.writeWalletBackup() } answers {
+            if (failWrite()) throw IOException("injected backup failure")
+            recovered.saveToFile(backup)
+        }
+        return maintenanceApp
+    }
+
     @Test
-    fun `startup maintenance recognises a key backup that belongs to another wallet`() {
-        setField("walletFactory", mockk<WalletFactory> {
-            every { getExtensions(any()) } returns emptyArray()
-        })
-        val checkApp = spyk(app)
-        every { checkApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } answers { backup.inputStream() }
+    fun `startup maintenance rewrites the backup a replacement still owes, then clears the marker`() {
+        replacementMarker.createNewFile()
+        val maintenanceApp = maintenanceApp()
 
-        assertTrue(checkApp.keyBackupMatches(recovered))
-        // A replacement whose backup write was cut short: the previous
-        // wallet's backup beside the new primary must be rewritten.
-        assertFalse(checkApp.keyBackupMatches(Wallet(Constants.NETWORK_PARAMETERS)))
+        maintenanceApp.maintainKeyBackup()
 
-        every { checkApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } throws
-            java.io.FileNotFoundException("no backup")
-        assertFalse(checkApp.keyBackupMatches(recovered))
+        verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+        assertFalse("cleared only after the rewrite", replacementMarker.exists())
+    }
+
+    @Test
+    fun `startup maintenance leaves a present backup alone when nothing is owed`() {
+        val previousBackup = backup.readBytes()
+        val maintenanceApp = maintenanceApp()
+
+        maintenanceApp.maintainKeyBackup()
+
+        // No parse of the backup and no second wallet: nothing is read at all.
+        verify(exactly = 0) { maintenanceApp.writeWalletBackup() }
+        verify(exactly = 0) { maintenanceApp.openFileInput(any()) }
+        assertArrayEquals(previousBackup, backup.readBytes())
+    }
+
+    @Test
+    fun `startup maintenance writes a missing backup without any marker`() {
+        backup.delete()
+        val maintenanceApp = maintenanceApp()
+
+        maintenanceApp.maintainKeyBackup()
+
+        verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+        assertTrue(backup.exists())
+        assertFalse(replacementMarker.exists())
+    }
+
+    @Test
+    fun `a failed backup rewrite keeps the replacement marker`() {
+        replacementMarker.createNewFile()
+        val maintenanceApp = maintenanceApp(failWrite = { true })
+
+        try {
+            maintenanceApp.maintainKeyBackup()
+            fail("the rewrite must fail")
+        } catch (expected: IOException) {
+            // Logged by the maintenance thread.
+        }
+        assertTrue("still owed to the next startup", replacementMarker.exists())
+    }
+
+    @Test
+    fun `an uninspectable replacement marker rewrites the backup`() {
+        val original = BackupReplacementState.confirmAbsent
+        BackupReplacementState.confirmAbsent = { throw SecurityException("injected") }
+        try {
+            val maintenanceApp = maintenanceApp()
+            maintenanceApp.maintainKeyBackup()
+            verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+        } finally {
+            BackupReplacementState.confirmAbsent = original
+        }
+    }
+
+    @Test
+    fun `replacement setup owes its backup before the primary save and clears it after the backup`() {
+        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        val setupApp = spyk(app)
+        var failBackup = true
+        every { setupApp.saveWallet() } answers {
+            assertTrue("owed before the primary is saved", replacementMarker.exists())
+            callOriginal()
+        }
+        every { setupApp.writeWalletBackup() } answers {
+            if (failBackup) throw IOException("injected backup failure")
+            recovered.saveToFile(backup)
+        }
+        every { setupApp.finalizeInitialization() } returns Unit
+
+        try {
+            setupApp.saveWalletAndFinalizeInitialization()
+            fail("backup save must fail")
+        } catch (expected: RuntimeException) {
+            assertTrue(expected.cause is IOException)
+        }
+        assertTrue("a death or failure before the backup leaves it owed", replacementMarker.exists())
+
+        failBackup = false
+        setupApp.saveWalletAndFinalizeInitialization()
+        assertFalse(replacementMarker.exists())
+    }
+
+    @Test
+    fun `replacement primary is not saved when the backup marker cannot be written`() {
+        // The marker's directory is a file, so the marker cannot be created.
+        val blocker = File(directory.root, "blocker").apply { writeText("") }
+        setField("walletFile", File(blocker, "primary"))
+        val setupApp = spyk(app)
+        try {
+            setupApp.saveWalletAndFinalizeInitialization()
+            fail("setup must fail without its marker")
+        } catch (expected: RuntimeException) {
+            assertTrue(expected.cause is IOException)
+        }
+        verify(exactly = 0) { setupApp.saveWallet() }
+        verify(exactly = 0) { setupApp.writeWalletBackup() }
     }
 
     @Test
