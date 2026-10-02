@@ -60,6 +60,7 @@ import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -2174,16 +2175,11 @@ class CutoverUiDataService internal constructor(
      * history, wallet-wide records) stay immediate. Map mutations happen
      * only on [txPipeline]'s sequential collector; the launched job itself
      * touches no shared state (cancellation is the only interaction).
-     * Bounded eldest-evicted (an evicted entry merely becomes
-     * non-cancellable — with the cap at [SEEN_TX_DIRECTIONS_MAX] and a
-     * seconds-long grace that is unreachable in practice).
+     * Every unfinished job stays in the map — cancellation leaves it in
+     * place, and only completed jobs are pruned — so [clearWipedWalletTxState]
+     * can join them all; the prune bounds it to the jobs of one grace window.
      */
-    private val pendingNotifyJobs =
-        object : LinkedHashMap<String, kotlinx.coroutines.Job>() {
-            override fun removeEldestEntry(
-                eldest: MutableMap.MutableEntry<String, kotlinx.coroutines.Job>
-            ): Boolean = size > SEEN_TX_DIRECTIONS_MAX
-        }
+    private val pendingNotifyJobs = mutableMapOf<String, kotlinx.coroutines.Job>()
 
     /** Once-per-process latch for the [runPipelines] tap-mismatch WARN (FIX: silent gate mismatch). */
     private val tapGapWarned = AtomicBoolean(false)
@@ -2605,7 +2601,8 @@ class CutoverUiDataService internal constructor(
      * waits for it. A reconcile walk or change-feed pass still holding the
      * wiped wallet's pages could then write them into tx_display_cache /
      * tx_group_cache AFTER the wipe cleared them. Returning from here means
-     * no pipeline coroutine is left to write.
+     * no pipeline coroutine is left to write, and no deferred coins-received
+     * push for the wiped wallet is left to fire ([clearWipedWalletTxState]).
      *
      * The pipeline stays stopped until [resumeAfterWalletWipe] — which the
      * wipe calls once the caches are cleared, whether or not the cutover
@@ -2620,6 +2617,7 @@ class CutoverUiDataService internal constructor(
             pipelineJob?.cancelAndJoin()
             pipelineJob = null
             resetForInactivePipeline()
+            clearWipedWalletTxState()
             stopGeneration.update { it + 1 }
         }
         log.info("SDK UI pipelines stopped for the wallet wipe")
@@ -2709,6 +2707,30 @@ class CutoverUiDataService internal constructor(
     private fun resetForInactivePipeline() {
         fullReconcilePending.set(false)
         clearSdkBalanceOverrides()
+    }
+
+    /**
+     * The wiped wallet's per-txid state, which must not carry over to the next
+     * wallet: its deferred coins-received pushes ([pendingNotifyJobs] run on
+     * the service [scope], outside [pipelineJob], so the join alone leaves
+     * them armed to fire after the wipe), and the dedup/classification maps
+     * keyed by its txids (nets and directions are THIS wallet's view of a tx).
+     * Those are only touched from [txPipeline]'s sequential collector, so this
+     * is safe only once [pipelineJob] has been joined (caller holds
+     * [pipelineMutex] after the join). The jobs are joined, not just
+     * cancelled: one already past its grace and inside [notifyCoinsReceived]
+     * finishes that call before the wipe proceeds.
+     */
+    private suspend fun clearWipedWalletTxState() {
+        val jobs = pendingNotifyJobs.values.toList()
+        jobs.forEach { it.cancel() }
+        jobs.joinAll()
+        pendingNotifyJobs.clear()
+        notifiedTxIds.clear()
+        noNetWarnedTxids.clear()
+        terminalResolvedTxids.clear()
+        seenEventDirections.clear()
+        engineNetByTxid.clear()
     }
 
     private fun clearSdkBalanceOverrides() {
@@ -3354,7 +3376,9 @@ class CutoverUiDataService internal constructor(
                     // incoming-first sibling already scheduled (the grace in
                     // [scheduleDeferredCoinsReceivedNotify] exists for exactly
                     // this moment).
-                    pendingNotifyJobs.remove(record.txidHex)?.cancel()
+                    // Cancelled in place, not removed: a job already inside
+                    // the callback must still be joined by a wipe.
+                    pendingNotifyJobs[record.txidHex]?.cancel()
                     if (notifiedTxIds.add(record.txidHex)) {
                         log.info(
                             "tx {} touched both directions of this wallet (self-spend) — " +
