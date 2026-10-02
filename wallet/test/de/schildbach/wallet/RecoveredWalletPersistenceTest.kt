@@ -526,6 +526,101 @@ class RecoveredWalletPersistenceTest {
         }
     }
 
+    /**
+     * A replacement primary that cannot be loaded beside the previous wallet's
+     * key backup, its replacement backup still owed (review, PR #1576).
+     */
+    private fun interruptedReplacementApp(): WalletApplication {
+        // The replacement: other key material than the backup, cut short on
+        // disk so its parse fails.
+        val replacement = Wallet(Constants.NETWORK_PARAMETERS).apply { freshReceiveKey() }
+        assertFalse(replacement.isPubKeyMine(recovered.currentReceiveKey().pubKey))
+        replacement.saveToFile(primary)
+        val intact = primary.readBytes()
+        primary.writeBytes(intact.copyOf(intact.size / 2))
+        ReflectionHelpers.setField(app, "wallet", null)
+        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        setField("walletFactory", mockk<WalletFactory> {
+            every { getExtensions(any()) } returns emptyArray()
+        })
+        val launchApp = spyk(app)
+        every { launchApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } answers { backup.inputStream() }
+        every { launchApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
+        every { launchApp.persistRecoveredWallet(any()) } answers { fail("must not persist the previous wallet's backup") }
+        every { launchApp.resetBlockchain() } answers { fail("must not queue a reset") }
+        every { launchApp.resetBlockchainInProcess() } answers { fail("must not reset") }
+        every { launchApp.finalizeInitialization() } answers { fail("must not publish a wallet") }
+        every { launchApp.maintainKeyBackup() } answers { fail("maintenance must not run") }
+        // The load's Toast needs a real Context.
+        every { launchApp["showLoadToast"](any<String>()) } answers { }
+        return launchApp
+    }
+
+    private fun loadWallet(launchApp: WalletApplication) {
+        WalletApplication::class.java.getDeclaredMethod("loadWalletFromProtobuf").apply {
+            isAccessible = true
+            invoke(launchApp)
+        }
+    }
+
+    @Test
+    fun `an unloadable primary whose replacement backup is owed is not recovered from the previous backup`() {
+        val launchApp = interruptedReplacementApp()
+        replacementMarker.createNewFile()
+        // A reset still owed by an earlier recovery: also left alone.
+        val resetMarker = File(directory.root, RecoveryResetState.MARKER_FILE_NAME)
+        RecoveryResetState.arm(directory.root)
+        val primaryBytes = primary.readBytes()
+        val backupBytes = backup.readBytes()
+
+        val restored = WalletApplication::class.java.getDeclaredMethod("restoreWalletFromBackup").run {
+            isAccessible = true
+            invoke(launchApp)
+        }
+        assertNull(restored)
+        loadWallet(launchApp)
+
+        assertNull(launchApp.wallet)
+        verify(exactly = 0) { launchApp.persistRecoveredWallet(any()) }
+        verify(exactly = 0) { launchApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) }
+        verify(exactly = 0) { launchApp.maintainKeyBackup() }
+        assertArrayEquals("primary untouched", primaryBytes, primary.readBytes())
+        assertArrayEquals("backup untouched", backupBytes, backup.readBytes())
+        assertTrue("replacement still owed", replacementMarker.exists())
+        assertTrue("reset still owed", resetMarker.exists())
+        // Onboarding opens the degraded screen: restore from the recovery
+        // phrase, never Create/Restore over the files.
+        assertTrue(launchApp.isWalletLoadDegraded)
+        assertTrue(launchApp.isWalletRecoveryFromSeedNeeded)
+        val actions = degradedScreenActions(
+            wipeRecoveryRequired = false,
+            safeMode = false,
+            recoveryFromSeedNeeded = launchApp.isWalletRecoveryFromSeedNeeded,
+            firstShow = true
+        )
+        assertTrue(actions.offerSeedRecovery)
+    }
+
+    @Test
+    fun `an uninspectable replacement marker refuses recovery from the backup`() {
+        val launchApp = interruptedReplacementApp()
+        val primaryBytes = primary.readBytes()
+        val backupBytes = backup.readBytes()
+        val original = BackupReplacementState.confirmAbsent
+        BackupReplacementState.confirmAbsent = { throw SecurityException("injected") }
+        try {
+            loadWallet(launchApp)
+        } finally {
+            BackupReplacementState.confirmAbsent = original
+        }
+
+        assertNull(launchApp.wallet)
+        verify(exactly = 0) { launchApp.persistRecoveredWallet(any()) }
+        assertArrayEquals(primaryBytes, primary.readBytes())
+        assertArrayEquals(backupBytes, backup.readBytes())
+        assertTrue(launchApp.isWalletRecoveryFromSeedNeeded)
+    }
+
     @Test
     fun `replacement setup owes its backup before the primary save and clears it after the backup`() {
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))

@@ -1839,13 +1839,35 @@ public class WalletApplication extends MultiDexApplication
      * — the deliberate recovery for an unusable primary wallet file. Returns
      * {@code null} (and latches {@link #walletRecoveryFromSeedNeeded}) when the
      * backup itself is missing, unreadable, inconsistent or of another
-     * network, before anything is persisted: this method must
+     * network, or when a replacement's backup is still owed (the backup may be
+     * the previous wallet's), before anything is persisted: this method must
      * NEVER throw out of {@code Application.onCreate} — the old
      * {@code Error("cannot read backup")} was itself a guaranteed crash loop.
      * The caller degrades into the safe-mode/report path instead.
      */
     @Nullable
     private Wallet restoreWalletFromBackup() {
+        // REPLACEMENT PROVENANCE first, before the backup is read: setup keeps
+        // the previous wallet's backup until the replacement's own backup is
+        // written (see BackupReplacementState). While that is still owed, the
+        // backup on disk may belong to the wallet the primary replaced — a
+        // consistent, same-network wallet that is nevertheless the WRONG one
+        // (other seed, or missing the replacement's imported keys). Recovering
+        // from it would save it as the primary, and startup maintenance would
+        // then rewrite the backup from it and clear the marker as if the
+        // replacement had completed. So nothing is read, persisted or cleared:
+        // the primary, the backup and both markers stay exactly as they are,
+        // and the user restores from the recovery phrase (degraded screen).
+        // An uninspectable marker counts as pending (fail closed).
+        if (BackupReplacementState.INSTANCE.isPending(walletFile.getParentFile())) {
+            log.error("primary wallet unusable while a replacement's key backup is still owed — the key "
+                    + "backup may be the previous wallet's; not recovering from it (restore from seed required)");
+            walletRecoveryFromSeedNeeded = true;
+            StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_BACKUP_UNUSABLE,
+                    "WALLET_BACKUP_REPLACEMENT_UNRESOLVED", "backup-replacement marker pending");
+            return null;
+        }
+
         InputStream is = null;
 
         try {
