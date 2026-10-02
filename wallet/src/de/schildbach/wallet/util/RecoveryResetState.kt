@@ -17,9 +17,12 @@
 
 package de.schildbach.wallet.util
 
+import androidx.annotation.VisibleForTesting
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.LinkOption
 
 /**
  * The PERSISTED "a wallet recovered from the key backup still owes a
@@ -39,6 +42,13 @@ import java.io.IOException
  * and only that reset removes it, once every part succeeded (or after
  * [MAX_FAILED_ATTEMPTS]). A bare file beside the wallet file, like
  * [WalletWipeState].
+ *
+ * FAIL CLOSED. Only a marker CONFIRMED absent means no reset is owed: an
+ * inspection that cannot tell ([Marker.UNKNOWN]) counts as pending, so
+ * [isPending] keeps the blockchain service from opening the stale stores,
+ * and [complete] does not report a reset done unless the marker is
+ * confirmed gone. `File.exists()` cannot be used for this: it also answers
+ * false when the file system cannot establish whether the file is there.
  */
 object RecoveryResetState {
     private val log = LoggerFactory.getLogger(RecoveryResetState::class.java)
@@ -56,7 +66,56 @@ object RecoveryResetState {
      */
     const val MAX_FAILED_ATTEMPTS = 3
 
+    /** What inspecting the marker established. */
+    enum class Marker {
+        /** Confirmed absent: no reset is owed. */
+        ABSENT,
+
+        /** Present: a reset is owed. */
+        PENDING,
+
+        /** Neither could be established (I/O or permission failure): treated as [PENDING]. */
+        UNKNOWN
+    }
+
     private fun marker(dir: File) = File(dir, MARKER_FILE_NAME)
+
+    /**
+     * How the marker is inspected. A seam for tests, which cannot make a real
+     * file system fail on demand; production code never replaces it.
+     */
+    @VisibleForTesting
+    internal var inspect: (File) -> Marker = ::inspectOnDisk
+
+    /**
+     * NOFOLLOW_LINKS: the marker is a plain file; a dangling link is still
+     * an entry at that path, so it is not "absent". `Files.exists` and
+     * `Files.notExists` both answer false when the check cannot be made,
+     * which is the only way to tell that case from a real absence.
+     */
+    private fun inspectOnDisk(file: File): Marker {
+        val path = file.toPath()
+        return when {
+            Files.exists(path, LinkOption.NOFOLLOW_LINKS) -> Marker.PENDING
+            Files.notExists(path, LinkOption.NOFOLLOW_LINKS) -> Marker.ABSENT
+            else -> Marker.UNKNOWN
+        }
+    }
+
+    /** Never throws: a failed inspection is [Marker.UNKNOWN], logged. */
+    fun state(dir: File): Marker {
+        val file = marker(dir)
+        val result = try {
+            inspect(file)
+        } catch (t: Throwable) {
+            log.warn("could not inspect the recovery-reset marker at {}", file, t)
+            return Marker.UNKNOWN
+        }
+        if (result == Marker.UNKNOWN) {
+            log.warn("could not establish whether the recovery-reset marker at {} exists — the reset stays owed", file)
+        }
+        return result
+    }
 
     /** Records that a reset is owed. Throws, unlike the other methods: the caller must not save without it. */
     @Throws(IOException::class)
@@ -67,13 +126,12 @@ object RecoveryResetState {
         }
     }
 
-    /** True when a recovered wallet's reset was armed and never recorded as done. */
-    fun isPending(dir: File): Boolean = try {
-        marker(dir).exists()
-    } catch (t: Throwable) {
-        log.warn("could not read the recovery-reset marker", t)
-        false
-    }
+    /**
+     * True unless the marker is confirmed absent: a recovered wallet's reset
+     * was armed and never recorded as done, or the marker cannot be inspected
+     * ([Marker.UNKNOWN], fail closed). Never throws.
+     */
+    fun isPending(dir: File): Boolean = state(dir) != Marker.ABSENT
 
     /**
      * Records one reset whose database clear failed, as a count inside the
@@ -92,20 +150,26 @@ object RecoveryResetState {
 
     /**
      * Call ONLY after the reset ran: while the marker is present every service
-     * start resets again. Returns whether the marker is now absent; false
-     * (logged) when it could not be deleted, so the caller must not treat the
-     * reset as complete.
+     * start resets again. Returns whether the marker is now confirmed absent;
+     * false (logged) when it could not be deleted, or its absence afterwards
+     * cannot be established, so the caller must not treat the reset as
+     * complete. Never throws.
      */
-    fun complete(dir: File): Boolean = try {
+    fun complete(dir: File): Boolean {
         val file = marker(dir)
-        if (!file.exists() || file.delete()) {
-            true
-        } else {
-            log.warn("could not delete the recovery-reset marker at {} — the reset stays owed", file)
-            false
+        try {
+            file.delete()
+        } catch (t: Throwable) {
+            log.warn("could not delete the recovery-reset marker at {}", file, t)
         }
-    } catch (t: Throwable) {
-        log.warn("could not delete the recovery-reset marker", t)
-        false
+        // Whatever delete() answered, only a confirmed absence completes the reset.
+        return when (state(dir)) {
+            Marker.ABSENT -> true
+            Marker.PENDING -> {
+                log.warn("could not delete the recovery-reset marker at {} — the reset stays owed", file)
+                false
+            }
+            Marker.UNKNOWN -> false // logged by state()
+        }
     }
 }
