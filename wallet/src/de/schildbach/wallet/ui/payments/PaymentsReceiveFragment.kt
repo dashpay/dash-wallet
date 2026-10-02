@@ -21,11 +21,13 @@ import android.os.Bundle
 import android.view.Gravity.CENTER_VERTICAL
 import android.view.View
 import android.widget.FrameLayout
+import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -63,6 +65,26 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
         private const val SHOW_IMPORT_PRIVATE_KEY_ARG = "showImportPrivateKey"
         private const val CENTER_VERTICALLY_KEY_ARG = "centerVertically"
         private const val FROM_QUICK_RECEIVE_KEY_ARG = "fromQuickReceive"
+
+        /**
+         * Whether a failed receive-address read should be shown to the user.
+         *
+         * Receive is a ViewPager2 page of [PaymentsFragment], so this fragment
+         * — and the address request started in `onViewCreated` — stays alive
+         * while the user is on the Send or Internal tab, and in the two-tab
+         * layout Receive is also built as the adjacent page while Send is
+         * selected. ViewPager2 caps an offscreen page at
+         * [Lifecycle.State.STARTED] and lifts only the selected page to
+         * [Lifecycle.State.RESUMED], so RESUMED — not STARTED — is what
+         * separates "the user is looking at Receive" from "this failure
+         * belongs to a page the user cannot see". Offscreen the failure is
+         * silent: the address area is simply left empty, which is the correct
+         * post-cutover outcome either way.
+         */
+        @VisibleForTesting
+        @JvmStatic
+        fun shouldSurfaceAddressFailure(viewState: Lifecycle.State): Boolean =
+            viewState.isAtLeast(Lifecycle.State.RESUMED)
 
         @JvmStatic
         fun newInstance(): PaymentsReceiveFragment {
@@ -126,14 +148,24 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
                 // Post-cutover the engine could not answer, and there is no safe
                 // substitute — the held dashj chain's pointer is frozen on an
                 // address the wallet has already been paid on (SR-03). Advertise
-                // nothing and let the user retry by reopening the screen.
+                // nothing: ReceiveInfoView with no address set keeps the address
+                // line and the QR code empty, which is exactly what we want, and
+                // the user can retry by reopening the screen.
+                //
+                // Handling stays inside Receive. This failure is transient (the
+                // engine may simply not be bound yet) and it can land while the
+                // user is on another tab of the shared pager, so it must never
+                // navigate — popping here would resolve the parent NavController
+                // and close the whole Payments destination out from under the
+                // tab in use.
                 log.warn("receive address unavailable; showing an error instead of an address", ex)
-                Toast.makeText(
-                    requireContext(),
-                    org.dash.wallet.common.R.string.loading_error,
-                    Toast.LENGTH_LONG
-                ).show()
-                findNavController().popBackStack()
+                if (shouldSurfaceAddressFailure(viewLifecycleOwner.lifecycle.currentState)) {
+                    Toast.makeText(
+                        requireContext(),
+                        org.dash.wallet.common.R.string.loading_error,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }
