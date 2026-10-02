@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
@@ -2642,25 +2643,67 @@ class CutoverUiDataService internal constructor(
     private var cachedReceiveAddress: ReceiveAddressSnapshot? = null
 
     /**
-     * Ticket issued to each engine read BEFORE it blocks, and the highest ticket
+     * Ticket stamped on each engine read AT THE READ, and the highest ticket
      * that has already published.
      *
      * The generation tells two wallet BINDINGS apart; it says nothing about the
      * order of two reads within ONE binding. Both the ticker/event refresh and a
-     * live read can be in the FFI at once: a refresh can take address A, pause,
-     * a live read can then publish the engine's newer B, and the released
-     * refresh would overwrite B with the stale A — putting an ALREADY-USED
-     * address back on the Receive screen until the next successful refresh.
-     * A read may therefore publish only if no later-started read has published
+     * live read can be in flight at once: a refresh can take address A, pause
+     * before publishing, a live read can then publish the engine's newer B, and
+     * the released refresh would overwrite B with the stale A — putting an
+     * ALREADY-USED address back on the Receive screen until the next successful
+     * refresh. A read may therefore publish only if no later read has published
      * first.
+     *
+     * WHERE the ticket is taken is as load-bearing as the fence itself: see
+     * [receiveEngineReadLock].
      */
     private var receiveReadTicket = 0L
     private var lastPublishedReceiveTicket = 0L
 
     /**
-     * Take the binding and a read ticket together, or null when nothing is bound.
-     * Called before the blocking FFI read; the lock is never held across it.
+     * Serializes ENGINE RECEIVE READS, so that ticket order IS snapshot order.
+     *
+     * The fence above orders publications by ticket, which is only sound if a
+     * higher ticket means a NEWER engine snapshot. Allocating the ticket before
+     * dispatching the read does not establish that, and the inversion it allows
+     * is not theoretical: the refresh took its ticket and then suspended at
+     * `withContext(Dispatchers.IO)` while its read was queued; a live read took
+     * the NEXT ticket, read address A and published it; the engine then advanced
+     * to B; and the queued refresh finally read — obtaining the NEWER B under
+     * the OLDER ticket, which the fence then rejected. The already-used A stayed
+     * in the cache and was handed back to the refresh's own caller. Plain thread
+     * scheduling between the ticket and either FFI call does the same.
+     *
+     * So the stamp and the snapshot are taken together, under this lock: reads
+     * queue here in the order they will read, and the ticket each one carries is
+     * the position it actually read in. This costs no real concurrency — the
+     * engine takes its wallet-manager WRITE lock for these reads, so they are
+     * already serialized inside the FFI; what changes is only that the queue is
+     * ordered where we can observe it.
+     *
+     * NOT [receiveAddressLock], and strictly OUTSIDE it: that lock guards the
+     * binding state that an unbind/rollback must be able to take at once, and it
+     * is never held across the FFI. The only permitted order is
+     * [receiveEngineReadLock] → [receiveAddressLock], and the publication
+     * ([completeReceiveRead]) happens after this lock has been released — which
+     * is exactly why the ticket fence is still needed.
      */
+    private val receiveEngineReadLock = Any()
+
+    /**
+     * Test barrier between an ordered engine read and its publication, no-op in
+     * production.
+     *
+     * That window is real — the serializing lock above is released before
+     * [completeReceiveRead] runs, which is the whole reason the ticket fence
+     * exists — but it is sub-microsecond and unreachable from a test through any
+     * other seam, because parking inside the fake FFI read now parks the lock
+     * with it. Two regression tests pin behaviour that only happens inside it.
+     */
+    @VisibleForTesting
+    internal var liveReceivePublishBarrier: () -> Unit = {}
+
     /**
      * [beginReceiveRead], but WAITING briefly for the binding when the cutover is
      * active and no wallet is bound yet.
@@ -2676,7 +2719,7 @@ class CutoverUiDataService internal constructor(
      */
     private fun beginReceiveReadAwaitingBinding(
         timeoutMs: Long = BINDING_WAIT_MS
-    ): Triple<Long, Long, String>? {
+    ): Pair<Long, String>? {
         val deadline = System.nanoTime() + timeoutMs * 1_000_000L
         // Resolved ONCE per call (the blocking read below is a DataStore hit, not
         // something to repeat every poll); a rollback during the wait is not
@@ -2706,11 +2749,35 @@ class CutoverUiDataService internal constructor(
         }
     }
 
-    private fun beginReceiveRead(): Triple<Long, Long, String>? = synchronized(receiveAddressLock) {
+    /**
+     * Take the BINDING — the wallet id and the generation it is current under —
+     * or null when nothing is bound. Called before the blocking FFI read; the
+     * lock is never held across it.
+     *
+     * Deliberately does NOT stamp the read's ticket. The ticket orders
+     * SNAPSHOTS, and this runs an unbounded scheduling gap (and, for the
+     * refresh, a `withContext` dispatch) before the snapshot is taken — see
+     * [receiveEngineReadLock], which is where the stamp belongs.
+     */
+    private fun beginReceiveRead(): Pair<Long, String>? = synchronized(receiveAddressLock) {
         if (!_cutoverActive.value) return null
         val walletIdHex = activeWalletIdHex ?: return null
-        Triple(receiveAddressGeneration, ++receiveReadTicket, walletIdHex)
+        Pair(receiveAddressGeneration, walletIdHex)
     }
+
+    /**
+     * Run [read] — one blocking engine address read — as the next one in line,
+     * returning the ticket it read under together with its answer.
+     *
+     * The ticket is stamped INSIDE the serialized section, so the order of the
+     * tickets is the order of the snapshots and [completeReceiveRead]'s fence
+     * can rely on it. See [receiveEngineReadLock] for why nothing weaker works.
+     */
+    private fun readReceiveAddressOrdered(read: () -> String?): Pair<Long, String?> =
+        synchronized(receiveEngineReadLock) {
+            val ticket = synchronized(receiveAddressLock) { ++receiveReadTicket }
+            Pair(ticket, read())
+        }
 
     /**
      * Publish [address] for the read identified by [generation]/[ticket], and
@@ -2925,10 +2992,10 @@ class CutoverUiDataService internal constructor(
      * after everything else it needs, as late as it possibly can.
      */
     fun sdkUnadvertisedAddressLiveBlockingWithBinding(): BoundEngineAddress? {
-        // Takes a ticket like the receive reads so the binding check is identical,
-        // but publishes nothing — there is no cache on this side, so ordering
-        // between two of these cannot matter.
-        val (generation, _, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
+        // Takes the binding exactly like the receive reads, but no ticket and no
+        // publication: there is no cache on this side, so the order of two of
+        // these cannot matter and they need not queue behind one another.
+        val (generation, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
         val address = source.nextChangeAddressOrNull(walletIdHex)
         return synchronized(receiveAddressLock) {
             // The wallet was wiped or rolled back while we were blocked: this
@@ -2971,8 +3038,14 @@ class CutoverUiDataService internal constructor(
         // Capture the binding and its generation together, then read OUTSIDE the
         // lock — holding it across a blocking FFI call would make every
         // deactivation wait on the engine's wallet-manager lock.
-        val (generation, ticket, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
-        val address = source.nextReceiveAddressOrNull(walletIdHex)
+        val (generation, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
+        // The ticket is stamped WITH the snapshot, not here: ordering that is
+        // established before the read says nothing about which read saw the
+        // newer engine state ([receiveEngineReadLock]).
+        val (ticket, address) = readReceiveAddressOrdered {
+            source.nextReceiveAddressOrNull(walletIdHex)
+        }
+        liveReceivePublishBarrier()
         // A failed read leaves the last known value in place rather than clearing
         // it (an empty cache sends the synchronous overlay back to the frozen
         // dashj address); a stale binding or an out-of-order result is rejected —
@@ -3685,9 +3758,13 @@ class CutoverUiDataService internal constructor(
         // answer ([completeReceiveRead]).
         val begun = beginReceiveRead()
         if (begun != null) {
-            val (generation, ticket, boundWalletIdHex) = begun
-            val nextReceive = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                source.nextReceiveAddressOrNull(boundWalletIdHex)
+            val (generation, boundWalletIdHex) = begun
+            // The ticket is taken on the thread that performs the read and under
+            // the read lock — NOT here. Taking it before this dispatch is what
+            // let a queued refresh obtain a NEWER snapshot under an OLDER ticket
+            // and then be rejected by its own fence ([receiveEngineReadLock]).
+            val (ticket, nextReceive) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                readReceiveAddressOrdered { source.nextReceiveAddressOrNull(boundWalletIdHex) }
             }
             val served = synchronized(receiveAddressLock) {
                 completeReceiveRead(generation, ticket, nextReceive)

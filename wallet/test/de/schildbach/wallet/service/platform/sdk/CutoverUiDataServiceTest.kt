@@ -54,6 +54,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -896,6 +897,21 @@ class CutoverUiDataServiceTest {
         @Volatile
         var gateByThreadNamePrefix = false
 
+        /**
+         * Take the answer AFTER the gate releases instead of before it, i.e.
+         * model a read that is held up BEFORE it has taken its snapshot rather
+         * than after.
+         *
+         * Off by default, and deliberately so: the out-of-order-publication
+         * tests need the snapshot taken BEFORE the park (a fake that re-read the
+         * field afterwards hands back whatever the test set meanwhile, which
+         * makes them pass vacuously — it did). The ordering test needs the
+         * opposite, because the inversion it pins is a read that takes its
+         * ordering stamp and only THEN reaches the engine.
+         */
+        @Volatile
+        var captureAnswerAfterGate = false
+
         override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
             nextReceiveAddressReads++
             val gate = gatedReadThreadName
@@ -912,7 +928,7 @@ class CutoverUiDataServiceTest {
                     "receive-address gate never released"
                 }
             }
-            return answer
+            return if (gated && captureAnswerAfterGate) nextReceiveAddress else answer
         }
 
         override suspend fun currentTotalDuffs(walletIdHex: String): Long =
@@ -1933,26 +1949,38 @@ class CutoverUiDataServiceTest {
         )
         assertNull("precondition: the cache is cold", service.sdkReceiveAddressOrNull())
 
-        // Start the OLDER read and park it holding A.
+        // Start the OLDER read and hold it on its way to PUBLISHING A — the
+        // window the fence governs. (It is held at the publish barrier, not
+        // inside the FFI: the engine reads are serialized now, so a read parked
+        // inside the FFI parks every other read behind it and the newer read
+        // below could never happen at all. The window this test is about opens
+        // AFTER the read, which is exactly why the fence is still needed —
+        // see CutoverUiDataService.receiveEngineReadLock.)
         val readThreadName = "sr03-cold-older-read"
         source.nextReceiveAddress = "yENGINEaddressA"
-        source.gatedReadThreadName = readThreadName
+        val publishGate = java.util.concurrent.CountDownLatch(1)
+        val olderHeld = java.util.concurrent.atomic.AtomicBoolean(false)
+        service.liveReceivePublishBarrier = {
+            if (Thread.currentThread().name == readThreadName) {
+                olderHeld.set(true)
+                check(publishGate.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                    "publish barrier never released"
+                }
+            }
+        }
         val older = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
             Thread(r, readThreadName)
         }
         val olderResult = older.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
-        val deadline = System.nanoTime() + 10_000_000_000L
-        while (!source.receiveAddressReadParked && System.nanoTime() < deadline) Thread.sleep(5)
-        assertTrue("the older read never reached the FFI", source.receiveAddressReadParked)
+        assertTrue("the older read never reached the publish barrier", waitFor { olderHeld.get() })
 
-        // A NEWER read completes while it is parked — and the engine has nothing
+        // A NEWER read completes while it is held — and the engine has nothing
         // for it, which is the whole point: this read publishes NOTHING, and the
         // old fence therefore did not move.
-        source.gatedReadThreadName = null
         source.nextReceiveAddress = null
         assertNull(service.sdkReceiveAddressLiveBlockingOrNull())
 
-        source.receiveAddressGate.countDown()
+        publishGate.countDown()
         val olderAnswer = olderResult.get()
         older.shutdown()
 
@@ -2090,29 +2118,40 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun anOlderReadCannotOverwriteANewerPublishedAddress() = runTest {
-        // Generation separates BINDINGS, not reads within one binding. A refresh
-        // can take address A, pause in the FFI, a live read can publish the
-        // engine's newer B, and the released refresh would then put the
-        // ALREADY-USED A back on the Receive screen.
+        // Generation separates BINDINGS, not reads within one binding. An older
+        // read can take address A, be held up on its way to PUBLISHING it, a
+        // live read can publish the engine's newer B, and the released older
+        // read would then put the ALREADY-USED A back on the Receive screen.
+        //
+        // Held at the publish barrier rather than inside the FFI, for the reason
+        // `anOlderReadCannotPublishAfterANewerReadCompletedEmpty` spells out: the
+        // engine reads are serialized, so the surviving out-of-order window is
+        // the one between a read and its publication.
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
         service.start()
         runCurrent()
 
-        // Start an OLDER read and park it holding A.
+        // Start an OLDER read and hold it holding A.
         val readThreadName = "sr03-older-read"
         source.nextReceiveAddress = "yENGINEaddressA"
-        source.gatedReadThreadName = readThreadName
+        val publishGate = java.util.concurrent.CountDownLatch(1)
+        val olderHeld = java.util.concurrent.atomic.AtomicBoolean(false)
+        service.liveReceivePublishBarrier = {
+            if (Thread.currentThread().name == readThreadName) {
+                olderHeld.set(true)
+                check(publishGate.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                    "publish barrier never released"
+                }
+            }
+        }
         val older = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
             Thread(r, readThreadName)
         }
         val olderResult = older.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
-        val deadline = System.nanoTime() + 10_000_000_000L
-        while (!source.receiveAddressReadParked && System.nanoTime() < deadline) Thread.sleep(5)
-        assertTrue("the older read never reached the FFI", source.receiveAddressReadParked)
+        assertTrue("the older read never reached the publish barrier", waitFor { olderHeld.get() })
 
-        // A NEWER read publishes B while the older one is still parked.
-        source.gatedReadThreadName = null
+        // A NEWER read publishes B while the older one is still held.
         source.nextReceiveAddress = "yENGINEaddressB"
         assertEquals("yENGINEaddressB", service.sdkReceiveAddressLiveBlockingOrNull())
         assertEquals("yENGINEaddressB", service.sdkReceiveAddressOrNull())
@@ -2122,7 +2161,7 @@ class CutoverUiDataServiceTest {
         // WalletApplication returns a non-null live result unchanged, so an
         // older caller answered with A would advertise an already-used address
         // even though the cache is correct.
-        source.receiveAddressGate.countDown()
+        publishGate.countDown()
         val olderAnswer = olderResult.get()
         older.shutdown()
 
@@ -2136,6 +2175,82 @@ class CutoverUiDataServiceTest {
             "yENGINEaddressB",
             olderAnswer
         )
+    }
+
+    @Test
+    fun aQueuedReadCannotTakeTheNewerSnapshotUnderTheOlderTicket() = runTest {
+        // ORDERING AT THE SNAPSHOT, not at the ticket. The fence throws away a
+        // read whose ticket is older than the last published one, which is only
+        // sound if a newer ticket means a newer ENGINE SNAPSHOT. Taking the
+        // ticket before the read was dispatched did not establish that:
+        //   the refresh took ticket 1 and suspended at withContext(IO)
+        //   a live read took ticket 2, read address A and published it
+        //   the engine advanced to B
+        //   the queued refresh finally reached the engine and got the NEWER B —
+        //   under the OLDER ticket, which its own fence then rejected
+        // leaving the already-used A in the cache AND handing A back to the
+        // refresh's own caller: SR-03's reused address, served by the machinery
+        // built to prevent it. Plain thread scheduling between the ticket and
+        // either FFI call inverts them the same way.
+        //
+        // Staged with the first read held BEFORE it takes its snapshot
+        // (`captureAnswerAfterGate`) — the state a ticket must never be allowed
+        // to run ahead of.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        source.nextReceiveAddress = "yENGINEaddressA"
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        assertTrue(
+            "the pipeline's own read must have published before the race is staged",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEaddressA" }
+        )
+
+        // The read that is FIRST in line, held before it has taken its snapshot.
+        val firstThreadName = "sr03-ordering-first"
+        source.captureAnswerAfterGate = true
+        source.gatedReadThreadName = firstThreadName
+        source.receiveAddressReadParked = false
+        val first = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, firstThreadName)
+        }
+        val firstResult = first.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        assertTrue("the first read never reached the engine", waitFor { source.receiveAddressReadParked })
+
+        // A SECOND read starts while the first is still inside the engine. It
+        // must not be able to take a snapshot — and therefore its ticket —
+        // before the read already in there has taken its own.
+        val second = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "sr03-ordering-second")
+        }
+        val secondResult = second.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        try {
+            secondResult.get(500, java.util.concurrent.TimeUnit.MILLISECONDS)
+            fail("a read overtook one already in flight: ticket order is not snapshot order")
+        } catch (expected: java.util.concurrent.TimeoutException) {
+            // Queued behind the first read, which is the point.
+        }
+
+        // The engine advances while the first read is still in there, so the
+        // snapshot that read is about to take is the NEWER one.
+        source.nextReceiveAddress = "yENGINEaddressB"
+        source.receiveAddressGate.countDown()
+
+        val firstAnswer = firstResult.get(10, java.util.concurrent.TimeUnit.SECONDS)
+        val secondAnswer = secondResult.get(10, java.util.concurrent.TimeUnit.SECONDS)
+        first.shutdown()
+        second.shutdown()
+
+        assertEquals(
+            "the newer snapshot must be published, not rejected for carrying an older ticket",
+            "yENGINEaddressB",
+            service.sdkReceiveAddressOrNull()
+        )
+        assertEquals(
+            "the read that took the newer snapshot must not be answered with the older address",
+            "yENGINEaddressB",
+            firstAnswer
+        )
+        assertEquals("yENGINEaddressB", secondAnswer)
     }
 
     @Test
