@@ -17,8 +17,11 @@
 
 package de.schildbach.wallet.util
 
+import androidx.annotation.VisibleForTesting
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.security.SecureRandom
 
 /**
@@ -44,6 +47,14 @@ import java.security.SecureRandom
  * planted marker or a restored `files/` marker from another install cannot
  * silently authorize destroying a healthy wallet on cold launch.
  *
+ * FAIL CLOSED. Only a marker CONFIRMED absent is [State.NONE]: a lookup that
+ * cannot establish whether the entry exists, and any entry that is not a
+ * plain file (a directory, or a symlink — dangling or not), is
+ * [State.RECOVERY_REQUIRED]. `File.exists()` cannot be used for this: it
+ * answers false both for a real absence and when the check cannot be made,
+ * and it follows a dangling link to "absent". Same approach as
+ * [RecoveryResetState].
+ *
  * Every method is failure-contained and never throws — a diagnostic/recovery
  * channel must not be able to take the app down.
  */
@@ -54,6 +65,41 @@ object WalletWipeState {
     const val MARKER_FILE_NAME = "wallet-wipe.pending"
 
     enum class State { NONE, PENDING, RECOVERY_REQUIRED }
+
+    /** What a lookup of the marker's directory entry established. */
+    internal enum class Entry {
+        /** Confirmed absent. */
+        ABSENT,
+
+        /** Some entry (file, directory, link) exists at the marker path. */
+        PRESENT,
+
+        /** Neither could be established (I/O or permission failure). */
+        UNKNOWN
+    }
+
+    /**
+     * How the marker's directory entry is looked up. A seam for tests, which
+     * cannot make a real file system fail on demand; production code never
+     * replaces it.
+     */
+    @VisibleForTesting
+    internal var lookup: (File) -> Entry = ::lookupOnDisk
+
+    /**
+     * NOFOLLOW_LINKS: a dangling link is still an entry at that path, so it
+     * is not "absent". `Files.exists` and `Files.notExists` both answer false
+     * when the check cannot be made, which is the only way to tell that case
+     * from a real absence.
+     */
+    private fun lookupOnDisk(file: File): Entry {
+        val path = file.toPath()
+        return when {
+            Files.exists(path, LinkOption.NOFOLLOW_LINKS) -> Entry.PRESENT
+            Files.notExists(path, LinkOption.NOFOLLOW_LINKS) -> Entry.ABSENT
+            else -> Entry.UNKNOWN
+        }
+    }
 
     private const val TOKEN_FILE_NAME = "wallet-wipe.install-token"
     private const val MARKER_VERSION = "v1"
@@ -97,8 +143,18 @@ object WalletWipeState {
         return try {
             if (!filesDir.isDirectory) return State.RECOVERY_REQUIRED
             val file = marker(filesDir)
-            if (!file.exists()) {
-                return State.NONE
+            when (lookup(file)) {
+                Entry.ABSENT -> return State.NONE
+                Entry.UNKNOWN -> {
+                    log.warn("could not establish whether the wallet-wipe marker at {} exists; manual recovery required", file)
+                    return State.RECOVERY_REQUIRED
+                }
+                Entry.PRESENT -> Unit
+            }
+            // The marker is written as a plain file; never read through a link.
+            if (!Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+                log.warn("wallet-wipe marker at {} is not a plain file; manual recovery required", file)
+                return State.RECOVERY_REQUIRED
             }
             val token = readInstallToken(noBackupFilesDir)
             if (token != null && readBounded(file, MARKER_FILE_MAX_BYTES) == markerBody(token)) {
@@ -119,16 +175,30 @@ object WalletWipeState {
      * re-runs the wipe, and re-running it is always safe, whereas clearing it
      * early leaves the half-wiped state this whole mechanism exists to
      * prevent.
+     *
+     * @return true only when the marker is now CONFIRMED absent; false (logged)
+     *   when it could not be deleted or its absence cannot be established.
      */
-    fun complete(filesDir: File) {
+    fun complete(filesDir: File): Boolean {
+        val file = marker(filesDir)
         try {
-            val file = marker(filesDir)
-            if (file.exists() && !file.delete()) {
-                log.warn("could not delete the wallet-wipe marker at {} — the next launch will re-run the wipe", file)
-            }
+            // Unconditionally: File.exists() is false for a dangling link,
+            // which File.delete() removes (the link, not its target).
+            file.delete()
         } catch (t: Throwable) {
-            log.warn("could not delete the wallet-wipe marker", t)
+            log.warn("could not delete the wallet-wipe marker at {}", file, t)
         }
+        // Whatever delete() answered, only a confirmed absence counts as removed.
+        val entry = try {
+            lookup(file)
+        } catch (t: Throwable) {
+            log.warn("could not inspect the wallet-wipe marker at {}", file, t)
+            Entry.UNKNOWN
+        }
+        if (entry != Entry.ABSENT) {
+            log.warn("wallet-wipe marker at {} not confirmed removed ({}) — the next launch will re-run the wipe", file, entry)
+        }
+        return entry == Entry.ABSENT
     }
 
     private fun markerBody(token: String) = "$MARKER_VERSION\n$token\n"
