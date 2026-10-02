@@ -47,6 +47,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.StringRes;
+import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
@@ -1192,11 +1193,16 @@ public class WalletApplication extends MultiDexApplication
             config.setTaxCategoryInstallTime(System.currentTimeMillis());
         }
 
+        // Before afterLoadWallet(), not after: it arms the wallet autosave
+        // (dashj's temp is a "*.tmp" in this same directory) and starts the
+        // maintenance thread, whose owed-backup repair writes
+        // key-backup-protobuf.tmp. Sweeping "*.tmp" after them could delete a
+        // temp mid-write, failing a repair this session never retries.
+        cleanupFiles();
+
         afterLoadWallet();
         log.info("STARTUP finalizeInit: afterLoadWallet done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_AFTER_LOAD_WALLET_DONE, "AFTER_LOAD_WALLET_DONE");
-
-        cleanupFiles();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
@@ -2037,16 +2043,25 @@ public class WalletApplication extends MultiDexApplication
         log.info("wallet backed up to: '{}', took {}", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, watch);
     }
 
-    private void cleanupFiles() {
-        for (final String filename : fileList()) {
-            if (filename.startsWith(Constants.Files.WALLET_KEY_BACKUP_BASE58)
-                    || filename.startsWith(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF + '.')
-                    || filename.endsWith(".tmp")) {
-                final File file = new File(getFilesDir(), filename);
-                log.info("removing obsolete file: '{}'", file);
-                file.delete();
+    /**
+     * Removes obsolete backups and abandoned temps. Runs exclusively of every
+     * {@link AtomicFileWriter} write (the key backup's), so an in-flight
+     * {@code key-backup-protobuf.tmp} is never swept from under its writer;
+     * any such temp this sees was abandoned by a dead process.
+     */
+    @VisibleForTesting
+    void cleanupFiles() {
+        AtomicFileWriter.runExclusive(() -> {
+            for (final String filename : fileList()) {
+                if (filename.startsWith(Constants.Files.WALLET_KEY_BACKUP_BASE58)
+                        || filename.startsWith(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF + '.')
+                        || filename.endsWith(".tmp")) {
+                    final File file = new File(getFilesDir(), filename);
+                    log.info("removing obsolete file: '{}'", file);
+                    file.delete();
+                }
             }
-        }
+        });
     }
 
     /**
