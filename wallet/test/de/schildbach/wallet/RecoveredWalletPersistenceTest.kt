@@ -194,6 +194,60 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
+    fun `an unreadable recovery marker keeps the reset owed`() {
+        val marker = File(directory.root, RecoveryResetState.MARKER_FILE_NAME)
+        app.persistRecoveredWallet(recovered)
+        // On disk the marker is gone, but the file system cannot confirm it.
+        assertTrue(marker.delete())
+        val onDisk = RecoveryResetState.inspect
+        RecoveryResetState.inspect = { RecoveryResetState.Marker.UNKNOWN }
+        try {
+            assertTrue("fail closed", app.isRecoveryResetPending)
+            assertFalse("an unverified absence is not a completed reset", app.markRecoveryResetComplete())
+
+            // The load still does the in-process half of the reset.
+            setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+            setField("walletFactory", mockk<WalletFactory> {
+                every { getExtensions(any()) } returns emptyArray()
+            })
+            val launchApp = spyk(app)
+            every { launchApp.resetBlockchain() } answers { fail("must not queue ACTION_RESET_BLOCKCHAIN") }
+            every { launchApp.resetBlockchainInProcess() } answers { }
+            every { launchApp.finalizeInitialization() } answers { }
+            val load = WalletApplication::class.java.getDeclaredMethod("loadWalletFromProtobuf").apply {
+                isAccessible = true
+            }
+            load.invoke(launchApp)
+            verify(exactly = 1) { launchApp.resetBlockchainInProcess() }
+
+            // Once the absence is confirmed, the load no longer resets.
+            RecoveryResetState.inspect = onDisk
+            assertFalse(launchApp.isRecoveryResetPending)
+            load.invoke(launchApp)
+            verify(exactly = 1) { launchApp.resetBlockchainInProcess() }
+        } finally {
+            RecoveryResetState.inspect = onDisk
+        }
+    }
+
+    @Test
+    fun `a wipe keeps its marker while the recovery marker's absence is unverified`() {
+        val wipeApp = spyk(app)
+        every { wipeApp.filesDir } returns directory.root
+        assertTrue(WalletWipeState.begin(directory.root))
+        val onDisk = RecoveryResetState.inspect
+        RecoveryResetState.inspect = { RecoveryResetState.Marker.UNKNOWN }
+        try {
+            wipeApp.markWalletWipeComplete()
+            assertTrue("the next launch must retry", WalletWipeState.isPending(directory.root))
+        } finally {
+            RecoveryResetState.inspect = onDisk
+        }
+        wipeApp.markWalletWipeComplete()
+        assertFalse(WalletWipeState.isPending(directory.root))
+    }
+
+    @Test
     fun `failed recovery resets are counted in the marker`() {
         app.persistRecoveredWallet(recovered)
         assertTrue(app.isRecoveryResetPending)

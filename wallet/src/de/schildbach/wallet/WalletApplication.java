@@ -1747,6 +1747,7 @@ public class WalletApplication extends MultiDexApplication
         // the blockchain service performs the store/database reset in its
         // onCreate, before it opens anything, whichever start creates it, so
         // no ACTION_RESET_BLOCKCHAIN is queued (it would reset a second time).
+        // An unreadable marker counts as pending (see isRecoveryResetPending).
         if (isRecoveryResetPending()) {
             log.info("recovered wallet still owes a blockchain reset — the blockchain service performs it");
             resetBlockchainInProcess();
@@ -1942,7 +1943,13 @@ public class WalletApplication extends MultiDexApplication
         recoveredWalletPersistencePending = false;
     }
 
-    /** A backup-recovered wallet still owes its blockchain reset; see {@link RecoveryResetState}. */
+    /**
+     * A backup-recovered wallet still owes its blockchain reset; see
+     * {@link RecoveryResetState}. Also true when the marker cannot be
+     * inspected (fail closed): only a marker confirmed absent lets the load
+     * skip the in-process reset and the blockchain service open its stores.
+     * Never throws.
+     */
     public boolean isRecoveryResetPending() {
         return RecoveryResetState.INSTANCE.isPending(walletFile.getParentFile());
     }
@@ -1955,7 +1962,8 @@ public class WalletApplication extends MultiDexApplication
     /**
      * Called by the blockchain service once the owed reset has run.
      *
-     * @return whether the marker is now absent; false means the reset is still owed.
+     * @return whether the marker is now confirmed absent; false, including
+     *   when its absence cannot be established, means the reset is still owed.
      */
     public boolean markRecoveryResetComplete() {
         return RecoveryResetState.INSTANCE.complete(walletFile.getParentFile());

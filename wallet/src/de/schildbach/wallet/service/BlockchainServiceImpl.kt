@@ -689,6 +689,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             stopSelf()
             return true
         }
+        // isRecoveryResetPending is also true for a marker that cannot be
+        // inspected: no command runs until it is confirmed absent.
         if (application.wallet == null || application.isWalletLoadDegraded || application.isRecoveryResetPending) {
             stopSelf()
             return true
@@ -2544,7 +2546,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 // A backup-recovered wallet still owes its reset: opening the
                 // existing stores and starting sync would expose their stale
-                // state to the transaction-stripped wallet.
+                // state to the transaction-stripped wallet. A marker that
+                // cannot be inspected counts as owed (fail closed), and the
+                // reset only completes once the marker is confirmed gone.
                 if (application.isRecoveryResetPending && !performRecoveryReset()) {
                     withContext(Dispatchers.Main) {
                         refuseWalletInitialization()

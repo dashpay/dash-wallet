@@ -264,6 +264,45 @@ class RefusedWalletInitializationTest {
     }
 
     @Test
+    fun `a recovery marker that cannot be inspected never lets initialization proceed`() = withRecoveryReset {
+        // The application answers from the real marker state, which the file
+        // system cannot establish: no marker file exists, and none can be read.
+        val markerDir = this@RefusedWalletInitializationTest.directory.newFolder()
+        every { application.isRecoveryResetPending } answers {
+            de.schildbach.wallet.util.RecoveryResetState.isPending(markerDir)
+        }
+        every { application.markRecoveryResetComplete() } answers {
+            de.schildbach.wallet.util.RecoveryResetState.complete(markerDir)
+        }
+        every { application.recordRecoveryResetFailure() } answers {
+            de.schildbach.wallet.util.RecoveryResetState.recordFailedAttempt(markerDir)
+        }
+        every { application.wallet } returns mockk()
+        every { application.isWalletLoadDegraded } returns false
+        every { service.stopSelf() } answers { }
+        val onDisk = de.schildbach.wallet.util.RecoveryResetState.inspect
+        de.schildbach.wallet.util.RecoveryResetState.inspect = {
+            de.schildbach.wallet.util.RecoveryResetState.Marker.UNKNOWN
+        }
+        try {
+            // onCreate's gate: owed, and every part of the reset succeeds,
+            // but its completion cannot be confirmed, so it is never waived.
+            repeat(de.schildbach.wallet.util.RecoveryResetState.MAX_FAILED_ATTEMPTS + 2) {
+                assertTrue(application.isRecoveryResetPending)
+                assertFalse(service.performRecoveryReset())
+            }
+            assertTrue(service.handleWalletLifecycleCommand(null))
+
+            // Once the file system confirms the absence, the next start proceeds.
+            de.schildbach.wallet.util.RecoveryResetState.inspect = onDisk
+            assertFalse(application.isRecoveryResetPending)
+            assertFalse(service.handleWalletLifecycleCommand(null))
+        } finally {
+            de.schildbach.wallet.util.RecoveryResetState.inspect = onDisk
+        }
+    }
+
+    @Test
     fun `commands are refused while a recovery reset is still owed`() {
         val service = spyk(BlockchainServiceImpl())
         val application = mockk<WalletApplication>(relaxed = true)
