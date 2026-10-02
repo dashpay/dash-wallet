@@ -37,6 +37,7 @@ import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
@@ -57,7 +58,8 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletFactory: WalletFactory,
     private val configuration: Configuration,
     private val securityFunctions: SecurityFunctions,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val blockchainServiceConfig: BlockchainServiceConfig
 ) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
@@ -198,12 +200,20 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     suspend fun restoreWalletFromSeed(words: List<String>): SeedRestoreResult = withContext(Dispatchers.IO) {
         if (isSeedValid(words)) {
+            // Before any restore work: a wipe marker refuses the replacement.
+            if (walletApplication.isWalletReplacementRefused) {
+                log.warn("seed restore refused before it began: a wallet reset is unfinished or unverified")
+                return@withContext SeedRestoreResult.REFUSED
+            }
             val creationTime = selectedCreationDate.value
-            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words), creationTime)
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
             if (!walletApplication.setWallet(wallet)) {
                 log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
                 return@withContext SeedRestoreResult.REFUSED
             }
+            // Only once the replacement is accepted: a refused wallet must not
+            // overwrite the existing wallet's persisted scan-start date.
+            creationTime?.let { blockchainServiceConfig.setWalletCreationDate(it) }
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()
             configuration.isRestoringBackup = true
