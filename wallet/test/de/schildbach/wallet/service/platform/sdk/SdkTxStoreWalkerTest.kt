@@ -612,6 +612,60 @@ class SdkTxStoreWalkerTest {
     }
 
     /**
+     * D-M-01: the store leaves `fee` NULL, so the walker recovers it for the
+     * display. A walk that sees only SOME of a send's spend marks cannot — and
+     * must try again once the rest land, in the same walker (the 60s reconcile
+     * reuses it), then persist the fee durably.
+     */
+    @Test
+    fun feeRecovery_partialSpendMarks_retriesWhenTheRestLand() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_fr_a", bip44Account)
+        insertCoreAddress("bip44_fr_b", bip44Account)
+        insertCoreAddress("bip44_fr_change", bip44Account)
+        val fundingA = txid(61)
+        val fundingB = txid(62)
+        insertTx(fundingA, direction = 0, netAmount = 2_000_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTx(fundingB, direction = 0, netAmount = 1_500_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(fundingA, 0, 2_000_000, "bip44_fr_a")
+        insertTxo(fundingB, 0, 1_500_000, "bip44_fr_b")
+
+        // A two-input credit purchase with the net the engine persists
+        // (−(burn+fee)) and no fee: 3 000 000 burn + 499 759 change, 241 fee.
+        val assetLock = txid(63)
+        insertTx(
+            assetLock, direction = 2, netAmount = -3_000_241, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        insertTxo(assetLock, 1, 499_759, "bip44_fr_change")
+        // Only the first input's spend mark has landed.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingA)
+
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 3_499_759, outputCount = 2, inputCount = 2)
+            } else {
+                null
+            }
+        })
+        fun walkedAssetLock(): L1TxUiRecord {
+            val byHex = HashMap<String, L1TxUiRecord>()
+            runBlocking { w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } } }
+            return requireNotNull(byHex[displayHexOf(assetLock)])
+        }
+
+        assertNull("one of two inputs proves no fee", walkedAssetLock().feeDuffs)
+        assertNull(storedShape(assetLock).third)
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingB)
+
+        val recovered = walkedAssetLock()
+        assertEquals(241L, recovered.feeDuffs)
+        assertEquals(-3_000_241L, recovered.netAmountDuffs) // the net itself is untouched
+        assertEquals(241L, storedShape(assetLock).third)
+    }
+
+    /**
      * An AssetLock whose stored net is already non-zero (the shape the rust
      * store-side fix will persist) is NOT flagged — the heal arm goes inert.
      */

@@ -652,30 +652,38 @@ internal class SdkTxStoreWalker(
     /**
      * Fill the fee the store left NULL ([needsFeeRecovery]) on [records]
      * (index-aligned with [rows]), so the display can show a send without its
-     * fee. One chunked payload fetch, paid only for sends still missing a fee.
+     * fee. One `pending_inputs` aggregate plus one chunked payload fetch, paid
+     * only while some send is still missing a fee.
      *
      * Durable like [persistCorrections]: a fee recovered from CONFIRMED spent
-     * marks is written into the store row (`fee IS NULL` guarded, so a value
-     * the engine wrote is never replaced), and the row then never qualifies
-     * again. A fee that needs a `pending_inputs` reservation is served from
-     * memory only — the reservation is an in-flight claim, the same rule as
-     * reattribution. A send whose fee is unrecoverable (not every input was
-     * ours) is remembered process-wide in [feeUnrecoverable], so it costs one
-     * parse per launch rather than one per walk.
+     * marks alone is written into the store row (`fee IS NULL` guarded, so a
+     * value the engine wrote is never replaced), and the row then never
+     * qualifies again. A fee that needs a `pending_inputs` reservation is
+     * served from memory only — the reservation is an in-flight claim, the
+     * same rule as reattribution.
+     *
+     * A send whose fee could not be recovered is retried whenever its spend
+     * evidence changes ([feeEvidenceTried]): a null fee may mean another
+     * participant funded it, but equally that the mirror holds only some of
+     * its spend marks so far, and the next mark must get another try.
      */
     private fun withRecoveredFees(rows: List<RecordRow>, records: List<L1TxUiRecord>): List<L1TxUiRecord> {
-        val candidates = records.indices.filter {
-            needsFeeRecovery(records[it]) && records[it].txidHex !in feeUnrecoverable
-        }
+        val candidates = records.indices.filter { needsFeeRecovery(records[it]) }
         if (candidates.isEmpty()) return records
-        val pending = if (candidates.any { rows[it].spentOwnedCount == 0 }) pendingSpentAggregates() else emptyMap()
-        val withEvidence = candidates.filter {
-            rows[it].spentOwnedCount + (pending[records[it].txidHex]?.count ?: 0) > 0
+        val pending = pendingSpentAggregates()
+        fun evidenceOf(i: Int) = FeeEvidence(
+            spentOwnedCount = rows[i].spentOwnedCount,
+            pendingCount = pending[records[i].txidHex]?.count ?: 0
+        )
+        val due = candidates.filter {
+            val evidence = evidenceOf(it)
+            evidence.inputCount > 0 && feeEvidenceTried[records[it].txidHex] != evidence
         }
-        if (withEvidence.isEmpty()) return records
+        if (due.isEmpty()) return records
 
         val facts = HashMap<String, TxPayloadFacts>()
-        for (chunk in withEvidence.chunked(TXID_IN_CHUNK)) {
+        val payloadSeen = HashSet<String>()
+        for (chunk in due.chunked(TXID_IN_CHUNK)) {
             val placeholders = chunk.joinToString(",") { "?" }
             rawQuery(
                 "SELECT txid, transactionData FROM transactions WHERE txid IN ($placeholders)",
@@ -683,33 +691,57 @@ internal class SdkTxStoreWalker(
             ) { c ->
                 while (c.moveToNext()) {
                     if (c.isNull(1)) continue
-                    payloadFacts(c.getBlob(1))?.let { facts[displayHexOf(c.getBlob(0))] = it }
+                    val hex = displayHexOf(c.getBlob(0))
+                    payloadSeen += hex
+                    payloadFacts(c.getBlob(1))?.let { facts[hex] = it }
                 }
             }
         }
 
         val out = records.toMutableList()
         val toPersist = ArrayList<Pair<ByteArray, Long>>()
-        for (i in withEvidence) {
+        for (i in due) {
             val row = rows[i]
             val hex = records[i].txidHex
             val pend = pending[hex]
-            val fact = facts[hex]
-            val fee = fact?.let {
+            val fee = facts[hex]?.let {
                 recoveredFeeDuffs(it, row.spentOwnedCount + (pend?.count ?: 0), row.spentOwnedDuffs + (pend?.duffs ?: 0L))
             }
             if (fee == null) {
-                // Only CONFIRMED evidence proves the fee unrecoverable: a
-                // pending send may simply not have all its marks yet.
-                if (pend == null) feeUnrecoverable += hex
+                // A payload that is not there yet gets another try every pass;
+                // one that is there was judged on this evidence.
+                if (hex in payloadSeen) feeEvidenceTried[hex] = evidenceOf(i)
                 continue
             }
+            feeEvidenceTried.remove(hex)
             out[i] = records[i].copy(feeDuffs = fee)
             if (pend == null) toPersist += row.wireTxid to fee
         }
         persistRecoveredFees(toPersist)
         return out
     }
+
+    /** The spend marks a fee-recovery attempt saw — see [feeEvidenceTried]. */
+    private data class FeeEvidence(val spentOwnedCount: Int, val pendingCount: Int) {
+        val inputCount: Int get() = spentOwnedCount + pendingCount
+    }
+
+    /**
+     * Sends whose fee [withRecoveredFees] could not recover, with the evidence
+     * that attempt saw. Skipped only while the evidence is unchanged. Per
+     * walker: a fee is unrecoverable for good only when an input was not ours,
+     * which is rare outside CoinJoin rounds (never candidates), so re-trying
+     * those once per walker costs little. Bounded; an evicted txid costs one
+     * re-parse. Synchronized: the point lookups ([recordFor]) reach it from
+     * any thread.
+     */
+    private val feeEvidenceTried: MutableMap<String, FeeEvidence> =
+        java.util.Collections.synchronizedMap(
+            object : LinkedHashMap<String, FeeEvidence>() {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, FeeEvidence>): Boolean =
+                    size > WALK_DEDUP_LRU_MAX
+            }
+        )
 
     /** Write recovered fees into the store's NULL `fee` columns — see [withRecoveredFees]. */
     private fun persistRecoveredFees(fees: List<Pair<ByteArray, Long>>) {
@@ -1321,21 +1353,6 @@ internal class SdkTxStoreWalker(
                     object : LinkedHashMap<String, Boolean>() {
                         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
                             size > 1_024
-                    }
-                )
-            )
-
-        /**
-         * Sends whose fee [withRecoveredFees] proved unrecoverable (an input
-         * was not ours), process-wide for the same reason as
-         * [reattributionLogged]. Bounded; an evicted txid costs one re-parse.
-         */
-        private val feeUnrecoverable: MutableSet<String> =
-            java.util.Collections.synchronizedSet(
-                java.util.Collections.newSetFromMap(
-                    object : LinkedHashMap<String, Boolean>() {
-                        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>): Boolean =
-                            size > WALK_DEDUP_LRU_MAX
                     }
                 )
             )

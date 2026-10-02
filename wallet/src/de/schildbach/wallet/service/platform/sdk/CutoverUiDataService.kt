@@ -552,7 +552,7 @@ internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecor
  *   [redatedFromBlock]: a time later than the tx's own block is reset to it.
  * - A non-contact sent row holding exactly the fee-included net takes the
  *   fee-free value ([L1TxUiRecord.sentValueWithoutFeeDuffs]) once the fee is
- *   known.
+ *   known — service-tagged rows included.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -744,6 +744,23 @@ internal fun planL1DisplaySync(
         ) {
             updated = updated.copy(statusText = "")
         }
+        // Drop the fee from a sent row cached WITH it (D-M-01). Rows authored while
+        // the store's fee column was NULL hold the fee-included net; once the fee is
+        // known ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free
+        // value every other row shows. It is the only value edit a service-tagged,
+        // asset-lock or "Internal" row ever takes — the shape re-stamps below keep
+        // their value — so it fires on the exact fee-included figure alone: a row
+        // holding anything else (dashj's own fee-free value on an upgraded wallet, a
+        // contact amount) is left as it is. Ahead of the service exit so a merchant
+        // send converges too. Contact rows are excluded outright: their value comes
+        // from the engine's signed net ([contactSignedNet]), not this record.
+        // Idempotent: the corrected value no longer equals the net.
+        if (contact == null && updated.contactUserId == null &&
+            record.sentValueWithoutFeeDuffs != record.netAmountDuffs &&
+            updated.valueSatoshis == record.netAmountDuffs
+        ) {
+            updated = updated.copy(valueSatoshis = record.sentValueWithoutFeeDuffs)
+        }
         if (serviceClassified) {
             // Status transitions only (see the guard split above).
             if (updated != existing) updates += updated
@@ -803,22 +820,6 @@ internal fun planL1DisplaySync(
                     filterFlags = plan.filterFlags
                 )
             }
-        }
-        // Drop the fee from a sent row cached WITH it (D-M-01). Rows authored while
-        // the store's fee column was NULL hold the fee-included net; once the fee is
-        // known ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free
-        // value every other row shows. This is the only value edit an asset-lock or
-        // "Internal" row ever takes — the shape re-stamps above and below keep their
-        // value — so it fires on the exact fee-included figure alone: a row holding
-        // anything else (dashj's own fee-free value on an upgraded wallet, a contact
-        // amount) is left as it is. Contact rows are excluded outright: their value
-        // comes from the engine's signed net ([contactSignedNet]), not this record.
-        // Idempotent: the corrected value no longer equals the net.
-        if (contact == null && updated.contactUserId == null &&
-            record.sentValueWithoutFeeDuffs != record.netAmountDuffs &&
-            updated.valueSatoshis == record.netAmountDuffs
-        ) {
-            updated = updated.copy(valueSatoshis = record.sentValueWithoutFeeDuffs)
         }
         // Re-shape a PLAIN cached row into an INTERNAL (self-transfer) row once the
         // record is known INTERNAL. The SDK classifies PER ACCOUNT, so one

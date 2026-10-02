@@ -138,6 +138,21 @@ class SentValueWithoutFeeTest {
         assertTrue(plan.updates.isEmpty())
     }
 
+    @Test
+    fun aServiceTaggedSendIsCorrectedToo() {
+        // A merchant send inserted while the fee was unknown, then tagged by metadata.
+        // Service rows take only status edges, but the fee-only value fix applies.
+        val sent = record(firstByte = 6, net = -10_000_227L, fee = 227L, direction = 1)
+        val row = invitationRow(value = -10_000_227L).copy(
+            rowId = sent.txidHex,
+            title = resolve(R.string.transaction_row_status_sent),
+            service = "Uphold"
+        )
+        val updated = sync(sent, row).updates.single()
+        assertEquals(-10_000_000L, updated.valueSatoshis)
+        assertEquals(row.copy(valueSatoshis = -10_000_000L), updated) // nothing else moves
+    }
+
     // ── Fee recovery (SdkTxStoreWalker) ───────────────────────────────
 
     @Test
