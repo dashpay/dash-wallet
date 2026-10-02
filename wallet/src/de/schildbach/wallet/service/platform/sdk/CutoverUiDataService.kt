@@ -2450,6 +2450,30 @@ class CutoverUiDataService internal constructor(
     fun isCutoverActive(): Boolean = _cutoverActive.value
 
     /**
+     * Revoke engine ownership of the key chain: binding FIRST, flag LAST, both
+     * in ONE critical section.
+     *
+     * Order and atomicity both matter, and publishing the flag first was a hole.
+     * [sdkReceiveAddressOrNull] serves the cache on the generation alone, so
+     * between a bare `_cutoverActive = false` and the unbind the synchronous
+     * overlay still handed out the RETIRED generation's address, while a live
+     * reader that had already seen the flag fell through to dashj — the same
+     * address, from the other direction. Taking the lock makes the pair
+     * indivisible for every reader that takes it ([beginReceiveRead], the cache
+     * accessor, the completion gate).
+     *
+     * This says nothing about [observedCutoverOwnership]: that is the PERSISTED
+     * gate's answer, and only the gate collector may move it. A pipeline that
+     * stops while the gate still says CUT_OVER (a wipe fence, a stale-wallet
+     * hold) must leave committed ownership standing, or the receive refusal
+     * would fall through to dashj precisely while nothing may answer.
+     */
+    private fun revokeReceiveOwnership() = synchronized(receiveAddressLock) {
+        unbindReceiveAddressWallet()
+        _cutoverActive.value = false
+    }
+
+    /**
      * The ownership the GATE last published ([cutoverUiActive], i.e. the
      * persisted [DashPayConfig.CUTOVER_STATE]), or null before its first
      * emission has landed. Deliberately NOT [_cutoverActive], which is the
@@ -3039,8 +3063,7 @@ class CutoverUiDataService internal constructor(
                     // precisely because the pipeline flag lags it on startup.
                     observedCutoverOwnership = active
                     if (!active) {
-                        _cutoverActive.value = false
-                        unbindReceiveAddressWallet()
+                        revokeReceiveOwnership()
                     }
                 }
         }
@@ -3052,7 +3075,7 @@ class CutoverUiDataService internal constructor(
             combine(cutoverUiActive().distinctUntilChanged(), stopGeneration) { active, _ -> active }
                 .collectLatest { active ->
                     if (!active) {
-                        _cutoverActive.value = false
+                        revokeReceiveOwnership()
                         resetForInactivePipeline()
                         return@collectLatest
                     }
@@ -3084,7 +3107,7 @@ class CutoverUiDataService internal constructor(
                                 job.join()
                                 return@coroutineScope
                             }
-                            _cutoverActive.value = false
+                            revokeReceiveOwnership()
                             // Mid-wipe: [resumeAfterWalletWipe] re-runs this block.
                             if (wipeFenced) return@coroutineScope
                             val passes = heldForBindPass

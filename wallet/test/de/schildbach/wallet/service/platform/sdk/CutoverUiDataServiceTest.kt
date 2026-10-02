@@ -31,7 +31,12 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -1772,6 +1777,78 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun deactivationRevokesTheCacheBeforeItPublishesDisabledOwnership() {
+        // ORDER, not just eventual consistency. [sdkReceiveAddressOrNull] serves
+        // the cache on the binding generation alone, so between a bare
+        // `_cutoverActive = false` and the unbind that followed it the
+        // synchronous overlay still handed out the RETIRED generation's address,
+        // while a live reader that had already seen the flag fell through to
+        // dashj's frozen one. Both halves of that window advertise an address
+        // that nothing owns any more.
+        //
+        // Sampled from INSIDE the transition: an unconfined collector of
+        // [cutoverActive] is resumed on the very thread that publishes the value,
+        // so what it reads is the state at that instant rather than afterwards.
+        // Hence a real scope — the collector must be resumed by the service's own
+        // thread, not by a test scheduler pumping it later.
+        //
+        // The pipelines run for real here, against relaxed mocks, so a child can
+        // fail on a path no test scheduler would have reached. Without a handler
+        // that failure reaches the DEFAULT uncaught handler, and the next
+        // `runTest` in the JVM fails with `UncaughtExceptionsBeforeTest` — a
+        // failure attributed to an unrelated test in an unrelated class.
+        val pipelineFailures = java.util.Collections.synchronizedList(mutableListOf<Throwable>())
+        val realScope = CoroutineScope(
+            SupervisorJob() + Dispatchers.Default +
+                kotlinx.coroutines.CoroutineExceptionHandler { _, t -> pipelineFailures.add(t) }
+        )
+        try {
+            val state = MutableStateFlow<String?>("CUT_OVER")
+            val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+            val service = buildService(source, configWithMutableState(state), realScope)
+            service.start()
+            assertTrue(
+                "precondition: the overlay is serving an engine address",
+                waitFor { service.sdkReceiveAddressOrNull() != null }
+            )
+
+            val servedWhileDisabled = java.util.concurrent.atomic.AtomicReference<String?>(null)
+            val sampled = java.util.concurrent.CountDownLatch(1)
+            realScope.launch(Dispatchers.Unconfined) {
+                service.cutoverActive.collect { active ->
+                    if (!active && sampled.count > 0L) {
+                        servedWhileDisabled.set(service.sdkReceiveAddressOrNull())
+                        sampled.countDown()
+                    }
+                }
+            }
+
+            state.value = "DUAL_RUNNING"
+
+            assertTrue(
+                "ownership must actually be published as disabled",
+                sampled.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            )
+            assertNull(
+                "the retired binding's address must already be gone when ownership is disabled",
+                servedWhileDisabled.get()
+            )
+        } finally {
+            realScope.cancel()
+        }
+    }
+
+    /** [pumpUntil] for the tests that run the service on a REAL scope. */
+    private fun waitFor(timeoutMs: Long = 10_000, condition: () -> Boolean): Boolean {
+        val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+        while (System.nanoTime() < deadline) {
+            if (condition()) return true
+            Thread.sleep(5)
+        }
+        return condition()
+    }
+
+    @Test
     fun rollback_clearsTheReceiveAddressOverlayAndTheBoundWallet() = runTest {
         // A rollback (CUT_OVER → DUAL_RUNNING) hands the key chain back to
         // dashj, whose pointer is live again. If the overlay kept serving, the
@@ -1914,8 +1991,13 @@ class CutoverUiDataServiceTest {
         source.nextReceiveAddress = "yWALLETaEngineAddress"
         val service = buildService(source, configWithMutableState(state), backgroundScope)
         service.start()
-        runCurrent()
-        assertEquals("yWALLETaEngineAddress", service.sdkReceiveAddressOrNull())
+        // The pipeline's own first read hops onto a REAL dispatcher
+        // (refreshNativeSplit wraps the engine read in withContext(IO)), so a
+        // single runCurrent() may return before it has published — this
+        // precondition flaked on exactly that. Same expectation, drained properly.
+        assertTrue(
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yWALLETaEngineAddress" }
+        )
 
         // Park a live read for wallet A inside the FFI, and wait until it really
         // is parked before wiping — otherwise the test could wipe first and
