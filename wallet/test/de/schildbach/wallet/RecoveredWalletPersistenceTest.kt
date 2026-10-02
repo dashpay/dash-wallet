@@ -8,9 +8,7 @@ import de.schildbach.wallet.ui.WalletUriHandlerActivity
 import de.schildbach.wallet.ui.degradedScreenActions
 import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.util.SafeModeRetryWaiters
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.spyk
@@ -803,7 +801,7 @@ class RecoveredWalletPersistenceTest {
         // unverified, and the wipe would not run at all.)
         mockkObject(WalletWipeState)
         try {
-            every { WalletWipeState.complete(any()) } just Runs
+            every { WalletWipeState.complete(any()) } returns false
             assertTrue(wipe { })
         } finally {
             unmockkObject(WalletWipeState)

@@ -51,7 +51,7 @@ class WalletWipeMetadataSavesTest {
 
     @Test
     fun aFinishedWipeResumesSaves() {
-        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { WalletWipeState.pendingOrNull(filesDir.root) }
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { WalletWipeState.pendingOrNull(filesDir.root, noBackupFilesDir.root) }
 
         assertFalse(queue.isPaused)
     }
@@ -60,7 +60,7 @@ class WalletWipeMetadataSavesTest {
     fun aWipeThatNeverRanKeepsSavesPaused() {
         // begin() could not write the marker, so finish() saw nothing pending
         // and skipped the destroy: the marker is absent but the old wallet is still there
-        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = false) { WalletWipeState.pendingOrNull(filesDir.root) }
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = false) { WalletWipeState.pendingOrNull(filesDir.root, noBackupFilesDir.root) }
 
         assertTrue(queue.isPaused)
     }
@@ -70,7 +70,7 @@ class WalletWipeMetadataSavesTest {
         // a failed destroy leaves the marker so the next launch re-runs the wipe
         WalletWipeState.begin(filesDir.root, noBackupFilesDir.root)
 
-        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = false) { WalletWipeState.pendingOrNull(filesDir.root) }
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = false) { WalletWipeState.pendingOrNull(filesDir.root, noBackupFilesDir.root) }
 
         assertTrue(queue.isPaused)
     }
@@ -80,7 +80,7 @@ class WalletWipeMetadataSavesTest {
         // complete() could not delete the marker; the next launch re-runs the wipe
         WalletWipeState.begin(filesDir.root, noBackupFilesDir.root)
 
-        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { WalletWipeState.pendingOrNull(filesDir.root) }
+        resumeMetadataSavesIfWipeComplete(queue, wipeFinished = true) { WalletWipeState.pendingOrNull(filesDir.root, noBackupFilesDir.root) }
 
         assertTrue(queue.isPaused)
     }

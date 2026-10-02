@@ -106,7 +106,7 @@ object WalletApplicationExt {
             // wipe from the top.
             withContext(NonCancellable) {
                 resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, wipeFinished) {
-                    WalletWipeState.pendingOrNull(filesDir)
+                    WalletWipeState.pendingOrNull(filesDir, noBackupFilesDir)
                 }
                 // Before the flag drops: onboarding re-routes on it, and an
                 // unfinished wipe must route to the degraded screen, not to
