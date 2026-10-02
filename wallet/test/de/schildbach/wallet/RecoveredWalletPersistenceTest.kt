@@ -754,4 +754,109 @@ class RecoveredWalletPersistenceTest {
         assertTrue("an unusable backup latches seed recovery", recoveryApp.isWalletRecoveryFromSeedNeeded)
         verify(exactly = 0) { recoveryApp.persistRecoveredWallet(any()) }
     }
+
+    /** Where the app writes its key backup (the name carries the network suffix). */
+    private val keyBackup get() = File(directory.root, Constants.Files.WALLET_KEY_BACKUP_PROTOBUF)
+
+    /** An app whose files dir is [directory] and whose key backup writes really go through AtomicFileWriter. */
+    private fun backupWritingApp(): WalletApplication {
+        val writingApp = spyk(app)
+        every { writingApp.filesDir } returns directory.root
+        every { writingApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns keyBackup
+        every { writingApp.openFileOutput(any(), any()) } answers {
+            java.io.FileOutputStream(File(directory.root, firstArg<String>()))
+        }
+        return writingApp
+    }
+
+    private suspend fun finishWipe(wipeApp: WalletApplication): Boolean = WalletWipeSequence.finish(
+        pending = { WalletWipeState.isPending(directory.root) },
+        detachWallet = { wipeApp.detachWalletForWipe() },
+        destroy = {
+            primary.delete()
+            keyBackup.delete()
+            wipeApp.confirmWalletSourcesDestroyed()
+        },
+        markComplete = { wipeApp.markWalletWipeComplete() }
+    ).also { wipeApp.recordWalletWipeStopped() }
+
+    @Test
+    fun `startup maintenance paused before its backup write does not rewrite a wiped wallet's backup`() = runBlocking {
+        recovered.saveToFile(primary)
+        assertFalse("maintenance owes a missing backup", keyBackup.exists())
+        val wipeApp = backupWritingApp()
+        val paused = java.util.concurrent.CountDownLatch(1)
+        val resume = java.util.concurrent.CountDownLatch(1)
+        every { wipeApp.writeKeyBackupProto(any(), any()) } answers {
+            paused.countDown()
+            resume.await()
+            callOriginal()
+        }
+        val maintenanceFailure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val maintenance = Thread {
+            try {
+                wipeApp.maintainKeyBackup()
+            } catch (t: Throwable) {
+                maintenanceFailure.set(t)
+            }
+        }
+        maintenance.start()
+        assertTrue(paused.await(5, java.util.concurrent.TimeUnit.SECONDS))
+
+        // The user resets while maintenance holds a proto of the wallet.
+        assertTrue(WalletWipeState.begin(directory.root))
+        resume.countDown()
+        maintenance.join(5_000)
+        assertTrue("the write is refused", maintenanceFailure.get() is IOException)
+        assertFalse(keyBackup.exists())
+
+        assertTrue(finishWipe(wipeApp))
+        assertFalse(keyBackup.exists())
+        assertFalse(primary.exists())
+        assertFalse(WalletWipeState.isPending(directory.root))
+        assertFalse(wipeApp.isWalletWipeRecoveryRequired)
+        Unit
+    }
+
+    @Test
+    fun `a backup write in flight finishes before the wipe detaches and destroys the wallet`() = runBlocking {
+        recovered.saveToFile(primary)
+        assertFalse(keyBackup.exists())
+        val wipeApp = backupWritingApp()
+        val writing = java.util.concurrent.CountDownLatch(1)
+        val resume = java.util.concurrent.CountDownLatch(1)
+        every { wipeApp.openFileOutput(any(), any()) } answers {
+            writing.countDown()
+            resume.await()
+            java.io.FileOutputStream(File(directory.root, firstArg<String>()))
+        }
+        val writeFailure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val writer = Thread {
+            try {
+                wipeApp.writeWalletBackup()
+            } catch (t: Throwable) {
+                writeFailure.set(t)
+            }
+        }
+        writer.start()
+        assertTrue(writing.await(5, java.util.concurrent.TimeUnit.SECONDS))
+
+        assertTrue(WalletWipeState.begin(directory.root))
+        val detach = Thread { wipeApp.detachWalletForWipe() }
+        detach.start()
+        detach.join(300)
+        assertTrue("detaching waits for the write in flight", detach.isAlive)
+        resume.countDown()
+        detach.join(5_000)
+        writer.join(5_000)
+        assertFalse(detach.isAlive)
+        writeFailure.get()?.let { throw AssertionError("the in-flight write must complete", it) }
+        assertTrue(keyBackup.exists())
+        assertNull(wipeApp.wallet)
+
+        assertTrue(finishWipe(wipeApp))
+        assertFalse(keyBackup.exists())
+        assertFalse(WalletWipeState.isPending(directory.root))
+        Unit
+    }
 }
