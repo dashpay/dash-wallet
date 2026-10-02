@@ -2039,25 +2039,60 @@ public class WalletApplication extends MultiDexApplication
     void writeWalletBackup() throws IOException {
         awaitDeferredWalletLoadForMutation();
         final Stopwatch watch = Stopwatch.createStarted();
-        final Protos.Wallet.Builder builder = new WalletProtobufSerializer().walletToProto(wallet).toBuilder();
+        final Wallet backedUpWallet = wallet;
+        if (backedUpWallet == null) {
+            throw new IOException("no wallet to back up");
+        }
+        final Protos.Wallet.Builder builder = new WalletProtobufSerializer().walletToProto(backedUpWallet).toBuilder();
 
         // strip redundant
         builder.clearTransaction();
         builder.clearLastSeenBlockHash();
         builder.setLastSeenBlockHeight(-1);
         builder.clearLastSeenBlockTimeSecs();
-        final Protos.Wallet walletProto = builder.build();
-
-        // Write atomically (temp -> fsync -> rename). This backup is the ONLY fallback
-        // loadWalletFromProtobuf() has when the primary wallet fails to parse, and dashj keeps no
-        // backup of its own. Writing it in place (the previous behaviour) meant a kill mid-write
-        // left a TRUNCATED backup, so a later primary-wallet failure would hit
-        // restoreWalletFromBackup() -> Error("cannot read backup") thrown straight out of
-        // Application.onCreate — an unrecoverable crash-loop with both copies unusable.
-        // dashj already writes the primary wallet this way (Wallet.saveToFile temp+rename).
-        AtomicFileWriter.write(this, Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, walletProto::writeTo);
+        writeKeyBackupProto(backedUpWallet, builder.build());
         watch.stop();
         log.info("wallet backed up to: '{}', took {}", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, watch);
+    }
+
+    /**
+     * Publishes {@code walletProto}, built from {@code backedUpWallet}, as the
+     * key backup — unless a Reset Wallet has begun since. The check and the
+     * write run under the {@link AtomicFileWriter} lock, which
+     * {@link #detachWalletForWipe} also takes to drop the wallet: a write
+     * already in flight finishes before the wipe destroys anything, and none
+     * starts once the wipe marker is set or the wallet it was built from is
+     * no longer the app's. The startup maintenance thread (which can still be
+     * walking a huge wallet's spam cleanup when the user resets) and the UI's
+     * {@link #backupWallet()} would otherwise write the wiped wallet's keys
+     * back after destruction deleted them.
+     *
+     * @throws IOException when the write failed, or was refused because of a wipe.
+     */
+    @VisibleForTesting
+    void writeKeyBackupProto(final Wallet backedUpWallet, final Protos.Wallet walletProto) throws IOException {
+        final IOException[] failure = new IOException[1];
+        AtomicFileWriter.runExclusive(() -> {
+            if (wallet != backedUpWallet || WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+                failure[0] = new IOException("a Reset Wallet has begun — the wallet's key backup is not written");
+                return;
+            }
+            try {
+                // Write atomically (temp -> fsync -> rename). This backup is the ONLY fallback
+                // loadWalletFromProtobuf() has when the primary wallet fails to parse, and dashj keeps no
+                // backup of its own. Writing it in place (the previous behaviour) meant a kill mid-write
+                // left a TRUNCATED backup, so a later primary-wallet failure would hit
+                // restoreWalletFromBackup() -> Error("cannot read backup") thrown straight out of
+                // Application.onCreate — an unrecoverable crash-loop with both copies unusable.
+                // dashj already writes the primary wallet this way (Wallet.saveToFile temp+rename).
+                AtomicFileWriter.write(this, Constants.Files.WALLET_KEY_BACKUP_PROTOBUF, walletProto::writeTo);
+            } catch (final IOException x) {
+                failure[0] = x;
+            }
+        });
+        if (failure[0] != null) {
+            throw failure[0];
+        }
     }
 
     /**
@@ -2486,7 +2521,10 @@ public class WalletApplication extends MultiDexApplication
     public void detachWalletForWipe() {
         awaitDeferredWalletLoadForMutation();
         log.info("removing wallet from memory during wipe");
-        wallet = null;
+        // Under the backup-write lock: waits out a key backup write in flight
+        // and refuses later ones (see writeKeyBackupProto), so none can put
+        // this wallet's keys back after the wipe deletes them.
+        AtomicFileWriter.runExclusive(() -> wallet = null);
         walletStateFlow.setValue(null);
         authenticationGroupExtension = null;
         if (walletBalanceObserver != null) {
