@@ -122,6 +122,7 @@ class CreateUsernameActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
 
         setContentView(R.layout.activity_create_username)
         val action = when (intent?.action) {

@@ -18,6 +18,8 @@ package de.schildbach.wallet.ui.more
 
 import android.net.Uri
 import android.os.PowerManager
+import androidx.annotation.MainThread
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.google.common.base.Charsets
@@ -48,7 +50,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
-import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
@@ -83,7 +84,6 @@ enum class ReportGenerationStatus {
 class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
-    walletDataProvider: WalletData,
     private val packageInfoProvider: PackageInfoProvider,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
     private val dashPayConfig: DashPayConfig,
@@ -116,14 +116,91 @@ class ContactSupportViewModel @Inject constructor(
         private const val LOGCAT_TIMEOUT_SECS = 20L
     }
 
-    val wallet: Wallet? = walletDataProvider.wallet
+    /**
+     * The wallet the report describes, or null. Read once when the dialog
+     * opens and again when the report is generated, so a wallet that loaded
+     * meanwhile is included. See [refreshWallet].
+     */
+    @Volatile
+    var wallet: Wallet? = null
+        private set
+
+    /** [wallet] is null because a safe-mode retry was still loading it. */
+    @Volatile
+    private var walletSkippedForRetry = false
+
+    /** The launch was degraded when [wallet] was taken (and no retry was running). */
+    @Volatile
+    private var walletLoadDegraded = false
+
     var contextualData: String? = null
     var stackTrace: String? = null
     var isCrash: Boolean = false
     private val _status = MutableStateFlow(ReportGenerationStatus.NotStarted)
     val status = _status.asStateFlow()
 
+    init {
+        refreshWallet()
+    }
+
+    /**
+     * Takes the wallet without waiting for a safe-mode retry. This view model
+     * is created on the main thread, and the recovery screen offers the report
+     * while a retry loads the wallet; reading it then waits for the retry's
+     * parse (minutes on a large wallet: an input-dispatch ANR on the main
+     * thread, a report that never comes on the IO thread). So mid-retry the
+     * report goes without the wallet sections and says why. Otherwise the
+     * wallet is read as before, which does not wait for a degraded launch: a
+     * wallet assigned before a failed publish or initialisation is exactly
+     * what a crash report needs.
+     *
+     * MAIN THREAD ONLY, which is what makes the check-then-read safe: a retry
+     * starts on the main thread (it sets the flag, then installs its gate),
+     * so no retry can start between the two reads here. Off the main thread
+     * one could, and the wallet read would then wait for the whole parse
+     * (review, #1594). Outside a retry neither read waits on the main thread:
+     * a background start's deferred load finished before the first activity
+     * was created (onActivityPreCreated), and the only other gate is a retry's.
+     * (A retry clears the flag inside its own main-thread completion, after
+     * the parse, so a read there finds the load done and does not wait.)
+     * The degraded state for the "no wallet" message is taken here for the
+     * same reason.
+     */
+    @MainThread
+    private fun refreshWallet() {
+        val retrying = application.isSafeModeRetryInProgress
+        walletSkippedForRetry = retrying
+        wallet = if (retrying) null else application.wallet
+        walletLoadDegraded = !retrying && application.isWalletLoadDegraded
+    }
+
+    /** [refreshWallet] from any caller, run on the main thread. */
+    @VisibleForTesting
+    internal suspend fun snapshotWallet() = withContext(Dispatchers.Main.immediate) {
+        refreshWallet()
+    }
+
     suspend fun createReport(
+        userIssueDescription: String,
+        collectDeviceInfo: Boolean,
+        collectInstalledPackages: Boolean,
+        collectApplicationLog: Boolean,
+        collectWalletDump: Boolean
+    ): Pair<String, ArrayList<Uri>> {
+        // A retry may have loaded the wallet since the dialog opened. Taken on
+        // the main thread, serialized with a retry's start (see refreshWallet);
+        // everything else is generated on IO.
+        snapshotWallet()
+        return generateReport(
+            userIssueDescription,
+            collectDeviceInfo,
+            collectInstalledPackages,
+            collectApplicationLog,
+            collectWalletDump
+        )
+    }
+
+    private suspend fun generateReport(
         userIssueDescription: String,
         collectDeviceInfo: Boolean,
         collectInstalledPackages: Boolean,
@@ -692,7 +769,12 @@ class ContactSupportViewModel @Inject constructor(
                 Transaction.SORT_TX_BY_UPDATE_TIME
             )
             walletDump + txDump
-        } ?: "No wallet loaded"
+        } ?: when {
+            walletSkippedForRetry -> "No wallet loaded: a safe-mode retry was still loading it"
+            walletLoadDegraded ->
+                "No wallet loaded: degraded launch (the load failed, or safe mode skipped it and no retry has finished)"
+            else -> "No wallet loaded"
+        }
     }
 
     @Throws(IOException::class)

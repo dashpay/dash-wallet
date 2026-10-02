@@ -69,6 +69,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 	@Override
     protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		if (getFinishedForNoWallet()) return; // LockScreenActivity finished early: no usable wallet
 
 		setContentView(R.layout.address_book_content);
 		Toolbar toolbar = findViewById(R.id.toolbar);

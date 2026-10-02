@@ -36,6 +36,7 @@ import javax.inject.Inject
 abstract class BaseMenuActivity : LockScreenActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
         setContentView(getLayoutId())
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)

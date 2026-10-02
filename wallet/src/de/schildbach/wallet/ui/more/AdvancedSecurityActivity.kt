@@ -79,6 +79,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
 
         binding = ActivityAdvancedSecurityBinding.inflate(layoutInflater)
         setContentView(binding.root)
