@@ -39,6 +39,7 @@ class WalletWipeStateTest {
     @get:Rule val directory = TemporaryFolder()
 
     private val onDisk = WalletWipeState.lookup
+    private val realWrite = WalletWipeState.writeMarker
     private val filesDir get() = File(directory.root, "files").apply { mkdirs() }
     private val noBackupDir get() = File(directory.root, "no_backup").apply { mkdirs() }
     private val marker get() = File(filesDir, WalletWipeState.MARKER_FILE_NAME)
@@ -46,6 +47,40 @@ class WalletWipeStateTest {
     @After
     fun restoreLookup() {
         WalletWipeState.lookup = onDisk
+        WalletWipeState.writeMarker = realWrite
+    }
+
+    @Test
+    fun `a retried reset keeps the pending marker without rewriting it`() {
+        assertTrue(WalletWipeState.begin(filesDir, noBackupDir))
+        val bytes = marker.readBytes()
+        var writes = 0
+        WalletWipeState.writeMarker = { file, body ->
+            writes++
+            realWrite(file, body)
+        }
+        assertTrue(WalletWipeState.begin(filesDir, noBackupDir))
+        assertEquals("a valid marker is never rewritten", 0, writes)
+        assertTrue(bytes.contentEquals(marker.readBytes()))
+        assertTrue(WalletWipeState.isPending(filesDir, noBackupDir))
+    }
+
+    @Test
+    fun `a marker write that dies before the rename leaves no marker`() {
+        WalletWipeState.writeMarker = { file, _ ->
+            // As if killed after the temp was written: the destination is untouched.
+            File(file.parentFile, file.name + ".tmp").writeText("v1\npartial")
+            throw IOException("injected: killed mid-write")
+        }
+        assertFalse(WalletWipeState.begin(filesDir, noBackupDir))
+        assertEquals(State.NONE, WalletWipeState.inspect(filesDir, noBackupDir))
+    }
+
+    @Test
+    fun `a new marker is written whole and leaves no temp behind`() {
+        assertTrue(WalletWipeState.begin(filesDir, noBackupDir))
+        assertEquals(State.PENDING, WalletWipeState.inspect(filesDir, noBackupDir))
+        assertFalse(File(filesDir, WalletWipeState.MARKER_FILE_NAME + ".tmp").exists())
     }
 
     @Test
