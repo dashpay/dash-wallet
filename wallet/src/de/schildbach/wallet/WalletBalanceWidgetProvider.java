@@ -199,7 +199,16 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    /**
+     * No wallet to show. Every widget callback runs on the main thread, and
+     * during a safe-mode retry getWallet() would wait there for the retry's
+     * parse (minutes on a large wallet: a broadcast or input-dispatch ANR on
+     * the recovery screen). So a retry in progress counts as not ready, and
+     * the widget is left as it is; the retry refreshes it when it succeeds
+     * (WalletApplication.completeSafeModeRetry).
+     */
     private static boolean walletNotReady(Context context) {
-        return ((WalletApplication) context.getApplicationContext()).getWallet() == null;
+        final WalletApplication application = (WalletApplication) context.getApplicationContext();
+        return application.isSafeModeRetryInProgress() || application.getWallet() == null;
     }
 }

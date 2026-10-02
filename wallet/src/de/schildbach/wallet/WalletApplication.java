@@ -768,6 +768,20 @@ public class WalletApplication extends MultiDexApplication
         }
         safeModeRetryInProgress = false;
         safeModeRetryCallbacks.complete(loaded);
+        if (loaded) {
+            // The balance widget skipped its updates while the retry loaded
+            // (see WalletBalanceWidgetProvider.walletNotReady), and nothing
+            // else refreshes it until the blockchain service starts, which
+            // can wait for the user to return to the app. Runs after the flag
+            // is cleared, or the widget would still read "not ready". This
+            // runs inside the load's own main-thread completion, after the
+            // parse, so the balance read does not wait.
+            try {
+                WalletBalanceWidgetProvider.updateWidgets(this, getWalletBalance());
+            } catch (final Throwable t) {
+                log.warn("could not refresh the balance widget after the safe-mode retry", t);
+            }
+        }
     }
 
     /**
