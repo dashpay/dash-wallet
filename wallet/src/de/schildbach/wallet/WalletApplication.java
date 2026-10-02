@@ -2483,7 +2483,10 @@ public class WalletApplication extends MultiDexApplication
             return;
         }
         WalletWipeState.INSTANCE.complete(getFilesDir());
-        if (!WalletWipeState.INSTANCE.isPending(getFilesDir(), getNoBackupFilesDir())) {
+        // Only a marker confirmed absent releases the recovered-wallet guard:
+        // "not pending" also covers an unverified marker that complete() could
+        // not remove, and that one still requires recovery.
+        if (WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir()) == WalletWipeState.State.NONE) {
             recoveredWalletPersistencePending = false;
         }
     }

@@ -255,6 +255,37 @@ class RecoveredWalletPersistenceTest {
     }
 
     @Test
+    fun `a wipe marker left unverified by complete keeps the recovered-wallet guard`() {
+        val wipeApp = spyk(app)
+        every { wipeApp.filesDir } returns directory.root
+        every { wipeApp.noBackupFilesDir } returns noBackupDir
+        assertTrue(WalletWipeState.begin(directory.root, noBackupDir))
+        ReflectionHelpers.setField(wipeApp, "recoveredWalletPersistencePending", true)
+        val marker = File(directory.root, WalletWipeState.MARKER_FILE_NAME)
+        // The removal fails and leaves the marker unreadable: no longer
+        // PENDING, but not absent either.
+        mockkObject(WalletWipeState)
+        try {
+            every { WalletWipeState.complete(any()) } answers {
+                marker.writeText("garbage")
+                false
+            }
+            wipeApp.markWalletWipeComplete()
+        } finally {
+            unmockkObject(WalletWipeState)
+        }
+        assertFalse(WalletWipeState.isPending(directory.root, noBackupDir))
+        assertEquals(WalletWipeState.State.RECOVERY_REQUIRED, WalletWipeState.inspect(directory.root, noBackupDir))
+        assertTrue(ReflectionHelpers.getField<Boolean>(wipeApp, "recoveredWalletPersistencePending"))
+        assertTrue(wipeApp.isWalletLoadDegraded)
+
+        // Once the marker is confirmed gone, the guard is released.
+        wipeApp.markWalletWipeComplete()
+        assertEquals(WalletWipeState.State.NONE, WalletWipeState.inspect(directory.root, noBackupDir))
+        assertFalse(ReflectionHelpers.getField<Boolean>(wipeApp, "recoveredWalletPersistencePending"))
+    }
+
+    @Test
     fun `failed recovery resets are counted in the marker`() {
         app.persistRecoveredWallet(recovered)
         assertTrue(app.isRecoveryResetPending)
