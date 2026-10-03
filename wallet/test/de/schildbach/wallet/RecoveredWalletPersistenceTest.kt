@@ -527,6 +527,48 @@ class RecoveredWalletPersistenceTest {
     }
 
     /**
+     * Startup maintenance repairs wallet A's owed backup while onboarding
+     * installs wallet B, arms the marker and saves B's primary. A's
+     * completion must not clear B's obligation; B's own completion does
+     * (review, PR #1576).
+     */
+    private fun assertRepairLeavesANewerReplacementOwed(armA: () -> Unit) {
+        armA()
+        val replacementB = Wallet(Constants.NETWORK_PARAMETERS).apply { freshReceiveKey() }
+        var armedB: BackupReplacementState.Generation? = null
+        val maintenanceApp = spyk(app)
+        every { maintenanceApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
+        every { maintenanceApp.writeWalletBackup() } answers {
+            // A's backup is published...
+            recovered.saveToFile(backup)
+            // ...and before A's completion runs, B arms and saves its primary.
+            armedB = BackupReplacementState.arm(directory.root)
+            replacementB.saveToFile(primary)
+        }
+
+        maintenanceApp.maintainKeyBackup()
+
+        verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+        assertTrue("B's backup is still owed", replacementMarker.exists())
+        assertTrue(BackupReplacementState.isPending(directory.root))
+
+        // B's backup is published, and B's completion clears its own arm.
+        replacementB.saveToFile(backup)
+        assertTrue(BackupReplacementState.complete(directory.root, requireNotNull(armedB)))
+        assertFalse(replacementMarker.exists())
+    }
+
+    @Test
+    fun `a repair's completion does not clear a replacement armed during the repair`() {
+        assertRepairLeavesANewerReplacementOwed { BackupReplacementState.arm(directory.root) }
+    }
+
+    @Test
+    fun `a repair of a legacy empty marker does not clear a replacement armed during the repair`() {
+        assertRepairLeavesANewerReplacementOwed { replacementMarker.createNewFile() }
+    }
+
+    /**
      * A replacement primary that cannot be loaded beside the previous wallet's
      * key backup, its replacement backup still owed (review, PR #1576).
      */

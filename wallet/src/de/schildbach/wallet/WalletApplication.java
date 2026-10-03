@@ -1130,8 +1130,14 @@ public class WalletApplication extends MultiDexApplication
         // durably BEFORE the primary save, and afterLoadWallet()'s maintenance
         // pays it (see BackupReplacementState). Without the marker the
         // primary must not be saved, exactly as when the save itself fails.
+        //
+        // The marker carries a fresh generation, and only this generation's
+        // completion below may clear it: startup maintenance can be repairing
+        // the previous wallet's backup concurrently, and its completion must
+        // not discharge this replacement's obligation.
+        final BackupReplacementState.Generation replacement;
         try {
-            BackupReplacementState.INSTANCE.arm(walletFile.getParentFile());
+            replacement = BackupReplacementState.INSTANCE.arm(walletFile.getParentFile());
         } catch (final IOException x) {
             throw new RuntimeException(x);
         }
@@ -1144,8 +1150,9 @@ public class WalletApplication extends MultiDexApplication
             throw new RuntimeException(x);
         }
         // The backup is this wallet's now; a marker that cannot be removed
-        // only costs the next startup a rewrite.
-        BackupReplacementState.INSTANCE.complete(walletFile.getParentFile());
+        // only costs the next startup a rewrite. A newer arm (another
+        // replacement installed meanwhile) is left for its own writer.
+        BackupReplacementState.INSTANCE.complete(walletFile.getParentFile(), replacement);
 
         config.armBackupReminder();
 
@@ -2033,11 +2040,18 @@ public class WalletApplication extends MultiDexApplication
      * only then is the marker removed. Nothing is read or written when the
      * backup exists and the marker is confirmed absent.
      *
+     * The marker's generation is read when the repair is decided, and only
+     * that generation is cleared afterwards: onboarding can install and arm a
+     * replacement while this repair is publishing the previous wallet's
+     * backup, and that replacement's obligation must survive until its own
+     * backup is published (review, PR #1576).
+     *
      * @throws IOException when the rewrite failed; the marker then stays.
      */
     void maintainKeyBackup() throws IOException {
         final File markerDir = walletFile.getParentFile();
-        final boolean replacementOwed = BackupReplacementState.INSTANCE.isPending(markerDir);
+        final BackupReplacementState.Generation owed = BackupReplacementState.INSTANCE.observe(markerDir);
+        final boolean replacementOwed = owed != null;
         if (!replacementOwed && getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists()) {
             return;
         }
@@ -2045,8 +2059,8 @@ public class WalletApplication extends MultiDexApplication
             log.warn("a replacement wallet's key backup is still owed — rewriting it");
         }
         writeWalletBackup();
-        if (replacementOwed) {
-            BackupReplacementState.INSTANCE.complete(markerDir);
+        if (owed != null) {
+            BackupReplacementState.INSTANCE.complete(markerDir, owed);
         }
     }
 
@@ -2585,7 +2599,7 @@ public class WalletApplication extends MultiDexApplication
         }
         // The wiped wallet's owed backup goes with it. Left behind it would
         // only make the replacement's first startup rewrite its own backup.
-        BackupReplacementState.INSTANCE.complete(getFilesDir());
+        BackupReplacementState.INSTANCE.discard(getFilesDir());
     }
 
     /**
