@@ -459,7 +459,14 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 handleStakingNavigation()
             }
             ShortcutOption.TOPPER -> {
-                lifecycleScope.launch {
+                // The VIEW's scope, not the fragment's: forward navigation from
+                // Home keeps this fragment on the back stack (Send pops up to
+                // walletFragment INCLUSIVE=false), so a fragment-scoped coroutine
+                // would still be active and still attached when the parked read
+                // unwinds, and the guard below would pass and toast over the
+                // screen the user moved to. Destroying the view is what makes the
+                // cancellation half of that guard mean anything here.
+                viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
                         requireActivity().openCustomTab(uri)

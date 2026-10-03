@@ -110,7 +110,11 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         }
 
         binding.buyBtn.setOnClickListener {
-            lifecycleScope.launch {
+            // The VIEW's scope, as in BuyAndSellIntegrationsFragment: this
+            // fragment stays on the back stack behind the screens it navigates
+            // to, so a fragment-scoped coroutine would still be active and
+            // attached when the parked read unwinds and would toast over them.
+            viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
                     viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)

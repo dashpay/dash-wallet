@@ -68,7 +68,13 @@ class BuyAndSellIntegrationsFragment : Fragment() {
                             findNavController().popBackStack()
                         },
                         onTopperClick = {
-                            lifecycleScope.launch {
+                            // The VIEW's scope: picking another integration
+                            // navigates forward with this fragment kept on the
+                            // back stack, so a fragment-scoped coroutine would
+                            // still be active and attached when the parked read
+                            // unwinds and would toast over that screen. Read
+                            // inside the click lambda, where the view exists.
+                            viewLifecycleOwner.lifecycleScope.launch {
                                 try {
                                     val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
                                     viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
