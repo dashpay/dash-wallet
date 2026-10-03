@@ -3359,6 +3359,44 @@ class CutoverUiDataService internal constructor(
             .map { stored -> !dashjEngineMayStart(CutoverState.fromStored(stored)) }
 
     /**
+     * [cutoverUiActive] as the INDEPENDENT DEACTIVATION collector subscribes to
+     * it, and as nothing else does.
+     *
+     * A named subscription, not a wrapper for its own sake. [start] opens THREE
+     * subscriptions to the one [DashPayConfig.CUTOVER_STATE] key — this one, the
+     * ownership feed and [cutoverPipelineGateFeed] — and they behave very
+     * differently: this one can never be parked, the gated one can be parked for
+     * the whole of an uncancellable FFI read. A test that wants to stage a late
+     * deactivation, or a reset the pipeline gate never sees, has to hand a
+     * different feed to ONE of them. Without a name, the only thing telling them
+     * apart at the config seam is the order they happen to subscribe in, so
+     * reordering these launches silently re-pointed such a test at the wrong
+     * collector and it went on passing while covering nothing (it did).
+     *
+     * So: keep these three frames on the stack, and keep the names. They are
+     * the seam the tests route by, and
+     * `CutoverUiDataServiceTest.RoutedCutoverConfig.assertWired` fails loudly if
+     * one of them stops arriving.
+     */
+    private fun cutoverDeactivationFeed(): Flow<Boolean> = cutoverUiActive()
+
+    /**
+     * [cutoverOwnershipCommitted] as the OWNERSHIP FEED subscribes to it, as
+     * distinct from the authoritative point read
+     * [cutoverOwnershipCommittedBlocking] performs over the same flow.
+     * See [cutoverDeactivationFeed] for why this subscription has a name.
+     */
+    private fun cutoverOwnershipFeed(): Flow<Boolean> = cutoverOwnershipCommitted()
+
+    /**
+     * [cutoverUiActive] as the GATED PIPELINE collector subscribes to it,
+     * deduplicated (the restart on [stopGeneration] is combined in by [start]).
+     * See [cutoverDeactivationFeed] for why this subscription has a name.
+     */
+    private fun cutoverPipelineGateFeed(): Flow<Boolean> =
+        cutoverUiActive().distinctUntilChanged()
+
+    /**
      * Idempotent once-per-process start (call site:
      * [de.schildbach.wallet.service.platform.PlatformSynchronizationService]'s
      * SDK-engine kick, alongside [L1ShadowSyncService.startIfEnabled]).
@@ -3424,7 +3462,7 @@ class CutoverUiDataService internal constructor(
         // bound with nothing left to revoke it eagerly. The decision to no-op
         // belongs where the decision to grant is serialized.
         scope.launch {
-            cutoverUiActive()
+            cutoverDeactivationFeed()
                 .collect { active ->
                     if (!active) revokeReceiveOwnershipIfStillDashjOwned()
                 }
@@ -3439,7 +3477,7 @@ class CutoverUiDataService internal constructor(
         // as UNKNOWN instead, and [cutoverOwnershipCommittedBlocking] then
         // resolves it authoritatively (and fails closed if it cannot).
         scope.launch {
-            cutoverOwnershipCommitted()
+            cutoverOwnershipFeed()
                 .catch { e ->
                     if (e is CancellationException) throw e
                     log.warn("the cutover state feed failed; ownership is UNKNOWN, not dashj", e)
@@ -3452,7 +3490,7 @@ class CutoverUiDataService internal constructor(
             // gate itself never changes: DataStore emissions conflate, so the
             // wipe's DUAL_RUNNING can be skipped if the next wallet's CUT_OVER
             // lands first — and a distinct-only gate would then never restart.
-            combine(cutoverUiActive().distinctUntilChanged(), stopGeneration) { active, _ -> active }
+            combine(cutoverPipelineGateFeed(), stopGeneration) { active, _ -> active }
                 .collectLatest { active ->
                     if (!active) {
                         revokeReceiveOwnership()

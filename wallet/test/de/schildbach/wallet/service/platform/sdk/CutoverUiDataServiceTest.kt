@@ -1905,9 +1905,10 @@ class CutoverUiDataServiceTest {
         check(delayedDeactivation.tryEmit("CUT_OVER"))
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val routed = delayedDeactivationConfig(delayedDeactivation, persisted)
         val service = buildService(
             source,
-            laggingGateConfig(delayedDeactivation, persisted),
+            routed.config,
             backgroundScope,
             txEvents = events
         )
@@ -1916,6 +1917,9 @@ class CutoverUiDataServiceTest {
             "precondition: the newer activation completed — ownership granted and the engine bound",
             pumpUntil { service.isCutoverActive() && service.sdkReceiveAddressOrNull() != null }
         )
+        // Loud precondition: the delayed feed really did reach the DEACTIVATION
+        // collector, and every other subscription is reading `persisted`.
+        routed.assertWired()
 
         // The older observation, delivered after the activation it predates.
         check(delayedDeactivation.tryEmit("DUAL_RUNNING"))
@@ -1931,18 +1935,17 @@ class CutoverUiDataServiceTest {
         // The activation must survive INTACT, pipeline included — not merely keep
         // its flag.
         //
-        // KNOWN LIMITATION, measured not assumed: this test is attached to the
-        // deactivation collector only POSITIONALLY. `laggingGateConfig` routes by
-        // call order and `start()` launches that collector first. Swapping the two
-        // `scope.launch` blocks leaves this test PASSING (verified by doing it) —
-        // because both collectors re-read the state under the fix and both then
-        // decline, so the stale observation reaches a different path and nothing
-        // observable changes. It would therefore stop exercising the scenario
-        // above without going red. The mutation that matters still bites:
-        // deleting the overtaken-observation guard in
-        // `revokeReceiveOwnershipIfStillDashjOwned` fails this test. Addressing
-        // the positional coupling needs the two collectors to be distinguishable
-        // at the config seam, which a mock on one key cannot do.
+        // Attached to the deactivation collector BY NAME, not by subscription
+        // order: `delayedDeactivationConfig` routes on production's
+        // `cutoverDeactivationFeed` frame, and `routed.assertWired()` above has
+        // already failed the test if that seam did not arrive. Swapping the
+        // `scope.launch` blocks in `start()` can no longer re-point this test at
+        // the gated collector — which used to leave it passing while covering
+        // nothing (verified by doing it: both collectors re-read the state under
+        // the fix and both then decline, so nothing observable changed).
+        // The mutation that matters still bites: deleting the
+        // overtaken-observation guard in `revokeReceiveOwnershipIfStillDashjOwned`
+        // fails this test.
         source.nextReceiveAddress = "yENGINEaddressAfterTheStaleFalse"
         events.emit(
             L1TxEvent.Detected(displayHex(11), 1_000_000L, null, contextCode = 0, directionCode = 0)
@@ -2324,28 +2327,35 @@ class CutoverUiDataServiceTest {
         val parkNextReread = java.util.concurrent.atomic.AtomicBoolean(false)
         val rereadParked = CompletableDeferred<Unit>()
         val rereadHold = CompletableDeferred<String?>()
-        var observeCalls = 0
-        val config = mockk<DashPayConfig> {
-            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
-                when {
-                    observeCalls++ == 0 -> gateFeed.consumeAsFlow()
-                    parkNextReread.compareAndSet(true, false) ->
+        // Routed by CALLER, not by subscription order: the conflated feed goes to
+        // the independent deactivation collector and the park applies to its
+        // authoritative reread (a point read), whatever order `start()` launches
+        // its collectors in.
+        val routed = RoutedCutoverConfig(
+            routes = mapOf(
+                CutoverSubscriber.DEACTIVATION to { gateFeed.consumeAsFlow() },
+                CutoverSubscriber.POINT_READ to {
+                    if (parkNextReread.compareAndSet(true, false)) {
                         kotlinx.coroutines.flow.flow {
                             rereadParked.complete(Unit)
                             emit(rereadHold.await())
                         }
-                    else -> persisted
+                    } else {
+                        persisted
+                    }
                 }
-            }
-        }
+            ),
+            fallback = { persisted }
+        )
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
-        val service = buildService(source, config, backgroundScope, txEvents = events)
+        val service = buildService(source, routed.config, backgroundScope, txEvents = events)
         service.start()
         assertTrue(
             "the overlay must serve the engine address once the pipeline's first read lands",
             pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
         )
+        routed.assertWired()
 
         // ACTUALLY park a pipeline read, so the gated collector's own revocation
         // genuinely cannot execute. Without an in-flight read this test would
@@ -2443,30 +2453,29 @@ class CutoverUiDataServiceTest {
         val parkNextPointRead = java.util.concurrent.atomic.AtomicBoolean(false)
         val grantReadEntered = CompletableDeferred<Unit>()
         val grantReadHold = CompletableDeferred<String?>()
-        var observeCalls = 0
-        val config = mockk<DashPayConfig> {
-            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
-                when (observeCalls++) {
-                    0 -> gateFeed
-                    1, 2 -> gatedFeed
-                    else -> {
-                        pointReads.incrementAndGet()
-                        if (parkNextPointRead.compareAndSet(true, false)) {
-                            kotlinx.coroutines.flow.flow {
-                                grantReadEntered.complete(Unit)
-                                emit(grantReadHold.await())
-                            }
-                        } else {
-                            pointReadState
+        val routed = RoutedCutoverConfig(
+            routes = mapOf(
+                CutoverSubscriber.DEACTIVATION to { gateFeed },
+                CutoverSubscriber.POINT_READ to {
+                    pointReads.incrementAndGet()
+                    if (parkNextPointRead.compareAndSet(true, false)) {
+                        kotlinx.coroutines.flow.flow {
+                            grantReadEntered.complete(Unit)
+                            emit(grantReadHold.await())
                         }
+                    } else {
+                        pointReadState
                     }
                 }
-            }
-        }
+            ),
+            // The ownership feed and the gated pipeline collector.
+            fallback = { gatedFeed }
+        )
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
-        val service = buildService(source, config, backgroundScope)
+        val service = buildService(source, routed.config, backgroundScope)
         service.start()
         runCurrent()
+        routed.assertWired()
         assertFalse("precondition: dashj owns the chain and nothing is granted", service.isCutoverActive())
         assertNull("precondition: nothing is bound or cached", service.sdkReceiveAddressOrNull())
         assertEquals(
@@ -2536,20 +2545,21 @@ class CutoverUiDataServiceTest {
             kotlinx.coroutines.channels.Channel.RENDEZVOUS
         )
         val authoritativeReads = java.util.concurrent.atomic.AtomicInteger(0)
-        var observeCalls = 0
-        val config = mockk<DashPayConfig> {
-            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
-                if (observeCalls++ == 0) {
-                    gateFeed.consumeAsFlow()
-                } else {
+        val routed = RoutedCutoverConfig(
+            routes = mapOf(
+                CutoverSubscriber.DEACTIVATION to { gateFeed.consumeAsFlow() },
+                // The authoritative rereads: POINT reads, not the long-lived feeds.
+                CutoverSubscriber.POINT_READ to {
                     authoritativeReads.incrementAndGet()
                     persisted
                 }
-            }
-        }
-        val service = buildService(FakeSource(), config, backgroundScope)
+            ),
+            fallback = { persisted }
+        )
+        val service = buildService(FakeSource(), routed.config, backgroundScope)
         service.start()
         runCurrent()
+        routed.assertWired()
         assertFalse("precondition: dashj owns the chain, nothing is granted", service.isCutoverActive())
 
         val baseline = authoritativeReads.get()
@@ -2981,26 +2991,144 @@ class CutoverUiDataServiceTest {
     // ── The wallet-wipe stop ──────────────────────────────────────────
 
     /**
-     * The FIRST collector [CutoverUiDataService.start] launches — the
-     * independent deactivation collector — sees [gateFeed]; the ownership feed,
-     * the gated pipeline collector and every later point read see [persisted].
-     * So a test controls when (or whether) a state change reaches the
-     * deactivation collector, independently of the state everything else reads.
+     * WHICH of [CutoverUiDataService]'s subscriptions to the one
+     * [DashPayConfig.CUTOVER_STATE] key is asking.
+     *
+     * [CutoverUiDataService.start] opens three long-lived ones, and everything
+     * else that consults the state is a one-shot point read. They need
+     * different feeds in different tests — a deactivation that arrives late, a
+     * pipeline gate that never sees a reset — so a fixture has to tell them
+     * apart.
+     *
+     * NOT by subscription order. Routing on "the first `observePreservingErrors`
+     * call" is a silent dependency on the order of the `scope.launch` blocks in
+     * `start()`: when the independent deactivation collector was added in FRONT
+     * of the gated one, every fixture that meant "the pipeline gate" quietly
+     * started staging the deactivation collector instead, and the tests went on
+     * passing while covering nothing (measured: see the mutation note on
+     * [stopForWalletWipe_conflatedReset_restartsForNextWallet_withoutTheWipedWalletsPendingWalk]).
+     *
+     * So route by the CALLER instead. Production names its three long-lived
+     * subscriptions (`cutoverDeactivationFeed`, `cutoverPipelineGateFeed`,
+     * `cutoverOwnershipFeed`), and those frames are on the stack at the moment
+     * the subscription is created — the flow is built eagerly, inside the
+     * caller, so this is not a guess about scheduling. Reordering the launches
+     * cannot re-point a fixture any more; renaming or removing one of those
+     * seams makes [RoutedCutoverConfig.assertWired] fail loudly instead.
      */
-    private fun laggingGateConfig(
-        gateFeed: Flow<String?>,
-        persisted: Flow<String?>
-    ): DashPayConfig {
-        var observeCalls = 0
-        return mockk {
+    private enum class CutoverSubscriber { DEACTIVATION, PIPELINE_GATE, OWNERSHIP_FEED, POINT_READ }
+
+    /**
+     * A [DashPayConfig] whose cutover-state feed depends on WHO subscribes.
+     *
+     * [assertWired] is the loud half: it fails the test if any of the three
+     * long-lived subscriptions did not arrive as its own kind — which is what a
+     * renamed seam, a collector that stopped subscribing, or a fourth
+     * subscription would look like. Without it a mis-routed fixture is exactly
+     * the silent pass this class is here to prevent.
+     */
+    private class RoutedCutoverConfig(
+        private val routes: Map<CutoverSubscriber, () -> Flow<String?>>,
+        private val fallback: () -> Flow<String?>
+    ) {
+        private val seen = java.util.concurrent.ConcurrentHashMap<CutoverSubscriber, Int>()
+
+        private fun seenCount(subscriber: CutoverSubscriber): Int = seen[subscriber] ?: 0
+
+        val config: DashPayConfig = mockk {
             every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
-                if (observeCalls++ == 0) gateFeed else persisted
+                val who = classify()
+                seen.merge(who, 1) { a, b -> a + b }
+                (routes[who] ?: fallback)()
+            }
+        }
+
+        /** Call after `start()` has run: every long-lived collector must be wired as itself. */
+        fun assertWired() {
+            assertEquals(
+                "the independent deactivation collector must have subscribed exactly once — " +
+                    "if this is 0 the fixture is routing its feed somewhere else",
+                1,
+                seenCount(CutoverSubscriber.DEACTIVATION)
+            )
+            assertEquals(
+                "the gated pipeline collector must have subscribed exactly once — " +
+                    "if this is 0 the fixture is routing its feed somewhere else",
+                1,
+                seenCount(CutoverSubscriber.PIPELINE_GATE)
+            )
+            assertEquals(
+                "the ownership feed must have subscribed exactly once",
+                1,
+                seenCount(CutoverSubscriber.OWNERSHIP_FEED)
+            )
+        }
+
+        private companion object {
+            /**
+             * Which subscription is being created, from the production frames
+             * below the mock.
+             *
+             * Each of [CutoverUiDataService.start]'s three long-lived
+             * subscriptions is created through a seam named after it; every
+             * other caller — the grant's authoritative read, the revocation's
+             * reread, `cutoverOwnershipCommittedBlocking`, the gate's
+             * wait-for-the-next-commit read — is a one-shot POINT read. The
+             * flow is built eagerly inside the caller, so these frames are
+             * genuinely on the stack at subscription time.
+             */
+            fun classify(): CutoverSubscriber {
+                val frames = Throwable().stackTrace.map { it.methodName }
+                return when {
+                    frames.contains("cutoverDeactivationFeed") -> CutoverSubscriber.DEACTIVATION
+                    frames.contains("cutoverPipelineGateFeed") -> CutoverSubscriber.PIPELINE_GATE
+                    frames.contains("cutoverOwnershipFeed") -> CutoverSubscriber.OWNERSHIP_FEED
+                    else -> CutoverSubscriber.POINT_READ
+                }
             }
         }
     }
 
+    /**
+     * Stages a DELAYED DEACTIVATION: only the independent deactivation collector
+     * reads [deactivationFeed], so a test chooses when (or whether) a `false`
+     * reaches it. The ownership feed, the gated pipeline collector and every
+     * point read see [persisted].
+     */
+    private fun delayedDeactivationConfig(
+        deactivationFeed: Flow<String?>,
+        persisted: Flow<String?>
+    ): RoutedCutoverConfig = RoutedCutoverConfig(
+        routes = mapOf(CutoverSubscriber.DEACTIVATION to { deactivationFeed }),
+        fallback = { persisted }
+    )
+
+    /**
+     * Stages a DELAYED PIPELINE GATE: only the gated pipeline collector reads
+     * [gateFeed], so a test can withhold the wipe's reset from the gate — the
+     * conflated-DataStore case in which only [CutoverUiDataService.stopForWalletWipe]'s
+     * generation bump can restart the pipeline. The deactivation collector, the
+     * ownership feed and every point read see [persisted], the real state.
+     */
+    private fun delayedPipelineGateConfig(
+        gateFeed: Flow<String?>,
+        persisted: Flow<String?>
+    ): RoutedCutoverConfig = RoutedCutoverConfig(
+        routes = mapOf(CutoverSubscriber.PIPELINE_GATE to { gateFeed }),
+        fallback = { persisted }
+    )
+
     @Test
     fun stopForWalletWipe_inFlightWalkCannotWriteAfterStop_andPipelineRestartsForNextWallet() = runTest {
+        // Two things at once, both staged against a gate that never sees the
+        // wipe's reset: a walk holding the WIPED wallet's second page must not
+        // write it after the stop, and the pipeline must still come back for the
+        // next wallet — which only the stop's generation bump can arrange here.
+        //
+        // MEASURED, not asserted: removing `stopGeneration` from the gate's
+        // `combine` in `start()` fails this test (it did not before the fixtures
+        // were split; see
+        // [stopForWalletWipe_conflatedReset_restartsForNextWallet_withoutTheWipedWalletsPendingWalk]).
         val pageA = listOf(record(firstByte = 1, net = 100, context = 3, direction = 0))
         val pageB = listOf(record(firstByte = 2, net = 200, context = 3, direction = 0))
         val store = mutableMapOf<String, TxDisplayCacheEntry>()
@@ -3013,18 +3141,27 @@ class CutoverUiDataServiceTest {
             beforePage = { walk, index -> if (walk == 1 && index == 1) walkHeldBeforePageB.await() }
         }
         val persisted = MutableStateFlow("CUT_OVER")
+        // The PIPELINE GATE's own feed. It does not see the wipe's reset until
+        // this test delivers it, so between the stop and that delivery only
+        // [CutoverUiDataService.stopForWalletWipe]'s generation bump can drop
+        // the pending walk and re-evaluate the gate.
         val gateFeed = MutableStateFlow("CUT_OVER")
+        val routed = delayedPipelineGateConfig(gateFeed, persisted)
         val service = buildService(
-            source, laggingGateConfig(gateFeed, persisted), backgroundScope,
+            source, routed.config, backgroundScope,
             displayDao = displayDao, groupDao = groupDao
         )
         service.start()
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
         runCurrent()
+        routed.assertWired()
         // Mid-walk: page A written, page B still held by the walker.
         assertEquals(setOf(displayHex(1)), store.keys)
 
-        // The wipe: reset persisted, gate emission NOT delivered; stop, then clear.
+        // The wipe: reset persisted, gate emission NEVER delivered; stop, then
+        // clear. [gateFeed] stays CUT_OVER for the rest of the test — the
+        // conflated DataStore case — so nothing the gate itself sees can stop or
+        // restart the pipeline here. Only the stop's generation bump can.
         persisted.value = "DUAL_RUNNING"
         service.stopForWalletWipe()
         source.boundWalletId = null // the SDK wallet clear succeeded
@@ -3035,20 +3172,25 @@ class CutoverUiDataServiceTest {
         runCurrent()
         assertTrue("the wiped wallet's page must not land after the stop", store.isEmpty())
         assertEquals(1, source.reconcileWalks)
+        assertFalse(
+            "the persisted reset is honoured although the gate never saw it",
+            service.isCutoverActive()
+        )
 
-        // The reset emission arrives, then the next wallet commits its cutover.
-        gateFeed.value = "DUAL_RUNNING"
-        runCurrent()
-        assertFalse(service.isCutoverActive())
-        // Commit lands before the bind (fresh-wallet setup order).
+        // The next wallet commits its cutover, then binds; the gate's own feed
+        // still never changed, so the restart can only be the re-evaluation the
+        // stop/resume armed.
         persisted.value = "CUT_OVER"
-        gateFeed.value = "CUT_OVER"
         runCurrent()
         source.boundWalletId = "cd".repeat(32)
         testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
         testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
         runCurrent()
-        assertTrue(service.isCutoverActive())
+        assertTrue(
+            "the stop's re-evaluation must restart the pipeline — the gate never saw the reset, " +
+                "so nothing else can",
+            service.isCutoverActive()
+        )
         assertEquals(2, source.reconcileWalks)
         assertEquals(setOf(displayHex(1), displayHex(2)), store.keys)
     }
@@ -3154,16 +3296,26 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun stopForWalletWipe_conflatedReset_restartsForNextWallet_withoutTheWipedWalletsPendingWalk() = runTest {
-        // The wipe's DUAL_RUNNING never reaches the gate (DataStore conflated
-        // it under the next wallet's CUT_OVER): the gate stays "active" the
-        // whole time, so only the stop can drop the old pending request, and
-        // only the stop's re-evaluation can restart the pipeline.
+        // The wipe's DUAL_RUNNING never reaches the GATED PIPELINE collector
+        // (DataStore conflated it under the next wallet's CUT_OVER): its feed
+        // stays "active" the whole time, so only the stop can drop the old
+        // pending request, and only the stop's re-evaluation can restart the
+        // pipeline.
+        //
+        // MEASURED, not asserted: removing `stopGeneration` from the gate's
+        // `combine` in `start()` fails this test. It did NOT before the fixtures
+        // were split — `laggingGateConfig` had started handing the withheld feed
+        // to the independent deactivation collector instead, leaving the gate on
+        // `persisted`, which does change, so the restart under test was being
+        // driven by the gate rather than by the stop and the mutation passed.
         val persisted = MutableStateFlow("CUT_OVER")
         val gateFeed = MutableStateFlow("CUT_OVER")
         val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
-        val service = buildService(source, laggingGateConfig(gateFeed, persisted), backgroundScope)
+        val routed = delayedPipelineGateConfig(gateFeed, persisted)
+        val service = buildService(source, routed.config, backgroundScope)
         service.start()
         runCurrent()
+        routed.assertWired()
         service.requestFullReconcile() // pending: the pipeline is still waiting for a bind
         runCurrent()
 
@@ -3176,7 +3328,11 @@ class CutoverUiDataServiceTest {
         // The next wallet commits, then binds; the gate still never changed.
         persisted.value = "CUT_OVER"
         runCurrent()
-        assertTrue(service.isCutoverActive())
+        assertTrue(
+            "the stop's re-evaluation must restart the pipeline — the gate never saw the reset, " +
+                "so nothing else can",
+            service.isCutoverActive()
+        )
         source.boundWalletId = "ef".repeat(32)
         testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
         runCurrent()
@@ -3195,9 +3351,11 @@ class CutoverUiDataServiceTest {
         val persisted = MutableStateFlow("CUT_OVER")
         val gateFeed = MutableStateFlow("CUT_OVER")
         val source = FakeSource(boundWalletId = null, records = MutableStateFlow(emptyList()))
-        val service = buildService(source, laggingGateConfig(gateFeed, persisted), backgroundScope)
+        val routed = delayedPipelineGateConfig(gateFeed, persisted)
+        val service = buildService(source, routed.config, backgroundScope)
         service.start()
         runCurrent()
+        routed.assertWired()
 
         persisted.value = "DUAL_RUNNING"
         service.stopForWalletWipe()
