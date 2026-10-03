@@ -232,19 +232,19 @@ class SwapRowDisplayCacheTest {
     }
 
     /** An SDK `transactions` record for this txid at the given [contextCode]. */
-    private fun sdkRecord(contextCode: Int) = l1TxUiRecord(
+    private fun sdkRecord(contextCode: Int, feeDuffs: Long? = null) = l1TxUiRecord(
         txidWireBytes = ByteArray(32) { i -> txHex.substring(i * 2, i * 2 + 2).toInt(16).toByte() }
             .reversedArray(),
         netAmountDuffs = sdkNetDuffs,
-        feeDuffs = null,
+        feeDuffs = feeDuffs,
         contextCode = contextCode,
         directionCode = 1, // OUTGOING
         firstSeenSec = now / 1000,
         blockTimestampSec = 0
     )
 
-    private fun syncAgainst(row: TxDisplayCacheEntry, contextCode: Int) = planL1DisplaySync(
-        records = listOf(sdkRecord(contextCode)),
+    private fun syncAgainst(row: TxDisplayCacheEntry, contextCode: Int, feeDuffs: Long? = null) = planL1DisplaySync(
+        records = listOf(sdkRecord(contextCode, feeDuffs)),
         existingByRowId = mapOf(row.rowId to row),
         groupedTxIds = emptySet(),
         resolve = resolve,
@@ -313,5 +313,27 @@ class SwapRowDisplayCacheTest {
         // 5. And it settles: another pass of either writer changes nothing.
         assertTrue(decorate(metadata(order(SwapOrderStatus.COMPLETED)), completed).isEmpty())
         assertTrue(syncAgainst(completed, contextCode = 3).updates.isEmpty())
+    }
+
+    @Test
+    fun aSwapCachedWithItsFeeDropsItOnceTheFeeIsKnown() {
+        // D-M-01: inserted while the store's fee was NULL, then decorated as a swap.
+        val inserted = planL1DisplaySync(
+            records = listOf(sdkRecord(contextCode = 3)),
+            existingByRowId = emptyMap(),
+            groupedTxIds = emptySet(),
+            resolve = resolve,
+            nowMs = now
+        ).inserts.single()
+        assertEquals(sdkNetDuffs, inserted.valueSatoshis)
+        val decorated = planSwapRowDecorations(
+            listOf(metadata(order(SwapOrderStatus.COMPLETED))),
+            mapOf(inserted.rowId to inserted),
+            ::title
+        ).single()
+
+        // The walker recovers a 227-duff fee: only the amount changes.
+        val plan = syncAgainst(decorated, contextCode = 3, feeDuffs = 227L)
+        assertEquals(decorated.copy(valueSatoshis = sdkNetDuffs + 227L), plan.updates.single())
     }
 }

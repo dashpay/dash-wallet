@@ -127,6 +127,19 @@ data class L1TxUiRecord(
      */
     val transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
 ) {
+    /**
+     * The value a history row shows: a send WITHOUT its fee, as dashj's
+     * `TransactionRowView.fromTransaction` has always rendered one (its
+     * `removeFee`: `value.add(fee)` whenever the value is negative). Applies to
+     * every sent shape — Sent, Internal and the asset-lock "…Fee"/Invitation
+     * rows alike — so a wallet shows the same figure whichever engine wrote the
+     * row (D-M-01: an upgraded wallet kept dashj's fee-free −0.03 Invitation
+     * while a restore of the same phrase showed −0.03000241). [netAmountDuffs]
+     * unchanged when the fee is unknown or the value is not negative.
+     */
+    val sentValueWithoutFeeDuffs: Long
+        get() = if (netAmountDuffs < 0L && feeDuffs != null) netAmountDuffs + feeDuffs else netAmountDuffs
+
     /** A coinbase payout: shown as "Mining Reward", as the dashj path does. */
     val isCoinbase: Boolean get() = transactionTypeKind == TX_TYPE_KIND_COINBASE
 
@@ -295,9 +308,7 @@ internal fun planL1TxRow(
         iconType = TxDisplayCacheEntry.ICON_SENT,
         iconBgType = TxDisplayCacheEntry.BG_SENT,
         filterFlags = TxDisplayCacheEntry.FLAG_SENT,
-        // netAmount includes the fee; the dashj list shows the amount
-        // without it (TransactionRowView's removeFee: value.add(fee)).
-        valueDuffs = record.netAmountDuffs + (record.feeDuffs ?: 0L),
+        valueDuffs = record.sentValueWithoutFeeDuffs,
         timestampMs = record.timestampMs,
         isIncoming = false
     )
@@ -319,7 +330,7 @@ internal fun planL1TxRow(
             },
             iconBgType = TxDisplayCacheEntry.BG_SENT,
             filterFlags = TxDisplayCacheEntry.FLAG_SENT,
-            valueDuffs = record.netAmountDuffs,
+            valueDuffs = record.sentValueWithoutFeeDuffs,
             timestampMs = record.timestampMs,
             isIncoming = false
         )
@@ -330,7 +341,7 @@ internal fun planL1TxRow(
         iconType = TxDisplayCacheEntry.ICON_INTERNAL,
         iconBgType = TxDisplayCacheEntry.BG_SENT,
         filterFlags = 0,
-        valueDuffs = record.netAmountDuffs,
+        valueDuffs = record.sentValueWithoutFeeDuffs,
         timestampMs = record.timestampMs,
         isIncoming = false
     )
@@ -512,6 +523,34 @@ internal const val L1_BLOCK_TIME_SKEW_TOLERANCE_MS = 3L * 60 * 60 * 1000
  * days before it was mined. Returns [existing] itself when nothing changes.
  * Pure — host-testable.
  */
+/**
+ * [entry] with the fee dropped from its value, when it was cached WITH it
+ * (D-M-01). Rows authored while the store's fee column was NULL hold the
+ * fee-included net; once the fee is known
+ * ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free value every
+ * other row shows. It is the only value edit a service-tagged, swap, gift-card,
+ * asset-lock or "Internal" row ever takes, so it fires on the exact
+ * fee-included figure alone: a row holding anything else (dashj's own fee-free
+ * value on an upgraded wallet, a contact amount, a swap's own amount) is left as
+ * it is. Contact rows are excluded outright: their value comes from the engine's
+ * signed net, not this record. Idempotent — the corrected value no longer
+ * equals the net. Returns [entry] itself when nothing changes. Pure —
+ * host-testable.
+ */
+internal fun withoutCachedFee(
+    entry: TxDisplayCacheEntry,
+    record: L1TxUiRecord,
+    contact: ResolvedTxContact?
+): TxDisplayCacheEntry =
+    if (contact == null && entry.contactUserId == null &&
+        record.sentValueWithoutFeeDuffs != record.netAmountDuffs &&
+        entry.valueSatoshis == record.netAmountDuffs
+    ) {
+        entry.copy(valueSatoshis = record.sentValueWithoutFeeDuffs)
+    } else {
+        entry
+    }
+
 internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecord): TxDisplayCacheEntry {
     val blockMs = record.blockTimestampMs
     if (blockMs <= 0L || existing.time - blockMs <= L1_BLOCK_TIME_SKEW_TOLERANCE_MS) return existing
@@ -539,6 +578,10 @@ internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecor
  * - SDK store stubs ([L1TxUiRecord.isStoreStub]) are skipped outright.
  * - Every existing row, the never-touch ones included, takes
  *   [redatedFromBlock]: a time later than the tx's own block is reset to it.
+ * - A non-contact sent row holding exactly the fee-included net takes the
+ *   fee-free value ([L1TxUiRecord.sentValueWithoutFeeDuffs]) once the fee is
+ *   known ([withoutCachedFee]) — service-tagged, swap and gift-card rows
+ *   included.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -690,7 +733,15 @@ internal fun planL1DisplaySync(
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
-            if (redated != existing) updates += redated
+            // Swap and gift-card rows are sends too, so they also take the fee-only
+            // value fix ([withoutCachedFee]) — their title/icon/status stay theirs.
+            // Error and CoinJoin rows take nothing else.
+            val kept = if (existing.hasErrors || (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0) {
+                redated
+            } else {
+                withoutCachedFee(redated, record, contact)
+            }
+            if (kept != existing) updates += kept
             continue
         }
         // A service-CLASSIFIED row is only half-rich. The service column is a
@@ -730,6 +781,8 @@ internal fun planL1DisplaySync(
         ) {
             updated = updated.copy(statusText = "")
         }
+        // Ahead of the service exit so a merchant send converges too.
+        updated = withoutCachedFee(updated, record, contact)
         if (serviceClassified) {
             // Status transitions only (see the guard split above).
             if (updated != existing) updates += updated
@@ -3222,8 +3275,12 @@ class CutoverUiDataService internal constructor(
         data class Snapshot(val records: List<L1TxUiRecord>) : TxFeedAction()
         data class EngineEvent(val event: L1TxEvent) : TxFeedAction()
 
-        /** Request for a FULL paged reconcile walk (ticker / contact re-resolution). */
-        object Reconcile : TxFeedAction()
+        /**
+         * Request for a FULL paged reconcile walk. [requested] is true for an
+         * explicit request (completeness check / contact re-resolution), false
+         * for the 60s ticker — only for the log line.
+         */
+        data class Reconcile(val requested: Boolean) : TxFeedAction()
     }
 
     /**
@@ -3277,26 +3334,28 @@ class CutoverUiDataService internal constructor(
                     val reconcilePages = MutableSharedFlow<List<L1TxUiRecord>>()
                     var reconcileJob: kotlinx.coroutines.Job? = null
                     val reconcileAgain = AtomicBoolean(false)
+                    // Whether a request (not the ticker) is among the walks
+                    // coalesced into [reconcileAgain] — for the log line only.
+                    val reconcileAgainRequested = AtomicBoolean(false)
                     merge(
                         source.observeWalletTxRecords(walletIdHex)
                             .map { TxFeedAction.Snapshot(it) as TxFeedAction },
                         reconcilePages.map { TxFeedAction.Snapshot(it) as TxFeedAction },
                         merge(
-                            reconcileTicker(),
+                            reconcileTicker().map { false },
                             // Replay a request made while nothing collected. Checked
                             // AFTER the subscription is live, so no request can fall
                             // between the check and the subscribe.
                             contactReResolveRequests.onSubscription {
                                 if (fullReconcilePending.get()) emit(Unit)
-                            }
-                        )
-                            .map { TxFeedAction.Reconcile as TxFeedAction },
+                            }.map { true }
+                        ).map { TxFeedAction.Reconcile(requested = it) as TxFeedAction },
                         txEvents.map { TxFeedAction.EngineEvent(it) }
                     ).collect { action ->
                         when (action) {
                             is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
                             is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
-                            TxFeedAction.Reconcile -> {
+                            is TxFeedAction.Reconcile -> {
                                 // Whatever triggered this, the walk it starts (or
                                 // the one more it queues) covers a pending request.
                                 fullReconcilePending.set(false)
@@ -3306,14 +3365,30 @@ class CutoverUiDataService internal constructor(
                                 // pass over freshly-busted caches).
                                 if (reconcileJob?.isActive == true) {
                                     reconcileAgain.set(true)
+                                    if (action.requested) {
+                                        reconcileAgainRequested.set(true)
+                                        log.info("full reconcile walk requested mid-walk; one more walk follows it")
+                                    }
                                 } else {
                                     reconcileJob = launch {
+                                        var requested = action.requested
                                         do {
                                             reconcileAgain.set(false)
+                                            val walk = reconcileWalkCount.incrementAndGet()
+                                            if (requested) log.info("full reconcile walk #{} started (requested)", walk)
+                                            val startedMs = System.currentTimeMillis()
+                                            var pages = 0
+                                            var records = 0
                                             try {
                                                 source.forEachWalletTxRecordPage(walletIdHex) { page ->
+                                                    pages++
+                                                    records += page.size
                                                     reconcilePages.emit(page)
                                                 }
+                                                logReconcileWalk(
+                                                    walk, requested, records, pages,
+                                                    System.currentTimeMillis() - startedMs
+                                                )
                                             } catch (t: Throwable) {
                                                 if (t is CancellationException) throw t
                                                 log.warn(
@@ -3321,6 +3396,7 @@ class CutoverUiDataService internal constructor(
                                                     t
                                                 )
                                             }
+                                            requested = reconcileAgainRequested.getAndSet(false)
                                         } while (reconcileAgain.get())
                                     }
                                 }
@@ -3577,6 +3653,30 @@ class CutoverUiDataService internal constructor(
      * change feed alone carries the launch window; thereafter one walk per
      * [refreshIntervalMs] preserves the 60s convergence semantics.
      */
+    /** Full reconcile walks started by this service — the `#n` in their log lines. */
+    private val reconcileWalkCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** Record count of the last logged ticker walk; -1 before the first. */
+    @Volatile
+    private var lastLoggedTickerWalkRecords = -1
+
+    /**
+     * One line per finished walk, so a QA log shows whether the reconcile ran
+     * and what it covered — before this a successful walk logged nothing, and
+     * "never ran" read the same as "ran fine" (D-M-01 §5). Requested walks
+     * always log; the 60s ticker logs its first walk and any walk whose record
+     * count moved, so a settled wallet does not log once a minute forever.
+     */
+    private fun logReconcileWalk(walk: Int, requested: Boolean, records: Int, pages: Int, elapsedMs: Long) {
+        if (requested || records != lastLoggedTickerWalkRecords) {
+            log.info(
+                "full reconcile walk #{} ({}) finished: {} records over {} pages in {}ms",
+                walk, if (requested) "requested" else "ticker", records, pages, elapsedMs
+            )
+        }
+        if (!requested) lastLoggedTickerWalkRecords = records
+    }
+
     private fun reconcileTicker(): Flow<Unit> = flow {
         delay(reconcileInitialDelayMs)
         while (true) {
