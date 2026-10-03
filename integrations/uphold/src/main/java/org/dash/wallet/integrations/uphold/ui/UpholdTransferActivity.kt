@@ -39,9 +39,11 @@ import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.services.ConfirmTransactionService
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.integrations.uphold.R
 import org.dash.wallet.integrations.uphold.data.RequirementsCheckResult
@@ -140,7 +142,21 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     private fun showPaymentConfirmation(amount: Dash) = lifecycleScope.launch {
         // Off-main: this is reached from a Main-thread observer, and dashj's
         // freshReceiveAddress() forces a synchronous full-wallet save.
-        val receiveAddress = walletDataProvider.freshReceiveAddressStringOffMain()
+        val receiveAddress = try {
+            walletDataProvider.freshReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            // Withdrawing from Uphold to the held dashj chain's frozen address
+            // would send the funds to an already-paid address (SR-03). Abandon
+            // the confirmation; the user can retry.
+            //
+            // An activity context cannot detach, so this never crashed — but the
+            // read parks uncancellably, so without the guard a finished activity
+            // still toasted over whatever the user moved on to.
+            this@UpholdTransferActivity.toastIfStillAttached(
+                org.dash.wallet.common.R.string.loading_error
+            )
+            return@launch
+        }
 
         withdrawalDialog = UpholdWithdrawalHelper(
             BigDecimal(balance.toPlainString()),

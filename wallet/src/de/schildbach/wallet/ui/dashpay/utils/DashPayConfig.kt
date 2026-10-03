@@ -132,6 +132,9 @@ open class DashPayConfig @Inject constructor(
     override fun <T> observe(key: Preferences.Key<T>): Flow<T?> =
         productionFlagOverride(key)?.let { flowOf(it) } ?: super.observe(key)
 
+    override fun <T> observePreservingErrors(key: Preferences.Key<T>): Flow<T?> =
+        productionFlagOverride(key)?.let { flowOf(it) } ?: super.observePreservingErrors(key)
+
     override suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         if (productionFlagOverride(key) != null) return
         super.set(key, value)

@@ -33,11 +33,13 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @AndroidEntryPoint
 class BuyAndSellIntegrationsFragment : Fragment() {
@@ -66,10 +68,29 @@ class BuyAndSellIntegrationsFragment : Fragment() {
                             findNavController().popBackStack()
                         },
                         onTopperClick = {
-                            lifecycleScope.launch {
-                                val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-                                viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
-                                requireActivity().openCustomTab(uri)
+                            // The VIEW's scope: picking another integration
+                            // navigates forward with this fragment kept on the
+                            // back stack, so a fragment-scoped coroutine would
+                            // still be active and attached when the parked read
+                            // unwinds and would toast over that screen. Read
+                            // inside the click lambda, where the view exists.
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                try {
+                                    val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+                                    viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
+                                    requireActivity().openCustomTab(uri)
+                                } catch (ex: ReceiveAddressUnavailableException) {
+                                    // No safe deposit address: sending the user to
+                                    // Topper with the held dashj chain's frozen
+                                    // address would have them buy into an
+                                    // already-paid address (SR-03). Guarded — the
+                                    // read parks uncancellably, so this can run
+                                    // once the fragment is gone and
+                                    // `requireContext()` would throw.
+                                    toastIfStillAttached(
+                                        org.dash.wallet.common.R.string.loading_error
+                                    )
+                                }
                             }
                         },
                         onUpholdClick = {
