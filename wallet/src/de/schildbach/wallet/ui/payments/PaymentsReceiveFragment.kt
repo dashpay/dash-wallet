@@ -145,12 +145,15 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
             viewModel.receiveAddress.collect(::showReceiveAddress)
         }
 
-        // Retry on selection. The read above can fail offscreen (the engine may
-        // simply not be bound yet), and ViewPager2 then RESUMES the retained
-        // page rather than recreating its view, so without this the page would
-        // stay blank forever even once the engine recovered. Single-flight and
-        // the "already have one" case are both the ViewModel's gate, so a resume
-        // during a slow read, or after a successful one, costs nothing.
+        // Retry, and revalidate, on selection. The read above can fail offscreen
+        // (the engine may simply not be bound yet), and ViewPager2 then RESUMES
+        // the retained page rather than recreating its view, so without this the
+        // page would stay blank forever even once the engine recovered. A resume
+        // after a SUCCESSFUL read matters too: this ViewModel outlives the view,
+        // so its address may have been paid — and the engine's next-unused
+        // pointer moved past it — while the user was on another tab. The read is
+        // idempotent while the address is unpaid, and single-flight is the
+        // ViewModel's gate, so a resume during a slow read still costs nothing.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.requestReceiveAddress()
@@ -159,32 +162,42 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
 
         // Prefetch, including while this page is the offscreen one built next to
         // Send, so the address is usually ready by the time Receive is selected.
+        // On a RECREATED view this is also the revalidation of whatever address
+        // the retained ViewModel is still holding.
         viewModel.requestReceiveAddress()
     }
 
     private fun showReceiveAddress(state: ReceiveAddressState) {
-        when (state) {
-            is ReceiveAddressState.Available -> binding.receiveInfo.setInfo(state.address, null)
-            is ReceiveAddressState.Unavailable -> {
-                // Advertise nothing: ReceiveInfoView with no address set keeps the
-                // address line and the QR code empty, which is the correct
-                // post-cutover outcome — the held dashj chain's frozen address is
-                // one the wallet has already been paid on (SR-03).
-                //
-                // Handling stays inside Receive and never navigates: the failure
-                // can land while the user is on another tab of the shared pager,
-                // and popping here would resolve the parent NavController and
-                // close the whole Payments destination out from under the tab in
-                // use.
-                if (shouldSurfaceAddressFailure(viewLifecycleOwner.lifecycle.currentState)) {
-                    Toast.makeText(
-                        requireContext(),
-                        org.dash.wallet.common.R.string.loading_error,
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-            ReceiveAddressState.Idle, ReceiveAddressState.Loading -> Unit
+        // Every state says what, if anything, it may advertise. A revalidation
+        // of an address already on screen reports it through
+        // ReceiveAddressState.Loading, so the QR stays up for the five seconds
+        // a cold engine read can take instead of blanking; a revalidation that
+        // FAILS reports nothing, and the QR is taken down.
+        val address = state.address
+
+        if (address != null) {
+            binding.receiveInfo.setInfo(address, null)
+        } else {
+            // Advertise nothing: ReceiveInfoView with no address set keeps the
+            // address line and the QR code empty, which is the correct
+            // post-cutover outcome — the held dashj chain's frozen address is
+            // one the wallet has already been paid on (SR-03), and an address
+            // whose revalidation failed can no longer be vouched for either.
+            binding.receiveInfo.clearInfo()
+        }
+
+        // Handling stays inside Receive and never navigates: the failure can
+        // land while the user is on another tab of the shared pager, and
+        // popping here would resolve the parent NavController and close the
+        // whole Payments destination out from under the tab in use.
+        if (state is ReceiveAddressState.Unavailable &&
+            shouldSurfaceAddressFailure(viewLifecycleOwner.lifecycle.currentState)
+        ) {
+            Toast.makeText(
+                requireContext(),
+                org.dash.wallet.common.R.string.loading_error,
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 }
