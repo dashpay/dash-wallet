@@ -2400,6 +2400,125 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun aRollbackObservedWhileTheGrantIsMidDecisionStillRevokesEagerly() = runTest {
+        // The applied-ownership filter decides whether a `false` is worth acting
+        // on. Asking that question OUTSIDE [ownershipDecisionMutex] asks it of a
+        // decision that may be half-made: `grantReceiveOwnershipIfStillCommitted`
+        // takes the mutex, reads CUT_OVER, and can be descheduled before it
+        // publishes `_cutoverActive` — the production scope is
+        // Dispatchers.Default, so that window is real. Starting from unapplied
+        // ownership, a rollback committing inside it reads "nothing applied", so
+        // the independent collector DISCARDED the emission instead of waiting for
+        // the grant it would have to undo. The grant then published and bound,
+        // and nothing eager was left to revoke it: the gated collector sees the
+        // rollback too, but `collectLatest` must JOIN a pipeline parked in an
+        // uncancellable FFI read before its deactivation action can run, which is
+        // the entire reason the independent collector exists.
+        //
+        // Staged with handshakes, not timing:
+        //  - the grant is held INSIDE its authoritative read, so it provably owns
+        //    the mutex and provably has not published yet;
+        //  - the rollback is emitted from a `flow {}`, whose `emit` invokes the
+        //    collector body synchronously in that same coroutine — so one
+        //    `runCurrent()` after the emission is released is enough to have made
+        //    the collector's decision, whichever shape the production code has;
+        //  - the gated collector's OWN feed never delivers the rollback at all
+        //    (a conflated DataStore feed is free to lag), so it can never be the
+        //    thing that revokes — only the eager path can produce the revocation
+        //    this test asserts on.
+        val rollbackObserved = CompletableDeferred<Unit>()
+        val gateFeed: Flow<String?> = kotlinx.coroutines.flow.flow {
+            emit("DUAL_RUNNING")
+            rollbackObserved.await()
+            emit("DUAL_RUNNING")
+            kotlinx.coroutines.awaitCancellation()
+        }
+        // The ownership feed and the GATED pipeline collector. It goes CUT_OVER
+        // and stays there: the rollback is never delivered here, so a revocation
+        // can only have come from the independent collector.
+        val gatedFeed = MutableStateFlow<String?>("DUAL_RUNNING")
+        // Every POINT read — the grant's authoritative read and the revocation's.
+        val pointReadState = MutableStateFlow<String?>("CUT_OVER")
+        val pointReads = java.util.concurrent.atomic.AtomicInteger(0)
+        val parkNextPointRead = java.util.concurrent.atomic.AtomicBoolean(false)
+        val grantReadEntered = CompletableDeferred<Unit>()
+        val grantReadHold = CompletableDeferred<String?>()
+        var observeCalls = 0
+        val config = mockk<DashPayConfig> {
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
+                when (observeCalls++) {
+                    0 -> gateFeed
+                    1, 2 -> gatedFeed
+                    else -> {
+                        pointReads.incrementAndGet()
+                        if (parkNextPointRead.compareAndSet(true, false)) {
+                            kotlinx.coroutines.flow.flow {
+                                grantReadEntered.complete(Unit)
+                                emit(grantReadHold.await())
+                            }
+                        } else {
+                            pointReadState
+                        }
+                    }
+                }
+            }
+        }
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, config, backgroundScope)
+        service.start()
+        runCurrent()
+        assertFalse("precondition: dashj owns the chain and nothing is granted", service.isCutoverActive())
+        assertNull("precondition: nothing is bound or cached", service.sdkReceiveAddressOrNull())
+        assertEquals(
+            "precondition: the three feed subscriptions are the only reads so far, and a `false` " +
+                "with nothing applied owes no authoritative read",
+            0,
+            pointReads.get()
+        )
+        val boundBaseline = source.boundCalls
+
+        // (1) The grant begins and is preempted between its authoritative read
+        //     and the flag publication, holding [ownershipDecisionMutex] there.
+        parkNextPointRead.set(true)
+        gatedFeed.value = "CUT_OVER"
+        assertTrue(
+            "the grant must be held inside its authoritative read",
+            pumpUntil { grantReadEntered.isCompleted }
+        )
+        assertFalse("precondition: the grant has not published ownership yet", service.isCutoverActive())
+        assertEquals("precondition: no pipeline has started", boundBaseline, source.boundCalls)
+
+        // (2) The rollback COMMITS, and the independent collector observes it in
+        //     exactly that window — with ownership not yet applied.
+        pointReadState.value = "DUAL_RUNNING"
+        rollbackObserved.complete(Unit)
+        // Deterministic: the flow's `emit` runs the collector body in its own
+        // coroutine, so when this returns the collector has either taken the
+        // ownership mutex (and is waiting behind the grant) or has already
+        // decided to discard the emission. Nothing is left pending.
+        runCurrent()
+
+        // (3) The grant resumes on the state it had already read, publishes
+        //     ownership and starts its pipeline.
+        grantReadHold.complete("CUT_OVER")
+        assertTrue(
+            "the grant must have published ownership and started its pipeline",
+            pumpUntil { source.boundCalls > boundBaseline }
+        )
+
+        // (4) ...and the rollback that was observed mid-grant must still be
+        //     applied, eagerly, by the collector that waited for it.
+        assertTrue(
+            "a rollback observed while the grant was mid-decision must still revoke ownership",
+            pumpUntil(5_000) { !service.isCutoverActive() && service.sdkReceiveAddressOrNull() == null }
+        )
+        // Deliberately NOT asserted through `sdkReceiveAddressLiveOrNull` here:
+        // the gated collector's feed still says CUT_OVER, so the live accessor
+        // would spend its whole binding wait before answering null, and what it
+        // would then be measuring is that wait, not the revocation.
+    }
+
+    @Test
     fun repeatedDashjEmissionsDoNotReReadTheCutoverState() = runTest {
         // Replacing the Boolean dedupe with an applied-ownership guard must not
         // turn every repeated `false` into an authoritative DataStore read under

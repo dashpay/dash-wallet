@@ -2485,6 +2485,13 @@ class CutoverUiDataService internal constructor(
      * collector deduplicates on, in place of the emitted Boolean — see the
      * comment there for why an edge-triggered dedupe could diverge from it and
      * suppress a genuine rollback.
+     *
+     * Read ONLY from inside [ownershipDecisionMutex] (i.e. from
+     * [revokeReceiveOwnershipIfStillDashjOwned]). Outside it the answer is a
+     * guess about a decision that may be half-made: a grant that has already
+     * read CUT_OVER but not yet published [_cutoverActive] reads as "nothing
+     * applied", and a rollback filtered out on that answer is discarded instead
+     * of waiting for the grant it would have to undo.
      */
     private fun receiveOwnershipApplied(): Boolean = synchronized(receiveAddressLock) {
         _cutoverActive.value || activeWalletIdHex != null
@@ -2526,9 +2533,28 @@ class CutoverUiDataService internal constructor(
      * since: a `false` older than the activation now in force is stale, and
      * applying it would revoke a binding the gated collector just granted.
      * See [ownershipDecisionMutex].
+     *
+     * BOTH filters live under the mutex, the cheap one first:
+     *
+     * - nothing APPLIED → nothing to revoke, and no authoritative read is owed.
+     *   This is what the deleted `distinctUntilChanged` used to buy, without the
+     *   dedupe state that could diverge from the applied decision;
+     * - applied, but the state has moved on → the observation was overtaken.
+     *
+     * The applied-state filter CANNOT sit in the collector, outside the mutex.
+     * A grant that has read CUT_OVER and not yet published [_cutoverActive] is
+     * invisible to it: starting from unapplied ownership, a rollback committing
+     * in that window reads "nothing applied", is discarded, and the grant then
+     * publishes and binds with no eager revocation left anywhere. The gated
+     * collector would still see that rollback, but `collectLatest` must JOIN a
+     * pipeline parked in an uncancellable FFI read before its deactivation
+     * action can run — which is the whole reason this collector exists. Taking
+     * the mutex first turns that window into a WAIT: the grant completes, and
+     * the decision is then made against ownership that is actually applied.
      */
     private suspend fun revokeReceiveOwnershipIfStillDashjOwned() =
         ownershipDecisionMutex.withLock {
+            if (!receiveOwnershipApplied()) return@withLock
             if (cutoverUiActive().first()) {
                 log.info("a dashj-ownership observation was overtaken by a newer cutover; ownership stands")
                 return@withLock
@@ -3387,12 +3413,20 @@ class CutoverUiDataService internal constructor(
         // while it is granted the feed emits `true`, which this collector
         // ignores — so the authoritative reread runs only for a `false` that
         // could actually change something.
+        //
+        // That filter lives INSIDE [revokeReceiveOwnershipIfStillDashjOwned],
+        // under [ownershipDecisionMutex], and EVERY `false` is handed to it.
+        // Filtering here, outside the mutex, reintroduced the same class of bug
+        // one level down: ownership a grant is in the middle of applying — it
+        // has read CUT_OVER but not yet published [_cutoverActive] — reads as
+        // "nothing applied", so a rollback committing in that window was
+        // discarded rather than waited out, and the grant then published and
+        // bound with nothing left to revoke it eagerly. The decision to no-op
+        // belongs where the decision to grant is serialized.
         scope.launch {
             cutoverUiActive()
                 .collect { active ->
-                    if (!active && receiveOwnershipApplied()) {
-                        revokeReceiveOwnershipIfStillDashjOwned()
-                    }
+                    if (!active) revokeReceiveOwnershipIfStillDashjOwned()
                 }
         }
         // The ownership FEED, deliberately a separate collector over the same
