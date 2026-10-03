@@ -329,6 +329,7 @@ class SdkWalletBinderTest {
         backfillWatchIntervalMs: Long = 5L,
         owedRescanWatchIntervalMs: Long = 5L,
         deviceProvablyLocked: () -> Boolean = { false },
+        reportNonFatal: (Throwable) -> Unit = {},
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -343,7 +344,8 @@ class SdkWalletBinderTest {
         backfillGate = backfillGate,
         backfillWatchIntervalMs = backfillWatchIntervalMs,
         owedRescanWatchIntervalMs = owedRescanWatchIntervalMs,
-        deviceProvablyLocked = deviceProvablyLocked
+        deviceProvablyLocked = deviceProvablyLocked,
+        reportNonFatal = reportNonFatal
     )
 
     // ── Phase 1a item 4: no first bind while the device is locked ─────
@@ -2628,26 +2630,89 @@ class SdkWalletBinderTest {
         coroutineContext.cancelChildren()
     }
 
-    /** Unreadable heights cannot replay the history on every start forever. */
+    /**
+     * Only durable confirmation clears the recovery debt (review, PR #1576):
+     * arms that never confirm keep it owed, every start arms it again (so the
+     * scan never advances unarmed), and past the threshold each process
+     * reports it once instead of giving it up.
+     */
     @Test
-    fun owedRewind_thatNeverConfirms_isGivenUpAfterTheBoundedArms() = runBlocking {
+    fun owedRewind_thatNeverConfirms_staysOwedReArmedAndReportedPastTheThreshold() = runBlocking {
+        val sdk = readySdk()
+        sdk.persistsRewindOnArm = false
+        sdk.durableHeight = null
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val reports = mutableListOf<Throwable>()
+        // No post-arm watch during the test: each start is one process, and
+        // its settle check at the gate is what is under test.
+        fun start() = binder(
+            sdk,
+            config = config,
+            owedRescanWatchIntervalMs = 60_000L,
+            reportNonFatal = { reports += it },
+            scope = this
+        )
+        assertTrue(start().oweSpvRescanForRecoveryReset())
+
+        repeat(SdkWalletBinder.OWED_RESCAN_ARMS_BEFORE_REPORT) {
+            assertTrue(start().ensureScanMayAdvance(walletId))
+            assertEquals(true, owedRecoveryRescan)
+        }
+        assertEquals(SdkWalletBinder.OWED_RESCAN_ARMS_BEFORE_REPORT, sdk.armRescanCalls)
+        assertTrue("not reported up to the threshold", reports.isEmpty())
+
+        // The next start: still owed, armed again, reported once.
+        val pastThreshold = start()
+        assertTrue(pastThreshold.ensureScanMayAdvance(walletId))
+        assertEquals("re-armed, not given up", SdkWalletBinder.OWED_RESCAN_ARMS_BEFORE_REPORT + 1, sdk.armRescanCalls)
+        assertEquals(true, owedRecoveryRescan)
+        assertEquals(
+            SdkWalletBinder.OWED_RESCAN_ARMS_BEFORE_REPORT + 1,
+            requireNotNull(ArmedOwedRescan.decode(owedRescanArmed)).arms
+        )
+        assertEquals(1, reports.size)
+        assertTrue(reports.single() is UnconfirmedOwedRescanException)
+
+        // Same process: no second arm, no second report.
+        assertTrue(pastThreshold.ensureScanMayAdvance(walletId))
+        assertEquals(SdkWalletBinder.OWED_RESCAN_ARMS_BEFORE_REPORT + 1, sdk.armRescanCalls)
+        assertEquals(1, reports.size)
+
+        // A later process reports again, and the debt is still owed.
+        assertTrue(start().ensureScanMayAdvance(walletId))
+        assertEquals(SdkWalletBinder.OWED_RESCAN_ARMS_BEFORE_REPORT + 2, sdk.armRescanCalls)
+        assertEquals(2, reports.size)
+        assertEquals(true, owedRecoveryRescan)
+
+        // Durable confirmation is what finally clears it, without another arm.
+        sdk.durableHeight = 0L
+        assertTrue(start().ensureScanMayAdvance(walletId))
+        assertNull(owedRecoveryRescan)
+        assertNull(owedRescanArmed)
+        assertEquals(SdkWalletBinder.OWED_RESCAN_ARMS_BEFORE_REPORT + 2, sdk.armRescanCalls)
+        coroutineContext.cancelChildren()
+    }
+
+    /** A failed arm holds the scan: an owed debt never advances unarmed. */
+    @Test
+    fun owedRewind_whoseArmFails_holdsTheScanAndStaysOwed() = runBlocking {
         val sdk = readySdk()
         sdk.persistsRewindOnArm = false
         sdk.durableHeight = null
         val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
         assertTrue(binder(sdk, config = config, scope = this).oweSpvRescanForRecoveryReset())
+        sdk.onArmRescan = { _, _ -> false }
 
-        repeat(SdkWalletBinder.MAX_UNCONFIRMED_OWED_RESCAN_ARMS) {
-            assertTrue(binder(sdk, config = config, scope = this).ensureScanMayAdvance(walletId))
-            assertEquals(true, owedRecoveryRescan)
-        }
-        assertEquals(SdkWalletBinder.MAX_UNCONFIRMED_OWED_RESCAN_ARMS, sdk.armRescanCalls)
-
-        assertTrue(binder(sdk, config = config, scope = this).ensureScanMayAdvance(walletId))
-        assertEquals("given up, not armed again", SdkWalletBinder.MAX_UNCONFIRMED_OWED_RESCAN_ARMS, sdk.armRescanCalls)
-        assertNull(owedRecoveryRescan)
-        assertNull(owedRescanArmed)
+        assertFalse(binder(sdk, config = config, scope = this).ensureScanMayAdvance(walletId))
+        assertEquals(true, owedRecoveryRescan)
         coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun saturatingIncrement_neverWraps() {
+        assertEquals(1, SdkWalletBinder.saturatingIncrement(0))
+        assertEquals(Int.MAX_VALUE, SdkWalletBinder.saturatingIncrement(Int.MAX_VALUE - 1))
+        assertEquals(Int.MAX_VALUE, SdkWalletBinder.saturatingIncrement(Int.MAX_VALUE))
     }
 
     @Test

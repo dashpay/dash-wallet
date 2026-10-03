@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.NativeLogBridge
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashj.platform.dpp.identifier.Identifier
@@ -312,7 +313,10 @@ class SdkWalletBinder internal constructor(
      * Phase 1a item 4). Unknowable reads as unlocked: attempt, and let the
      * keystore answer.
      */
-    private val deviceProvablyLocked: () -> Boolean = { false }
+    private val deviceProvablyLocked: () -> Boolean = { false },
+    // Where an owed rescan that keeps going unconfirmed is reported as a
+    // non-fatal (see [reportUnconfirmedOwedRescan]). Never throws.
+    private val reportNonFatal: (Throwable) -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -340,6 +344,13 @@ class SdkWalletBinder internal constructor(
                 context.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true
             } catch (t: Throwable) {
                 false
+            }
+        },
+        reportNonFatal = { t ->
+            try {
+                CrashReporter.saveBackgroundTrace(t, context.packageManager.getPackageInfo(context.packageName, 0))
+            } catch (e: Throwable) {
+                log.warn("could not save the background trace", e)
             }
         }
     )
@@ -1787,8 +1798,16 @@ class SdkWalletBinder internal constructor(
      *   re-arming would restart a replay already under way and extend the
      *   last-known-balance hold);
      * - a later process finds the debts still owed and arms again.
-     * Arms that never confirm are bounded ([MAX_UNCONFIRMED_OWED_RESCAN_ARMS]),
-     * so unreadable heights cannot replay the history on every start forever.
+     *
+     * Only durable confirmation clears a debt (review, PR #1576): an arm count
+     * measures arms that succeeded in memory, not replays that completed, so
+     * giving up after N of them dropped a mandatory recovery that ten
+     * terminated processes never made durable, and opened the scan at the old
+     * watermark. Every start that owes a debt therefore arms it again, and
+     * the scan never advances in a process where it is owed but not armed.
+     * What is bounded is the noise: once the record shows
+     * [OWED_RESCAN_ARMS_BEFORE_REPORT] unconfirmed arms, the next arm in each
+     * process is reported once as a non-fatal ([reportUnconfirmedOwedRescan]).
      */
     private suspend fun repayOwedRescans(walletIdHex: String, widened: Boolean): Boolean {
         settleArmedOwedRescanIfDurable(walletIdHex)
@@ -1809,16 +1828,6 @@ class SdkWalletBinder internal constructor(
             return true
         }
         val previous = readArmedOwedRescan()?.takeIf { it.walletIdHex == walletIdHex }
-        if (previous != null && previous.arms >= MAX_UNCONFIRMED_OWED_RESCAN_ARMS) {
-            log.error(
-                "owed SDK rescan on {}…: armed {} times without the durable watermark ever confirming " +
-                    "the rewind (pre-arm {}, target {}); giving up so the history is not replayed on " +
-                    "every start",
-                walletIdHex.take(8), previous.arms, previous.preArmHeight, previous.targetHeight
-            )
-            clearPaidOwedRescans(paidWide = widened)
-            return true
-        }
         val birthTimeSecs = resolveBirthTimeSecs()
         val preArmHeight = sdkService.durableSpvSyncedHeight(walletIdHex)
         if (!sdkService.armSpvRescan(walletIdHex, birthTimeSecs)) {
@@ -1830,7 +1839,7 @@ class SdkWalletBinder internal constructor(
             preArmHeight = preArmHeight,
             targetHeight = sdkService.spvRescanTargetHeight(birthTimeSecs),
             wide = widened,
-            arms = (previous?.arms ?: 0) + 1
+            arms = saturatingIncrement(previous?.arms ?: 0)
         )
         owedRescanArmedInProcess = armed
         writeArmedOwedRescan(armed)
@@ -1842,8 +1851,30 @@ class SdkWalletBinder internal constructor(
             if (recoveryOwed) "a recovery reset owed it" else "an earlier session scanned at the default windows",
             preArmHeight, armed.targetHeight, armed.arms
         )
+        if (armed.arms > OWED_RESCAN_ARMS_BEFORE_REPORT) reportUnconfirmedOwedRescan(armed, recoveryOwed)
         if (!settleArmedOwedRescanIfDurable(walletIdHex)) watchArmedOwedRescan(walletIdHex)
         return true
+    }
+
+    /** One report per process of an owed rescan that keeps going unconfirmed. */
+    private val unconfirmedOwedRescanReported = AtomicBoolean(false)
+
+    /**
+     * The debt stays owed and was armed again; this only makes a rewind that
+     * never becomes durable visible, once per process, instead of giving the
+     * debt up. Never throws.
+     */
+    private fun reportUnconfirmedOwedRescan(armed: ArmedOwedRescan, recoveryOwed: Boolean) {
+        if (!unconfirmedOwedRescanReported.compareAndSet(false, true)) return
+        val message = "owed SDK rescan on ${armed.walletIdHex.take(8)}… armed ${armed.arms} times without the " +
+            "durable watermark confirming the rewind (pre-arm ${armed.preArmHeight}, target ${armed.targetHeight}, " +
+            "${if (recoveryOwed) "recovery reset" else "widening"} debt); still owed and re-armed"
+        log.error(message)
+        try {
+            reportNonFatal(UnconfirmedOwedRescanException(message))
+        } catch (t: Throwable) {
+            log.warn("could not report the unconfirmed owed rescan", t)
+        }
     }
 
     /**
@@ -1880,7 +1911,7 @@ class SdkWalletBinder internal constructor(
         false
     }
 
-    /** Clear what a durable (or abandoned) rewind paid: the recovery debt, and the widening debt when wide. */
+    /** Clear what a durable rewind paid: the recovery debt, and the widening debt when wide. */
     private suspend fun clearPaidOwedRescans(paidWide: Boolean) {
         if (paidWide) dashPayConfig.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED)
         dashPayConfig.remove(DashPayConfig.SDK_RECOVERY_RESCAN_OWED)
@@ -2203,12 +2234,15 @@ class SdkWalletBinder internal constructor(
         internal const val OWED_RESCAN_WATCH_MAX_POLLS = 40
 
         /**
-         * Arms of one owed rescan, across starts, that may go unconfirmed
-         * before the debt is given up. Each start that cannot confirm the
-         * previous arm replays from birth again; this bounds that when the
-         * durable watermark cannot be read at all.
+         * Unconfirmed arms of one owed rescan, across starts, after which the
+         * next arm in each process is reported as a non-fatal. The debt is
+         * never given up: only durable confirmation clears it.
          */
-        internal const val MAX_UNCONFIRMED_OWED_RESCAN_ARMS = 10
+        internal const val OWED_RESCAN_ARMS_BEFORE_REPORT = 10
+
+        /** [count] + 1, saturating at [Int.MAX_VALUE] so the persisted count never wraps. */
+        internal fun saturatingIncrement(count: Int): Int = if (count >= Int.MAX_VALUE) Int.MAX_VALUE else count + 1
+
         internal const val BACKFILL_WATCH_MAX_POLLS = 45
 
         /**
@@ -2281,6 +2315,9 @@ internal object ContactCoverageDecider {
     }
 }
 
+/** The non-fatal [SdkWalletBinder] reports for an owed rescan that keeps going unconfirmed. */
+internal class UnconfirmedOwedRescanException(message: String) : IllegalStateException(message)
+
 /**
  * An owed SPV rewind that was armed, persisted as
  * [DashPayConfig.SDK_OWED_RESCAN_ARMED] until the rewind is durable.
@@ -2289,7 +2326,8 @@ internal object ContactCoverageDecider {
  * @property targetHeight the height the arm rewound to; null when unknown.
  * @property wide whether the arm was at the widened windows, and so also pays
  *   [DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED].
- * @property arms how many starts have armed it without a confirmation.
+ * @property arms how many starts have armed it without a confirmation;
+ *   saturates at [Int.MAX_VALUE].
  */
 internal data class ArmedOwedRescan(
     val walletIdHex: String,
