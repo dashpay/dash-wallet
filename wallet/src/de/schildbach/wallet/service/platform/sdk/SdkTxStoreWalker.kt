@@ -301,6 +301,10 @@ internal const val TX_TYPE_KIND_ASSET_LOCK = 6
  * @param payloadFacts the [TxPayloadFacts] source for [reattributeIncomingRecord]'s
  *        internal-vs-outgoing discrimination (production: [dashjPayloadFacts];
  *        tests inject a deterministic fake).
+ * @param onCorrectionsPersisted invoked (on the calling IO thread) with the
+ *        display-hex txids of every correction batch [persistCorrections]
+ *        committed — the signal the display pipeline re-sums the per-day
+ *        "Mixing" group rows on when a grouped member's stored net changed.
  */
 internal class SdkTxStoreWalker(
     private val db: DashDatabase,
@@ -309,7 +313,8 @@ internal class SdkTxStoreWalker(
     private val tailRows: Int = RECENT_TAIL_ROWS,
     private val pageThrottleMs: Long = PAGE_THROTTLE_MS,
     private val onQuery: ((String) -> Unit)? = null,
-    private val payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts
+    private val payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts,
+    private val onCorrectionsPersisted: ((Set<String>) -> Unit)? = null
 ) {
 
     /**
@@ -1005,7 +1010,10 @@ internal class SdkTxStoreWalker(
                     "served from memory, re-corrected next pass",
                 t
             )
+            return
         }
+        // Outside the try: a failing listener must not read as a failed write.
+        onCorrectionsPersisted?.invoke(corrections.mapTo(HashSet()) { it.first.record.txidHex })
     }
 
     /**
@@ -1196,6 +1204,19 @@ internal class SdkTxStoreWalker(
     }
 
     // ── Synchronous point/enumeration reads (seam lazy views) ─────────
+
+    /**
+     * Fresh SERVED records (reattributed — the same shapes every other read
+     * here serves) for [displayHexes], WITHOUT the membership probe: the
+     * caller already knows these txids belong to the wallet (the per-day
+     * "Mixing" group re-sum reads its `tx_group_cache` members). A txid the
+     * store does not hold is simply absent from the result. Chunked IN reads,
+     * no payload column; bounded by the caller's batch size.
+     */
+    fun recordsFor(displayHexes: Collection<String>): List<L1TxUiRecord> {
+        val wire = displayHexes.mapNotNull { hexToBytesOrNull(it.lowercase())?.reversedArray() }
+        return if (wire.isEmpty()) emptyList() else queryTxRecords(wire)
+    }
 
     /**
      * Point lookup of ONE wallet-relevant record — fresh from the store,

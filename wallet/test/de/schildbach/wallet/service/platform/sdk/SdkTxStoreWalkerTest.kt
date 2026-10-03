@@ -1339,6 +1339,32 @@ class SdkTxStoreWalkerTest {
     }
 
     @Test
+    fun coinJoin_correctionSignalled_andRecordsForServesCurrentNets() {
+        // The mixing-group re-sum's two hooks into the walker: the
+        // persisted-corrections signal, and point reads of the served nets.
+        val ids = seedCoinJoinRound()
+        val signalled = mutableListOf<Set<String>>()
+        val w = SdkTxStoreWalker(
+            db = db,
+            walletId = walletId,
+            pageThrottleMs = 0L,
+            payloadFacts = coinJoinFacts,
+            onCorrectionsPersisted = { signalled += it }
+        )
+        val unknown = displayHexOf(txid(99))
+        // A point read corrects (and signals) exactly like a walk; a txid the
+        // store does not hold is simply absent.
+        val served = w.recordsFor(listOf(displayHexOf(ids.round), unknown))
+        assertEquals(listOf(displayHexOf(ids.round)), served.map { it.txidHex })
+        assertEquals(0L, served.single().netAmountDuffs)
+        assertEquals(listOf(setOf(displayHexOf(ids.round))), signalled)
+
+        // Already corrected: nothing persisted, nothing signalled.
+        walkRecords(w)
+        assertEquals(1, signalled.size)
+    }
+
+    @Test
     fun recomputeCoinJoinRecordNet_netOnly() {
         val born = l1TxUiRecord(txid(85), 2 * denom, 50L, 3, 3, 1_700_000_000, 0)
         val fixed = recomputeCoinJoinRecordNet(born, spentOwnedDuffs = 2 * denom, fundedOwnedDuffs = 2 * denom - 10)
