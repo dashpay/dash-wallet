@@ -66,6 +66,13 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
      */
     private var confirmJob: Job? = null
 
+    /**
+     * The id of the confirm attempt THIS fragment instance started, so the attempt
+     * can be released by name. The single-flight itself lives in the retained view
+     * model, which outlives this instance.
+     */
+    private var confirmAttemptId: Long? = null
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -100,19 +107,13 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
             // idempotency UUID, which Coinbase bills as a second purchase.
             // Launching first and disabling inside the coroutine would not help:
             // the taps race in exactly the window before the first suspension.
-            if (!viewModel.tryBeginConfirm()) {
-                return@setOnClickListener
-            }
+            val attemptId = viewModel.tryBeginConfirm() ?: return@setOnClickListener
+            confirmAttemptId = attemptId
             binding.confirmBtnContainer.isEnabled = false
             confirmJob = lifecycleScope.launch {
-                // The guard is held through address preparation, the purchase and
-                // the handoff to 2FA, and released only where nothing was bought.
-                // Deliberately NOT released after navigating: the navigation
-                // transaction has not executed when this coroutine ends, so this
-                // view is still attached and still clickable — a queued tap would
-                // place the second order. [onResume] re-arms it if the user comes
-                // back to this screen.
-                var release = true
+                // The flight is owned by this attempt through address preparation,
+                // the purchase and the handoff to 2FA, and given back only where
+                // nothing was bought.
                 try {
                     // Acquire the destination BEFORE the purchase. tryBuyDash()
                     // submits placeBuyOrder() with a fresh UUID, so an address
@@ -133,8 +134,15 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
                         ).show()
                         return@launch
                     }
-                    if (tryBuyDash()) {
-                        release = false
+                    if (tryBuyDash(attemptId)) {
+                        // Bought: the operation is over, so this attempt stops
+                        // owning the flight and the navigation latch takes over.
+                        // Deliberately not simply released: the navigation
+                        // transaction has not executed when this coroutine ends, so
+                        // this view is still attached and still clickable — a queued
+                        // tap would place the second order. [onResume] drops the
+                        // latch if the user comes back to this screen.
+                        viewModel.latchConfirmForNavigation(attemptId)
                         val twoFaParams = CoinbaseTransactionParams(params, TransactionType.BuyDash)
                         safeNavigate(
                             CoinbaseOrderReviewFragmentDirections
@@ -143,11 +151,14 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
                     }
                 } finally {
                     // Covers the early return, a declined purchase AND an
-                    // unexpected throw: a latch left set by a failure path would
-                    // leave the button dead for the rest of the screen's life.
-                    if (release) {
-                        releaseConfirm()
-                    }
+                    // unexpected throw: ownership left behind by a failure path
+                    // would leave the button dead for the rest of the screen's
+                    // life. Names the attempt, so it is a no-op once the purchase
+                    // handed off to the latch above, and — the case cancellation
+                    // creates — once this attempt no longer owns the flight because
+                    // the fragment was recreated while it was still parked in the
+                    // destination read and a new attempt is now running.
+                    releaseConfirm(attemptId)
                 }
             }
         }
@@ -223,20 +234,28 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
         // Back from the 2FA screen (cancelled, or back-pressed) with no confirm
         // running: the next tap is a new intent, so the latch the navigation kept
         // is dropped HERE rather than in the coroutine, which ends while this
-        // view is still on screen.
+        // view is still on screen. ONLY the latch: an attempt that is still
+        // running — this instance's predecessor, unwinding the destination read it
+        // was cancelled in — owns its flight and gives it back itself.
         if (confirmJob?.isActive != true) {
-            releaseConfirm()
+            viewModel.releaseConfirmNavigationLatch()
+
+            if (!viewModel.isConfirmBusy()) {
+                binding.confirmBtnContainer.isEnabled = true
+            }
         }
     }
 
     /**
-     * Give the confirm single-flight back and re-enable the button. The view can
-     * already be gone — [lifecycleScope] outlives it — so the button half is
-     * conditional while the guard half is not.
+     * Give the confirm single-flight back for [attemptId] and re-enable the
+     * button. The view can already be gone — [lifecycleScope] outlives it — so the
+     * button half is conditional, and it is also skipped while anything else still
+     * holds the flight.
      */
-    private fun releaseConfirm() {
-        viewModel.endConfirm()
-        if (view != null) {
+    private fun releaseConfirm(attemptId: Long) {
+        viewModel.endConfirm(attemptId)
+
+        if (view != null && !viewModel.isConfirmBusy()) {
             binding.confirmBtnContainer.isEnabled = true
         }
     }
@@ -246,10 +265,10 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 
-    private suspend fun tryBuyDash(): Boolean {
+    private suspend fun tryBuyDash(attemptId: Long): Boolean {
         try {
             AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
-                viewModel.buyDash()
+                viewModel.buyDash(attemptId)
             }
         } catch (ex: Exception) {
             viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ERROR)
@@ -285,5 +304,13 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
     override fun onDestroy() {
         super.onDestroy()
         onBackPressedCallback?.remove()
+        // Whatever this instance started is cancelled with its [lifecycleScope],
+        // but a cancelled attempt parked in the uncancellable destination read can
+        // take seconds to unwind. Give its ownership back now, so the recreated
+        // fragment can confirm straight away; the late `finally` then finds the
+        // attempt no longer owns the flight and leaves the new one alone. A no-op
+        // for an attempt that already bought — that one is held by the navigation
+        // latch, which only [onResume] drops.
+        confirmAttemptId?.let { viewModel.endConfirm(it) }
     }
 }
