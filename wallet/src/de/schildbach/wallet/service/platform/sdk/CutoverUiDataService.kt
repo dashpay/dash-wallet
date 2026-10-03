@@ -2475,6 +2475,22 @@ class CutoverUiDataService internal constructor(
     }
 
     /**
+     * Whether this service currently has engine ownership APPLIED — i.e.
+     * whether there is anything for [revokeReceiveOwnership] to take away.
+     *
+     * Both halves, in one critical section, because either one alone still
+     * authorizes a read: the flag is what [beginReceiveRead] and
+     * [receiveBindingStillCurrent] consult, and the binding is what the cached
+     * address is stamped against. This is the state [start]'s deactivation
+     * collector deduplicates on, in place of the emitted Boolean — see the
+     * comment there for why an edge-triggered dedupe could diverge from it and
+     * suppress a genuine rollback.
+     */
+    private fun receiveOwnershipApplied(): Boolean = synchronized(receiveAddressLock) {
+        _cutoverActive.value || activeWalletIdHex != null
+    }
+
+    /**
      * Serializes the ownership DECISION — the grant in [start]'s gated collector
      * against the revocation in its independent deactivation collector — and
      * makes each decision from a persisted-state read taken while it is held.
@@ -2702,6 +2718,37 @@ class CutoverUiDataService internal constructor(
     private var cachedReceiveAddress: ReceiveAddressSnapshot? = null
 
     /**
+     * Whether the newest read this binding has ACCEPTED (the one that last moved
+     * [lastPublishedReceiveTicket]) actually got an answer out of the engine.
+     *
+     * The cache alone cannot say that, and the difference is the whole contract
+     * split between the two kinds of caller. A failed read deliberately HOLDS
+     * the cache — the synchronous overlay ([sdkReceiveAddressOrNull]) must keep
+     * serving the last engine address, because its only alternative is the held
+     * dashj chain's frozen, possibly already-paid pointer. But a LIVE caller
+     * asked for the engine's answer AS OF NOW, and it has somewhere safe to go
+     * when there isn't one: [de.schildbach.wallet.WalletApplication
+     * .decideLiveReceiveAddress] refuses the dashj fallback post-cutover and
+     * raises [org.dash.wallet.common.services.ReceiveAddressUnavailableException],
+     * which the Receive UI surfaces as a retry. Answering it from the hold made
+     * that fail-closed handling unreachable: cache A, let a payment land on A,
+     * let both the event refresh and the next live read fail, and the live read
+     * still returned A — so the paid QR stayed on screen.
+     *
+     * It is written under the SAME ticket fence as the address, never beside it:
+     * a success flag that an older completion could set after a newer read had
+     * failed would re-authorise exactly the address the fence just rejected.
+     */
+    private var latestReceiveReadRevalidated = false
+
+    /**
+     * What a completed receive read answers: the address this binding has
+     * ACCEPTED, and whether the newest accepted read REVALIDATED it against the
+     * engine. See [latestReceiveReadRevalidated].
+     */
+    private data class ReceiveReadAnswer(val address: String?, val revalidated: Boolean)
+
+    /**
      * Ticket stamped on each engine read AT THE READ, and the highest ticket
      * that has already published.
      *
@@ -2840,15 +2887,16 @@ class CutoverUiDataService internal constructor(
 
     /**
      * Publish [address] for the read identified by [generation]/[ticket], and
-     * return what that read should answer.
+     * return what that read should answer — together with whether that answer
+     * is a REVALIDATION or merely the HOLD ([latestReceiveReadRevalidated]).
      *
      * Rejects two classes of stale result: a different BINDING (the wallet was
      * wiped or rolled back while we blocked) and an OUT-OF-ORDER publication
      * (a later read already published). Must be called under
      * [receiveAddressLock].
      */
-    private fun completeReceiveRead(generation: Long, ticket: Long, address: String?): String? {
-        if (generation != receiveAddressGeneration) return null
+    private fun completeReceiveRead(generation: Long, ticket: Long, address: String?): ReceiveReadAnswer {
+        if (generation != receiveAddressGeneration) return ReceiveReadAnswer(null, revalidated = false)
         if (ticket > lastPublishedReceiveTicket) {
             // The fence advances for EVERY completed read, not only a successful
             // one, because what it records is COMPLETION ORDER — and a failed
@@ -2860,12 +2908,19 @@ class CutoverUiDataService internal constructor(
             // Receive screen, after a newer read had established that the engine
             // was no longer answering.
             lastPublishedReceiveTicket = ticket
+            // Under the SAME fence as the address, and for the same reason: the
+            // newest ACCEPTED read is the one that decides whether what the
+            // cache holds has been revalidated, so an older completion arriving
+            // after a newer FAILED read must not reinstate a success.
+            latestReceiveReadRevalidated = address != null
             if (address != null) {
                 cachedReceiveAddress = ReceiveAddressSnapshot(generation, address)
             }
             // A FAILED read still HOLDS whatever the cache has: clearing it would
             // send the synchronous overlay back to the frozen dashj address,
-            // which is the defect. It simply does not get to publish.
+            // which is the defect. It simply does not get to publish — and it
+            // marks the hold as UNREVALIDATED, so a live caller fails closed
+            // instead of being answered from it.
         }
         // Answer from the CACHE, never from this read's own result. Rejecting an
         // out-of-order publication is only half the job: an older read that
@@ -2877,7 +2932,8 @@ class CutoverUiDataService internal constructor(
         // own read lost the ordering — gets that, and a rejected read with
         // nothing cached answers nothing rather than smuggling its own result
         // past the fence.
-        return cachedReceiveAddress?.takeIf { it.generation == generation }?.address
+        val held = cachedReceiveAddress?.takeIf { it.generation == generation }?.address
+        return ReceiveReadAnswer(held, revalidated = held != null && latestReceiveReadRevalidated)
     }
 
     /**
@@ -2891,6 +2947,7 @@ class CutoverUiDataService internal constructor(
         activeWalletIdHex = walletIdHex
         receiveAddressGeneration++
         cachedReceiveAddress = null
+        latestReceiveReadRevalidated = false
         lastPublishedReceiveTicket = receiveReadTicket
     }
 
@@ -2905,6 +2962,7 @@ class CutoverUiDataService internal constructor(
         activeWalletIdHex = null
         receiveAddressGeneration++
         cachedReceiveAddress = null
+        latestReceiveReadRevalidated = false
         // Every read issued so far is now stale; the generation already rejects
         // them, and this keeps the ticket floor consistent for the next binding.
         lastPublishedReceiveTicket = receiveReadTicket
@@ -2975,14 +3033,19 @@ class CutoverUiDataService internal constructor(
      * BLOCKS on the FFI (it takes the engine's wallet-manager write lock), hence
      * [Dispatchers.IO].
      *
-     * Null when the cutover is not active, or when the read is unavailable AND
-     * nothing has ever been published. A failed read on a WARM cache returns the
-     * last known engine address instead — the same hold
-     * [sdkReceiveAddressLiveBlockingOrNull] documents and
-     * `postCutover_failedEngineReadHoldsTheLastAddress` pins, because dropping
-     * to null here would send the caller back to the frozen dashj pointer, which
-     * is the defect. Either way it never returns a GUESSED address: every value
-     * it yields came from the engine.
+     * Null when the cutover is not active, or when the newest ACCEPTED read did
+     * not reach the engine — warm cache or cold. The cache is still HELD on a
+     * failure (that is what keeps the synchronous overlay off the frozen dashj
+     * pointer, and `postCutover_failedEngineReadHoldsTheLastAddress` pins it),
+     * but this caller asked for a LIVE answer and must not be handed the hold as
+     * though it were one: [de.schildbach.wallet.WalletApplication
+     * .decideLiveReceiveAddress] refuses the dashj fallback post-cutover and
+     * raises
+     * [org.dash.wallet.common.services.ReceiveAddressUnavailableException]
+     * instead, which is the retry the Receive screen shows rather than leaving a
+     * QR up that the chain may already have paid. See
+     * [latestReceiveReadRevalidated]. It never returns a GUESSED address either:
+     * every value it yields came from the engine.
      */
     suspend fun sdkReceiveAddressLiveOrNull(): String? =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -3109,8 +3172,15 @@ class CutoverUiDataService internal constructor(
         // it (an empty cache sends the synchronous overlay back to the frozen
         // dashj address); a stale binding or an out-of-order result is rejected —
         // see [completeReceiveRead].
+        //
+        // But the HOLD is for the overlay, not for this caller: a live read that
+        // could not be revalidated answers NOTHING, so
+        // [de.schildbach.wallet.WalletApplication.decideLiveReceiveAddress]
+        // reaches its unavailable path instead of accepting a held address as a
+        // successful revalidation ([latestReceiveReadRevalidated]).
         return synchronized(receiveAddressLock) {
-            completeReceiveRead(generation, ticket, address)
+            val answer = completeReceiveRead(generation, ticket, address)
+            answer.address?.takeIf { answer.revalidated }
         }
     }
 
@@ -3295,11 +3365,32 @@ class CutoverUiDataService internal constructor(
         // collector against the gated one, so the revocation is applied through
         // [revokeReceiveOwnershipIfStillDashjOwned] — which decides under
         // [ownershipDecisionMutex] and so cannot undo a newer activation.
+        //
+        // DEDUPLICATED ON THE OWNERSHIP THIS SERVICE HAS APPLIED, never on the
+        // emitted Boolean. A `distinctUntilChanged` here recorded the value
+        // DELIVERED, which is not the decision APPLIED: an initial `false` can
+        // be delivered after CUT_OVER has committed, the authoritative reread
+        // then correctly leaves ownership standing — and the dedupe state is
+        // nonetheless `false`. If the intervening `true` is conflated away while
+        // this collector is descheduled (the preferences feed conflates, and
+        // re-delivers equal values, which is the only reason a dedupe was
+        // wanted at all), the NEXT `false` — a genuine rollback — is suppressed
+        // as a repeat, and nothing revokes eagerly. The gated collector sees it,
+        // but must join a pipeline parked in an uncancellable FFI read first,
+        // and until it does the retired generation and its cached address stay
+        // authorized. [ownershipDecisionMutex] does not help: it orders a grant
+        // against a revocation that RUNS, not against one that was deduped away.
+        //
+        // The applied state cannot drift from itself, and it is also a STRICTER
+        // filter than the Boolean edge in the steady state: while ownership is
+        // revoked the feed emits `false` and there is nothing to revoke, and
+        // while it is granted the feed emits `true`, which this collector
+        // ignores — so the authoritative reread runs only for a `false` that
+        // could actually change something.
         scope.launch {
             cutoverUiActive()
-                .distinctUntilChanged()
                 .collect { active ->
-                    if (!active) {
+                    if (!active && receiveOwnershipApplied()) {
                         revokeReceiveOwnershipIfStillDashjOwned()
                     }
                 }
@@ -3849,8 +3940,11 @@ class CutoverUiDataService internal constructor(
             val (ticket, nextReceive) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 readReceiveAddressOrdered { source.nextReceiveAddressOrNull(boundWalletIdHex) }
             }
+            // The CACHE answer, not the revalidation verdict: this read feeds the
+            // synchronous overlay, which is exactly the caller the hold exists
+            // for ([latestReceiveReadRevalidated]).
             val served = synchronized(receiveAddressLock) {
-                completeReceiveRead(generation, ticket, nextReceive)
+                completeReceiveRead(generation, ticket, nextReceive).address
             }
             if (served == null && nextReceive == null) {
                 log.info("engine next-receive-address unavailable; the Receive screen stays on dashj")

@@ -39,6 +39,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -1639,8 +1640,21 @@ class CutoverUiDataServiceTest {
         )
 
         assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
-        // …and the live read reports the same held value rather than nothing.
-        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressLiveOrNull())
+        // …but the hold is for the OVERLAY only. A LIVE caller asked for the
+        // engine's answer as of now and has somewhere safe to go without one —
+        // WalletApplication.decideLiveReceiveAddress refuses the dashj fallback
+        // post-cutover and raises ReceiveAddressUnavailableException, which the
+        // Receive screen turns into a retry. Answering it from the hold made
+        // that fail-closed handling unreachable in production: cache A, take a
+        // payment on A, let the refresh AND the next live read fail, and the
+        // live read still returned A — so the already-paid QR stayed up.
+        assertNull(
+            "a live caller must not be answered from the hold",
+            service.sdkReceiveAddressLiveOrNull()
+        )
+        // The hold itself survives that live read's own failed attempt: the
+        // overlay still has somewhere better than the frozen dashj pointer.
+        assertEquals("yENGINEnextUnusedAddress", service.sdkReceiveAddressOrNull())
     }
 
     @Test
@@ -2082,6 +2096,79 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun anOlderCompletionAfterANewerFailedReadIsNotAServedRevalidation() = runTest {
+        // The WARM-cache twin of the test above, and the exact shape the live
+        // refusal has to survive:
+        //   the cache holds A, and the chain has already paid A
+        //   read 1 takes A and is held on its way to publishing it
+        //   read 2 finds the engine unavailable — nothing published, A still HELD
+        //   read 1 arrives and the fence rejects its publication
+        // The fence already stopped read 1 REPUBLISHING A. What it did not stop
+        // was read 1 being ANSWERED from the held cache, and a non-null answer
+        // is one WalletApplication.decideLiveReceiveAddress returns unchanged —
+        // so the failed revalidation never reached its unavailable path and the
+        // paid QR stayed up. The revalidation verdict therefore rides the SAME
+        // fence as the address: an older completion must not reinstate a
+        // success that a newer FAILED read has already retired.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        source.nextReceiveAddress = "yENGINEaddressA"
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope)
+        service.start()
+        assertTrue(
+            "precondition: the cache is WARM with A",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEaddressA" }
+        )
+
+        // The OLDER read takes A and is held at the publish barrier — the
+        // post-read window the fence governs. (Not inside the FFI: the engine
+        // reads are serialized, so a read parked there would park the newer one
+        // behind it — see anOlderReadCannotPublishAfterANewerReadCompletedEmpty.)
+        val readThreadName = "sr03-warm-older-read"
+        val publishGate = java.util.concurrent.CountDownLatch(1)
+        val olderHeld = java.util.concurrent.atomic.AtomicBoolean(false)
+        service.liveReceivePublishBarrier = {
+            if (Thread.currentThread().name == readThreadName) {
+                olderHeld.set(true)
+                check(publishGate.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                    "publish barrier never released"
+                }
+            }
+        }
+        val older = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, readThreadName)
+        }
+        val olderResult = older.submit<String?> { service.sdkReceiveAddressLiveBlockingOrNull() }
+        assertTrue("the older read never reached the publish barrier", waitFor { olderHeld.get() })
+
+        // The NEWER read completes empty while the older one is still held.
+        source.nextReceiveAddress = null
+        assertNull(
+            "the newer read found nothing, so it must not be answered from the hold",
+            service.sdkReceiveAddressLiveBlockingOrNull()
+        )
+
+        publishGate.countDown()
+        val olderAnswerAfterFailure = olderResult.get()
+        older.shutdown()
+
+        assertNull(
+            "an older completion must not be answered from a hold a newer FAILED read retired",
+            olderAnswerAfterFailure
+        )
+        assertEquals(
+            "…while the overlay keeps the hold, which is the whole reason it is not cleared",
+            "yENGINEaddressA",
+            service.sdkReceiveAddressOrNull()
+        )
+
+        // And the refusal is not latched: the next read that actually reaches
+        // the engine re-authorizes the live answer.
+        service.liveReceivePublishBarrier = {}
+        source.nextReceiveAddress = "yENGINEaddressB"
+        assertEquals("yENGINEaddressB", service.sdkReceiveAddressLiveBlockingOrNull())
+    }
+
+    @Test
     fun unadvertisedDestinationIsRefusedOnceAnotherWalletOwnsTheChain() = runTest {
         // Reset Wallet clears the cutover state IN-PROCESS and the next wallet
         // commits, so this service outlives the wallet a destination was read
@@ -2201,6 +2288,162 @@ class CutoverUiDataServiceTest {
         assertNull(service.sdkUnadvertisedAddressLiveBlockingOrNull())
 
         source.receiveAddressGate.countDown()
+    }
+
+    @Test
+    fun rollbackRevokesOwnershipAfterAnOvertakenFalseAndAMissedTrue() = runTest {
+        // The deactivation collector used to deduplicate on the Boolean it was
+        // DELIVERED (`distinctUntilChanged`), which is not the decision it
+        // APPLIED after the authoritative reread. The two diverge, and then a
+        // genuine rollback is swallowed as a repeat:
+        //   a `false` is delivered after CUT_OVER has committed — the reread
+        //     reads true and correctly leaves ownership standing, but `false`
+        //     is now the last value the dedupe remembers;
+        //   the intervening `true` is conflated away while this collector is
+        //     descheduled, so the dedupe never advances past it;
+        //   the rollback's `false` is suppressed as a repeat — no eager
+        //     revocation runs at all.
+        // The gated collector does see that rollback, but `collectLatest`
+        // cancels AND JOINS, and the pipeline is parked in an uncancellable FFI
+        // read — so until that read returns, the retired generation and its
+        // cached address stay authorized. [ownershipDecisionMutex] does not
+        // help: it orders a revocation that RUNS, not one deduped away.
+        //
+        // The feed is CONFLATED but NOT distinct, like the preferences feed: it
+        // re-delivers equal values (the only reason a dedupe was ever wanted)
+        // and drops an unconsumed one. A MutableStateFlow models neither.
+        val persisted = MutableStateFlow<String?>("CUT_OVER")
+        val gateFeed = kotlinx.coroutines.channels.Channel<String?>(
+            kotlinx.coroutines.channels.Channel.CONFLATED
+        )
+        // The reread the deactivation collector performs, parked ON DEMAND so
+        // the collector is demonstrably NOT waiting in `receive()` while the
+        // `true` is emitted — a conflated channel hands a value straight to a
+        // waiting receiver, so without this park nothing would be dropped and
+        // the test would pass with the dedupe put back (it did).
+        val parkNextReread = java.util.concurrent.atomic.AtomicBoolean(false)
+        val rereadParked = CompletableDeferred<Unit>()
+        val rereadHold = CompletableDeferred<String?>()
+        var observeCalls = 0
+        val config = mockk<DashPayConfig> {
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
+                when {
+                    observeCalls++ == 0 -> gateFeed.consumeAsFlow()
+                    parkNextReread.compareAndSet(true, false) ->
+                        kotlinx.coroutines.flow.flow {
+                            rereadParked.complete(Unit)
+                            emit(rereadHold.await())
+                        }
+                    else -> persisted
+                }
+            }
+        }
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val service = buildService(source, config, backgroundScope, txEvents = events)
+        service.start()
+        assertTrue(
+            "the overlay must serve the engine address once the pipeline's first read lands",
+            pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" }
+        )
+
+        // ACTUALLY park a pipeline read, so the gated collector's own revocation
+        // genuinely cannot execute. Without an in-flight read this test would
+        // prove only that SOMETHING eventually revokes.
+        source.gatedReadThreadName = "DefaultDispatcher"
+        source.gateByThreadNamePrefix = true
+        source.receiveAddressReadParked = false
+        events.emit(
+            L1TxEvent.Detected(displayHex(12), 1_000_000L, null, contextCode = 0, directionCode = 0)
+        )
+        assertTrue(
+            "the pipeline read must be parked before the rollback",
+            pumpUntil(10_000) { source.receiveAddressReadParked }
+        )
+
+        // (1) The OVERTAKEN `false`, held inside its authoritative reread.
+        parkNextReread.set(true)
+        gateFeed.trySend("DUAL_RUNNING")
+        assertTrue(
+            "the overtaken `false` must have been consumed and be inside its reread",
+            pumpUntil { rereadParked.isCompleted }
+        )
+
+        // The real rollback commits. The gated collector observes it and parks
+        // on the join; nothing it does can land while the FFI read is held.
+        persisted.value = "DUAL_RUNNING"
+
+        // (2) the MISSED `true` and (3) another `false`. The collector is inside
+        // its reread, so the `true` only reaches the conflated buffer — where
+        // the `false` replaces it before anyone receives either.
+        gateFeed.trySend("CUT_OVER")
+        gateFeed.trySend("DUAL_RUNNING")
+
+        // The parked reread finally answers, and it answers CUT_OVER: the
+        // observation it belongs to was overtaken, so ownership rightly stands
+        // and the dedupe's last DELIVERED value is `false`.
+        rereadHold.complete("CUT_OVER")
+
+        assertTrue(
+            "the rollback must revoke eagerly even though the delivered Boolean did not change",
+            pumpUntil(4_000) { service.sdkReceiveAddressOrNull() == null }
+        )
+        assertNull(service.sdkReceiveAddressLiveOrNull())
+        assertNull(service.sdkUnadvertisedAddressLiveBlockingOrNull())
+        assertEquals(
+            "the pipeline read must still be parked — otherwise the gated collector could have done this",
+            1L,
+            source.receiveAddressGate.count
+        )
+
+        source.receiveAddressGate.countDown()
+    }
+
+    @Test
+    fun repeatedDashjEmissionsDoNotReReadTheCutoverState() = runTest {
+        // Replacing the Boolean dedupe with an applied-ownership guard must not
+        // turn every repeated `false` into an authoritative DataStore read under
+        // the ownership mutex — and repeats are the normal case, because the
+        // preferences feed re-delivers the mapped value on ANY write to the
+        // file. While ownership is already revoked there is nothing to revoke,
+        // so no reread is owed; that is what the dedupe used to buy, kept here
+        // without the state that could diverge from the applied decision.
+        //
+        // RENDEZVOUS, not conflated: `send` returns only once the collector has
+        // taken the value, so "the emission was delivered" needs no timing
+        // guess (a test that silently dropped them would prove nothing).
+        val persisted = MutableStateFlow<String?>("DUAL_RUNNING")
+        val gateFeed = kotlinx.coroutines.channels.Channel<String?>(
+            kotlinx.coroutines.channels.Channel.RENDEZVOUS
+        )
+        val authoritativeReads = java.util.concurrent.atomic.AtomicInteger(0)
+        var observeCalls = 0
+        val config = mockk<DashPayConfig> {
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
+                if (observeCalls++ == 0) {
+                    gateFeed.consumeAsFlow()
+                } else {
+                    authoritativeReads.incrementAndGet()
+                    persisted
+                }
+            }
+        }
+        val service = buildService(FakeSource(), config, backgroundScope)
+        service.start()
+        runCurrent()
+        assertFalse("precondition: dashj owns the chain, nothing is granted", service.isCutoverActive())
+
+        val baseline = authoritativeReads.get()
+        repeat(3) {
+            gateFeed.send("DUAL_RUNNING")
+            runCurrent()
+        }
+
+        assertEquals(
+            "a repeated dashj emission must not re-read the persisted state",
+            baseline,
+            authoritativeReads.get()
+        )
     }
 
     @Test

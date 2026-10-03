@@ -2395,10 +2395,14 @@ public class WalletApplication extends MultiDexApplication
      * {@link #sdkReceiveAddressOrNull()} serves, or null when the engine has no
      * answer.
      *
-     * <p>Null means: pre-cutover, rolled back, the SDK is not up, or the read
-     * failed on a COLD cache. On a WARM cache a failed read instead returns the
-     * last known engine address — dropping to null there would send the caller
-     * back to the frozen dashj pointer, which is the defect this exists to fix.
+     * <p>Null means: pre-cutover, rolled back, the SDK is not up, or the latest
+     * engine read did not answer — on a warm cache as much as on a cold one.
+     * The SDK still HOLDS the last known address for the cached accessor
+     * {@link #sdkReceiveAddressOrNull()}, whose only alternative is the frozen
+     * dashj pointer; but a held value is not a revalidation, and handing one
+     * back here let {@link #decideLiveReceiveAddress} accept it as though it
+     * were, so the fail-closed path below was never reached and an already-paid
+     * QR stayed on the Receive screen.
      * It is also null when the binding CHANGED while the read was blocked (a
      * rollback, or Reset Wallet wiping the wallet in place): that answer belongs
      * to a wallet that is no longer current, and serving it would advertise an
