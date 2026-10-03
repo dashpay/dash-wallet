@@ -153,6 +153,24 @@ class SentValueWithoutFeeTest {
         assertEquals(row.copy(valueSatoshis = -10_000_000L), updated) // nothing else moves
     }
 
+    @Test
+    fun aGiftCardSendIsCorrectedToo() {
+        val sent = record(firstByte = 7, net = -10_000_227L, fee = 227L, direction = 1)
+        val row = invitationRow(value = -10_000_227L).copy(
+            rowId = sent.txidHex,
+            title = "Gift card · Brinker",
+            filterFlags = TxDisplayCacheEntry.FLAG_SENT or TxDisplayCacheEntry.FLAG_GIFT_CARD
+        )
+        assertEquals(row.copy(valueSatoshis = -10_000_000L), sync(sent, row).updates.single())
+    }
+
+    @Test
+    fun aFailedSendKeepsItsValue() {
+        val sent = record(firstByte = 8, net = -10_000_227L, fee = 227L, direction = 1)
+        val row = invitationRow(value = -10_000_227L).copy(rowId = sent.txidHex, hasErrors = true)
+        assertTrue(sync(sent, row).updates.isEmpty())
+    }
+
     // ── Fee recovery (SdkTxStoreWalker) ───────────────────────────────
 
     @Test

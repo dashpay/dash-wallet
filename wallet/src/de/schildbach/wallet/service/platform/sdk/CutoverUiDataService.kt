@@ -523,6 +523,34 @@ internal const val L1_BLOCK_TIME_SKEW_TOLERANCE_MS = 3L * 60 * 60 * 1000
  * days before it was mined. Returns [existing] itself when nothing changes.
  * Pure — host-testable.
  */
+/**
+ * [entry] with the fee dropped from its value, when it was cached WITH it
+ * (D-M-01). Rows authored while the store's fee column was NULL hold the
+ * fee-included net; once the fee is known
+ * ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free value every
+ * other row shows. It is the only value edit a service-tagged, swap, gift-card,
+ * asset-lock or "Internal" row ever takes, so it fires on the exact
+ * fee-included figure alone: a row holding anything else (dashj's own fee-free
+ * value on an upgraded wallet, a contact amount, a swap's own amount) is left as
+ * it is. Contact rows are excluded outright: their value comes from the engine's
+ * signed net, not this record. Idempotent — the corrected value no longer
+ * equals the net. Returns [entry] itself when nothing changes. Pure —
+ * host-testable.
+ */
+internal fun withoutCachedFee(
+    entry: TxDisplayCacheEntry,
+    record: L1TxUiRecord,
+    contact: ResolvedTxContact?
+): TxDisplayCacheEntry =
+    if (contact == null && entry.contactUserId == null &&
+        record.sentValueWithoutFeeDuffs != record.netAmountDuffs &&
+        entry.valueSatoshis == record.netAmountDuffs
+    ) {
+        entry.copy(valueSatoshis = record.sentValueWithoutFeeDuffs)
+    } else {
+        entry
+    }
+
 internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecord): TxDisplayCacheEntry {
     val blockMs = record.blockTimestampMs
     if (blockMs <= 0L || existing.time - blockMs <= L1_BLOCK_TIME_SKEW_TOLERANCE_MS) return existing
@@ -552,7 +580,8 @@ internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecor
  *   [redatedFromBlock]: a time later than the tx's own block is reset to it.
  * - A non-contact sent row holding exactly the fee-included net takes the
  *   fee-free value ([L1TxUiRecord.sentValueWithoutFeeDuffs]) once the fee is
- *   known — service-tagged rows included.
+ *   known ([withoutCachedFee]) — service-tagged, swap and gift-card rows
+ *   included.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -704,7 +733,15 @@ internal fun planL1DisplaySync(
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
-            if (redated != existing) updates += redated
+            // Swap and gift-card rows are sends too, so they also take the fee-only
+            // value fix ([withoutCachedFee]) — their title/icon/status stay theirs.
+            // Error and CoinJoin rows take nothing else.
+            val kept = if (existing.hasErrors || (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0) {
+                redated
+            } else {
+                withoutCachedFee(redated, record, contact)
+            }
+            if (kept != existing) updates += kept
             continue
         }
         // A service-CLASSIFIED row is only half-rich. The service column is a
@@ -744,23 +781,8 @@ internal fun planL1DisplaySync(
         ) {
             updated = updated.copy(statusText = "")
         }
-        // Drop the fee from a sent row cached WITH it (D-M-01). Rows authored while
-        // the store's fee column was NULL hold the fee-included net; once the fee is
-        // known ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free
-        // value every other row shows. It is the only value edit a service-tagged,
-        // asset-lock or "Internal" row ever takes — the shape re-stamps below keep
-        // their value — so it fires on the exact fee-included figure alone: a row
-        // holding anything else (dashj's own fee-free value on an upgraded wallet, a
-        // contact amount) is left as it is. Ahead of the service exit so a merchant
-        // send converges too. Contact rows are excluded outright: their value comes
-        // from the engine's signed net ([contactSignedNet]), not this record.
-        // Idempotent: the corrected value no longer equals the net.
-        if (contact == null && updated.contactUserId == null &&
-            record.sentValueWithoutFeeDuffs != record.netAmountDuffs &&
-            updated.valueSatoshis == record.netAmountDuffs
-        ) {
-            updated = updated.copy(valueSatoshis = record.sentValueWithoutFeeDuffs)
-        }
+        // Ahead of the service exit so a merchant send converges too.
+        updated = withoutCachedFee(updated, record, contact)
         if (serviceClassified) {
             // Status transitions only (see the guard split above).
             if (updated != existing) updates += updated
