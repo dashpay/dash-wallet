@@ -334,7 +334,7 @@ public final class Constants {
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
-    // 1,500,000,000 credits (Platform v4.2 reduced the contested-name
+    // 15,000,000,000 credits (Platform v4.2 reduced the contested-name
     // prefunded voting balance from 0.2 to 0.1 DASH; see MO-1069)
     public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.15");
     public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.10");
