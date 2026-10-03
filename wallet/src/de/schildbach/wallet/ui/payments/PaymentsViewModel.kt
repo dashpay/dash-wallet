@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.payments
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -27,16 +28,52 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Context
 import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
+
+private val log = LoggerFactory.getLogger(PaymentsViewModel::class.java)
+
+/**
+ * What the Receive screen is able to advertise, owned by the ViewModel rather
+ * than by the page's view so that it outlives both a tab switch and a view
+ * recreation.
+ */
+sealed interface ReceiveAddressState {
+    /** Nothing asked for yet. */
+    data object Idle : ReceiveAddressState
+
+    /**
+     * A read is in flight. The live read BLOCKS for up to
+     * `CutoverUiDataService.BINDING_WAIT_MS` (5s) waiting for the engine to
+     * bind, so this state is both long-lived and the single-flight latch.
+     */
+    data object Loading : ReceiveAddressState
+
+    /** The engine answered; [address] is safe to advertise. */
+    data class Available(val address: String) : ReceiveAddressState
+
+    /**
+     * The read failed. Retryable — the usual cause is an engine that has not
+     * bound yet. [attempt] numbers the failed reads so two consecutive
+     * failures are distinct values: [kotlinx.coroutines.flow.StateFlow]
+     * conflates equal ones, and a collector that was not scheduled in between
+     * would otherwise never see the second failure.
+     */
+    data class Unavailable(val attempt: Int) : ReceiveAddressState
+}
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
@@ -74,6 +111,57 @@ class PaymentsViewModel @Inject constructor(
             walletDataProvider.freshReceiveAddressLive()
         } ?: error("Wallet not yet initialised")
     }
+
+    private val _receiveAddress = MutableStateFlow<ReceiveAddressState>(ReceiveAddressState.Idle)
+    val receiveAddress = _receiveAddress.asStateFlow()
+
+    /** Written only by the one in-flight read the gate below admits. */
+    private var failedReceiveReads = 0
+
+    /**
+     * Ask for the address the Receive screen should advertise, unless one is
+     * already in hand or already on its way.
+     *
+     * Called both when the page's view is created (a prefetch that may run
+     * while the page is offscreen) and every time the page becomes RESUMED, so
+     * that a read which failed offscreen — the engine had not bound yet, and
+     * ViewPager2 keeps the failed page around rather than recreating it — is
+     * retried when the user actually selects Receive.
+     *
+     * The gate is the state itself, flipped with an atomic
+     * [getAndUpdate]: whoever observes a startable state is the one caller that
+     * proceeds. That matters because the read BLOCKS for up to 5s waiting for
+     * the engine to bind, so repeated resumes land squarely inside a read that
+     * is still running. It also deliberately runs on [viewModelScope] rather
+     * than the view's scope: pausing the page must not cancel a read in
+     * flight, both because the blocking wait would keep its IO thread anyway
+     * and because the next resume would then start a second, overlapping one.
+     */
+    fun requestReceiveAddress() {
+        val previous = _receiveAddress.getAndUpdate { current ->
+            if (canStartReceiveAddressRequest(current)) ReceiveAddressState.Loading else current
+        }
+
+        if (!canStartReceiveAddressRequest(previous)) {
+            return
+        }
+
+        viewModelScope.launch {
+            _receiveAddress.value = try {
+                // get current address is much faster, because the wallet doesn't need to be saved
+                ReceiveAddressState.Available(getCurrentAddress().toBase58())
+            } catch (ex: ReceiveAddressUnavailableException) {
+                // Post-cutover the engine could not answer, and there is no safe
+                // substitute — the held dashj chain's pointer is frozen on an
+                // address the wallet has already been paid on (SR-03). Advertise
+                // nothing and stay retryable: the failure is usually just an
+                // engine that has not bound yet.
+                log.warn("receive address unavailable; advertising nothing", ex)
+                ReceiveAddressState.Unavailable(++failedReceiveReads)
+            }
+        }
+    }
+
     init {
         identityConfig.observe()
             .flatMapLatest { identity ->
@@ -100,5 +188,26 @@ class PaymentsViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
+    }
+
+    companion object {
+        /**
+         * Whether a receive-address request may START from [current].
+         *
+         * [ReceiveAddressState.Loading] is refused because the read is already
+         * on its way — a second one would block on the same engine read and
+         * could hand back a different address. [ReceiveAddressState.Available]
+         * is refused because the address is already shown: re-reading it on
+         * every tab switch churns the engine and risks advertising a different
+         * address each time the user flips tabs. Only a never-asked
+         * ([ReceiveAddressState.Idle]) or FAILED
+         * ([ReceiveAddressState.Unavailable]) state starts a read, which is
+         * exactly what makes becoming RESUMED after an offscreen failure a
+         * retry rather than a no-op.
+         */
+        @VisibleForTesting
+        @JvmStatic
+        fun canStartReceiveAddressRequest(current: ReceiveAddressState): Boolean =
+            current is ReceiveAddressState.Idle || current is ReceiveAddressState.Unavailable
     }
 }

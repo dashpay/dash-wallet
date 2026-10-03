@@ -27,12 +27,15 @@ import org.junit.Test
  * ([PaymentsReceiveFragment.shouldSurfaceAddressFailure]).
  *
  * Receive is a ViewPager2 page of [PaymentsFragment], and the address request
- * it starts in `onViewCreated` is not cancelled when the user switches to Send
- * or Internal — the page is only capped at [Lifecycle.State.STARTED]. So a
- * failure can complete while the user is somewhere else entirely, and the one
- * thing it must not do is interrupt that other tab. The threshold is pinned
- * here: STARTED is an offscreen page and stays silent, only RESUMED is the
- * page the user is actually looking at.
+ * it starts is not cancelled when the user switches to Send or Internal — the
+ * page is only capped at [Lifecycle.State.STARTED], and the read itself runs
+ * on the ViewModel's scope. So a failure can complete while the user is
+ * somewhere else entirely, and the one thing it must not do is interrupt that
+ * other tab. The threshold is pinned here: STARTED is an offscreen page and
+ * stays silent, only RESUMED is the page the user is actually looking at —
+ * which is also when the request is retried
+ * ([de.schildbach.wallet.ui.payments.PaymentsViewModel.requestReceiveAddress],
+ * covered by [PaymentsReceiveAddressRequestTest]).
  *
  * What this cannot see: that the handler no longer navigates. That is a
  * Robolectric/instrumented concern (every Robolectric test in this module
