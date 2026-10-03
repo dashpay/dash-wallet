@@ -586,6 +586,7 @@
     <string name="transaction_metadata_past_syncing">All transactions made up to %s are syncing</string>
     <string name="transaction_metadata_save_new_tx_title">Do you want to save unsaved transactions?</string>
     <string name="transaction_metadata_you_have_n_tx">You have %d unsaved transactions since %s</string>
+    <string name="transaction_metadata_you_have_n_unsaved_tx">You have %d unsaved transactions</string>
     <string name="transaction_metadata_save_transactions">Save unsaved transactions</string>
     <string name="transaction_metadata_continue_without_saving">Continue without saving</string>
     <string name="invitation_fee_title">Invitation Fee</string>

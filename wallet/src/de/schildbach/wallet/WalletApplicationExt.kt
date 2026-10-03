@@ -20,6 +20,8 @@
 package de.schildbach.wallet
 
 import androidx.work.WorkManager
+import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
+import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
 import de.schildbach.wallet.util.WalletWipeSequence
 import de.schildbach.wallet.util.WalletWipeState
 import kotlinx.coroutines.CancellationException
@@ -55,6 +57,16 @@ object WalletApplicationExt {
      * with "Fragment SecurityFragment not attached to Activity".
      */
     fun WalletApplication.beginWalletWipe() {
+        // Stop transaction-metadata saves now, not at the destroy phase: the
+        // service teardown in between can take minutes, and a save of this
+        // wallet's settings must not write or enqueue a publish once the user
+        // has confirmed the reset. The queue stays paused — refusing new saves
+        // — until finishWalletWipe() is done; destroyWalletData() also waits
+        // for the cancelled save to stop before anything is cleared.
+        transactionMetadataSaveQueue.pause()
+        // ...and publishes already handed to WorkManager: the cancelAllWork()
+        // in the destroy phase comes after the same teardown.
+        PublishTransactionMetadataOperation.cancelAll(this)
         WalletWipeSequence.begin(
             markPending = { WalletWipeState.begin(filesDir) },
             handOffUi = {
@@ -71,12 +83,13 @@ object WalletApplicationExt {
      * SDK cleanup inside it ran for nearly two minutes on a live device.
      */
     suspend fun WalletApplication.finishWalletWipe() {
+        var wipeFinished = false
         try {
             // A failure here must not become an uncaught exception in the
             // service-teardown coroutine that calls this — the process dying
             // in the middle of a wipe is the failure mode being fixed. The
             // marker stays behind instead, and the next launch re-runs it.
-            runCatching {
+            wipeFinished = runCatching {
                 WalletWipeSequence.finish(
                     pending = { WalletWipeState.isPending(filesDir) },
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
@@ -86,12 +99,15 @@ object WalletApplicationExt {
             }.onFailure {
                 rethrowCancellation(it)
                 log.error("Reset Wallet did not finish — the next launch will complete it", it)
-            }
+            }.getOrDefault(false)
         } finally {
             // The UI is waiting on this flag whether the wipe finished or
             // threw; a launch that finds the marker still there re-runs the
             // wipe from the top.
             withContext(NonCancellable) {
+                resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, wipeFinished) {
+                    WalletWipeState.pendingOrNull(filesDir)
+                }
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
@@ -109,6 +125,13 @@ object WalletApplicationExt {
     }
 
     private suspend fun WalletApplication.destroyWalletData() {
+        // A queued transaction-metadata save holds this wallet's consent and
+        // field choices. Left to run after the clears below it would write
+        // them into the next wallet and enqueue a publish, so stop it and wait.
+        // Pausing again covers a wipe resumed at launch, which never went
+        // through beginWalletWipe().
+        runCatching { transactionMetadataSaveQueue.pauseAndJoin() }
+            .onFailure { rethrowCancellation(it); log.warn("tx-metadata save queue pause failed during wipe", it) }
         destroyWalletFiles()
         // Live DataStore-backed configs must be cleared through their API (one
         // atomic memory+disk edit) before the leftover files are deleted:
@@ -229,6 +252,31 @@ object WalletApplicationExt {
         runCatching { dashPayConfig.seedDebugDefaultsIfUnset() }
             .onFailure { rethrowCancellation(it); log.warn("debug-flag re-seed failed after reset", it) }
         log.info("databases cleared (isWalletWipe = {})", isWalletWipe)
+    }
+
+    /**
+     * The queue was paused by beginWalletWipe() / destroyWalletData(). Only a
+     * wipe that ran its destruction to the end AND whose marker is confirmed
+     * cleared lets the next wallet's saves run. Fails closed: an absent marker
+     * alone is not proof — if [WalletWipeState.begin] could not write it,
+     * finish() skipped the destroy and the old wallet is still in place — and
+     * a marker that cannot be read ([markerPending] null or throwing) counts
+     * as still pending.
+     *
+     * @param wipeFinished what WalletWipeSequence.finish() returned; false if it threw.
+     * @param markerPending true/false when the marker could be read, null when not.
+     */
+    internal fun resumeMetadataSavesIfWipeComplete(
+        queue: TransactionMetadataSaveQueue,
+        wipeFinished: Boolean,
+        markerPending: () -> Boolean?
+    ) {
+        val markerCleared = wipeFinished && runCatching { markerPending() }.getOrNull() == false
+        if (markerCleared) {
+            queue.resume()
+        } else {
+            log.warn("Reset Wallet did not finish — transaction metadata saves stay paused")
+        }
     }
 
     private fun rethrowCancellation(t: Throwable) {

@@ -29,12 +29,11 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
+import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,10 +41,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -87,13 +88,30 @@ enum class TxMetadataSaveFrequency {
     }
 }
 
+/** Dates are epoch millis; 0 means "never" / "not known yet". */
+data class TransactionMetadataSettingsUIState(
+    /** the settings as edited on screen, not yet saved */
+    val settings: TransactionMetadataSettings = TransactionMetadataSettings(),
+    val lastSaveWorkId: String? = null,
+    val lastSaveDate: Long = 0,
+    val futureSaveDate: Long = 0,
+    val hasPastTransactionsToSave: Boolean = false,
+    val unsavedTxCount: Int = 0,
+    val firstUnsavedTxDate: Long = 0,
+    val selectedExchangeRate: ExchangeRate? = null
+) {
+    /**
+     * The date unsaved transactions go back to, or null when none is known:
+     * the unsaved-transaction scan may still be running, or the only unsaved
+     * items are cached edits. Never format the 0 sentinel — it reads as 1970.
+     */
+    val unsavedSinceDate: Long?
+        get() = listOf(lastSaveDate, firstUnsavedTxDate).firstOrNull { it > 0 }
+}
+
 interface TransactionMetadataSettingsPreviewViewModel {
-    val filterState: StateFlow<TransactionMetadataSettings>
-    val hasPastTransactionsToSave: StateFlow<Boolean>
+    val uiState: StateFlow<TransactionMetadataSettingsUIState>
     fun updatePreferences(settings: TransactionMetadataSettings)
-    val lastSaveWorkId: StateFlow<String?>
-    val lastSaveDate: StateFlow<Long>
-    val futureSaveDate: StateFlow<Long>
     fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>
 }
 
@@ -107,53 +125,64 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val transactionMetadataDao: TransactionMetadataDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    private val platformSyncService: PlatformSyncService
+    private val platformSyncService: PlatformSyncService,
+    private val saveQueue: TransactionMetadataSaveQueue,
+    private val publishOperation: PublishTransactionMetadataOperation
 ) : ViewModel(), TransactionMetadataSettingsPreviewViewModel {
     companion object {
         val CURRENT_DATA_COST = Coin.valueOf(25000) //0.00025000
         private val log = LoggerFactory.getLogger(TransactionMetadataSettingsViewModel::class.java)
     }
-    private val _filterState = MutableStateFlow(TransactionMetadataSettings())
-    override val filterState: StateFlow<TransactionMetadataSettings> = _filterState.asStateFlow()
-    private var originalState: TransactionMetadataSettings? = null
-    private val workerJob = SupervisorJob()
-    private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+    private val _uiState = MutableStateFlow(TransactionMetadataSettingsUIState())
+    override val uiState: StateFlow<TransactionMetadataSettingsUIState> = _uiState.asStateFlow()
+    private var persistedSettings: TransactionMetadataSettings? = null
 
-    override fun onCleared() {
-        // viewModelScope is cancelled by the framework, but the IO worker
-        // scope is ours to stop — its launchIn collectors never complete on
-        // their own and would outlive the screen.
-        workerJob.cancel()
-        super.onCleared()
-    }
-
-    private var _selectedExchangeRate = MutableStateFlow<ExchangeRate?>(null)
-    val selectedExchangeRate = _selectedExchangeRate.asStateFlow()
     private var selectedCurrency: String = Constants.USD_CURRENCY
-    //private val savePastTxToNetwork = MutableStateFlow(false)
-    private val _lastSaveWorkId = MutableStateFlow<String?>(null)
-    override val lastSaveWorkId = _lastSaveWorkId.asStateFlow()
-    private val _lastSaveDate = MutableStateFlow<Long>(-1)
-    override val lastSaveDate = _lastSaveDate.asStateFlow()
-    private val _futureSaveDate = MutableStateFlow<Long>(-1)
-    override val futureSaveDate = _futureSaveDate.asStateFlow()
-    private val _hasPastTransactionsToSave = MutableStateFlow<Boolean>(false)
-    override val hasPastTransactionsToSave = _hasPastTransactionsToSave.asStateFlow()
     private val _oldUnsavedTransactions = MutableStateFlow<List<org.dash.wallet.common.transactions.TxInfo>>(listOf())
-    var firstUnsavedTxDate: Long = 0
-        private set
-    var unsavedTxCount: Int = 0
-        private set
-    private val publishOperation = PublishTransactionMetadataOperation(walletApplication)
 
     init {
+        // Re-emits on every DashPayConfig write, and a save queued by an
+        // earlier visit to this screen can still be writing after the user
+        // has started editing here. Edits are always compared against the
+        // latest persisted settings. An unedited draft adopts them; an edited
+        // one is kept, since edits are the user's, but is re-compared, so it
+        // reads as unmodified only once it matches what is now persisted.
         dashPayConfig.observeTransactionMetadataSettings()
-            .onEach {
-                _filterState.value = it
-                if (originalState == null) {
-                    originalState = it
+            .distinctUntilChanged()
+            .onEach { persisted ->
+                persistedSettings = persisted
+                _uiState.update { state ->
+                    val draft = state.settings
+                    if (draft.modified) {
+                        state.copy(settings = draft.copy(modified = !draft.isEqual(persisted)))
+                    } else {
+                        state.copy(settings = persisted)
+                    }
                 }
-            }.launchIn(viewModelWorkerScope)
+            }.launchIn(viewModelScope)
+
+        // Written by PublishTransactionMetadataWorker on a complete publish;
+        // this is the only thing that tells a saved wallet from an unsaved one.
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
+            .onEach {
+                _uiState.update { state -> state.copy(lastSaveDate = it ?: 0) }
+                log.info("last save date: {}", it?.let { Date(it) })
+            }
+            .launchIn(viewModelScope)
+
+        dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_AFTER)
+            .onEach {
+                _uiState.update { state -> state.copy(futureSaveDate = it ?: 0) }
+                log.info("future save date: {}", it?.let { Date(it) })
+            }
+            .launchIn(viewModelScope)
+
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { selectedCurrency = it }
+            .flatMapLatest(exchangeRates::observeExchangeRate)
+            .onEach { rate -> _uiState.update { it.copy(selectedExchangeRate = rate) } }
+            .launchIn(viewModelScope)
 
         dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
             .flatMapLatest { startTimestamp ->
@@ -179,18 +208,21 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                     }
             }
             .onEach { (cachedCount, neverPublishedCount) ->
-                _hasPastTransactionsToSave.value = cachedCount > 0 || neverPublishedCount > 0
-                unsavedTxCount = cachedCount + neverPublishedCount
+                val unsavedTxCount = cachedCount + neverPublishedCount
+                _uiState.update {
+                    it.copy(hasPastTransactionsToSave = unsavedTxCount > 0, unsavedTxCount = unsavedTxCount)
+                }
                 log.info(
                     "unsaved count: {} ({} cached + {} never-published)",
                     unsavedTxCount, cachedCount, neverPublishedCount
                 )
             }
-            .launchIn(viewModelWorkerScope)
+            .launchIn(viewModelScope)
 
         viewModelScope.launch(Dispatchers.IO) {
-            val (oldUnsavedList, _) = platformSyncService.getUnsavedTransactions()
+            val (oldUnsavedList, firstUnsavedDate) = platformSyncService.getUnsavedTransactions()
             log.info("old unsaved count: ${oldUnsavedList.size}")
+            _uiState.update { it.copy(firstUnsavedTxDate = firstUnsavedDate) }
             _oldUnsavedTransactions.value = oldUnsavedList
         }
     }
@@ -210,15 +242,15 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     }
 
     override fun updatePreferences(settings: TransactionMetadataSettings) {
-        val modified = !settings.isEqual(originalState)
-        _filterState.value = settings.copy(modified = modified)
-        log.info("modified $modified\n  ${_filterState.value}\n  $originalState")
+        val modified = !settings.isEqual(persistedSettings)
+        _uiState.update { it.copy(settings = settings.copy(modified = modified)) }
+        log.info("modified $modified\n  ${_uiState.value.settings}\n  $persistedSettings")
     }
 
     val saveToNetwork = dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_SAVE_TO_NETWORK)
 
     fun getBalanceInLocalFormat(): String {
-        selectedExchangeRate.value?.fiat?.let {
+        _uiState.value.selectedExchangeRate?.fiat?.let {
             val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.toDashjFiat())
             val fiatValue = exchangeRate.coinToFiat(CURRENT_DATA_COST)
             val minValue = try {
@@ -237,21 +269,32 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private suspend fun getNextWorkId(): String {
         val newId = UUID.randomUUID().toString()
         dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID, newId)
-        _lastSaveWorkId.value = newId
+        _uiState.update { it.copy(lastSaveWorkId = newId) }
         log.info("last save work id: {}", dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID))
         log.info("last save work id should be: {}", newId)
         return newId
     }
 
     suspend fun loadLastWorkId() {
-        _lastSaveWorkId.value = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
+        val workId = dashPayConfig.get(DashPayConfig.TRANSACTION_METADATA_LAST_SAVE_WORK_ID)
+        _uiState.update { it.copy(lastSaveWorkId = workId) }
     }
 
-    /** save using current settings */
+    /**
+     * save using current settings
+     *
+     * Queued on [TransactionMetadataSaveQueue], which runs in the application
+     * scope, not the screen's: every caller pops the screen right after this
+     * returns, which clears the ViewModel and cancels its scopes while the
+     * DataStore writes below are still in flight — the publish was never
+     * enqueued on ~1 in 3 attempts, with no sign of it. The queue also keeps a
+     * save from a reopened screen from being overtaken by an earlier one, and
+     * lets Reset Wallet stop it.
+     */
     fun saveToNetwork(forceSave: Boolean) {
-        viewModelWorkerScope.launch {
+        val settings = _uiState.value.settings
+        saveQueue.submit {
             val previousSettings = dashPayConfig.getTransactionMetadataSettings()
-            val settings = filterState.value
             savePreferences(settings)
             if (settings.saveToNetwork) {
                 if (!previousSettings.saveToNetwork) {
@@ -259,21 +302,24 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
                 }
             }
             if (forceSave || settings.savePastTxToNetwork) {
-                // TODO: save here
-                publishOperation.create(
-                    getNextWorkId()
-                ).enqueue()
+                val workId = getNextWorkId()
+                commit { publishOperation.create(workId).enqueue() }
             }
         }
     }
 
-    /** save using current settings */
-    suspend fun saveToNetworkNow(): String {
-        val nextId = getNextWorkId()
-        publishOperation.create(
-            nextId
-        ).enqueue()
-        return nextId
+    /**
+     * Publish now, behind any save already queued, and return the publish's
+     * work id.
+     *
+     * @throws TransactionMetadataSaveQueue.SaveDiscardedException if a wallet
+     *   reset stopped it
+     */
+    suspend fun saveToNetworkNow(): String = saveQueue.submitAndAwait {
+        val workId = getNextWorkId()
+        commit { publishOperation.create(workId).enqueue() }
+            ?: throw TransactionMetadataSaveQueue.SaveDiscardedException()
+        workId
     }
 
     override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>> = PublishTransactionMetadataOperation.operationStatusFlow(
