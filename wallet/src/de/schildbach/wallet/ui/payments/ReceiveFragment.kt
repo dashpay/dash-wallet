@@ -35,6 +35,7 @@ import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.data.freshReceiveAddressOffMain
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 import de.schildbach.wallet.util.format
@@ -46,7 +47,6 @@ import de.schildbach.wallet.util.toNeutralCoin
 import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
-import android.widget.Toast
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 // RequestCoinsFragment in Bitcoin Wallet has the code for Bluetooth support (sharing addresses)
@@ -98,11 +98,13 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
                     // No safe address to put in the request — see
                     // PaymentsReceiveFragment. Better no invoice than one the
                     // chain has already paid.
-                    Toast.makeText(
-                        requireContext(),
-                        org.dash.wallet.common.R.string.loading_error,
-                        Toast.LENGTH_LONG
-                    ).show()
+                    //
+                    // Guarded: the read parks uncancellably, so this arm can run
+                    // after the VIEW scope was cancelled, which on this screen
+                    // means the user navigated on with the fragment still on the
+                    // back stack — attached, so only the cancellation half of the
+                    // guard suppresses the toast.
+                    toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
                 }
             }
         }

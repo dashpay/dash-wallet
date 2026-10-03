@@ -81,6 +81,7 @@ import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe
@@ -92,7 +93,6 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import de.schildbach.wallet.service.L1SyncUiStatus
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
-import android.widget.Toast
 
 @AndroidEntryPoint
 class WalletFragment : Fragment(R.layout.home_content) {
@@ -466,11 +466,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     } catch (ex: ReceiveAddressUnavailableException) {
                         // Same rule as the other Topper entry points: without a
                         // safe deposit address, do not open the purchase flow.
-                        Toast.makeText(
-                            requireContext(),
-                            org.dash.wallet.common.R.string.loading_error,
-                            Toast.LENGTH_LONG
-                        ).show()
+                        // Guarded — the read parks uncancellably, so this can run
+                        // once the fragment is gone and `requireContext()` would
+                        // throw.
+                        toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
                     }
                 }
             }

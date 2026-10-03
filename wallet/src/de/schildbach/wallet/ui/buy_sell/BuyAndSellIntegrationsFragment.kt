@@ -33,13 +33,13 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
-import android.widget.Toast
 
 @AndroidEntryPoint
 class BuyAndSellIntegrationsFragment : Fragment() {
@@ -77,12 +77,13 @@ class BuyAndSellIntegrationsFragment : Fragment() {
                                     // No safe deposit address: sending the user to
                                     // Topper with the held dashj chain's frozen
                                     // address would have them buy into an
-                                    // already-paid address (SR-03).
-                                    Toast.makeText(
-                                        requireContext(),
-                                        org.dash.wallet.common.R.string.loading_error,
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                    // already-paid address (SR-03). Guarded — the
+                                    // read parks uncancellably, so this can run
+                                    // once the fragment is gone and
+                                    // `requireContext()` would throw.
+                                    toastIfStillAttached(
+                                        org.dash.wallet.common.R.string.loading_error
+                                    )
                                 }
                             }
                         },

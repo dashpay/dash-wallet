@@ -32,6 +32,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
@@ -48,7 +49,6 @@ import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseBuyUIState
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
-import android.widget.Toast
 
 @AndroidEntryPoint
 class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_review) {
@@ -127,11 +127,15 @@ class CoinbaseOrderReviewFragment : Fragment(R.layout.fragment_coinbase_order_re
                         // Depositing to the held dashj chain's frozen address is the
                         // SR-03 defect; nothing has been bought yet, so this is safe
                         // to retry.
-                        Toast.makeText(
-                            requireContext(),
-                            org.dash.wallet.common.R.string.loading_error,
-                            Toast.LENGTH_LONG
-                        ).show()
+                        //
+                        // Guarded, because this arm is reachable AFTER this
+                        // coroutine was cancelled: the read parks for up to five
+                        // uncancellable seconds, and a `withContext` that throws
+                        // delivers the throw rather than the cancellation. A bare
+                        // `requireContext()` here crashed the recreated screen's
+                        // process instead of offering the retry. The `finally`
+                        // below still returns the flight either way.
+                        toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
                         return@launch
                     }
                     if (tryBuyDash(attemptId)) {

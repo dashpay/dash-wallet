@@ -25,7 +25,6 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -42,6 +41,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.setAmount
 import org.dash.wallet.common.ui.setFormat
 import org.dash.wallet.common.ui.setRoundedBackground
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
@@ -117,11 +117,9 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
                     requireActivity().openCustomTab(uri)
                 } catch (ex: ReceiveAddressUnavailableException) {
                     // See BuyAndSellIntegrationsFragment: no safe deposit address.
-                    Toast.makeText(
-                        requireContext(),
-                        org.dash.wallet.common.R.string.loading_error,
-                        Toast.LENGTH_LONG
-                    ).show()
+                    // Guarded — the read parks uncancellably, so this can run once
+                    // the fragment is gone and `requireContext()` would throw.
+                    toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
                 }
             }
         }

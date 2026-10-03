@@ -23,7 +23,9 @@ import android.content.Intent
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -191,6 +193,27 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.SendReport)
     }
 
+    /**
+     * Publish [ex] on the API's error surface, unless this coroutine has
+     * already been cancelled.
+     *
+     * [CrowdNodeApi.apiError] is APP-scoped — a singleton StateFlow that
+     * [StakingActivity] observes for the whole staking flow — while the reads
+     * that raise this are cancelled with the screen yet keep running for up to
+     * five uncancellable seconds afterwards. A `withContext` that throws
+     * delivers the throw rather than the cancellation, so without this check an
+     * abandoned read still latches an error nothing will clear ([clearError]
+     * runs only where a dialog was actually shown), and the NEXT time staking
+     * opens it greets the user with a stale failure before anything has been
+     * read. The condition is transient and every entry point re-runs
+     * initialisation, so dropping it is the honest outcome.
+     */
+    private suspend fun reportAddressFailure(ex: ReceiveAddressUnavailableException) {
+        if (currentCoroutineContext().isActive) {
+            crowdNodeApi.apiError.value = ex
+        }
+    }
+
     suspend fun recheckState() {
         crowdNodeApi.restoreStatus()
         // StakingActivity calls this from a bare lifecycleScope.launch while it
@@ -202,7 +225,7 @@ class CrowdNodeViewModel @Inject constructor(
         val address = try {
             getOrCreateAccountAddress()
         } catch (ex: ReceiveAddressUnavailableException) {
-            crowdNodeApi.apiError.value = ex
+            reportAddressFailure(ex)
             return
         }
         _accountAddress.value = address
@@ -240,7 +263,7 @@ class CrowdNodeViewModel @Inject constructor(
         val address = try {
             getOrCreateAccountAddress()
         } catch (ex: ReceiveAddressUnavailableException) {
-            crowdNodeApi.apiError.value = ex
+            reportAddressFailure(ex)
             return null
         }
         _accountAddress.value = address
@@ -481,7 +504,7 @@ class CrowdNodeViewModel @Inject constructor(
         val address = try {
             createNewAccountAddress()
         } catch (ex: ReceiveAddressUnavailableException) {
-            crowdNodeApi.apiError.value = ex
+            reportAddressFailure(ex)
             return false
         }
         _accountAddress.value = address

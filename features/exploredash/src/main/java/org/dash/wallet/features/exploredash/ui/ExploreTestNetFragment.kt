@@ -24,7 +24,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -33,6 +32,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
@@ -62,11 +62,13 @@ class ExploreTestNetFragment : Fragment(R.layout.fragment_explore_testnet) {
                 } catch (ex: ReceiveAddressUnavailableException) {
                     // Copying the held dashj chain's frozen address would point
                     // the faucet at an already-paid address (SR-03).
-                    Toast.makeText(
-                        requireContext(),
-                        org.dash.wallet.common.R.string.loading_error,
-                        Toast.LENGTH_LONG
-                    ).show()
+                    //
+                    // Guarded: the read parks uncancellably, so this arm can run
+                    // after the VIEW scope was cancelled — on this screen that is
+                    // navigating forward, where the fragment stays on the back
+                    // stack and `getContext()` is still non-null. Only the
+                    // cancellation half of the guard suppresses that toast.
+                    toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
                     return@launch
                 }
                 val clipboardManager =

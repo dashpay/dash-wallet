@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
+import org.dash.wallet.common.ui.runIfStillAttached
 import org.dash.wallet.integrations.coinbase.model.Balance
 import org.dash.wallet.integrations.coinbase.model.CoinbaseAccount
 import org.dash.wallet.integrations.coinbase.model.CoinbaseErrorType
@@ -91,7 +92,20 @@ class CoinbaseBuyDashConfirmGuardTest {
 
     /** What the modelled screen showed instead of navigating to 2FA. */
     private val purchaseErrors = CopyOnWriteArrayList<Throwable>()
+
+    /** Retry prompts the modelled screen actually put in front of the user. */
     private val unavailableAddressRetries = AtomicInteger(0)
+
+    /**
+     * Times the unavailable-address handler was ENTERED, whether or not it went
+     * on to show anything.
+     *
+     * Separate from [unavailableAddressRetries] so that "showed nothing" cannot
+     * pass for the wrong reason: the cancelled case is only meaningful if the
+     * handler ran at all, and if the blocking read's failure ever stopped
+     * reaching the catch there would be nothing left to guard.
+     */
+    private val unavailableAddressHandlers = AtomicInteger(0)
 
     /** Set to park the NEXT destination read, modelling the blocking engine seam. */
     private val parkNextRead = AtomicReference<Handshake?>(null)
@@ -175,6 +189,17 @@ class CoinbaseBuyDashConfirmGuardTest {
         private var attemptId: Long? = null
         private var confirmJob: Job? = null
 
+        /**
+         * The fragment's nullable `getContext()`.
+         *
+         * Deliberately never cleared, even by [onDestroy]: `lifecycleScope` is
+         * cancelled in `onDestroy` while the context is nulled later, in
+         * `onDetach`, so an attempt unwinding in that window finds itself
+         * cancelled but still attached. That is the case only the cancellation
+         * half of the guard can catch, and the one this screen models.
+         */
+        private val host = Any()
+
         /** Counted down once this instance's confirm has fully unwound. */
         val confirmFinished = CountDownLatch(1)
 
@@ -187,8 +212,13 @@ class CoinbaseBuyDashConfirmGuardTest {
                     try {
                         viewModel.getTransferDashParams()
                     } catch (_: ReceiveAddressUnavailableException) {
-                        // The toast-and-retry arm: nothing was bought.
-                        unavailableAddressRetries.incrementAndGet()
+                        // The toast-and-retry arm: nothing was bought. Through the
+                        // SAME guard the fragment's handler uses, because this arm
+                        // is reachable after cancellation — the destination read
+                        // parks uncancellably, and a `withContext` that throws
+                        // delivers the throw rather than the cancellation.
+                        unavailableAddressHandlers.incrementAndGet()
+                        runIfStillAttached(host) { unavailableAddressRetries.incrementAndGet() }
                         return@launch
                     }
 
@@ -423,6 +453,51 @@ class CoinbaseBuyDashConfirmGuardTest {
         }
         assertTrue(thrown.message?.contains("single-flight") == true)
         assertEquals(0, orders.get())
+    }
+
+    @Test
+    fun anAttemptCancelledInTheDestinationReadSurfacesNothingWhenItFails() = runBlocking {
+        priceTheOrder()
+
+        // The attempt parks in the destination read and is still parked when the
+        // screen goes away; only then does the read fail.
+        val parked = Handshake().also { parkNextRead.set(it) }
+        failNextRead.set(true)
+        val rotatedAway = ReviewScreen()
+        val scope = CoroutineScope(Dispatchers.Default + Job())
+
+        assertNotNull("the tap must begin a confirm", rotatedAway.tap(scope))
+        awaitLatch(parked.reached, "the tap must be parked in the destination read")
+
+        // Rotation. `lifecycleScope` is cancelled, but the read does not answer
+        // cancellation, so the attempt cannot unwind yet.
+        scope.cancel()
+        rotatedAway.onDestroy()
+        assertEquals(
+            "the attempt must still be parked, not unwound",
+            1L,
+            rotatedAway.confirmFinished.count
+        )
+
+        parked.proceed.countDown()
+        awaitLatch(rotatedAway.confirmFinished, "the cancelled attempt must finish unwinding")
+
+        // The hazard: cancellation does NOT swallow an exception thrown by the
+        // body of a `withContext`, so the failure handler runs on a screen that
+        // is already gone. Asserted, because "surfaced nothing" below would
+        // otherwise be satisfied by the handler never running.
+        assertEquals(
+            "the failure must still reach the handler — that is the hazard",
+            1,
+            unavailableAddressHandlers.get()
+        )
+        assertEquals(
+            "but a cancelled attempt must put nothing in front of the user",
+            0,
+            unavailableAddressRetries.get()
+        )
+        assertEquals("and nothing may be ordered", 0, orders.get())
+        scope.cancel()
     }
 
     companion object {
