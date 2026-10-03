@@ -137,6 +137,42 @@ fun engineStartHoldsService(
 ): Boolean = startingSinceMs > 0L && nowMs - startingSinceMs < capMs
 
 /**
+ * How long after the service is created the SDK engine start may still be
+ * pending — not yet begun, so [engineStartHoldsService] cannot see it — and
+ * hold the service ([engineStartPendingHoldsService]). Before the start sets
+ * its marker it waits for the SDK bind, reads its enablement and runs the
+ * scan gate (at most 15 s); in the field report the service was created at
+ * 22:23:41 and the start began at 22:24:09, 28 s later. Two minutes covers
+ * that with room for a slow bind and the gate, and is short enough that a
+ * start that never comes (the shadow disabled, or no wallet bound) delays the
+ * service's normal behaviour only briefly.
+ */
+const val ENGINE_START_PENDING_GRACE_MS = 2L * 60 * 1000
+
+/**
+ * Whether the SDK engine start that a new service kicks, but has not begun
+ * yet, should hold the service. The blockchain-state observer is attached
+ * before that start is kicked and replays the stored state at once; a stored
+ * state that reads synced would otherwise take the service out of the
+ * foreground before the start had set its marker, and a background service
+ * cannot reliably promote itself again (Android 12+ refuses
+ * `startForeground()` from the background).
+ *
+ * Holds only while the engine is not running, the SDK bind is not blocked (a
+ * blocked bind cannot start anything, and the service must be free to idle
+ * out), and within [graceMs] of [serviceCreatedAtMs] (0 = unknown, never
+ * holds). Pure — host-testable.
+ */
+fun engineStartPendingHoldsService(
+    serviceCreatedAtMs: Long,
+    nowMs: Long,
+    engineRunning: Boolean,
+    bindBlocked: Boolean,
+    graceMs: Long = ENGINE_START_PENDING_GRACE_MS
+): Boolean = serviceCreatedAtMs > 0L && !engineRunning && !bindBlocked &&
+    nowMs - serviceCreatedAtMs < graceMs
+
+/**
  * One activity sample taken from the KOTLIN SDK L1 engine — the
  * post-cutover replacement for the dashj counters, mapped onto the same
  * four slots so [isSyncIdle] is untouched:

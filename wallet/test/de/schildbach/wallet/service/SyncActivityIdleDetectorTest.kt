@@ -279,4 +279,46 @@ class SyncActivityIdleDetectorTest {
         assertEquals(DURABLE_LAG_STALL_MS, age)
         assertFalse(durableLagHoldsService(2_400_000, 2_547_694, age))
     }
+
+    @Test
+    fun engineStartPending_holdsOnlyBeforeTheStartWithinTheGrace() {
+        val created = 1_000_000L
+        val at = created + 28_000 // the field gap between onCreate and the start
+        assertTrue(engineStartPendingHoldsService(created, at, engineRunning = false, bindBlocked = false))
+        assertFalse("engine already running", engineStartPendingHoldsService(created, at, engineRunning = true, bindBlocked = false))
+        assertFalse("a blocked bind must still idle out", engineStartPendingHoldsService(created, at, engineRunning = false, bindBlocked = true))
+        assertTrue(
+            "just under the grace",
+            engineStartPendingHoldsService(created, created + ENGINE_START_PENDING_GRACE_MS - 1, engineRunning = false, bindBlocked = false)
+        )
+        assertFalse(
+            "a start that never comes stops holding at the grace",
+            engineStartPendingHoldsService(created, created + ENGINE_START_PENDING_GRACE_MS, engineRunning = false, bindBlocked = false)
+        )
+        assertFalse("creation time unknown", engineStartPendingHoldsService(0L, at, engineRunning = false, bindBlocked = false))
+    }
+
+    @Test
+    fun foregroundDemotion_cachedSyncedStateBeforeTheStartMarker_isRefused() {
+        // The observer replays the stored synced state before the kicked start
+        // has set its marker: only the pending-start part of the hold sees it.
+        val created = 1_000_000L
+        var now = created + 5_000
+        var startingSinceMs = 0L
+        var engineRunning = false
+        val gate = ForegroundDemotionGate {
+            engineStartPendingHoldsService(created, now, engineRunning, bindBlocked = false) ||
+                engineStartHoldsService(startingSinceMs, now)
+        }
+        assertFalse("synced state at startup, start marker still 0", gate.mayDemote())
+
+        now = created + 28_000
+        startingSinceMs = now // the start begins
+        assertFalse(gate.onHold(true))
+        now += 60_000
+        engineRunning = true // the start returns and clears its marker
+        startingSinceMs = 0L
+        assertTrue("the hold has ended with a demotion pending: re-run it", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
 }

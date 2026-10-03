@@ -2270,6 +2270,9 @@ class L1ShadowSyncService internal constructor(
     /** Running latch: the wallet id the probe compares, null when stopped. */
     private val runningWalletIdHex = MutableStateFlow<String?>(null)
 
+    /** Whether the engine is up (the running latch is set). Non-suspending; any thread. */
+    fun isEngineRunning(): Boolean = runningWalletIdHex.value != null
+
     /**
      * The DashPay bring-up once it has outlived its budget and [startIfEnabled]
      * has stopped awaiting it — service-owned so [stop] can end it.

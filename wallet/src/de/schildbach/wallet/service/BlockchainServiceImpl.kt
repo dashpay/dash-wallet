@@ -823,6 +823,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val notificationAddresses: MutableList<Address> = LinkedList()
     private val transactionsReceived = AtomicInteger()
     private val mnListDiffsReceived = AtomicInteger()
+    @Volatile
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
     private var deleteWalletFileOnShutdown = false
@@ -843,14 +844,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val foregroundDemotionGate = ForegroundDemotionGate { sdkHoldsService(System.currentTimeMillis()) }
 
     /**
-     * Whether an SDK engine start in flight ([engineStartHoldsService]) or the
-     * SDK still saving the scan ([durableLagHoldsService]) holds the service
-     * now. Read from the live sources so it is current on any thread — the
-     * tick and the sync-complete demotion share this one definition. Never
-     * reads the database, and never true pre-cutover.
+     * Whether an SDK engine start that is pending ([engineStartPendingHoldsService])
+     * or in flight ([engineStartHoldsService]), or the SDK still saving the scan
+     * ([durableLagHoldsService]), holds the service now. Read from the live
+     * sources so it is current on any thread — the tick and the sync-complete
+     * demotion share this one definition. Never reads the database, and never
+     * true pre-cutover.
      */
     private fun sdkHoldsService(nowMs: Long): Boolean {
         if (!dashjHeldByCutover) return false
+        if (engineStartPendingHoldsService(
+                serviceCreatedAt,
+                nowMs,
+                l1ShadowSyncService.isEngineRunning(),
+                sdkBindBlocked()
+            )
+        ) {
+            return true
+        }
         if (engineStartHoldsService(l1ShadowSyncService.engineStartingSinceMs(), nowMs)) return true
         val durableHeight = l1ShadowSyncService.durableSyncedHeight()
         return durableLagHoldsService(
@@ -859,6 +870,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             durableHeightTracker.msSinceChange(durableHeight, nowMs)
         )
     }
+
+    /** Whether the SDK bind is blocked ("SDK setup pending"): nothing can start or replay. */
+    private fun sdkBindBlocked(): Boolean =
+        ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
 
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
@@ -2240,7 +2255,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // BLOCKED ("SDK setup pending", Phase 1a item 3) nothing can
             // replay, so the service is allowed to idle out — the unlock
             // receiver / foreground edge bring it back.
-            val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
+            val bindBlocked = sdkBindBlocked()
             val replaying = blockchainState?.replaying == true && !bindBlocked
             // An SDK engine start in flight reports no progress, so it reads idle too.
             // Same treatment as a replay — stay up, and hold the wake lock so the
