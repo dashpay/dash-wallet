@@ -113,8 +113,33 @@ data class L1TxUiRecord(
     /** Epoch-millis of first observation (or the block timestamp), 0 when unknown. */
     val timestampMs: Long,
     val status: L1TxUiStatus,
-    val direction: L1TxUiDirection
-)
+    val direction: L1TxUiDirection,
+    /**
+     * Epoch-millis of the containing block's header time, 0 while the tx is
+     * unconfirmed (or for a stub row). Kept apart from [timestampMs] so a
+     * planner can tell a block-backed time from a first-sighting time.
+     */
+    val blockTimestampMs: Long = 0L,
+    /**
+     * The SDK's `transactions.transactionTypeKind` (Rust `TransactionType`
+     * discriminant, e.g. [TX_TYPE_KIND_COINBASE]); [TX_TYPE_KIND_UNKNOWN] when
+     * not populated or not known to the producing feed.
+     */
+    val transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
+) {
+    /** A coinbase payout: shown as "Mining Reward", as the dashj path does. */
+    val isCoinbase: Boolean get() = transactionTypeKind == TX_TYPE_KIND_COINBASE
+
+    /**
+     * The SDK's TXO-parent STUB, not a transaction yet. When an output lands
+     * before its transaction, the SDK writes `TransactionEntity(txid,
+     * ByteArray(0))` so the TXO foreign key holds: context 0, direction 0,
+     * net 0, and BOTH timestamps 0. Every real record has a non-zero time
+     * (the SDK stamps `firstSeen` with the block time, or with "now" when it
+     * has neither), so a zero [timestampMs] identifies the stub exactly.
+     */
+    val isStoreStub: Boolean get() = timestampMs == 0L
+}
 
 /**
  * Map the SDK `transactions` row's raw columns to the neutral record.
@@ -130,7 +155,8 @@ fun l1TxUiRecord(
     contextCode: Int,
     directionCode: Int,
     firstSeenSec: Long,
-    blockTimestampSec: Int
+    blockTimestampSec: Int,
+    transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
 ): L1TxUiRecord {
     val status = when (contextCode) {
         1 -> L1TxUiStatus.INSTANT_LOCKED
@@ -163,7 +189,9 @@ fun l1TxUiRecord(
         feeDuffs = feeDuffs,
         timestampMs = timestampMs,
         status = status,
-        direction = direction
+        direction = direction,
+        blockTimestampMs = if (blockTimestampSec > 0) blockTimestampSec * 1000L else 0L,
+        transactionTypeKind = transactionTypeKind
     )
 }
 
@@ -355,7 +383,13 @@ internal fun planL1TxRow(
         )
     } else L1TxRowPlan(
         rowId = record.txidHex,
-        titleRes = R.string.transaction_row_status_received,
+        // dashj parity (TxResourceMapper): every coinbase reads "Mining Reward" —
+        // neither path can tell a masternode payout from a miner's.
+        titleRes = if (record.isCoinbase) {
+            R.string.transaction_row_status_mining_reward
+        } else {
+            R.string.transaction_row_status_received
+        },
         statusRes = if (record.status == L1TxUiStatus.PENDING) {
             R.string.transaction_row_status_processing
         } else {
@@ -390,9 +424,13 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.INVITE -> R.string.transaction_row_invitation
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
-    // Same label as the self-move — the arrow, not the title, carries the
-    // internal/external distinction (product decision, 2026-08-10).
-    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded
+    // Every AssetUnlock without evidence that THIS wallet's pool authored it.
+    // That is not only a foreign pool's unshield: a Platform identity credit
+    // withdrawal (evonode reward withdrawals included) is an AssetUnlock too,
+    // and plain "Unshielded" on it read as a shielded-pool move the user never
+    // made (field report, 2026-09-30). Product decision, 2026-09-30, replacing
+    // the shared label of 2026-08-10; the arrow still carries the receive.
+    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded_withdrawal
 }
 
 /**
@@ -424,8 +462,9 @@ internal val TxGroupCacheEntry.isMultiTxGroupRow: Boolean
  *   the "invisible receive" fix (a tx the held dashj wallet never saw).
  * - [updates]: SURGICAL fixes to existing dashj-era rows whose live
  *   status dashj can no longer learn — the "stuck Sending" fix. Only the
- *   title/status strings change; value, time, metadata, contact and
- *   service fields are preserved.
+ *   title/status strings change; value, metadata, contact and service
+ *   fields are preserved, and time is only ever moved back to the block
+ *   time ([redatedFromBlock]).
  * - [notifyIncoming]: freshly-discovered incoming transactions (subset of
  *   [inserts]) the user should get a coins-received notification for.
  */
@@ -453,6 +492,33 @@ internal data class L1DisplaySyncPlan(
 internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
 
 /**
+ * How far a cached row's time may sit AFTER its block's header time before
+ * [redatedFromBlock] treats it as wrong. A header may lag real time by about
+ * an hour (it need only beat the median of the previous 11 blocks), so a tx
+ * first seen just before it was mined can legitimately read up to that much
+ * later than its block. Three hours clears that with margin, while a row a
+ * restore stamped "now" for a tx mined days or years ago is far outside it.
+ */
+internal const val L1_BLOCK_TIME_SKEW_TOLERANCE_MS = 3L * 60 * 60 * 1000
+
+/**
+ * [existing] with its time moved back to [record]'s block time when the cached
+ * time is impossible: LATER than the block that contains the tx, by more than
+ * [L1_BLOCK_TIME_SKEW_TOLERANCE_MS]. A tx can be seen before it is mined, never
+ * long after, so such a time was never a sighting; it is a placeholder "now"
+ * (a stub row inserted during a restore, before [planL1DisplaySync] skipped
+ * stubs). Moving the time EARLIER only, and only to a block time, leaves every
+ * genuine first-sighting time alone, including a tx that sat in the mempool for
+ * days before it was mined. Returns [existing] itself when nothing changes.
+ * Pure — host-testable.
+ */
+internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecord): TxDisplayCacheEntry {
+    val blockMs = record.blockTimestampMs
+    if (blockMs <= 0L || existing.time - blockMs <= L1_BLOCK_TIME_SKEW_TOLERANCE_MS) return existing
+    return existing.copy(time = blockMs)
+}
+
+/**
  * Pure sync-pass planner. Rules:
  * - Transactions living inside a multi-tx group row ([groupedTxIds]) are
  *   never touched — group rows are dashj-era history.
@@ -470,6 +536,9 @@ internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
  *   A row whose only extra semantics is a metadata-supplied `service`
  *   classification still takes these status edges (its title/status ARE
  *   the plain pending texts) but none of the value/rate/shape re-stamps.
+ * - SDK store stubs ([L1TxUiRecord.isStoreStub]) are skipped outright.
+ * - Every existing row, the never-touch ones included, takes
+ *   [redatedFromBlock]: a time later than the tx's own block is reset to it.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -542,6 +611,12 @@ internal fun planL1DisplaySync(
 
     for (record in records) {
         if (record.txidHex in groupedTxIds) continue
+        // A stub carries nothing displayable (net 0, no direction, no time). Rendering
+        // it inserted a "Received 0" row stamped NOW, and the real record later fixed
+        // that row's value and title but never its time, so a restore dated history it
+        // scanned as "today". Skip it; the real record reaches this planner on a later
+        // pass (the periodic full walk re-reads every TXO's transaction).
+        if (record.isStoreStub) continue
         val contact = contactByTxid[record.txidHex]
         val contactSignedNet = signedNetByTxid[record.txidHex]
         val plan = planL1TxRow(record, kindByTxid[record.txidHex], contact, contactSignedNet)
@@ -607,10 +682,15 @@ internal fun planL1DisplaySync(
         // (verified on-device, 2026-08-07 Maya field test). The swap reconciler
         // restores swapStatus on the next display-cache write signal, so this guard
         // then holds the row stable instead of flip-flopping once per sync pass.
+        //
+        // The one edit EVERY row takes, the never-touch rows included: a time that is
+        // impossible for the record's block (see [redatedFromBlock]).
+        val redated = redatedFromBlock(existing, record)
         if (existing.hasErrors || existing.swapStatus != null ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
+            if (redated != existing) updates += redated
             continue
         }
         // A service-CLASSIFIED row is only half-rich. The service column is a
@@ -628,7 +708,7 @@ internal fun planL1DisplaySync(
             sdkAuthoritative += record.txidHex
         }
 
-        var updated = existing
+        var updated = redated
         if (existing.title == resolve(R.string.transaction_row_status_sending) &&
             plan.titleRes == R.string.transaction_row_status_sent
         ) {
@@ -797,6 +877,15 @@ internal fun planL1DisplaySync(
                     statusText = if (keepConfirming) updated.statusText else desiredStatus
                 )
             }
+        }
+        // A coinbase cached as plain "Received" — before records carried their kind,
+        // or by the dashj-side writer — takes its "Mining Reward" title. Title only:
+        // the shape (receive arrow, value) is already right. Idempotent, since the
+        // relabelled title is no longer "Received".
+        if (record.isCoinbase && contact == null && updated.contactUserId == null &&
+            updated.title == resolve(R.string.transaction_row_status_received)
+        ) {
+            updated = updated.copy(title = resolve(R.string.transaction_row_status_mining_reward))
         }
         if (contact != null) {
             // Always attach the contact IDENTITY the insert could not (identity/

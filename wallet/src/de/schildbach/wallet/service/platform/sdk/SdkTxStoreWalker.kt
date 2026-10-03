@@ -212,6 +212,12 @@ internal const val TX_TYPE_KIND_STANDARD = 0
  */
 internal const val TX_TYPE_KIND_ASSET_LOCK = 6
 
+/** Rust `TransactionType` discriminant for a Coinbase — a mining or masternode payout. */
+internal const val TX_TYPE_KIND_COINBASE = 8
+
+/** `transactions.transactionTypeKind`'s not-yet-populated sentinel (the entity default). */
+internal const val TX_TYPE_KIND_UNKNOWN = 0xFF
+
 /**
  * BOUNDED reader over the Kotlin SDK's L1 Room store (`txos` +
  * `transactions`) for the post-cutover display/seam pipelines — the fix for
@@ -432,7 +438,8 @@ internal class SdkTxStoreWalker(
                 contextCode = c.getInt(startCol + 3),
                 directionCode = c.getInt(startCol + 4),
                 firstSeenSec = c.getLong(startCol + 5),
-                blockTimestampSec = c.getInt(startCol + 6)
+                blockTimestampSec = c.getInt(startCol + 6),
+                transactionTypeKind = c.getInt(startCol + 7)
             ),
             wireTxid = txid,
             typeKind = c.getInt(startCol + 7),
