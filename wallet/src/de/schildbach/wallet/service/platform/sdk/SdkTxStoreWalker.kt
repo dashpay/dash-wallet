@@ -209,7 +209,17 @@ internal fun reattributeIncomingRecord(
  * the stored fee stands — a mixing round's inputs are co-funded by other
  * participants, so neither [reattributeIncomingRecord]'s direction rules nor
  * its fee recovery apply. An already-correct record round-trips EQUAL (no
- * persist, no log, no churn). Pure — host-testable.
+ * persist, no log, no churn).
+ *
+ * MONOTONE — the net may only be LOWERED, never raised. Without #979 the
+ * stored net is born too high, and every additional spent mark the mirror
+ * gains only lowers the recompute, so corrections move down toward the truth.
+ * With #979 the stored net already carries full input attribution, so a
+ * recompute from a mirror whose spent marks are still incomplete (mid-restore,
+ * or an input row that never lands — the rust-dashcore#1006 class) is HIGHER
+ * and is refused: the walker never makes an engine-correct net worse.
+ * Accepted cost: a CoinJoin net stored too LOW (an output missed at the time —
+ * a different engine defect) is never raised here. Pure — host-testable.
  */
 internal fun recomputeCoinJoinRecordNet(
     record: L1TxUiRecord,
@@ -218,7 +228,7 @@ internal fun recomputeCoinJoinRecordNet(
 ): L1TxUiRecord {
     if (record.direction != L1TxUiDirection.COINJOIN || spentOwnedDuffs <= 0L) return record
     val net = fundedOwnedDuffs - spentOwnedDuffs
-    return if (record.netAmountDuffs == net) record else record.copy(netAmountDuffs = net)
+    return if (net >= record.netAmountDuffs) record else record.copy(netAmountDuffs = net)
 }
 
 /**
@@ -776,11 +786,13 @@ internal class SdkTxStoreWalker(
             if (it.isCoinJoinNetCandidate()) {
                 // A CoinJoin row consults the payload ONLY for the
                 // mirror-completeness guard, so only when a correction is
-                // actually pending (stored net ≠ recompute): a correct store
-                // does no payload work. Confirmed evidence only — pending
+                // actually pending — the recompute is LOWER than the stored
+                // net ([recomputeCoinJoinRecordNet] never raises one): a
+                // correct store, and a #979 store whose spent marks still
+                // lag, do no payload work. Confirmed evidence only — pending
                 // reservations are never used for CoinJoin rows.
-                return@filter it.record.netAmountDuffs !=
-                    (fundedOwned[it.record.txidHex] ?: 0L) - it.spentOwnedDuffs
+                return@filter (fundedOwned[it.record.txidHex] ?: 0L) - it.spentOwnedDuffs <
+                    it.record.netAmountDuffs
             }
             val recomputed = (fundedOwned[it.record.txidHex] ?: 0L) -
                 (it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L))
@@ -843,8 +855,9 @@ internal class SdkTxStoreWalker(
         for (row in flagged) {
             val hex = row.record.txidHex
             val coinJoin = row.isCoinJoinNetCandidate()
-            // A CoinJoin row whose stored net already equals the recompute is
-            // correct: served as stored, nothing persisted, nothing logged.
+            // A CoinJoin row whose recompute is not LOWER than its stored net
+            // (already correct, or a refused raise) is served as stored:
+            // nothing persisted, nothing logged.
             if (coinJoin && hex !in needsFactsHexes) continue
             val fact = facts[hex]
             if (coinJoin && fact == null) {

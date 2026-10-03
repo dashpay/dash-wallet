@@ -1283,6 +1283,29 @@ class SdkTxStoreWalkerTest {
     }
 
     @Test
+    fun coinJoin_with979_correctNetNeverRaisedByIncompleteSpentMarks() {
+        // The #979 store mid-restore: the engine already persisted the true,
+        // fully attributed net (0), but only ONE of our two inputs has its
+        // spent mark in the mirror yet — the recompute reads +denom. It must
+        // be refused (the walker never makes an engine-correct net worse,
+        // and if the second input's row never lands that would be permanent).
+        val ids = seedCoinJoinRound(storedNet = 0L, linkF2 = false)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = { error("no payload work for a refused raise") }))
+        assertEquals(0L, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+
+        // Once the mark lands the recompute agrees — still nothing to do.
+        linkSecondInput(ids)
+        queryLog.clear()
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
     fun coinJoin_incompleteMirror_defersAndPersistsNothing() {
         // Our second output (vout 2, a wallet-tracked CoinJoin address) has no
         // txos row: funded would read 1·denom and stamp a born-wrong −denom.
@@ -1378,6 +1401,11 @@ class SdkTxStoreWalkerTest {
         assertTrue(born === recomputeCoinJoinRecordNet(born, 0L, 2 * denom))
         val outgoing = born.copy(direction = L1TxUiDirection.OUTGOING)
         assertTrue(outgoing === recomputeCoinJoinRecordNet(outgoing, 2 * denom, 0L))
+        // MONOTONE: a recompute HIGHER than the stored net (the #979 store
+        // with spent marks still incomplete) is refused — the same record.
+        assertTrue(correct === recomputeCoinJoinRecordNet(correct, spentOwnedDuffs = denom, fundedOwnedDuffs = 2 * denom))
+        // A lower recompute from partial evidence still applies (moves down).
+        assertEquals(denom, recomputeCoinJoinRecordNet(born, denom, 2 * denom).netAmountDuffs)
     }
 
     // ── reattributeIncomingRecord (pure) ──────────────────────────────
