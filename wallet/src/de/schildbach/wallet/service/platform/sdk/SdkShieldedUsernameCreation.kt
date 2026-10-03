@@ -92,8 +92,8 @@ internal val SHIELDED_IDENTITY_DENOMINATIONS_CREDITS = longArrayOf(
  *   — 0.25 DASH pre-v4.2, 0.15 DASH once the network activates it) → 0.25 DASH
  *   either way (both round UP to the same member). The identity is created holding
  *   `denomination − metered fee` in credits, and a contested DPNS registration
- *   needs ~0.2 DASH of those credits for the prefunded voting balance Drive
- *   attaches to every contestable label — 0.1 cannot cover it, 0.25 can.
+ *   needs ~0.2 DASH (0.1 from protocol 14) of those credits for the prefunded
+ *   voting balance Drive attaches to every contestable label — 0.1 cannot cover it, 0.25 can.
  *   (Before v13 this resolved to 0.3, which the active set no longer accepts.)
  */
 internal fun chooseShieldedIdentityDenominationCredits(
@@ -402,7 +402,7 @@ interface ShieldedUsernameSource {
     /**
      * Register [label] as a DPNS name for [identityId]. Contested labels
      * need no special client-side handling: dpp derives the ~0.2 DASH
-     * prefunded voting balance from the contested unique index
+     * (0.1 from protocol 14) prefunded voting balance from the contested unique index
      * automatically (`prefunded_voting_balance_for_document`), paid from
      * the identity's credit balance — which is why a contested creation
      * must fund the identity with the 0.25 denomination (the smallest v13
@@ -611,10 +611,12 @@ sealed class ShieldedUsernameSubmitState {
  *
  * 1. Preflights (nothing submitted if any fails → NotBroadcast): flag on,
  *    contested-ness derived from the label (contested labels take the
- *    0.25-fee → 0.25-denomination mapping — the smallest covering member
- *    of the v13 set — so the identity's credits cover the ~0.2 prefunded
- *    voting balance the contested DPNS registration debits; non-contested
- *    take 0.03 → 0.03), fee → denomination mapping
+ *    protocol-gated contested fee — 0.25 DASH legacy/protocol-13, 0.15 DASH
+ *    from protocol 14 — → 0.25-denomination mapping either way — the
+ *    smallest covering member of the v13 set — so the identity's credits
+ *    cover the ~0.2 DASH (0.1 from protocol 14) prefunded voting balance the
+ *    contested DPNS registration debits; non-contested take 0.03 → 0.03),
+ *    fee → denomination mapping
  *    resolves ([chooseShieldedIdentityDenominationCredits]), shielded runtime
  *    ready ([ShieldedBalanceService.ensureShieldedReady]) with the pool
  *    READY (trustworthy balance, not a mid-sync placeholder zero) and
@@ -849,8 +851,8 @@ class SdkShieldedUsernameCreation internal constructor(
         // Contested-ness is derived HERE from the labels (same rule the
         // request screen gates on) so a caller can never pair a contested
         // name with the too-small non-contested denomination — the name
-        // registration would fail its ~0.2 prefunded-voting-balance
-        // debit after the identity was already created. In the dual-
+        // registration would fail its ~0.2 DASH (0.1 from protocol 14)
+        // prefunded-voting-balance debit after the identity was already created. In the dual-
         // username flow the primary is the contested one, but either
         // label being contestable bumps the funding requirement.
         val contested = try {
@@ -863,8 +865,9 @@ class SdkShieldedUsernameCreation internal constructor(
 
         // Fee → denomination (explicit mapping, see
         // chooseShieldedIdentityDenominationCredits: non-contested
-        // 0.03 DASH → 0.03, contested 0.25 DASH → 0.25 — both members of the
-        // allowed exit-denomination set).
+        // 0.03 DASH → 0.03, contested 0.25 DASH (legacy/protocol-13; the
+        // 0.15 DASH protocol-14 fee rounds up the same way) → 0.25 — both
+        // members of the allowed exit-denomination set).
         val fee = try {
             feeCredits(contested)
         } catch (t: Throwable) {
