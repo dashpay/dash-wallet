@@ -37,6 +37,8 @@ import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.service.platform.sdk.AssetLockFundingEvidence
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.assetLockFundingVerdict
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
@@ -230,15 +232,18 @@ enum class InviteUsernameTier {
  *   link when minted by a build that includes it; older links carry nothing
  *   and are [InviteUsernameTier.UNKNOWN].
  *
- * The threshold is the same for both: the contested fee. The shielded note
- * values (current v13 mints 0.03 / 0.25 DASH, legacy links 0.1 / 0.3)
- * straddle it just as the L1 amounts do — the contested mints (0.25 / 0.3)
- * are >= the 0.25 fee, the non-contested ones (0.03 / 0.1) below it.
+ * The threshold is the same for both: [contestedFee] (the protocol-gated
+ * contested fee, MO-1069 — pass the SMALLER of the two possible values, e.g.
+ * [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees.CURRENT]'s,
+ * so an invite funded under EITHER protocol era still classifies correctly).
+ * The shielded note values (current v13 mints 0.03 / 0.25 DASH, legacy links
+ * 0.1 / 0.3) straddle it just as the L1 amounts do — the contested mints
+ * (0.25 / 0.3) are >= the fee, the non-contested ones (0.03 / 0.1) below it.
  */
-fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin): InviteUsernameTier {
+fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin, contestedFee: Coin): InviteUsernameTier {
     if (invite == null) return InviteUsernameTier.UNKNOWN
     if (!invite.isShielded) {
-        return if (l1InviteBalance >= Constants.DASH_PAY_FEE_CONTESTED) {
+        return if (l1InviteBalance >= contestedFee) {
             InviteUsernameTier.CONTESTED
         } else {
             InviteUsernameTier.NON_CONTESTED
@@ -246,7 +251,7 @@ fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin): Invi
     }
     val credits = invite.shieldedFundingCredits ?: return InviteUsernameTier.UNKNOWN
     val funded = Coin.valueOf(creditsToDash(credits).duffs)
-    return if (funded >= Constants.DASH_PAY_FEE_CONTESTED) {
+    return if (funded >= contestedFee) {
         InviteUsernameTier.CONTESTED
     } else {
         InviteUsernameTier.NON_CONTESTED
@@ -438,7 +443,8 @@ class RequestUserNameViewModel @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val platformHealthProbe: PlatformHealthProbe,
     private val identityCreationStatus: IdentityCreationStatusHolder,
-    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
+    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight,
+    private val dashSdkService: DashSdkService
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
@@ -566,7 +572,7 @@ class RequestUserNameViewModel @Inject constructor(
      */
     private fun canShieldedFundContestedUsername(): Boolean {
         if (_shieldedSyncStatus.value != ShieldedSyncStatus.READY) return false
-        val requirement = shieldedIdentityFundingRequirement(Dash(Constants.DASH_PAY_FEE_CONTESTED.value))
+        val requirement = shieldedIdentityFundingRequirement(Dash(_contestedFees.value.contested.value))
             ?: return false
         return _shieldedBalance.value >= requirement
     }
@@ -581,7 +587,7 @@ class RequestUserNameViewModel @Inject constructor(
         val contestable = lastGateUsername?.let {
             runCatching { Names.isUsernameContestable(it) }.getOrDefault(false)
         } ?: false
-        val fee = if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+        val fee = if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE
         return shieldedIdentityFundingRequirement(Dash(fee.value))
             ?: shieldedIdentityFundingRequirement(Dash(Constants.DASH_PAY_FEE.value))
             ?: Dash(Constants.DASH_PAY_FEE.value)
@@ -602,6 +608,16 @@ class RequestUserNameViewModel @Inject constructor(
             if (it.fundingNoteAnchored == anchored) it else it.copy(fundingNoteAnchored = anchored)
         }
     }
+
+    /**
+     * Protocol-gated contested fee (MO-1069), refreshed once from a live
+     * [DashSdkService.currentProtocolVersion] read. Defaults to
+     * [ContestedUsernameFees.LEGACY] (the safe fallback for "not resolved
+     * yet") until that read lands — see [ConfirmUserNameDialogViewModel] for
+     * the same pattern on the confirm sheet.
+     */
+    private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
+    val contestedFees: StateFlow<ContestedUsernameFees> get() = _contestedFees
 
     private val _identityBalance = MutableStateFlow(0L)
     val identityBalance: StateFlow<Long>
@@ -747,7 +763,7 @@ class RequestUserNameViewModel @Inject constructor(
             val credits = _identityBalance.value
             credits > CONTEST_DOCUMENT_FEE
         } else {
-            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
+            _walletBalance.value >= _contestedFees.value.contested
         }
     }
 
@@ -760,6 +776,10 @@ class RequestUserNameViewModel @Inject constructor(
             _requestedUserNameLink.value = withContext(Dispatchers.IO) {
                 identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
             }
+        }
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+            recomputeBalanceGate()
         }
         // L1/non-shielded creation completion feedback. The L1 branch of
         // submit() starts CreateIdentityService and sets
@@ -1461,8 +1481,8 @@ class RequestUserNameViewModel @Inject constructor(
             identityBalance > 0L && !contestable ->
                 (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
             contestable ->
-                walletBalance >= Constants.DASH_PAY_FEE_CONTESTED &&
-                    assetLockFundingEligible(Constants.DASH_PAY_FEE_CONTESTED)
+                walletBalance >= _contestedFees.value.contested &&
+                    assetLockFundingEligible(_contestedFees.value.contested)
             else ->
                 walletBalance >= Constants.DASH_PAY_FEE &&
                     assetLockFundingEligible(Constants.DASH_PAY_FEE)
@@ -1533,7 +1553,7 @@ class RequestUserNameViewModel @Inject constructor(
             // allowed). An UNKNOWN tier still passes — see InviteUsernameTier.UNKNOWN.
             isUsingInvite() && createUsernameArgs?.invite?.isShielded == true ->
                 inviteTierAllowsUsername(inviteTier(), contestable)
-            isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
+            isUsingInvite() && contestable -> inviteBalance >= _contestedFees.value.contested
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
             // Paying from the shielded pool: the welcome-screen decision
             // point only offers this source when the pool covers the
@@ -1550,8 +1570,8 @@ class RequestUserNameViewModel @Inject constructor(
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 NON_CONTEST_DOCUMENT_FEE / 1000)
             identityBalance == 0L && contestable ->
-                walletBalance >= Constants.DASH_PAY_FEE_CONTESTED &&
-                    assetLockFundingEligible(Constants.DASH_PAY_FEE_CONTESTED)
+                walletBalance >= _contestedFees.value.contested &&
+                    assetLockFundingEligible(_contestedFees.value.contested)
             identityBalance == 0L && !contestable ->
                 walletBalance >= Constants.DASH_PAY_FEE &&
                     assetLockFundingEligible(Constants.DASH_PAY_FEE)
@@ -1565,22 +1585,22 @@ class RequestUserNameViewModel @Inject constructor(
             paymentSource != UsernamePaymentSource.SHIELDED_BALANCE &&
             identityBalance == 0L &&
             run {
-                val fee = if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+                val fee = if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE
                 walletBalance >= fee && !assetLockFundingEligible(fee)
             }
         // The same branch structure, resolved to the amount the
         // insufficient-balance row must name (the old layout hardcoded
         // 0.25 for every case).
         val requiredAmount = when {
-            isUsingInvite() && contestable -> Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            isUsingInvite() && contestable -> _contestedFees.value.contested.toPlainString()
             isUsingInvite() && !contestable -> Constants.DASH_PAY_FEE.toPlainString()
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE ->
                 shieldedIdentityFundingRequirement(
-                    Dash((if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE).value)
-                )?.toPlainString() ?: Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+                    Dash((if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE).value)
+                )?.toPlainString() ?: _contestedFees.value.contested.toPlainString()
             identityBalance > 0L && contestable -> Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000).toPlainString()
             identityBalance > 0L && !contestable -> Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000).toPlainString()
-            contestable -> Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            contestable -> _contestedFees.value.contested.toPlainString()
             else -> Constants.DASH_PAY_FEE.toPlainString()
         }
         if (!enoughBalance) {
@@ -1758,7 +1778,12 @@ class RequestUserNameViewModel @Inject constructor(
      * including invites whose creator had paid the contested fee.
      */
     fun inviteTier(): InviteUsernameTier =
-        inviteUsernameTier(createUsernameArgs?.invite, getInvitationAmount())
+        // The SMALLER of the two possible contested fees (CURRENT, MO-1069):
+        // an invite may have been funded under either protocol era, and this
+        // floor classifies a genuine contested funding correctly regardless
+        // of which one — the live _contestedFees value governs what THIS
+        // registration needs, not what a past invite's creator paid.
+        inviteUsernameTier(createUsernameArgs?.invite, getInvitationAmount(), ContestedUsernameFees.CURRENT.contested)
 
     fun isInviteForContestedNames(): Boolean = inviteTier() == InviteUsernameTier.CONTESTED
 

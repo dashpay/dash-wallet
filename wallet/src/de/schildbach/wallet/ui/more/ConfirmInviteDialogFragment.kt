@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.invite.InvitationFragmentViewModel
 import de.schildbach.wallet.ui.invite.InviteCreationFailureKind
@@ -142,8 +143,13 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                         // shielded pool. Contested-ness follows the fee the
                         // inviter picked (0.25 → contested → the 0.25 v13
                         // denomination).
-                        val contested = inviteAmount.value >=
-                            de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED.value
+                        // The floor is the SMALLER of the two possible contested
+                        // fees (CURRENT, MO-1069) — any genuine contested
+                        // selection (either protocol era) is >= it, while the
+                        // non-contested fee (0.03) never is, so this classifies
+                        // correctly regardless of which era funded the amount
+                        // shown on the fee dialog.
+                        val contested = inviteAmount.value >= ContestedUsernameFees.CURRENT.contested.value
                         when (val result = invitationFragmentViewModel.createShieldedInvite(contested)) {
                             is SdkWriteResult.Broadcast -> result.value.user
                             else -> {
@@ -158,8 +164,13 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                         // asset-lock worker. Contested-ness follows the fee the
                         // inviter picked (0.25 → contested), same rule as the
                         // shielded branch above.
-                        val contested = inviteAmount.value >=
-                            de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED.value
+                        // The floor is the SMALLER of the two possible contested
+                        // fees (CURRENT, MO-1069) — any genuine contested
+                        // selection (either protocol era) is >= it, while the
+                        // non-contested fee (0.03) never is, so this classifies
+                        // correctly regardless of which era funded the amount
+                        // shown on the fee dialog.
+                        val contested = inviteAmount.value >= ContestedUsernameFees.CURRENT.contested.value
                         when (val result = invitationFragmentViewModel.createL1Invite(contested)) {
                             is SdkWriteResult.Broadcast -> result.value.user
                             else -> {

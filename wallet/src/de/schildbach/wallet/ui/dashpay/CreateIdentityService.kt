@@ -24,6 +24,8 @@ import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.uniqueIdStringOrNull
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
@@ -347,6 +349,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
     @Inject lateinit var sdkL1InviteCreation: SdkL1InviteCreation
     @Inject lateinit var shieldedInviteOverageTopUp: ShieldedInviteOverageTopUp
+    @Inject lateinit var dashSdkService: DashSdkService
     @Inject lateinit var dashPayConfig: DashPayConfig
     private lateinit var securityGuard: SecurityGuard
 
@@ -651,15 +654,16 @@ class CreateIdentityService : LifecycleService() {
             } else {
                 // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
                 val balanceInfo = blockchainIdentityData.identity?.let { platformRepo.getIdentityBalance(it.id) }
+                val contestedFees = ContestedUsernameFees.current(dashSdkService)
                 val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                    Constants.DASH_PAY_FEE_CONTESTED
+                    contestedFees.contested
                 } else {
                     Constants.DASH_PAY_FEE
                 }
 
                 if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
                     val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                        Constants.DASH_PAY_FEE_CONTESTED_NAME
+                        contestedFees.contestedName
                     } else {
                         Constants.DASH_PAY_FEE
                     }

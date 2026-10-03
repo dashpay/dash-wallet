@@ -31,6 +31,8 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
@@ -49,6 +51,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -82,15 +85,16 @@ import javax.inject.Inject
  *   opaquely at the FFI. The tiles/confirm screen still DISPLAY the bare
  *   denomination (what the invite is worth); this requirement is what the
  *   user must HOLD, and what the insufficiency message quotes.
- * - L1 invite: the L1 fee — [Constants.DASH_PAY_FEE_CONTESTED] (0.25)
- *   contested / [Constants.DASH_PAY_FEE] (0.03) non-contested.
+ * - L1 invite: the L1 fee — [contestedFee] (the protocol-gated contested fee
+ *   resolved via [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees],
+ *   MO-1069) / [Constants.DASH_PAY_FEE] (0.03) non-contested.
  */
-internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean): Coin {
+internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean, contestedFee: Coin): Coin {
     return if (shielded) {
         (if (contestedSelected) SHIELDED_INVITE_CONTESTED else SHIELDED_INVITE_NON_CONTESTED)
             .add(SHIELDED_INVITE_FEE_MARGIN)
     } else {
-        if (contestedSelected) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+        if (contestedSelected) contestedFee else Constants.DASH_PAY_FEE
     }
 }
 
@@ -136,9 +140,10 @@ internal fun inviteFeeGate(
     l1Balance: Coin,
     shieldedReady: Boolean,
     shieldedBalance: Coin,
-    contestedSelected: Boolean
+    contestedSelected: Boolean,
+    contestedFee: Coin
 ): Boolean {
-    val requirement = inviteFeeRequirement(shielded, contestedSelected)
+    val requirement = inviteFeeRequirement(shielded, contestedSelected, contestedFee)
     return if (shielded) {
         shieldedReady && shieldedBalance >= requirement
     } else {
@@ -257,6 +262,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val sdkL1InviteCreation: SdkL1InviteCreation,
     private val shieldedBalanceService: ShieldedBalanceService,
     private val assetLockFundingPreflight: de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight,
+    private val dashSdkService: DashSdkService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
@@ -264,6 +270,16 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val workerJob = Job()
     private val workerScope = CoroutineScope(workerJob + Dispatchers.IO)
     private val authExtension = platformRepo.authenticationGroupExtension!!
+
+    /**
+     * Protocol-gated contested fee (MO-1069), refreshed once from a live
+     * [DashSdkService.currentProtocolVersion] read. Defaults to
+     * [ContestedUsernameFees.LEGACY] (the safe fallback for "not resolved
+     * yet") until that read lands — see [de.schildbach.wallet.ui.username
+     * .request.RequestUserNameViewModel] for the same pattern.
+     */
+    private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
+    val contestedFees: StateFlow<ContestedUsernameFees> = _contestedFees.asStateFlow()
 
     private val pubkeyHash: ByteArray
         get() = authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
@@ -515,6 +531,9 @@ open class InvitationFragmentViewModel @Inject constructor(
             .onEach { invitation ->
                 _invitation.value = invitation
             }.launchIn(workerScope)
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+        }
     }
 
     suspend fun getInvitedUserProfile(): DashPayProfile? = dashPayProfileDao.loadByUserId(identityId.value!!)

@@ -31,6 +31,8 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
 import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -176,7 +178,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val invitationsDao: InvitationsDao,
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService,
-    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService
+    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService,
+    private val dashSdkService: DashSdkService
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -194,7 +197,7 @@ class TopUpRepositoryImpl @Inject constructor(
         keyParameter: KeyParameter?
     ) {
         val fee = if (Names.isUsernameContestable(username)) {
-            Constants.DASH_PAY_FEE_CONTESTED
+            ContestedUsernameFees.current(dashSdkService).contested
         } else {
             Constants.DASH_PAY_FEE
         }
