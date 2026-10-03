@@ -80,6 +80,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(intent: Intent?) {
+        if (redirectDegradedWallet(walletApplication)) return
         if (intent != null) {
             lifecycleScope.launch {
                 val invitation = viewModel.handleInvite(intent)
@@ -97,6 +98,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(invite: InvitationLinkData) {
+        if (redirectDegradedWallet(walletApplication)) return
         val mainTask = inviteHandler.getMainTask()
         log.info("mainTask: $mainTask")
         when {

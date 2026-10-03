@@ -224,7 +224,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
         // screen within the same safe-mode process is not new evidence of
         // anything — it means the user is trying again. Retry the skipped load
         // instead of showing the same dead end.
-        if (degraded && walletApplication.isSafeModeLaunch && degradedScreenShownInProcess) {
+        // Not under a wipe marker: no load may run there, so re-entering is
+        // not a reason to try again.
+        if (degraded && walletApplication.isSafeModeLaunch && degradedScreenShownInProcess &&
+            !walletApplication.isWalletWipeRecoveryRequired
+        ) {
             log.warn("safe mode: degraded screen re-entered in the same process — retrying the wallet load")
             // The load runs off the main thread; stay on this screen, showing
             // the retry in progress, until it reports back.
@@ -439,12 +443,18 @@ class OnboardingActivity : RestoreFromFileActivity() {
      * create/restore flows would overwrite the existing wallet file.
      */
     private fun showDegradedStartupScreen() {
-        val recoveryFromSeedNeeded = walletApplication.isWalletRecoveryFromSeedNeeded
-        val safeMode = walletApplication.isSafeModeLaunch
         // Only the FIRST show pops the report dialog — a retry that fails must
         // not re-open it on top of the screen the user just came back to.
         val firstShow = !degradedScreenShownInProcess
         degradedScreenShownInProcess = true
+        // An unfinished wipe outranks every other recovery action here: see
+        // degradedScreenActions.
+        val actions = degradedScreenActions(
+            wipeRecoveryRequired = walletApplication.isWalletWipeRecoveryRequired,
+            safeMode = walletApplication.isSafeModeLaunch,
+            recoveryFromSeedNeeded = walletApplication.isWalletRecoveryFromSeedNeeded,
+            firstShow = firstShow
+        )
         binding.composeContainer.setContent {
             Column(
                 modifier = Modifier
@@ -452,7 +462,15 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     .padding(20.dp, 10.dp, 20.dp, 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (safeMode && !recoveryFromSeedNeeded) {
+                if (actions.showWipeRecoveryMessage) {
+                    Text(
+                        text = stringResource(R.string.wallet_wipe_recovery_required),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                if (actions.offerSafeModeRetry) {
                     // Safe mode SKIPPED the load — nothing is known to be
                     // broken, so say so and offer the way back in.
                     Text(
@@ -471,7 +489,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                         isLoading = safeModeRetryInProgress
                     )
                 }
-                if (recoveryFromSeedNeeded) {
+                if (actions.offerSeedRecovery) {
                     // Both the primary wallet file AND the key backup are
                     // unusable — say so, and offer the ONLY remaining path.
                     Text(
@@ -492,7 +510,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     onClick = { showDegradedStartupReportDialog() },
                     modifier = Modifier.fillMaxWidth(),
                     text = stringResource(R.string.report_issue_dialog_report),
-                    style = if (recoveryFromSeedNeeded || safeMode) Style.TintedWhite else Style.FilledWhiteBlue,
+                    style = if (actions.reportIsPrimary) Style.FilledWhiteBlue else Style.TintedWhite,
                     size = Size.Large
                 )
                 DashButton(
@@ -504,7 +522,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 )
             }
         }
-        if (firstShow) {
+        if (actions.autoShowReport) {
             showDegradedStartupReportDialog()
         }
         // A degraded launch that OPENED is a launch that reached its UI: the
@@ -570,6 +588,13 @@ class OnboardingActivity : RestoreFromFileActivity() {
      * renamed it), then run the standard restore-from-seed flow.
      */
     private fun recoverFromSeedAfterFailedLoad() {
+        if (walletApplication.isWalletReplacementRefused) {
+            // A wipe marker is on disk: renaming the old file or restoring a
+            // replacement under it is exactly what must not happen.
+            log.warn("degraded startup: restore-from-seed refused — a wallet reset is unfinished")
+            showDegradedStartupScreen()
+            return
+        }
         log.warn("degraded startup: user chose restore-from-seed; preserving any existing wallet file aside")
         walletApplication.preserveWalletFileForRecovery()
         recoverWalletFromSeedPhrase()
@@ -616,6 +641,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun initViewModel() {
         viewModel.showToastAction.observe(this) {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+        }
+
+        viewModel.walletReplacementRefusedAction.observe(this) {
+            // The wipe guard latched: the degraded screen explains it.
+            redirectDegradedWallet(walletApplication)
         }
 
         viewModel.finishCreateNewWalletAction.observe(this) {

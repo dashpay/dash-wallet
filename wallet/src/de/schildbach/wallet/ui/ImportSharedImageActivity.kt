@@ -61,7 +61,8 @@ class ImportSharedImageActivity : AppCompatActivity() {
         // retry reading the wallet would wait on the main thread for the
         // retry's parse.
         val walletApplication = application as WalletApplication
-        if (walletApplication.isWalletLoadDegraded || walletApplication.wallet == null) {
+        if (redirectDegradedWallet(walletApplication)) return
+        if (walletApplication.wallet == null) {
             setResult(RESULT_CANCELED)
             finish()
             return

@@ -94,7 +94,7 @@ object WalletApplicationExt {
                     pending = { WalletWipeState.isPending(filesDir) },
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
                     destroy = { destroyWalletData() },
-                    markComplete = { WalletWipeState.complete(filesDir) }
+                    markComplete = { markWalletWipeComplete() }
                 )
             }.onFailure {
                 rethrowCancellation(it)
@@ -108,6 +108,10 @@ object WalletApplicationExt {
                 resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, wipeFinished) {
                     WalletWipeState.pendingOrNull(filesDir)
                 }
+                // Before the flag drops: onboarding re-routes on it, and an
+                // unfinished wipe must route to the degraded screen, not to
+                // create/restore.
+                recordWalletWipeStopped()
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
@@ -145,6 +149,9 @@ object WalletApplicationExt {
         notifyWalletWipeListeners()
         destroyWalletSecrets()
         clearDatabasesInner(isWalletWipe = true)
+        // Last, so every other step still runs: a surviving primary or key
+        // backup throws here, keeping the wipe marker for the next launch.
+        confirmWalletSourcesDestroyed()
     }
 
     /**
@@ -174,12 +181,22 @@ object WalletApplicationExt {
     }
 
     /**
+     * The awaited form of [clearDatabasesForRescan], for a backup-recovered
+     * wallet's owed reset: its marker may only be removed once every store
+     * is clear. Returns false when any step failed, so the marker stays and
+     * the next launch resets again.
+     */
+    suspend fun WalletApplication.clearDatabasesForRecoveryReset(): Boolean =
+        clearDatabasesInner(isWalletWipe = false)
+
+    /**
      * Every step is failure-contained: one failing store (most notably
      * the platform metadata push inside [PlatformSyncService.clearDatabases])
      * must never abort the remaining clears — that partial-clear mode is
      * exactly the resurrected-DashPay-UI bug.
      */
-    private suspend fun WalletApplication.clearDatabasesInner(isWalletWipe: Boolean) {
+    private suspend fun WalletApplication.clearDatabasesInner(isWalletWipe: Boolean): Boolean {
+        var cleared = true
         // Stop the platform sync machinery BEFORE any clear: "Reset Wallet"
         // does not restart the process, and shutdown() gates its cancel on an
         // identity still being present — so an in-flight sync iteration
@@ -188,9 +205,9 @@ object WalletApplicationExt {
         // the clears below. Sync restarts naturally with the next blockchain
         // service start.
         runCatching { platformSyncService.stopSync() }
-            .onFailure { rethrowCancellation(it); log.warn("platform-sync stop failed during reset", it) }
+            .onFailure { rethrowCancellation(it); cleared = false; log.warn("platform-sync stop failed during reset", it) }
         runCatching { platformSyncService.clearDatabases() }
-            .onFailure { rethrowCancellation(it); log.warn("platform-sync clear failed during reset", it) }
+            .onFailure { rethrowCancellation(it); cleared = false; log.warn("platform-sync clear failed during reset", it) }
         if (isWalletWipe) {
             // SDK twin of the platform-sync resurrection guard above: destroy
             // this wallet's SDK state (bound wallet + binder latch) so the NEXT
@@ -199,9 +216,9 @@ object WalletApplicationExt {
             // staying hidden after a "Reset this wallet". Wipe only: the restore
             // path re-binds to the restored seed instead of destroying it.
             runCatching { l1ShadowSyncService.clearForWalletWipe() }
-                .onFailure { rethrowCancellation(it); log.warn("SDK wallet clear failed during wipe", it) }
+                .onFailure { rethrowCancellation(it); cleared = false; log.warn("SDK wallet clear failed during wipe", it) }
             runCatching { transactionMetadataProvider.clear() }
-                .onFailure { rethrowCancellation(it); log.warn("tx-metadata clear failed during wipe", it) }
+                .onFailure { rethrowCancellation(it); cleared = false; log.warn("tx-metadata clear failed during wipe", it) }
             // Phase 5d PER-WALLET cutover reset: the cutover state is
             // per-install-persisted. Put it back to DUAL_RUNNING so the next
             // (restored/created) wallet re-runs its own immediate commit and
@@ -210,7 +227,7 @@ object WalletApplicationExt {
             // on its own), so the reset is about the UI seams' ownership
             // reads, not about which engine runs.
             runCatching { cutoverCoordinator.resetForWalletWipe() }
-                .onFailure { rethrowCancellation(it); log.warn("cutover state reset failed during wipe", it) }
+                .onFailure { rethrowCancellation(it); cleared = false; log.warn("cutover state reset failed during wipe", it) }
             // The reset above only persists DUAL_RUNNING; the SDK tx pipeline
             // stops when that emission reaches its gate, and nothing waits for
             // it. Cancel AND join it here — even when the reset failed —
@@ -218,11 +235,11 @@ object WalletApplicationExt {
             // the wiped wallet's pages re-writes them into tx_display_cache /
             // tx_group_cache. It stays fenced until resumeAfterWalletWipe.
             runCatching { cutoverUiDataService.stopForWalletWipe() }
-                .onFailure { rethrowCancellation(it); log.warn("SDK UI pipeline stop failed during wipe", it) }
+                .onFailure { rethrowCancellation(it); cleared = false; log.warn("SDK UI pipeline stop failed during wipe", it) }
         }
         try {
             runCatching { identityRepository.clearDatabase(isWalletWipe) }
-                .onFailure { rethrowCancellation(it); log.warn("identity/DashPay clear failed during reset", it) }
+                .onFailure { rethrowCancellation(it); cleared = false; log.warn("identity/DashPay clear failed during reset", it) }
             // A wipe starts a new wallet, so its history must go. A rescan keeps
             // the rows post-cutover — the SDK still holds every transaction
             // (MO-1054); see clearDatabaseForRescan.
@@ -233,7 +250,7 @@ object WalletApplicationExt {
                     txDisplayCacheService.clearDatabaseForRescan()
                 }
             }
-                .onFailure { rethrowCancellation(it); log.warn("tx-display-cache clear failed during reset", it) }
+                .onFailure { rethrowCancellation(it); cleared = false; log.warn("tx-display-cache clear failed during reset", it) }
         } finally {
             // Caches are clear: re-arm the SDK pipeline for the next wallet
             // explicitly — a failed cutover reset leaves CUT_OVER unchanged,
@@ -251,7 +268,8 @@ object WalletApplicationExt {
         // live: the duck-say overnight restore ran with no SDK engine).
         runCatching { dashPayConfig.seedDebugDefaultsIfUnset() }
             .onFailure { rethrowCancellation(it); log.warn("debug-flag re-seed failed after reset", it) }
-        log.info("databases cleared (isWalletWipe = {})", isWalletWipe)
+        log.info("databases cleared (isWalletWipe = {}, all steps succeeded = {})", isWalletWipe, cleared)
+        return cleared
     }
 
     /**
