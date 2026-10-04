@@ -3096,8 +3096,12 @@ class CutoverUiDataService internal constructor(
      * ## Why it is not cached
      *
      * Unlike the receive address there is no screen to keep warm: every caller
-     * consumes this immediately at spend time. Caching would also make two
-     * successive self-transfers share one destination for no benefit.
+     * consumes this immediately at spend time, so a cache would buy nothing.
+     * NOT caching does not buy anything either: it does not keep two successive
+     * self-transfers apart, because nothing is reserved and both therefore draw
+     * the same next-unused address anyway (see the residual below). An earlier
+     * version of this comment offered that separation as the reason not to
+     * cache and was wrong.
      *
      * ## KNOWN RESIDUAL — this is NOT an isolation guarantee
      *
@@ -3113,10 +3117,63 @@ class CutoverUiDataService internal constructor(
      *
      * What this destination does buy is avoiding the EASIER attack: the engine's
      * receive chain would hand self-transfers the very address the Receive screen
-     * is advertising, which anyone holding an unpaid QR can watch. Closing the
-     * residual needs an SDK allocation mechanism competing change builders
-     * honour — no reservation or dedicated-pool API is exposed at v42int21 — or
-     * a maintainer decision to accept it.
+     * is advertising, which anyone holding an unpaid QR can watch.
+     *
+     * ## How long the collision window actually is
+     *
+     * Longer than the build. The engine marks an internal address USED when it
+     * OBSERVES the spending transaction on the network, not when a builder
+     * picks it, so C stays drawable by the engine's own change selection until
+     * the self-transfer has been broadcast AND seen. For the unshield that is
+     * up to ~10 MINUTES, not seconds: the withdrawal runs through the platform
+     * withdrawal queue (the `ProvingOverlay` parameter KDoc in
+     * `ui/shielded/ShieldedTransferScreen.kt` records the up-to-10-minute wait
+     * for this direction), and that overlay is dismissable — its Hide button
+     * leaves the spend running on the app scope and hands the user back a
+     * working wallet, so sending an ordinary payment mid-withdrawal is an
+     * expected thing to do, and an ordinary payment is exactly the builder that
+     * can draw C. The other two callers, the paper-wallet sweep
+     * ([de.schildbach.wallet.ui.payments.SweepWalletFragment]) and the
+     * post-upgrade CoinJoin combine ([CoinJoinFundsMigrationService]), broadcast
+     * within seconds, so their windows are short. The unshield's is not.
+     *
+     * ## What the SDK would have to give us
+     *
+     * An allocation mechanism that competing change builders honour. The pinned
+     * AAR does not expose one (`dashSdkVersion` in the root `build.gradle` —
+     * `0.1.0-v42int27-SNAPSHOT` at the time of writing; re-read it rather than
+     * trusting this number). Two things qualify that, both checked against the
+     * pinned artifacts:
+     *
+     * - A change address can be PINNED, just not RESERVED.
+     *   `CoreTransactionBuilder.setChangeAddress$sdk_release(String)` is
+     *   present in the AAR's bytecode and bound through
+     *   `WalletManagerNative.coreTxBuilderSetChangeAddress` to the exported FFI
+     *   symbol `core_wallet_tx_builder_set_change_address`; [CoreSendAllNative]
+     *   is the in-tree precedent for reaching an SDK-`internal` `$sdk_release`
+     *   member from Java. But it only names a change output on ONE build — it
+     *   does not take the address out of the pool, so a concurrent builder can
+     *   still draw the same one. Whether a pinned address even wins over the
+     *   pool draw is a Rust-side detail NOT verified here; read key-wallet's
+     *   transaction builder before relying on it.
+     * - Upstream is reported to have the reservation primitive already, on the
+     *   RECEIVE side: key-wallet's `AddressPool` with
+     *   `AddressState::{Available, Reserved, Used}`, `next_unused_and_reserve`,
+     *   `release_reservation` and `sweep_expired_reservations`, where
+     *   `next_unused` already skips `Reserved`. That is a reading of the Rust
+     *   tree and not necessarily of the revision THIS AAR was built from, so
+     *   re-check it before quoting it. What is verified here is the gap: none of
+     *   it is exported from the pinned `libdash_sdk_jni.so`. Its entire
+     *   address-pool surface is read-only (`address_pool_get_*`,
+     *   `managed_*_get_*_address_pool`) plus `core_wallet_next_change_address` /
+     *   `core_wallet_next_receive_address` — no `*_and_reserve`, no release, no
+     *   sweep, and no internal-chain (change) counterpart of the receive-side
+     *   trio. (The `releaseReservation` that the SDK DOES expose reserves UTXOs
+     *   for a pending spend, not addresses.)
+     *
+     * So closing this needs an upstream change — bridge the receive-side
+     * reservation to FFI and give the internal chain its own — or a maintainer
+     * decision to accept the residual.
      *
      * Generation-validated exactly like [sdkReceiveAddressLiveBlockingOrNull]:
      * an answer produced for a binding that has since been wiped is discarded
