@@ -3156,14 +3156,20 @@ class CutoverUiDataService internal constructor(
      *   still draw the same one. Whether a pinned address even wins over the
      *   pool draw is a Rust-side detail NOT verified here; read key-wallet's
      *   transaction builder before relying on it.
-     * - Upstream is reported to have the reservation primitive already, on the
-     *   RECEIVE side: key-wallet's `AddressPool` with
-     *   `AddressState::{Available, Reserved, Used}`, `next_unused_and_reserve`,
-     *   `release_reservation` and `sweep_expired_reservations`, where
-     *   `next_unused` already skips `Reserved`. That is a reading of the Rust
-     *   tree and not necessarily of the revision THIS AAR was built from, so
-     *   re-check it before quoting it. What is verified here is the gap: none of
-     *   it is exported from the pinned `libdash_sdk_jni.so`. Its entire
+     * - Upstream already HAS the reservation primitive, on the RECEIVE side.
+     *   Verified in key-wallet at `rust-dashcore@f3dc260`:
+     *   `AddressState::{Available, Reserved { at }, Used }`
+     *   (`address_pool.rs:222`), `AddressPool::next_unused_and_reserve` (`:649`),
+     *   `release_reservation` (`:690`), `sweep_expired_reservations` (`:713`),
+     *   and `next_unused` (`:580`) gates on `is_available()`, so it ALREADY
+     *   skips `Reserved` — a reservation would compose with the engine's own
+     *   change selection with no change to the selector. The receive-side trio
+     *   is on `ManagedCoreFundsAccount` (`managed_core_funds_account.rs:1077`,
+     *   `:1112`, `:1137`); there is NO change-side counterpart. That revision is
+     *   not proven to be the one THIS AAR was built from, so confirm line
+     *   numbers against the build revision before quoting them. What is verified
+     *   against the pinned artifact is the gap: none of it is exported from
+     *   `libdash_sdk_jni.so`. Its entire
      *   address-pool surface is read-only (`address_pool_get_*`,
      *   `managed_*_get_*_address_pool`) plus `core_wallet_next_change_address` /
      *   `core_wallet_next_receive_address` — no `*_and_reserve`, no release, no
@@ -3173,7 +3179,11 @@ class CutoverUiDataService internal constructor(
      *
      * So closing this needs an upstream change — bridge the receive-side
      * reservation to FFI and give the internal chain its own — or a maintainer
-     * decision to accept the residual.
+     * decision to accept the residual. Filed upstream as dashpay/platform#5276;
+     * this codebase currently takes the latter course deliberately, because the
+     * alternatives are worse: the engine's RECEIVE chain is the advertised QR,
+     * and the held dashj chain hands back an address the wallet has ALREADY been
+     * paid on (that is SR-03, the defect this file exists to fix).
      *
      * Generation-validated exactly like [sdkReceiveAddressLiveBlockingOrNull]:
      * an answer produced for a binding that has since been wiped is discarded
