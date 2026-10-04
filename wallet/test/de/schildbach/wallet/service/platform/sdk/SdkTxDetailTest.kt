@@ -392,4 +392,94 @@ class SdkTxDetailTest {
             unmockkObject(TransactionDecoder)
         }
     }
+
+    // ── D-M-01: the fee is never counted twice ────────────────────────
+
+    /**
+     * [SdkTxDetailProvider.load] for a send whose history row holds [cachedValue],
+     * with the SDK row's [storedNet]/[storedFee] — decode forced to fail so only the
+     * row-to-net reconstruction is under test.
+     */
+    private fun detailNetFor(
+        cachedValue: Long,
+        storedNet: Long,
+        storedFee: Long?,
+        storedDirection: Int,
+        contactUserId: String? = null
+    ): Long {
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns storedNet
+            every { fee } returns storedFee
+            every { context } returns 3
+            every { direction } returns storedDirection
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val db = mockk<DashDatabase> {
+            every { transactionDao() } returns mockk<TransactionDao> { coEvery { getByTxid(any()) } returns entity }
+            every { txoDao() } returns mockk()
+        }
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+        }
+        val row = de.schildbach.wallet.database.entity.TxDisplayCacheEntry(
+            rowId = decoded.txidDisplayHex,
+            title = "Sent",
+            valueSatoshis = cachedValue,
+            iconType = de.schildbach.wallet.database.entity.TxDisplayCacheEntry.ICON_SENT,
+            iconBgType = de.schildbach.wallet.database.entity.TxDisplayCacheEntry.BG_SENT,
+            statusText = "",
+            comment = "",
+            transactionAmount = 1,
+            time = 1_770_000_000_000L,
+            hasErrors = false,
+            service = null,
+            exchangeRateFiatCode = null,
+            exchangeRateFiatValue = null,
+            contactUsername = contactUserId?.let { "friend" },
+            contactDisplayName = null,
+            contactAvatarUrl = null,
+            contactUserId = contactUserId,
+            filterFlags = de.schildbach.wallet.database.entity.TxDisplayCacheEntry.FLAG_SENT
+        )
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns listOf(row)
+        }
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } throws UnsatisfiedLinkError("no decode in this test")
+            return requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true))
+                        .load(decoded.txidDisplayHex)
+                }
+            ).netAmountDuffs
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    @Test
+    fun `contact send keeps its fee-inclusive net once the walker recovers the fee`() {
+        // The SDK row shows only the +change; the history row holds the engine's
+        // signed net, fee included. Before and after the fee is persisted.
+        val before = detailNetFor(-10_000_227L, storedNet = 499_773L, storedFee = null, storedDirection = 0, contactUserId = "id")
+        val after = detailNetFor(-10_000_227L, storedNet = 499_773L, storedFee = 227L, storedDirection = 0, contactUserId = "id")
+        assertEquals(-10_000_227L, before)
+        assertEquals(-10_000_227L, after) // not −10 000 454
+    }
+
+    @Test
+    fun `send still cached with its fee is not counted twice`() {
+        // Fee persisted, history row not yet corrected by the next planner pass.
+        assertEquals(-10_000_227L, detailNetFor(-10_000_227L, storedNet = -10_000_227L, storedFee = 227L, storedDirection = 1))
+    }
+
+    @Test
+    fun `fee-free send gets its fee back for the detail sheet`() {
+        assertEquals(-10_000_227L, detailNetFor(-10_000_000L, storedNet = -10_000_227L, storedFee = 227L, storedDirection = 1))
+    }
 }

@@ -203,6 +203,32 @@ internal fun buildSdkTxDetail(
 
 private const val OP_RETURN = 0x6a.toByte()
 
+/**
+ * The true signed wallet net of a transaction whose plain send/receive
+ * history row ([cachedValue], non-zero) overrides the SDK record's direction
+ * and amount in the detail sheet — so a sent amount renders the dashj way:
+ * |net| as the amount, the fee shown separately.
+ *
+ * - A receive's cached value IS its net.
+ * - A contact send's cached value is the engine's signed net
+ *   ([SdkTxContactResolver.signedNetsFor]: owned outputs − owned inputs), so
+ *   it already includes the fee.
+ * - A row still holding the record's fee-included net (cached before the fee
+ *   was known, and not yet corrected by [withoutCachedFee]) is the net too.
+ * - Every other send is cached as its principal only
+ *   ([L1TxUiRecord.sentValueWithoutFeeDuffs]): the net is −(|principal| + fee).
+ *
+ * The middle two used to be indistinguishable from the last only because the
+ * store's fee column was always NULL; once the walker persists recovered fees
+ * (D-M-01), adding the fee to them would count it twice. Pure — host-testable.
+ */
+internal fun detailSignedNet(cachedValue: Long, isContactRow: Boolean, record: L1TxUiRecord): Long = when {
+    cachedValue > 0L -> cachedValue
+    isContactRow -> cachedValue
+    cachedValue == record.netAmountDuffs -> cachedValue
+    else -> -(kotlin.math.abs(cachedValue) + (record.feeDuffs ?: 0L))
+}
+
 /** Display-order txid hex → 32 wire-order bytes, or null when malformed. */
 internal fun displayTxIdToWireBytes(txIdDisplayHex: String): ByteArray? {
     if (txIdDisplayHex.length != 64 || !txIdDisplayHex.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
@@ -292,9 +318,9 @@ class SdkTxDetailProvider @Inject constructor(
         // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
         // service rows keep the SDK direction. Sign convention (Bug A):
         // - INCOMING: the cached value IS the received net → use it directly.
-        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only (it excludes the
-        //   fee), so reconstruct the true signed net = -(|principal| + fee) so a sent amount
-        //   renders the same way the dashj path does (|net| amount, fee shown separately).
+        // - OUTGOING: see [detailSignedNet] — the cached value is usually the principal
+        //   only (fee excluded), but not for a contact send or a row still cached with
+        //   its fee, and adding the fee to those would count it twice.
         val cacheEntry = txDisplayCacheDao
             .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
             .firstOrNull()
@@ -309,11 +335,7 @@ class SdkTxDetailProvider @Inject constructor(
             } else {
                 L1TxUiDirection.INCOMING
             }
-            val net = if (cachedDirection == L1TxUiDirection.INCOMING) {
-                cachedValue
-            } else {
-                -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
-            }
+            val net = detailSignedNet(cachedValue, isContactRow = cacheEntry.contactUserId != null, baseRecord)
             baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
         } else {
             baseRecord
