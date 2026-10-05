@@ -37,6 +37,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.NonCancellable
+import org.bitcoinj.core.Sha256Hash
 import org.dashfoundation.dashsdk.wallet.SpvSubProgress
 import org.dashfoundation.dashsdk.wallet.SpvSyncProgressData
 import org.dashfoundation.dashsdk.wallet.SpvSyncState
@@ -169,6 +170,18 @@ class L1ShadowSyncServiceTest {
 
         override suspend fun dashjUnspentUtxos(): List<L1Utxo>? = dashjUtxos
 
+        // The parity breakdown's two inputs; null = unavailable (the seam default).
+        var sdkTxidHeights: Map<Sha256Hash, Int>? = null
+        var dashjFacts: DashjBreakdownFacts? = null
+        var breakdownDashjCalls = 0
+
+        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, Int>? = sdkTxidHeights
+
+        override suspend fun dashjBreakdownFacts(sdkTxids: Set<Sha256Hash>): DashjBreakdownFacts? {
+            breakdownDashjCalls++
+            return dashjFacts
+        }
+
         override suspend fun clearSpvStorage() {
             clearSpvStorageCalls++
         }
@@ -264,7 +277,8 @@ class L1ShadowSyncServiceTest {
         destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
         flagGate: () -> CompletableDeferred<Unit>? = { null },
         scanMayAdvance: suspend (String) -> Boolean = { true },
-        scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS
+        scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
+        breakdownStore: ParityBreakdownStore? = null
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -279,7 +293,8 @@ class L1ShadowSyncServiceTest {
         bringUpStopJoinMs = bringUpStopJoinMs,
         destructiveBringUpJoinMs = destructiveBringUpJoinMs,
         scanMayAdvance = scanMayAdvance,
-        scanGateRetryInitialMs = scanGateRetryInitialMs
+        scanGateRetryInitialMs = scanGateRetryInitialMs,
+        breakdownStore = breakdownStore
     )
 
     /**
@@ -3498,6 +3513,132 @@ class L1ShadowSyncServiceTest {
             service.verificationStatus.value
         )
         assertEquals("the probe must not run against a frozen engine", 0, probes)
+        service.stop()
+    }
+
+    // ── Transaction-level parity breakdown (service-level) ────────────
+
+    private val sharedTxid = Sha256Hash.wrap("11".repeat(32))
+    private val dashjOnlyTxid = Sha256Hash.wrap("22".repeat(32))
+
+    private fun breakdownSource() = FakeSource(boundWalletId = walletIdHex).apply {
+        sdkTxidHeights = mapOf(sharedTxid to 900)
+        dashjFacts = DashjBreakdownFacts(
+            lastBlockSeenHeight = 1_000,
+            txs = listOf(DashjTxFacts(sharedTxid, 900), DashjTxFacts(dashjOnlyTxid, 950, netDuffs = -5))
+        )
+    }
+
+    /** Re-drive SYNCED edges (each pings the parity loop) until [done] or the timeout. */
+    private suspend fun FakeSource.driveSyncedEdgesUntil(done: () -> Boolean) {
+        withTimeout(5_000) {
+            while (!done()) {
+                progressFlow.value = SpvSyncProgressData.EMPTY
+                progressFlow.value = synced
+                delay(10)
+            }
+        }
+    }
+
+    @Test
+    fun heldDashj_runsTheParityBreakdownOncePerDay_andKeepsItAcrossARestart() = runBlocking {
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        var now = 1_000_000L
+        val service = service(
+            source,
+            nowMs = { now },
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        assertTrue(service.startIfEnabled())
+        source.driveSyncedEdgesUntil { ParityBreakdownStore(file).load() != null }
+
+        val first = checkNotNull(service.latestParityBreakdown())
+        assertTrue(first.text, first.text.startsWith("ParityBreakdown "))
+        assertTrue(first.text, first.text.contains("trigger=held dashjLastBlockSeenHeight=1000"))
+        assertTrue(first.text, first.text.contains("| shared=1"))
+        assertTrue(first.text, first.text.contains("moves-money=1 net=-5"))
+        assertEquals(first, ParityBreakdownStore(file).load())
+        assertEquals(1, source.breakdownDashjCalls)
+
+        // More probe-loop ticks the same day: no second run.
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        service.stop()
+
+        // A restart an hour later reads the kept result: still not due.
+        now += 60 * 60_000L
+        val restarted = service(
+            source,
+            nowMs = { now },
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        assertTrue(restarted.startIfEnabled())
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        assertEquals(first, restarted.latestParityBreakdown())
+        restarted.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_runsTheParityBreakdownWithTheProbeTrigger() = runBlocking {
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        source.driveSyncedEdgesUntil { service.latestParityBreakdown() != null }
+        val text = checkNotNull(service.latestParityBreakdown()).text
+        assertTrue(text, text.contains("trigger=probe"))
+        service.stop()
+    }
+
+    @Test
+    fun parityBreakdown_doesNotRunWithoutTheDiagnosticBeforeTheCutover_orBeforeSync() = runBlocking {
+        val source = breakdownSource()
+        // Pre-cutover, diagnostic off: the probe runs, the breakdown does not.
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(0, source.breakdownDashjCalls)
+        service.stop()
+
+        // Held, but the SDK has not caught up: its txid set could be partial.
+        source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))
+        val held = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        assertTrue(held.startIfEnabled())
+        delay(50)
+        assertEquals(0, source.breakdownDashjCalls)
+        assertNull(held.latestParityBreakdown())
+        held.stop()
+    }
+
+    @Test
+    fun parityBreakdown_unavailableSide_isSkippedAndBackedOff() = runBlocking {
+        val source = breakdownSource().apply { dashjFacts = null }
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        assertTrue(service.startIfEnabled())
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls > 0 }
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        // One attempt, then the retry back-off (the test clock stands still).
+        assertEquals(1, source.breakdownDashjCalls)
+        assertNull(service.latestParityBreakdown())
         service.stop()
     }
 }

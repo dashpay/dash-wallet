@@ -34,6 +34,8 @@ import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ParityReport
+import de.schildbach.wallet.service.platform.sdk.StoredParityBreakdown
+import de.schildbach.wallet.service.platform.sdk.parityBreakdownReportSection
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.NativeLogBridge
@@ -488,10 +490,13 @@ class ContactSupportViewModel @Inject constructor(
         try {
             val diagnosticEnabled = dashPayConfig.getDashjSyncDiagnostic()
             val parityHistory = dashjDiagnosticSyncState.parityHistory()
-            if (diagnosticEnabled || parityHistory.isNotEmpty()) {
+            // A breakdown also runs, daily, while dashj is held with the
+            // diagnostic off — attach the log whenever one exists.
+            val parityBreakdown = l1ShadowSyncService.latestParityBreakdown()
+            if (diagnosticEnabled || parityHistory.isNotEmpty() || parityBreakdown != null) {
                 val parityLogFile = File(reportDir, "dashJ-kotlin-parity-log.txt")
                 FileWriter(parityLogFile).use { writer ->
-                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory))
+                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory, parityBreakdown))
                 }
                 attachments.add(
                     FileProvider.getUriForFile(
@@ -613,12 +618,14 @@ class ContactSupportViewModel @Inject constructor(
      * The content of the `dashJ-kotlin-parity-log.txt` support-log attachment:
      * the current diagnostic state (percent + verdict), the SDK wallet's
      * unspent/total TXO counts (500-input standard-tx cap check), the latest
-     * [ParityReport] from the L1 shadow harness, and the recent parity
-     * history recorded by [DashjDiagnosticSyncState.recordParity].
+     * [ParityReport] from the L1 shadow harness, the latest transaction-level
+     * breakdown ([L1ShadowSyncService.latestParityBreakdown]), and the recent
+     * parity history recorded by [DashjDiagnosticSyncState.recordParity].
      */
     private fun buildDashjKotlinParityLog(
         diagnosticEnabled: Boolean,
-        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>
+        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>,
+        parityBreakdown: StoredParityBreakdown?
     ): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US)
         fun formatReport(r: ParityReport): String =
@@ -671,6 +678,8 @@ class ContactSupportViewModel @Inject constructor(
 
         text.append("\n--- latest parity report ---\n")
         text.append(latest?.let { formatReport(it) } ?: "none").append('\n')
+
+        text.append(parityBreakdownReportSection(parityBreakdown) { dateFormat.format(Date(it)) })
 
         text.append("\n--- parity history (oldest first, up to 50 entries) ---\n")
         if (parityHistory.isEmpty()) {
