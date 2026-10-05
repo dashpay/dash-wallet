@@ -3124,14 +3124,28 @@ class CutoverUiDataService internal constructor(
      * OBSERVES the spending transaction on the network, not when a builder
      * picks it, so C stays drawable by the engine's own change selection until
      * the self-transfer has been broadcast AND seen. For the unshield that is
-     * up to ~10 MINUTES, not seconds: the withdrawal runs through the platform
-     * withdrawal queue (the `ProvingOverlay` parameter KDoc in
-     * `ui/shielded/ShieldedTransferScreen.kt` records the up-to-10-minute wait
-     * for this direction), and that overlay is dismissable — its Hide button
-     * leaves the spend running on the app scope and hands the user back a
-     * working wallet, so sending an ordinary payment mid-withdrawal is an
-     * expected thing to do, and an ordinary payment is exactly the builder that
-     * can draw C. The other two callers, the paper-wallet sweep
+     * MINUTES rather than seconds, because the withdrawal runs through the
+     * platform withdrawal queue. Two numbers, carrying very different weight:
+     *
+     * - MEASURED, ONE SAMPLE: 91 seconds from submit to the spending output
+     *   being visible to a testnet `dashd` (first confirmation at 2 min 13 s).
+     *   One unshield, on one emulator, against testnet, on this head — a
+     *   single observation, not a distribution, so read it as the order of
+     *   magnitude and nothing more. From the QA disposable-wallet device run
+     *   of 2026-10-05, `pr1570-disposable-wallet-verification.md`.
+     * - STATED UPPER BOUND: ~10 minutes. That is the app's own user-facing
+     *   promise (the `ProvingOverlay` parameter KDoc in
+     *   `ui/shielded/ShieldedTransferScreen.kt`, and the confirm sheet's "Up
+     *   to 10 minutes to spend"), not a measurement of what the queue does.
+     *   An earlier version of this comment quoted it as the window's actual
+     *   length, which overstated it.
+     *
+     * Either figure leaves the window open long enough to matter, and the
+     * overlay is dismissable — its Hide button leaves the spend running on
+     * the app scope and hands the user back a working wallet, so sending an
+     * ordinary payment mid-withdrawal is an expected thing to do, and an
+     * ordinary payment is exactly the builder that can draw C. The other two
+     * callers, the paper-wallet sweep
      * ([de.schildbach.wallet.ui.payments.SweepWalletFragment]) and the
      * post-upgrade CoinJoin combine ([CoinJoinFundsMigrationService]), broadcast
      * within seconds, so their windows are short. The unshield's is not.
