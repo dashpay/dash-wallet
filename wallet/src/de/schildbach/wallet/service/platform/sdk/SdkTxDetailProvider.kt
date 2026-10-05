@@ -142,20 +142,8 @@ internal fun buildSdkTxDetail(
 ): SdkTxDetail {
     val outputs = decoded?.outputs.orEmpty()
 
-    // Fee: the SDK-recorded fee wins; otherwise Σin−Σout, but ONLY when
-    // every input's spent value is wallet-known (a single unknown input
-    // makes the subtraction meaningless). A negative result means
-    // inconsistent data — show nothing rather than a fabricated fee.
-    val derivedFee = if (
-        decoded != null && decoded.inputs.isNotEmpty() &&
-        inputTxoValues.size == decoded.inputs.size && inputTxoValues.all { it != null }
-    ) {
-        (inputTxoValues.filterNotNull().sum() - outputs.sumOf { it.valueDuffs })
-            .takeIf { it >= 0 }
-    } else {
-        null
-    }
-    val fee = record.feeDuffs ?: derivedFee
+    // Fee: the SDK-recorded fee wins; otherwise Σin−Σout ([derivedFeeDuffs]).
+    val fee = record.feeDuffs ?: derivedFeeDuffs(decoded, inputTxoValues)
 
     val allOutputAddresses = outputs.mapNotNull { it.address }.distinct()
     val outputAddresses = when (record.direction) {
@@ -202,6 +190,24 @@ internal fun buildSdkTxDetail(
 }
 
 private const val OP_RETURN = 0x6a.toByte()
+
+/**
+ * Σin−Σout of [decoded], but ONLY when every input's spent value is
+ * wallet-known ([inputTxoValues], parallel to `decoded.inputs`): a single
+ * unknown input makes the subtraction meaningless. A negative result means
+ * inconsistent data — null rather than a fabricated fee. Input TXO values are
+ * known before the send confirms, so this also covers a pending send whose
+ * store fee is still NULL.
+ */
+internal fun derivedFeeDuffs(decoded: DecodedTransaction?, inputTxoValues: List<Long?>): Long? =
+    if (decoded != null && decoded.inputs.isNotEmpty() &&
+        inputTxoValues.size == decoded.inputs.size && inputTxoValues.all { it != null }
+    ) {
+        (inputTxoValues.filterNotNull().sum() - decoded.outputs.sumOf { it.valueDuffs })
+            .takeIf { it >= 0 }
+    } else {
+        null
+    }
 
 /**
  * The true signed wallet net of a transaction whose plain send/receive
@@ -298,10 +304,43 @@ class SdkTxDetailProvider @Inject constructor(
         }
 
         val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
+
+        val decoded = try {
+            TransactionDecoder.decode(
+                entity.transactionData,
+                toSdkNetwork(Constants.NETWORK_PARAMETERS)
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            // Throwable, not Exception: an Exception here is unexpected for
+            // SDK-persisted bytes, while a LinkageError (UnsatisfiedLinkError /
+            // ExceptionInInitializerError) means the JNI library cannot load
+            // on this device's ABI. Either way, degrade to the row-only
+            // detail (same presentation as a decode failure) — never crash.
+            log.error("consensus decode failed for SDK tx {}", txIdDisplayHex, t)
+            null
+        }
+
+        val txoDao = db.txoDao()
+        val myOutputAddresses = mutableSetOf<String>()
+        decoded?.outputs?.forEachIndexed { index, _ ->
+            txoDao.getByOutpoint(txoOutpoint(wireTxid, index))?.let { myOutputAddresses += it.address }
+        }
+        val inputTxos = decoded?.inputs.orEmpty().map { input ->
+            txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
+        }
+
+        // The fee the history list used: the store's, or — while the store still has it
+        // NULL — Σin−Σout from the wallet's input TXOs, which the walker also uses
+        // (persisted, or in memory for a pending send). It must be known before the
+        // cached principal is turned back into a net below, or a pending send's fee is
+        // read as 0 and its amount sent shows without it (D-M-01).
+        val effectiveFee = entity.fee ?: derivedFeeDuffs(decoded, inputTxos.map { it?.amount })
         val baseRecord = l1TxUiRecord(
             txidWireBytes = entity.txid,
             netAmountDuffs = entity.netAmount,
-            feeDuffs = entity.fee,
+            feeDuffs = effectiveFee,
             contextCode = entity.context,
             directionCode = entity.direction,
             firstSeenSec = entity.firstSeen,
@@ -339,32 +378,6 @@ class SdkTxDetailProvider @Inject constructor(
             baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
         } else {
             baseRecord
-        }
-
-        val decoded = try {
-            TransactionDecoder.decode(
-                entity.transactionData,
-                toSdkNetwork(Constants.NETWORK_PARAMETERS)
-            )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            // Throwable, not Exception: an Exception here is unexpected for
-            // SDK-persisted bytes, while a LinkageError (UnsatisfiedLinkError /
-            // ExceptionInInitializerError) means the JNI library cannot load
-            // on this device's ABI. Either way, degrade to the row-only
-            // detail (same presentation as a decode failure) — never crash.
-            log.error("consensus decode failed for SDK tx {}", txIdDisplayHex, t)
-            null
-        }
-
-        val txoDao = db.txoDao()
-        val myOutputAddresses = mutableSetOf<String>()
-        decoded?.outputs?.forEachIndexed { index, _ ->
-            txoDao.getByOutpoint(txoOutpoint(wireTxid, index))?.let { myOutputAddresses += it.address }
-        }
-        val inputTxos = decoded?.inputs.orEmpty().map { input ->
-            txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
         }
 
         // Classify a wallet-authored internal move as a Platform-funding asset

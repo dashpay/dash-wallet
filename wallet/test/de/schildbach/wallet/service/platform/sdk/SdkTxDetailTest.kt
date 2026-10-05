@@ -397,29 +397,44 @@ class SdkTxDetailTest {
 
     /**
      * [SdkTxDetailProvider.load] for a send whose history row holds [cachedValue],
-     * with the SDK row's [storedNet]/[storedFee] — decode forced to fail so only the
-     * row-to-net reconstruction is under test.
+     * with the SDK row's [storedNet]/[storedFee]. With [inputTxoAmount] null the decode
+     * is forced to fail, so only the row-to-net reconstruction is under test; with it
+     * set, the fixture decodes and its one input is a wallet TXO of that amount.
      */
-    private fun detailNetFor(
+    private fun detailFor(
         cachedValue: Long,
         storedNet: Long,
         storedFee: Long?,
         storedDirection: Int,
-        contactUserId: String? = null
-    ): Long {
+        contactUserId: String? = null,
+        storedContext: Int = 3,
+        inputTxoAmount: Long? = null
+    ): SdkTxDetail {
         val entity = mockk<TransactionEntity> {
             every { txid } returns decoded.txid
             every { transactionData } returns rawTxBytes
             every { netAmount } returns storedNet
             every { fee } returns storedFee
-            every { context } returns 3
+            every { context } returns storedContext
             every { direction } returns storedDirection
             every { firstSeen } returns 1_770_000_000L
             every { blockTimestamp } returns 0
         }
         val db = mockk<DashDatabase> {
             every { transactionDao() } returns mockk<TransactionDao> { coEvery { getByTxid(any()) } returns entity }
-            every { txoDao() } returns mockk()
+            every { txoDao() } returns mockk<org.dashfoundation.dashsdk.persistence.dao.TxoDao> {
+                val inputOutpoint = txoOutpoint(decoded.inputs.single().prevTxid, decoded.inputs.single().prevVout)
+                coEvery { getByOutpoint(any()) } answers {
+                    if (inputTxoAmount != null && firstArg<ByteArray>().contentEquals(inputOutpoint)) {
+                        mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+                            every { amount } returns inputTxoAmount
+                            every { address } returns "input-address"
+                        }
+                    } else {
+                        null
+                    }
+                }
+            }
         }
         val sdkService = mockk<DashSdkService> {
             coEvery { ensureStarted() } returns Unit
@@ -450,16 +465,41 @@ class SdkTxDetailTest {
         }
         mockkObject(TransactionDecoder)
         try {
-            every { TransactionDecoder.decode(any(), any()) } throws UnsatisfiedLinkError("no decode in this test")
+            if (inputTxoAmount == null) {
+                every { TransactionDecoder.decode(any(), any()) } throws UnsatisfiedLinkError("no decode in this test")
+            } else {
+                every { TransactionDecoder.decode(any(), any()) } returns decoded
+            }
             return requireNotNull(
                 runBlocking {
                     SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true))
                         .load(decoded.txidDisplayHex)
                 }
-            ).netAmountDuffs
+            )
         } finally {
             unmockkObject(TransactionDecoder)
         }
+    }
+
+    private fun detailNetFor(
+        cachedValue: Long,
+        storedNet: Long,
+        storedFee: Long?,
+        storedDirection: Int,
+        contactUserId: String? = null
+    ): Long = detailFor(cachedValue, storedNet, storedFee, storedDirection, contactUserId).netAmountDuffs
+
+    @Test
+    fun `pending send whose fee is only known in memory shows the amount with its fee`() {
+        // Not yet confirmed: the walker recovers the 247-duff fee from the input
+        // reservation and serves the fee-free row (−70 000), but the store's fee stays
+        // NULL. The sheet derives the same fee from the input TXO instead of reading 0.
+        val detail = detailFor(
+            cachedValue = -70_000L, storedNet = -70_247L, storedFee = null, storedDirection = 1,
+            storedContext = 0, inputTxoAmount = 95_247L
+        )
+        assertEquals(-70_247L, detail.netAmountDuffs) // not −70 000
+        assertEquals(247L, detail.feeDuffs)
     }
 
     @Test
