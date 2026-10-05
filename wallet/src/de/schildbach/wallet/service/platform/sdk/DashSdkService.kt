@@ -390,6 +390,25 @@ interface DashSdkService {
     fun spvRescanArmedWithin(windowMs: Long): Boolean = false
 
     /**
+     * The wallet's DURABLE SPV filter-scan watermark, `WalletEntity.syncedHeight`
+     * in the SDK's Room `wallets` row: the height a restarted process resumes
+     * the filter scan from. [armSpvRescan] only rewinds the in-memory
+     * checkpoint (`PlatformWalletManager.rescanSpvFilters`: if the process dies
+     * before the filter loop consumes the rewind and persists progress, the
+     * request must be reissued), so this is the only evidence that an armed
+     * rewind survives a restart. A pure Room read with no bring-up. Null when
+     * the SDK database is not open, the row does not exist, or the read
+     * failed. Default null so read-only fakes stay source-compatible.
+     */
+    suspend fun durableSpvSyncedHeight(walletIdHex: String): Long? = null
+
+    /**
+     * The height [armSpvRescan] rewinds to for [birthTimeSecs] (the same
+     * time-to-height mapping), or null when unknown. Default null.
+     */
+    fun spvRescanTargetHeight(birthTimeSecs: Long?): Long? = null
+
+    /**
      * The activated wallet manager for the app's network, or null if
      * [ensureStarted] has not completed.
      */

@@ -864,6 +864,40 @@ class DashSdkServiceImpl @Inject constructor(
         false
     }
 
+    /**
+     * Same time→height mapping the bind used for this wallet's birthHeight
+     * (dashj checkpoints; the resolver contains its own failures → 0u/genesis),
+     * so the rescan floor can never sit ABOVE where the wallet's history starts.
+     */
+    private fun spvRescanBirthHeight(birthTimeSecs: Long?): UInt = sdkBirthHeightFor(birthTimeSecs) { time ->
+        BirthHeightResolver(
+            networkParameters = Constants.NETWORK_PARAMETERS,
+            openCheckpoints = { context.assets.open(Constants.Files.CHECKPOINTS_FILENAME) }
+        ).resolve(time)
+    }
+
+    override fun spvRescanTargetHeight(birthTimeSecs: Long?): Long? = try {
+        spvRescanBirthHeight(birthTimeSecs).toLong()
+    } catch (e: Exception) {
+        log.warn("spvRescanTargetHeight failed: {}", e.message)
+        null
+    }
+
+    override suspend fun durableSpvSyncedHeight(walletIdHex: String): Long? = try {
+        val database = databaseOrNull()
+        val walletId = walletIdFromHex(walletIdHex)
+        if (database == null || walletId == null) {
+            null
+        } else {
+            database.walletDao().getByWalletId(walletId)?.syncedHeight?.toLong()
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("durableSpvSyncedHeight failed on {}…: {}", walletIdHex.take(8), e.message)
+        null
+    }
+
     override suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean = try {
         ensureStarted()
         val manager = runtime?.walletManager
@@ -872,16 +906,7 @@ class DashSdkServiceImpl @Inject constructor(
             log.warn("armSpvRescan: SDK manager missing or bad wallet id {}…", walletIdHex.take(8))
             false
         } else {
-            // Same time→height mapping the bind used for this wallet's
-            // birthHeight (dashj checkpoints; resolver contains its own
-            // failures → 0u/genesis), so the rescan floor can never sit
-            // ABOVE where the wallet's history starts.
-            val birthHeight = sdkBirthHeightFor(birthTimeSecs) { time ->
-                BirthHeightResolver(
-                    networkParameters = Constants.NETWORK_PARAMETERS,
-                    openCheckpoints = { context.assets.open(Constants.Files.CHECKPOINTS_FILENAME) }
-                ).resolve(time)
-            }
+            val birthHeight = spvRescanBirthHeight(birthTimeSecs)
             manager.rescanSpvFilters(walletId, birthHeight.toInt())
             // Stamp BEFORE reporting success: the persist gate
             // (spvRescanArmedWithin) must already see the arm when the
