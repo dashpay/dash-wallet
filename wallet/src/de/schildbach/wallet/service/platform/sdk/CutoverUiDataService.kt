@@ -1208,13 +1208,12 @@ interface CutoverUiSource {
      * `ManagedCoreWallet.nextChangeAddress`).
      *
      * The internal chain exists precisely because it is NEVER handed to a payer,
-     * which is what makes it the right destination for moving our OWN money:
-     * the unshield withdrawal and the post-upgrade CoinJoin combine. Both are
-     * self-transfers whose whole point is that nobody can link them to the user.
-     * Paying them to [nextReceiveAddressOrNull] would do the opposite — that
+     * which is what makes it the right destination for moving our OWN money: a
+     * self-transfer's whole point is that nobody can link it to the user.
+     * Paying one to [nextReceiveAddressOrNull] would do the opposite — that
      * address is the one the Receive screen is advertising, so a counterparty
      * who was handed the QR and simply did not pay it can watch it and learn the
-     * withdrawal and its amount.
+     * transfer and its amount.
      *
      * Same null contract, same threading contract and same blocking behaviour as
      * [nextReceiveAddressOrNull]. Default null: sources without a core wallet.
@@ -3050,8 +3049,8 @@ class CutoverUiDataService internal constructor(
      * LIVE engine read of the next unused receive address, bypassing the cache —
      * for callers that are already off the main thread and want the engine's
      * answer as of THIS instant (the Receive screen, the buy/sell integrations'
-     * deposit address). NOT the unshield or CoinJoin-combine destinations —
-     * those are self-transfers and draw from
+     * deposit address). NOT a self-transfer destination — those must never be
+     * paid to an advertised address and draw from
      * [sdkUnadvertisedAddressLiveBlockingOrNull] instead. Publishes what it reads, so
      * the cache the synchronous [sdkReceiveAddressOrNull] serves is refreshed as
      * a side effect.
@@ -3240,12 +3239,15 @@ class CutoverUiDataService internal constructor(
 
     /**
      * [sdkReceiveAddressLiveOrNull] without the coroutine — the whole read is
-     * synchronous (the FFI call needs no suspension), so the Java call sites
-     * that are already on a background thread
-     * ([de.schildbach.wallet.WalletApplication.currentReceiveAddressLive] and
-     * [de.schildbach.wallet.WalletApplication.freshReceiveAddressLive], which
-     * the paper-wallet sweep drives off its background handler) can use it
-     * directly instead of bridging into `runBlocking`.
+     * synchronous (the FFI call needs no suspension), so the two Java accessors
+     * it backs ([de.schildbach.wallet.WalletApplication.currentReceiveAddressLive]
+     * and [de.schildbach.wallet.WalletApplication.freshReceiveAddressLive]),
+     * which are contracted off-main already, can use it directly instead of
+     * bridging into `runBlocking`.
+     *
+     * This is the ADVERTISED address — what a payer is given. A self-transfer
+     * destination never comes from here; it draws from
+     * [sdkUnadvertisedAddressLiveBlockingOrNull] instead.
      *
      * BLOCKS on the engine's wallet-manager write lock — off-main only.
      */

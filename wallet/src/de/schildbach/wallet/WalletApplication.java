@@ -2424,9 +2424,9 @@ public class WalletApplication extends MultiDexApplication
      * {@link #currentReceiveAddress()} with a LIVE engine read instead of the
      * cached one — for callers already off the main thread that want the
      * engine's answer as of this instant (the Receive screen and the QR it
-     * shows, the exchange-integration deposit addresses). NOT the unshield or
-     * CoinJoin-combine destinations: those are self-transfers and must never be
-     * paid to an advertised address — see {@link #unadvertisedDestinationLive()}.
+     * shows, the exchange-integration deposit addresses). NOT a self-transfer
+     * destination: those must never be paid to an advertised address — see
+     * {@link #unadvertisedDestinationLive()}.
      *
      * <p><b>FAILS CLOSED after cutover.</b> There is no safe fallback on that
      * side: the dashj chain is HELD, so its "current" pointer is frozen wherever
@@ -2528,20 +2528,21 @@ public class WalletApplication extends MultiDexApplication
      * A destination for the user's OWN money that was never advertised — the
      * engine's next unused INTERNAL (change) address post-cutover.
      *
-     * <p>See {@code WalletData.unadvertisedDestinationLive}: the unshield
-     * withdrawal and the CoinJoin combine must not be paid to the address the
-     * Receive screen is showing, because post-cutover that address is the same
-     * one {@link #freshReceiveAddressLive()} returns, and a counterparty who was
+     * <p>See {@code WalletData.unadvertisedDestinationLive}: a self-transfer
+     * must not be paid to the address the Receive screen is showing, because
+     * post-cutover that address is the same one
+     * {@link #freshReceiveAddressLive()} returns, and a counterparty who was
      * handed the QR and never paid it can watch it.
      *
      * <p><b>Post-cutover this FAILS rather than falling back.</b> There is no
      * safe fallback on this side: {@link #freshReceiveAddress()} is itself
      * overlaid, so on a warm cache it returns the very advertised address this
      * method exists to avoid — a fallback there would silently reintroduce the
-     * leak precisely when the engine read is failing. Both callers
-     * ({@code ShieldedTransferExecutor}, {@code CoinJoinFundsMigrationService})
-     * catch this strictly BEFORE broadcast and report not-sent, so failing is
-     * merely a retry; leaking would be permanent and invisible.
+     * leak precisely when the engine read is failing. Every caller must catch
+     * this strictly BEFORE broadcast and report not-sent — today's three
+     * ({@code ShieldedTransferExecutor}, {@code CoinJoinFundsMigrationService},
+     * {@code SweepWalletFragment}) all do — so failing is merely a retry;
+     * leaking would be permanent and invisible.
      *
      * <p>Pre-cutover it returns the REAL dashj fresh key — read straight off the
      * wallet, deliberately not through the overlaid accessor — which is what
