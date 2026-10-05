@@ -56,6 +56,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
@@ -1123,6 +1124,36 @@ internal fun planMixingGroupUpdates(
                 )
             )
         }
+}
+
+/** Which figure [overlayBalanceChoice] put on screen. */
+internal enum class OverlayBalanceSource(val logName: String) {
+    /** The SDK has not published yet this launch; the dashj wallet's own balance. */
+    DASHJ("dashj"),
+
+    /** The live SDK balance — the figure the parity check compares. */
+    SDK("sdk"),
+
+    /** The SDK is still scanning; the last-known figure held under "Syncing balance". */
+    LAST_KNOWN("lastKnown")
+}
+
+/**
+ * The display choice behind [CutoverUiDataService.overlayTotalBalance], with the
+ * source it came from: dashj until the SDK publishes, the live SDK figure once it
+ * is synced, the positive last-known figure while it is still scanning, otherwise
+ * the live SDK figure. Pure — host-testable.
+ */
+internal fun overlayBalanceChoice(
+    sdk: Coin?,
+    synced: Boolean,
+    lastKnown: Coin?,
+    dashj: Coin
+): Pair<Coin, OverlayBalanceSource> = when {
+    sdk == null -> dashj to OverlayBalanceSource.DASHJ
+    synced -> sdk to OverlayBalanceSource.SDK
+    lastKnown != null && lastKnown.isPositive -> lastKnown to OverlayBalanceSource.LAST_KNOWN
+    else -> sdk to OverlayBalanceSource.SDK
 }
 
 // ── Seam tx snapshot (post-cutover WalletDataProvider reads) ──────────
@@ -2556,20 +2587,25 @@ class CutoverUiDataService internal constructor(
      *   has no balance to "lose", and holding 0 over freshly-discovered
      *   funds would be the one case where the hold is the alarming state).
      */
-    fun overlayTotalBalance(dashjBalance: Flow<Coin>): Flow<Coin> =
+    @JvmOverloads
+    fun overlayTotalBalance(dashjBalance: Flow<Coin>, feed: String = "total"): Flow<Coin> =
         combine(
             _sdkTotalBalance,
             _l1Synced,
             _lastKnownTotalBalance,
             dashjBalance
-        ) { sdk, synced, lastKnown, dashj ->
-            when {
-                sdk == null -> dashj
-                synced -> sdk
-                lastKnown != null && lastKnown.isPositive -> lastKnown
-                else -> sdk
+        ) { sdk, synced, lastKnown, dashj -> overlayBalanceChoice(sdk, synced, lastKnown, dashj) }
+            .distinctUntilChanged()
+            // What the header actually SHOWS, and why. The published/persisted lines
+            // record what the SDK computed, not which of the three figures the overlay
+            // put on screen, so a field report could not show what the user saw (field
+            // report, 2026-10-04: a balance compared against another wallet, with no way
+            // to tell a live SDK figure from a held seed or the dashj diagnostic's).
+            // Logs on a change of value or source only; each subscriber logs its own.
+            .onEach { (value, source) ->
+                log.info("displayed balance ({}): {} duffs from {}", feed, value.value, source.logName)
             }
-        }
+            .map { it.first }
 
     /**
      * The cutover-aware MAX-SENDABLE feed for the send screen

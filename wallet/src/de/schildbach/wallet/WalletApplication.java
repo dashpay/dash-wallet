@@ -2439,7 +2439,7 @@ public class WalletApplication extends MultiDexApplication
                         || balanceType == Wallet.BalanceType.ESTIMATED_SPENDABLE)
                 && coinSelector == null) {
             return cutoverUiDataService.overlayTotalBalance(
-                    walletBalanceObserver.observe(balanceType, null));
+                    walletBalanceObserver.observe(balanceType, null), balanceType.name());
         }
 
         return walletBalanceObserver.observe(balanceType, coinSelector);

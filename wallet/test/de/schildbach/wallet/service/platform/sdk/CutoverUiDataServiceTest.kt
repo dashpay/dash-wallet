@@ -416,6 +416,22 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun overlayChoice_reportsTheSourceOfTheDisplayedFigure() {
+        val sdk = Coin.valueOf(6_506_830_476)
+        val held = Coin.valueOf(6_606_830_703)
+        val dashj = Coin.valueOf(999)
+        // Before the SDK publishes this launch: the dashj wallet's own figure.
+        assertEquals(dashj to OverlayBalanceSource.DASHJ, overlayBalanceChoice(null, true, held, dashj))
+        // Synced: the live SDK figure, the one the parity check compares.
+        assertEquals(sdk to OverlayBalanceSource.SDK, overlayBalanceChoice(sdk, true, held, dashj))
+        // Still scanning with a positive seed: the held last-known figure.
+        assertEquals(held to OverlayBalanceSource.LAST_KNOWN, overlayBalanceChoice(sdk, false, held, dashj))
+        // Still scanning with no usable seed: the live SDK figure.
+        assertEquals(sdk to OverlayBalanceSource.SDK, overlayBalanceChoice(sdk, false, null, dashj))
+        assertEquals(sdk to OverlayBalanceSource.SDK, overlayBalanceChoice(sdk, false, Coin.ZERO, dashj))
+    }
+
+    @Test
     fun syncPlan_oldIncomingInsertedButNotNotified() {
         val old = record(firstByte = 7, net = 1_000_000, firstSeenSec = (now - 3 * 24 * 60 * 60 * 1000L) / 1000)
         val plan = planL1DisplaySync(listOf(old), emptyMap(), emptySet(), resolve, now)
