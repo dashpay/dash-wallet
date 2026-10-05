@@ -77,8 +77,10 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
         }
     }
 
-    private fun walletResetInProgress() =
-        saveQueue.isPaused || WalletWipeState.isPending(applicationContext.filesDir)
+    // Any wipe marker short of a confirmed absence counts, an unverified one included.
+    private fun walletResetInProgress() = saveQueue.isPaused ||
+        WalletWipeState.inspect(applicationContext.filesDir, applicationContext.noBackupFilesDir) !=
+        WalletWipeState.State.NONE
 
     override suspend fun doWorkWithBaseProgress(): Result {
 
