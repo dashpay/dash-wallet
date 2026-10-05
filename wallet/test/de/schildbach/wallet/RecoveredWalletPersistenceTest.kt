@@ -674,7 +674,7 @@ class RecoveredWalletPersistenceTest {
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         val setupApp = spyk(app)
         var failBackup = true
-        every { setupApp.saveWallet() } answers {
+        every { setupApp.saveWallet(true) } answers {
             assertTrue("owed before the primary is saved", replacementMarker.exists())
             callOriginal()
         }
@@ -709,7 +709,7 @@ class RecoveredWalletPersistenceTest {
         } catch (expected: RuntimeException) {
             assertTrue(expected.cause is IOException)
         }
-        verify(exactly = 0) { setupApp.saveWallet() }
+        verify(exactly = 0) { setupApp.saveWallet(any()) }
         verify(exactly = 0) { setupApp.writeWalletBackup() }
     }
 
@@ -1125,5 +1125,145 @@ class RecoveredWalletPersistenceTest {
         writingApp.backupWallet()
 
         assertTrue(readWallet(keyBackup).isPubKeyMine(recovered.currentReceiveKey().pubKey))
+    }
+
+    /** A fresh process on the same files: nothing in memory, only what is on disk. */
+    private fun restartedApp(): WalletApplication {
+        val fresh = WalletApplication()
+        fun set(name: String, value: Any) = ReflectionHelpers.setField(fresh, name, value)
+        set("walletFile", primary)
+        set("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        set("walletFactory", mockk<WalletFactory> { every { getExtensions(any()) } returns emptyArray() })
+        val launchApp = spyk(fresh)
+        every { launchApp.filesDir } returns directory.root
+        every { launchApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns keyBackup
+        every { launchApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } answers { keyBackup.inputStream() }
+        every { launchApp.openFileOutput(any(), any()) } answers {
+            java.io.FileOutputStream(File(directory.root, firstArg<String>()))
+        }
+        every { launchApp.finalizeInitialization() } returns Unit
+        every { launchApp.resetBlockchain() } answers { fail("must not queue a reset") }
+        every { launchApp["showLoadToast"](any<String>()) } answers { }
+        return launchApp
+    }
+
+    /**
+     * Wallet A is committed with its key backup. Existing-wallet PIN recovery
+     * installs wallet B through setWallet() and, before PIN setup runs, the
+     * blockchain service's shutdown save (an ordinary saveWallet()) writes
+     * B's primary. The process then dies. B's backup must be owed on disk,
+     * so the restart neither trusts A's backup as B's recovery input nor
+     * skips the repair (review, PR #1576).
+     */
+    @Test
+    fun `an ordinary save of an installed replacement owes its backup across a restart`() {
+        recovered.saveToFile(primary)
+        val setupApp = setupCapableApp()
+        setupApp.backupWallet()
+        val backupA = keyBackup.readBytes()
+        assertTrue(readWallet(keyBackup).isPubKeyMine(recovered.currentReceiveKey().pubKey))
+        assertFalse(replacementMarker.exists())
+
+        val replacementB = replacementWallet()
+        val keyB = replacementB.freshReceiveKey()
+        assertTrue(setupApp.setWallet(replacementB))
+        // As saveWalletOnShutdown() does: the app is not degraded, so it saves.
+        assertFalse(setupApp.isWalletLoadDegraded)
+        setupApp.saveWallet()
+
+        assertTrue("B's primary is on disk", readWallet(primary).isPubKeyMine(keyB.pubKey))
+        assertArrayEquals("A's backup is still in place", backupA, keyBackup.readBytes())
+        assertTrue("B's backup is owed", replacementMarker.exists())
+        val armed = replacementMarker.readText()
+        // Further saves of the now-committed B do not re-arm.
+        setupApp.saveWallet()
+        assertEquals(armed, replacementMarker.readText())
+
+        // Restart 1: B's primary fails to load before any repair. A's backup
+        // must not be accepted (and persisted) as the wallet.
+        val primaryB = primary.readBytes()
+        primary.writeBytes(primaryB.copyOf(primaryB.size / 2))
+        val failedLaunch = restartedApp()
+        every { failedLaunch.persistRecoveredWallet(any()) } answers { fail("must not persist A's backup") }
+        loadWallet(failedLaunch)
+        assertNull(failedLaunch.wallet)
+        assertTrue(failedLaunch.isWalletRecoveryFromSeedNeeded)
+        verify(exactly = 0) { failedLaunch.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) }
+        assertArrayEquals(backupA, keyBackup.readBytes())
+        assertTrue(replacementMarker.exists())
+
+        // Restart 2: B's primary loads; maintenance rewrites the backup from
+        // B and only then clears the marker.
+        primary.writeBytes(primaryB)
+        val launchApp = restartedApp()
+        loadWallet(launchApp)
+        val loadedB = requireNotNull(launchApp.wallet)
+        assertTrue(loadedB.isPubKeyMine(keyB.pubKey))
+        launchApp.maintainKeyBackup(loadedB)
+        assertTrue(readWallet(keyBackup).isPubKeyMine(keyB.pubKey))
+        assertFalse(readWallet(keyBackup).isPubKeyMine(recovered.currentReceiveKey().pubKey))
+        assertFalse(replacementMarker.exists())
+    }
+
+    @Test
+    fun `saving the committed wallet does not owe a replacement backup`() {
+        val setupApp = setupCapableApp()
+        setupApp.saveWallet()
+        setupApp.saveWallet()
+        assertTrue(primary.exists())
+        assertFalse(replacementMarker.exists())
+    }
+
+    @Test
+    fun `setup after an ordinary save of its replacement supersedes that arm and clears the marker`() {
+        recovered.saveToFile(primary)
+        val setupApp = setupCapableApp()
+        setupApp.backupWallet()
+        val replacementB = replacementWallet()
+        val keyB = replacementB.freshReceiveKey()
+        assertTrue(setupApp.setWallet(replacementB))
+        setupApp.saveWallet()
+        assertTrue(replacementMarker.exists())
+
+        setupApp.saveWalletAndFinalizeInitialization()
+
+        assertTrue(readWallet(keyBackup).isPubKeyMine(keyB.pubKey))
+        assertFalse(replacementMarker.exists())
+        verify(exactly = 1) { setupApp.finalizeInitialization() }
+    }
+
+    @Test
+    fun `an ordinary save of a replacement is refused when its backup obligation cannot be recorded`() {
+        recovered.saveToFile(primary)
+        val primaryA = primary.readBytes()
+        val setupApp = setupCapableApp()
+        // A non-empty directory where the marker goes: the arm's rename fails.
+        replacementMarker.mkdir()
+        File(replacementMarker, "child").writeText("")
+        val replacementB = replacementWallet()
+        assertTrue(setupApp.setWallet(replacementB))
+
+        try {
+            setupApp.saveWallet()
+            fail("the save must fail without its marker")
+        } catch (expected: RuntimeException) {
+            assertTrue(expected.cause is IOException)
+        }
+        assertArrayEquals("the primary still holds A", primaryA, primary.readBytes())
+        // B was not committed, so it still cannot be backed up.
+        try {
+            setupApp.writeWalletBackup()
+            fail("an unsaved replacement must not be backed up")
+        } catch (expected: WalletApplication.UncommittedWalletBackupException) {
+            // Nothing written.
+        }
+    }
+
+    @Test
+    fun `persisting a wallet recovered from the backup owes no replacement backup`() {
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        app.persistRecoveredWallet(recovered)
+        assertTrue(primary.exists())
+        assertFalse(replacementMarker.exists())
     }
 }

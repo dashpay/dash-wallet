@@ -223,8 +223,11 @@ public class WalletApplication extends MultiDexApplication
      * The wallet whose primary is on disk: the one parsed from
      * {@link #walletFile}, or the last one {@link #protobufSerializeWallet}
      * saved there. {@link #setWallet} installs a replacement WITHOUT
-     * committing it; only {@link #saveWalletAndFinalizeInitialization}'s
-     * primary save does. A key backup is published only from the committed
+     * committing it; the first primary save of it does — normally
+     * {@link #saveWalletAndFinalizeInitialization}'s, but an ordinary
+     * {@link #saveWallet} (the blockchain service's shutdown save) can get
+     * there first, so every first commit records the replacement's backup
+     * obligation before writing (see {@link #protobufSerializeWallet}). A key backup is published only from the committed
      * wallet ({@link #writeKeyBackupProto}), so it never holds a wallet whose
      * primary is not on disk — a recovery from it could otherwise come back
      * as a wallet the user never finished setting up, without the imported
@@ -1073,8 +1076,9 @@ public class WalletApplication extends MultiDexApplication
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
                 AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
         );
-        // Installed, not committed: its primary is saved only by
-        // saveWalletAndFinalizeInitialization(), and until then no key backup
+        // Installed, not committed: until its primary is first saved (by
+        // saveWalletAndFinalizeInitialization(), or an ordinary saveWallet()
+        // that arms the backup-replacement marker first), no key backup
         // may be published from it or from the wallet it replaces (see
         // committedWallet). Under the backup-write lock, so a write that
         // checked the previous wallet is current finishes first.
@@ -1161,8 +1165,12 @@ public class WalletApplication extends MultiDexApplication
             throw new RuntimeException(x);
         }
         // Commits the replacement (committedWallet): from here on its backup
-        // may be published, and the previous wallet's may not.
-        saveWallet();
+        // may be published, and the previous wallet's may not. The obligation
+        // is already armed above, so this save arms nothing of its own: a
+        // second arm would replace this generation and leave the completion
+        // below unable to clear the marker. A generation an earlier ordinary
+        // save armed for this wallet was just overwritten by ours.
+        saveWallet(true);
         // Unlike backupWallet(), a failure here propagates: the flags below
         // must not be cleared while the replacement has no key backup.
         try {
@@ -2007,9 +2015,18 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void saveWallet() {
+        saveWallet(false);
+    }
+
+    /**
+     * @param backupAccountedFor true only when the caller has armed the
+     *   backup-replacement marker itself (setup); see {@link #protobufSerializeWallet}.
+     */
+    @VisibleForTesting
+    void saveWallet(final boolean backupAccountedFor) {
         awaitDeferredWalletLoadForMutation();
         try {
-            protobufSerializeWallet(wallet);
+            protobufSerializeWallet(wallet, backupAccountedFor);
         } catch (final IOException x) {
             throw new RuntimeException(x);
         }
@@ -2020,7 +2037,10 @@ public class WalletApplication extends MultiDexApplication
         // Before the save: once the primary exists, a later launch loads it as
         // an ordinary wallet and only this marker says its reset is still owed.
         RecoveryResetState.INSTANCE.arm(walletFile.getParentFile());
-        protobufSerializeWallet(recoveredWallet);
+        // The wallet was read FROM the key backup, so the backup already
+        // holds it: no replacement backup is owed. Arming here would also make
+        // the next launch refuse this same backup if the primary failed again.
+        protobufSerializeWallet(recoveredWallet, true);
         recoveredWalletPersistencePending = false;
     }
 
@@ -2050,13 +2070,64 @@ public class WalletApplication extends MultiDexApplication
         return RecoveryResetState.INSTANCE.complete(walletFile.getParentFile());
     }
 
-    private void protobufSerializeWallet(final Wallet wallet) throws IOException {
+    /**
+     * Saves {@code wallet} as the primary and commits it.
+     *
+     * The FIRST save of a wallet that is not yet the committed one (a
+     * replacement {@link #setWallet} installed) puts its primary beside the
+     * previous wallet's key backup. Unless the caller has already accounted
+     * for that ({@code backupAccountedFor}: setup armed the marker itself, or
+     * the wallet was recovered from the backup), the replacement's backup is
+     * recorded as owed BEFORE the primary is written, so a death before setup
+     * writes the backup leaves startup maintenance an obligation to repair it,
+     * and a later primary-load failure refuses the previous wallet's backup
+     * (review, PR #1576: PIN recovery's setWallet() followed by the blockchain
+     * service's shutdown save). If the marker cannot be written, nothing is
+     * saved or committed. The marker is left for setup, whose own generation
+     * supersedes it, or for the next startup's maintenance.
+     *
+     * dashj's autosave writes the primary without passing here, but only for
+     * a wallet afterLoadWallet() armed it for: a loaded one (committed by the
+     * load) or a replacement after setup committed it. A replacement gets no
+     * autosave while it is uncommitted.
+     *
+     * @throws IOException when the marker or the primary could not be written.
+     */
+    private void protobufSerializeWallet(final Wallet wallet, final boolean backupAccountedFor) throws IOException {
+        if (!backupAccountedFor) {
+            armBackupReplacementIfUncommitted(wallet);
+        }
         final Stopwatch watch = Stopwatch.createStarted();
         wallet.saveToFile(walletFile);
         watch.stop();
         markWalletCommitted(wallet);
 
         log.info("wallet saved to: '{}', took {}", walletFile, watch);
+    }
+
+    /**
+     * Arms the backup-replacement marker when {@code wallet} is not the
+     * committed one. Decided and armed under the {@link AtomicFileWriter}
+     * lock, like every change of {@link #committedWallet}; an already
+     * committed wallet arms nothing.
+     */
+    private void armBackupReplacementIfUncommitted(final Wallet wallet) throws IOException {
+        final IOException[] failure = new IOException[1];
+        AtomicFileWriter.runExclusive(() -> {
+            if (committedWallet == wallet) {
+                return;
+            }
+            log.info("first primary save of a replacement wallet — recording that its key backup is owed");
+            try {
+                BackupReplacementState.INSTANCE.arm(walletFile.getParentFile());
+            } catch (final IOException x) {
+                failure[0] = x;
+            }
+        });
+        if (failure[0] != null) {
+            throw new IOException("the replacement wallet's backup obligation could not be recorded — "
+                    + "its primary is not saved", failure[0]);
+        }
     }
 
     /** Records that {@code savedWallet} is the wallet the primary now holds; see {@link #committedWallet}. */
