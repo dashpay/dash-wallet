@@ -14,7 +14,11 @@ import io.mockk.mockk
 import io.mockk.verify
 import de.schildbach.wallet.service.WalletFactory
 import org.bitcoinj.core.Context
+import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+import org.bitcoinj.script.Script
+import org.bitcoinj.wallet.KeyChainGroup
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.junit.Assert.*
 import org.junit.Before
@@ -57,6 +61,8 @@ class RecoveredWalletPersistenceTest {
         recovered = backup.inputStream().use { WalletProtobufSerializer().readWallet(it) }
         setField("walletFile", primary)
         setField("wallet", recovered)
+        // As if loaded from the primary: the wallet whose backup may be written.
+        setField("committedWallet", recovered)
     }
 
     @Test
@@ -456,7 +462,7 @@ class RecoveredWalletPersistenceTest {
     private fun maintenanceApp(failWrite: () -> Boolean = { false }): WalletApplication {
         val maintenanceApp = spyk(app)
         every { maintenanceApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
-        every { maintenanceApp.writeWalletBackup() } answers {
+        every { maintenanceApp.writeWalletBackup(any()) } answers {
             if (failWrite()) throw IOException("injected backup failure")
             recovered.saveToFile(backup)
         }
@@ -468,9 +474,9 @@ class RecoveredWalletPersistenceTest {
         replacementMarker.createNewFile()
         val maintenanceApp = maintenanceApp()
 
-        maintenanceApp.maintainKeyBackup()
+        maintenanceApp.maintainKeyBackup(recovered)
 
-        verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+        verify(exactly = 1) { maintenanceApp.writeWalletBackup(any()) }
         assertFalse("cleared only after the rewrite", replacementMarker.exists())
     }
 
@@ -479,10 +485,10 @@ class RecoveredWalletPersistenceTest {
         val previousBackup = backup.readBytes()
         val maintenanceApp = maintenanceApp()
 
-        maintenanceApp.maintainKeyBackup()
+        maintenanceApp.maintainKeyBackup(recovered)
 
         // No parse of the backup and no second wallet: nothing is read at all.
-        verify(exactly = 0) { maintenanceApp.writeWalletBackup() }
+        verify(exactly = 0) { maintenanceApp.writeWalletBackup(any()) }
         verify(exactly = 0) { maintenanceApp.openFileInput(any()) }
         assertArrayEquals(previousBackup, backup.readBytes())
     }
@@ -492,9 +498,9 @@ class RecoveredWalletPersistenceTest {
         backup.delete()
         val maintenanceApp = maintenanceApp()
 
-        maintenanceApp.maintainKeyBackup()
+        maintenanceApp.maintainKeyBackup(recovered)
 
-        verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+        verify(exactly = 1) { maintenanceApp.writeWalletBackup(any()) }
         assertTrue(backup.exists())
         assertFalse(replacementMarker.exists())
     }
@@ -505,7 +511,7 @@ class RecoveredWalletPersistenceTest {
         val maintenanceApp = maintenanceApp(failWrite = { true })
 
         try {
-            maintenanceApp.maintainKeyBackup()
+            maintenanceApp.maintainKeyBackup(recovered)
             fail("the rewrite must fail")
         } catch (expected: IOException) {
             // Logged by the maintenance thread.
@@ -519,8 +525,8 @@ class RecoveredWalletPersistenceTest {
         BackupReplacementState.confirmAbsent = { throw SecurityException("injected") }
         try {
             val maintenanceApp = maintenanceApp()
-            maintenanceApp.maintainKeyBackup()
-            verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+            maintenanceApp.maintainKeyBackup(recovered)
+            verify(exactly = 1) { maintenanceApp.writeWalletBackup(any()) }
         } finally {
             BackupReplacementState.confirmAbsent = original
         }
@@ -538,7 +544,7 @@ class RecoveredWalletPersistenceTest {
         var armedB: BackupReplacementState.Generation? = null
         val maintenanceApp = spyk(app)
         every { maintenanceApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns backup
-        every { maintenanceApp.writeWalletBackup() } answers {
+        every { maintenanceApp.writeWalletBackup(any()) } answers {
             // A's backup is published...
             recovered.saveToFile(backup)
             // ...and before A's completion runs, B arms and saves its primary.
@@ -546,9 +552,9 @@ class RecoveredWalletPersistenceTest {
             replacementB.saveToFile(primary)
         }
 
-        maintenanceApp.maintainKeyBackup()
+        maintenanceApp.maintainKeyBackup(recovered)
 
-        verify(exactly = 1) { maintenanceApp.writeWalletBackup() }
+        verify(exactly = 1) { maintenanceApp.writeWalletBackup(any()) }
         assertTrue("B's backup is still owed", replacementMarker.exists())
         assertTrue(BackupReplacementState.isPending(directory.root))
 
@@ -592,7 +598,7 @@ class RecoveredWalletPersistenceTest {
         every { launchApp.resetBlockchain() } answers { fail("must not queue a reset") }
         every { launchApp.resetBlockchainInProcess() } answers { fail("must not reset") }
         every { launchApp.finalizeInitialization() } answers { fail("must not publish a wallet") }
-        every { launchApp.maintainKeyBackup() } answers { fail("maintenance must not run") }
+        every { launchApp.maintainKeyBackup(any()) } answers { fail("maintenance must not run") }
         // The load's Toast needs a real Context.
         every { launchApp["showLoadToast"](any<String>()) } answers { }
         return launchApp
@@ -625,7 +631,7 @@ class RecoveredWalletPersistenceTest {
         assertNull(launchApp.wallet)
         verify(exactly = 0) { launchApp.persistRecoveredWallet(any()) }
         verify(exactly = 0) { launchApp.openFileInput(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) }
-        verify(exactly = 0) { launchApp.maintainKeyBackup() }
+        verify(exactly = 0) { launchApp.maintainKeyBackup(any()) }
         assertArrayEquals("primary untouched", primaryBytes, primary.readBytes())
         assertArrayEquals("backup untouched", backupBytes, backup.readBytes())
         assertTrue("replacement still owed", replacementMarker.exists())
@@ -932,7 +938,7 @@ class RecoveredWalletPersistenceTest {
         val maintenanceFailure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
         val maintenance = Thread {
             try {
-                wipeApp.maintainKeyBackup()
+                wipeApp.maintainKeyBackup(recovered)
             } catch (t: Throwable) {
                 maintenanceFailure.set(t)
             }
@@ -995,5 +1001,129 @@ class RecoveredWalletPersistenceTest {
         assertFalse(keyBackup.exists())
         assertFalse(WalletWipeState.isPending(directory.root))
         Unit
+    }
+
+    /** A replacement as create/restore builds it: a WalletEx with its own seed. */
+    private fun replacementWallet(): WalletEx = WalletEx(
+        Constants.NETWORK_PARAMETERS,
+        KeyChainGroup.builder(Constants.NETWORK_PARAMETERS).fromRandom(Script.ScriptType.P2PKH).build()
+    )
+
+    /** A [backupWritingApp] that can also install a replacement through setWallet and run its setup. */
+    private fun setupCapableApp(): WalletApplication {
+        setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
+        setField("cutoverCoordinator", mockk<CutoverCoordinator>(relaxed = true))
+        val setupApp = backupWritingApp()
+        every { setupApp.finalizeInitialization() } returns Unit
+        return setupApp
+    }
+
+    private fun readWallet(file: File): Wallet = file.inputStream().use { WalletProtobufSerializer().readWallet(it) }
+
+    /**
+     * The reviewer's ordering (PR #1576): wallet A loads with its replacement
+     * backup owed, and PIN recovery installs wallet B through setWallet
+     * BEFORE startup maintenance chooses which wallet to back up. Neither B
+     * (not saved yet) nor A (no longer the app's wallet) may be published,
+     * and A's obligation must not be acknowledged; B's setup publishes B's
+     * backup and clears its own generation.
+     */
+    @Test
+    fun `a replacement installed before startup maintenance runs is neither backed up nor acknowledged`() {
+        // A is the primary (committed in setUp) beside the previous wallet's backup, its own still owed.
+        recovered.saveToFile(primary)
+        Wallet(Constants.NETWORK_PARAMETERS).apply { freshReceiveKey() }.saveToFile(keyBackup)
+        val previousBackup = keyBackup.readBytes()
+        val owedA = BackupReplacementState.arm(directory.root)
+        val primaryA = primary.readBytes()
+        val setupApp = setupCapableApp()
+
+        val replacementB = replacementWallet()
+        val keyB = replacementB.freshReceiveKey()
+        assertTrue(setupApp.setWallet(replacementB))
+        assertSame(replacementB, setupApp.wallet)
+
+        setupApp.maintainKeyBackup(recovered)
+
+        verify(exactly = 0) { setupApp.writeKeyBackupProto(any(), any()) }
+        assertArrayEquals("nothing is published", previousBackup, keyBackup.readBytes())
+        assertEquals("A's obligation is not acknowledged", owedA.content, replacementMarker.readText())
+        assertArrayEquals("the primary still holds A", primaryA, primary.readBytes())
+
+        // B is not backed up from any other path either until its primary is saved.
+        try {
+            setupApp.writeWalletBackup()
+            fail("an unsaved replacement must not be backed up")
+        } catch (expected: WalletApplication.UncommittedWalletBackupException) {
+            // Nothing written.
+        }
+        setupApp.backupWallet()
+        assertArrayEquals(previousBackup, keyBackup.readBytes())
+        assertEquals(owedA.content, replacementMarker.readText())
+
+        // B commits: primary, then backup, then B's own generation clears the marker.
+        setupApp.saveWalletAndFinalizeInitialization()
+        assertTrue(readWallet(primary).isPubKeyMine(keyB.pubKey))
+        assertTrue(readWallet(keyBackup).isPubKeyMine(keyB.pubKey))
+        assertFalse(replacementMarker.exists())
+        verify(exactly = 1) { setupApp.finalizeInitialization() }
+    }
+
+    /**
+     * B is installed after maintenance decided to repair A but before A's
+     * backup is published: the publish-time check refuses it, so the
+     * backup and A's marker stay as they were.
+     */
+    @Test
+    fun `a replacement installed while startup maintenance builds the backup refuses the publish`() {
+        recovered.saveToFile(primary)
+        Wallet(Constants.NETWORK_PARAMETERS).apply { freshReceiveKey() }.saveToFile(keyBackup)
+        val previousBackup = keyBackup.readBytes()
+        val owedA = BackupReplacementState.arm(directory.root)
+        val setupApp = setupCapableApp()
+        val replacementB = replacementWallet()
+        every { setupApp.writeKeyBackupProto(any(), any()) } answers {
+            assertTrue(setupApp.setWallet(replacementB))
+            callOriginal()
+        }
+
+        setupApp.maintainKeyBackup(recovered)
+
+        verify(exactly = 1) { setupApp.writeKeyBackupProto(recovered, any()) }
+        assertArrayEquals(previousBackup, keyBackup.readBytes())
+        assertEquals(owedA.content, replacementMarker.readText())
+    }
+
+    @Test
+    fun `a first install still writes its key backup`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        assertFalse(keyBackup.exists())
+        val setupApp = setupCapableApp()
+        val created = replacementWallet()
+        val key = created.freshReceiveKey()
+
+        assertTrue(setupApp.setWallet(created))
+        setupApp.saveWalletAndFinalizeInitialization()
+
+        assertTrue(readWallet(primary).isPubKeyMine(key.pubKey))
+        assertTrue(readWallet(keyBackup).isPubKeyMine(key.pubKey))
+        assertFalse(replacementMarker.exists())
+
+        // Its startup maintenance (bound to it) then finds nothing owed.
+        val written = keyBackup.readBytes()
+        setupApp.maintainKeyBackup(created)
+        assertArrayEquals(written, keyBackup.readBytes())
+    }
+
+    @Test
+    fun `backupWallet writes the committed wallet's backup`() {
+        recovered.saveToFile(primary)
+        assertFalse(keyBackup.exists())
+        val writingApp = backupWritingApp()
+
+        writingApp.backupWallet()
+
+        assertTrue(readWallet(keyBackup).isPubKeyMine(recovered.currentReceiveKey().pubKey))
     }
 }

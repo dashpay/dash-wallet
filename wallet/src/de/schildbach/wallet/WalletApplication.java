@@ -220,6 +220,20 @@ public class WalletApplication extends MultiDexApplication
     private Wallet wallet;
 
     /**
+     * The wallet whose primary is on disk: the one parsed from
+     * {@link #walletFile}, or the last one {@link #protobufSerializeWallet}
+     * saved there. {@link #setWallet} installs a replacement WITHOUT
+     * committing it; only {@link #saveWalletAndFinalizeInitialization}'s
+     * primary save does. A key backup is published only from the committed
+     * wallet ({@link #writeKeyBackupProto}), so it never holds a wallet whose
+     * primary is not on disk — a recovery from it could otherwise come back
+     * as a wallet the user never finished setting up, without the imported
+     * keys of the one that was really saved (review, PR #1576). Written and
+     * checked under the {@link AtomicFileWriter} lock.
+     */
+    private volatile Wallet committedWallet;
+
+    /**
      * The wallet load of a BACKGROUND process start, run off the main thread so
      * onCreate meets the system's start-up deadline (see DeferredWalletLoad).
      * Inactive on a foreground start, which loads synchronously as before.
@@ -1059,7 +1073,12 @@ public class WalletApplication extends MultiDexApplication
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP,
                 AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
         );
-        this.wallet = newWallet;
+        // Installed, not committed: its primary is saved only by
+        // saveWalletAndFinalizeInitialization(), and until then no key backup
+        // may be published from it or from the wallet it replaces (see
+        // committedWallet). Under the backup-write lock, so a write that
+        // checked the previous wallet is current finishes first.
+        AtomicFileWriter.runExclusive(() -> this.wallet = newWallet);
         walletStateFlow.setValue(newWallet);
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
@@ -1141,6 +1160,8 @@ public class WalletApplication extends MultiDexApplication
         } catch (final IOException x) {
             throw new RuntimeException(x);
         }
+        // Commits the replacement (committedWallet): from here on its backup
+        // may be published, and the previous wallet's may not.
         saveWallet();
         // Unlike backupWallet(), a failure here propagates: the flags below
         // must not be cleared while the replacement has no key backup.
@@ -1381,7 +1402,9 @@ public class WalletApplication extends MultiDexApplication
                     }
                 }
 
-                maintainKeyBackup();
+                // Bound to the wallet this load installed, never to whatever
+                // the mutable field holds by the time this thread gets here.
+                maintainKeyBackup(walletForMaintenance);
             } catch (final Throwable t) {
                 log.error("deferred wallet maintenance failed — continuing degraded", t);
                 try {
@@ -1670,6 +1693,9 @@ public class WalletApplication extends MultiDexApplication
                                 + " deferredFriendChains=" + FriendKeyChainLookahead.deferredCount());
                 // Overlap the deferred derivations with the rest of startup.
                 parsed = true;
+                // This is the wallet the primary holds; startup maintenance
+                // may back it up (and only it) until a replacement commits.
+                markWalletCommitted(wallet);
                 FriendKeyChainLookahead.completeAsync();
             } catch (final FileNotFoundException x) {
                 log.error("problem loading wallet", x);
@@ -2028,8 +2054,33 @@ public class WalletApplication extends MultiDexApplication
         final Stopwatch watch = Stopwatch.createStarted();
         wallet.saveToFile(walletFile);
         watch.stop();
+        markWalletCommitted(wallet);
 
         log.info("wallet saved to: '{}', took {}", walletFile, watch);
+    }
+
+    /** Records that {@code savedWallet} is the wallet the primary now holds; see {@link #committedWallet}. */
+    private void markWalletCommitted(final Wallet savedWallet) {
+        AtomicFileWriter.runExclusive(() -> committedWallet = savedWallet);
+    }
+
+    /** Whether {@code candidate} is both the app's wallet and the one its primary holds. Under the backup-write lock. */
+    private boolean isCurrentCommittedWallet(final Wallet candidate) {
+        final boolean[] current = new boolean[1];
+        AtomicFileWriter.runExclusive(() -> current[0] = candidate != null
+                && wallet == candidate && committedWallet == candidate);
+        return current[0];
+    }
+
+    /**
+     * A key backup refused because the wallet it was built from is no longer
+     * the app's, or its primary is not on disk (a replacement installed but
+     * not yet saved). Nothing was written.
+     */
+    static final class UncommittedWalletBackupException extends IOException {
+        UncommittedWalletBackupException(final String message) {
+            super(message);
+        }
     }
 
     /**
@@ -2040,27 +2091,61 @@ public class WalletApplication extends MultiDexApplication
      * only then is the marker removed. Nothing is read or written when the
      * backup exists and the marker is confirmed absent.
      *
+     * Bound to {@code loadedWallet}, the wallet the load parsed from the
+     * primary (or saved there): the backup is built from it, published only
+     * while it is still the app's wallet AND the committed one, and the
+     * marker is cleared only under the same check. Onboarding can install a
+     * replacement before or while this runs; until that replacement's primary
+     * is saved, neither wallet's backup is published here, and the marker
+     * stays for setup or the next startup (review, PR #1576).
+     *
      * The marker's generation is read when the repair is decided, and only
-     * that generation is cleared afterwards: onboarding can install and arm a
-     * replacement while this repair is publishing the previous wallet's
-     * backup, and that replacement's obligation must survive until its own
-     * backup is published (review, PR #1576).
+     * that generation is cleared afterwards: a replacement armed while this
+     * repair is publishing keeps its obligation until its own backup is
+     * published.
      *
      * @throws IOException when the rewrite failed; the marker then stays.
      */
-    void maintainKeyBackup() throws IOException {
+    void maintainKeyBackup(final Wallet loadedWallet) throws IOException {
         final File markerDir = walletFile.getParentFile();
         final BackupReplacementState.Generation owed = BackupReplacementState.INSTANCE.observe(markerDir);
         final boolean replacementOwed = owed != null;
         if (!replacementOwed && getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists()) {
             return;
         }
+        // Cheap check first: a replacement already installed means the loaded
+        // wallet's huge proto need not be built at all.
+        if (!isCurrentCommittedWallet(loadedWallet)) {
+            log.warn("startup key-backup maintenance skipped: the loaded wallet was replaced (or is not the one "
+                    + "on disk) before its backup was written{}", replacementOwed ? "; the marker stays" : "");
+            return;
+        }
         if (replacementOwed) {
             log.warn("a replacement wallet's key backup is still owed — rewriting it");
         }
-        writeWalletBackup();
+        try {
+            writeWalletBackup(loadedWallet);
+        } catch (final UncommittedWalletBackupException x) {
+            log.warn("startup key-backup maintenance not published: {}{}", x.getMessage(),
+                    replacementOwed ? "; the marker stays" : "");
+            return;
+        }
         if (owed != null) {
-            BackupReplacementState.INSTANCE.complete(markerDir, owed);
+            final boolean[] completed = new boolean[1];
+            AtomicFileWriter.runExclusive(() -> {
+                // Same lock as setWallet() and the primary commit: the backup
+                // just published is the current, saved wallet's, or nothing
+                // is acknowledged. complete() itself still requires the
+                // observed generation.
+                if (isCurrentCommittedWallet(loadedWallet)) {
+                    completed[0] = true;
+                    BackupReplacementState.INSTANCE.complete(markerDir, owed);
+                }
+            });
+            if (!completed[0]) {
+                log.warn("the loaded wallet was replaced after its backup was rewritten — the replacement "
+                        + "marker stays for the replacement's own backup");
+            }
         }
     }
 
@@ -2072,10 +2157,21 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
+    /** Backs up the app's current wallet; refused unless it is the committed one. */
     void writeWalletBackup() throws IOException {
         awaitDeferredWalletLoadForMutation();
+        writeWalletBackup(wallet);
+    }
+
+    /**
+     * Backs up {@code backedUpWallet}. Published only if, at publish time, it
+     * is still the app's wallet and the one its primary holds.
+     *
+     * @throws UncommittedWalletBackupException when it is not; nothing is written.
+     */
+    void writeWalletBackup(final Wallet backedUpWallet) throws IOException {
+        awaitDeferredWalletLoadForMutation();
         final Stopwatch watch = Stopwatch.createStarted();
-        final Wallet backedUpWallet = wallet;
         if (backedUpWallet == null) {
             throw new IOException("no wallet to back up");
         }
@@ -2093,9 +2189,11 @@ public class WalletApplication extends MultiDexApplication
 
     /**
      * Publishes {@code walletProto}, built from {@code backedUpWallet}, as the
-     * key backup — unless a Reset Wallet has begun since. The check and the
-     * write run under the {@link AtomicFileWriter} lock, which
-     * {@link #detachWalletForWipe} also takes to drop the wallet: a write
+     * key backup — unless a Reset Wallet has begun since, or
+     * {@code backedUpWallet} is no longer the app's committed wallet. The
+     * checks and the write run under the {@link AtomicFileWriter} lock, which
+     * {@link #detachWalletForWipe} also takes to drop the wallet, and
+     * {@link #setWallet} and the primary save take to change it: a write
      * already in flight finishes before the wipe destroys anything, and none
      * starts once the wipe marker is set or the wallet it was built from is
      * no longer the app's. The startup maintenance thread (which can still be
@@ -2103,14 +2201,29 @@ public class WalletApplication extends MultiDexApplication
      * {@link #backupWallet()} would otherwise write the wiped wallet's keys
      * back after destruction deleted them.
      *
-     * @throws IOException when the write failed, or was refused because of a wipe.
+     * The committed check keeps an installed-but-unsaved replacement out of
+     * the backup: the backup is the recovery input when the primary fails to
+     * load, so it must never hold a wallet the primary does not.
+     *
+     * @throws IOException when the write failed, or was refused because of a wipe;
+     *   {@link UncommittedWalletBackupException} when refused for an uncommitted wallet.
      */
     @VisibleForTesting
     void writeKeyBackupProto(final Wallet backedUpWallet, final Protos.Wallet walletProto) throws IOException {
         final IOException[] failure = new IOException[1];
         AtomicFileWriter.runExclusive(() -> {
-            if (wallet != backedUpWallet || WalletWipeState.INSTANCE.isPending(getFilesDir())) {
+            if (WalletWipeState.INSTANCE.isPending(getFilesDir())) {
                 failure[0] = new IOException("a Reset Wallet has begun — the wallet's key backup is not written");
+                return;
+            }
+            if (wallet != backedUpWallet) {
+                failure[0] = new UncommittedWalletBackupException(
+                        "the wallet was replaced — its key backup is not written");
+                return;
+            }
+            if (committedWallet != backedUpWallet) {
+                failure[0] = new UncommittedWalletBackupException(
+                        "the wallet's primary is not saved yet — its key backup is not written");
                 return;
             }
             try {
@@ -2560,7 +2673,10 @@ public class WalletApplication extends MultiDexApplication
         // Under the backup-write lock: waits out a key backup write in flight
         // and refuses later ones (see writeKeyBackupProto), so none can put
         // this wallet's keys back after the wipe deletes them.
-        AtomicFileWriter.runExclusive(() -> wallet = null);
+        AtomicFileWriter.runExclusive(() -> {
+            wallet = null;
+            committedWallet = null;
+        });
         walletStateFlow.setValue(null);
         authenticationGroupExtension = null;
         if (walletBalanceObserver != null) {
