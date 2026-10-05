@@ -727,6 +727,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     /**
+     * Tells the app whether the dashj engine now runs only for the Tools
+     * diagnostic, so the wallet autosave uses the long diagnostic debounce
+     * ([de.schildbach.wallet.util.WalletAutosave.DASHJ_DIAGNOSTIC_AUTOSAVE_DELAY_MS])
+     * exactly then. The request is recorded in call order; the re-arm, which
+     * may wait out a save in flight, runs on its own coroutine so it never
+     * holds up [onCreateCompleted] or [checkMutex]. Pre-cutover and held, the
+     * request is "off", which leaves the autosave as armed at load.
+     */
+    private fun requestDiagnosticAutosave() {
+        val diagnostic = DashjEngineRole.resolve(dashjHeldByCutover, dashjSyncDiagnostic).isDiagnostic
+        application.requestDashjDiagnosticAutosave(diagnostic)
+        serviceScope.launch {
+            try {
+                application.reconcileWalletAutosave()
+            } catch (e: Exception) {
+                log.error("failed to switch the wallet autosave debounce (dashj sync diagnostic {})", diagnostic, e)
+            }
+        }
+    }
+
+    /**
      * True once [onCreate]'s init coroutine ran to its end with a wallet.
      * [onCreateCompleted] cannot say this: the refusal and failure paths
      * complete it too, to release the callers awaiting it.
@@ -1883,6 +1904,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 propagateContext()
                 dashSystemService.system.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
+                // The diagnostic engine only compares balances and transactions
+                // with the SDK: no InstantSend or ChainLock requests, and no
+                // LLMQ thread (DashSystem.start(), run by startAsync below,
+                // reads these flags). Every other role gets the original
+                // flags back. Set while no peergroup runs, before one is built.
+                val engineRole = DashjEngineRole.resolve(dashjHeldByCutover, dashjSyncDiagnostic)
+                dashSystemService.system.masternodeSync?.let { masternodeSync ->
+                    if (applyDashjEngineSyncFlags(masternodeSync, engineRole, Constants.SYNC_FLAGS)) {
+                        log.info("dashj engine role {}: sync flags now {}", engineRole, masternodeSync.syncFlags)
+                    }
+                }
                 log.info("starting peergroup")
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
                 if (Constants.SUPPORTS_PLATFORM) {
@@ -2171,6 +2203,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         dashjSyncDiagnostic = enabled
                         dashjHeldByCutover = !coordinatorAllowsDashj
                         dashjEngineMayStart = newEngineMayStart
+                        requestDiagnosticAutosave()
                         if (!enabled) {
                             dashjDiagnosticSyncState.reset()
                             lastDiagnosticParity = null
@@ -2610,6 +2643,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
                     dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
                 )
+                requestDiagnosticAutosave()
 
                 peerConnectivityListener = PeerConnectivityListener()
                 broadcastPeerState(0)

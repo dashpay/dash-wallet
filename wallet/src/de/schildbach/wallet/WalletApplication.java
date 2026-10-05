@@ -186,6 +186,7 @@ import de.schildbach.wallet.util.BackupReplacementState;
 import de.schildbach.wallet.util.RecoveryResetState;
 import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
+import de.schildbach.wallet.util.WalletAutosave;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
 import de.schildbach.wallet.util.WalletLoadBudget;
 import de.schildbach.wallet.util.WalletWipeState;
@@ -218,6 +219,13 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+
+    /**
+     * The dashj wallet's autosave: armed by {@link #afterLoadWallet}, stopped
+     * by the wipe, and given a longer debounce while the dashj engine runs only
+     * for the Tools diagnostic (see {@link #requestDashjDiagnosticAutosave}).
+     */
+    private final WalletAutosave walletAutosave = new WalletAutosave();
 
     /**
      * The wallet whose primary is on disk: the one parsed from
@@ -1374,7 +1382,9 @@ public class WalletApplication extends MultiDexApplication
         if (autosaveDelayMs != Constants.Files.WALLET_AUTOSAVE_DELAY_MS) {
             log.info("wallet autosave debounce raised to {} ms for a {} byte wallet file", autosaveDelayMs, walletFileSize);
         }
-        wallet.autosaveToFile(walletFile, autosaveDelayMs, TimeUnit.MILLISECONDS, null);
+        // Raised further only if the blockchain service already found the
+        // dashj engine running just for the Tools diagnostic in this process.
+        walletAutosave.arm(wallet, walletFile, autosaveDelayMs);
         final Wallet walletForMaintenance = wallet;
 
         // did blockchain rescan fail
@@ -2455,6 +2465,30 @@ public class WalletApplication extends MultiDexApplication
                 .postDelayed(() -> startBlockchainService(false), 1500);
     }
 
+    /**
+     * Called by the blockchain service whenever it resolves whether the dashj
+     * engine runs only for the Tools › "dashj sync (diagnostic)" toggle
+     * (cutover committed + toggle on). Records the mode only; {@link
+     * #reconcileWalletAutosave} then switches the wallet autosave to {@link
+     * WalletAutosave#DASHJ_DIAGNOSTIC_AUTOSAVE_DELAY_MS} and back. That is a
+     * no-op when the debounce would not change, so a pre-cutover or held
+     * launch keeps exactly the autosave {@link #afterLoadWallet} armed.
+     */
+    public void requestDashjDiagnosticAutosave(final boolean dashjDiagnosticSync) {
+        walletAutosave.requestDashjDiagnostic(dashjDiagnosticSync);
+    }
+
+    /**
+     * Applies the latest {@link #requestDashjDiagnosticAutosave} request. Kept
+     * apart from it so callers can record the request in order and do this
+     * (possibly slow) part on a worker: whichever reconcile runs last applies
+     * the last request.
+     */
+    @WorkerThread
+    public void reconcileWalletAutosave() {
+        walletAutosave.reconcile();
+    }
+
     public void resetBlockchainState() {
         blockchainStateDataProvider.resetBlockchainState();
     }
@@ -2492,7 +2526,7 @@ public class WalletApplication extends MultiDexApplication
     public void replaceWallet(final Wallet newWallet) {
         resetBlockchain();
         if (wallet != null) {
-            wallet.shutdownAutosaveAndWait();
+            walletAutosave.shutdown(wallet);
         }
 
         wallet = newWallet;
@@ -2726,7 +2760,7 @@ public class WalletApplication extends MultiDexApplication
             // A wipe resumed at launch never loaded a wallet, so there may be
             // no autosave to shut down — the file still has to go.
             if (wallet != null) {
-                wallet.shutdownAutosaveAndWait();
+                walletAutosave.shutdown(wallet);
             }
             walletFile.delete();
         }
