@@ -25,6 +25,7 @@ import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -69,7 +70,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val swapOrderDao: SwapOrderDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val sdkTxMetadataSource: SdkTxMetadataSource
 ) : TransactionMetadataProvider {
     companion object {
         private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
@@ -150,40 +152,82 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
             log.info("txmetadata: inserting $metadata")
 
-            val platformIconUrl = transactionMetadataDocumentDao.getTransactionIconUrl(txId)
-
-            if (!platformIconUrl.isNullOrEmpty()) {
-                try {
-                    updateIcon(txId, platformIconUrl)
-                } catch (ex: Exception) {
-                    log.error("Failed to make an http call for icon: $platformIconUrl")
-                }
-            }
-
-            val giftCardNumber = transactionMetadataDocumentDao.getGiftCardNumber(txId)
-            val giftCardPin = transactionMetadataDocumentDao.getGiftCardPin(txId)
-            val merchantName = transactionMetadataDocumentDao.getMerchantName(txId)
-            val giftCardPrice = transactionMetadataDocumentDao.getOriginalPrice(txId)
-            val barcodeValue = transactionMetadataDocumentDao.getBarcodeValue(txId)
-            val barcodeFormat = transactionMetadataDocumentDao.getBarcodeFormat(txId)
-            val merchantUrl = transactionMetadataDocumentDao.getMerchantUrl(txId)
-
-            val giftCard = GiftCard(
-                txId,
-                merchantName ?: "",
-                giftCardPrice ?: 0.0,
-                giftCardNumber,
-                giftCardPin,
-                barcodeValue,
-                barcodeFormat?.let { BarcodeFormat.valueOf(it) },
-                merchantUrl
-            )
-            insertOrUpdateGiftCard(giftCard)
+            importPlatformIconAndGiftCard(txId)
 
             return metadata
         }
 
-        return null
+        return insertSdkTransactionMetadata(txId)
+    }
+
+    /**
+     * Insert path for a transaction the dashj wallet does not hold but the Kotlin
+     * SDK's store does: a DashPay one-way-contact receive found by the SDK's contact
+     * backfill, or any transaction after the cutover. The row's txid, value, type and
+     * time come from the SDK store; memo, exchange rate, service, tax category and
+     * sent time come from the fetched platform metadata documents, exactly as for a
+     * dashj transaction. Without this the row was never created, and the metadata was
+     * DROPPED (2026-10-02, topple testnet, tx e5169bfc).
+     *
+     * Nothing goes to the change cache: that cache publishes values a local dashj
+     * transaction carried and platform lacked, and the SDK store holds no memo or rate.
+     */
+    private suspend fun insertSdkTransactionMetadata(txId: TxId): TransactionMetadata? {
+        val sdkRow = sdkTxMetadataSource.defaultMetadataFor(txId) ?: return null
+
+        val platformSentTimestamp = transactionMetadataDocumentDao.getSentTimestamp(txId)
+        val platformMemo = transactionMetadataDocumentDao.getTransactionMemo(txId)
+        val platformService = transactionMetadataDocumentDao.getTransactionService(txId)
+        val platformTaxCategory = transactionMetadataDocumentDao.getTransactionTaxCategory(txId)
+        val platformRate = transactionMetadataDocumentDao.getTransactionExchangeRate(txId)
+            ?.takeIf { it.rate != null }
+
+        val metadata = sdkRow.copy(
+            timestamp = platformSentTimestamp ?: sdkRow.timestamp,
+            taxCategory = platformTaxCategory?.let { TaxCategory.fromValue(it) },
+            currencyCode = platformRate?.currencyCode,
+            rate = platformRate?.rate,
+            memo = platformMemo ?: "",
+            service = platformService
+        )
+        transactionMetadataDao.insert(metadata)
+        log.info("txmetadata for {} has no wallet tx, inserted a row from the SDK store", txId)
+
+        importPlatformIconAndGiftCard(txId)
+        return metadata
+    }
+
+    /** The icon and gift card parts of the platform metadata documents for [txId]. */
+    private suspend fun importPlatformIconAndGiftCard(txId: TxId) {
+        val platformIconUrl = transactionMetadataDocumentDao.getTransactionIconUrl(txId)
+
+        if (!platformIconUrl.isNullOrEmpty()) {
+            try {
+                updateIcon(txId, platformIconUrl)
+            } catch (ex: Exception) {
+                log.error("Failed to make an http call for icon: $platformIconUrl")
+            }
+        }
+
+        val giftCardNumber = transactionMetadataDocumentDao.getGiftCardNumber(txId)
+        val giftCardPin = transactionMetadataDocumentDao.getGiftCardPin(txId)
+        val merchantName = transactionMetadataDocumentDao.getMerchantName(txId)
+        val giftCardPrice = transactionMetadataDocumentDao.getOriginalPrice(txId)
+        val barcodeValue = transactionMetadataDocumentDao.getBarcodeValue(txId)
+        val barcodeFormat = transactionMetadataDocumentDao.getBarcodeFormat(txId)
+        val merchantUrl = transactionMetadataDocumentDao.getMerchantUrl(txId)
+
+        val giftCard = GiftCard(
+            txId,
+            merchantName ?: "",
+            giftCardPrice ?: 0.0,
+            giftCardNumber,
+            giftCardPin,
+            barcodeValue,
+            barcodeFormat?.let { BarcodeFormat.valueOf(it) },
+            merchantUrl
+        )
+        insertOrUpdateGiftCard(giftCard)
     }
 
     private suspend fun shouldSaveToCache(): Boolean {
@@ -214,11 +258,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
             update(existing)
         } else {
             log.info("txmetadata for $txId does not exist, perform insert, then update")
-            // insertTransactionMetadata derives the row from a dashj wallet
-            // Transaction and returns null when the wallet does not hold the tx
-            // (an SDK-only tx). Fall back to the caller-supplied minimal row
-            // (txid + value/type from the SDK detail) so the edit still persists
-            // in the same table under the same TxId key.
+            // insertTransactionMetadata derives the row from the dashj wallet
+            // Transaction, else from the SDK store, and returns null only when
+            // neither holds the tx (or the SDK is not running). Fall back to the
+            // caller-supplied minimal row so the edit still persists in the same
+            // table under the same TxId key.
             val inserted = insertTransactionMetadata(txId, isSyncingPlatform)
                 ?: fallbackMetadata?.also {
                     log.info("txmetadata for $txId has no wallet tx, inserting SDK fallback row")
@@ -228,7 +272,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 // The metadata is dropped here. Never silent: this is precisely
                 // how fetched platform metadata went missing without a trace.
                 log.warn(
-                    "txmetadata for {} DROPPED — no wallet tx and no fallback row; " +
+                    "txmetadata for {} DROPPED — no wallet tx, not in the SDK store, and no fallback row; " +
                         "any platform metadata for this transaction will not be displayed",
                     txId
                 )

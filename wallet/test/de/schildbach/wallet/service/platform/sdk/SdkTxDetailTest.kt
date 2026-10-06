@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -48,6 +49,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.dash.wallet.common.data.TxId
+import org.dash.wallet.common.money.Coin as NeutralCoin
+import org.dash.wallet.common.transactions.TransactionCategory
 
 /**
  * Host-JVM tests for the Step B1 decode → detail-model mapping
@@ -391,5 +395,58 @@ class SdkTxDetailTest {
         } finally {
             unmockkObject(TransactionDecoder)
         }
+    }
+
+    // ── Metadata source (SDK-only txs) ────────────────────────────────
+
+    @Test
+    fun `defaultMetadataFor builds a received row from the SDK store without starting the SDK`() {
+        // The 2026-10-02 field case: a DashPay one-way-contact receive the SDK's
+        // contact backfill found, held only by the SDK store.
+        val txIdHex = "e5169bfc4989585abd4b0476188611b981e3c750539da5b8a39fe135e3bbb957"
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns displayTxIdToWireBytes(txIdHex)!!
+            every { netAmount } returns 100_000L
+            every { fee } returns null
+            every { context } returns 2 // in block
+            every { direction } returns 0 // incoming
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val txDao = mockk<TransactionDao> {
+            coEvery { getByTxid(any()) } returns entity
+        }
+        val db = mockk<DashDatabase> { every { transactionDao() } returns txDao }
+        val sdkService = mockk<DashSdkService> { every { databaseOrNull() } returns db }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        val row = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true))
+                .defaultMetadataFor(TxId.wrap(txIdHex))
+        }
+
+        assertNotNull(row)
+        assertEquals(TxId.wrap(txIdHex), row!!.txId)
+        assertEquals(NeutralCoin.valueOf(100_000L), row.value)
+        assertEquals(TransactionCategory.Received, row.type)
+        assertEquals(1_770_000_000_000L, row.timestamp)
+        assertEquals("", row.memo)
+        assertNull(row.taxCategory)
+        coVerify(exactly = 0) { sdkService.ensureStarted() }
+    }
+
+    @Test
+    fun `defaultMetadataFor is null when the SDK store is not open`() {
+        val sdkService = mockk<DashSdkService> { every { databaseOrNull() } returns null }
+
+        val row = runBlocking {
+            SdkTxDetailProvider(sdkService, mockk(), mockk(relaxed = true))
+                .defaultMetadataFor(TxId.wrap("e5169bfc4989585abd4b0476188611b981e3c750539da5b8a39fe135e3bbb957"))
+        }
+
+        assertNull(row)
+        coVerify(exactly = 0) { sdkService.ensureStarted() }
     }
 }

@@ -27,6 +27,7 @@ import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
 import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
+import org.dashfoundation.dashsdk.persistence.entities.TransactionEntity
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -109,7 +110,27 @@ data class SdkTxDetail(
  * lets the sheet fall back to [TransactionMetadata.defaultTaxCategory]
  * (Income for a receive, Expense for a send) — identical to a dashj tx.
  */
-fun SdkTxDetail.toDefaultMetadata(): TransactionMetadata = TransactionMetadata(
+fun SdkTxDetail.toDefaultMetadata(): TransactionMetadata =
+    defaultSdkTxMetadata(txIdDisplayHex, netAmountDuffs, timestampMs, isSent)
+
+/**
+ * The same default row as [SdkTxDetail.toDefaultMetadata], built from the
+ * list-shape record alone (no consensus decode, no TXO lookups). The sent/received
+ * rule matches [SdkTxDetail.isSent].
+ */
+internal fun L1TxUiRecord.toDefaultMetadata(): TransactionMetadata = defaultSdkTxMetadata(
+    txidHex,
+    netAmountDuffs,
+    timestampMs,
+    isSent = netAmountDuffs < 0 || direction != L1TxUiDirection.INCOMING
+)
+
+private fun defaultSdkTxMetadata(
+    txIdDisplayHex: String,
+    netAmountDuffs: Long,
+    timestampMs: Long,
+    isSent: Boolean
+): TransactionMetadata = TransactionMetadata(
     TxId.wrap(txIdDisplayHex),
     timestampMs,
     Coin.valueOf(netAmountDuffs),
@@ -248,7 +269,7 @@ class SdkTxDetailProvider @Inject constructor(
     private val sdkService: DashSdkService,
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val assetLockKindResolver: AssetLockKindResolver
-) {
+) : SdkTxMetadataSource {
     /**
      * Load the detail for [txIdDisplayHex] (display-order hex, i.e.
      * `Sha256Hash.toString()`), or null when the SDK holds no such
@@ -272,52 +293,7 @@ class SdkTxDetailProvider @Inject constructor(
         }
 
         val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
-        val baseRecord = l1TxUiRecord(
-            txidWireBytes = entity.txid,
-            netAmountDuffs = entity.netAmount,
-            feeDuffs = entity.fee,
-            contextCode = entity.context,
-            directionCode = entity.direction,
-            firstSeenSec = entity.firstSeen,
-            blockTimestampSec = entity.blockTimestamp
-        )
-
-        // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
-        // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
-        // correction. For a contact send the SDK `transactions` row surfaces only the +change
-        // (wrong direction: INCOMING / wrong amount), so whenever a plain send/receive cache row
-        // exists it is the AUTHORITATIVE direction + amount override — not only when the SDK net
-        // is 0. Absent (pre-cutover / non-SDK txs) → the SDK row stands unchanged.
-        //
-        // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
-        // service rows keep the SDK direction. Sign convention (Bug A):
-        // - INCOMING: the cached value IS the received net → use it directly.
-        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only (it excludes the
-        //   fee), so reconstruct the true signed net = -(|principal| + fee) so a sent amount
-        //   renders the same way the dashj path does (|net| amount, fee shown separately).
-        val cacheEntry = txDisplayCacheDao
-            .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
-            .firstOrNull()
-        val cachedValue = cacheEntry?.valueSatoshis
-        val record = if (
-            cacheEntry != null && cachedValue != null && cachedValue != 0L &&
-            (cacheEntry.iconType == TxDisplayCacheEntry.ICON_SENT ||
-                cacheEntry.iconType == TxDisplayCacheEntry.ICON_RECEIVED)
-        ) {
-            val cachedDirection = if (cachedValue < 0) {
-                L1TxUiDirection.OUTGOING
-            } else {
-                L1TxUiDirection.INCOMING
-            }
-            val net = if (cachedDirection == L1TxUiDirection.INCOMING) {
-                cachedValue
-            } else {
-                -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
-            }
-            baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
-        } else {
-            baseRecord
-        }
+        val record = correctedRecord(entity, txIdDisplayHex)
 
         val decoded = try {
             TransactionDecoder.decode(
@@ -358,6 +334,82 @@ class SdkTxDetailProvider @Inject constructor(
             inputTxoValues = inputTxos.map { it?.amount },
             assetLockKind = assetLockKind
         )
+    }
+
+    /**
+     * The neutral record for [entity], with the tx_display_cache correction applied
+     * (see the comment inside). Cheap: one Room read, no decode.
+     */
+    private suspend fun correctedRecord(entity: TransactionEntity, txIdDisplayHex: String): L1TxUiRecord {
+        val baseRecord = l1TxUiRecord(
+            txidWireBytes = entity.txid,
+            netAmountDuffs = entity.netAmount,
+            feeDuffs = entity.fee,
+            contextCode = entity.context,
+            directionCode = entity.direction,
+            firstSeenSec = entity.firstSeen,
+            blockTimestampSec = entity.blockTimestamp
+        )
+
+        // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
+        // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
+        // correction. For a contact send the SDK `transactions` row surfaces only the +change
+        // (wrong direction: INCOMING / wrong amount), so whenever a plain send/receive cache row
+        // exists it is the AUTHORITATIVE direction + amount override — not only when the SDK net
+        // is 0. Absent (pre-cutover / non-SDK txs) → the SDK row stands unchanged.
+        //
+        // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
+        // service rows keep the SDK direction. Sign convention (Bug A):
+        // - INCOMING: the cached value IS the received net → use it directly.
+        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only (it excludes the
+        //   fee), so reconstruct the true signed net = -(|principal| + fee) so a sent amount
+        //   renders the same way the dashj path does (|net| amount, fee shown separately).
+        val cacheEntry = txDisplayCacheDao
+            .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
+            .firstOrNull()
+        val cachedValue = cacheEntry?.valueSatoshis
+        return if (
+            cacheEntry != null && cachedValue != null && cachedValue != 0L &&
+            (cacheEntry.iconType == TxDisplayCacheEntry.ICON_SENT ||
+                cacheEntry.iconType == TxDisplayCacheEntry.ICON_RECEIVED)
+        ) {
+            val cachedDirection = if (cachedValue < 0) {
+                L1TxUiDirection.OUTGOING
+            } else {
+                L1TxUiDirection.INCOMING
+            }
+            val net = if (cachedDirection == L1TxUiDirection.INCOMING) {
+                cachedValue
+            } else {
+                -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
+            }
+            baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
+        } else {
+            baseRecord
+        }
+    }
+
+    /**
+     * [SdkTxMetadataSource]: the default metadata row for a tx the SDK store holds.
+     *
+     * Never starts the SDK. When it is not running there is no SDK store to consult,
+     * and starting it as a side effect of a metadata lookup (for example a platform
+     * metadata sync on a wallet that has not cut over) is not this method's call.
+     * The tx-detail sheet starts it through [load] before it imports metadata.
+     */
+    override suspend fun defaultMetadataFor(txId: TxId): TransactionMetadata? {
+        val txIdDisplayHex = txId.toString().lowercase()
+        val wireTxid = displayTxIdToWireBytes(txIdDisplayHex) ?: return null
+        return try {
+            val db = sdkService.databaseOrNull() ?: return null
+            val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
+            correctedRecord(entity, txIdDisplayHex).toDefaultMetadata()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("SDK store lookup for metadata of {} failed", txIdDisplayHex, e)
+            null
+        }
     }
 
     companion object {
