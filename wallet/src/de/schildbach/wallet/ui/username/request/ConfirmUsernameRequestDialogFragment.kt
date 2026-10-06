@@ -75,14 +75,24 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
                         },
                         onCancel = {
                             lifecycleScope.launch {
-                                authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                                authenticateThenSubmit(
+                                    this@ConfirmUsernameRequestDialogFragment,
+                                    authManager,
+                                    requestUserNameViewModel,
+                                    viewModel.uiState.value.amountDuffs
+                                )
                                 dismiss()
                             }
                         }
                     ).show(requireActivity())
                 } else {
                     lifecycleScope.launch {
-                        authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                        authenticateThenSubmit(
+                            this@ConfirmUsernameRequestDialogFragment,
+                            authManager,
+                            requestUserNameViewModel,
+                            viewModel.uiState.value.amountDuffs
+                        )
                         dismiss()
                     }
                 }

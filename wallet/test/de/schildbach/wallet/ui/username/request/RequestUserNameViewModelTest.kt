@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.username.request
 
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
@@ -53,6 +54,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -613,6 +616,63 @@ class RequestUserNameViewModelTest {
         assertTrue("brian must be contested", state.usernameContestable)
         assertEquals("0.25", state.requiredAmount)
         assertFalse("0.15 DASH must not satisfy the legacy 0.25 requirement", state.enoughBalance)
+    }
+
+    // ── existing-identity contested gate (MO-1069 review 5431682794) ────────
+
+    private fun existingIdentity(userId: String = "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr") =
+        BlockchainIdentityData(IdentityCreationState.DONE, null, "brian", null, userId, false)
+
+    /**
+     * Wires [identityConfig] so the VM resolves an EXISTING identity (userId
+     * set) whose identity-credit balance is [credits] — the precondition for
+     * [RequestUserNameViewModel.canAffordContestedUsername]'s
+     * `identity?.userId != null` branch.
+     */
+    private fun existingIdentityWithCredits(credits: Long): PlatformRepo {
+        val userId = existingIdentity().userId!!
+        every { identityConfig.observe(BlockchainIdentityConfig.IDENTITY_ID) } returns
+            MutableStateFlow(userId)
+        coEvery { identityConfig.load() } returns existingIdentity(userId)
+        return mockk<PlatformRepo>(relaxed = true) {
+            coEvery { getIdentityBalance(any()) } returns CreditBalanceInfo(credits)
+        }
+    }
+
+    @Test
+    fun canAffordContestedUsername_existingIdentity_protocol14_pointOneFiveDashPasses() = runVmTest {
+        // thepastaclaw's review (5431682794): the existing-identity gate must
+        // track the live-resolved contestedName fee (0.10 DASH current /
+        // 0.20 DASH legacy), not the fixed legacy 0.20 constant. 0.15 DASH of
+        // identity credits clears the 0.10 DASH current name fee.
+        coEvery { dashSdkService.currentProtocolVersion() } returns 14
+        val platformRepo = existingIdentityWithCredits(credits = 15_000_000_000L) // 0.15 DASH
+        val viewModel = viewModel(platformRepo = platformRepo)
+        // identityConfig.observe(IDENTITY_ID) is collected on viewModelWorkerScope
+        // (a REAL Dispatchers.IO scope, not the test's virtual-time Main dispatcher —
+        // see RequestUserNameViewModel.viewModelWorkerScope), so the balance update
+        // lands on a real thread the virtual scheduler never advances for. withTimeout
+        // must run under a real dispatcher too, or its own virtual deadline fires
+        // before the real update ever gets a chance to land.
+        withContext(Dispatchers.Default.limitedParallelism(1)) {
+            withTimeout(5_000) { viewModel.identityBalance.first { it != 0L } }
+        }
+
+        assertTrue(viewModel.canAffordContestedUsername())
+    }
+
+    @Test
+    fun canAffordContestedUsername_existingIdentity_protocol13_pointOneFiveDashFails() = runVmTest {
+        // Same 0.15 DASH identity-credit balance, but the network still runs
+        // protocol 13: the legacy 0.20 DASH name fee is NOT cleared by 0.15.
+        coEvery { dashSdkService.currentProtocolVersion() } returns 13
+        val platformRepo = existingIdentityWithCredits(credits = 15_000_000_000L) // 0.15 DASH
+        val viewModel = viewModel(platformRepo = platformRepo)
+        withContext(Dispatchers.Default.limitedParallelism(1)) {
+            withTimeout(5_000) { viewModel.identityBalance.first { it != 0L } }
+        }
+
+        assertFalse(viewModel.canAffordContestedUsername())
     }
 
     @Test

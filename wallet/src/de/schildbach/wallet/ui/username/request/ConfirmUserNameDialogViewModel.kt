@@ -56,7 +56,14 @@ data class ConfirmUserNameUIState(
     /** The shown amount leaves the SHIELDED pool — render the source label. */
     val fromShieldedBalance: Boolean = false,
     val usernameSubmittedSuccess: Boolean = false,
-    val usernameSubmittedError: Boolean = false
+    val usernameSubmittedError: Boolean = false,
+    /**
+     * The confirmed amount in DUFFS this sheet showed — carried into the
+     * funding call so a fee re-resolved higher at spend time (a protocol
+     * activation, or a failed live read falling back to LEGACY) is refused
+     * rather than funded silently (MO-1069 review 5431682794).
+     */
+    val amountDuffs: Long = 0L
 )
 
 /** What the username confirm sheet must show: the amount actually spent and where it comes from. */
@@ -178,7 +185,8 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
                 amountStr = amountStr,
                 fiatAmountStr = fiatAmountStr,
                 fiatSymbol = fiatSymbol,
-                fromShieldedBalance = cost.fromShieldedBalance
+                fromShieldedBalance = cost.fromShieldedBalance,
+                amountDuffs = cost.amount.value
             )
         }
     }

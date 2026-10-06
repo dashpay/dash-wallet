@@ -34,10 +34,11 @@ import org.dash.wallet.common.services.AuthenticationManager
 suspend fun authenticateThenSubmit(
     fragment: Fragment,
     authManager: AuthenticationManager,
-    viewModel: RequestUserNameViewModel
+    viewModel: RequestUserNameViewModel,
+    approvedAmountDuffs: Long = Long.MAX_VALUE
 ) {
     val pin = authManager.authenticate(fragment.requireActivity())
     if (pin != null) {
-        viewModel.submit()
+        viewModel.submit(approvedAmountDuffs)
     }
 }
