@@ -71,16 +71,27 @@ import javax.inject.Singleton
  *   receiving-account registration is outstanding
  *   ([de.schildbach.wallet.service.platform.sdk.DashPayBackfillStatus.ledgerIncomplete]).
  *   Also positive evidence, so this too MAY re-open the signal.
+ * @property accountBuildsHeldByLockedDevice the unsettled account builds are
+ *   waiting on the device being unlocked — their drain needs the Keystore-held
+ *   seed ([de.schildbach.wallet.service.platform.sdk.AccountBuildDrainState.BLOCKED_DEVICE_LOCKED]).
+ *   Not a settledness term of its own: it tells [L1SyncStatusService] not to
+ *   run its time ceiling down against a wait that only an unlock can end (and
+ *   that is itself bounded once the device is unlocked).
  */
 data class DashPaySyncTerms(
     val applicable: Boolean = false,
     val initialSyncCompleted: Boolean = false,
     val contactSyncInFlight: Boolean = false,
     val accountBuildsSettled: Boolean = true,
-    val backfillSettled: Boolean = true
+    val backfillSettled: Boolean = true,
+    val accountBuildsHeldByLockedDevice: Boolean = false
 ) {
     val settled: Boolean
         get() = !applicable || (initialSyncCompleted && accountBuildsSettled && backfillSettled)
+
+    /** Unsettled, and the account builds are waiting on a device unlock. */
+    val heldByLockedDevice: Boolean
+        get() = !settled && !accountBuildsSettled && accountBuildsHeldByLockedDevice
 }
 
 /**
@@ -159,11 +170,18 @@ class DashPaySyncStatus @Inject constructor() {
             initialSyncCompleted = false,
             contactSyncInFlight = false,
             accountBuildsSettled = true,
-            backfillSettled = true
+            backfillSettled = true,
+            accountBuildsHeldByLockedDevice = false
         )
     }
 
-    fun setAccountBuildsSettled(settled: Boolean) = update { it.copy(accountBuildsSettled = settled) }
+    /**
+     * The account-build term, and whether an unsettled one is waiting on the
+     * device being unlocked ([DashPaySyncTerms.accountBuildsHeldByLockedDevice]).
+     */
+    fun setAccountBuildsSettled(settled: Boolean, heldByLockedDevice: Boolean = false) = update {
+        it.copy(accountBuildsSettled = settled, accountBuildsHeldByLockedDevice = !settled && heldByLockedDevice)
+    }
 
     fun setBackfillSettled(settled: Boolean) = update { it.copy(backfillSettled = settled) }
 
@@ -171,14 +189,14 @@ class DashPaySyncStatus @Inject constructor() {
         val before = _terms.value
         _terms.update(transform)
         val after = _terms.value
-        if (before.settled != after.settled) {
+        if (before.settled != after.settled || before.heldByLockedDevice != after.heldByLockedDevice) {
             log.info(
                 "DashPay sync {}: applicable={} initialSyncCompleted={} accountBuilds={} " +
-                    "backfill={} (contactSyncInFlight={} — diagnostic only, a scheduled " +
-                    "refresh never re-raises the indicator)",
+                    "(heldByLockedDevice={}) backfill={} (contactSyncInFlight={} — diagnostic " +
+                    "only, a scheduled refresh never re-raises the indicator)",
                 if (after.settled) "SETTLED" else "still in progress",
-                after.applicable, after.initialSyncCompleted,
-                after.accountBuildsSettled, after.backfillSettled, after.contactSyncInFlight
+                after.applicable, after.initialSyncCompleted, after.accountBuildsSettled,
+                after.accountBuildsHeldByLockedDevice, after.backfillSettled, after.contactSyncInFlight
             )
         }
     }

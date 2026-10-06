@@ -917,6 +917,10 @@ class CutoverUiDataServiceTest {
         deferredContactBuilds: Int? = null,
         /** When non-null, the deferred-build probe calls THIS per read (overrides [deferredContactBuilds]). */
         deferredContactBuildFeed: (suspend () -> Int?)? = null,
+        /** The contact-account-build drain state read with each count; default = the drain has run. */
+        drainState: () -> AccountBuildDrainState = { AccountBuildDrainState.RAN },
+        /** Receives (buildsSettled, backfillSettled, buildsHeldByLockedDevice) per publication. */
+        publishDashPaySyncTerms: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
         /** When non-null, backs BOTH the IS-lock persist and the persisted-lock read (restart-safe store fake). */
         persistedIsLocks: MutableSet<String>? = null,
         /**
@@ -952,6 +956,8 @@ class CutoverUiDataServiceTest {
         deferredContactBuildCount = {
             if (deferredContactBuildFeed != null) deferredContactBuildFeed() else deferredContactBuilds
         },
+        accountBuildDrainState = { drainState() },
+        publishDashPaySyncTerms = publishDashPaySyncTerms,
         persistInstantLock = { txid, _ -> persistedIsLocks?.add(txid) },
         loadPersistedInstantLocks = { txids ->
             persistedIsLocks?.let { store -> txids.filterTo(mutableSetOf()) { it in store } } ?: emptySet()
@@ -1355,6 +1361,135 @@ class CutoverUiDataServiceTest {
         }
 
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    // ── QA phone 2 (12.0.0-qa28, restore): builds that cannot drain ───
+
+    @Test
+    fun postCutover_buildsBlockedByTheLockedDevice_neverSettle_andHoldTheIndicator() = runTest {
+        // 212 builds, every drain refused by the Keystore while the phone sat
+        // locked. The count cannot move, so its standing still must never be
+        // read as "stuck": no persist, and the indicator is told the builds
+        // are held by the locked device.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        var drain = AccountBuildDrainState.BLOCKED_DEVICE_LOCKED
+        val published = mutableListOf<Triple<Boolean, Boolean, Boolean>>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuildFeed = { 212 },
+            drainState = { drain },
+            publishDashPaySyncTerms = { builds, backfill, held -> published += Triple(builds, backfill, held) }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS * 10) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        assertEquals("builds unsettled and held by the locked device", Triple(false, true, true), published.last())
+
+        // Unlocked: the drain ran but these entries stay queued (the stuck
+        // shape). Fresh evidence is gathered under the new state, then the
+        // ordinary pin settles them — the protection against a truly stuck
+        // queue holding the seed and the header forever is intact.
+        drain = AccountBuildDrainState.RAN
+        repeat(2) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(Triple(false, true, false), published.last())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(Triple(true, true, false), published.last())
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 3_554_481_263L) }
+    }
+
+    @Test
+    fun postCutover_buildsNoDrainHasTouched_doNotSettleOnTheOrdinaryPin() = runTest {
+        // The restore shape: the SDK queued 211 builds during the scan, but the
+        // app only drains after it recovers the identity. Three unchanged reads
+        // used to "settle" them and persist a short seed.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuildFeed = { 211 },
+            drainState = { AccountBuildDrainState.NOT_ATTEMPTED }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS * 5) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun deferredBuilds_aCountThatCannotMove_isNoEvidenceOfAStuckQueue() {
+        var observation = DeferredBuildObservation()
+        repeat(100) {
+            observation = nextDeferredBuildObservation(
+                observation, 212, AccountBuildDrainState.BLOCKED_DEVICE_LOCKED, l1Synced = true
+            )
+        }
+        assertEquals(0, observation.unchangedReads)
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+        // Drained is drained, whatever the drain state.
+        assertTrue(deferredBuildsSettled(0, 0, AccountBuildDrainState.BLOCKED_DEVICE_LOCKED))
+    }
+
+    @Test
+    fun deferredBuilds_aNewDrainStateStartsAFreshStreak() {
+        var observation = DeferredBuildObservation()
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            observation = nextDeferredBuildObservation(observation, 91, AccountBuildDrainState.RAN, l1Synced = true)
+        }
+        assertTrue(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+
+        observation = nextDeferredBuildObservation(
+            observation, 91, AccountBuildDrainState.BLOCKED_DEVICE_LOCKED, l1Synced = true
+        )
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+
+        observation = nextDeferredBuildObservation(observation, 91, AccountBuildDrainState.RAN, l1Synced = true)
+        assertEquals(0, observation.unchangedReads)
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+    }
+
+    @Test
+    fun deferredBuilds_beforeAnyDrain_onlyCaughtUpReadsCount_towardALongPin() {
+        var observation = DeferredBuildObservation()
+        // 2.5 h of scan on QA phone 2: none of these reads is evidence.
+        repeat(150) {
+            observation = nextDeferredBuildObservation(
+                observation, 211, AccountBuildDrainState.NOT_ATTEMPTED, l1Synced = false
+            )
+        }
+        assertEquals(0, observation.unchangedReads)
+
+        repeat(DEFERRED_BUILDS_UNDRAINED_SETTLED_READS - 1) {
+            observation = nextDeferredBuildObservation(
+                observation, 211, AccountBuildDrainState.NOT_ATTEMPTED, l1Synced = true
+            )
+        }
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+
+        // The backstop: a wallet whose app never drains still settles.
+        observation = nextDeferredBuildObservation(
+            observation, 211, AccountBuildDrainState.NOT_ATTEMPTED, l1Synced = true
+        )
+        assertTrue(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
     }
 
     @Test

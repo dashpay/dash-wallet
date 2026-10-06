@@ -887,6 +887,99 @@ class L1SyncStatusServiceTest {
         job.cancel()
     }
 
+    // ── QA phone 2 (12.0.0-qa28): builds waiting on a locked device ──────
+
+    @Test
+    fun buildsHeldByTheLockedDevice_mapToTheirOwnVerdict() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE, dashPaySettleVerdict(status.terms.value))
+
+        status.setAccountBuildsSettled(false)
+        assertEquals(DashPaySettleVerdict.UNSETTLED, dashPaySettleVerdict(status.terms.value))
+
+        // A settled term can never be "held".
+        status.setAccountBuildsSettled(true, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+        assertFalse(status.terms.value.accountBuildsHeldByLockedDevice)
+    }
+
+    @Test
+    fun aWalletWithoutAnIdentityIsNeverHeldByTheLockedDevice() {
+        val status = DashPaySyncStatus()
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+    }
+
+    /**
+     * The phone sat locked for hours with 212 builds unable to drain. The
+     * ordinary ceiling must not run out meanwhile, or the user unlocks to the
+     * short balance reported as final.
+     */
+    @Test
+    fun aLockedDeviceHold_outlastsTheOrdinaryCeiling_butNotItsOwn() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(feed, deadlineMs = 1_000, lockedHoldMs = 50_000)
+                .collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE)
+        testScheduler.advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals("a locked-device hold is not cut short by the ordinary ceiling", false, seen.last())
+
+        testScheduler.advanceTimeBy(41_000)
+        runCurrent()
+        assertEquals("the hold has an independent backstop of its own", true, seen.last())
+        job.cancel()
+    }
+
+    /**
+     * After the unlock the drain runs and the builds start moving: the hold
+     * becomes an ordinary unsettled verdict, which must show as syncing again
+     * with a FRESH ceiling, even though an earlier ceiling had run out.
+     */
+    @Test
+    fun theDrainResumingAfterAnUnlock_reRaisesTheIndicatorWithAFreshCeiling() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(feed, deadlineMs = 1_000, lockedHoldMs = 5_000)
+                .collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(6_000)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        runCurrent()
+        assertEquals("draining builds show as syncing again", false, seen.last())
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.SETTLED)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
     // ── MO-995: the filters sawtooth guard ────────────────────────────
 
     /**

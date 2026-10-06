@@ -335,7 +335,11 @@ internal fun sustainedPlatformStarvation(
  * precisely a term that looked bounded and was not (the backfill gate's armed
  * marker is permanent on a healthy wallet). An indicator that never clears is
  * worse than one that clears early, so past this point the DashPay half is
- * reported settled regardless of what any producer says.
+ * reported settled regardless of what any producer says. Time the phone spends
+ * locked with contact account builds waiting on it
+ * ([DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE]) runs a longer ceiling of its
+ * own instead ([DASHPAY_LOCKED_HOLD_CEILING_MS]): nobody can see it, and it
+ * ends a few minutes after an unlock.
  *
  * Sized above the worst observed honest tail: on 11.10.86 the L1 scan reported
  * caught up at 17:12:39 and the DashPay side finished at 17:25:00 — ~12.4
@@ -355,24 +359,83 @@ internal const val DASHPAY_SETTLE_DEADLINE_MS = 15 * 60_000L
  * must not restart the clock, or a 60 s republish cadence would hold the
  * ceiling off forever). Pure — host-testable.
  */
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 internal fun dashPaySyncSettledWithDeadline(
     settled: Flow<Boolean>,
     deadlineMs: Long = DASHPAY_SETTLE_DEADLINE_MS
-): Flow<Boolean> = settled
+): Flow<Boolean> = dashPaySyncVerdictWithDeadline(
+    settled.map { if (it) DashPaySettleVerdict.SETTLED else DashPaySettleVerdict.UNSETTLED },
+    deadlineMs
+)
+
+/**
+ * The DashPay half of "finished syncing" as the ceiling sees it
+ * ([dashPaySyncVerdictWithDeadline]).
+ */
+internal enum class DashPaySettleVerdict {
+    SETTLED,
+
+    /** Unsettled: reported as syncing until it settles or [DASHPAY_SETTLE_DEADLINE_MS] passes. */
+    UNSETTLED,
+
+    /**
+     * Unsettled because contact account builds are waiting on the device being
+     * unlocked ([DashPaySyncTerms.heldByLockedDevice]): reported as syncing
+     * under [DASHPAY_LOCKED_HOLD_CEILING_MS] instead of the ordinary ceiling,
+     * which would otherwise run out while the phone sits locked and the user
+     * would unlock to a short balance shown as final (QA phone 2,
+     * 12.0.0-qa28). A locked device shows no header, and once it is unlocked
+     * the producer drops the hold when the next drain runs or after
+     * [de.schildbach.wallet.service.platform.sdk.ACCOUNT_BUILD_UNLOCK_GRACE_MS],
+     * whichever is first — and that change starts a fresh ordinary ceiling.
+     */
+    HELD_BY_LOCKED_DEVICE
+}
+
+/**
+ * Backstop ceiling for [DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE], kept
+ * independent of the producer for the same reason as
+ * [DASHPAY_SETTLE_DEADLINE_MS]: should a producer stop publishing while it
+ * holds, the indicator must still clear. Long enough to cover a night with
+ * the phone locked.
+ */
+internal const val DASHPAY_LOCKED_HOLD_CEILING_MS = 12 * 60 * 60_000L
+
+/** The ceiling's view of [terms]. Pure — host-testable. */
+internal fun dashPaySettleVerdict(terms: DashPaySyncTerms): DashPaySettleVerdict = when {
+    terms.settled -> DashPaySettleVerdict.SETTLED
+    terms.heldByLockedDevice -> DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE
+    else -> DashPaySettleVerdict.UNSETTLED
+}
+
+/**
+ * [dashPaySyncSettledWithDeadline] over the three-way [DashPaySettleVerdict]:
+ * [deadlineMs] runs while [DashPaySettleVerdict.UNSETTLED], [lockedHoldMs]
+ * while [DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE], and every change of
+ * verdict restarts the clock — so builds that start draining after an unlock
+ * are reported as syncing again even if a ceiling ran out earlier.
+ * Pure — host-testable.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun dashPaySyncVerdictWithDeadline(
+    verdicts: Flow<DashPaySettleVerdict>,
+    deadlineMs: Long = DASHPAY_SETTLE_DEADLINE_MS,
+    lockedHoldMs: Long = DASHPAY_LOCKED_HOLD_CEILING_MS
+): Flow<Boolean> = verdicts
     .distinctUntilChanged()
-    .flatMapLatest { isSettled ->
-        if (isSettled) {
-            flowOf(true)
-        } else {
-            flow {
-                emit(false)
-                delay(deadlineMs)
-                emit(true)
-            }
+    .flatMapLatest { verdict ->
+        when (verdict) {
+            DashPaySettleVerdict.SETTLED -> flowOf(true)
+            DashPaySettleVerdict.UNSETTLED -> unsettledUntil(deadlineMs)
+            DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE -> unsettledUntil(lockedHoldMs)
         }
     }
     .distinctUntilChanged()
+
+private fun unsettledUntil(ceilingMs: Long): Flow<Boolean> = flow {
+    emit(false)
+    delay(ceilingMs)
+    emit(true)
+}
 
 /**
  * Neutral chain-sync stage for the DETAIL readout (Tools → Network
@@ -680,7 +743,7 @@ class L1SyncStatusService @Inject constructor(
      * never flicker into "syncing" on the way to its first emission.
      */
     private val dashPaySettled: StateFlow<Boolean> =
-        dashPaySyncSettledWithDeadline(dashPaySyncStatus.terms.map { it.settled })
+        dashPaySyncVerdictWithDeadline(dashPaySyncStatus.terms.map(::dashPaySettleVerdict))
             .catch { e ->
                 // Fail OPEN: the indicator must never be stuck on because a
                 // bookkeeping feed failed.
