@@ -88,7 +88,9 @@ enum class ReportGenerationStatus {
 /**
  * Whether the report gets `dashJ-kotlin-parity-log.txt`: the dashj sync
  * diagnostic is on, it ran this launch (parity history exists), or a
- * breakdown applies to this report (the cutover is committed).
+ * breakdown applies to this report (the cutover is committed and the user
+ * shares the application log — [ReportParityBreakdown.NOT_SHARED] is not
+ * applicable, so it never attaches the parity log on its own).
  */
 internal fun shouldAttachParityLog(
     diagnosticEnabled: Boolean,
@@ -288,8 +290,9 @@ class ContactSupportViewModel @Inject constructor(
         // A fresh dashj ↔ SDK parity breakdown for the parity log, computed
         // BEFORE the logs are copied so its ParityBreakdown block is in the
         // attached wallet.log too. Bounded (it falls back to the last stored
-        // result with the reason) and never fails the report.
-        val parityBreakdown = parityBreakdownForReport()
+        // result with the reason) and never fails the report. It lists txids
+        // and amounts, so only when the user shares the application log.
+        val parityBreakdown = parityBreakdownForReport(collectApplicationLog)
 
         if (collectApplicationLog) {
             _status.value = ReportGenerationStatus.Logs
@@ -716,20 +719,25 @@ class ContactSupportViewModel @Inject constructor(
     /**
      * The breakdown for the parity log ([L1ShadowSyncService.parityBreakdownForReport]):
      * waits up to [PARITY_BREAKDOWN_REPORT_TIMEOUT_MS] under its own progress
-     * step. Whatever goes wrong, the report goes on with the last stored
-     * result (or none) and the reason.
+     * step. Whatever goes wrong, the report goes on without it, with the
+     * reason.
+     *
+     * The breakdown lists txids and amounts — application-log material — so
+     * when the user unticks "Append application log" it is neither computed
+     * nor shown ([ReportParityBreakdown.NOT_SHARED]), whatever else is shared.
      */
-    private suspend fun parityBreakdownForReport(): ReportParityBreakdown = try {
-        _status.value = ReportGenerationStatus.ParityBreakdown
-        l1ShadowSyncService.parityBreakdownForReport()
-    } catch (x: CancellationException) {
-        throw x
-    } catch (x: Exception) {
-        log.info("problem computing the parity breakdown for the report", x)
-        ReportParityBreakdown(
-            stored = runCatching { l1ShadowSyncService.latestParityBreakdown() }.getOrNull(),
-            notRefreshedReason = "failed (${x.javaClass.simpleName}: ${x.message})"
-        )
+    @VisibleForTesting
+    internal suspend fun parityBreakdownForReport(collectApplicationLog: Boolean): ReportParityBreakdown {
+        if (!collectApplicationLog) return ReportParityBreakdown.NOT_SHARED
+        return try {
+            _status.value = ReportGenerationStatus.ParityBreakdown
+            l1ShadowSyncService.parityBreakdownForReport()
+        } catch (x: CancellationException) {
+            throw x
+        } catch (x: Exception) {
+            log.info("problem computing the parity breakdown for the report", x)
+            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName}: ${x.message})")
+        }
     }
 
     @Throws(IOException::class)

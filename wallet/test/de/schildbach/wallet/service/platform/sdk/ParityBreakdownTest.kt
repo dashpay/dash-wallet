@@ -17,6 +17,9 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -32,6 +35,7 @@ import org.bitcoinj.wallet.WalletTransaction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Files
@@ -300,7 +304,9 @@ class ParityBreakdownTest {
         assertTrue(text, text.contains("sdk-only at/below examples (0 of 0, lowest height first): none"))
     }
 
-    private val stored = StoredParityBreakdown(42L, "ParityBreakdown body")
+    private val walletA = "ab".repeat(32)
+
+    private val stored = StoredParityBreakdown(walletA, 42L, "ParityBreakdown body")
 
     @Test
     fun reportSection_fresh_carriesTheComputedTimeAndTheText() {
@@ -332,6 +338,53 @@ class ParityBreakdownTest {
         )
     }
 
+    @Test
+    fun reportSection_notShared_saysOmitted_andIsNotApplicable() {
+        assertEquals(
+            "\n--- latest parity breakdown ---\nomitted (application log not shared)\n",
+            parityBreakdownReportSection(ReportParityBreakdown.NOT_SHARED) { "unused" }
+        )
+        assertFalse(ReportParityBreakdown.NOT_SHARED.applicable)
+        // Even if a result were attached to it, an omitted breakdown shows none of it.
+        val withText = ReportParityBreakdown.NOT_SHARED.copy(stored = stored)
+        assertFalse(parityBreakdownReportSection(withText) { "unused" }.contains("ParityBreakdown body"))
+    }
+
+    // ── SDK still processing ──────────────────────────────────────────
+
+    @Test
+    fun sdkStillProcessing_untilTheCommittedWalletHeightReachesDashj() {
+        assertEquals(
+            "SDK still processing transactions (wallet height 990 < dashj 1000)",
+            sdkStillProcessingReason(sdkWalletHeight = 990, dashjLastBlockSeenHeight = 1_000)
+        )
+        assertEquals(
+            "SDK still processing transactions (wallet height unknown, dashj 1000)",
+            sdkStillProcessingReason(sdkWalletHeight = 0, dashjLastBlockSeenHeight = 1_000)
+        )
+        assertNull(sdkStillProcessingReason(sdkWalletHeight = 1_000, dashjLastBlockSeenHeight = 1_000))
+        // A held dashj far below the SDK: nothing to wait for.
+        assertNull(sdkStillProcessingReason(sdkWalletHeight = 1_400_000, dashjLastBlockSeenHeight = 1_000))
+        // dashj has seen no block: nothing confirmed to wait for.
+        assertNull(sdkStillProcessingReason(sdkWalletHeight = 0, dashjLastBlockSeenHeight = -1))
+    }
+
+    // ── Single flight ─────────────────────────────────────────────────
+
+    @Test
+    fun inFlight_includesAPublishedLazyRunThatHasNotStarted() = runBlocking {
+        assertNull(inFlightParityBreakdown<Unit>(null))
+        val lazy = async(start = CoroutineStart.LAZY) { }
+        // The review's gap: published but not started reads as inactive.
+        assertFalse(lazy.isActive)
+        assertSame(lazy, inFlightParityBreakdown(lazy))
+        lazy.start()
+        lazy.await()
+        assertNull(inFlightParityBreakdown(lazy))
+        val cancelled = async(start = CoroutineStart.LAZY) { }.also { it.cancel() }
+        assertNull(inFlightParityBreakdown(cancelled))
+    }
+
     // ── Store ─────────────────────────────────────────────────────────
 
     @Test
@@ -342,13 +395,24 @@ class ParityBreakdownTest {
             val store = ParityBreakdownStore(file)
             assertNull(store.load())
 
-            val stored = StoredParityBreakdown(1_759_665_600_123L, "ParityBreakdown a\n  line two")
+            val stored = StoredParityBreakdown(walletA, 1_759_665_600_123L, "ParityBreakdown a\n  line two")
             store.save(stored)
             assertEquals(stored, store.load())
             assertEquals(stored, ParityBreakdownStore(file).load())
+            assertTrue(file.readText().startsWith("1759665600123 $walletA\n"))
 
-            file.writeText("not-a-number\ntext")
+            file.writeText("not-a-number $walletA\ntext")
             assertNull(store.load())
+            // The earlier format, without a wallet id: no wallet to match it to.
+            file.writeText("1759665600123\ntext")
+            assertNull(store.load())
+
+            store.save(stored)
+            store.clear()
+            assertFalse(file.exists())
+            assertFalse(dir.resolve("sub/breakdown.txt.tmp").exists())
+            assertNull(store.load())
+            store.clear() // nothing there: still fine
         } finally {
             dir.deleteRecursively()
         }

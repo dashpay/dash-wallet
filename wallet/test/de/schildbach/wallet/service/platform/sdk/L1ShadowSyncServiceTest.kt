@@ -173,9 +173,21 @@ class L1ShadowSyncServiceTest {
         // The parity breakdown's two inputs; null = unavailable (the seam default).
         var sdkTxidHeights: Map<Sha256Hash, Int>? = null
         var dashjFacts: DashjBreakdownFacts? = null
+        @Volatile
         var breakdownDashjCalls = 0
 
-        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, Int>? = sdkTxidHeights
+        /** Breakdown runs that read the SDK side; atomic for the concurrent-report test. */
+        val sdkTxidCalls = java.util.concurrent.atomic.AtomicInteger()
+
+        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, Int>? {
+            sdkTxidCalls.incrementAndGet()
+            return sdkTxidHeights
+        }
+
+        /** The durable committed wallet height the shadow seeds its cursor from; null = unknown. */
+        var walletSyncedHeight: Long? = null
+
+        override suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? = walletSyncedHeight
 
         /** Runs inside [dashjBreakdownFacts]: a gate to hold the run, or a throw. */
         var onDashjBreakdownFacts: suspend () -> Unit = {}
@@ -3526,6 +3538,8 @@ class L1ShadowSyncServiceTest {
     private val dashjOnlyTxid = Sha256Hash.wrap("22".repeat(32))
 
     private fun breakdownSource() = FakeSource(boundWalletId = walletIdHex).apply {
+        // The SDK has processed every block through dashj's last block seen.
+        walletSyncedHeight = 1_000
         sdkTxidHeights = mapOf(sharedTxid to 900)
         dashjFacts = DashjBreakdownFacts(
             lastBlockSeenHeight = 1_000,
@@ -3553,7 +3567,7 @@ class L1ShadowSyncServiceTest {
         }
     }
 
-    private val previouslyStored = StoredParityBreakdown(500L, "ParityBreakdown from an earlier run")
+    private val previouslyStored = StoredParityBreakdown(walletIdHex, 500L, "ParityBreakdown from an earlier run")
 
     private fun storeWithPreviousResult() =
         ParityBreakdownStore(dataDir.resolve("breakdown.txt")).also { it.save(previouslyStored) }
@@ -3587,7 +3601,7 @@ class L1ShadowSyncServiceTest {
         assertEquals(1, source.breakdownDashjCalls)
         // Kept for a later report to fall back on.
         assertEquals(fresh, ParityBreakdownStore(file).load())
-        assertEquals(fresh, service.latestParityBreakdown())
+        assertEquals(fresh, service.latestParityBreakdown(walletIdHex))
         service.stop()
     }
 
@@ -3634,7 +3648,7 @@ class L1ShadowSyncServiceTest {
         }
         val finished = checkNotNull(store.load())
         assertTrue(finished.text, finished.text.contains("trigger=report"))
-        assertEquals(finished, service.latestParityBreakdown())
+        assertEquals(finished, service.latestParityBreakdown(walletIdHex))
         service.stop()
     }
 
@@ -3659,8 +3673,8 @@ class L1ShadowSyncServiceTest {
         val source = breakdownSource()
         val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
         assertTrue(service.startIfEnabled())
-        source.driveSyncedEdgesUntil { service.latestParityBreakdown() != null }
-        val text = checkNotNull(service.latestParityBreakdown()).text
+        source.driveSyncedEdgesUntil { service.latestParityBreakdown(walletIdHex) != null }
+        val text = checkNotNull(service.latestParityBreakdown(walletIdHex)).text
         assertTrue(text, text.contains("trigger=probe"))
         service.stop()
     }
@@ -3706,7 +3720,142 @@ class L1ShadowSyncServiceTest {
         }
         // One attempt, then the retry back-off (the test clock stands still).
         assertEquals(1, source.breakdownDashjCalls)
-        assertNull(service.latestParityBreakdown())
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        service.stop()
+    }
+
+    // ── Review fixes (#1601) ──────────────────────────────────────────
+
+    @Test
+    fun report_sdkStillProcessingTransactions_fallsBack_andKeepsTheStoredResult() = runBlocking {
+        // Caught up on the filter scan (synced), but the committed wallet
+        // height trails dashj's last block seen: transactions below it may
+        // still be on their way into the store.
+        val source = breakdownSource().apply { walletSyncedHeight = 990 }
+        val store = storeWithPreviousResult()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
+        service.startSynced(source)
+
+        val reason = "SDK still processing transactions (wallet height 990 < dashj 1000)"
+        assertEquals(ReportParityBreakdown(previouslyStored, reason), service.parityBreakdownForReport())
+        assertEquals("the incomplete comparison must not replace the stored result", previouslyStored, store.load())
+        assertEquals(previouslyStored, service.latestParityBreakdown(walletIdHex))
+
+        // With dashj's height known up front, neither side is even read.
+        source.dashjChainHead = 1_000
+        val readsBefore = source.breakdownDashjCalls
+        assertEquals(ReportParityBreakdown(previouslyStored, reason), service.parityBreakdownForReport())
+        assertEquals(readsBefore, source.breakdownDashjCalls)
+
+        // The pipeline commits through dashj's height: the next report is fresh.
+        source.eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 1000 }")
+        val report = service.parityBreakdownForReport()
+        assertNull(report.notRefreshedReason)
+        assertEquals(checkNotNull(report.stored), store.load())
+        service.stop()
+    }
+
+    @Test
+    fun report_unknownWalletHeight_isNotFresh() = runBlocking {
+        val source = breakdownSource().apply { walletSyncedHeight = null }
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertEquals(
+            ReportParityBreakdown(null, "SDK still processing transactions (wallet height unknown, dashj 1000)"),
+            service.parityBreakdownForReport()
+        )
+        service.stop()
+    }
+
+    @Test
+    fun storedResult_ofAnotherWallet_isNeverShown() = runBlocking {
+        val otherWallet = "ef".repeat(32)
+        val store = ParityBreakdownStore(dataDir.resolve("breakdown.txt")).also {
+            it.save(StoredParityBreakdown(otherWallet, 500L, "ParityBreakdown of the previous wallet"))
+        }
+        val source = breakdownSource()
+        source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
+        assertTrue(service.startIfEnabled())
+
+        assertEquals(ReportParityBreakdown(null, "SDK not synced"), service.parityBreakdownForReport())
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        assertNotNull(service.latestParityBreakdown(otherWallet))
+        service.stop()
+    }
+
+    @Test
+    fun walletWipe_clearsTheStoredResult_andAnInFlightRunCannotWriteItBack() = runBlocking {
+        val file = dataDir.resolve("breakdown.txt")
+        val store = storeWithPreviousResult()
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        // A run that cannot be stopped in time (parked in a blocking read).
+        val source = breakdownSource().apply {
+            onDashjBreakdownFacts = {
+                inside.complete(Unit)
+                withContext(NonCancellable) { gate.await() }
+            }
+        }
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
+        service.startSynced(source)
+        assertEquals(previouslyStored, service.latestParityBreakdown(walletIdHex))
+
+        val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
+        withTimeout(5_000) { inside.await() }
+
+        service.clearForWalletWipe()
+        assertFalse("the wipe deletes the stored result", file.exists())
+        assertNull(service.latestParityBreakdown(walletIdHex))
+
+        gate.complete(Unit)
+        val afterWipe = withTimeout(5_000) { report.await() }
+        assertNull(afterWipe.stored)
+        assertNotNull(afterWipe.notRefreshedReason)
+        // Give a straggling write every chance to land, then check nothing did.
+        delay(50)
+        assertFalse("the run must not write the wiped wallet's result back", file.exists())
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        assertNull(ParityBreakdownStore(file).load())
+        service.stop()
+    }
+
+    @Test
+    fun concurrentReports_shareOneRun() = runBlocking {
+        val inFlight = java.util.concurrent.atomic.AtomicInteger()
+        val maxInFlight = java.util.concurrent.atomic.AtomicInteger()
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(dataDir.resolve("breakdown.txt"))
+        )
+        service.startSynced(source)
+        repeat(20) { round ->
+            val gate = CompletableDeferred<Unit>()
+            source.onDashjBreakdownFacts = {
+                maxInFlight.accumulateAndGet(inFlight.incrementAndGet(), ::maxOf)
+                try {
+                    gate.await()
+                } finally {
+                    inFlight.decrementAndGet()
+                }
+            }
+            val runsBefore = source.sdkTxidCalls.get()
+            // Many callers on real threads, racing to start the run.
+            val reports = (1..8).map {
+                async(Dispatchers.Default) { service.parityBreakdownForReport(timeoutMs = 5_000) }
+            }
+            withTimeout(5_000) { while (source.sdkTxidCalls.get() == runsBefore) delay(1) }
+            delay(20)
+            gate.complete(Unit)
+            val results = reports.map { it.await() }
+            assertEquals("round $round: never two runs at once", 1, maxInFlight.get())
+            assertTrue(
+                "round $round: every report gets a fresh result",
+                results.all { it.notRefreshedReason == null && it.stored != null }
+            )
+        }
         service.stop()
     }
 }

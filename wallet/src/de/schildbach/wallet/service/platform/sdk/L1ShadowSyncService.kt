@@ -1821,10 +1821,11 @@ interface L1ShadowSource {
     suspend fun dashjUnspentUtxos(): List<L1Utxo>?
 
     /**
-     * Every distinct SDK txid — the same funding ∪ spending set [sdkTxCount]
-     * counts — with its `transactions.blockHeight` (0 = none: unconfirmed, or
-     * no transactions row), for the [ParityBreakdown]. Null when unavailable;
-     * default null so test fakes stay source-compatible.
+     * Every distinct SDK txid of the wallet with its block height, for the
+     * [ParityBreakdown] ([querySdkTxidHeights]): the funding ∪ spending set
+     * [sdkTxCount] counts plus the wallet's reserved (`pending_inputs`)
+     * spenders, so it can exceed [sdkTxCount] by in-flight change-less sends.
+     * Null when unavailable; default null so test fakes stay source-compatible.
      */
     suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, Int>? = null
 
@@ -2008,29 +2009,8 @@ internal class DashSdkL1ShadowSource(
     override suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, Int>? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
         val db = database()
-        // The [sdkTxCount] union, joined to its height, read straight off the
-        // cursor into one map keyed the way dashj keys its transactions.
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            db.openHelper.readableDatabase.query(
-                androidx.sqlite.db.SimpleSQLiteQuery(
-                    "SELECT u.t, tx.blockHeight FROM (" +
-                        "SELECT txid AS t FROM txos WHERE walletId = ? AND txid IS NOT NULL " +
-                        "UNION " +
-                        "SELECT spendingTxid AS t FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL) u " +
-                        "LEFT JOIN transactions tx ON tx.txid = u.t",
-                    arrayOf<Any?>(walletId, walletId)
-                )
-            ).use { cursor ->
-                val out = HashMap<org.bitcoinj.core.Sha256Hash, Int>(cursor.count * 4 / 3 + 1)
-                while (cursor.moveToNext()) {
-                    val wire = cursor.getBlob(0) ?: continue
-                    if (wire.size != 32) continue
-                    // Room stores wire order; dashj's Sha256Hash is display order.
-                    out[org.bitcoinj.core.Sha256Hash.wrapReversed(wire)] =
-                        if (cursor.isNull(1)) 0 else cursor.getInt(1)
-                }
-                out
-            }
+            querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
         }
     }
 
@@ -3022,8 +3002,7 @@ class L1ShadowSyncService internal constructor(
             watchdogJob = null
             eventTapJob?.cancel()
             eventTapJob = null
-            breakdownRun?.cancel()
-            breakdownRun = null
+            synchronized(breakdownLock) { breakdownRun.also { breakdownRun = null } }?.cancel()
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
@@ -3891,19 +3870,35 @@ class L1ShadowSyncService internal constructor(
 
     // ── Transaction-level parity breakdown ────────────────────────────
 
-    /** The latest breakdown, this process's or the one [breakdownStore] held at the first read. */
+    /**
+     * The latest breakdown, this process's or the one [breakdownStore] held at
+     * the first read — for whichever SDK wallet it was computed for; readers
+     * only ever see it for that wallet ([latestParityBreakdown]). Written
+     * under [breakdownLock].
+     */
     @Volatile
     private var latestBreakdown: StoredParityBreakdown? = null
 
     @Volatile
     private var breakdownStoreLoaded = false
 
+    /** Guards the breakdown state and serializes every [breakdownStore] write and clear. */
     private val breakdownLock = Any()
 
     /**
+     * Bumped by a wallet wipe ([clearParityBreakdownForWalletWipe]); under
+     * [breakdownLock]. A run, or a first [breakdownStore] read, that began in
+     * an earlier epoch keeps nothing, so a run that finishes after the wipe
+     * cannot write the wiped wallet's txids back.
+     */
+    private var breakdownEpoch = 0L
+
+    /**
      * The run in flight, if any: at most one at a time, shared by the hourly
-     * diagnostic run and a report (a report joins a run already going).
-     * Cancelled by [stop].
+     * diagnostic run and a report (a report joins a run already going). Kept
+     * until it has COMPLETED, not just while active: it is published before
+     * it is started ([startParityBreakdown]). Cancelled by [stop] and by a
+     * wallet wipe.
      */
     @Volatile
     private var breakdownRun: Deferred<ParityBreakdownRunResult>? = null
@@ -3920,25 +3915,56 @@ class L1ShadowSyncService internal constructor(
     private var breakdownUnavailableLogged = false
 
     /**
-     * The latest [ParityBreakdown] as its log text, from this process or —
-     * after a restart — from [breakdownStore]; null when none was ever
-     * computed. The first call reads a small file: call off the main thread.
+     * The latest [ParityBreakdown] for SDK wallet [walletIdHex] as its log
+     * text, from this process or — after a restart — from [breakdownStore];
+     * null when none was computed for that wallet. The first call reads a
+     * small file: call off the main thread.
      */
-    internal fun latestParityBreakdown(): StoredParityBreakdown? {
+    internal fun latestParityBreakdown(walletIdHex: String): StoredParityBreakdown? {
         if (!breakdownStoreLoaded) {
+            val epoch = synchronized(breakdownLock) { breakdownEpoch }
             val loaded = breakdownStore?.load()
             synchronized(breakdownLock) {
-                val current = latestBreakdown
-                if (loaded != null && (current == null || loaded.computedAtMs > current.computedAtMs)) {
-                    latestBreakdown = loaded
+                // A wipe since the read: what was read is the wiped wallet's.
+                if (epoch == breakdownEpoch && !breakdownStoreLoaded) {
+                    val current = latestBreakdown
+                    if (loaded != null && (current == null || loaded.computedAtMs > current.computedAtMs)) {
+                        latestBreakdown = loaded
+                    }
+                    breakdownStoreLoaded = true
                 }
-                breakdownStoreLoaded = true
             }
         }
-        return latestBreakdown
+        return latestBreakdown?.takeIf { it.walletIdHex == walletIdHex }
     }
 
-    /** The SDK's txid set is complete enough to compare: the same caught-up test the parity streak uses. */
+    /**
+     * Wallet wipe: forget the breakdown (memory and [breakdownStore]) and
+     * cancel a run in flight. The epoch bump fences a run that cannot be
+     * stopped in time — it finishes without keeping or logging anything.
+     */
+    private suspend fun clearParityBreakdownForWalletWipe() {
+        val run = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            synchronized(breakdownLock) {
+                breakdownEpoch++
+                latestBreakdown = null
+                breakdownStoreLoaded = true // the file is gone; nothing to load
+                lastBreakdownRunMs = null
+                breakdownRetryNotBeforeMs = 0L
+                breakdownStore?.clear()
+                breakdownRun.also { breakdownRun = null }
+            }
+        }
+        run?.cancel()
+        log.info("ParityBreakdown: cleared for the wallet wipe")
+    }
+
+    /**
+     * The SDK's txid set is complete enough to compare: the same caught-up
+     * test the parity streak uses. Not sufficient on its own — that test
+     * ignores the block/transaction pipeline, so [runParityBreakdown] also
+     * waits for the committed wallet height ([sdkStillProcessingReason]).
+     */
     private fun sdkCaughtUpForBreakdown(): Boolean =
         _progress.value.let { it.synced || it.scanCaughtUpToTip }
 
@@ -3950,24 +3976,27 @@ class L1ShadowSyncService internal constructor(
      */
     private fun maybeLaunchParityBreakdown(walletIdHex: String) {
         if (!sdkCaughtUpForBreakdown()) return
-        if (breakdownRun?.isActive == true) return
+        if (inFlightParityBreakdown(breakdownRun) != null) return
         val now = nowMs()
         if (now < breakdownRetryNotBeforeMs) return
         if (!parityBreakdownDue(now, lastBreakdownRunMs)) return
         startParityBreakdown(walletIdHex, ParityBreakdownTrigger.PROBE)
     }
 
-    /** Start a run, or return the one already in flight. */
+    /** Start a run, or return the one already in flight (started or not). */
     private fun startParityBreakdown(
         walletIdHex: String,
         trigger: ParityBreakdownTrigger
     ): Deferred<ParityBreakdownRunResult> {
         val run = synchronized(breakdownLock) {
-            breakdownRun?.takeIf { it.isActive }?.let { return it }
+            inFlightParityBreakdown(breakdownRun)?.let { return it }
+            val epoch = breakdownEpoch
             // LAZY so the field is set before the body runs (an Unconfined
-            // scope would otherwise run it inside this lock).
+            // scope would otherwise run it inside this lock). Published
+            // unstarted: callers in the gap below see it as in flight
+            // ([inFlightParityBreakdown]), not as finished.
             scope.async(start = kotlinx.coroutines.CoroutineStart.LAZY) {
-                runParityBreakdown(walletIdHex, trigger)
+                runParityBreakdown(walletIdHex, trigger, epoch)
             }.also { breakdownRun = it }
         }
         run.start()
@@ -3980,8 +4009,10 @@ class L1ShadowSyncService internal constructor(
      *
      * Applies once the cutover is committed, and before it only with the dashj
      * sync diagnostic on ([parityBreakdownAppliesToReport]). When no fresh run
-     * is possible — the SDK has not caught up, the run timed out or failed —
-     * the last stored result is returned with the reason. A timed-out run is
+     * is possible — the SDK has not caught up or is still processing
+     * transactions, the run timed out or failed — the last stored result for
+     * the running SDK wallet is returned with the reason (none when the
+     * shadow is not running: no wallet to match it to). A timed-out run is
      * not cancelled: it finishes in the background, logs its block and stores
      * it for the next report. Never throws, except to propagate the caller's
      * own cancellation.
@@ -4021,7 +4052,9 @@ class L1ShadowSyncService internal constructor(
             }
         }
         val fallback = try {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { latestParityBreakdown() }
+            walletIdHex?.let {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { latestParityBreakdown(it) }
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             null
@@ -4033,48 +4066,94 @@ class L1ShadowSyncService internal constructor(
      * One breakdown run: the SDK txid set (one SQL pass), then one pass over
      * dashj's transactions, then the pure [computeParityBreakdown]. Both
      * inputs are dropped when this returns; only the text is kept (in memory
-     * and in [breakdownStore]). Never throws, except cancellation.
+     * and in [breakdownStore]), and only if no wallet wipe happened since
+     * [epoch]. Never throws, except cancellation.
+     *
+     * Waits for the SDK's transaction processing, not just its filter scan:
+     * a transaction below dashj's comparison height that the SDK has matched
+     * but not yet imported would otherwise read as dashj-only. The committed
+     * wallet height is read BEFORE the SDK txid set, so every transaction at
+     * or below it is already in the store when the set is read.
      */
     private suspend fun runParityBreakdown(
         walletIdHex: String,
-        trigger: ParityBreakdownTrigger
+        trigger: ParityBreakdownTrigger,
+        epoch: Long
     ): ParityBreakdownRunResult {
         val result = try {
             val startedMs = nowMs()
             val startedNanos = System.nanoTime()
-            val sdkTxids = source.sdkTxidHeights(walletIdHex)
-            val dashj = sdkTxids?.let { source.dashjBreakdownFacts(it.keys) }
-            if (sdkTxids == null || dashj == null) {
-                val what = if (sdkTxids == null) "SDK txid set not available" else "dashj wallet not available"
-                if (!breakdownUnavailableLogged) {
-                    breakdownUnavailableLogged = true
-                    log.info("ParityBreakdown skipped: {}", what)
-                }
-                ParityBreakdownRunResult.Unavailable(what)
+            val sdkWalletHeight = _engineWalletSyncedHeight.value
+            // Cheap early answer (dashj's last block seen) before the two
+            // full reads; the dashj pass below re-checks with its own height.
+            val stillProcessing = source.dashjChainHeadHeight()?.let { sdkStillProcessingReason(sdkWalletHeight, it) }
+            if (stillProcessing != null) {
+                log.info("ParityBreakdown skipped: {}", stillProcessing)
+                ParityBreakdownRunResult.Unavailable(stillProcessing)
             } else {
-                val breakdown = computeParityBreakdown(dashj.txs, sdkTxids, dashj.lastBlockSeenHeight)
-                val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
-                val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
-                log.info(text)
-                val stored = StoredParityBreakdown(startedMs, text)
-                synchronized(breakdownLock) { latestBreakdown = stored }
-                breakdownStore?.let { store ->
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { store.save(stored) }
+                val sdkTxids = source.sdkTxidHeights(walletIdHex)
+                val dashj = sdkTxids?.let { source.dashjBreakdownFacts(it.keys) }
+                if (sdkTxids == null || dashj == null) {
+                    val what = if (sdkTxids == null) "SDK txid set not available" else "dashj wallet not available"
+                    if (!breakdownUnavailableLogged) {
+                        breakdownUnavailableLogged = true
+                        log.info("ParityBreakdown skipped: {}", what)
+                    }
+                    ParityBreakdownRunResult.Unavailable(what)
+                } else {
+                    val processing = sdkStillProcessingReason(sdkWalletHeight, dashj.lastBlockSeenHeight)
+                    if (processing != null) {
+                        log.info("ParityBreakdown skipped: {}", processing)
+                        ParityBreakdownRunResult.Unavailable(processing)
+                    } else {
+                        val breakdown = computeParityBreakdown(dashj.txs, sdkTxids, dashj.lastBlockSeenHeight)
+                        val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
+                        val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
+                        val stored = StoredParityBreakdown(walletIdHex, startedMs, text)
+                        if (keepParityBreakdown(stored, epoch)) {
+                            log.info(text)
+                            ParityBreakdownRunResult.Done(stored)
+                        } else {
+                            log.info("ParityBreakdown discarded: the wallet was wiped while it ran")
+                            ParityBreakdownRunResult.Unavailable(PARITY_BREAKDOWN_WIPED)
+                        }
+                    }
                 }
-                ParityBreakdownRunResult.Done(stored)
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("ParityBreakdown failed", t)
             ParityBreakdownRunResult.Failed("${t.javaClass.simpleName}: ${t.message}")
         }
-        if (result is ParityBreakdownRunResult.Done) {
-            lastBreakdownRunMs = result.stored.computedAtMs
-        } else {
-            breakdownRetryNotBeforeMs = nowMs() + PARITY_BREAKDOWN_RETRY_MS
+        synchronized(breakdownLock) {
+            if (epoch == breakdownEpoch) {
+                if (result is ParityBreakdownRunResult.Done) {
+                    lastBreakdownRunMs = result.stored.computedAtMs
+                } else {
+                    breakdownRetryNotBeforeMs = nowMs() + PARITY_BREAKDOWN_RETRY_MS
+                }
+            }
         }
         return result
     }
+
+    /**
+     * Keep [stored] as the latest result (memory and [breakdownStore]) unless
+     * a wallet wipe happened since [epoch]. The check and the write are one
+     * step under [breakdownLock], so a wipe cannot slip in between.
+     */
+    private suspend fun keepParityBreakdown(stored: StoredParityBreakdown, epoch: Long): Boolean =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            synchronized(breakdownLock) {
+                if (epoch != breakdownEpoch) {
+                    false
+                } else {
+                    latestBreakdown = stored
+                    breakdownStore?.save(stored)
+                    true
+                }
+            }
+        }
 
     /**
      * Under [mutex]. A bring-up that [stopInternal] cancelled but could not
@@ -4427,6 +4506,10 @@ class L1ShadowSyncService internal constructor(
      * rest (a partial clear is exactly the resurrection bug).
      */
     suspend fun clearForWalletWipe() {
+        // First and unconditionally: the stored parity breakdown carries this
+        // wallet's txids and amounts, and must never reach the next wallet's
+        // support report.
+        clearParityBreakdownForWalletWipe()
         val recreator = this.recreator ?: run {
             log.info("wallet-wipe SDK cleanup skipped: no recreator wired (test construction?)")
             return

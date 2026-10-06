@@ -17,6 +17,9 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.Deferred
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -151,7 +154,8 @@ internal data class SdkOnlyTx(val txidHex: String, val height: Int)
  * @property dashjConsidered dashj transactions at or below [dashjLastBlockSeenHeight] plus its unconfirmed ones.
  * @property dashjUnconfirmed how many of [dashjConsidered] are not in a block.
  * @property dashjAboveLastBlock dashj transactions in a block above its own last block — excluded (expected 0).
- * @property sdkTotal every distinct txid in the SDK's TXO rows.
+ * @property sdkTotal every distinct SDK txid of the wallet: its TXO rows' funding and
+ *   spending txids plus its reserved (`pending_inputs`) spenders.
  * @property shared dashj-considered txids the SDK also has (at any height).
  * @property dashjOnlyGroups every [DashjOnlyGroup], in enum order, zeros included.
  * @property dashjOnlyDead dashj-only transactions dashj marked DEAD, across all groups.
@@ -334,6 +338,46 @@ internal fun parityBreakdownLog(
     }
 }
 
+// ── SDK side ──────────────────────────────────────────────────────────
+
+/**
+ * Every distinct SDK txid of wallet [walletId] (wire bytes) with its
+ * `transactions.blockHeight` (0 = none: unconfirmed, or no transactions row),
+ * keyed the way dashj keys its transactions. Blocking: call off the main
+ * thread.
+ *
+ * The set is the wallet's TXO rows' funding and spending txids (what the
+ * `L1Parity` line's `sdkTxCount` counts) plus the spenders the wallet has
+ * RESERVED in `pending_inputs`: a change-less send has no TXO row of its own
+ * and its spent marks only land at confirmation, so until then the
+ * reservation is its only wallet-scoped trace — the same rule
+ * `SdkTxStoreWalker` uses for membership. Not the whole `transactions`
+ * table: it has no walletId column, so it is not this wallet's set.
+ */
+internal fun querySdkTxidHeights(db: SupportSQLiteDatabase, walletId: ByteArray): Map<Sha256Hash, Int> =
+    db.query(
+        SimpleSQLiteQuery(
+            "SELECT u.t, tx.blockHeight FROM (" +
+                "SELECT txid AS t FROM txos WHERE walletId = ? AND txid IS NOT NULL " +
+                "UNION " +
+                "SELECT spendingTxid AS t FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL " +
+                "UNION " +
+                "SELECT spendingTxid AS t FROM pending_inputs WHERE walletId = ?) u " +
+                "LEFT JOIN transactions tx ON tx.txid = u.t",
+            arrayOf<Any?>(walletId, walletId, walletId)
+        )
+    ).use { cursor ->
+        // Read straight off the cursor into one map.
+        val out = HashMap<Sha256Hash, Int>(cursor.count * 4 / 3 + 1)
+        while (cursor.moveToNext()) {
+            val wire = cursor.getBlob(0) ?: continue
+            if (wire.size != 32) continue
+            // Room stores wire order; dashj's Sha256Hash is display order.
+            out[Sha256Hash.wrapReversed(wire)] = if (cursor.isNull(1)) 0 else cursor.getInt(1)
+        }
+        out
+    }
+
 // ── dashj side ────────────────────────────────────────────────────────
 
 /**
@@ -393,16 +437,26 @@ private fun specialTag(tx: Transaction): String? = when {
 
 // ── Keeping the latest result ─────────────────────────────────────────
 
-/** The latest breakdown as the support report shows it: when, and the [parityBreakdownLog] text. */
-internal data class StoredParityBreakdown(val computedAtMs: Long, val text: String)
+/**
+ * The latest breakdown as the support report shows it: which SDK wallet it
+ * was computed for, when, and the [parityBreakdownLog] text (txids and
+ * amounts). A result is only ever shown for the wallet it came from.
+ */
+internal data class StoredParityBreakdown(val walletIdHex: String, val computedAtMs: Long, val text: String)
 
 /**
  * The latest [StoredParityBreakdown] in one small file (a few KB), so a
  * support report has something to fall back on after a restart, or when a
- * fresh run is not possible. Line 1 is the computed-at time in ms; the rest
- * is the text. Never throws: an unreadable file reads as none.
+ * fresh run is not possible. Line 1 is `<computed-at ms> <SDK wallet id>`;
+ * the rest is the text. A file without a wallet id (an earlier format) reads
+ * as none. Never throws: an unreadable file reads as none.
+ *
+ * Not thread-safe: the caller serializes [save] and [clear] (they share the
+ * `.tmp` file).
  */
 internal class ParityBreakdownStore(private val file: File) {
+
+    private val tmp: File get() = File(file.path + ".tmp")
 
     fun load(): StoredParityBreakdown? = try {
         if (!file.isFile) {
@@ -410,8 +464,15 @@ internal class ParityBreakdownStore(private val file: File) {
         } else {
             val content = file.readText()
             val newline = content.indexOf('\n')
-            val computedAtMs = if (newline > 0) content.substring(0, newline).toLongOrNull() else null
-            computedAtMs?.let { StoredParityBreakdown(it, content.substring(newline + 1)) }
+            val header = if (newline > 0) content.substring(0, newline).split(' ') else emptyList()
+            val computedAtMs = header.getOrNull(0)?.toLongOrNull()
+            val walletIdHex = header.getOrNull(1)?.takeIf { header.size == 2 && it.isNotEmpty() }
+            if (computedAtMs == null || walletIdHex == null) {
+                log.info("ParityBreakdown: {} has no wallet id; ignoring it", file)
+                null
+            } else {
+                StoredParityBreakdown(walletIdHex, computedAtMs, content.substring(newline + 1))
+            }
         }
     } catch (e: Exception) {
         log.info("ParityBreakdown: could not read {}", file, e)
@@ -421,14 +482,24 @@ internal class ParityBreakdownStore(private val file: File) {
     fun save(stored: StoredParityBreakdown) {
         try {
             file.parentFile?.mkdirs()
-            val tmp = File(file.path + ".tmp")
-            tmp.writeText("${stored.computedAtMs}\n${stored.text}")
+            val tmp = this.tmp
+            tmp.writeText("${stored.computedAtMs} ${stored.walletIdHex}\n${stored.text}")
             if (!tmp.renameTo(file)) {
                 file.delete()
                 tmp.renameTo(file)
             }
         } catch (e: Exception) {
             log.info("ParityBreakdown: could not write {}", file, e)
+        }
+    }
+
+    /** Delete the stored result (a wallet wipe). Never throws. */
+    fun clear() {
+        try {
+            tmp.delete()
+            if (file.exists() && !file.delete()) log.warn("ParityBreakdown: could not delete {}", file)
+        } catch (e: Exception) {
+            log.warn("ParityBreakdown: could not delete {}", file, e)
         }
     }
 }
@@ -460,6 +531,40 @@ internal fun parityBreakdownDue(
 internal fun parityBreakdownAppliesToReport(cutoverCommitted: Boolean, dashjDiagnosticEnabled: Boolean): Boolean =
     cutoverCommitted || dashjDiagnosticEnabled
 
+/**
+ * Why the SDK's transaction set is not yet complete up to dashj's comparison
+ * height, or null when it is.
+ *
+ * The SDK's caught-up test (`ShadowSyncProgress.scanCaughtUpToTip`) watches
+ * the filter scan only; the blocks it matched are downloaded and their
+ * transactions imported afterwards. [sdkWalletHeight] is the wallet's
+ * COMMITTED height (`ShadowSyncProgress.walletSyncedHeight`): every block at
+ * or below it has been processed. Until it reaches
+ * [dashjLastBlockSeenHeight], a transaction the SDK is still importing would
+ * be counted dashj-only. An unknown height (0) cannot prove anything, so it
+ * waits too. A dashj wallet with no block seen has nothing confirmed to wait
+ * for.
+ */
+internal fun sdkStillProcessingReason(sdkWalletHeight: Long, dashjLastBlockSeenHeight: Int): String? = when {
+    dashjLastBlockSeenHeight <= 0 -> null
+    sdkWalletHeight <= 0L ->
+        "SDK still processing transactions (wallet height unknown, dashj $dashjLastBlockSeenHeight)"
+    sdkWalletHeight < dashjLastBlockSeenHeight ->
+        "SDK still processing transactions (wallet height $sdkWalletHeight < dashj $dashjLastBlockSeenHeight)"
+    else -> null
+}
+
+/**
+ * The breakdown run to join instead of starting another: any run that has not
+ * COMPLETED. A run is published before it is started, and a LAZY deferred
+ * reads `isActive == false` until then — testing `isActive` would let a
+ * second caller start a second run in that gap.
+ */
+internal fun <T> inFlightParityBreakdown(run: Deferred<T>?): Deferred<T>? = run?.takeIf { !it.isCompleted }
+
+/** [ParityBreakdownRunResult.Unavailable] for a run that finished after a wallet wipe. */
+internal const val PARITY_BREAKDOWN_WIPED = "wallet wiped while computing"
+
 /** How one breakdown run ended. */
 internal sealed class ParityBreakdownRunResult {
     data class Done(val stored: StoredParityBreakdown) : ParityBreakdownRunResult()
@@ -477,19 +582,30 @@ internal sealed class ParityBreakdownRunResult {
  * @property stored the result shown: fresh when [notRefreshedReason] is null,
  *   otherwise the last stored one (or none).
  * @property notRefreshedReason why no fresh result: `SDK not synced`,
- *   `timed out after 30s`, `failed (…)`. Null for a fresh result.
+ *   `SDK still processing transactions (…)`, `timed out after 30s`,
+ *   `failed (…)`. Null for a fresh result.
  * @property applicable false when this report gets no breakdown at all
- *   ([parityBreakdownAppliesToReport]); [notRefreshedReason] then says why.
+ *   ([parityBreakdownAppliesToReport], or [omitted]); [notRefreshedReason]
+ *   then says why.
+ * @property omitted the user chose not to share the application log, so the
+ *   transaction-level breakdown (txids and amounts) is left out of the report
+ *   and was not computed for it.
  */
 internal data class ReportParityBreakdown(
     val stored: StoredParityBreakdown?,
     val notRefreshedReason: String?,
-    val applicable: Boolean = true
+    val applicable: Boolean = true,
+    val omitted: Boolean = false
 ) {
     companion object {
         const val NOT_APPLICABLE_REASON = "not computed before the cutover with the dashj sync diagnostic off"
 
         val NOT_APPLICABLE = ReportParityBreakdown(null, NOT_APPLICABLE_REASON, applicable = false)
+
+        const val NOT_SHARED_REASON = "application log not shared"
+
+        /** The application log is not shared: no breakdown, and it never attaches the parity log on its own. */
+        val NOT_SHARED = ReportParityBreakdown(null, NOT_SHARED_REASON, applicable = false, omitted = true)
     }
 }
 
@@ -502,6 +618,7 @@ internal fun parityBreakdownReportSection(
     val stored = if (report.applicable) report.stored else null
     val reason = report.notRefreshedReason
     when {
+        report.omitted -> append("omitted (").append(reason ?: ReportParityBreakdown.NOT_SHARED_REASON).append(")\n")
         stored == null -> append("none (").append(reason ?: "never computed").append(")\n")
         else -> {
             if (reason == null) {
