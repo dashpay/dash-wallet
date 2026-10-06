@@ -224,9 +224,10 @@ internal data class L1TxRowPlan(
 
 internal fun planL1TxRow(
     record: L1TxUiRecord,
-    // The Platform-funding role of an INTERNAL/COINJOIN-classified asset lock,
-    // resolved app-side before this pure planner runs (null for a plain move).
-    // When present, the row renders as a SENT "…Fee" instead of "Internal".
+    // The Platform-funding role of an INTERNAL/COINJOIN- or OUTGOING-recorded
+    // asset lock, resolved app-side before this pure planner runs (null for a
+    // plain move). When present, the row renders as a SENT "…Fee" instead of
+    // "Internal"/"Sent".
     assetLockKind: AssetLockKind? = null,
     // The DashPay contact this row pays to / receives from (IDENTITY only, from the
     // DIP-15 friendship match). Direction/amount do NOT come from the contact or the
@@ -285,7 +286,29 @@ internal fun planL1TxRow(
         }
     }
     return when (record.direction) {
-    L1TxUiDirection.OUTGOING -> L1TxRowPlan(
+    L1TxUiDirection.OUTGOING -> if (assetLockKind != null && assetLockKind.appliesToOutgoing) {
+        // An asset lock stored, or corrected by the store walker, as the OUTGOING
+        // spend it is: net −(burn + fee), since the credit burn has no address
+        // and leaves the wallet (dashpay/platform#4412). Same title, icon and
+        // flags as the INTERNAL asset-lock branch above, so the row reads alike
+        // whichever shape the store persisted; the value keeps this direction's
+        // fee-excluded rule (the burn — the credits funded), as dashj showed it.
+        L1TxRowPlan(
+            rowId = record.txidHex,
+            titleRes = assetLockTitleRes(assetLockKind),
+            statusRes = -1,
+            iconType = if (assetLockKind.isPoolTransfer) {
+                TxDisplayCacheEntry.ICON_INTERNAL
+            } else {
+                TxDisplayCacheEntry.ICON_SENT
+            },
+            iconBgType = TxDisplayCacheEntry.BG_SENT,
+            filterFlags = TxDisplayCacheEntry.FLAG_SENT,
+            valueDuffs = record.netAmountDuffs + (record.feeDuffs ?: 0L),
+            timestampMs = record.timestampMs,
+            isIncoming = false
+        )
+    } else L1TxRowPlan(
         rowId = record.txidHex,
         titleRes = if (record.status == L1TxUiStatus.PENDING) {
             R.string.transaction_row_status_sending
@@ -414,6 +437,23 @@ internal fun planL1TxRow(
  */
 internal val AssetLockKind.isPoolTransfer: Boolean
     get() = this == AssetLockKind.SHIELD || this == AssetLockKind.UNSHIELD
+
+/**
+ * The kinds an OUTGOING asset lock can carry: the Platform-funding ones and the
+ * shield (a lock into the wallet's own pool, kept on its transfer treatment).
+ * The unshield pair are AssetUnlocks, recorded INCOMING, never an outgoing lock.
+ */
+internal val AssetLockKind.appliesToOutgoing: Boolean
+    get() = this == AssetLockKind.UPGRADE || this == AssetLockKind.TOPUP ||
+        this == AssetLockKind.INVITE || this == AssetLockKind.SHIELD
+
+/**
+ * Whether the display pass asks the asset-lock resolver about an OUTGOING
+ * record: only when the SDK typed it an AssetLock. A plain send never pays the
+ * probe. Pure — host-testable.
+ */
+internal fun probesOutgoingAssetLockKind(record: L1TxUiRecord): Boolean =
+    record.direction == L1TxUiDirection.OUTGOING && record.transactionTypeKind == TX_TYPE_KIND_ASSET_LOCK
 
 /** The list/detail title string for a Platform-funding asset-lock kind. */
 internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
@@ -555,9 +595,10 @@ internal fun planL1DisplaySync(
     // historical rate, exactly as before this fix.
     incomingFiatCode: String? = null,
     incomingFiatValue: Long? = null,
-    // Platform-funding role per (INTERNAL/COINJOIN) txid, resolved app-side
-    // before this pure planner runs — turns the mislabelled "Internal" row
-    // into the SENT "…Fee" it funded. Empty = no known asset locks.
+    // Platform-funding role per (INTERNAL/COINJOIN, or OUTGOING AssetLock) txid,
+    // resolved app-side before this pure planner runs — turns the mislabelled
+    // "Internal"/"Sent" row into the SENT "…Fee" it funded. Empty = no known
+    // asset locks.
     kindByTxid: Map<String, AssetLockKind> = emptyMap(),
     // Resolved DashPay contact per txid, from the dashj DIP-15 resolver run
     // app-side before this pure planner runs — stamps the avatar/username on
@@ -775,19 +816,34 @@ internal fun planL1DisplaySync(
         // and contact fields are preserved via copy(). Idempotent: once the shape
         // matches the plan, nothing is written. The never-touch guards above
         // already excluded service/gift-card/error/CoinJoin rows, and kindByTxid
-        // is only ever populated for INTERNAL/COINJOIN/INCOMING self-moves.
+        // is only populated for INTERNAL/COINJOIN/INCOMING self-moves and for
+        // OUTGOING records the SDK typed an AssetLock. (d) is that last case: a
+        // restored asset lock the store walker corrected to OUTGOING, cached
+        // "Sent" before its kind resolved. Its value is definitive too — the
+        // plain-row re-stamp below, which would otherwise keep it current, skips
+        // kind rows — so a snapshot record also carries the value over.
         if (kindByTxid[record.txidHex] != null) {
             val desiredTitle = resolve(plan.titleRes)
+            val desiredValue = if (restampFromDefinitiveRecord &&
+                record.direction == L1TxUiDirection.OUTGOING &&
+                record.netAmountDuffs != 0L
+            ) {
+                plan.valueDuffs
+            } else {
+                updated.valueSatoshis
+            }
             if (updated.title != desiredTitle ||
                 updated.iconType != plan.iconType ||
                 updated.iconBgType != plan.iconBgType ||
-                updated.filterFlags != plan.filterFlags
+                updated.filterFlags != plan.filterFlags ||
+                updated.valueSatoshis != desiredValue
             ) {
                 updated = updated.copy(
                     title = desiredTitle,
                     iconType = plan.iconType,
                     iconBgType = plan.iconBgType,
-                    filterFlags = plan.filterFlags
+                    filterFlags = plan.filterFlags,
+                    valueSatoshis = desiredValue
                 )
             }
         }
@@ -3694,7 +3750,8 @@ class CutoverUiDataService internal constructor(
 
             // Classify INTERNAL/COINJOIN rows as Platform-funding asset locks so
             // the mislabelled "Internal" row renders the SENT "…Fee" it funded.
-            // Only these directions can be asset-lock funding — a fast app-side
+            // Only these directions, and OUTGOING records the SDK typed an
+            // AssetLock, can be asset-lock funding — a fast app-side
             // Room/DataStore probe per candidate, never blocking the pipeline.
             val kindByTxid = mutableMapOf<String, AssetLockKind>()
             for (record in records) {
@@ -3718,6 +3775,16 @@ class CutoverUiDataService internal constructor(
                             AssetLockKind.UNSHIELD,
                             AssetLockKind.UNSHIELD_EXTERNAL -> kindByTxid[record.txidHex] = kind
                             else -> {}
+                        }
+                    L1TxUiDirection.OUTGOING ->
+                        // A restored identity registration, top-up or invite lock
+                        // the store walker corrected from INTERNAL/net-0 to the
+                        // OUTGOING −(burn + fee) it is. Typed AssetLock only, so a
+                        // plain send pays no probe.
+                        if (probesOutgoingAssetLockKind(record)) {
+                            resolveAssetLockKind(record.txidHex)
+                                ?.takeIf { it.appliesToOutgoing }
+                                ?.let { kindByTxid[record.txidHex] = it }
                         }
                     else -> {}
                 }

@@ -18,6 +18,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import android.app.Application
 import androidx.room.Room
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.runBlocking
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.junit.After
@@ -609,6 +610,55 @@ class SdkTxStoreWalkerTest {
         assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
         assertEquals(-3_000_241L, healed.netAmountDuffs)
         assertEquals(241L, healed.feeDuffs)
+    }
+
+    /**
+     * The display pipeline end to end for that healed record: the walker's
+     * OUTGOING asset lock is probed (typed AssetLock), and with its resolved
+     * kind it renders "Upgrade Fee" valued at the burn — not plain "Sent".
+     */
+    @Test
+    fun reattribution_assetLock_healedOutgoing_rendersItsPlatformTitle() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al3", bip44Account)
+        insertCoreAddress("bip44_al3_change", bip44Account)
+        val funding = txid(91)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al3")
+        val assetLock = txid(92)
+        insertTx(
+            assetLock, direction = 2, netAmount = 0, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al3_change")
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 14_886_248, outputCount = 2, inputCount = 1)
+            } else {
+                null
+            }
+        })
+        val records = ArrayList<L1TxUiRecord>()
+        w.walkAll { page -> records += page }
+        val healed = records.single { it.txidHex == displayHexOf(assetLock) }
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals("the copy keeps the type kind", TX_TYPE_KIND_ASSET_LOCK, healed.transactionTypeKind)
+        assertTrue(probesOutgoingAssetLockKind(healed))
+        assertFalse(
+            "the plain funding receive is never probed",
+            probesOutgoingAssetLockKind(records.single { it.txidHex == displayHexOf(funding) })
+        )
+
+        val resolve: (Int) -> String = { id -> "str:$id" }
+        val plan = planL1DisplaySync(
+            listOf(healed), emptyMap(), emptySet(), resolve, nowMs = 1_700_000_100_000L,
+            kindByTxid = mapOf(healed.txidHex to AssetLockKind.UPGRADE)
+        )
+        val row = plan.inserts.single()
+        assertEquals(resolve(R.string.dashpay_upgrade_fee), row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        assertTrue(plan.notifyIncoming.isEmpty())
     }
 
     /**
