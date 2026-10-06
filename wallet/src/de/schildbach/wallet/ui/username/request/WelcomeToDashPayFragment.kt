@@ -7,9 +7,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.shielded.ShieldedBalanceActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentWelcomeToDashpayBinding
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
@@ -66,6 +68,9 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
         requestUserNameViewModel.identityBalance.observe(viewLifecycleOwner) {
             updateView()
         }
+        requestUserNameViewModel.contestedFees.observe(viewLifecycleOwner) {
+            updateView()
+        }
         paymentViewModel.uiState.observe(viewLifecycleOwner) {
             updateView()
         }
@@ -105,16 +110,27 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
                 )
             } else if (!requestUserNameViewModel.canAffordContestedUsername()) {
                 // "Cost up to" must quote the true maximum COST of a
-                // username — the protocol-gated contested fee/denomination
-                // (ContestedUsernameFees, MO-1069), identical on both payment
-                // paths. The padded shield-first funding guidance
-                // (denomination + fee margin, SHIELDED_USERNAME_FUND_MIN*)
-                // is NOT a cost; the shield sheets present it as "shield at
-                // least X" instead.
+                // username across BOTH payment paths. The transparent fee is
+                // the protocol-gated contested fee (ContestedUsernameFees,
+                // MO-1069), but the shielded path always exits at the fixed
+                // 0.25 DASH denomination (SHIELDED_IDENTITY_DENOMINATIONS_CREDITS
+                // has no tier between 0.03 and 0.25) — it does NOT shrink once
+                // the transparent fee drops to 0.15, so the larger of the two
+                // is the true maximum. The padded shield-first funding
+                // guidance (denomination + fee margin,
+                // SHIELDED_USERNAME_FUND_MIN*) is NOT a cost; the shield
+                // sheets present it as "shield at least X" instead.
+                val contestedFee = requestUserNameViewModel.contestedFees.value.contested
+                val shieldedRequirement = shieldedIdentityFundingRequirement(Dash(contestedFee.value))
+                val maxContestedCost = if (shieldedRequirement != null && shieldedRequirement.duffs > contestedFee.value) {
+                    shieldedRequirement.toPlainString()
+                } else {
+                    contestedFee.toPlainString()
+                }
                 binding.balanceRequirementDisclaimer.text = getString(
                     R.string.welcome_request_username_min_balance_disclaimer_all,
                     requestUserNameViewModel.walletBalance.value.toPlainString(),
-                    requestUserNameViewModel.contestedFees.value.contested.toPlainString()
+                    maxContestedCost
                 )
             }
             binding.balanceRequirementDisclaimer.isVisible =

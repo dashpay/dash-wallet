@@ -417,16 +417,6 @@ class DashSdkServiceImpl @Inject constructor(
     @Volatile
     private var lastSpvRescanArmElapsedMs = 0L
 
-    /**
-     * Session cache for [currentProtocolVersion] — populated by the first
-     * successful `sdk.system.refreshProtocolVersion()` read and reused for
-     * the lifetime of the current [runtime]. Cleared in [stop] so a platform
-     * reconnect (the next [ensureStarted] rebuilding [runtime]) re-queries
-     * rather than serving a version cached against the torn-down connection.
-     */
-    @Volatile
-    private var cachedProtocolVersion: Int? = null
-
     override fun spvRescanArmedWithin(windowMs: Long): Boolean {
         val armedAt = lastSpvRescanArmElapsedMs
         return armedAt != 0L && android.os.SystemClock.elapsedRealtime() - armedAt < windowMs
@@ -456,10 +446,6 @@ class DashSdkServiceImpl @Inject constructor(
         lock.withLock {
             val current = runtime ?: return
             runtime = null
-            // The next ensureStarted() rebuilds a fresh SdkRuntime (a platform
-            // reconnect) — a protocol version cached against the torn-down
-            // connection must not survive it.
-            cachedProtocolVersion = null
             log.info("stopping Dash Platform SDK")
             // Managers first (each closes its native bundle + resolver/signer
             // children), then the SDK handle they were built against, then
@@ -481,22 +467,20 @@ class DashSdkServiceImpl @Inject constructor(
 
     /**
      * See [DashSdkService.currentProtocolVersion] for the full contract.
-     * Cached for the session ([cachedProtocolVersion]) once a read succeeds —
-     * the active protocol version does not change within one connection, and
-     * the cache is cleared in [stop] so the NEXT [ensureStarted] (a platform
-     * reconnect) re-queries instead of serving a stale version. A query
-     * failure is never cached (so the very next call retries) and surfaces
-     * as null, per the interface contract that null means "unknown, fall
-     * back to the older behavior" — never a particular version.
+     * Always a live `sdk.system.refreshProtocolVersion()` read — NOT cached
+     * across calls. A process can span network activation (this runtime
+     * outlives [de.schildbach.wallet.service.platform.PlatformSyncService]
+     * .stopSdkEngines(), which only stops the sync engines, not this
+     * service), so a value read before activation must never be served
+     * again after it. A query failure surfaces as null, per the interface
+     * contract that null means "unknown, fall back to the older behavior"
+     * — never a particular version.
      */
     override suspend fun currentProtocolVersion(): Int? {
-        cachedProtocolVersion?.let { return it }
         return try {
             ensureStarted()
             val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
-            val version = sdk.system.refreshProtocolVersion()
-            cachedProtocolVersion = version
-            version
+            sdk.system.refreshProtocolVersion()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
