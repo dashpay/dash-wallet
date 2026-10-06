@@ -1365,9 +1365,23 @@ class PlatformSynchronizationService @Inject constructor(
                 // pass — so a slow-but-working node keeps working (see
                 // LEGACY_CONTACT_QUERY_TIMEOUT_MS for why the bound is
                 // generous rather than the SDK path's 6 s).
-                val contactIdentity = boundedLegacyPlatformQuery(
+                val lookup = boundedLegacyPlatformQuery(
                     "getContactIdentity(sent request to ${contactRequest.toUserId})"
-                ) { platform.getContactIdentity(contactRequest.toUserId) }?.orElse(null)
+                ) { platform.getContactIdentity(contactRequest.toUserId) }
+                val contactIdentity = lookup?.orElse(null)
+                if (contactIdentity == null) {
+                    // The timeout (or a missing identity) used to fall through to
+                    // `contactIdentity!!` and surface as an "Unknown error -
+                    // NullPointerException" for this contact. Skip it instead:
+                    // the request row is already in the database, so the next
+                    // sync's database-integrity check retries the keychain.
+                    log.info(
+                        "adding accepted/sent request {} to wallet skipped for this pass: {}; " +
+                            "the next sync retries it",
+                        contactRequest.toUserId, contactIdentitySkipReason(lookup)
+                    )
+                    return false
+                }
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -1385,7 +1399,7 @@ class PlatformSynchronizationService @Inject constructor(
                         platformRepo.walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
                 identityRepository.blockchainIdentity!!.addPaymentKeyChainFromContact(
-                    contactIdentity!!,
+                    contactIdentity,
                     contactRequest,
                     myEncryptionKey!!
                 )
@@ -1421,9 +1435,19 @@ class PlatformSynchronizationService @Inject constructor(
                 // identities.get would otherwise throw "No converter for ..." and
                 // this received request would never be added to the wallet.
                 // Bounded exactly like the sent-request path above.
-                val contactIdentity = boundedLegacyPlatformQuery(
+                val lookup = boundedLegacyPlatformQuery(
                     "getContactIdentity(received request from ${contactRequest.ownerId})"
-                ) { platform.getContactIdentity(contactRequest.ownerId) }?.orElse(null)
+                ) { platform.getContactIdentity(contactRequest.ownerId) }
+                val contactIdentity = lookup?.orElse(null)
+                if (contactIdentity == null) {
+                    // Same as the sent-request path above.
+                    log.info(
+                        "adding received request {} to wallet skipped for this pass: {}; " +
+                            "the next sync retries it",
+                        contactRequest.ownerId, contactIdentitySkipReason(lookup)
+                    )
+                    return false
+                }
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -1441,7 +1465,7 @@ class PlatformSynchronizationService @Inject constructor(
                         platformRepo.walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
                 identityRepository.blockchainIdentity!!.addPaymentKeyChainToContact(
-                    contactIdentity!!,
+                    contactIdentity,
                     contactRequest,
                     myEncryptionKey!!
                 )
@@ -3042,3 +3066,17 @@ internal const val BACKGROUND_CONTACT_TICKS = 20
  */
 internal fun contactTickDue(inBackground: Boolean, ticksSinceLastRun: Int): Boolean =
     !inBackground || ticksSinceLastRun >= BACKGROUND_CONTACT_TICKS
+
+/**
+ * Why a contact's keychain step is skipped for this pass, given what the
+ * bounded `getContactIdentity` lookup ([boundedLegacyPlatformQuery]) returned —
+ * or null when the identity is there and the step can run. The lookup is null
+ * when the time budget expired and an empty [java.util.Optional] when Platform
+ * returned no identity; either way the contact is retried on a later pass
+ * rather than failing with a NullPointerException. Pure — host-testable.
+ */
+internal fun contactIdentitySkipReason(lookup: java.util.Optional<*>?): String? = when {
+    lookup == null -> "the contact identity lookup timed out"
+    !lookup.isPresent -> "the contact identity was not found on Platform"
+    else -> null
+}
