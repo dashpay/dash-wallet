@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.more
 
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.platform.sdk.ReportParityBreakdown
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -29,8 +30,10 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.bitcoinj.wallet.Wallet
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Collections
 import java.util.concurrent.Executors
@@ -134,5 +137,17 @@ class ContactSupportViewModelTest {
             Dispatchers.resetMain()
             mainDispatcher.close()
         }
+    }
+
+    @Test
+    fun parityLog_isAttachedWhenTheDiagnosticRan_orABreakdownApplies() {
+        val applies = ReportParityBreakdown(null, "SDK not synced")
+        val notApplicable = ReportParityBreakdown.NOT_APPLICABLE
+        // Committed cutover: a breakdown applies even with the diagnostic off.
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = false, breakdown = applies))
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = true, hasParityHistory = false, breakdown = notApplicable))
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = true, breakdown = notApplicable))
+        // Before the cutover, diagnostic off and never run: no parity log.
+        assertFalse(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = false, breakdown = notApplicable))
     }
 }

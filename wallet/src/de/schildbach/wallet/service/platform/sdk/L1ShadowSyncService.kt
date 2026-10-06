@@ -29,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -2255,8 +2256,9 @@ class L1ShadowSyncService internal constructor(
     private val scanGateRetryInitialMs: Long = SCAN_GATE_RETRY_INITIAL_MS,
     private val scanGateRetryMaxMs: Long = SCAN_GATE_RETRY_MAX_MS,
     /**
-     * Where the latest [ParityBreakdown] is kept across restarts; null (tests'
-     * default) keeps it in memory only. See [maybeLaunchParityBreakdown].
+     * Where the latest [ParityBreakdown] is kept across restarts, for a report
+     * to fall back on; null (tests' default) keeps it in memory only. See
+     * [parityBreakdownForReport].
      */
     private val breakdownStore: ParityBreakdownStore? = null
 ) {
@@ -2542,21 +2544,27 @@ class L1ShadowSyncService internal constructor(
      * probing during a real dual-run would starve the cutover streak.
      */
     private suspend fun resolveParityPolicy(): ParityProbePolicy {
-        val committed = try {
-            !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("parity policy: cutover state unreadable; assuming dual-run", t)
-            false
-        }
-        val diagnostic = try {
-            dashPayConfig.getDashjSyncDiagnostic()
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            false
-        }
+        val committed = readCutoverCommitted()
+        val diagnostic = readDashjDiagnostic()
         dashjDiagnosticOn = diagnostic
         return parityProbePolicy(committed, diagnostic)
+    }
+
+    /** The cutover is committed; an unreadable state reads as dual-run (see [resolveParityPolicy]). */
+    private suspend fun readCutoverCommitted(): Boolean = try {
+        !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("parity policy: cutover state unreadable; assuming dual-run", t)
+        false
+    }
+
+    /** The Tools "dashj sync (diagnostic)" toggle; unreadable reads as off. */
+    private suspend fun readDashjDiagnostic(): Boolean = try {
+        dashPayConfig.getDashjSyncDiagnostic()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        false
     }
 
     /** The Tools "dashj sync (diagnostic)" toggle as [resolveParityPolicy] last read it. */
@@ -3014,8 +3022,8 @@ class L1ShadowSyncService internal constructor(
             watchdogJob = null
             eventTapJob?.cancel()
             eventTapJob = null
-            breakdownJob?.cancel()
-            breakdownJob = null
+            breakdownRun?.cancel()
+            breakdownRun = null
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
@@ -3327,22 +3335,19 @@ class L1ShadowSyncService internal constructor(
                     loggedSuspension = false
                     probeParity(walletIdHex)
                     if (dashjDiagnosticOn) {
-                        maybeLaunchParityBreakdown(walletIdHex, ParityBreakdownTrigger.PROBE)
+                        // Hourly, so a diagnostic run can be followed in the
+                        // log; otherwise the breakdown runs only for a report.
+                        maybeLaunchParityBreakdown(walletIdHex)
                     }
-                } else {
-                    if (!loggedSuspension) {
-                        loggedSuspension = true
-                        log.info(
-                            "L1Parity probing suspended: the cutover is committed and the dashj " +
-                                "engine is held, so its balance is frozen at the cutover snapshot — " +
-                                "any comparison against it is a guaranteed MISMATCH that measures " +
-                                "nothing. Turn on the Tools 'dashj sync (diagnostic)' toggle to " +
-                                "un-hold dashj and resume probing."
-                        )
-                    }
-                    // The totals are meaningless against a held dashj, but its
-                    // history up to its own last block is not — see ParityBreakdown.
-                    maybeLaunchParityBreakdown(walletIdHex, ParityBreakdownTrigger.HELD)
+                } else if (!loggedSuspension) {
+                    loggedSuspension = true
+                    log.info(
+                        "L1Parity probing suspended: the cutover is committed and the dashj " +
+                            "engine is held, so its balance is frozen at the cutover snapshot — " +
+                            "any comparison against it is a guaranteed MISMATCH that measures " +
+                            "nothing. Turn on the Tools 'dashj sync (diagnostic)' toggle to " +
+                            "un-hold dashj and resume probing."
+                    )
                 }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
@@ -3895,11 +3900,19 @@ class L1ShadowSyncService internal constructor(
 
     private val breakdownLock = Any()
 
-    /** The run in flight, if any — one at a time; cancelled by [stop]. */
+    /**
+     * The run in flight, if any: at most one at a time, shared by the hourly
+     * diagnostic run and a report (a report joins a run already going).
+     * Cancelled by [stop].
+     */
     @Volatile
-    private var breakdownJob: Job? = null
+    private var breakdownRun: Deferred<ParityBreakdownRunResult>? = null
 
-    /** After a failed or skipped run, no new attempt before this (wall clock, [nowMs]). */
+    /** When this process last completed a run — the hourly cadence. In memory only. */
+    @Volatile
+    private var lastBreakdownRunMs: Long? = null
+
+    /** After a failed or skipped run, no hourly attempt before this (wall clock, [nowMs]). */
     @Volatile
     private var breakdownRetryNotBeforeMs = 0L
 
@@ -3925,71 +3938,142 @@ class L1ShadowSyncService internal constructor(
         return latestBreakdown
     }
 
+    /** The SDK's txid set is complete enough to compare: the same caught-up test the parity streak uses. */
+    private fun sdkCaughtUpForBreakdown(): Boolean =
+        _progress.value.let { it.synced || it.scanCaughtUpToTip }
+
     /**
-     * Start a [ParityBreakdown] run if one is due: hourly alongside the probe
-     * ([ParityBreakdownTrigger.PROBE], diagnostic on), daily while dashj is
-     * held and the probe is suspended ([ParityBreakdownTrigger.HELD]). Due-ness
-     * is measured from the latest result, which [breakdownStore] keeps across
-     * restarts. Runs only once the SDK has caught up, so its txid set is not
-     * partial. Never blocks the probe loop: the run is its own job on [scope].
+     * The hourly diagnostic run ([ParityBreakdownTrigger.PROBE]), called from
+     * the probe loop while the dashj sync diagnostic is on, so a diagnostic
+     * run can be followed in the log. Only once the SDK has caught up. Never
+     * blocks the probe loop: the run is its own job on [scope].
      */
-    private fun maybeLaunchParityBreakdown(walletIdHex: String, trigger: ParityBreakdownTrigger) {
-        val progress = _progress.value
-        if (!progress.synced && !progress.scanCaughtUpToTip) return
-        if (breakdownJob?.isActive == true) return
+    private fun maybeLaunchParityBreakdown(walletIdHex: String) {
+        if (!sdkCaughtUpForBreakdown()) return
+        if (breakdownRun?.isActive == true) return
         val now = nowMs()
         if (now < breakdownRetryNotBeforeMs) return
-        // Cheap in-memory check on every tick once the store has been read;
-        // the first check of a process reads it inside the job (file I/O).
-        if (breakdownStoreLoaded && !parityBreakdownDue(trigger, now, latestBreakdown?.computedAtMs)) return
-        breakdownJob = scope.launch {
-            try {
-                val last = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    latestParityBreakdown()
+        if (!parityBreakdownDue(now, lastBreakdownRunMs)) return
+        startParityBreakdown(walletIdHex, ParityBreakdownTrigger.PROBE)
+    }
+
+    /** Start a run, or return the one already in flight. */
+    private fun startParityBreakdown(
+        walletIdHex: String,
+        trigger: ParityBreakdownTrigger
+    ): Deferred<ParityBreakdownRunResult> {
+        val run = synchronized(breakdownLock) {
+            breakdownRun?.takeIf { it.isActive }?.let { return it }
+            // LAZY so the field is set before the body runs (an Unconfined
+            // scope would otherwise run it inside this lock).
+            scope.async(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                runParityBreakdown(walletIdHex, trigger)
+            }.also { breakdownRun = it }
+        }
+        run.start()
+        return run
+    }
+
+    /**
+     * A fresh [ParityBreakdown] for a support report (Report Issue / Contact
+     * Support), waiting at most [timeoutMs].
+     *
+     * Applies once the cutover is committed, and before it only with the dashj
+     * sync diagnostic on ([parityBreakdownAppliesToReport]). When no fresh run
+     * is possible — the SDK has not caught up, the run timed out or failed —
+     * the last stored result is returned with the reason. A timed-out run is
+     * not cancelled: it finishes in the background, logs its block and stores
+     * it for the next report. Never throws, except to propagate the caller's
+     * own cancellation.
+     */
+    internal suspend fun parityBreakdownForReport(
+        timeoutMs: Long = PARITY_BREAKDOWN_REPORT_TIMEOUT_MS
+    ): ReportParityBreakdown {
+        if (!parityBreakdownAppliesToReport(readCutoverCommitted(), readDashjDiagnostic())) {
+            return ReportParityBreakdown.NOT_APPLICABLE
+        }
+        val walletIdHex = runningWalletIdHex.value
+        val reason = when {
+            walletIdHex == null -> "SDK sync not running"
+            !sdkCaughtUpForBreakdown() -> "SDK not synced"
+            else -> {
+                val run = startParityBreakdown(walletIdHex, ParityBreakdownTrigger.REPORT)
+                val result = withTimeoutOrNull(timeoutMs) {
+                    try {
+                        run.await()
+                    } catch (e: CancellationException) {
+                        currentCoroutineContext().ensureActive() // our own cancellation propagates
+                        ParityBreakdownRunResult.Failed("cancelled")
+                    }
                 }
-                if (!parityBreakdownDue(trigger, nowMs(), last?.computedAtMs)) return@launch
-                if (!runParityBreakdown(walletIdHex, trigger)) {
-                    breakdownRetryNotBeforeMs = nowMs() + PARITY_BREAKDOWN_RETRY_MS
+                when (result) {
+                    is ParityBreakdownRunResult.Done -> return ReportParityBreakdown(result.stored, null)
+                    is ParityBreakdownRunResult.Unavailable -> result.what
+                    is ParityBreakdownRunResult.Failed -> "failed (${result.what})"
+                    null -> {
+                        log.info(
+                            "ParityBreakdown for the report timed out after {}; it continues in the background",
+                            humanDuration(timeoutMs)
+                        )
+                        "timed out after ${humanDuration(timeoutMs)}"
+                    }
                 }
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                breakdownRetryNotBeforeMs = nowMs() + PARITY_BREAKDOWN_RETRY_MS
-                log.warn("ParityBreakdown failed; retrying in {} at the earliest", humanDuration(PARITY_BREAKDOWN_RETRY_MS), t)
             }
         }
+        val fallback = try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { latestParityBreakdown() }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            null
+        }
+        return ReportParityBreakdown(fallback, reason)
     }
 
     /**
      * One breakdown run: the SDK txid set (one SQL pass), then one pass over
      * dashj's transactions, then the pure [computeParityBreakdown]. Both
-     * inputs are dropped when this returns; only the text is kept. Returns
-     * false when either side is unavailable.
+     * inputs are dropped when this returns; only the text is kept (in memory
+     * and in [breakdownStore]). Never throws, except cancellation.
      */
-    private suspend fun runParityBreakdown(walletIdHex: String, trigger: ParityBreakdownTrigger): Boolean {
-        val startedMs = nowMs()
-        val startedNanos = System.nanoTime()
-        val sdkTxids = source.sdkTxidHeights(walletIdHex)
-        val dashj = sdkTxids?.let { source.dashjBreakdownFacts(it.keys) }
-        if (sdkTxids == null || dashj == null) {
-            if (!breakdownUnavailableLogged) {
-                breakdownUnavailableLogged = true
-                log.info(
-                    "ParityBreakdown skipped: {} not available",
-                    if (sdkTxids == null) "the SDK txid set" else "the dashj wallet"
-                )
+    private suspend fun runParityBreakdown(
+        walletIdHex: String,
+        trigger: ParityBreakdownTrigger
+    ): ParityBreakdownRunResult {
+        val result = try {
+            val startedMs = nowMs()
+            val startedNanos = System.nanoTime()
+            val sdkTxids = source.sdkTxidHeights(walletIdHex)
+            val dashj = sdkTxids?.let { source.dashjBreakdownFacts(it.keys) }
+            if (sdkTxids == null || dashj == null) {
+                val what = if (sdkTxids == null) "SDK txid set not available" else "dashj wallet not available"
+                if (!breakdownUnavailableLogged) {
+                    breakdownUnavailableLogged = true
+                    log.info("ParityBreakdown skipped: {}", what)
+                }
+                ParityBreakdownRunResult.Unavailable(what)
+            } else {
+                val breakdown = computeParityBreakdown(dashj.txs, sdkTxids, dashj.lastBlockSeenHeight)
+                val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
+                val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
+                log.info(text)
+                val stored = StoredParityBreakdown(startedMs, text)
+                synchronized(breakdownLock) { latestBreakdown = stored }
+                breakdownStore?.let { store ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { store.save(stored) }
+                }
+                ParityBreakdownRunResult.Done(stored)
             }
-            return false
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("ParityBreakdown failed", t)
+            ParityBreakdownRunResult.Failed("${t.javaClass.simpleName}: ${t.message}")
         }
-        val breakdown = computeParityBreakdown(dashj.txs, sdkTxids, dashj.lastBlockSeenHeight)
-        val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
-        val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
-        log.info(text)
-        val stored = StoredParityBreakdown(startedMs, text)
-        synchronized(breakdownLock) { latestBreakdown = stored }
-        breakdownStore?.let { store ->
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { store.save(stored) }
+        if (result is ParityBreakdownRunResult.Done) {
+            lastBreakdownRunMs = result.stored.computedAtMs
+        } else {
+            breakdownRetryNotBeforeMs = nowMs() + PARITY_BREAKDOWN_RETRY_MS
         }
-        return true
+        return result
     }
 
     /**

@@ -217,17 +217,22 @@ class ParityBreakdownTest {
     // ── Cadence ───────────────────────────────────────────────────────
 
     @Test
-    fun due_hourlyWithTheProbe_dailyWhileHeld() {
+    fun due_hourlyForTheDiagnosticRun() {
         val hour = 60 * 60_000L
         val t0 = 10 * 24 * hour
-        assertTrue(parityBreakdownDue(ParityBreakdownTrigger.PROBE, t0, null))
-        assertFalse(parityBreakdownDue(ParityBreakdownTrigger.PROBE, t0 + hour - 1, t0))
-        assertTrue(parityBreakdownDue(ParityBreakdownTrigger.PROBE, t0 + hour, t0))
-        assertFalse(parityBreakdownDue(ParityBreakdownTrigger.HELD, t0 + hour, t0))
-        assertFalse(parityBreakdownDue(ParityBreakdownTrigger.HELD, t0 + 24 * hour - 1, t0))
-        assertTrue(parityBreakdownDue(ParityBreakdownTrigger.HELD, t0 + 24 * hour, t0))
-        // A clock that went back must not lock the breakdown out for a day.
-        assertTrue(parityBreakdownDue(ParityBreakdownTrigger.HELD, t0 - 1, t0))
+        assertTrue(parityBreakdownDue(t0, null))
+        assertFalse(parityBreakdownDue(t0 + hour - 1, t0))
+        assertTrue(parityBreakdownDue(t0 + hour, t0))
+        // A clock that went back must not lock the run out for an hour.
+        assertTrue(parityBreakdownDue(t0 - 1, t0))
+    }
+
+    @Test
+    fun report_getsABreakdownOnceCommitted_orWithTheDiagnosticBeforeTheCutover() {
+        assertTrue(parityBreakdownAppliesToReport(cutoverCommitted = true, dashjDiagnosticEnabled = false))
+        assertTrue(parityBreakdownAppliesToReport(cutoverCommitted = true, dashjDiagnosticEnabled = true))
+        assertTrue(parityBreakdownAppliesToReport(cutoverCommitted = false, dashjDiagnosticEnabled = true))
+        assertFalse(parityBreakdownAppliesToReport(cutoverCommitted = false, dashjDiagnosticEnabled = false))
     }
 
     // ── Text ──────────────────────────────────────────────────────────
@@ -255,13 +260,13 @@ class ParityBreakdownTest {
             sampleBreakdown(),
             computedAtMs = 1_759_665_600_123L,
             durationMs = 1_234,
-            trigger = ParityBreakdownTrigger.HELD.label
+            trigger = ParityBreakdownTrigger.REPORT.label
         )
         val h3 = h(3).toString()
         val h4 = h(4).toString()
         val h8 = h(8).toString()
         assertEquals(
-            "ParityBreakdown computedAt=2025-10-05T12:00:00Z took=1234ms trigger=held dashjLastBlockSeenHeight=1000\n" +
+            "ParityBreakdown computedAt=2025-10-05T12:00:00Z took=1234ms trigger=report dashjLastBlockSeenHeight=1000\n" +
                 "  dashj txids considered=7 (unconfirmed=1, above last block excluded=0) | sdk txids=4 | shared=1\n" +
                 "  dashj-only=6 net=+248987000 (dead=0)\n" +
                 "    coinjoin=2 net=-10000: mixing=1 net=0, create-denominations=0 net=0, make-collateral=0 net=0," +
@@ -295,15 +300,35 @@ class ParityBreakdownTest {
         assertTrue(text, text.contains("sdk-only at/below examples (0 of 0, lowest height first): none"))
     }
 
+    private val stored = StoredParityBreakdown(42L, "ParityBreakdown body")
+
     @Test
-    fun reportSection_carriesTheComputedTimeAndTheText() {
+    fun reportSection_fresh_carriesTheComputedTimeAndTheText() {
         assertEquals(
-            "\n--- latest parity breakdown ---\nnone\n",
-            parityBreakdownReportSection(null) { "unused" }
+            "\n--- latest parity breakdown ---\ncomputed: at-42 (fresh, for this report)\nParityBreakdown body\n",
+            parityBreakdownReportSection(ReportParityBreakdown(stored, null)) { "at-$it" }
+        )
+    }
+
+    @Test
+    fun reportSection_fallback_labelsTheStoredResultWithItsTimeAndTheReason() {
+        assertEquals(
+            "\n--- latest parity breakdown ---\n" +
+                "not refreshed: SDK not synced — showing the last stored result\n" +
+                "computed: at-42\nParityBreakdown body\n",
+            parityBreakdownReportSection(ReportParityBreakdown(stored, "SDK not synced")) { "at-$it" }
+        )
+    }
+
+    @Test
+    fun reportSection_saysNoneWithTheReason_whenNothingIsStored_orItDoesNotApply() {
+        assertEquals(
+            "\n--- latest parity breakdown ---\nnone (timed out after 30s)\n",
+            parityBreakdownReportSection(ReportParityBreakdown(null, "timed out after 30s")) { "unused" }
         )
         assertEquals(
-            "\n--- latest parity breakdown ---\ncomputed: at-42\nParityBreakdown body\n",
-            parityBreakdownReportSection(StoredParityBreakdown(42L, "ParityBreakdown body")) { "at-$it" }
+            "\n--- latest parity breakdown ---\nnone (${ReportParityBreakdown.NOT_APPLICABLE_REASON})\n",
+            parityBreakdownReportSection(ReportParityBreakdown.NOT_APPLICABLE) { "unused" }
         )
     }
 

@@ -397,10 +397,10 @@ private fun specialTag(tx: Transaction): String? = when {
 internal data class StoredParityBreakdown(val computedAtMs: Long, val text: String)
 
 /**
- * The latest [StoredParityBreakdown] in one small file (a few KB), so the
- * support report has it after a restart and the held-dashj daily cadence
- * survives one. Line 1 is the computed-at time in ms; the rest is the text.
- * Never throws: an unreadable file reads as none.
+ * The latest [StoredParityBreakdown] in one small file (a few KB), so a
+ * support report has something to fall back on after a restart, or when a
+ * fresh run is not possible. Line 1 is the computed-at time in ms; the rest
+ * is the text. Never throws: an unreadable file reads as none.
  */
 internal class ParityBreakdownStore(private val file: File) {
 
@@ -433,31 +433,93 @@ internal class ParityBreakdownStore(private val file: File) {
     }
 }
 
-/** The `--- latest parity breakdown ---` section of `dashJ-kotlin-parity-log.txt`. */
-internal fun parityBreakdownReportSection(
-    stored: StoredParityBreakdown?,
-    formatDate: (Long) -> String
-): String = buildString {
-    append("\n--- latest parity breakdown ---\n")
-    if (stored == null) {
-        append("none\n")
-    } else {
-        append("computed: ").append(formatDate(stored.computedAtMs)).append('\n')
-        append(stored.text).append('\n')
+/** Why a breakdown ran: hourly alongside the diagnostic parity probe, or for a support report. */
+internal enum class ParityBreakdownTrigger(val label: String) {
+    PROBE("probe"),
+    REPORT("report")
+}
+
+/**
+ * Whether the hourly [ParityBreakdownTrigger.PROBE] run is due, given when
+ * this process last completed one (null = not yet).
+ */
+internal fun parityBreakdownDue(
+    nowMs: Long,
+    lastRunMs: Long?,
+    intervalMs: Long = PARITY_BREAKDOWN_PROBE_INTERVAL_MS
+): Boolean =
+    lastRunMs == null ||
+        nowMs < lastRunMs || // the clock went back: don't wait out a bogus interval
+        nowMs - lastRunMs >= intervalMs
+
+/**
+ * Whether a support report gets a breakdown: always once the cutover is
+ * committed (dashj held or diagnostic), and before it only with the dashj
+ * sync diagnostic on — the same audience the parity log is for.
+ */
+internal fun parityBreakdownAppliesToReport(cutoverCommitted: Boolean, dashjDiagnosticEnabled: Boolean): Boolean =
+    cutoverCommitted || dashjDiagnosticEnabled
+
+/** How one breakdown run ended. */
+internal sealed class ParityBreakdownRunResult {
+    data class Done(val stored: StoredParityBreakdown) : ParityBreakdownRunResult()
+
+    /** One side could not be read, e.g. `dashj wallet not available`. */
+    data class Unavailable(val what: String) : ParityBreakdownRunResult()
+
+    /** The run threw; [what] is the exception's class and message. */
+    data class Failed(val what: String) : ParityBreakdownRunResult()
+}
+
+/**
+ * The breakdown a support report shows.
+ *
+ * @property stored the result shown: fresh when [notRefreshedReason] is null,
+ *   otherwise the last stored one (or none).
+ * @property notRefreshedReason why no fresh result: `SDK not synced`,
+ *   `timed out after 30s`, `failed (…)`. Null for a fresh result.
+ * @property applicable false when this report gets no breakdown at all
+ *   ([parityBreakdownAppliesToReport]); [notRefreshedReason] then says why.
+ */
+internal data class ReportParityBreakdown(
+    val stored: StoredParityBreakdown?,
+    val notRefreshedReason: String?,
+    val applicable: Boolean = true
+) {
+    companion object {
+        const val NOT_APPLICABLE_REASON = "not computed before the cutover with the dashj sync diagnostic off"
+
+        val NOT_APPLICABLE = ReportParityBreakdown(null, NOT_APPLICABLE_REASON, applicable = false)
     }
 }
 
-/** Why a breakdown runs: alongside the parity probe, or on its own while dashj is held. */
-internal enum class ParityBreakdownTrigger(val label: String, val intervalMs: Long) {
-    PROBE("probe", 60 * 60_000L),
-    HELD("held", 24 * 60 * 60_000L)
+/** The `--- latest parity breakdown ---` section of `dashJ-kotlin-parity-log.txt`. */
+internal fun parityBreakdownReportSection(
+    report: ReportParityBreakdown,
+    formatDate: (Long) -> String
+): String = buildString {
+    append("\n--- latest parity breakdown ---\n")
+    val stored = if (report.applicable) report.stored else null
+    val reason = report.notRefreshedReason
+    when {
+        stored == null -> append("none (").append(reason ?: "never computed").append(")\n")
+        else -> {
+            if (reason == null) {
+                append("computed: ").append(formatDate(stored.computedAtMs)).append(" (fresh, for this report)\n")
+            } else {
+                append("not refreshed: ").append(reason).append(" — showing the last stored result\n")
+                append("computed: ").append(formatDate(stored.computedAtMs)).append('\n')
+            }
+            append(stored.text).append('\n')
+        }
+    }
 }
 
-/** Whether a [trigger] run is due, given when the latest one was computed (null = never). */
-internal fun parityBreakdownDue(trigger: ParityBreakdownTrigger, nowMs: Long, lastComputedAtMs: Long?): Boolean =
-    lastComputedAtMs == null ||
-        nowMs < lastComputedAtMs || // the clock went back: don't wait out a bogus interval
-        nowMs - lastComputedAtMs >= trigger.intervalMs
+/** The hourly cadence of the diagnostic run ([ParityBreakdownTrigger.PROBE]). */
+internal const val PARITY_BREAKDOWN_PROBE_INTERVAL_MS = 60 * 60_000L
+
+/** How long a support report waits for a fresh breakdown before falling back. */
+internal const val PARITY_BREAKDOWN_REPORT_TIMEOUT_MS = 30_000L
 
 internal const val PARITY_BREAKDOWN_MAX_MONEY_TXS = 50
 internal const val PARITY_BREAKDOWN_MAX_SDK_EXAMPLES = 20
