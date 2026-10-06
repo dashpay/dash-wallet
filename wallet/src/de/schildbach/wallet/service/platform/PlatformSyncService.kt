@@ -1512,7 +1512,10 @@ class PlatformSynchronizationService @Inject constructor(
      *
      * if lastContactRequestTime is 0, then all profiles are retrieved
      *
-     * This does not handle the case if userIdList.size > 100
+     * Any size of userIdList is handled: both lookups batch the ids by 100,
+     * the profile query returns at most one document per id, and the name
+     * query pages past Drive's 100-document cap
+     * ([domainDocumentsForIdentities]).
      */
     private suspend fun updateContactProfiles(
         userIdList: List<String>,
@@ -1538,10 +1541,11 @@ class PlatformSynchronizationService @Inject constructor(
 
                 // Phase 3e: domain documents for the contact ids via the
                 // Kotlin SDK behind the same read flag; null = flag off or
-                // SDK path failed — fall through to the dashj query.
+                // SDK path failed — fall through to the dashj query, which
+                // pages past the 100-document cap `names.getList` stops at.
                 val nameDocuments = (
                     sdkUsernameQueries.getDomainDocumentsForIdentitiesOrNull(identifierList)
-                        ?: platform.names.getList(identifierList)
+                        ?: platform.platform.domainDocumentsForIdentities(identifierList)
                     ).map { DomainDocument(it) }
                 val documentsByName = nameDocuments.associateBy({ it.normalizedLabel }, { it })
                 val idByNameMap = nameDocuments.associateBy({ it.normalizedLabel }, { it.ownerId })
