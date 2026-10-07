@@ -101,6 +101,12 @@ data class MayaConversionPreviewUIState(
     val quoteSecondsLeft: Long? = null,
     /** True while the swap order is being committed (or a fresh quote fetched). */
     val isLoading: Boolean = false,
+    /**
+     * True once this screen's deposit has been broadcast. The swap is paid for and can't be
+     * recalled, so Confirm stays dead for whatever brings the user back here — dismissing the
+     * result sheet, or a process death that restores the preview.
+     */
+    val isCommitted: Boolean = false,
     val isOnline: Boolean = true
 )
 
@@ -201,7 +207,7 @@ fun MayaConversionPreviewScreen(
                     },
                     style = if (state.quoteSecondsLeft != null) Style.FilledBlue else Style.TintedBlue,
                     size = Size.Large,
-                    isEnabled = !state.isLoading,
+                    isEnabled = !state.isLoading && !state.isCommitted,
                     isLoading = state.isLoading,
                     onClick = onConfirmClick,
                     modifier = Modifier.weight(1f)
