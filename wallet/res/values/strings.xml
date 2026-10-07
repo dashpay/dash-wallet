@@ -344,6 +344,7 @@
     <string name="report_issue_dialog_status_background_traces">background traces</string>
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">finishing</string>
+    <string name="report_issue_dialog_status_parity_breakdown">wallet transaction check (up to 30 seconds)</string>
     <string name="report_transaction_history_export">Export transactions</string>
     <string name="report_transaction_history_title">CSV export</string>
     <string name="report_transaction_history_dialog_title">The full transaction history will be exported as a CSV file</string>
