@@ -935,6 +935,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val notificationAddresses: MutableList<Address> = LinkedList()
     private val transactionsReceived = AtomicInteger()
     private val mnListDiffsReceived = AtomicInteger()
+    @Volatile
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
     // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
@@ -949,6 +950,44 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var syncPercentage = 0 // 0 to 100%
     private var balance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
+
+    /** When the SDK's durable height last moved; written by the tick only. */
+    private val durableHeightTracker = DurableHeightTracker()
+
+    /** Holds the sync-complete demotion while the idle rule holds the service (see the tick). */
+    private val foregroundDemotionGate = ForegroundDemotionGate { sdkHoldsService(System.currentTimeMillis()) }
+
+    /**
+     * Whether an SDK engine start that is pending ([engineStartPendingHoldsService])
+     * or in flight ([engineStartHoldsService]), or the SDK still saving the scan
+     * ([durableLagHoldsService]), holds the service now. Read from the live
+     * sources so it is current on any thread — the tick and the sync-complete
+     * demotion share this one definition. Never reads the database, and never
+     * true pre-cutover.
+     */
+    private fun sdkHoldsService(nowMs: Long): Boolean {
+        if (!dashjHeldByCutover) return false
+        if (engineStartPendingHoldsService(
+                serviceCreatedAt,
+                nowMs,
+                l1ShadowSyncService.isEngineRunning(),
+                sdkBindBlocked()
+            )
+        ) {
+            return true
+        }
+        if (engineStartHoldsService(l1ShadowSyncService.engineStartingSinceMs(), nowMs)) return true
+        val durableHeight = l1ShadowSyncService.durableSyncedHeight()
+        return durableLagHoldsService(
+            durableHeight,
+            l1ShadowSyncService.engineCommittedHeight(),
+            durableHeightTracker.msSinceChange(durableHeight, nowMs)
+        )
+    }
+
+    /** Whether the SDK bind is blocked ("SDK setup pending"): nothing can start or replay. */
+    private fun sdkBindBlocked(): Boolean =
+        ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
 
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
@@ -2330,15 +2369,58 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // BLOCKED ("SDK setup pending", Phase 1a item 3) nothing can
             // replay, so the service is allowed to idle out — the unlock
             // receiver / foreground edge bring it back.
-            val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
+            val bindBlocked = sdkBindBlocked()
             val replaying = blockchainState?.replaying == true && !bindBlocked
-            holdWakeLockWhileReplaying(replaying)
+            // An SDK engine start in flight reports no progress, so it reads idle too.
+            // Same treatment as a replay — stay up, and hold the wake lock so the
+            // start is not dozed — but capped (see [engineStartHoldsService]).
+            val engineStartingSinceMs = if (dashjHeldByCutover) l1ShadowSyncService.engineStartingSinceMs() else 0L
+            val engineStarting = engineStartHoldsService(engineStartingSinceMs, System.currentTimeMillis())
+            // …and so does the SDK still persisting what the scan already covered.
+            val durableHeight = if (dashjHeldByCutover) l1ShadowSyncService.durableSyncedHeight() else 0L
+            val committedHeight = if (dashjHeldByCutover) l1ShadowSyncService.engineCommittedHeight() else 0L
+            val durableLagging = durableLagHoldsService(
+                durableHeight,
+                committedHeight,
+                durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
+            )
+            holdWakeLockWhileReplaying(replaying || engineStarting || durableLagging)
+            // Those two holds also keep the service in the foreground: the scan reads
+            // synced while they last, and a demoted service would be stopped anyway.
+            if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
+                blockchainState?.let { state ->
+                    log.info("SDK engine start / scan save finished — re-checking the foreground notification")
+                    updateSyncNotification(state)
+                }
+            }
 
             if (isSyncIdle(activityHistory) && replaying) {
                 log.info(
                     "idle counters, but a replay is in progress ({}%) — keeping the service alive " +
                         "until it completes",
                     blockchainState?.percentageSync
+                )
+                return
+            }
+            if (isSyncIdle(activityHistory) && engineStarting) {
+                log.info(
+                    "idle counters, but the SDK engine start begun {}s ago is still running — keeping " +
+                        "the service alive until it finishes (at most {} min)",
+                    (System.currentTimeMillis() - engineStartingSinceMs) / 1000,
+                    ENGINE_START_KEEPALIVE_MS / 60_000
+                )
+                // The zero samples of the start window must not carry over: without
+                // this the first tick after the start finishes, before the engine has
+                // reported anything, would read the full history as idle and stop.
+                activityHistory.clear()
+                return
+            }
+            if (isSyncIdle(activityHistory) && durableLagging) {
+                log.info(
+                    "idle counters, but the SDK's saved height {} is {} blocks behind the committed " +
+                        "cursor {} and still advancing — keeping the service alive so a stop does not " +
+                        "re-walk them",
+                    durableHeight, committedHeight - durableHeight, committedHeight
                 )
                 return
             }
@@ -2368,11 +2450,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val lock = wakeLock ?: return
             try {
                 if (replaying && !replayWakeLockHeld) {
-                    log.info("replay in progress on the SDK path — acquiring the wake lock")
+                    log.info("replay or engine start in progress on the SDK path — acquiring the wake lock")
                     lock.acquire()
                     replayWakeLockHeld = true
                 } else if (!replaying && replayWakeLockHeld) {
-                    log.info("replay complete — releasing the wake lock")
+                    log.info("replay / engine start complete — releasing the wake lock")
                     replayWakeLockHeld = false
                     if (lock.isHeld) lock.release()
                 }
@@ -3731,10 +3813,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val broadcast = Intent(BlockchainService.ACTION_BLOCKCHAIN_STATE)
         broadcast.setPackage(packageName)
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null && blockchainState.bestChainDate != null) {
+        if (blockchainState != null) {
+            updateSyncNotification(blockchainState)
+        }
+        this.blockchainState = blockchainState
+        maybeRecoverIdentityPostCutover(blockchainState)
+    }
+
+    /**
+     * Show the ongoing sync notification while syncing, and leave the
+     * foreground once sync has finished — unless [foregroundDemotionGate] is
+     * holding it, in which case the tick calls this again when the hold ends.
+     */
+    private fun updateSyncNotification(blockchainState: BlockchainState) {
+        val bestChainDate = blockchainState.bestChainDate
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bestChainDate != null) {
             //Handle Ongoing notification state
             val syncing =
-                blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
+                bestChainDate.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
             // NotificationManager calls are synchronous binder IPC and this
             // observer runs on MAIN for every blockchain-state DB write — same
             // blocked-binder ANR shape as the peer-connectivity listener. Ship
@@ -3742,10 +3838,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             notificationHandler.post {
                 try {
                     if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver) {
-                        //Remove ongoing notification if blockchain sync finished
-                        stopForeground(true)
-                        foregroundService = ForegroundService.NONE
-                        nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+                        if (foregroundDemotionGate.mayDemote()) {
+                            //Remove ongoing notification if blockchain sync finished
+                            stopForeground(true)
+                            foregroundService = ForegroundService.NONE
+                            nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+                        } else {
+                            log.info(
+                                "sync finished, but the SDK engine is still starting or saving the scan — " +
+                                    "staying in the foreground until it is done"
+                            )
+                        }
                     } else if (blockchainState.replaying || syncing) {
                         //Shows ongoing notification when synchronizing the blockchain
                         val notification = createNetworkSyncNotification(blockchainState)
@@ -3756,8 +3859,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
-        this.blockchainState = blockchainState
-        maybeRecoverIdentityPostCutover(blockchainState)
     }
 
     /**

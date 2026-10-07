@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
@@ -115,8 +116,33 @@ data class L1TxUiRecord(
     /** Epoch-millis of first observation (or the block timestamp), 0 when unknown. */
     val timestampMs: Long,
     val status: L1TxUiStatus,
-    val direction: L1TxUiDirection
-)
+    val direction: L1TxUiDirection,
+    /**
+     * Epoch-millis of the containing block's header time, 0 while the tx is
+     * unconfirmed (or for a stub row). Kept apart from [timestampMs] so a
+     * planner can tell a block-backed time from a first-sighting time.
+     */
+    val blockTimestampMs: Long = 0L,
+    /**
+     * The SDK's `transactions.transactionTypeKind` (Rust `TransactionType`
+     * discriminant, e.g. [TX_TYPE_KIND_COINBASE]); [TX_TYPE_KIND_UNKNOWN] when
+     * not populated or not known to the producing feed.
+     */
+    val transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
+) {
+    /** A coinbase payout: shown as "Mining Reward", as the dashj path does. */
+    val isCoinbase: Boolean get() = transactionTypeKind == TX_TYPE_KIND_COINBASE
+
+    /**
+     * The SDK's TXO-parent STUB, not a transaction yet. When an output lands
+     * before its transaction, the SDK writes `TransactionEntity(txid,
+     * ByteArray(0))` so the TXO foreign key holds: context 0, direction 0,
+     * net 0, and BOTH timestamps 0. Every real record has a non-zero time
+     * (the SDK stamps `firstSeen` with the block time, or with "now" when it
+     * has neither), so a zero [timestampMs] identifies the stub exactly.
+     */
+    val isStoreStub: Boolean get() = timestampMs == 0L
+}
 
 /**
  * Map the SDK `transactions` row's raw columns to the neutral record.
@@ -132,7 +158,8 @@ fun l1TxUiRecord(
     contextCode: Int,
     directionCode: Int,
     firstSeenSec: Long,
-    blockTimestampSec: Int
+    blockTimestampSec: Int,
+    transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
 ): L1TxUiRecord {
     val status = when (contextCode) {
         1 -> L1TxUiStatus.INSTANT_LOCKED
@@ -165,7 +192,9 @@ fun l1TxUiRecord(
         feeDuffs = feeDuffs,
         timestampMs = timestampMs,
         status = status,
-        direction = direction
+        direction = direction,
+        blockTimestampMs = if (blockTimestampSec > 0) blockTimestampSec * 1000L else 0L,
+        transactionTypeKind = transactionTypeKind
     )
 }
 
@@ -197,9 +226,10 @@ internal data class L1TxRowPlan(
 
 internal fun planL1TxRow(
     record: L1TxUiRecord,
-    // The Platform-funding role of an INTERNAL/COINJOIN-classified asset lock,
-    // resolved app-side before this pure planner runs (null for a plain move).
-    // When present, the row renders as a SENT "…Fee" instead of "Internal".
+    // The Platform-funding role of an INTERNAL/COINJOIN- or OUTGOING-recorded
+    // asset lock, resolved app-side before this pure planner runs (null for a
+    // plain move). When present, the row renders as a SENT "…Fee" instead of
+    // "Internal"/"Sent".
     assetLockKind: AssetLockKind? = null,
     // The DashPay contact this row pays to / receives from (IDENTITY only, from the
     // DIP-15 friendship match). Direction/amount do NOT come from the contact or the
@@ -258,7 +288,29 @@ internal fun planL1TxRow(
         }
     }
     return when (record.direction) {
-    L1TxUiDirection.OUTGOING -> L1TxRowPlan(
+    L1TxUiDirection.OUTGOING -> if (assetLockKind != null && assetLockKind.appliesToOutgoing) {
+        // An asset lock stored, or corrected by the store walker, as the OUTGOING
+        // spend it is: net −(burn + fee), since the credit burn has no address
+        // and leaves the wallet (dashpay/platform#4412). Same title, icon and
+        // flags as the INTERNAL asset-lock branch above, so the row reads alike
+        // whichever shape the store persisted; the value keeps this direction's
+        // fee-excluded rule (the burn — the credits funded), as dashj showed it.
+        L1TxRowPlan(
+            rowId = record.txidHex,
+            titleRes = assetLockTitleRes(assetLockKind),
+            statusRes = -1,
+            iconType = if (assetLockKind.isPoolTransfer) {
+                TxDisplayCacheEntry.ICON_INTERNAL
+            } else {
+                TxDisplayCacheEntry.ICON_SENT
+            },
+            iconBgType = TxDisplayCacheEntry.BG_SENT,
+            filterFlags = TxDisplayCacheEntry.FLAG_SENT,
+            valueDuffs = record.netAmountDuffs + (record.feeDuffs ?: 0L),
+            timestampMs = record.timestampMs,
+            isIncoming = false
+        )
+    } else L1TxRowPlan(
         rowId = record.txidHex,
         titleRes = if (record.status == L1TxUiStatus.PENDING) {
             R.string.transaction_row_status_sending
@@ -357,7 +409,13 @@ internal fun planL1TxRow(
         )
     } else L1TxRowPlan(
         rowId = record.txidHex,
-        titleRes = R.string.transaction_row_status_received,
+        // dashj parity (TxResourceMapper): every coinbase reads "Mining Reward" —
+        // neither path can tell a masternode payout from a miner's.
+        titleRes = if (record.isCoinbase) {
+            R.string.transaction_row_status_mining_reward
+        } else {
+            R.string.transaction_row_status_received
+        },
         statusRes = if (record.status == L1TxUiStatus.PENDING) {
             R.string.transaction_row_status_processing
         } else {
@@ -382,6 +440,23 @@ internal fun planL1TxRow(
 internal val AssetLockKind.isPoolTransfer: Boolean
     get() = this == AssetLockKind.SHIELD || this == AssetLockKind.UNSHIELD
 
+/**
+ * The kinds an OUTGOING asset lock can carry: the Platform-funding ones and the
+ * shield (a lock into the wallet's own pool, kept on its transfer treatment).
+ * The unshield pair are AssetUnlocks, recorded INCOMING, never an outgoing lock.
+ */
+internal val AssetLockKind.appliesToOutgoing: Boolean
+    get() = this == AssetLockKind.UPGRADE || this == AssetLockKind.TOPUP ||
+        this == AssetLockKind.INVITE || this == AssetLockKind.SHIELD
+
+/**
+ * Whether the display pass asks the asset-lock resolver about an OUTGOING
+ * record: only when the SDK typed it an AssetLock. A plain send never pays the
+ * probe. Pure — host-testable.
+ */
+internal fun probesOutgoingAssetLockKind(record: L1TxUiRecord): Boolean =
+    record.direction == L1TxUiDirection.OUTGOING && record.transactionTypeKind == TX_TYPE_KIND_ASSET_LOCK
+
 /** The list/detail title string for a Platform-funding asset-lock kind. */
 internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.UPGRADE -> R.string.dashpay_upgrade_fee
@@ -392,9 +467,13 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.INVITE -> R.string.transaction_row_invitation
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
-    // Same label as the self-move — the arrow, not the title, carries the
-    // internal/external distinction (product decision, 2026-08-10).
-    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded
+    // Every AssetUnlock without evidence that THIS wallet's pool authored it.
+    // That is not only a foreign pool's unshield: a Platform identity credit
+    // withdrawal (evonode reward withdrawals included) is an AssetUnlock too,
+    // and plain "Unshielded" on it read as a shielded-pool move the user never
+    // made (field report, 2026-09-30). Product decision, 2026-09-30, replacing
+    // the shared label of 2026-08-10; the arrow still carries the receive.
+    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded_withdrawal
 }
 
 /**
@@ -426,8 +505,9 @@ internal val TxGroupCacheEntry.isMultiTxGroupRow: Boolean
  *   the "invisible receive" fix (a tx the held dashj wallet never saw).
  * - [updates]: SURGICAL fixes to existing dashj-era rows whose live
  *   status dashj can no longer learn — the "stuck Sending" fix. Only the
- *   title/status strings change; value, time, metadata, contact and
- *   service fields are preserved.
+ *   title/status strings change; value, metadata, contact and service
+ *   fields are preserved, and time is only ever moved back to the block
+ *   time ([redatedFromBlock]).
  * - [notifyIncoming]: freshly-discovered incoming transactions (subset of
  *   [inserts]) the user should get a coins-received notification for.
  */
@@ -455,6 +535,33 @@ internal data class L1DisplaySyncPlan(
 internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
 
 /**
+ * How far a cached row's time may sit AFTER its block's header time before
+ * [redatedFromBlock] treats it as wrong. A header may lag real time by about
+ * an hour (it need only beat the median of the previous 11 blocks), so a tx
+ * first seen just before it was mined can legitimately read up to that much
+ * later than its block. Three hours clears that with margin, while a row a
+ * restore stamped "now" for a tx mined days or years ago is far outside it.
+ */
+internal const val L1_BLOCK_TIME_SKEW_TOLERANCE_MS = 3L * 60 * 60 * 1000
+
+/**
+ * [existing] with its time moved back to [record]'s block time when the cached
+ * time is impossible: LATER than the block that contains the tx, by more than
+ * [L1_BLOCK_TIME_SKEW_TOLERANCE_MS]. A tx can be seen before it is mined, never
+ * long after, so such a time was never a sighting; it is a placeholder "now"
+ * (a stub row inserted during a restore, before [planL1DisplaySync] skipped
+ * stubs). Moving the time EARLIER only, and only to a block time, leaves every
+ * genuine first-sighting time alone, including a tx that sat in the mempool for
+ * days before it was mined. Returns [existing] itself when nothing changes.
+ * Pure — host-testable.
+ */
+internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecord): TxDisplayCacheEntry {
+    val blockMs = record.blockTimestampMs
+    if (blockMs <= 0L || existing.time - blockMs <= L1_BLOCK_TIME_SKEW_TOLERANCE_MS) return existing
+    return existing.copy(time = blockMs)
+}
+
+/**
  * Pure sync-pass planner. Rules:
  * - Transactions living inside a multi-tx group row ([groupedTxIds]) are
  *   never touched — group rows are dashj-era history.
@@ -472,6 +579,9 @@ internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
  *   A row whose only extra semantics is a metadata-supplied `service`
  *   classification still takes these status edges (its title/status ARE
  *   the plain pending texts) but none of the value/rate/shape re-stamps.
+ * - SDK store stubs ([L1TxUiRecord.isStoreStub]) are skipped outright.
+ * - Every existing row, the never-touch ones included, takes
+ *   [redatedFromBlock]: a time later than the tx's own block is reset to it.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -487,9 +597,10 @@ internal fun planL1DisplaySync(
     // historical rate, exactly as before this fix.
     incomingFiatCode: String? = null,
     incomingFiatValue: Long? = null,
-    // Platform-funding role per (INTERNAL/COINJOIN) txid, resolved app-side
-    // before this pure planner runs — turns the mislabelled "Internal" row
-    // into the SENT "…Fee" it funded. Empty = no known asset locks.
+    // Platform-funding role per (INTERNAL/COINJOIN, or OUTGOING AssetLock) txid,
+    // resolved app-side before this pure planner runs — turns the mislabelled
+    // "Internal"/"Sent" row into the SENT "…Fee" it funded. Empty = no known
+    // asset locks.
     kindByTxid: Map<String, AssetLockKind> = emptyMap(),
     // Resolved DashPay contact per txid, from the dashj DIP-15 resolver run
     // app-side before this pure planner runs — stamps the avatar/username on
@@ -544,6 +655,12 @@ internal fun planL1DisplaySync(
 
     for (record in records) {
         if (record.txidHex in groupedTxIds) continue
+        // A stub carries nothing displayable (net 0, no direction, no time). Rendering
+        // it inserted a "Received 0" row stamped NOW, and the real record later fixed
+        // that row's value and title but never its time, so a restore dated history it
+        // scanned as "today". Skip it; the real record reaches this planner on a later
+        // pass (the periodic full walk re-reads every TXO's transaction).
+        if (record.isStoreStub) continue
         val contact = contactByTxid[record.txidHex]
         val contactSignedNet = signedNetByTxid[record.txidHex]
         val plan = planL1TxRow(record, kindByTxid[record.txidHex], contact, contactSignedNet)
@@ -609,10 +726,15 @@ internal fun planL1DisplaySync(
         // (verified on-device, 2026-08-07 Maya field test). The swap reconciler
         // restores swapStatus on the next display-cache write signal, so this guard
         // then holds the row stable instead of flip-flopping once per sync pass.
+        //
+        // The one edit EVERY row takes, the never-touch rows included: a time that is
+        // impossible for the record's block (see [redatedFromBlock]).
+        val redated = redatedFromBlock(existing, record)
         if (existing.hasErrors || existing.swapStatus != null ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
+            if (redated != existing) updates += redated
             continue
         }
         // A service-CLASSIFIED row is only half-rich. The service column is a
@@ -630,7 +752,7 @@ internal fun planL1DisplaySync(
             sdkAuthoritative += record.txidHex
         }
 
-        var updated = existing
+        var updated = redated
         if (existing.title == resolve(R.string.transaction_row_status_sending) &&
             plan.titleRes == R.string.transaction_row_status_sent
         ) {
@@ -696,19 +818,34 @@ internal fun planL1DisplaySync(
         // and contact fields are preserved via copy(). Idempotent: once the shape
         // matches the plan, nothing is written. The never-touch guards above
         // already excluded service/gift-card/error/CoinJoin rows, and kindByTxid
-        // is only ever populated for INTERNAL/COINJOIN/INCOMING self-moves.
+        // is only populated for INTERNAL/COINJOIN/INCOMING self-moves and for
+        // OUTGOING records the SDK typed an AssetLock. (d) is that last case: a
+        // restored asset lock the store walker corrected to OUTGOING, cached
+        // "Sent" before its kind resolved. Its value is definitive too — the
+        // plain-row re-stamp below, which would otherwise keep it current, skips
+        // kind rows — so a snapshot record also carries the value over.
         if (kindByTxid[record.txidHex] != null) {
             val desiredTitle = resolve(plan.titleRes)
+            val desiredValue = if (restampFromDefinitiveRecord &&
+                record.direction == L1TxUiDirection.OUTGOING &&
+                record.netAmountDuffs != 0L
+            ) {
+                plan.valueDuffs
+            } else {
+                updated.valueSatoshis
+            }
             if (updated.title != desiredTitle ||
                 updated.iconType != plan.iconType ||
                 updated.iconBgType != plan.iconBgType ||
-                updated.filterFlags != plan.filterFlags
+                updated.filterFlags != plan.filterFlags ||
+                updated.valueSatoshis != desiredValue
             ) {
                 updated = updated.copy(
                     title = desiredTitle,
                     iconType = plan.iconType,
                     iconBgType = plan.iconBgType,
-                    filterFlags = plan.filterFlags
+                    filterFlags = plan.filterFlags,
+                    valueSatoshis = desiredValue
                 )
             }
         }
@@ -799,6 +936,15 @@ internal fun planL1DisplaySync(
                     statusText = if (keepConfirming) updated.statusText else desiredStatus
                 )
             }
+        }
+        // A coinbase cached as plain "Received" — before records carried their kind,
+        // or by the dashj-side writer — takes its "Mining Reward" title. Title only:
+        // the shape (receive arrow, value) is already right. Idempotent, since the
+        // relabelled title is no longer "Received".
+        if (record.isCoinbase && contact == null && updated.contactUserId == null &&
+            updated.title == resolve(R.string.transaction_row_status_received)
+        ) {
+            updated = updated.copy(title = resolve(R.string.transaction_row_status_mining_reward))
         }
         if (contact != null) {
             // Always attach the contact IDENTITY the insert could not (identity/
@@ -1036,6 +1182,36 @@ internal fun planMixingGroupUpdates(
                 )
             )
         }
+}
+
+/** Which figure [overlayBalanceChoice] put on screen. */
+internal enum class OverlayBalanceSource(val logName: String) {
+    /** The SDK has not published yet this launch; the dashj wallet's own balance. */
+    DASHJ("dashj"),
+
+    /** The live SDK balance — the figure the parity check compares. */
+    SDK("sdk"),
+
+    /** The SDK is still scanning; the last-known figure held under "Syncing balance". */
+    LAST_KNOWN("lastKnown")
+}
+
+/**
+ * The display choice behind [CutoverUiDataService.overlayTotalBalance], with the
+ * source it came from: dashj until the SDK publishes, the live SDK figure once it
+ * is synced, the positive last-known figure while it is still scanning, otherwise
+ * the live SDK figure. Pure — host-testable.
+ */
+internal fun overlayBalanceChoice(
+    sdk: Coin?,
+    synced: Boolean,
+    lastKnown: Coin?,
+    dashj: Coin
+): Pair<Coin, OverlayBalanceSource> = when {
+    sdk == null -> dashj to OverlayBalanceSource.DASHJ
+    synced -> sdk to OverlayBalanceSource.SDK
+    lastKnown != null && lastKnown.isPositive -> lastKnown to OverlayBalanceSource.LAST_KNOWN
+    else -> sdk to OverlayBalanceSource.SDK
 }
 
 // ── Seam tx snapshot (post-cutover WalletDataProvider reads) ──────────
@@ -3366,20 +3542,25 @@ class CutoverUiDataService internal constructor(
      *   has no balance to "lose", and holding 0 over freshly-discovered
      *   funds would be the one case where the hold is the alarming state).
      */
-    fun overlayTotalBalance(dashjBalance: Flow<Coin>): Flow<Coin> =
+    @JvmOverloads
+    fun overlayTotalBalance(dashjBalance: Flow<Coin>, feed: String = "total"): Flow<Coin> =
         combine(
             _sdkTotalBalance,
             _l1Synced,
             _lastKnownTotalBalance,
             dashjBalance
-        ) { sdk, synced, lastKnown, dashj ->
-            when {
-                sdk == null -> dashj
-                synced -> sdk
-                lastKnown != null && lastKnown.isPositive -> lastKnown
-                else -> sdk
+        ) { sdk, synced, lastKnown, dashj -> overlayBalanceChoice(sdk, synced, lastKnown, dashj) }
+            .distinctUntilChanged()
+            // What the header actually SHOWS, and why. The published/persisted lines
+            // record what the SDK computed, not which of the three figures the overlay
+            // put on screen, so a field report could not show what the user saw (field
+            // report, 2026-10-04: a balance compared against another wallet, with no way
+            // to tell a live SDK figure from a held seed or the dashj diagnostic's).
+            // Logs on a change of value or source only; each subscriber logs its own.
+            .onEach { (value, source) ->
+                log.info("displayed balance ({}): {} duffs from {}", feed, value.value, source.logName)
             }
-        }
+            .map { it.first }
 
     /**
      * The cutover-aware MAX-SENDABLE feed for the send screen
@@ -4676,7 +4857,8 @@ class CutoverUiDataService internal constructor(
 
             // Classify INTERNAL/COINJOIN rows as Platform-funding asset locks so
             // the mislabelled "Internal" row renders the SENT "…Fee" it funded.
-            // Only these directions can be asset-lock funding — a fast app-side
+            // Only these directions, and OUTGOING records the SDK typed an
+            // AssetLock, can be asset-lock funding — a fast app-side
             // Room/DataStore probe per candidate, never blocking the pipeline.
             val kindByTxid = mutableMapOf<String, AssetLockKind>()
             for (record in records) {
@@ -4700,6 +4882,16 @@ class CutoverUiDataService internal constructor(
                             AssetLockKind.UNSHIELD,
                             AssetLockKind.UNSHIELD_EXTERNAL -> kindByTxid[record.txidHex] = kind
                             else -> {}
+                        }
+                    L1TxUiDirection.OUTGOING ->
+                        // A restored identity registration, top-up or invite lock
+                        // the store walker corrected from INTERNAL/net-0 to the
+                        // OUTGOING −(burn + fee) it is. Typed AssetLock only, so a
+                        // plain send pays no probe.
+                        if (probesOutgoingAssetLockKind(record)) {
+                            resolveAssetLockKind(record.txidHex)
+                                ?.takeIf { it.appliesToOutgoing }
+                                ?.let { kindByTxid[record.txidHex] = it }
                         }
                     else -> {}
                 }

@@ -157,6 +157,17 @@ class L1ShadowSyncServiceTest {
 
         override suspend fun sdkTxCount(walletIdHex: String): Int = sdkTxs
 
+        /** The SDK's durable `WalletEntity.syncedHeight`, and how often it was read. */
+        @Volatile var durableHeight: Long? = null
+        @Volatile var durableReads = 0
+        var onDurableRead: () -> Unit = {}
+
+        override suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? {
+            durableReads++
+            onDurableRead()
+            return durableHeight
+        }
+
         override suspend fun dashjBalanceDuffs(): Pair<Long, Long>? = dashjBalances
 
         override suspend fun dashjTxCount(): Int? = dashjTxs
@@ -184,10 +195,15 @@ class L1ShadowSyncServiceTest {
             return sdkTxidHeights
         }
 
-        /** The durable committed wallet height the shadow seeds its cursor from; null = unknown. */
-        var walletSyncedHeight: Long? = null
-
-        override suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? = walletSyncedHeight
+        /**
+         * The durable committed wallet height the shadow seeds its cursor from; null = unknown.
+         * The same value as [durableHeight], read through the one [sdkWalletSyncedHeight] override.
+         */
+        var walletSyncedHeight: Long?
+            get() = durableHeight
+            set(value) {
+                durableHeight = value
+            }
 
         /** Runs inside [dashjBreakdownFacts]: a gate to hold the run, or a throw. */
         var onDashjBreakdownFacts: suspend () -> Unit = {}
@@ -294,6 +310,7 @@ class L1ShadowSyncServiceTest {
         flagGate: () -> CompletableDeferred<Unit>? = { null },
         scanMayAdvance: suspend (String) -> Boolean = { true },
         scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
+        durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS,
         breakdownStore: ParityBreakdownStore? = null
     ) = L1ShadowSyncService(
         source = source,
@@ -310,6 +327,7 @@ class L1ShadowSyncServiceTest {
         destructiveBringUpJoinMs = destructiveBringUpJoinMs,
         scanMayAdvance = scanMayAdvance,
         scanGateRetryInitialMs = scanGateRetryInitialMs,
+        durableHeightRefreshMs = durableHeightRefreshMs,
         breakdownStore = breakdownStore
     )
 
@@ -1476,6 +1494,81 @@ class L1ShadowSyncServiceTest {
         assertFalse(service.isShadowSpvRunning())
     }
 
+    // ── engine-start hold: engineStartingSinceMs ───────────────────────
+
+    @Test
+    fun startMarker_spansTheStart_andIsClearedWhenItReturns() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        var seenAtStartSpv = -1L
+        source.onStart = { seenAtStartSpv = service.engineStartingSinceMs() }
+
+        assertTrue(service.startIfEnabled())
+        assertEquals(1_000_000L, seenAtStartSpv)
+        assertEquals(0L, service.engineStartingSinceMs())
+    }
+
+    @Test
+    fun startMarker_ofAQueuedStart_survivesTheEndOfTheStartBeforeIt() = runBlocking {
+        // A start that fails leaves the engine down, so the start queued on the
+        // mutex behind it runs a full start of its own. The first start's clear
+        // used to run after the lock was released, wiping the second's marker
+        // while the second was still inside its bring-up.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val firstGate = CompletableDeferred<Unit>()
+        val secondEntered = CompletableDeferred<Unit>()
+        val secondGate = CompletableDeferred<Unit>()
+        source.onStartWalletSubsystems = {
+            if (source.subsystemsCalls == 1) {
+                firstGate.await()
+            } else {
+                secondEntered.complete(Unit)
+                secondGate.await()
+            }
+            null
+        }
+        source.onStart = { if (source.startCalls == 1) throw IllegalStateException("first start fails") }
+
+        // The first start runs on this test's event loop, the second unconfined:
+        // releasing the mutex then runs the second start, up to its bring-up,
+        // before the first start's own code after the lock resumes.
+        val first = launch { service.startIfEnabled() }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        val second = scope.async { service.startIfEnabled() }
+        delay(20) // the second start is now queued on the mutex
+        firstGate.complete(Unit)
+        withTimeout(5_000) { first.join(); secondEntered.await() }
+
+        assertEquals("the second start is in flight and owns the marker", 1_000_000L, service.engineStartingSinceMs())
+        secondGate.complete(Unit)
+        assertTrue(withTimeout(5_000) { second.await() })
+        assertEquals(0L, service.engineStartingSinceMs())
+    }
+
+    @Test
+    fun startMarker_coversTheInPlaceRestartAndTheResetRestart() = runBlocking {
+        // Both restart the SPV client without going through startIfEnabled, and
+        // its start loads the stored header chain just the same.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val seenAtStartSpv = mutableListOf<Long>()
+        source.onStart = {
+            seenAtStartSpv += service.engineStartingSinceMs()
+            source.spvRunning = true
+        }
+        assertTrue(service.startIfEnabled())
+
+        source.spvRunning = false // stopped underneath, the latch survives
+        assertTrue(service.ensureSpvRunning())
+        assertEquals(0L, service.engineStartingSinceMs())
+
+        assertTrue(service.resetShadowState(hard = false))
+        assertEquals(0L, service.engineStartingSinceMs())
+
+        assertEquals(listOf(1_000_000L, 1_000_000L, 1_000_000L), seenAtStartSpv)
+    }
+
     // ── ensureSpvRunning: the shield-from-wallet broadcast guard ───────
 
     @Test
@@ -2022,6 +2115,52 @@ class L1ShadowSyncServiceTest {
         sdkConfirmed = 200_000
         dashjBalances = 100_000L to 100_000L
         dashjChainHead = 1_511_575
+    }
+
+    // ── durable synced height: refreshed on its own clock ─────────────
+
+    @Test
+    fun durableHeight_followsThePersisterWhileProgressStaysSynced() = runBlocking {
+        // The scan has reported SYNCED and the progress feed, change-gated,
+        // emits nothing more, while the SDK keeps persisting its watermark.
+        val source = FakeSource(boundWalletId = walletIdHex).apply { durableHeight = 2_400_000L }
+        source.progressFlow.value = synced
+        val service = service(source, durableHeightRefreshMs = 20)
+        assertTrue(service.startIfEnabled())
+        assertEquals("seeded at start", 2_400_000L, service.durableSyncedHeight())
+
+        for (height in listOf(2_410_000L, 2_420_000L, 2_430_000L)) {
+            source.durableHeight = height
+            withTimeout(5_000) { while (service.durableSyncedHeight() != height) delay(5) }
+        }
+        service.stop()
+    }
+
+    @Test
+    fun durableHeight_refreshStopsWithTheService_andALateReadIsDropped() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply { durableHeight = 2_400_000L }
+        val service = service(source, durableHeightRefreshMs = 20)
+        assertTrue(service.startIfEnabled())
+        // A refresh parked inside its read while the service stops.
+        val readEntered = CompletableDeferred<Unit>()
+        val readRelease = java.util.concurrent.CountDownLatch(1)
+        source.onDurableRead = {
+            if (!readEntered.isCompleted) {
+                readEntered.complete(Unit)
+                readRelease.await()
+            }
+        }
+        source.durableHeight = 2_500_000L
+        withTimeout(5_000) { readEntered.await() }
+
+        service.stop()
+        readRelease.countDown()
+        delay(100)
+        assertEquals("reset on stop; the late read must not land", 0L, service.durableSyncedHeight())
+
+        val readsAfterStop = source.durableReads
+        delay(100)
+        assertEquals("no refresh runs after stop", readsAfterStop, source.durableReads)
     }
 
     @Test
