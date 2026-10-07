@@ -243,26 +243,39 @@ class CreateIdentityService : LifecycleService() {
         private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
         private const val EXTRA_INVITE = "org.dash.dashpay.extra.INVITE"
         private const val EXTRA_SHIELDED = "org.dash.dashpay.extra.SHIELDED"
+        private const val EXTRA_APPROVED_AMOUNT_DUFFS = "org.dash.dashpay.extra.APPROVED_AMOUNT_DUFFS"
 
         @JvmStatic
-        fun createIntentForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
+        fun createIntentForNewUsername(
+            context: Context,
+            username: String,
+            usernameSecondary: String?,
+            approvedAmountDuffs: Long = Long.MAX_VALUE
+        ): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_WITH_NEW_USERNAME
                 putExtra(EXTRA_USERNAME, username)
                 usernameSecondary?.let {
                     putExtra(EXTRA_USERNAME_SECONDARY, it)
                 }
+                putExtra(EXTRA_APPROVED_AMOUNT_DUFFS, approvedAmountDuffs)
             }
         }
 
         @JvmStatic
-        fun createIntent(context: Context, username: String, usernameSecondary: String?): Intent {
+        fun createIntent(
+            context: Context,
+            username: String,
+            usernameSecondary: String?,
+            approvedAmountDuffs: Long = Long.MAX_VALUE
+        ): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_CREATE_IDENTITY
                 putExtra(EXTRA_USERNAME, username)
                 usernameSecondary?.let {
                     putExtra(EXTRA_USERNAME_SECONDARY, it)
                 }
+                putExtra(EXTRA_APPROVED_AMOUNT_DUFFS, approvedAmountDuffs)
             }
         }
 
@@ -460,7 +473,8 @@ class CreateIdentityService : LifecycleService() {
                     val username = intent.getStringExtra(EXTRA_USERNAME)
                     val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
                     val retryWithNewUserName = intent.action == ACTION_RETRY_WITH_NEW_USERNAME
-                    handleCreateIdentityAction(username, usernameSecondary, retryWithNewUserName)
+                    val approvedAmountDuffs = intent.getLongExtra(EXTRA_APPROVED_AMOUNT_DUFFS, Long.MAX_VALUE)
+                    handleCreateIdentityAction(username, usernameSecondary, retryWithNewUserName, approvedAmountDuffs)
                 }
                 ACTION_CREATE_IDENTITY_FROM_INVITATION,
                 ACTION_RETRY_INVITE_WITH_NEW_USERNAME -> {
@@ -504,17 +518,27 @@ class CreateIdentityService : LifecycleService() {
         return if (sdkHoldMode) Service.START_NOT_STICKY else Service.START_STICKY
     }
 
-    private fun handleCreateIdentityAction(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean = false) {
+    private fun handleCreateIdentityAction(
+        username: String?,
+        usernameSecondary: String?,
+        retryWithNewUserName: Boolean = false,
+        approvedAmountDuffs: Long = Long.MAX_VALUE
+    ) {
         workInProgress = true
         identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
-            createIdentity(username, usernameSecondary, retryWithNewUserName)
+            createIdentity(username, usernameSecondary, retryWithNewUserName, approvedAmountDuffs)
             workInProgress = false
             stopSelf()
         }
     }
 
-    private suspend fun createIdentity(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean) {
+    private suspend fun createIdentity(
+        username: String?,
+        usernameSecondary: String?,
+        retryWithNewUserName: Boolean,
+        approvedAmountDuffs: Long = Long.MAX_VALUE
+    ) {
         log.info("username registration starting($username, $retryWithNewUserName)")
         org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
         val timerEntireProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE)
@@ -646,7 +670,8 @@ class CreateIdentityService : LifecycleService() {
                     topUpRepository.createAssetLockTransaction(
                         blockchainIdentity,
                         blockchainIdentityData.username!!,
-                        encryptionKey
+                        encryptionKey,
+                        approvedAmountDuffs
                     )
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
                     walletApplication.broadcastTransaction(assetLockTransaction)

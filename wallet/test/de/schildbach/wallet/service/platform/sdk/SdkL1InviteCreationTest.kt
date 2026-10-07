@@ -50,9 +50,12 @@ class SdkL1InviteCreationTest {
 
     // The protocol-14 CURRENT contested fee (0.15 DASH) vs. the protocol-13
     // LEGACY contested fee (0.25 DASH) a null/failed funding-time protocol
-    // read falls back to — see ContestedUsernameFees.
-    private val currentContestedDuffs = 15_000_000_000L
-    private val legacyContestedDuffs = 25_000_000_000L
+    // read falls back to — see ContestedUsernameFees. Core DUFFS scale (1
+    // DASH = 100,000,000 duffs), matching feeDuffs/approvedAmountDuffs/
+    // L1InviteSource.createInvitation() and the transparent counterpart's
+    // fixtures (dash-wallet#1584 review).
+    private val currentContestedDuffs = 15_000_000L
+    private val legacyContestedDuffs = 25_000_000L
 
     private fun happySource() = mockk<L1InviteSource> {
         coEvery { boundWalletIdOrNull() } returns walletIdHex

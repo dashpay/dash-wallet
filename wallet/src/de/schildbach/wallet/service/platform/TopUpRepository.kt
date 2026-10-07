@@ -84,6 +84,20 @@ import kotlin.coroutines.resume
 import androidx.core.net.toUri
 
 /**
+ * Thrown by [TopUpRepository.createAssetLockTransaction] when the live-resolved
+ * identity-funding fee exceeds the amount the confirm sheet showed and the
+ * user authenticated against — provably pre-broadcast (nothing is built or
+ * signed before this check), so [CreateIdentityService]'s generic exception
+ * handler surfaces it as the usual retryable creation error.
+ */
+class FundingAmountExceededException(
+    resolvedAmountDuffs: Long,
+    approvedAmountDuffs: Long
+) : Exception(
+    "resolved funding amount ($resolvedAmountDuffs duffs) exceeds the confirmed amount ($approvedAmountDuffs duffs)"
+)
+
+/**
  * contains topup related functions that are used by:
  * 1. [CreateIdentityService] to create an identity
  * 2. [checkTopUps] to retry/complete legacy top-ups
@@ -93,7 +107,8 @@ interface TopUpRepository {
     suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
-        keyParameter: KeyParameter?
+        keyParameter: KeyParameter?,
+        approvedAmountDuffs: Long = Long.MAX_VALUE
     )
 
     fun createTopupTransaction(
@@ -194,12 +209,23 @@ class TopUpRepositoryImpl @Inject constructor(
     override suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
-        keyParameter: KeyParameter?
+        keyParameter: KeyParameter?,
+        approvedAmountDuffs: Long
     ) {
         val fee = if (Names.isUsernameContestable(username)) {
             ContestedUsernameFees.current(dashSdkService).contested
         } else {
             Constants.DASH_PAY_FEE
+        }
+        // The confirm sheet authenticated the user against approvedAmountDuffs;
+        // this fee is a FRESH live resolution (a protocol activation, or a
+        // failed read falling back to the higher LEGACY fee, can land on a
+        // higher amount than what was confirmed) — refuse rather than build
+        // (nothing is signed/broadcast yet) and fund silently, mirroring
+        // SdkTransparentUsernameCreation.createUsernameTransparent's identical
+        // guard (MO-1069 review 5431682794).
+        if (fee.value > approvedAmountDuffs) {
+            throw FundingAmountExceededException(fee.value, approvedAmountDuffs)
         }
         val balance = walletDataProvider.observeTotalBalance().first()
         val emptyWallet = balance == fee ||

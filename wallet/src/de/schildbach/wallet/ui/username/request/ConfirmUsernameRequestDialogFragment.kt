@@ -65,6 +65,15 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
                     !requestUserNameViewModel.hasSecondaryName()) {
                     createInstantUsernameDialog(
                         onCreateInstantUsername = {
+                            // The secondary confirm sheet always shows
+                            // Coin.ZERO (the instant name is free) — record
+                            // THIS primary approval now so the eventual dual
+                            // submit caps against it instead of the
+                            // secondary sheet's zero (MO-1069 review
+                            // 5431682794).
+                            requestUserNameViewModel.recordApprovedFundingAmount(
+                                viewModel.uiState.value.amountDuffs
+                            )
                             // Navigate to the instant username fragment
                             dialogSafeNavigate(
                                 ConfirmUsernameRequestDialogFragmentDirections.toRequestUsernameFragmentForInstant(
@@ -91,7 +100,16 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
                             this@ConfirmUsernameRequestDialogFragment,
                             authManager,
                             requestUserNameViewModel,
-                            viewModel.uiState.value.amountDuffs
+                            // The secondary confirm always shows Coin.ZERO
+                            // (the instant name is free) — a dual-name submit
+                            // actually spends the PRIMARY's approved amount,
+                            // recorded in onCreateInstantUsername above
+                            // (MO-1069 review 5431682794).
+                            if (usernameType == UsernameType.Secondary) {
+                                requestUserNameViewModel.approvedFundingAmountDuffs
+                            } else {
+                                viewModel.uiState.value.amountDuffs
+                            }
                         )
                         dismiss()
                     }

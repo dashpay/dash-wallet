@@ -487,6 +487,30 @@ class RequestUserNameViewModel @Inject constructor(
     var requestedUsernameSecondary: String? = null
 
     /**
+     * The funding amount the most recent confirm sheet showed and the user
+     * authenticated against — the single cap every [submit] call funds
+     * against, including a retry (the shared error dialog's "Try again")
+     * and the cancelled-verification shortcuts, neither of which shows a
+     * fresh confirm sheet. A fee that resolves higher at spend time than
+     * what the user actually saw is refused rather than funded silently
+     * (MO-1069 review 5431682794). Updated on every [submit] call; stays
+     * unbounded until the first confirm sheet records a real amount.
+     */
+    var approvedFundingAmountDuffs: Long = Long.MAX_VALUE
+        private set
+
+    /**
+     * The primary confirm sheet's approved amount, recorded when it hands
+     * off to the instant-secondary-name flow instead of submitting
+     * directly: the secondary confirm always shows [Coin.ZERO] (the extra
+     * name itself is free), so the eventual dual-name submit must cap
+     * against the PRIMARY's approval, not the secondary sheet's.
+     */
+    fun recordApprovedFundingAmount(amountDuffs: Long) {
+        approvedFundingAmountDuffs = amountDuffs
+    }
+
+    /**
      * Which balance the user chose to pay the username fee from on the
      * "Select your payment option" sheet (Figma 1856:1805). Selecting the
      * shielded balance starts observing the pool (lazily — the SDK runtime
@@ -1051,7 +1075,7 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private fun triggerIdentityCreation(reuseTransaction: Boolean) {
+    private fun triggerIdentityCreation(reuseTransaction: Boolean, approvedAmountDuffs: Long) {
         val username = requestedUserName!!
         val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
@@ -1080,7 +1104,8 @@ class RequestUserNameViewModel @Inject constructor(
                     CreateIdentityService.createIntentForNewUsername(
                         walletApplication,
                         username,
-                        usernameSecondary
+                        usernameSecondary,
+                        approvedAmountDuffs
                     )
                 )
             }
@@ -1089,7 +1114,8 @@ class RequestUserNameViewModel @Inject constructor(
                     CreateIdentityService.createIntent(
                         walletApplication,
                         username,
-                        usernameSecondary
+                        usernameSecondary,
+                        approvedAmountDuffs
                     )
                 )
             }
@@ -1099,14 +1125,18 @@ class RequestUserNameViewModel @Inject constructor(
     /**
      * [approvedAmountDuffs] is the amount the confirm sheet showed and the
      * user authenticated against — carried into
-     * [SdkTransparentUsernameCreation.submit] so a fee re-resolved higher at
-     * funding time (a protocol activation, or a failed live read falling
-     * back to LEGACY) is refused rather than funded silently (MO-1069 review
-     * 5431682794). Defaults to unbounded for callers (tests, and the
-     * dashj/shielded paths that don't consult it) without a confirmed amount
-     * to cap against.
+     * [SdkTransparentUsernameCreation.submit] (and, pre-cutover,
+     * [TopUpRepository.createAssetLockTransaction] via [triggerIdentityCreation])
+     * so a fee re-resolved higher at funding time (a protocol activation, or
+     * a failed live read falling back to LEGACY) is refused rather than
+     * funded silently (MO-1069 review 5431682794). Defaults to
+     * [approvedFundingAmountDuffs] — the last confirm sheet's amount — so a
+     * retry or the cancelled-verification shortcuts (neither shows a fresh
+     * confirm sheet) cap against the ORIGINAL approval instead of falling
+     * back to unbounded; recorded here so the next such call sees it too.
      */
-    fun submit(approvedAmountDuffs: Long = Long.MAX_VALUE) {
+    fun submit(approvedAmountDuffs: Long = this.approvedFundingAmountDuffs) {
+        this.approvedFundingAmountDuffs = approvedAmountDuffs
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
         viewModelScope.launch {
@@ -1233,7 +1263,7 @@ class RequestUserNameViewModel @Inject constructor(
                 // status the shielded path shows; it is dismissed with the
                 // screen (or replaced by the error state below).
                 _uiState.update { it.copy(usernameRequestSubmitting = true) }
-                triggerIdentityCreation(reuseTransaction)
+                triggerIdentityCreation(reuseTransaction, approvedAmountDuffs)
             }
         }
     }

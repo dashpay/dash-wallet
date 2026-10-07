@@ -30,12 +30,19 @@ import org.dash.wallet.common.services.AuthenticationManager
  * authentication the spend ever gets (observed live: a non-private
  * username registered with no auth at all). A cancelled prompt (null)
  * submits nothing.
+ *
+ * [approvedAmountDuffs] defaults to [RequestUserNameViewModel.approvedFundingAmountDuffs] —
+ * the last confirm sheet's amount — rather than unbounded, so the callers
+ * with no fresh confirm sheet to read from (the shared error dialog's
+ * retry, the cancelled-verification shortcuts) still cap the spend at what
+ * the user actually approved instead of silently funding a higher
+ * fee resolved at spend time (MO-1069 review 5431682794).
  */
 suspend fun authenticateThenSubmit(
     fragment: Fragment,
     authManager: AuthenticationManager,
     viewModel: RequestUserNameViewModel,
-    approvedAmountDuffs: Long = Long.MAX_VALUE
+    approvedAmountDuffs: Long = viewModel.approvedFundingAmountDuffs
 ) {
     val pin = authManager.authenticate(fragment.requireActivity())
     if (pin != null) {
