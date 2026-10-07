@@ -2166,6 +2166,7 @@ class L1ShadowSyncService internal constructor(
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
     private val filterStallThresholdMs: Long = FILTER_STALL_THRESHOLD_MS,
+    private val durableHeightRefreshMs: Long = DURABLE_HEIGHT_REFRESH_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
     private val recreator: ShadowWalletRecreator? = null,
     /**
@@ -2279,7 +2280,7 @@ class L1ShadowSyncService internal constructor(
      *
      * It runs on the long-lived injected [scope], not as a child of the start
      * that created it, so neither a cancelled start nor [stop]'s teardown of
-     * the four loop jobs touches it. Held here so both can.
+     * the loop jobs touches it. Held here so both can.
      */
     @Volatile
     private var detachedBringUp: Deferred<Result<String?>>? = null
@@ -2288,6 +2289,7 @@ class L1ShadowSyncService internal constructor(
     private var parityJob: Job? = null
     private var watchdogJob: Job? = null
     private var eventTapJob: Job? = null
+    private var durableHeightJob: Job? = null
 
     /**
      * The filter-stall watchdog's restart, held so a second decision cannot
@@ -2441,9 +2443,9 @@ class L1ShadowSyncService internal constructor(
     /**
      * The SDK's DURABLE `WalletEntity.syncedHeight` — where a restart would
      * resume — cached for synchronous readers; 0 = unknown. Seeded at start
-     * and refreshed by [monitorProgress] at most every
-     * [DURABLE_HEIGHT_REFRESH_MS], so a reader on the main thread never touches
-     * the database. Reset on [stop].
+     * and refreshed by [durableHeightLoop] every [DURABLE_HEIGHT_REFRESH_MS],
+     * so a reader on the main thread never touches the database. Reset on
+     * [stop].
      *
      * It trails [_engineWalletSyncedHeight] by however much the SDK has not yet
      * persisted, and on a large restore that is a lot: field report,
@@ -2454,7 +2456,15 @@ class L1ShadowSyncService internal constructor(
      */
     @Volatile
     private var durableSyncedHeight: Long = 0L
-    private var durableHeightReadAtMs: Long = 0L
+
+    /**
+     * Guards [durableSyncedHeight] against a refresh that read before [stop]
+     * and writes after it: [stop] bumps [durableHeightGeneration] and resets
+     * the height under this lock, and a refresh writes only for the
+     * generation it was launched in.
+     */
+    private val durableHeightLock = Any()
+    private var durableHeightGeneration = 0L
 
     /** See [durableSyncedHeight]. */
     fun durableSyncedHeight(): Long = durableSyncedHeight
@@ -2922,8 +2932,10 @@ class L1ShadowSyncService internal constructor(
                         log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
                         0L
                     }
-                    durableSyncedHeight = _engineWalletSyncedHeight.value
-                    durableHeightReadAtMs = nowMs()
+                    val durableGeneration = synchronized(durableHeightLock) {
+                        durableSyncedHeight = _engineWalletSyncedHeight.value
+                        durableHeightGeneration
+                    }
                     lastProbeHeartbeatMs = nowMs()
                     logEngineDowntimeIfResuming()
                     startedAtMs = nowMs()
@@ -2931,6 +2943,8 @@ class L1ShadowSyncService internal constructor(
                     parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
                     watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
                     eventTapJob = scope.launch { tapWalletEvents() }.logCompletion("wallet-event tap")
+                    durableHeightJob = scope.launch { durableHeightLoop(walletIdHex, durableGeneration) }
+                        .logCompletion("durable-height refresh")
                     log.info(
                         "L1 shadow SPV started for SDK wallet {}… (dataDir={}, default peer discovery); " +
                             "debug-only instrumentation — two SPV engines are now running",
@@ -2995,7 +3009,7 @@ class L1ShadowSyncService internal constructor(
     private suspend fun stopInternal() {
         mutex.withLock {
             // BEFORE the early return. A bring-up that outlived its budget is
-            // not one of the four loop jobs, and it is not covered by
+            // not one of the loop jobs, and it is not covered by
             // runningWalletIdHex either — a start that detached one and then
             // failed leaves it running with that still null, so the return
             // below would step straight over it and the next start would run a
@@ -3040,6 +3054,8 @@ class L1ShadowSyncService internal constructor(
             watchdogJob = null
             eventTapJob?.cancel()
             eventTapJob = null
+            durableHeightJob?.cancel()
+            durableHeightJob = null
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
@@ -3047,14 +3063,16 @@ class L1ShadowSyncService internal constructor(
             sessionHeaderStart = 0L // the next session measures its own work
             sessionFilterStart = 0L
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
-            durableSyncedHeight = 0L
-            durableHeightReadAtMs = 0L
+            synchronized(durableHeightLock) {
+                durableHeightGeneration++
+                durableSyncedHeight = 0L
+            }
             lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
             lastStopAtMs = nowMs()
             stopCount++
             log.info(
-                "L1ShadowLifecycle STOPPED after {} up; all four loops torn down " +
-                    "(progress monitor, parity probe, watchdog, wallet-event tap); " +
+                "L1ShadowLifecycle STOPPED after {} up; all five loops torn down " +
+                    "(progress monitor, parity probe, watchdog, wallet-event tap, durable-height refresh); " +
                     "teardown #{} this process. Nothing runs until the next startIfEnabled().",
                 if (startedAtMs == 0L) "unknown" else humanDuration(lastStopAtMs - startedAtMs),
                 stopCount
@@ -3068,15 +3086,38 @@ class L1ShadowSyncService internal constructor(
      * cursor the engine had committed in this session. WARN when progress
      * will be re-walked. Never throws.
      */
-    /** One cached read for [durableSyncedHeight]; a failed read keeps the last value. */
-    private suspend fun refreshDurableSyncedHeight() {
-        val walletIdHex = runningWalletIdHex.value ?: return
-        runCatching { source.sdkWalletSyncedHeight(walletIdHex) }
-            .onSuccess { height -> if (height != null) durableSyncedHeight = height }
-            .onFailure { t ->
-                if (t is CancellationException) throw t
-                log.debug("durable syncedHeight refresh failed; keeping {}", durableSyncedHeight, t)
-            }
+    /**
+     * Re-read [durableSyncedHeight] every [durableHeightRefreshMs] for this
+     * run. On its own clock, not the progress feed's: that feed only emits on
+     * change, so once the scan reports SYNCED it goes quiet while the SDK is
+     * still persisting what it scanned — exactly the drain the service's
+     * durable-lag hold watches. Fed from progress, the cached height froze
+     * there, read as a stalled persister after ten minutes, and released the
+     * hold mid-drain.
+     */
+    private suspend fun durableHeightLoop(walletIdHex: String, generation: Long) {
+        while (currentCoroutineContext().isActive) {
+            delay(durableHeightRefreshMs)
+            refreshDurableSyncedHeight(walletIdHex, generation)
+        }
+    }
+
+    /**
+     * One cached read for [durableSyncedHeight]. A failed read keeps the last
+     * value; a read that finishes after [stop] (a newer [generation]) is dropped.
+     */
+    private suspend fun refreshDurableSyncedHeight(walletIdHex: String, generation: Long) {
+        val height = try {
+            source.sdkWalletSyncedHeight(walletIdHex) ?: return
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.debug("durable syncedHeight refresh failed; keeping {}", durableSyncedHeight, t)
+            return
+        }
+        synchronized(durableHeightLock) {
+            if (generation == durableHeightGeneration) durableSyncedHeight = height
+        }
     }
 
     private suspend fun logWatermarkAtStop(walletIdHex: String, committed: Long, filter: Long) {
@@ -3230,10 +3271,6 @@ class L1ShadowSyncService internal constructor(
                         syncedEdgeSignal.trySend(Unit)
                     }
                     val now = nowMs()
-                    if (now - durableHeightReadAtMs >= DURABLE_HEIGHT_REFRESH_MS) {
-                        durableHeightReadAtMs = now
-                        refreshDurableSyncedHeight()
-                    }
                     val terminalTransition = mapped.phase != lastPhase &&
                         (mapped.phase == ShadowSyncPhase.SYNCED || mapped.phase == ShadowSyncPhase.ERROR)
                     if (terminalTransition || now - lastLogMs >= progressLogIntervalMs) {
@@ -3557,7 +3594,7 @@ class L1ShadowSyncService internal constructor(
                 // than no watchdog at all.
                 //
                 // Launching on the service [scope] (which `stop()` does NOT
-                // cancel — it cancels the four loop jobs only) is what
+                // cancel — it cancels the loop jobs only) is what
                 // [checkProbeHeartbeat] already does for its own restart.
                 // The new run installs a fresh watchdogJob.
                 launchStallRestart(stuckAt = p.filterHeight)
@@ -4396,7 +4433,7 @@ class L1ShadowSyncService internal constructor(
          */
         internal const val BRING_UP_BUDGET_MS = 20_000L
 
-        /** How often [monitorProgress] re-reads the durable synced height (one indexed row). */
+        /** How often [durableHeightLoop] re-reads the durable synced height (one indexed row). */
         internal const val DURABLE_HEIGHT_REFRESH_MS = 30_000L
 
         /**

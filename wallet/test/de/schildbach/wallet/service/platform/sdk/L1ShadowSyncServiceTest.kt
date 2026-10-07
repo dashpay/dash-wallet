@@ -156,6 +156,17 @@ class L1ShadowSyncServiceTest {
 
         override suspend fun sdkTxCount(walletIdHex: String): Int = sdkTxs
 
+        /** The SDK's durable `WalletEntity.syncedHeight`, and how often it was read. */
+        @Volatile var durableHeight: Long? = null
+        @Volatile var durableReads = 0
+        var onDurableRead: () -> Unit = {}
+
+        override suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? {
+            durableReads++
+            onDurableRead()
+            return durableHeight
+        }
+
         override suspend fun dashjBalanceDuffs(): Pair<Long, Long>? = dashjBalances
 
         override suspend fun dashjTxCount(): Int? = dashjTxs
@@ -264,7 +275,8 @@ class L1ShadowSyncServiceTest {
         destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
         flagGate: () -> CompletableDeferred<Unit>? = { null },
         scanMayAdvance: suspend (String) -> Boolean = { true },
-        scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS
+        scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
+        durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -279,7 +291,8 @@ class L1ShadowSyncServiceTest {
         bringUpStopJoinMs = bringUpStopJoinMs,
         destructiveBringUpJoinMs = destructiveBringUpJoinMs,
         scanMayAdvance = scanMayAdvance,
-        scanGateRetryInitialMs = scanGateRetryInitialMs
+        scanGateRetryInitialMs = scanGateRetryInitialMs,
+        durableHeightRefreshMs = durableHeightRefreshMs
     )
 
     /**
@@ -2066,6 +2079,52 @@ class L1ShadowSyncServiceTest {
         sdkConfirmed = 200_000
         dashjBalances = 100_000L to 100_000L
         dashjChainHead = 1_511_575
+    }
+
+    // ── durable synced height: refreshed on its own clock ─────────────
+
+    @Test
+    fun durableHeight_followsThePersisterWhileProgressStaysSynced() = runBlocking {
+        // The scan has reported SYNCED and the progress feed, change-gated,
+        // emits nothing more, while the SDK keeps persisting its watermark.
+        val source = FakeSource(boundWalletId = walletIdHex).apply { durableHeight = 2_400_000L }
+        source.progressFlow.value = synced
+        val service = service(source, durableHeightRefreshMs = 20)
+        assertTrue(service.startIfEnabled())
+        assertEquals("seeded at start", 2_400_000L, service.durableSyncedHeight())
+
+        for (height in listOf(2_410_000L, 2_420_000L, 2_430_000L)) {
+            source.durableHeight = height
+            withTimeout(5_000) { while (service.durableSyncedHeight() != height) delay(5) }
+        }
+        service.stop()
+    }
+
+    @Test
+    fun durableHeight_refreshStopsWithTheService_andALateReadIsDropped() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply { durableHeight = 2_400_000L }
+        val service = service(source, durableHeightRefreshMs = 20)
+        assertTrue(service.startIfEnabled())
+        // A refresh parked inside its read while the service stops.
+        val readEntered = CompletableDeferred<Unit>()
+        val readRelease = java.util.concurrent.CountDownLatch(1)
+        source.onDurableRead = {
+            if (!readEntered.isCompleted) {
+                readEntered.complete(Unit)
+                readRelease.await()
+            }
+        }
+        source.durableHeight = 2_500_000L
+        withTimeout(5_000) { readEntered.await() }
+
+        service.stop()
+        readRelease.countDown()
+        delay(100)
+        assertEquals("reset on stop; the late read must not land", 0L, service.durableSyncedHeight())
+
+        val readsAfterStop = source.durableReads
+        delay(100)
+        assertEquals("no refresh runs after stop", readsAfterStop, source.durableReads)
     }
 
     @Test
