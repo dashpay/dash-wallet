@@ -19,10 +19,15 @@ package org.dash.wallet.integrations.crowdnode
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertNull
+import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.dash.wallet.common.WalletDataProvider
@@ -31,6 +36,7 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
@@ -41,6 +47,8 @@ import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.mockito.kotlin.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @ExperimentalCoroutinesApi
 class MainCoroutineRule(
@@ -140,5 +148,85 @@ class CrowdNodeViewModelTest {
             verify(api).restoreStatus()
             assertEquals(address, viewModel.accountAddress.value)
         }
+    }
+
+    /**
+     * The address read behind [CrowdNodeViewModel.recheckState], parked on
+     * demand so the failure can be made to arrive after cancellation — the way
+     * the real one does, since it waits for the SDK engine on an uncancellable
+     * sleep.
+     */
+    private class ParkedAddressRead {
+        val reached = CountDownLatch(1)
+        val release = CountDownLatch(1)
+
+        fun read(): String {
+            reached.countDown()
+            assertTrue("the address read was never released", release.await(10L, TimeUnit.SECONDS))
+            throw ReceiveAddressUnavailableException()
+        }
+    }
+
+    private fun viewModelWith(api: CrowdNodeApi, wallet: WalletDataProvider) = CrowdNodeViewModel(
+        mock(), mock(), wallet, api, mock(),
+        exchangeRatesMock, mock(), blockchainStateMock, mock(), mock()
+    )
+
+    @Test
+    fun recheckState_addressUnavailable_reportsTheError() {
+        val errors = MutableStateFlow<Exception?>(null)
+        api.stub {
+            onBlocking { restoreStatus() } doReturn Unit
+            on { accountAddress } doReturn null
+            on { apiError } doReturn errors
+        }
+        val wallet = mock<WalletDataProvider> {
+            on { observeTotalBalance() } doReturn MutableStateFlow(fullBalance)
+            on { freshReceiveAddressStringLive() } doAnswer { throw ReceiveAddressUnavailableException() }
+        }
+
+        runBlocking { viewModelWith(api, wallet).recheckState() }
+
+        // StakingActivity observes this for the whole staking flow, so it is the
+        // only thing that puts the failure in front of the user.
+        assertTrue(
+            "an unavailable address must be reported",
+            errors.value is ReceiveAddressUnavailableException
+        )
+    }
+
+    @Test
+    fun recheckState_cancelledBeforeTheAddressReadFails_reportsNothing() {
+        val errors = MutableStateFlow<Exception?>(null)
+        val parked = ParkedAddressRead()
+        api.stub {
+            onBlocking { restoreStatus() } doReturn Unit
+            on { accountAddress } doReturn null
+            on { apiError } doReturn errors
+        }
+        val wallet = mock<WalletDataProvider> {
+            on { observeTotalBalance() } doReturn MutableStateFlow(fullBalance)
+            on { freshReceiveAddressStringLive() } doAnswer { parked.read() }
+        }
+        val viewModel = viewModelWith(api, wallet)
+
+        // StakingActivity calls this from its own lifecycleScope, so leaving
+        // staking cancels it — but the read cannot answer that cancellation, and
+        // a `withContext` whose body throws delivers the throw rather than the
+        // cancellation, so the handler still runs.
+        val scope = CoroutineScope(Dispatchers.Default + Job())
+        val job = scope.launch { viewModel.recheckState() }
+        assertTrue("the read must have parked", parked.reached.await(10L, TimeUnit.SECONDS))
+        job.cancel()
+        parked.release.countDown()
+        runBlocking { job.join() }
+
+        // apiError is a singleton the staking flow shares, and only a dialog
+        // actually shown clears it: latching here greets the NEXT staking
+        // session with a stale failure before anything has been read.
+        assertNull(
+            "a read abandoned with the screen must not latch an app-scoped error",
+            errors.value
+        )
     }
 }

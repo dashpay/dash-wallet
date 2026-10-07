@@ -129,9 +129,8 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     private var screen = SCREEN_TRANSFER
     private var shieldFirst = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         if (!Constants.SUPPORTS_PLATFORM) {
             finish()

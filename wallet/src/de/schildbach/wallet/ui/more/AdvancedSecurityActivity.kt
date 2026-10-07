@@ -77,9 +77,8 @@ class AdvancedSecurityActivity : LockScreenActivity() {
     }
     private lateinit var dashSymbol: ImageSpan
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         binding = ActivityAdvancedSecurityBinding.inflate(layoutInflater)
         setContentView(binding.root)

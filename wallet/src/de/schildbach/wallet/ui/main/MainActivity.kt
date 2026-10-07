@@ -185,16 +185,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // LockScreenActivity finishes the activity when there is no usable
-        // wallet (a direct launch on a fresh install, a degraded launch, a
-        // safe-mode retry still loading); nothing below may run, and the
-        // callbacks below check the same flag (see finishedForNoWallet).
-        if (finishedForNoWallet) {
-            log.warn("started without a wallet - closing (launch onboarding instead)")
-            return
-        }
+    // Runs only with a usable wallet: LockScreenActivity finishes the activity
+    // otherwise (a direct launch on a fresh install, a degraded launch, a
+    // safe-mode retry still loading), and the callbacks below check
+    // finishedForNoWallet for that case.
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // no-op on API 35+, where edge-to-edge is enforced
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)

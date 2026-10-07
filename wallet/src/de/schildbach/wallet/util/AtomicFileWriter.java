@@ -40,11 +40,18 @@ import java.io.OutputStream;
  *
  * <p>Temp files are named {@code <name>.tmp} so that {@code WalletApplication.cleanupFiles()}, which
  * sweeps {@code *.tmp} from the files dir on launch, garbage-collects any temp abandoned by a kill.
+ * That sweep must not delete a temp that is still being written: it would fail the write (the
+ * rename finds no source), and a startup repair that fails is not retried this session. Every
+ * write therefore runs under {@link #LOCK}, and a sweep runs under it too through
+ * {@link #runExclusive}, so a sweep only ever sees temps that no write in this process still owns.
  */
 public final class AtomicFileWriter {
 
     /** Suffix appended to the destination name to form the temp file. */
     public static final String TEMP_SUFFIX = ".tmp";
+
+    /** Held for the whole of every {@link #write}; see {@link #runExclusive}. */
+    private static final Object LOCK = new Object();
 
     /** Writes the file body. May throw; the destination is left untouched if it does. */
     public interface ContentWriter {
@@ -62,6 +69,23 @@ public final class AtomicFileWriter {
      *         any pre-existing destination file is left exactly as it was.
      */
     public static void write(final Context context, final String filename, final ContentWriter writer)
+            throws IOException {
+        synchronized (LOCK) {
+            writeLocked(context, filename, writer);
+        }
+    }
+
+    /**
+     * Runs {@code action} while no {@link #write} is in flight in this process, and keeps new writes
+     * from starting until it returns. For sweeping abandoned temps without deleting a live one.
+     */
+    public static void runExclusive(final Runnable action) {
+        synchronized (LOCK) {
+            action.run();
+        }
+    }
+
+    private static void writeLocked(final Context context, final String filename, final ContentWriter writer)
             throws IOException {
         final String tempFilename = filename + TEMP_SUFFIX;
         final File tempFile = new File(context.getFilesDir(), tempFilename);

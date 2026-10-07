@@ -32,14 +32,22 @@ import kotlinx.coroutines.flow.map
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class PublishTransactionMetadataOperation(val application: Application) {
+class PublishTransactionMetadataOperation @Inject constructor(val application: Application) {
     class PublishTransactionMetadataException(message: String) : java.lang.Exception(message)
 
     companion object {
         private val log = LoggerFactory.getLogger(PublishTransactionMetadataOperation::class.java)
 
         private const val WORK_NAME = "PublishTransactionMetadataWorker.WORK#"
+        /** on every publish request, so a wallet reset can cancel them all */
+        private const val WORK_TAG = "PublishTransactionMetadataWorker"
+
+        /** Cancels every queued or running metadata publish. */
+        fun cancelAll(application: Application) {
+            WorkManager.getInstance(application).cancelAllWorkByTag(WORK_TAG)
+        }
         fun uniqueWorkName(workId: String) = "${WORK_NAME}$workId}"
 
         fun operationStatus(
@@ -141,6 +149,7 @@ class PublishTransactionMetadataOperation(val application: Application) {
                 workDataOf()
             )
             .addTag("workId:$workId")
+            .addTag(WORK_TAG)
             .build()
 
         return WorkManager.getInstance(application)

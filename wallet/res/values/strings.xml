@@ -332,6 +332,7 @@
     <string name="report_issue_dialog_report">Report</string>
     <string name="wallet_recovery_from_seed_message">Your wallet file could not be read and no automatic backup was usable. Your funds are safe on the network — restore your wallet with your recovery phrase to continue.</string>
     <string name="safe_mode_startup_message">The app did not finish starting up the last few times, so this start skipped loading your wallet. Nothing has been changed or deleted. Send us a report, or try opening your wallet again.</string>
+    <string name="wallet_wipe_recovery_required">A previous wallet reset may not have finished. Wallet access is paused to protect any remaining data. Contact support for help recovering your wallet.</string>
     <string name="report_issue_dialog_collect_device_info">Append device information</string>
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>
@@ -347,6 +348,7 @@
     <string name="report_issue_dialog_status_background_traces">background traces</string>
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">finishing</string>
+    <string name="report_issue_dialog_status_parity_breakdown">wallet transaction check (up to 30 seconds)</string>
     <string name="report_transaction_history_export">Export transactions</string>
     <string name="report_transaction_history_title">CSV export</string>
     <string name="report_transaction_history_dialog_title">The full transaction history will be exported as a CSV file</string>

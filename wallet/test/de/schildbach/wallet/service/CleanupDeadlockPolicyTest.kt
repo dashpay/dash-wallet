@@ -18,7 +18,6 @@ package de.schildbach.wallet.service
 
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.CLEANUP_DEADLOCK_EXIT_MS
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.CleanupDeadlockAction
-import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.CleanupDeadlockClock
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.decideOnCleanupDeadlock
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.endProcessIfStillBackgrounded
 import kotlinx.coroutines.CoroutineStart
@@ -85,53 +84,7 @@ class CleanupDeadlockPolicyTest {
         )
     }
 
-    // ── The deadlock clock (review, 2026-09-28) ──
-
-    /**
-     * A cleanup stuck waiting for its instance's initialization is as stuck as
-     * any other: the clock runs from the claim, so a refused start measures it.
-     * It used to be stamped only after that wait, and read 0 ms forever.
-     */
-    @Test
-    fun clock_runsFromTheClaim_soACleanupStuckBeforeInitCompletesStillCounts() {
-        var now = 1_000L
-        val clock = CleanupDeadlockClock { now }
-        clock.start() // claimed; now parked awaiting initialization
-        now += CLEANUP_DEADLOCK_EXIT_MS + 1
-        assertEquals(CLEANUP_DEADLOCK_EXIT_MS + 1, clock.stuckForMs())
-        assertEquals(CleanupDeadlockAction.EXIT_PROCESS, decideOnCleanupDeadlock(clock.stuckForMs(), appVisible = false))
-    }
-
-    /** A finished cleanup's start time is never charged to a later wait: that ended the process early. */
-    @Test
-    fun clock_clearedWhenItsOwnerFinishes() {
-        var now = 1_000L
-        val clock = CleanupDeadlockClock { now }
-        val token = clock.start()
-        now += 60_000
-        clock.finish(token)
-        now += CLEANUP_DEADLOCK_EXIT_MS * 10
-        assertEquals(0L, clock.stuckForMs())
-        assertEquals(CleanupDeadlockAction.STOP_SELF, decideOnCleanupDeadlock(clock.stuckForMs(), appVisible = false))
-    }
-
-    /** A late finish from an older owner cannot clear a newer owner's clock. */
-    @Test
-    fun clock_aStaleFinishDoesNotClearANewerOwner() {
-        var now = 1_000L
-        val clock = CleanupDeadlockClock { now }
-        val old = clock.start()
-        now += 5_000
-        clock.start() // the next cleanup's claim
-        now += 7_000
-        clock.finish(old)
-        assertEquals(7_000L, clock.stuckForMs())
-    }
-
-    @Test
-    fun clock_readsZeroBeforeAnyCleanup() {
-        assertEquals(0L, CleanupDeadlockClock { 123_456L }.stuckForMs())
-    }
+    // The deadlock clock itself (review, 2026-09-28) is PendingServiceCleanup; see PendingServiceCleanupTest.
 
     // ── The final check and the exit, together on the main thread (review, 2026-09-29) ──
 

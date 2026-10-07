@@ -936,9 +936,9 @@ class SendCoinsTaskRunner @Inject constructor(
             serviceName?.let {
                 metadataProvider.setTransactionService(TxId.wrap(payment.txidHex), it)
             }
-            // refund_to comes from the SDK's persisted address pool — no
-            // dashj keychain on this route. Null → omit the refund output
-            // (optional per BIP70) rather than fall back to dashj.
+            // refund_to comes from the ENGINE's next unused external address
+            // over the FFI — no dashj keychain on this route. Null → omit the
+            // refund output (optional per BIP70) rather than fall back to dashj.
             val refundAddress = sdkL1SendService.refundAddressOrNull()
             if (refundAddress == null) {
                 log.warn("no SDK refund address available; sending the Payment message without refund_to")

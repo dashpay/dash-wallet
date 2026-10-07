@@ -108,6 +108,7 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
             val newStatus = when (it) {
                 ReportGenerationStatus.Logs -> getString(R.string.report_issue_dialog_status_application_log)
                 ReportGenerationStatus.Packages -> getString(R.string.report_issue_dialog_status_installed_packages)
+                ReportGenerationStatus.ParityBreakdown -> getString(R.string.report_issue_dialog_status_parity_breakdown)
                 ReportGenerationStatus.ApplicationInfo -> getString(R.string.report_issue_dialog_status_application_info)
                 ReportGenerationStatus.WalletDump -> getString(R.string.report_issue_dialog_status_wallet_dump)
                 ReportGenerationStatus.StackTrace -> getString(R.string.report_issue_dialog_status_stack_trace)

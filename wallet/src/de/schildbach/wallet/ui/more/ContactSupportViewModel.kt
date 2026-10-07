@@ -34,10 +34,14 @@ import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ParityReport
+import de.schildbach.wallet.service.platform.sdk.PARITY_BREAKDOWN_REPORT_TIMEOUT_MS
+import de.schildbach.wallet.service.platform.sdk.ReportParityBreakdown
+import de.schildbach.wallet.service.platform.sdk.parityBreakdownReportSection
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.NativeLogBridge
 import de.schildbach.wallet.util.StartupBreadcrumbs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,12 +77,26 @@ enum class ReportGenerationStatus {
     StackTrace,
     DeviceInfo,
     Packages,
+    ParityBreakdown,
     Logs,
     WalletDump,
     BackgroundTraces,
     Finishing,
     Complete
 }
+
+/**
+ * Whether the report gets `dashJ-kotlin-parity-log.txt`: the dashj sync
+ * diagnostic is on, it ran this launch (parity history exists), or a
+ * breakdown applies to this report (the cutover is committed and the user
+ * shares the application log — [ReportParityBreakdown.NOT_SHARED] is not
+ * applicable, so it never attaches the parity log on its own).
+ */
+internal fun shouldAttachParityLog(
+    diagnosticEnabled: Boolean,
+    hasParityHistory: Boolean,
+    breakdown: ReportParityBreakdown
+): Boolean = diagnosticEnabled || hasParityHistory || breakdown.applicable
 
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
@@ -268,6 +286,13 @@ class ContactSupportViewModel @Inject constructor(
                 text.append(x.toString()).append('\n')
             }
         }
+
+        // A fresh dashj ↔ SDK parity breakdown for the parity log, computed
+        // BEFORE the logs are copied so its ParityBreakdown block is in the
+        // attached wallet.log too. Bounded (it falls back to the last stored
+        // result with the reason) and never fails the report. It lists txids
+        // and amounts, so only when the user shares the application log.
+        val parityBreakdown = parityBreakdownForReport(collectApplicationLog)
 
         if (collectApplicationLog) {
             _status.value = ReportGenerationStatus.Logs
@@ -488,10 +513,10 @@ class ContactSupportViewModel @Inject constructor(
         try {
             val diagnosticEnabled = dashPayConfig.getDashjSyncDiagnostic()
             val parityHistory = dashjDiagnosticSyncState.parityHistory()
-            if (diagnosticEnabled || parityHistory.isNotEmpty()) {
+            if (shouldAttachParityLog(diagnosticEnabled, parityHistory.isNotEmpty(), parityBreakdown)) {
                 val parityLogFile = File(reportDir, "dashJ-kotlin-parity-log.txt")
                 FileWriter(parityLogFile).use { writer ->
-                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory))
+                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory, parityBreakdown))
                 }
                 attachments.add(
                     FileProvider.getUriForFile(
@@ -613,12 +638,14 @@ class ContactSupportViewModel @Inject constructor(
      * The content of the `dashJ-kotlin-parity-log.txt` support-log attachment:
      * the current diagnostic state (percent + verdict), the SDK wallet's
      * unspent/total TXO counts (500-input standard-tx cap check), the latest
-     * [ParityReport] from the L1 shadow harness, and the recent parity
-     * history recorded by [DashjDiagnosticSyncState.recordParity].
+     * [ParityReport] from the L1 shadow harness, the transaction-level
+     * breakdown computed for this report ([parityBreakdownForReport]), and the
+     * recent parity history recorded by [DashjDiagnosticSyncState.recordParity].
      */
     private fun buildDashjKotlinParityLog(
         diagnosticEnabled: Boolean,
-        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>
+        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>,
+        parityBreakdown: ReportParityBreakdown
     ): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US)
         fun formatReport(r: ParityReport): String =
@@ -672,6 +699,8 @@ class ContactSupportViewModel @Inject constructor(
         text.append("\n--- latest parity report ---\n")
         text.append(latest?.let { formatReport(it) } ?: "none").append('\n')
 
+        text.append(parityBreakdownReportSection(parityBreakdown) { dateFormat.format(Date(it)) })
+
         text.append("\n--- parity history (oldest first, up to 50 entries) ---\n")
         if (parityHistory.isEmpty()) {
             text.append("none\n")
@@ -685,6 +714,30 @@ class ContactSupportViewModel @Inject constructor(
             }
         }
         return text.toString()
+    }
+
+    /**
+     * The breakdown for the parity log ([L1ShadowSyncService.parityBreakdownForReport]):
+     * waits up to [PARITY_BREAKDOWN_REPORT_TIMEOUT_MS] under its own progress
+     * step. Whatever goes wrong, the report goes on without it, with the
+     * reason.
+     *
+     * The breakdown lists txids and amounts — application-log material — so
+     * when the user unticks "Append application log" it is neither computed
+     * nor shown ([ReportParityBreakdown.NOT_SHARED]), whatever else is shared.
+     */
+    @VisibleForTesting
+    internal suspend fun parityBreakdownForReport(collectApplicationLog: Boolean): ReportParityBreakdown {
+        if (!collectApplicationLog) return ReportParityBreakdown.NOT_SHARED
+        return try {
+            _status.value = ReportGenerationStatus.ParityBreakdown
+            l1ShadowSyncService.parityBreakdownForReport()
+        } catch (x: CancellationException) {
+            throw x
+        } catch (x: Exception) {
+            log.info("problem computing the parity breakdown for the report", x)
+            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName}: ${x.message})")
+        }
     }
 
     @Throws(IOException::class)

@@ -65,6 +65,11 @@ import org.junit.Before
 import org.junit.Test
 import java.util.Date
 import java.util.EnumSet
+import org.bitcoinj.core.Address
+import org.bitcoinj.params.TestNet3Params
+
+/** A valid testnet address — the executor base58-encodes what the wallet returns. */
+private const val UNSHIELD_DESTINATION_BASE58 = "ydW78zVxRgNhANX2qtG4saSCC5ejNQjw2U"
 
 /**
  * Verifies the SdkWriteResult → UI contract of [ShieldedTransferViewModel]:
@@ -89,12 +94,19 @@ class ShieldedTransferViewModelTest {
         every { observeShieldedBalance() } returns flowOf(Dash.parse("15.5"))
         every { shieldedSyncStatus } returns poolSyncStatus
     }
+    private val unshieldDestination =
+        Address.fromBase58(TestNet3Params.get(), UNSHIELD_DESTINATION_BASE58)
+
     private val walletData = mockk<WalletData> {
         // total balance only feeds the "pending" explainer; the
         // transferable balance comes from the chainlocked-only selection
         every { observeTotalBalance() } returns flowOf(Coin.parseCoin("3.00"))
         every { observeBalance(any(), any()) } returns flowOf(Coin.parseCoin("3.00"))
-        every { freshReceiveAddressString() } returns "yTestAddressBase58"
+        // The unshield destination is the UNADVERTISED (engine internal/change)
+        // chain — deliberately NOT the receive address the Receive screen shows,
+        // which post-cutover would be the same address a payer was handed.
+        // Returns a dashj Address, which the executor base58-encodes.
+        every { unadvertisedDestinationLive() } returns unshieldDestination
     }
     private val dashPayConfig = mockk<DashPayConfig> {
         coEvery { get(DashPayConfig.SHIELDED_TIMING_INFO_SHOWN) } returns true
@@ -466,13 +478,13 @@ class ShieldedTransferViewModelTest {
 
         assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
         io.mockk.coVerify {
-            shieldedService.withdrawToCore("yTestAddressBase58", Dash.parse("1"))
+            shieldedService.withdrawToCore(UNSHIELD_DESTINATION_BASE58, Dash.parse("1"))
         }
     }
 
     @Test
     fun freshAddressFailure_isNotSent_notAmbiguous() = runTest(dispatcher) {
-        every { walletData.freshReceiveAddressString() } throws IllegalStateException("wallet locked")
+        every { walletData.unadvertisedDestinationLive() } throws IllegalStateException("wallet locked")
         val vm = viewModel()
 
         vm.onSwapDirection()

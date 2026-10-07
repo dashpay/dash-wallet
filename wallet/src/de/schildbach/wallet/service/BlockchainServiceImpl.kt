@@ -54,6 +54,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRecoveryReset
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
 import de.schildbach.wallet.WalletApplicationExt.finishWalletWipe
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -76,6 +77,7 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.RecoveryResetState
 import de.schildbach.wallet.util.FriendKeyChainLookahead
 import de.schildbach.wallet.util.ThrottledRunner
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
@@ -470,18 +472,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * blockstore while that instance still held its file lock
          * (OverlappingFileLockException, five failed starts on the reference
          * install on 2026-09-16).
+         *
+         * It is also the deadlock clock read by the onCreate guard: it times
+         * the continuous interval in which any destroy is pending, starting in
+         * onDestroy itself. A cleanup stuck before it claims [isCleaningUp], or
+         * while it waits for its instance's initialization, is exactly as stuck
+         * and used to read as 0 ms, so a refused start never reached
+         * [CLEANUP_DEADLOCK_EXIT_MS]. The clock clears when the last pending
+         * destroy finishes, so a finished cleanup's start time is never charged
+         * to a later one.
          */
-        private val pendingDestroys = java.util.concurrent.atomic.AtomicInteger(0)
+        private val pendingDestroys = PendingServiceCleanup()
 
         /** Whether a previous instance of this service is still tearing down. */
-        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
-
-        /**
-         * How long the cleanup that currently owns [isCleaningUp] has been
-         * running. Read by the onCreate guard to measure how long a refused
-         * start has been waiting on a cleanup that never finishes.
-         */
-        private val cleanupClock = CleanupDeadlockClock { SystemClock.elapsedRealtime() }
+        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.isPending()
 
         /**
          * Plan §37: how long a previous instance's cleanup may stay unfinished
@@ -493,35 +497,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         /** What a start refused by an unfinished cleanup does next — see [decideOnCleanupDeadlock]. */
         enum class CleanupDeadlockAction { STOP_SELF, EXIT_PROCESS }
-
-        /**
-         * The deadlock clock for the cleanup that owns [isCleaningUp] (review,
-         * 2026-09-28). It starts the moment a cleanup CLAIMS ownership, before
-         * that cleanup waits for its instance's initialization: a cleanup stuck
-         * in that wait is exactly as stuck, and used to read as 0 ms, so a
-         * refused start never reached the exit bound. It is cleared by the same
-         * owner when it finishes, by compare-and-set on the token [start]
-         * returned, so a finished cleanup's start time can never be charged to
-         * a later one (that used to end the process early), and a late finish
-         * cannot clear a newer owner's clock.
-         */
-        internal class CleanupDeadlockClock(private val nowMs: () -> Long) {
-            private val startedAtMs = AtomicLong(0L)
-
-            /** Start the clock for a cleanup that just claimed ownership; returns its token. */
-            fun start(): Long = nowMs().coerceAtLeast(1L).also { startedAtMs.set(it) }
-
-            /** The owner holding [token] finished; clears the clock unless a newer owner restarted it. */
-            fun finish(token: Long) {
-                startedAtMs.compareAndSet(token, 0L)
-            }
-
-            /** How long the current owner has been running, or 0 with no cleanup in progress. */
-            fun stuckForMs(): Long {
-                val startedAt = startedAtMs.get()
-                return if (startedAt == 0L) 0L else (nowMs() - startedAt).coerceAtLeast(0L)
-            }
-        }
 
         /**
          * Plan §37 (Andrei, 2026-09-22): a shutdown parked behind a native SDK
@@ -586,6 +561,143 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
+
+    internal fun refuseWalletInitialization() {
+        // Commands and teardown await this latch even when initialization is refused.
+        onCreateCompleted.complete(Unit)
+    }
+
+    /**
+     * Called synchronously by [onStartCommand], before its command coroutine.
+     * Every command coroutine awaits the same latch, so a refused normal
+     * command can resume first and stopSelf(); cleanup then cancels the
+     * wipe's coroutine. Recording the wipe here lets cleanup run it anyway.
+     */
+    internal fun recordWipeRequest(action: String?) {
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            deleteWalletFileOnShutdown = true
+        }
+    }
+
+    /**
+     * The [onCreate] gate for a backup-recovered wallet's owed reset, run
+     * before any store is opened. The reset is done HERE, not by teardown:
+     * stopSelf() does not destroy a started service while an activity is
+     * bound (MainActivity binds in onResume), so a teardown-only reset could
+     * stall with the app in the foreground.
+     *
+     * The reset is complete only when both SPV stores are gone, the
+     * databases cleared, the SDK rescan durably owed (when the SDK owns L1)
+     * and the marker actually deleted. Otherwise the failure is counted, this
+     * returns false and the caller refuses initialization so the next start
+     * retries. Only a failing database clear is waived after
+     * [RecoveryResetState.MAX_FAILED_ATTEMPTS], so the wallet can still sync;
+     * an undeleted store or an SDK rescan that could not be owed never is.
+     *
+     * @return true when initialization may proceed.
+     */
+    internal suspend fun performRecoveryReset(): Boolean {
+        log.warn("onCreate: recovered wallet owes a blockchain reset — resetting before initialization")
+        val blockstoreDir = getDir("blockstore", MODE_PRIVATE)
+        val storesDeleted = listOf(Constants.Files.BLOCKCHAIN_FILENAME, Constants.Files.HEADERS_FILENAME)
+            .map { File(blockstoreDir, it) }
+            .all { !it.exists() || it.delete() }
+        resetMNLists(false)
+        val databasesCleared = application.clearDatabasesForRecoveryReset()
+        val sdkRescanOwed = oweSdkRescanIfCutOver()
+        resetBlockchainState()
+        // The parts a stale-state reset cannot do without.
+        val requiredPartsDone = storesDeleted && sdkRescanOwed
+        if (requiredPartsDone && databasesCleared) {
+            if (application.markRecoveryResetComplete()) {
+                log.info("recovery reset complete")
+                return true
+            }
+            log.warn("recovery reset ran, but its marker could not be removed")
+        }
+        val attempts = application.recordRecoveryResetFailure()
+        if (attempts == RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+            runCatching {
+                CrashReporter.saveBackgroundTrace(
+                    IllegalStateException(
+                        "recovery reset failed $attempts times (storesDeleted=$storesDeleted, " +
+                            "databasesCleared=$databasesCleared, sdkRescanOwed=$sdkRescanOwed)"
+                    ),
+                    packageInfoProvider.packageInfo
+                )
+            }
+        }
+        if (!requiredPartsDone || attempts < RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+            log.warn(
+                "recovery reset failed (attempt {}: storesDeleted={}, databasesCleared={}, sdkRescanOwed={}) — " +
+                    "the reset stays owed", attempts, storesDeleted, databasesCleared, sdkRescanOwed
+            )
+            return false
+        }
+        // Only the best-effort database clear keeps failing: waive it.
+        log.error("recovery reset: database clear failed {} times — waiving it so the wallet can sync", attempts)
+        return application.markRecoveryResetComplete()
+    }
+
+    /**
+     * The SDK half of the recovery reset: when the SDK owns L1 its filter
+     * watermark must rewind, owed durably to the next bind
+     * ([SdkWalletBinder.oweSpvRescanForRecoveryReset]). True when nothing is
+     * owed (pre-cutover, dashj's store wipe is the whole reset) or the debt
+     * is recorded. A failed ownership read counts as a failure.
+     */
+    private suspend fun oweSdkRescanIfCutOver(): Boolean = try {
+        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForRecoveryReset()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("recovery reset: SDK rescan could not be owed", t)
+        false
+    }
+
+    /** Called on Main after initialization settles, before ordinary command handling. */
+    internal fun handleWalletLifecycleCommand(action: String?): Boolean {
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            recordWipeRequest(action)
+            stopSelf()
+            return true
+        }
+        // Order matters: this runs on Main.
+        // 1. An instance that never initialized (refused, or its init failed)
+        //    is rejected first. Its latch is complete, but it opened no stores,
+        //    receivers or SDK resume, so a later recovery of the application
+        //    (a safe-mode retry that clears the degradation flags) must not
+        //    make it accept commands.
+        // 2. The degraded check before the wallet read: during a safe-mode
+        //    retry isWalletLoadDegraded answers without waiting, whereas the
+        //    wallet getter waits on Main for the retry's whole parse and check
+        //    (DeferredWalletLoad) and could freeze the recovery screen into an
+        //    ANR.
+        // isRecoveryResetPending is also true for a marker that cannot be
+        // inspected: no command runs until it is confirmed absent.
+        if (!initCompleted ||
+            application.isWalletLoadDegraded ||
+            application.wallet == null ||
+            application.isRecoveryResetPending
+        ) {
+            stopSelf()
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Refused initialization can leave no wallet, even without a degraded-state flag.
+     * The degraded check comes before the wallet read for the same reason as in
+     * [handleWalletLifecycleCommand]: it answers without waiting during a
+     * safe-mode retry, while the wallet getter would wait for that retry's parse.
+     */
+    internal fun saveWalletOnShutdown() {
+        if (!deleteWalletFileOnShutdown && !application.isWalletLoadDegraded && application.wallet != null) {
+            propagateContext()
+            application.saveWallet()
+        }
+    }
 
     /**
      * True once [onCreate]'s init coroutine ran to its end with a wallet.
@@ -826,6 +938,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Volatile
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
+    // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
+    @Volatile
     private var deleteWalletFileOnShutdown = false
 
     // Settings to bypass dashj default dns seeds
@@ -1368,7 +1482,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     active.await()
                     continue
                 }
-                if (pendingDestroys.get() <= 0 && !isCleaningUp.get()) break
+                if (!pendingDestroys.isPending() && !isCleaningUp.get()) break
                 delay(100)
             }
             true
@@ -2466,7 +2580,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // finish. With the app in the background, end the process so
                     // the next start gets a clean one; stopSelf alone left the
                     // engine off for four hours on 2026-09-22.
-                    val stuckForMs = cleanupClock.stuckForMs()
+                    val stuckForMs = pendingDestroys.elapsedMs(SystemClock.elapsedRealtime())
                     if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS) {
                         // Logged BEFORE the decision: the visibility check and
                         // the exit run together on the main thread, with no
@@ -2500,8 +2614,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                 propagateContext()
                 val wallet = application.wallet
-                if (wallet == null) {
-                    log.error("onCreate: wallet is null after cleanup, service cannot continue")
+                if (wallet == null || application.isWalletLoadDegraded) {
+                    log.warn("onCreate: wallet is unavailable or degraded, service cannot continue")
+                    withContext(Dispatchers.Main) { refuseWalletInitialization() }
+                    return@launch
+                }
+                // A backup-recovered wallet still owes its reset: opening the
+                // existing stores and starting sync would expose their stale
+                // state to the transaction-stripped wallet. A marker that
+                // cannot be inspected counts as owed (fail closed), and the
+                // reset only completes once the marker is confirmed gone.
+                if (application.isRecoveryResetPending && !performRecoveryReset()) {
+                    withContext(Dispatchers.Main) {
+                        refuseWalletInitialization()
+                        stopSelf()
+                    }
                     return@launch
                 }
                 // Phase 5d: resolve the cutover engine gate ONCE, before we
@@ -3075,10 +3202,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldPromoteToForeground(intent)) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
+        recordWipeRequest(intent?.action)
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
             log.info("onCreate completed, processing onStartCommand")
+            if (withContext(Dispatchers.Main) { handleWalletLifecycleCommand(intent?.action) }) {
+                return@launch
+            }
             if (intent != null) {
                 propagateContext()
                 log.info(
@@ -3107,10 +3238,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
                     armSdkRescanForResetIfCutOver()
-                    stopSelf()
-                } else if (BlockchainService.ACTION_WIPE_WALLET == action) {
-                    log.info("will remove blockchain and delete walletFile on service shutdown")
-                    deleteWalletFileOnShutdown = true
                     stopSelf()
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
@@ -3207,7 +3334,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
-        pendingDestroys.incrementAndGet()
+        pendingDestroys.schedule(SystemClock.elapsedRealtime())
         super.onDestroy()
         // unregister receivers on the main thread, if they were registered
         // in some cases, onDestroy is called soon after onCreate and before its coroutine finishes
@@ -3258,14 +3385,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // file lock, which is the OverlappingFileLockException this counter exists to prevent.
             if (!isCleaningUp.compareAndSet(false, true)) {
                 log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
-                pendingDestroys.decrementAndGet()
+                pendingDestroys.finish()
                 cleanupMonitorJob.cancel()
                 return@launch
             }
-            // The deadlock clock starts at the claim, before the wait for
-            // initialization below, and is cleared by this owner in finally.
-            val cleanupClockToken = cleanupClock.start()
-
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
@@ -3368,10 +3491,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
                 }
-                if (!deleteWalletFileOnShutdown) {
-                    propagateContext()
-                    application.saveWallet()
-                }
+                saveWalletOnShutdown()
                 // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
                 // onCreate it may still be null, so guard rather than assert.
                 wakeLock?.let { lock ->
@@ -3422,10 +3542,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (checkMutex.isLocked) {
                     checkMutex.unlock()
                 }
-                cleanupClock.finish(cleanupClockToken)
-                isCleaningUp.set(false)
-                pendingDestroys.decrementAndGet()
                 cleanupDeferred?.complete(Unit)
+                isCleaningUp.set(false)
+                pendingDestroys.finish()
                 // Cancel the cleanup monitor since cleanup is done
                 cleanupMonitorJob.cancel()
             }
