@@ -77,6 +77,10 @@ data class InvitationLinkData(
             return InvitationLinkData(linkBuilder.build(), null)
         }
 
+        private fun looksLikeUrl(value: String): Boolean {
+            return value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)
+        }
+
         fun isValid(link: Uri): Boolean {
             return try {
                 val queryParams = link.queryParameterNames
@@ -107,7 +111,10 @@ data class InvitationLinkData(
     @IgnoredOnParcel
     val avatarUrl by lazy {
         link.getQueryParameter(PARAM_AVATAR_URL)?.run {
-            Uri.decode(this)
+            // Links from wallets before 11.10 carry the avatar URL percent-encoded a second time
+            // (`https%3A%2F%2F...`); a value that already reads as a URL must not be decoded again,
+            // or a legitimate `%20` inside it would be corrupted.
+            if (looksLikeUrl(this)) this else Uri.decode(this)
         } ?: ""
     }
 
