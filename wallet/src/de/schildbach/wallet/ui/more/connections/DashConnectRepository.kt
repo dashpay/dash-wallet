@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.more.connections
 
 import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
-import de.schildbach.wallet.ui.more.connections.protocol.DashStRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,13 +91,7 @@ object DashConnectBranding {
 }
 
 /** The decoded payload of a scanned DashConnect QR code. */
-sealed class DashConnectQr {
-    /** First QR (`dash-key:`): an app requests a login the user must approve. */
-    data class Login(val request: DashKeyRequest) : DashConnectQr()
-
-    /** Second QR (`dash-st:`): first-login key registration on the identity. */
-    data class KeyRegistration(val request: DashStRequest) : DashConnectQr()
-}
+data class DashConnectQr(val request: DashKeyRequest)
 
 /**
  * Boundary for DashConnect data, backed by Dash Platform. [MockDashConnectRepository] provides
@@ -107,7 +100,7 @@ sealed class DashConnectQr {
 interface DashConnectRepository {
     fun observeConnections(): Flow<List<DAppConnection>>
 
-    /** Decodes and validates a scanned QR into a login request or a key-registration request. */
+    /** Decodes and validates a scanned QR into a login request. */
     suspend fun parseQr(qrContent: String): DashConnectQr
 
     /**
@@ -116,12 +109,6 @@ interface DashConnectRepository {
      * key-exchange contract. Returns the resulting connection.
      */
     suspend fun approveLogin(request: DashKeyRequest): DAppConnection
-
-    /**
-     * Completes a `dash-st:` first-login key registration: validates the transition end-to-end,
-     * signs it with the identity master key and broadcasts it.
-     */
-    suspend fun completeKeyRegistration(request: DashStRequest)
 
     suspend fun disconnect(connectionId: String)
 
@@ -181,8 +168,6 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
         connections.value = connections.value.filter { it.id != id } + connection
         return connection
     }
-
-    override suspend fun completeKeyRegistration(request: DashStRequest) = Unit
 
     override suspend fun disconnect(connectionId: String) {
         connections.value = connections.value.map {
