@@ -44,6 +44,7 @@ import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @AndroidEntryPoint
 class StakingActivity : LockScreenActivity() {
@@ -139,6 +140,22 @@ class StakingActivity : LockScreenActivity() {
     }
 
     private fun handleCrowdNodeError(error: Exception?) {
+        if (error is ReceiveAddressUnavailableException) {
+            // The wallet cannot yet supply a receive address to use as the
+            // CrowdNode account identity (post-cutover, engine not bound). This
+            // activity observes the error for the WHOLE staking flow, including
+            // the new-account screen, where signup and linking would otherwise
+            // just do nothing. Transient — the action re-runs initialisation on
+            // the next attempt, so "try again" is honest advice.
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(org.dash.wallet.common.R.string.error),
+                getString(org.dash.wallet.common.R.string.loading_error),
+                getString(R.string.button_close)
+            ).show(this)
+            viewModel.clearError()
+            return
+        }
         if (error is CrowdNodeException && error.message == CrowdNodeException.MISSING_PRIMARY) {
             AdaptiveDialog.create(
                 R.drawable.ic_error,

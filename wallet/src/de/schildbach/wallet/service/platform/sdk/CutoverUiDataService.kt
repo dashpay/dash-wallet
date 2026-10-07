@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
@@ -62,6 +63,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1169,6 +1171,56 @@ interface CutoverUiSource {
     suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = null
 
     /**
+     * The wallet's NEXT UNUSED BIP-44 external (receive) address, base58, read
+     * straight from the ENGINE over the FFI
+     * (`core_wallet_next_receive_address` →
+     * `ManagedCoreWallet.nextReceiveAddress`) — deliberately NOT from the SDK's
+     * Room `core_addresses` mirror. The mirror is a persistence PROJECTION the
+     * engine writes behind itself (`onPersistAccountAddressPoolEntry`), so it
+     * lags every used-marker by a persistence pass; the engine's own used-set is
+     * the only thing that answers "which address has nobody paid yet" at the
+     * instant the Receive screen asks.
+     *
+     * This is the post-cutover replacement for dashj's
+     * `currentReceiveAddress()`. Post-cutover the dashj wallet is HELD, so its
+     * key chain never sees the chain and its "current" pointer sits wherever the
+     * restore left it — index 0 on a fresh restore, i.e. an address the wallet
+     * has ALREADY been paid on (SR-03/D-003: the Receive screen re-served the
+     * funded address after Reset Wallet + restore). The engine's pointer, fed by
+     * the SPV scan's used-set, skips that range.
+     *
+     * Synchronous by construction: the FFI call needs no coroutine and the
+     * manager handle is available without suspending, which is what lets the
+     * non-suspending [de.schildbach.wallet.WalletApplication.currentReceiveAddress]
+     * overlay serve an engine-authoritative answer rather than a cached one. It
+     * DOES take the engine's wallet-manager write lock, so callers must be off
+     * the main thread — see [CutoverUiDataService.sdkReceiveAddressLiveOrNull].
+     *
+     * Null when unavailable (SDK not started, wallet not loaded, no BIP-44
+     * account yet, FFI error) — "unknown", never a wrong address; the caller
+     * falls back. Default null: sources without a core wallet (test fixtures).
+     */
+    fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int = 0): String? = null
+
+    /**
+     * The wallet's NEXT UNUSED BIP-44 INTERNAL (change) address, base58, read
+     * from the engine over the FFI (`core_wallet_next_change_address` →
+     * `ManagedCoreWallet.nextChangeAddress`).
+     *
+     * The internal chain exists precisely because it is NEVER handed to a payer,
+     * which is what makes it the right destination for moving our OWN money: a
+     * self-transfer's whole point is that nobody can link it to the user.
+     * Paying one to [nextReceiveAddressOrNull] would do the opposite — that
+     * address is the one the Receive screen is advertising, so a counterparty
+     * who was handed the QR and simply did not pay it can watch it and learn the
+     * transfer and its amount.
+     *
+     * Same null contract, same threading contract and same blocking behaviour as
+     * [nextReceiveAddressOrNull]. Default null: sources without a core wallet.
+     */
+    fun nextChangeAddressOrNull(walletIdHex: String, accountIndex: Int = 0): String? = null
+
+    /**
      * ONE-SHOT count of the wallet's own transaction RECORDS — the distinct
      * txids the wallet's TXOs fund or spend, i.e. the cardinality of the set
      * [observeWalletTxRecords] / [forEachWalletTxRecordPage] enumerate. This
@@ -1340,6 +1392,55 @@ internal class DashSdkCutoverUiSource(
 
     override suspend fun currentTotalDuffs(walletIdHex: String): Long =
         currentBalanceSplitDuffs(walletIdHex).total
+
+    /**
+     * See [CutoverUiSource.nextReceiveAddressOrNull]. Engine-only: the wallet
+     * manager handle is read WITHOUT [DashSdkService.ensureStarted] (this is a
+     * non-suspending call), so it simply answers null while the SDK is not up —
+     * post-cutover it always is, because the pipelines that consume this have
+     * already started it.
+     *
+     * [ManagedPlatformWallet.coreWallet] hands out an owned handle, so it is
+     * closed with `use` exactly like every other core-wallet call site
+     * (`widenAddressWindows`, `CoreSendAllNative`).
+     */
+    override fun nextReceiveAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
+        val manager = service.walletManagerOrNull() ?: return null
+        val wallet = manager.wallets.value[walletIdHex] ?: return null
+        return try {
+            wallet.coreWallet().use { core -> core.nextReceiveAddress(accountIndex) }
+                .takeIf { it.isNotBlank() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // Never propagate: every caller treats null as "keep the previous /
+            // fall back to dashj", which is always safe; throwing here would
+            // take down the balance refresh this rides on.
+            log.warn(
+                "engine next-receive-address read failed for account {} on {}…: {}",
+                accountIndex, walletIdHex.take(8), e.message
+            )
+            null
+        }
+    }
+
+    /** See [CutoverUiSource.nextChangeAddressOrNull]. Same discipline as the receive read. */
+    override fun nextChangeAddressOrNull(walletIdHex: String, accountIndex: Int): String? {
+        val manager = service.walletManagerOrNull() ?: return null
+        val wallet = manager.wallets.value[walletIdHex] ?: return null
+        return try {
+            wallet.coreWallet().use { core -> core.nextChangeAddress(accountIndex) }
+                .takeIf { it.isNotBlank() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            log.warn(
+                "engine next-change-address read failed for account {} on {}…: {}",
+                accountIndex, walletIdHex.take(8), e.message
+            )
+            null
+        }
+    }
 
     override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
@@ -2348,6 +2449,219 @@ class CutoverUiDataService internal constructor(
     /** Synchronous [cutoverActive] read for non-reactive call sites. */
     fun isCutoverActive(): Boolean = _cutoverActive.value
 
+    /**
+     * Revoke engine ownership of the key chain: binding FIRST, flag LAST, both
+     * in ONE critical section.
+     *
+     * Order and atomicity both matter, and publishing the flag first was a hole.
+     * [sdkReceiveAddressOrNull] serves the cache on the generation alone, so
+     * between a bare `_cutoverActive = false` and the unbind the synchronous
+     * overlay still handed out the RETIRED generation's address, while a live
+     * reader that had already seen the flag fell through to dashj — the same
+     * address, from the other direction. Taking the lock makes the pair
+     * indivisible for every reader that takes it ([beginReceiveRead], the cache
+     * accessor, the completion gate).
+     *
+     * This says nothing about [observedCutoverOwnership]: that is the PERSISTED
+     * gate's answer, and only the gate collector may move it. A pipeline that
+     * stops while the gate still says CUT_OVER (a wipe fence, a stale-wallet
+     * hold) must leave committed ownership standing, or the receive refusal
+     * would fall through to dashj precisely while nothing may answer.
+     */
+    private fun revokeReceiveOwnership() = synchronized(receiveAddressLock) {
+        unbindReceiveAddressWallet()
+        _cutoverActive.value = false
+    }
+
+    /**
+     * Whether this service currently has engine ownership APPLIED — i.e.
+     * whether there is anything for [revokeReceiveOwnership] to take away.
+     *
+     * Both halves, in one critical section, because either one alone still
+     * authorizes a read: the flag is what [beginReceiveRead] and
+     * [receiveBindingStillCurrent] consult, and the binding is what the cached
+     * address is stamped against. This is the state [start]'s deactivation
+     * collector deduplicates on, in place of the emitted Boolean — see the
+     * comment there for why an edge-triggered dedupe could diverge from it and
+     * suppress a genuine rollback.
+     *
+     * Read ONLY from inside [ownershipDecisionMutex] (i.e. from
+     * [revokeReceiveOwnershipIfStillDashjOwned]). Outside it the answer is a
+     * guess about a decision that may be half-made: a grant that has already
+     * read CUT_OVER but not yet published [_cutoverActive] reads as "nothing
+     * applied", and a rollback filtered out on that answer is discarded instead
+     * of waiting for the grant it would have to undo.
+     */
+    private fun receiveOwnershipApplied(): Boolean = synchronized(receiveAddressLock) {
+        _cutoverActive.value || activeWalletIdHex != null
+    }
+
+    /**
+     * Serializes the ownership DECISION — the grant in [start]'s gated collector
+     * against the revocation in its independent deactivation collector — and
+     * makes each decision from a persisted-state read taken while it is held.
+     *
+     * The two collectors observe the same key but are deliberately SEPARATE (see
+     * [start]), so until this existed nothing ordered them against each other.
+     * Observing an emitted `false` and applying it are not one step: the
+     * collector is resumed on [scope]'s dispatcher, and in that gap a CUT_OVER
+     * can commit, the gated collector pass its own fresh-state check, publish
+     * [_cutoverActive] and bind the pipeline. The stale `false` then landed on
+     * the NEW binding and tore it down — and because that collector is
+     * deactivation-only, the `true` that followed it did nothing, while the
+     * gated collector had already consumed its own `true` and was parked on the
+     * running job. Nothing re-granted: [beginReceiveRead] refuses every ticker
+     * and tx-event refresh while the flag is false, so live receive and
+     * self-transfer reads waited and failed until the next activation trigger or
+     * a process restart. Revoking EARLY is safe; revoking LATE is not.
+     *
+     * Holding this across the read is what makes "older" decidable without a
+     * version stamp the DataStore does not give us: whichever decision runs
+     * second also READ second, so it decides on the newer state, and an
+     * observation that has been overtaken can no longer undo what overtook it.
+     *
+     * It is held only across that read and the flag write — never across a
+     * pipeline run or a blocking engine call — so the deactivation collector
+     * keeps the independence it exists for: a [runPipelines] parked in an
+     * uncancellable FFI read still cannot delay a revocation.
+     */
+    private val ownershipDecisionMutex = Mutex()
+
+    /**
+     * Apply an observed deactivation unless the persisted state has moved on
+     * since: a `false` older than the activation now in force is stale, and
+     * applying it would revoke a binding the gated collector just granted.
+     * See [ownershipDecisionMutex].
+     *
+     * BOTH filters live under the mutex, the cheap one first:
+     *
+     * - nothing APPLIED → nothing to revoke, and no authoritative read is owed.
+     *   This is what the deleted `distinctUntilChanged` used to buy, without the
+     *   dedupe state that could diverge from the applied decision;
+     * - applied, but the state has moved on → the observation was overtaken.
+     *
+     * The applied-state filter CANNOT sit in the collector, outside the mutex.
+     * A grant that has read CUT_OVER and not yet published [_cutoverActive] is
+     * invisible to it: starting from unapplied ownership, a rollback committing
+     * in that window reads "nothing applied", is discarded, and the grant then
+     * publishes and binds with no eager revocation left anywhere. The gated
+     * collector would still see that rollback, but `collectLatest` must JOIN a
+     * pipeline parked in an uncancellable FFI read before its deactivation
+     * action can run — which is the whole reason this collector exists. Taking
+     * the mutex first turns that window into a WAIT: the grant completes, and
+     * the decision is then made against ownership that is actually applied.
+     */
+    private suspend fun revokeReceiveOwnershipIfStillDashjOwned() =
+        ownershipDecisionMutex.withLock {
+            if (!receiveOwnershipApplied()) return@withLock
+            if (cutoverUiActive().first()) {
+                log.info("a dashj-ownership observation was overtaken by a newer cutover; ownership stands")
+                return@withLock
+            }
+            revokeReceiveOwnership()
+        }
+
+    /**
+     * Publish engine ownership for a pipeline about to start, deciding on a
+     * state read taken under [ownershipDecisionMutex] so that a deactivation
+     * observed BEFORE this grant cannot be applied after it. Returns whether
+     * ownership was granted.
+     */
+    private suspend fun grantReceiveOwnershipIfStillCommitted(): Boolean =
+        ownershipDecisionMutex.withLock {
+            if (!cutoverUiActive().first()) return@withLock false
+            _cutoverActive.value = true
+            true
+        }
+
+    /**
+     * The last AUTHORITATIVE ownership observation of the persisted
+     * [DashPayConfig.CUTOVER_STATE] — TRI-STATE, and the three states are not
+     * interchangeable:
+     *
+     * - `true`  — observed: the ENGINE owns the key chain;
+     * - `false` — observed: DASHJ owns it;
+     * - `null`  — UNKNOWN: never observed yet, or the state could not be read.
+     *
+     * The distinction is the whole point. This is fed from
+     * [cutoverOwnershipCommitted], which has no fail-open `catch`, precisely so
+     * a failed read cannot be recorded as `false`: a `false` here is what
+     * authorises [de.schildbach.wallet.WalletApplication.decideLiveReceiveAddress]
+     * to serve the HELD dashj chain's frozen address, and "we could not read the
+     * state" is not a licence to do that. The GATE's own feed ([cutoverUiActive])
+     * keeps its fail-open `catch` for the pipeline, which must not START on a
+     * state it could not read — the opposite failure direction, which is why the
+     * two feeds are separate collectors over the same key.
+     *
+     * Deliberately NOT [_cutoverActive], which is the pipeline's flag and stays
+     * false until the pipeline has bound.
+     */
+    @Volatile
+    private var observedCutoverOwnership: Boolean? = null
+
+    /**
+     * Whether the cutover is COMMITTED — whether the ENGINE, not dashj, owns the
+     * key chain — answered from authoritative state rather than from the
+     * pipeline flag.
+     *
+     * [isCutoverActive] cannot answer this, and using it for the post-cutover
+     * receive refusal was the SR-03 defect in another costume: on startup with a
+     * persisted CUT_OVER the flag is false until the gated collector has bound
+     * and published, so a receive or integration request landing in that window
+     * got null from the SDK, passed the refusal, and fell through to the HELD
+     * dashj wallet's frozen — already-paid — address.
+     *
+     * Resolution order:
+     * - the pipeline flag when it is already true (the engine is demonstrably
+     *   serving; nothing more authoritative is needed and it costs nothing);
+     * - an OBSERVED `true` from [observedCutoverOwnership] — the startup window
+     *   this exists for, where the persisted state says CUT_OVER and the
+     *   pipeline has not published yet;
+     * - otherwise a bounded blocking read of the persisted state;
+     * - and FAIL CLOSED (owned) if even that cannot be resolved. Unknown
+     *   ownership answered as "dashj" is how the frozen address gets served;
+     *   answered as "engine" it costs a retry on a screen.
+     *
+     * ## Why a REMEMBERED `false` is not an answer
+     *
+     * Only the fail-CLOSED direction may be served from memory. A remembered
+     * `false` is the one answer that authorises the dashj fallback, and it can
+     * be out of date in exactly the way that matters: the service starts on
+     * DUAL_RUNNING, observes `false`, the cutover then COMMITS, and the gate
+     * collector has not been resumed yet. Short-circuiting on that `false`
+     * returns "dashj owns the chain" for a wallet whose key chain the engine has
+     * already taken over — a cold-cache receive read then falls through to the
+     * held dashj chain's frozen address, which is SR-03 itself. So the
+     * dashj-authorising answer always comes from the persisted state, and the
+     * memory is only allowed to skip work in the direction that cannot cause it.
+     * The read it costs is a DataStore hit served from memory after the first
+     * one, on a path that is already blocking in the FFI.
+     *
+     * BLOCKS (a DataStore read) unless the engine's ownership is already
+     * established — off-main callers only, which every caller of this already is.
+     */
+    @JvmOverloads
+    fun cutoverOwnershipCommittedBlocking(timeoutMs: Long = OWNERSHIP_WAIT_MS): Boolean {
+        if (_cutoverActive.value) return true
+        if (observedCutoverOwnership == true) return true
+        return try {
+            val resolved = runBlocking {
+                withTimeoutOrNull(timeoutMs) { cutoverOwnershipCommitted().first() }
+            }
+            if (resolved == null) {
+                log.warn("cutover ownership unresolved after {}ms; failing closed", timeoutMs)
+                true
+            } else {
+                resolved
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("the persisted cutover state could not be read; failing closed", t)
+            true
+        }
+    }
+
+
     private val _sdkSpendableUtxoCount = MutableStateFlow<Int?>(null)
 
     /**
@@ -2393,6 +2707,591 @@ class CutoverUiDataService internal constructor(
      */
     fun sdkSpendableUtxoCountOrNull(): Int? =
         _sdkSpendableUtxoCount.value?.takeIf { _l1Synced.value }
+
+    /**
+     * One cached engine address together with the binding GENERATION it was
+     * read under. The generation is what makes the cache wallet-SAFE: an
+     * address is only ever served, or published, while the binding it came from
+     * is still the current one.
+     */
+    private data class ReceiveAddressSnapshot(val generation: Long, val address: String)
+
+    /**
+     * An engine address together with the binding GENERATION it was read under,
+     * so a caller that cannot consume it immediately can re-validate the binding
+     * at the last possible moment — see
+     * [sdkUnadvertisedAddressLiveBlockingWithBinding].
+     */
+    data class BoundEngineAddress(val address: String, val generation: Long)
+
+    /** Guards [receiveAddressGeneration], [activeWalletIdHex] and [cachedReceiveAddress]. */
+    private val receiveAddressLock = Any()
+
+    /**
+     * Bumped on EVERY binding change — each bind and each unbind.
+     *
+     * It exists because the engine read is BLOCKING and cannot be cancelled: a
+     * live read captures the wallet id, blocks in the FFI, and by the time it
+     * returns the binding may be gone. Checking the active flag again on the way
+     * out is not enough — that is still check-then-act, and it cannot tell a
+     * surviving binding from a DIFFERENT one that activated in the meantime.
+     * A monotonic generation can.
+     */
+    private var receiveAddressGeneration = 0L
+
+    /** The cached engine address, stamped with the generation that produced it. */
+    private var cachedReceiveAddress: ReceiveAddressSnapshot? = null
+
+    /**
+     * Whether the newest read this binding has ACCEPTED (the one that last moved
+     * [lastPublishedReceiveTicket]) actually got an answer out of the engine.
+     *
+     * The cache alone cannot say that, and the difference is the whole contract
+     * split between the two kinds of caller. A failed read deliberately HOLDS
+     * the cache — the synchronous overlay ([sdkReceiveAddressOrNull]) must keep
+     * serving the last engine address, because its only alternative is the held
+     * dashj chain's frozen, possibly already-paid pointer. But a LIVE caller
+     * asked for the engine's answer AS OF NOW, and it has somewhere safe to go
+     * when there isn't one: [de.schildbach.wallet.WalletApplication
+     * .decideLiveReceiveAddress] refuses the dashj fallback post-cutover and
+     * raises [org.dash.wallet.common.services.ReceiveAddressUnavailableException],
+     * which the Receive UI surfaces as a retry. Answering it from the hold made
+     * that fail-closed handling unreachable: cache A, let a payment land on A,
+     * let both the event refresh and the next live read fail, and the live read
+     * still returned A — so the paid QR stayed on screen.
+     *
+     * It is written under the SAME ticket fence as the address, never beside it:
+     * a success flag that an older completion could set after a newer read had
+     * failed would re-authorise exactly the address the fence just rejected.
+     */
+    private var latestReceiveReadRevalidated = false
+
+    /**
+     * What a completed receive read answers: the address this binding has
+     * ACCEPTED, and whether the newest accepted read REVALIDATED it against the
+     * engine. See [latestReceiveReadRevalidated].
+     */
+    private data class ReceiveReadAnswer(val address: String?, val revalidated: Boolean)
+
+    /**
+     * Ticket stamped on each engine read AT THE READ, and the highest ticket
+     * that has already published.
+     *
+     * The generation tells two wallet BINDINGS apart; it says nothing about the
+     * order of two reads within ONE binding. Both the ticker/event refresh and a
+     * live read can be in flight at once: a refresh can take address A, pause
+     * before publishing, a live read can then publish the engine's newer B, and
+     * the released refresh would overwrite B with the stale A — putting an
+     * ALREADY-USED address back on the Receive screen until the next successful
+     * refresh. A read may therefore publish only if no later read has published
+     * first.
+     *
+     * WHERE the ticket is taken is as load-bearing as the fence itself: see
+     * [receiveEngineReadLock].
+     */
+    private var receiveReadTicket = 0L
+    private var lastPublishedReceiveTicket = 0L
+
+    /**
+     * Serializes ENGINE RECEIVE READS, so that ticket order IS snapshot order.
+     *
+     * The fence above orders publications by ticket, which is only sound if a
+     * higher ticket means a NEWER engine snapshot. Allocating the ticket before
+     * dispatching the read does not establish that, and the inversion it allows
+     * is not theoretical: the refresh took its ticket and then suspended at
+     * `withContext(Dispatchers.IO)` while its read was queued; a live read took
+     * the NEXT ticket, read address A and published it; the engine then advanced
+     * to B; and the queued refresh finally read — obtaining the NEWER B under
+     * the OLDER ticket, which the fence then rejected. The already-used A stayed
+     * in the cache and was handed back to the refresh's own caller. Plain thread
+     * scheduling between the ticket and either FFI call does the same.
+     *
+     * So the stamp and the snapshot are taken together, under this lock: reads
+     * queue here in the order they will read, and the ticket each one carries is
+     * the position it actually read in. This costs no real concurrency — the
+     * engine takes its wallet-manager WRITE lock for these reads, so they are
+     * already serialized inside the FFI; what changes is only that the queue is
+     * ordered where we can observe it.
+     *
+     * NOT [receiveAddressLock], and strictly OUTSIDE it: that lock guards the
+     * binding state that an unbind/rollback must be able to take at once, and it
+     * is never held across the FFI. The only permitted order is
+     * [receiveEngineReadLock] → [receiveAddressLock], and the publication
+     * ([completeReceiveRead]) happens after this lock has been released — which
+     * is exactly why the ticket fence is still needed.
+     */
+    private val receiveEngineReadLock = Any()
+
+    /**
+     * Test barrier between an ordered engine read and its publication, no-op in
+     * production.
+     *
+     * That window is real — the serializing lock above is released before
+     * [completeReceiveRead] runs, which is the whole reason the ticket fence
+     * exists — but it is sub-microsecond and unreachable from a test through any
+     * other seam, because parking inside the fake FFI read now parks the lock
+     * with it. Two regression tests pin behaviour that only happens inside it.
+     */
+    @VisibleForTesting
+    internal var liveReceivePublishBarrier: () -> Unit = {}
+
+    /**
+     * [beginReceiveRead], but WAITING briefly for the binding when the cutover is
+     * active and no wallet is bound yet.
+     *
+     * That window — cutover flag on, `awaitBoundWallet` not yet resolved — is the
+     * dominant reason a live read comes back empty, and an empty answer sends the
+     * caller to the held dashj chain's frozen address, i.e. straight back into
+     * SR-03. Waiting is the honest response: the wallet genuinely has no address
+     * it can safely advertise until the engine binds, and these accessors are
+     * contractually off-main, so a short wait costs a spinner rather than a wrong
+     * address. Pre-cutover it never waits, because dashj owns the chain and
+     * answers immediately.
+     */
+    private fun beginReceiveReadAwaitingBinding(
+        timeoutMs: Long = BINDING_WAIT_MS
+    ): Pair<Long, String>? {
+        val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+        // Resolved ONCE per call (the blocking read below is a DataStore hit, not
+        // something to repeat every poll); a rollback during the wait is not
+        // missed, because it bumps the generation and the read is rejected on the
+        // way out — it only costs the remainder of the wait.
+        var cutoverOwned: Boolean? = null
+        while (true) {
+            beginReceiveRead()?.let { return it }
+            // Not bound. Only worth waiting while the ENGINE owns the key chain;
+            // otherwise dashj is the rightful owner and the caller should use it.
+            // Asked of the COMMITTED ownership rather than [_cutoverActive]: on
+            // startup with a persisted CUT_OVER the pipeline flag is still false,
+            // and giving up there is exactly the window that drops the caller
+            // onto the held dashj chain's frozen address.
+            val owned = cutoverOwned ?: cutoverOwnershipCommittedBlocking().also { cutoverOwned = it }
+            if (!owned) return null
+            if (System.nanoTime() >= deadline) {
+                log.warn("no SDK wallet bound after {}ms; the caller must fail closed", timeoutMs)
+                return null
+            }
+            try {
+                Thread.sleep(BINDING_POLL_MS)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                return null
+            }
+        }
+    }
+
+    /**
+     * Take the BINDING — the wallet id and the generation it is current under —
+     * or null when nothing is bound. Called before the blocking FFI read; the
+     * lock is never held across it.
+     *
+     * Deliberately does NOT stamp the read's ticket. The ticket orders
+     * SNAPSHOTS, and this runs an unbounded scheduling gap (and, for the
+     * refresh, a `withContext` dispatch) before the snapshot is taken — see
+     * [receiveEngineReadLock], which is where the stamp belongs.
+     */
+    private fun beginReceiveRead(): Pair<Long, String>? = synchronized(receiveAddressLock) {
+        if (!_cutoverActive.value) return null
+        val walletIdHex = activeWalletIdHex ?: return null
+        Pair(receiveAddressGeneration, walletIdHex)
+    }
+
+    /**
+     * Run [read] — one blocking engine address read — as the next one in line,
+     * returning the ticket it read under together with its answer.
+     *
+     * The ticket is stamped INSIDE the serialized section, so the order of the
+     * tickets is the order of the snapshots and [completeReceiveRead]'s fence
+     * can rely on it. See [receiveEngineReadLock] for why nothing weaker works.
+     */
+    private fun readReceiveAddressOrdered(read: () -> String?): Pair<Long, String?> =
+        synchronized(receiveEngineReadLock) {
+            val ticket = synchronized(receiveAddressLock) { ++receiveReadTicket }
+            Pair(ticket, read())
+        }
+
+    /**
+     * Publish [address] for the read identified by [generation]/[ticket], and
+     * return what that read should answer — together with whether that answer
+     * is a REVALIDATION or merely the HOLD ([latestReceiveReadRevalidated]).
+     *
+     * Rejects two classes of stale result: a different BINDING (the wallet was
+     * wiped or rolled back while we blocked) and an OUT-OF-ORDER publication
+     * (a later read already published). Must be called under
+     * [receiveAddressLock].
+     */
+    private fun completeReceiveRead(generation: Long, ticket: Long, address: String?): ReceiveReadAnswer {
+        if (generation != receiveAddressGeneration) return ReceiveReadAnswer(null, revalidated = false)
+        if (ticket > lastPublishedReceiveTicket) {
+            // The fence advances for EVERY completed read, not only a successful
+            // one, because what it records is COMPLETION ORDER — and a failed
+            // read completes just as definitively as a successful one. Advancing
+            // it on success alone left a cold-cache hole: read 1 takes A and
+            // parks in the FFI, a payment lands on A, read 2 finds the engine
+            // unavailable and publishes nothing, and read 1 then arrives and
+            // publishes A — putting an address the chain has already paid on the
+            // Receive screen, after a newer read had established that the engine
+            // was no longer answering.
+            lastPublishedReceiveTicket = ticket
+            // Under the SAME fence as the address, and for the same reason: the
+            // newest ACCEPTED read is the one that decides whether what the
+            // cache holds has been revalidated, so an older completion arriving
+            // after a newer FAILED read must not reinstate a success.
+            latestReceiveReadRevalidated = address != null
+            if (address != null) {
+                cachedReceiveAddress = ReceiveAddressSnapshot(generation, address)
+            }
+            // A FAILED read still HOLDS whatever the cache has: clearing it would
+            // send the synchronous overlay back to the frozen dashj address,
+            // which is the defect. It simply does not get to publish — and it
+            // marks the hold as UNREVALIDATED, so a live caller fails closed
+            // instead of being answered from it.
+        }
+        // Answer from the CACHE, never from this read's own result. Rejecting an
+        // out-of-order publication is only half the job: an older read that
+        // handed its own stale address back to its caller would still put an
+        // already-used address on the Receive screen, because
+        // [de.schildbach.wallet.WalletApplication]'s live accessors return a
+        // non-null result unchanged. After the gate the cache holds the newest
+        // address this binding ACCEPTED, so every caller — including one whose
+        // own read lost the ordering — gets that, and a rejected read with
+        // nothing cached answers nothing rather than smuggling its own result
+        // past the fence.
+        val held = cachedReceiveAddress?.takeIf { it.generation == generation }?.address
+        return ReceiveReadAnswer(held, revalidated = held != null && latestReceiveReadRevalidated)
+    }
+
+    /**
+     * Bind the SDK wallet the receive-address reads answer for, invalidating
+     * anything the previous binding cached or has in flight. Idempotent: a
+     * re-bind to the SAME id (the tx pipeline re-announces it) does not bump the
+     * generation, so it cannot needlessly discard a legitimate in-flight read.
+     */
+    private fun bindReceiveAddressWallet(walletIdHex: String) = synchronized(receiveAddressLock) {
+        if (activeWalletIdHex == walletIdHex) return@synchronized
+        activeWalletIdHex = walletIdHex
+        receiveAddressGeneration++
+        cachedReceiveAddress = null
+        latestReceiveReadRevalidated = false
+        lastPublishedReceiveTicket = receiveReadTicket
+    }
+
+    /**
+     * Drop the binding: the cutover rolled back, or Reset Wallet wiped the
+     * wallet in place (`WalletApplicationExt.clearDatabasesInner` →
+     * `cutoverCoordinator.resetForWalletWipe()`, which deliberately does NOT
+     * restart the process). Everything the old binding cached is discarded and
+     * every read still in flight under it is invalidated by the bump.
+     */
+    private fun unbindReceiveAddressWallet() = synchronized(receiveAddressLock) {
+        activeWalletIdHex = null
+        receiveAddressGeneration++
+        cachedReceiveAddress = null
+        latestReceiveReadRevalidated = false
+        // Every read issued so far is now stale; the generation already rejects
+        // them, and this keeps the ticket floor consistent for the next binding.
+        lastPublishedReceiveTicket = receiveReadTicket
+    }
+
+    /**
+     * Synchronous, NON-BLOCKING cutover overlay for
+     * [de.schildbach.wallet.WalletApplication.currentReceiveAddress] /
+     * [de.schildbach.wallet.WalletApplication.freshReceiveAddress], or null to
+     * keep the dashj address.
+     *
+     * ## Why an overlay was needed (SR-03 / D-003)
+     *
+     * Post-cutover the dashj wallet is HELD: it never sees a block, so its
+     * receive key chain's "current" pointer stays wherever the restore left it —
+     * index 0 on a fresh restore. The Receive screen therefore re-served the
+     * very address the wallet had already been funded on, and `freshReceiveAddress()`
+     * walked forward from the same index-0 base through the used range instead
+     * of skipping it. That is a correctness defect (a payer sees a reused
+     * address) and a privacy one (address reuse links payments).
+     *
+     * The engine's own pointer is derived from the SPV scan's used-set, so it
+     * skips every address the chain has already paid. This overlay serves that.
+     *
+     * ## Why it serves the CACHE and not a live FFI read
+     *
+     * The FFI read takes the engine's wallet-manager WRITE lock, and this
+     * accessor is reachable from the main thread (widgets, loaders, Java call
+     * sites with no coroutine). The cache is refreshed by the very event that
+     * can invalidate it, so its staleness window is the gap between an engine tx
+     * event and the next line of [refreshNativeSplit] — sub-millisecond in
+     * practice. Off-main callers that want the guarantee rather than the
+     * practice use [sdkReceiveAddressLiveOrNull].
+     *
+     * ## Why the generation check is not optional
+     *
+     * WALLET ISOLATION. Reset Wallet clears the cutover state in-process, so
+     * this service can outlive the wallet the cache was filled from. Serving a
+     * stale entry to the NEXT wallet would put the erased wallet's address on
+     * the Receive screen — [de.schildbach.wallet.WalletApplication] validates
+     * the address's NETWORK, not which seed owns it, so nothing downstream would
+     * catch it and payments would land somewhere the current wallet cannot
+     * spend. The stamp makes that unrepresentable.
+     *
+     * ## Why there is no [_l1Synced] gate
+     *
+     * Unlike the UTXO count, holding back here has no safe direction: the dashj
+     * fallback post-cutover is a KNOWN-WRONG address (index 0 of a restored,
+     * frozen chain), not a sound over-estimate. A mid-scan engine answer can
+     * still be an address the scan has not yet found a payment for, but it is
+     * the engine's honest best answer and it converges as the scan advances —
+     * strictly better than serving an address we can already see on chain.
+     */
+    fun sdkReceiveAddressOrNull(): String? = synchronized(receiveAddressLock) {
+        cachedReceiveAddress?.takeIf { it.generation == receiveAddressGeneration }?.address
+    }
+
+    /**
+     * LIVE engine read of the next unused receive address, bypassing the cache —
+     * for callers that are already off the main thread and want the engine's
+     * answer as of THIS instant (the Receive screen, the buy/sell integrations'
+     * deposit address). NOT a self-transfer destination — those must never be
+     * paid to an advertised address and draw from
+     * [sdkUnadvertisedAddressLiveBlockingOrNull] instead. Publishes what it reads, so
+     * the cache the synchronous [sdkReceiveAddressOrNull] serves is refreshed as
+     * a side effect.
+     *
+     * BLOCKS on the FFI (it takes the engine's wallet-manager write lock), hence
+     * [Dispatchers.IO].
+     *
+     * Null when the cutover is not active, or when the newest ACCEPTED read did
+     * not reach the engine — warm cache or cold. The cache is still HELD on a
+     * failure (that is what keeps the synchronous overlay off the frozen dashj
+     * pointer, and `postCutover_failedEngineReadHoldsTheLastAddress` pins it),
+     * but this caller asked for a LIVE answer and must not be handed the hold as
+     * though it were one: [de.schildbach.wallet.WalletApplication
+     * .decideLiveReceiveAddress] refuses the dashj fallback post-cutover and
+     * raises
+     * [org.dash.wallet.common.services.ReceiveAddressUnavailableException]
+     * instead, which is the retry the Receive screen shows rather than leaving a
+     * QR up that the chain may already have paid. See
+     * [latestReceiveReadRevalidated]. It never returns a GUESSED address either:
+     * every value it yields came from the engine.
+     */
+    suspend fun sdkReceiveAddressLiveOrNull(): String? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            sdkReceiveAddressLiveBlockingOrNull()
+        }
+
+    /**
+     * The engine's next unused INTERNAL (change) address — a destination for the
+     * user's OWN money that has never been advertised to anyone.
+     *
+     * ## Why this is separate from the receive address
+     *
+     * Post-cutover `fresh` and `current` receive addresses coincide (the engine
+     * tracks USED, not ISSUED), so serving the unshield withdrawal from the
+     * receive chain would pay it to the exact address the Receive screen is
+     * advertising. A counterparty handed that QR who simply never pays it can
+     * watch the address and learn the withdrawal and its amount — which is the
+     * one thing shielding exists to prevent. The internal chain is never handed
+     * out, so it restores the separation dashj had (advertised = an issued
+     * current key, self-transfer = a newly issued key).
+     *
+     * ## Why it is not cached
+     *
+     * Unlike the receive address there is no screen to keep warm: every caller
+     * consumes this immediately at spend time, so a cache would buy nothing.
+     * NOT caching does not buy anything either: it does not keep two successive
+     * self-transfers apart, because nothing is reserved and both therefore draw
+     * the same next-unused address anyway (see the residual below). An earlier
+     * version of this comment offered that separation as the reason not to
+     * cache and was wrong.
+     *
+     * ## KNOWN RESIDUAL — this is NOT an isolation guarantee
+     *
+     * The address is taken with `next_change_address`, which returns the next
+     * UNUSED internal address without issuing or reserving it, and that is the
+     * SAME allocator the engine's own change selection draws from. So while an
+     * internal address C stays unused, an ordinary payment and a self-transfer
+     * can both select C — and the payment's RECIPIENT can see their change
+     * output and link the later self-transfer to it. That is cross-operation
+     * linkage, visible to a counterparty; an earlier version of this comment
+     * claimed the only collision was between two of the user's own transfers and
+     * was wrong.
+     *
+     * What this destination does buy is avoiding the EASIER attack: the engine's
+     * receive chain would hand self-transfers the very address the Receive screen
+     * is advertising, which anyone holding an unpaid QR can watch.
+     *
+     * ## How long the collision window actually is
+     *
+     * Longer than the build. The engine marks an internal address USED when it
+     * OBSERVES the spending transaction on the network, not when a builder
+     * picks it, so C stays drawable by the engine's own change selection until
+     * the self-transfer has been broadcast AND seen. For the unshield that is
+     * MINUTES rather than seconds, because the withdrawal runs through the
+     * platform withdrawal queue. Two numbers, carrying very different weight:
+     *
+     * - MEASURED, ONE SAMPLE: 91 seconds from submit to the spending output
+     *   being visible to a testnet `dashd` (first confirmation at 2 min 13 s).
+     *   One unshield, on one emulator, against testnet, on this head — a
+     *   single observation, not a distribution, so read it as the order of
+     *   magnitude and nothing more. From the QA disposable-wallet device run
+     *   of 2026-10-05, `pr1570-disposable-wallet-verification.md`.
+     * - STATED UPPER BOUND: ~10 minutes. That is the app's own user-facing
+     *   promise (the `ProvingOverlay` parameter KDoc in
+     *   `ui/shielded/ShieldedTransferScreen.kt`, and the confirm sheet's "Up
+     *   to 10 minutes to spend"), not a measurement of what the queue does.
+     *   An earlier version of this comment quoted it as the window's actual
+     *   length, which overstated it.
+     *
+     * Either figure leaves the window open long enough to matter, and the
+     * overlay is dismissable — its Hide button leaves the spend running on
+     * the app scope and hands the user back a working wallet, so sending an
+     * ordinary payment mid-withdrawal is an expected thing to do, and an
+     * ordinary payment is exactly the builder that can draw C. The other two
+     * callers, the paper-wallet sweep
+     * ([de.schildbach.wallet.ui.payments.SweepWalletFragment]) and the
+     * post-upgrade CoinJoin combine ([CoinJoinFundsMigrationService]), broadcast
+     * within seconds, so their windows are short. The unshield's is not.
+     *
+     * ## What the SDK would have to give us
+     *
+     * An allocation mechanism that competing change builders honour. The pinned
+     * AAR does not expose one (`dashSdkVersion` in the root `build.gradle` —
+     * `0.1.0-v42int27-SNAPSHOT` at the time of writing; re-read it rather than
+     * trusting this number). Two things qualify that, both checked against the
+     * pinned artifacts:
+     *
+     * - A change address can be PINNED, just not RESERVED.
+     *   `CoreTransactionBuilder.setChangeAddress$sdk_release(String)` is
+     *   present in the AAR's bytecode and bound through
+     *   `WalletManagerNative.coreTxBuilderSetChangeAddress` to the exported FFI
+     *   symbol `core_wallet_tx_builder_set_change_address`; [CoreSendAllNative]
+     *   is the in-tree precedent for reaching an SDK-`internal` `$sdk_release`
+     *   member from Java. But it only names a change output on ONE build — it
+     *   does not take the address out of the pool, so a concurrent builder can
+     *   still draw the same one. Whether a pinned address even wins over the
+     *   pool draw is a Rust-side detail NOT verified here; read key-wallet's
+     *   transaction builder before relying on it.
+     * - Upstream already HAS the reservation primitive, on the RECEIVE side.
+     *   Verified in key-wallet at `rust-dashcore@f3dc260`:
+     *   `AddressState::{Available, Reserved { at }, Used }`
+     *   (`address_pool.rs:222`), `AddressPool::next_unused_and_reserve` (`:649`),
+     *   `release_reservation` (`:690`), `sweep_expired_reservations` (`:713`),
+     *   and `next_unused` (`:580`) gates on `is_available()`, so it ALREADY
+     *   skips `Reserved` — a reservation would compose with the engine's own
+     *   change selection with no change to the selector. The receive-side trio
+     *   is on `ManagedCoreFundsAccount` (`managed_core_funds_account.rs:1077`,
+     *   `:1112`, `:1137`); there is NO change-side counterpart. That revision is
+     *   not proven to be the one THIS AAR was built from, so confirm line
+     *   numbers against the build revision before quoting them. What is verified
+     *   against the pinned artifact is the gap: none of it is exported from
+     *   `libdash_sdk_jni.so`. Its entire
+     *   address-pool surface is read-only (`address_pool_get_*`,
+     *   `managed_*_get_*_address_pool`) plus `core_wallet_next_change_address` /
+     *   `core_wallet_next_receive_address` — no `*_and_reserve`, no release, no
+     *   sweep, and no internal-chain (change) counterpart of the receive-side
+     *   trio. (The `releaseReservation` that the SDK DOES expose reserves UTXOs
+     *   for a pending spend, not addresses.)
+     *
+     * So closing this needs an upstream change — bridge the receive-side
+     * reservation to FFI and give the internal chain its own — or a maintainer
+     * decision to accept the residual. Filed upstream as dashpay/platform#5276;
+     * this codebase currently takes the latter course deliberately, because the
+     * alternatives are worse: the engine's RECEIVE chain is the advertised QR,
+     * and the held dashj chain hands back an address the wallet has ALREADY been
+     * paid on (that is SR-03, the defect this file exists to fix).
+     *
+     * Generation-validated exactly like [sdkReceiveAddressLiveBlockingOrNull]:
+     * an answer produced for a binding that has since been wiped is discarded
+     * rather than returned. BLOCKS on the FFI — off-main only.
+     */
+    fun sdkUnadvertisedAddressLiveBlockingOrNull(): String? =
+        sdkUnadvertisedAddressLiveBlockingWithBinding()?.address
+
+    /**
+     * [sdkUnadvertisedAddressLiveBlockingOrNull] keeping the BINDING IDENTITY the
+     * answer was produced under, for a caller that still has a decision to make
+     * before it can use the address.
+     *
+     * [de.schildbach.wallet.WalletApplication.unadvertisedDestinationLive] is
+     * that caller: it must also decide whether the engine owns the chain at all.
+     * Validating the generation here and then reading ownership separately left a
+     * gap wide enough for a Reset Wallet — wallet A's address validated, A wiped,
+     * wallet B activated, ownership read as true, and B's self-transfer paid to
+     * an address only the ERASED wallet can spend. The generation travels with
+     * the address so that caller can re-check it ([receiveBindingStillCurrent])
+     * after everything else it needs, as late as it possibly can.
+     */
+    fun sdkUnadvertisedAddressLiveBlockingWithBinding(): BoundEngineAddress? {
+        // Takes the binding exactly like the receive reads, but no ticket and no
+        // publication: there is no cache on this side, so the order of two of
+        // these cannot matter and they need not queue behind one another.
+        val (generation, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
+        val address = source.nextChangeAddressOrNull(walletIdHex)
+        return synchronized(receiveAddressLock) {
+            // The wallet was wiped or rolled back while we were blocked: this
+            // address belongs to a wallet that is no longer current, and paying
+            // our own funds to it would send them somewhere the CURRENT wallet
+            // cannot spend. Answer nothing; the caller falls back to dashj.
+            if (address == null || generation != receiveAddressGeneration) {
+                null
+            } else {
+                BoundEngineAddress(address, generation)
+            }
+        }
+    }
+
+    /**
+     * Whether [generation] is STILL the binding the engine is serving — i.e.
+     * whether an address read under it may still be used.
+     *
+     * Both halves are required and both are read in one critical section: a
+     * generation that is still current under a cutover that has since rolled
+     * back belongs to dashj again, and a live cutover over a bumped generation
+     * belongs to a DIFFERENT wallet.
+     */
+    fun receiveBindingStillCurrent(generation: Long): Boolean = synchronized(receiveAddressLock) {
+        _cutoverActive.value && generation == receiveAddressGeneration
+    }
+
+    /**
+     * [sdkReceiveAddressLiveOrNull] without the coroutine — the whole read is
+     * synchronous (the FFI call needs no suspension), so the two Java accessors
+     * it backs ([de.schildbach.wallet.WalletApplication.currentReceiveAddressLive]
+     * and [de.schildbach.wallet.WalletApplication.freshReceiveAddressLive]),
+     * which are contracted off-main already, can use it directly instead of
+     * bridging into `runBlocking`.
+     *
+     * This is the ADVERTISED address — what a payer is given. A self-transfer
+     * destination never comes from here; it draws from
+     * [sdkUnadvertisedAddressLiveBlockingOrNull] instead.
+     *
+     * BLOCKS on the engine's wallet-manager write lock — off-main only.
+     */
+    fun sdkReceiveAddressLiveBlockingOrNull(): String? {
+        // Capture the binding and its generation together, then read OUTSIDE the
+        // lock — holding it across a blocking FFI call would make every
+        // deactivation wait on the engine's wallet-manager lock.
+        val (generation, walletIdHex) = beginReceiveReadAwaitingBinding() ?: return null
+        // The ticket is stamped WITH the snapshot, not here: ordering that is
+        // established before the read says nothing about which read saw the
+        // newer engine state ([receiveEngineReadLock]).
+        val (ticket, address) = readReceiveAddressOrdered {
+            source.nextReceiveAddressOrNull(walletIdHex)
+        }
+        liveReceivePublishBarrier()
+        // A failed read leaves the last known value in place rather than clearing
+        // it (an empty cache sends the synchronous overlay back to the frozen
+        // dashj address); a stale binding or an out-of-order result is rejected —
+        // see [completeReceiveRead].
+        //
+        // But the HOLD is for the overlay, not for this caller: a live read that
+        // could not be revalidated answers NOTHING, so
+        // [de.schildbach.wallet.WalletApplication.decideLiveReceiveAddress]
+        // reaches its unavailable path instead of accepting a held address as a
+        // successful revalidation ([latestReceiveReadRevalidated]).
+        return synchronized(receiveAddressLock) {
+            val answer = completeReceiveRead(generation, ticket, address)
+            answer.address?.takeIf { answer.revalidated }
+        }
+    }
 
     /**
      * Whether the SDK's L1 scan has caught up. Mirrors EXACTLY the predicate
@@ -2506,12 +3405,79 @@ class CutoverUiDataService internal constructor(
      * on any read error.
      */
     internal fun cutoverUiActive(): Flow<Boolean> =
-        dashPayConfig.observe(DashPayConfig.CUTOVER_STATE)
-            .map { stored -> !dashjEngineMayStart(CutoverState.fromStored(stored)) }
+        cutoverOwnershipCommitted()
             .catch { e ->
                 log.warn("failed to read the cutover state; UI stays on dashj", e)
                 emit(false)
             }
+
+    /**
+     * [cutoverUiActive] WITHOUT the fail-open catch.
+     *
+     * The two consumers need opposite failure directions. The pipeline GATE must
+     * not start the SDK on a state it could not read, so it treats an error as
+     * "dashj". The receive refusal ([cutoverOwnershipCommittedBlocking]) must not
+     * report "dashj owns the chain" on a state it could not read, because that
+     * answer serves the held chain's frozen address. So the error reaches that
+     * caller, which fails closed on it.
+     *
+     * ## Why [DashPayConfig.observePreservingErrors] and not `observe`
+     *
+     * `observe` is served from [org.dash.wallet.common.data.BaseConfig.data],
+     * which CATCHES IOException and emits `emptyPreferences()`. An unreadable
+     * preferences file therefore arrived here as a MISSING key, which
+     * [CutoverState.fromStored] maps to DUAL_RUNNING, which this maps to
+     * `false` — "dashj owns the key chain". That is the one answer that
+     * authorises [de.schildbach.wallet.WalletApplication.decideLiveReceiveAddress]
+     * to serve the held dashj chain's frozen, possibly already-funded address,
+     * and it was being produced by a read that never succeeded: on a cold start
+     * with CUT_OVER persisted, no binding and nothing remembered,
+     * [cutoverOwnershipCommittedBlocking] accepted that `false` and its
+     * fail-closed handler was never reached. The error-preserving read keeps a
+     * genuinely ABSENT key (`null` → DUAL_RUNNING, a real answer) apart from a
+     * FAILED one (a throw), so only the former can authorise dashj.
+     */
+    private fun cutoverOwnershipCommitted(): Flow<Boolean> =
+        dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE)
+            .map { stored -> !dashjEngineMayStart(CutoverState.fromStored(stored)) }
+
+    /**
+     * [cutoverUiActive] as the INDEPENDENT DEACTIVATION collector subscribes to
+     * it, and as nothing else does.
+     *
+     * A named subscription, not a wrapper for its own sake. [start] opens THREE
+     * subscriptions to the one [DashPayConfig.CUTOVER_STATE] key — this one, the
+     * ownership feed and [cutoverPipelineGateFeed] — and they behave very
+     * differently: this one can never be parked, the gated one can be parked for
+     * the whole of an uncancellable FFI read. A test that wants to stage a late
+     * deactivation, or a reset the pipeline gate never sees, has to hand a
+     * different feed to ONE of them. Without a name, the only thing telling them
+     * apart at the config seam is the order they happen to subscribe in, so
+     * reordering these launches silently re-pointed such a test at the wrong
+     * collector and it went on passing while covering nothing (it did).
+     *
+     * So: keep these three frames on the stack, and keep the names. They are
+     * the seam the tests route by, and
+     * `CutoverUiDataServiceTest.RoutedCutoverConfig.assertWired` fails loudly if
+     * one of them stops arriving.
+     */
+    private fun cutoverDeactivationFeed(): Flow<Boolean> = cutoverUiActive()
+
+    /**
+     * [cutoverOwnershipCommitted] as the OWNERSHIP FEED subscribes to it, as
+     * distinct from the authoritative point read
+     * [cutoverOwnershipCommittedBlocking] performs over the same flow.
+     * See [cutoverDeactivationFeed] for why this subscription has a name.
+     */
+    private fun cutoverOwnershipFeed(): Flow<Boolean> = cutoverOwnershipCommitted()
+
+    /**
+     * [cutoverUiActive] as the GATED PIPELINE collector subscribes to it,
+     * deduplicated (the restart on [stopGeneration] is combined in by [start]).
+     * See [cutoverDeactivationFeed] for why this subscription has a name.
+     */
+    private fun cutoverPipelineGateFeed(): Flow<Boolean> =
+        cutoverUiActive().distinctUntilChanged()
 
     /**
      * Idempotent once-per-process start (call site:
@@ -2522,15 +3488,95 @@ class CutoverUiDataService internal constructor(
      */
     fun start() {
         if (!started.compareAndSet(false, true)) return
+        // OWNERSHIP first, in its OWN collector. `collectLatest` below cancels
+        // the previous pipeline run and JOINS it before running the replacement
+        // action, and `refreshNativeSplit` blocks in an uncancellable FFI read —
+        // so a parked read delays that replacement arbitrarily. Invalidating the
+        // binding from inside it therefore left the retired wallet's address
+        // authorized for the whole of that window: the cache still matched its
+        // generation and live reads still passed the active gate.
+        //
+        // This collector depends on nothing that can be parked, so a rollback or
+        // an in-place wallet wipe revokes ownership at once. The generation bump
+        // is what invalidates the reads already in flight.
+        //
+        // DEACTIVATION ONLY. Activation stays with the gated collector below,
+        // which publishes [_cutoverActive] = true only once the wipe fence and
+        // the stale-wiped-wallet hold have cleared: a `true` that outran those
+        // would advertise SDK ownership while no pipeline is running, and the
+        // wipe's whole point is that nothing answers for the wiped wallet. The
+        // asymmetry is deliberate — revoking early is always safe, granting
+        // early is not.
+        //
+        // Revoking LATE is not safe either, and nothing here orders this
+        // collector against the gated one, so the revocation is applied through
+        // [revokeReceiveOwnershipIfStillDashjOwned] — which decides under
+        // [ownershipDecisionMutex] and so cannot undo a newer activation.
+        //
+        // DEDUPLICATED ON THE OWNERSHIP THIS SERVICE HAS APPLIED, never on the
+        // emitted Boolean. A `distinctUntilChanged` here recorded the value
+        // DELIVERED, which is not the decision APPLIED: an initial `false` can
+        // be delivered after CUT_OVER has committed, the authoritative reread
+        // then correctly leaves ownership standing — and the dedupe state is
+        // nonetheless `false`. If the intervening `true` is conflated away while
+        // this collector is descheduled (the preferences feed conflates, and
+        // re-delivers equal values, which is the only reason a dedupe was
+        // wanted at all), the NEXT `false` — a genuine rollback — is suppressed
+        // as a repeat, and nothing revokes eagerly. The gated collector sees it,
+        // but must join a pipeline parked in an uncancellable FFI read first,
+        // and until it does the retired generation and its cached address stay
+        // authorized. [ownershipDecisionMutex] does not help: it orders a grant
+        // against a revocation that RUNS, not against one that was deduped away.
+        //
+        // The applied state cannot drift from itself, and it is also a STRICTER
+        // filter than the Boolean edge in the steady state: while ownership is
+        // revoked the feed emits `false` and there is nothing to revoke, and
+        // while it is granted the feed emits `true`, which this collector
+        // ignores — so the authoritative reread runs only for a `false` that
+        // could actually change something.
+        //
+        // That filter lives INSIDE [revokeReceiveOwnershipIfStillDashjOwned],
+        // under [ownershipDecisionMutex], and EVERY `false` is handed to it.
+        // Filtering here, outside the mutex, reintroduced the same class of bug
+        // one level down: ownership a grant is in the middle of applying — it
+        // has read CUT_OVER but not yet published [_cutoverActive] — reads as
+        // "nothing applied", so a rollback committing in that window was
+        // discarded rather than waited out, and the grant then published and
+        // bound with nothing left to revoke it eagerly. The decision to no-op
+        // belongs where the decision to grant is serialized.
+        scope.launch {
+            cutoverDeactivationFeed()
+                .collect { active ->
+                    if (!active) revokeReceiveOwnershipIfStillDashjOwned()
+                }
+        }
+        // The ownership FEED, deliberately a separate collector over the same
+        // key. It reads [cutoverOwnershipCommitted] — the gate's flow WITHOUT the
+        // fail-open `catch` — because the two consumers need opposite failure
+        // directions, and sharing one feed gave the receive refusal the gate's:
+        // a state that could not be read arrived here as `false`, i.e. "dashj
+        // owns the key chain", which is the one answer that authorises serving
+        // the held dashj chain's frozen address. An unreadable state is recorded
+        // as UNKNOWN instead, and [cutoverOwnershipCommittedBlocking] then
+        // resolves it authoritatively (and fails closed if it cannot).
+        scope.launch {
+            cutoverOwnershipFeed()
+                .catch { e ->
+                    if (e is CancellationException) throw e
+                    log.warn("the cutover state feed failed; ownership is UNKNOWN, not dashj", e)
+                    observedCutoverOwnership = null
+                }
+                .collect { owned -> observedCutoverOwnership = owned }
+        }
         scope.launch {
             // [stopGeneration] re-runs the block after a wipe stop even when the
             // gate itself never changes: DataStore emissions conflate, so the
             // wipe's DUAL_RUNNING can be skipped if the next wallet's CUT_OVER
             // lands first — and a distinct-only gate would then never restart.
-            combine(cutoverUiActive().distinctUntilChanged(), stopGeneration) { active, _ -> active }
+            combine(cutoverPipelineGateFeed(), stopGeneration) { active, _ -> active }
                 .collectLatest { active ->
                     if (!active) {
-                        _cutoverActive.value = false
+                        revokeReceiveOwnership()
                         resetForInactivePipeline()
                         return@collectLatest
                     }
@@ -2544,8 +3590,11 @@ class CutoverUiDataService internal constructor(
                                 if (wipeFenced) return@withLock null
                                 heldForBindPass = staleWipedWalletHold()
                                 if (heldForBindPass != null) return@withLock null
-                                if (!cutoverUiActive().first()) return@withLock null
-                                _cutoverActive.value = true
+                                // The fresh-state check AND the grant, under
+                                // [ownershipDecisionMutex]: a `false` the
+                                // deactivation collector observed before this
+                                // read must not be applied after it.
+                                if (!grantReceiveOwnershipIfStillCommitted()) return@withLock null
                                 launch {
                                     log.info("cutover committed — serving home-screen data from the SDK")
                                     try {
@@ -2554,6 +3603,7 @@ class CutoverUiDataService internal constructor(
                                         if (t is CancellationException) throw t
                                         log.error("cutover UI pipelines failed; balance override cleared", t)
                                         clearSdkBalanceOverrides()
+                                        unbindReceiveAddressWallet()
                                     }
                                 }.also { pipelineJob = it }
                             }
@@ -2561,7 +3611,7 @@ class CutoverUiDataService internal constructor(
                                 job.join()
                                 return@coroutineScope
                             }
-                            _cutoverActive.value = false
+                            revokeReceiveOwnership()
                             // Mid-wipe: [resumeAfterWalletWipe] re-runs this block.
                             if (wipeFenced) return@coroutineScope
                             val passes = heldForBindPass
@@ -2701,12 +3751,28 @@ class CutoverUiDataService internal constructor(
 
     /**
      * Everything a stopped pipeline must not leave behind: the SDK overrides
-     * for dashj-fed UI, and a [fullReconcilePending] walk — it belongs to the
-     * wallet whose pipeline just stopped (a wipe resets the cutover state).
+     * for dashj-fed UI, a [fullReconcilePending] walk — it belongs to the
+     * wallet whose pipeline just stopped (a wipe resets the cutover state) —
+     * and the engine receive address together with the wallet it was read from.
      */
     private fun resetForInactivePipeline() {
         fullReconcilePending.set(false)
         clearSdkBalanceOverrides()
+        // A rollback puts dashj back in charge of the key chain, so the engine
+        // address must stop being served — and the bound id must go with it, or
+        // a live read could still answer from the wallet the rollback, or
+        // [stopForWalletWipe], just abandoned. The generation bump invalidates
+        // the reads already parked in the FFI under the old binding.
+        //
+        // On the ROLLBACK path [start]'s eager ownership collector has normally
+        // revoked already and this is a redundant second bump (harmless: the
+        // generation only has to DIFFER). It is kept because [stopForWalletWipe]
+        // reaches here too, and that path must not depend on the gate: the wipe
+        // calls it right after `resetForWalletWipe()`, before the DataStore
+        // emission is guaranteed to have arrived — and when the cutover reset
+        // FAILED the state stays CUT_OVER, so the eager collector never fires
+        // at all. This is the deterministic revocation for the wiped wallet.
+        unbindReceiveAddressWallet()
     }
 
     /**
@@ -2752,6 +3818,11 @@ class CutoverUiDataService internal constructor(
 
     private suspend fun runPipelines() = coroutineScope {
         val walletIdHex = awaitBoundWallet()
+        // Bind the id here rather than only in [txPipeline]: the receive-address
+        // live read ([sdkReceiveAddressLiveOrNull]) is reachable from the UI the
+        // moment the cutover is active, i.e. potentially before the tx pipeline's
+        // first line runs. Same value, published sooner.
+        bindReceiveAddressWallet(walletIdHex)
         // Observability: the instant-receive tap is gated on
         // USE_KOTLIN_SDK_L1_SHADOW ([L1ShadowSyncService.startIfEnabled])
         // while THIS service gates on CUTOVER_STATE. A committed cutover
@@ -3001,6 +4072,39 @@ class CutoverUiDataService internal constructor(
             log.warn("SDK spendable-UTXO-count read failed; falling back to the dashj count", t)
             _sdkSpendableUtxoCount.value = null
         }
+        // The RECEIVE ADDRESS rides the same cadence for a reason of its own:
+        // the only thing that moves the engine's pointer is a receive landing on
+        // the current address, and that is precisely an engine tx event — one of
+        // the two triggers of this function. Unlike the reads above, a failed one
+        // HOLDS the last known address instead of dropping to null: null sends
+        // the overlay back to the frozen dashj index-0 address, which is the
+        // defect ([sdkReceiveAddressOrNull]), whereas a slightly stale engine
+        // address is at worst one the engine has not yet marked used.
+        // Same ticketed read/publish pair as the live accessor, and for the same
+        // two reasons: this read blocks in the FFI too, so the binding may be gone
+        // by the time it returns, AND a live read may have published a newer
+        // address meanwhile — which this one must not overwrite with its older
+        // answer ([completeReceiveRead]).
+        val begun = beginReceiveRead()
+        if (begun != null) {
+            val (generation, boundWalletIdHex) = begun
+            // The ticket is taken on the thread that performs the read and under
+            // the read lock — NOT here. Taking it before this dispatch is what
+            // let a queued refresh obtain a NEWER snapshot under an OLDER ticket
+            // and then be rejected by its own fence ([receiveEngineReadLock]).
+            val (ticket, nextReceive) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                readReceiveAddressOrdered { source.nextReceiveAddressOrNull(boundWalletIdHex) }
+            }
+            // The CACHE answer, not the revalidation verdict: this read feeds the
+            // synchronous overlay, which is exactly the caller the hold exists
+            // for ([latestReceiveReadRevalidated]).
+            val served = synchronized(receiveAddressLock) {
+                completeReceiveRead(generation, ticket, nextReceive).address
+            }
+            if (served == null && nextReceive == null) {
+                log.info("engine next-receive-address unavailable; the Receive screen stays on dashj")
+            }
+        }
     }
 
     private suspend fun updateSdkBalance(duffs: Long) {
@@ -3138,11 +4242,14 @@ class CutoverUiDataService internal constructor(
     }
 
     /**
-     * The bound SDK wallet id once [txPipeline] runs — read by the historical-
-     * mixing classification probe in [syncDisplayCache]
-     * ([CutoverUiSource.coinJoinFundedTxids] is wallet-scoped). Volatile only
-     * for memory visibility; both writer and reader live on [txPipeline]'s
-     * sequential collector.
+     * The bound SDK wallet id for the whole run of the pipelines — set by
+     * [runPipelines] as soon as [awaitBoundWallet] resolves, re-set (to the same
+     * value) by [txPipeline], and cleared when the cutover goes inactive.
+     *
+     * Read by the historical-mixing classification probe in [syncDisplayCache]
+     * ([CutoverUiSource.coinJoinFundedTxids] is wallet-scoped) and by the
+     * receive-address live read ([sdkReceiveAddressLiveOrNull]) — the latter
+     * from arbitrary UI coroutines, which is what the [Volatile] is for.
      */
     @Volatile
     private var activeWalletIdHex: String? = null
@@ -3156,7 +4263,7 @@ class CutoverUiDataService internal constructor(
      * collecting ([fullReconcilePending]) walks as soon as it subscribes.
      */
     private suspend fun txPipeline(walletIdHex: String) {
-        activeWalletIdHex = walletIdHex
+        bindReceiveAddressWallet(walletIdHex)
         // Three feeds, one sequential collector (merge never runs two
         // actions concurrently — that serial execution is what makes the
         // insert/notify dedup race-free):
@@ -3859,6 +4966,26 @@ class CutoverUiDataService internal constructor(
     }
 
     companion object {
+        /**
+         * How long a LIVE receive-address read waits for the SDK wallet to bind
+         * before giving up and letting the caller fail closed. Covers a normal
+         * post-cutover bind (sub-second once the engine is up) and a retrying one,
+         * without leaving a screen apparently hung.
+         */
+        internal const val BINDING_WAIT_MS = 5_000L
+
+        /** Poll granularity for [BINDING_WAIT_MS]. */
+        internal const val BINDING_POLL_MS = 50L
+
+        /**
+         * How long [cutoverOwnershipCommittedBlocking] waits on the persisted
+         * cutover state before failing closed. Only ever paid before the gate
+         * collector's first emission, against a DataStore read that is served
+         * from memory after the first one — generous enough that a slow cold
+         * read resolves rather than guesses.
+         */
+        internal const val OWNERSHIP_WAIT_MS = 2_000L
+
         internal const val REFRESH_INTERVAL_MS = 60_000L
 
         /**

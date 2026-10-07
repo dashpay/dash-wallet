@@ -35,6 +35,7 @@ import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.data.freshReceiveAddressOffMain
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 import de.schildbach.wallet.util.format
@@ -46,6 +47,7 @@ import de.schildbach.wallet.util.toNeutralCoin
 import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 // RequestCoinsFragment in Bitcoin Wallet has the code for Bluetooth support (sharing addresses)
 @AndroidEntryPoint
@@ -86,10 +88,24 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
             // freshReceiveAddress() forces a synchronous full-wallet save
             // (measured 1.2s at 215 friend chains) — see freshReceiveAddressOffMain.
             viewLifecycleOwner.lifecycleScope.launch {
-                val address = walletData.freshReceiveAddressOffMain()
-                val dialogFragment =
-                    ReceiveDetailsDialog.createDialog(address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat())
-                dialogFragment.show(requireActivity())
+                try {
+                    val address = walletData.freshReceiveAddressOffMain()
+                    val dialogFragment = ReceiveDetailsDialog.createDialog(
+                        address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat()
+                    )
+                    dialogFragment.show(requireActivity())
+                } catch (ex: ReceiveAddressUnavailableException) {
+                    // No safe address to put in the request — see
+                    // PaymentsReceiveFragment. Better no invoice than one the
+                    // chain has already paid.
+                    //
+                    // Guarded: the read parks uncancellably, so this arm can run
+                    // after the VIEW scope was cancelled, which on this screen
+                    // means the user navigated on with the fragment still on the
+                    // back stack — attached, so only the cancellation half of the
+                    // guard suppresses the toast.
+                    toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
+                }
             }
         }
     }
