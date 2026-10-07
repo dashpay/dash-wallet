@@ -9,12 +9,13 @@ buildscript {
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
         // Pre-release SDK snapshot published to the Sonatype snapshots repository
-        // (declared below as 'Central Portal Snapshots'; anonymous read). Built from
-        // dashpay/platform integration/v42int11 @ 598e64efe8: v4.2-dev + rebased
-        // #4439 (TXO reconcile) + the restore branch (#4474/#4475) + the ordered
-        // bring-up binding (#4658) + #4643 keystore fixes, on the fork engine pin
-        // af88edf6 (v4.2-dev pin 93260bf + rust-dashcore #979/#1001/#989).
-        dashSdkVersion = '0.1.0-v42int28-20261002.062748-1'
+        // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
+        // the exact timestamped build, not the -SNAPSHOT name, so a later upload
+        // can't change what this commit builds. v42int29: HashEngineering/platform
+        // integration/v42int29 @ 762b2ddcdd (int28 without rust-dashcore #979,
+        // #4439's hole repair, #4474 and the transaction-record folding; adds
+        // dashpay/platform#5259). Recipe: dash-wallet-qa recipes/platform/v42int29.yaml.
+        dashSdkVersion = '0.1.0-v42int29-20261007.000257-1'
         // 4.0.1 fixes the CBOR crash that aborted every identity read:
         // IdentityPublicKey.toObject() put the raw ContractBounds object
         // (SingleContractDocumentType) into the map handed to Cbor, which has
