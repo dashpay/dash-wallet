@@ -462,7 +462,8 @@ class CreateIdentityService : LifecycleService() {
                 identityRepository.loadBlockchainIdentityBaseData()
             }
             if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
-                handleCreateIdentityAction(null, null)
+                val approvedAmountDuffs = runBlocking { dashPayConfig.get(DashPayConfig.APPROVED_FUNDING_AMOUNT_DUFFS) } ?: Long.MAX_VALUE
+                handleCreateIdentityAction(null, null, approvedAmountDuffs = approvedAmountDuffs)
             }
 
         } else if (!workInProgress) {
@@ -474,6 +475,9 @@ class CreateIdentityService : LifecycleService() {
                     val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
                     val retryWithNewUserName = intent.action == ACTION_RETRY_WITH_NEW_USERNAME
                     val approvedAmountDuffs = intent.getLongExtra(EXTRA_APPROVED_AMOUNT_DUFFS, Long.MAX_VALUE)
+                    // persisted so a later null-intent restart or ACTION_RETRY_AFTER_INTERRUPTION
+                    // (neither of which carries this extra) funds against the same cap
+                    runBlocking { dashPayConfig.set(DashPayConfig.APPROVED_FUNDING_AMOUNT_DUFFS, approvedAmountDuffs) }
                     handleCreateIdentityAction(username, usernameSecondary, retryWithNewUserName, approvedAmountDuffs)
                 }
                 ACTION_CREATE_IDENTITY_FROM_INVITATION,
@@ -489,7 +493,8 @@ class CreateIdentityService : LifecycleService() {
                     if (startForegroundPromised) {
                         createIdentityNotification.startServiceForeground()
                     }
-                    handleCreateIdentityAction(null, null)
+                    val approvedAmountDuffs = runBlocking { dashPayConfig.get(DashPayConfig.APPROVED_FUNDING_AMOUNT_DUFFS) } ?: Long.MAX_VALUE
+                    handleCreateIdentityAction(null, null, approvedAmountDuffs = approvedAmountDuffs)
                 }
                 ACTION_RETRY_INVITE_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)

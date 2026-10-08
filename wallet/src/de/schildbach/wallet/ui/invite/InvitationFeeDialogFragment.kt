@@ -75,7 +75,10 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         // Protocol-gated (MO-1069): mirror the resolved contested fee and
         // re-render the amounts/gate once the live read lands (replays the
         // current StateFlow value immediately, so this also covers the
-        // pre-resolve LEGACY default).
+        // pre-resolve LEGACY default). viewModel is activity-scoped, so a
+        // re-opened invite flow needs an explicit refresh — its own init only
+        // ran once, on the activity's first open.
+        viewModel.refreshContestedFees()
         viewModel.contestedFees.observe(viewLifecycleOwner) { fees ->
             contestedFee = fees.contested
             if (contestedSelected) selectedFee = contestedFee

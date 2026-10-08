@@ -283,6 +283,20 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
     val contestedFees: StateFlow<ContestedUsernameFees> = _contestedFees.asStateFlow()
 
+    /**
+     * Re-resolves [contestedFees] from a live [DashSdkService.currentProtocolVersion]
+     * read. This ViewModel is obtained through `activityViewModels()`, so [init]
+     * only resolves once per activity instance — reopening the invite flow
+     * (e.g. after a protocol 13-to-14 activation, or a failed initial lookup)
+     * must call this explicitly to pick up the current fee instead of quoting
+     * the stale one.
+     */
+    fun refreshContestedFees() {
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+        }
+    }
+
     private val pubkeyHash: ByteArray
         get() = authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
 
@@ -538,9 +552,7 @@ open class InvitationFragmentViewModel @Inject constructor(
             .onEach { invitation ->
                 _invitation.value = invitation
             }.launchIn(workerScope)
-        viewModelScope.launch {
-            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
-        }
+        refreshContestedFees()
     }
 
     suspend fun getInvitedUserProfile(): DashPayProfile? = dashPayProfileDao.loadByUserId(identityId.value!!)
