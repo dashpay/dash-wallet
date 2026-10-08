@@ -21,12 +21,15 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
 import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
+import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -142,20 +145,8 @@ internal fun buildSdkTxDetail(
 ): SdkTxDetail {
     val outputs = decoded?.outputs.orEmpty()
 
-    // Fee: the SDK-recorded fee wins; otherwise Σin−Σout, but ONLY when
-    // every input's spent value is wallet-known (a single unknown input
-    // makes the subtraction meaningless). A negative result means
-    // inconsistent data — show nothing rather than a fabricated fee.
-    val derivedFee = if (
-        decoded != null && decoded.inputs.isNotEmpty() &&
-        inputTxoValues.size == decoded.inputs.size && inputTxoValues.all { it != null }
-    ) {
-        (inputTxoValues.filterNotNull().sum() - outputs.sumOf { it.valueDuffs })
-            .takeIf { it >= 0 }
-    } else {
-        null
-    }
-    val fee = record.feeDuffs ?: derivedFee
+    // Fee: the SDK-recorded fee wins; otherwise Σin−Σout ([derivedFeeDuffs]).
+    val fee = record.feeDuffs ?: derivedFeeDuffs(decoded, inputTxoValues)
 
     val allOutputAddresses = outputs.mapNotNull { it.address }.distinct()
     val outputAddresses = when (record.direction) {
@@ -203,6 +194,73 @@ internal fun buildSdkTxDetail(
 
 private const val OP_RETURN = 0x6a.toByte()
 
+/**
+ * Σin−Σout of [decoded], but ONLY when every input's spent value is
+ * wallet-known ([inputTxoValues], parallel to `decoded.inputs`): a single
+ * unknown input makes the subtraction meaningless. A negative result means
+ * inconsistent data — null rather than a fabricated fee. Input TXO values are
+ * known before the send confirms, so this also covers a pending send whose
+ * store fee is still NULL.
+ */
+internal fun derivedFeeDuffs(decoded: DecodedTransaction?, inputTxoValues: List<Long?>): Long? =
+    if (decoded != null && decoded.inputs.isNotEmpty() &&
+        inputTxoValues.size == decoded.inputs.size && inputTxoValues.all { it != null }
+    ) {
+        (inputTxoValues.filterNotNull().sum() - decoded.outputs.sumOf { it.valueDuffs })
+            .takeIf { it >= 0 }
+    } else {
+        null
+    }
+
+/**
+ * The true signed wallet net of a transaction whose plain send/receive
+ * history row ([cachedValue], non-zero) overrides the SDK record's direction
+ * and amount in the detail sheet — so a sent amount renders the dashj way:
+ * |net| as the amount, the fee shown separately.
+ *
+ * - A receive's cached value IS its net.
+ * - A contact send's cached value is taken as the engine's signed net
+ *   ([SdkTxContactResolver.signedNetsFor]: owned outputs − owned inputs, fee
+ *   included). That is only usually right — a contact row written before the
+ *   engine net was known holds the fee-free principal — so [SdkTxDetailProvider]
+ *   uses this only when it has no walker record to read the net from.
+ * - A row still holding the record's fee-included net (cached before the fee
+ *   was known, and not yet corrected by [withoutCachedFee]) is the net too.
+ * - Every other send is cached as its principal only
+ *   ([L1TxUiRecord.sentValueWithoutFeeDuffs]): the net is −(|principal| + fee).
+ *
+ * The middle two used to be indistinguishable from the last only because the
+ * store's fee column was always NULL; once the walker persists recovered fees
+ * (D-M-01), adding the fee to them would count it twice. Pure — host-testable.
+ */
+internal fun detailSignedNet(cachedValue: Long, isContactRow: Boolean, record: L1TxUiRecord): Long = when {
+    cachedValue > 0L -> cachedValue
+    isContactRow -> cachedValue
+    cachedValue == record.netAmountDuffs -> cachedValue
+    else -> -(kotlin.math.abs(cachedValue) + (record.feeDuffs ?: 0L))
+}
+
+/**
+ * The bound SDK wallet's record for [displayHex] through [SdkTxStoreWalker.recordFor],
+ * or null when the manager is not up, no single wallet is bound, the tx is not
+ * the wallet's, or the read fails — the detail sheet then falls back to the raw
+ * store row.
+ */
+private suspend fun boundWalletRecordOrNull(
+    sdkService: DashSdkService,
+    db: DashDatabase,
+    displayHex: String
+): L1TxUiRecord? = try {
+    val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
+    walletId?.let { withContext(Dispatchers.IO) { SdkTxStoreWalker(db, it).recordFor(displayHex) } }
+} catch (e: CancellationException) {
+    throw e
+} catch (t: Throwable) {
+    LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+        .warn("wallet record lookup failed for {}; using the store row", displayHex, t)
+    null
+}
+
 /** Display-order txid hex → 32 wire-order bytes, or null when malformed. */
 internal fun displayTxIdToWireBytes(txIdDisplayHex: String): ByteArray? {
     if (txIdDisplayHex.length != 64 || !txIdDisplayHex.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
@@ -244,11 +302,28 @@ internal fun txoOutpoint(wireTxid: ByteArray, vout: Int): ByteArray =
  * mapping is covered here by [SdkTxDetailTest].
  */
 @Singleton
-class SdkTxDetailProvider @Inject constructor(
+class SdkTxDetailProvider internal constructor(
     private val sdkService: DashSdkService,
     private val txDisplayCacheDao: TxDisplayCacheDao,
-    private val assetLockKindResolver: AssetLockKindResolver
+    private val assetLockKindResolver: AssetLockKindResolver,
+    // The bound wallet's record for a txid as the history list sees it
+    // ([SdkTxStoreWalker.recordFor]): reattributed, with its fee recovered.
+    // Null when no wallet is bound or the tx is not the wallet's. A seam so
+    // host tests can supply the record without a Room store.
+    private val walletRecordFor: suspend (DashDatabase, String) -> L1TxUiRecord?
 ) {
+    @Inject
+    constructor(
+        sdkService: DashSdkService,
+        txDisplayCacheDao: TxDisplayCacheDao,
+        assetLockKindResolver: AssetLockKindResolver
+    ) : this(
+        sdkService,
+        txDisplayCacheDao,
+        assetLockKindResolver,
+        { db, displayHex -> boundWalletRecordOrNull(sdkService, db, displayHex) }
+    )
+
     /**
      * Load the detail for [txIdDisplayHex] (display-order hex, i.e.
      * `Sha256Hash.toString()`), or null when the SDK holds no such
@@ -272,52 +347,6 @@ class SdkTxDetailProvider @Inject constructor(
         }
 
         val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
-        val baseRecord = l1TxUiRecord(
-            txidWireBytes = entity.txid,
-            netAmountDuffs = entity.netAmount,
-            feeDuffs = entity.fee,
-            contextCode = entity.context,
-            directionCode = entity.direction,
-            firstSeenSec = entity.firstSeen,
-            blockTimestampSec = entity.blockTimestamp
-        )
-
-        // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
-        // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
-        // correction. For a contact send the SDK `transactions` row surfaces only the +change
-        // (wrong direction: INCOMING / wrong amount), so whenever a plain send/receive cache row
-        // exists it is the AUTHORITATIVE direction + amount override — not only when the SDK net
-        // is 0. Absent (pre-cutover / non-SDK txs) → the SDK row stands unchanged.
-        //
-        // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
-        // service rows keep the SDK direction. Sign convention (Bug A):
-        // - INCOMING: the cached value IS the received net → use it directly.
-        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only (it excludes the
-        //   fee), so reconstruct the true signed net = -(|principal| + fee) so a sent amount
-        //   renders the same way the dashj path does (|net| amount, fee shown separately).
-        val cacheEntry = txDisplayCacheDao
-            .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
-            .firstOrNull()
-        val cachedValue = cacheEntry?.valueSatoshis
-        val record = if (
-            cacheEntry != null && cachedValue != null && cachedValue != 0L &&
-            (cacheEntry.iconType == TxDisplayCacheEntry.ICON_SENT ||
-                cacheEntry.iconType == TxDisplayCacheEntry.ICON_RECEIVED)
-        ) {
-            val cachedDirection = if (cachedValue < 0) {
-                L1TxUiDirection.OUTGOING
-            } else {
-                L1TxUiDirection.INCOMING
-            }
-            val net = if (cachedDirection == L1TxUiDirection.INCOMING) {
-                cachedValue
-            } else {
-                -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
-            }
-            baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
-        } else {
-            baseRecord
-        }
 
         val decoded = try {
             TransactionDecoder.decode(
@@ -343,6 +372,72 @@ class SdkTxDetailProvider @Inject constructor(
         }
         val inputTxos = decoded?.inputs.orEmpty().map { input ->
             txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
+        }
+
+        // The fee the history list used: the store's, or — while the store still has it
+        // NULL — Σin−Σout from the wallet's input TXOs, which the walker also uses
+        // (persisted, or in memory for a pending send). It must be known before the
+        // cached principal is turned back into a net below, or a pending send's fee is
+        // read as 0 and its amount sent shows without it (D-M-01).
+        // The record the history list was built from: the walker's, which corrects a
+        // misattributed stored row (a contact send stored INCOMING +change becomes
+        // OUTGOING with the whole-wallet net) and carries the recovered fee, persisted
+        // or in memory for a pending send. Reading it here keeps the sheet and the
+        // list on the same net and fee (D-M-01). The raw store row is the fallback
+        // when no wallet is bound.
+        val walletRecord = walletRecordFor(db, txIdDisplayHex.lowercase())
+        val effectiveFee = walletRecord?.feeDuffs ?: entity.fee ?: derivedFeeDuffs(decoded, inputTxos.map { it?.amount })
+        val baseRecord = (
+            walletRecord ?: l1TxUiRecord(
+                txidWireBytes = entity.txid,
+                netAmountDuffs = entity.netAmount,
+                feeDuffs = entity.fee,
+                contextCode = entity.context,
+                directionCode = entity.direction,
+                firstSeenSec = entity.firstSeen,
+                blockTimestampSec = entity.blockTimestamp
+            )
+            ).copy(feeDuffs = effectiveFee)
+
+        // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
+        // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
+        // correction. For a contact send the SDK `transactions` row surfaces only the +change
+        // (wrong direction: INCOMING / wrong amount), so whenever a plain send/receive cache row
+        // exists it is the AUTHORITATIVE direction + amount override — not only when the SDK net
+        // is 0. Absent (pre-cutover / non-SDK txs) → the SDK row stands unchanged.
+        //
+        // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
+        // service rows keep the SDK direction. Sign convention (Bug A):
+        // - INCOMING: the cached value IS the received net → use it directly.
+        // - OUTGOING: the walker's own net when it has one — it IS the signed net,
+        //   fee included, whatever the row holds. A cached row cannot tell a contact
+        //   send's engine net (fee included) from a fallback principal (fee excluded),
+        //   since both carry the contact identity. Without a walker record,
+        //   [detailSignedNet] reconstructs it from the row.
+        val cacheEntry = txDisplayCacheDao
+            .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
+            .firstOrNull()
+        val cachedValue = cacheEntry?.valueSatoshis
+        val record = if (
+            cacheEntry != null && cachedValue != null && cachedValue != 0L &&
+            (cacheEntry.iconType == TxDisplayCacheEntry.ICON_SENT ||
+                cacheEntry.iconType == TxDisplayCacheEntry.ICON_RECEIVED)
+        ) {
+            val cachedDirection = if (cachedValue < 0) {
+                L1TxUiDirection.OUTGOING
+            } else {
+                L1TxUiDirection.INCOMING
+            }
+            val net = if (cachedDirection == L1TxUiDirection.OUTGOING &&
+                walletRecord != null && walletRecord.netAmountDuffs < 0L
+            ) {
+                walletRecord.netAmountDuffs
+            } else {
+                detailSignedNet(cachedValue, isContactRow = cacheEntry.contactUserId != null, baseRecord)
+            }
+            baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
+        } else {
+            baseRecord
         }
 
         // Classify a wallet-authored internal move as a Platform-funding asset

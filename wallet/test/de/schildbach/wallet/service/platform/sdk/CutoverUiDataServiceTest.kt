@@ -4117,7 +4117,9 @@ class CutoverUiDataServiceTest {
         assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
         assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
         assertEquals(0, row.filterFlags)
-        assertEquals(-146L, row.valueSatoshis) // combined net = the fee
+        // Combined net −146, shown without the 146 fee the OUTGOING sibling carried —
+        // the same 0 the incoming-first order shows (D-M-01).
+        assertEquals(0L, row.valueSatoshis)
         assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty())
 
@@ -4171,7 +4173,9 @@ class CutoverUiDataServiceTest {
         assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
         assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
         assertEquals(0, row.filterFlags)
-        assertEquals(-146L, row.valueSatoshis) // combined net, not the +0.009 partial
+        // The combined net (−146), not the +0.009 partial — shown without its
+        // 146 fee, so the self-transfer reads 0 as dashj renders it (D-M-01).
+        assertEquals(0L, row.valueSatoshis)
         assertEquals("", row.statusText)
         assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty()) // the pending push was cancelled
