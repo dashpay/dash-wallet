@@ -556,17 +556,6 @@ internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
 internal const val L1_BLOCK_TIME_SKEW_TOLERANCE_MS = 3L * 60 * 60 * 1000
 
 /**
- * [existing] with its time moved back to [record]'s block time when the cached
- * time is impossible: LATER than the block that contains the tx, by more than
- * [L1_BLOCK_TIME_SKEW_TOLERANCE_MS]. A tx can be seen before it is mined, never
- * long after, so such a time was never a sighting; it is a placeholder "now"
- * (a stub row inserted during a restore, before [planL1DisplaySync] skipped
- * stubs). Moving the time EARLIER only, and only to a block time, leaves every
- * genuine first-sighting time alone, including a tx that sat in the mempool for
- * days before it was mined. Returns [existing] itself when nothing changes.
- * Pure — host-testable.
- */
-/**
  * [entry] with the fee dropped from its value, when it was cached WITH it
  * (D-M-01). Rows authored while the store's fee column was NULL hold the
  * fee-included net; once the fee is known
@@ -594,6 +583,17 @@ internal fun withoutCachedFee(
         entry
     }
 
+/**
+ * [existing] with its time moved back to [record]'s block time when the cached
+ * time is impossible: LATER than the block that contains the tx, by more than
+ * [L1_BLOCK_TIME_SKEW_TOLERANCE_MS]. A tx can be seen before it is mined, never
+ * long after, so such a time was never a sighting; it is a placeholder "now"
+ * (a stub row inserted during a restore, before [planL1DisplaySync] skipped
+ * stubs). Moving the time EARLIER only, and only to a block time, leaves every
+ * genuine first-sighting time alone, including a tx that sat in the mempool for
+ * days before it was mined. Returns [existing] itself when nothing changes.
+ * Pure — host-testable.
+ */
 internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecord): TxDisplayCacheEntry {
     val blockMs = record.blockTimestampMs
     if (blockMs <= 0L || existing.time - blockMs <= L1_BLOCK_TIME_SKEW_TOLERANCE_MS) return existing

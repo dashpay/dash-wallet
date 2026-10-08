@@ -522,4 +522,95 @@ class SdkTxDetailTest {
     fun `fee-free send gets its fee back for the detail sheet`() {
         assertEquals(-10_000_227L, detailNetFor(-10_000_000L, storedNet = -10_000_227L, storedFee = 227L, storedDirection = 1))
     }
+
+    // ── D-M-01: a contact row's amount is read from the wallet record ─
+
+    /**
+     * [SdkTxDetailProvider.load] for the history [row] of a send whose stored SDK row is
+     * the misattributed INCOMING +change (what a contact send persists), with the
+     * walker's corrected [walletRecord] supplied through the provider's seam.
+     */
+    private fun loadContactSend(row: de.schildbach.wallet.database.entity.TxDisplayCacheEntry, walletRecord: L1TxUiRecord): SdkTxDetail {
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns 499_773L
+            every { fee } returns null
+            every { context } returns 0
+            every { direction } returns 0
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val db = mockk<DashDatabase> {
+            every { transactionDao() } returns mockk<TransactionDao> { coEvery { getByTxid(any()) } returns entity }
+            every { txoDao() } returns mockk()
+        }
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns listOf(row)
+        }
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } throws UnsatisfiedLinkError("no decode in this test")
+            return requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, hex ->
+                        walletRecord.takeIf { it.txidHex == hex }
+                    }.load(decoded.txidDisplayHex)
+                }
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    /** The walker's record: the pending contact send reattributed OUTGOING, fee recovered in memory. */
+    private fun reattributedContactSend() = l1TxUiRecord(
+        txidWireBytes = decoded.txid,
+        netAmountDuffs = -10_000_227L,
+        feeDuffs = 227L,
+        contextCode = 0,
+        directionCode = 1,
+        firstSeenSec = 1_770_000_000L,
+        blockTimestampSec = 0
+    )
+
+    private val friend = ResolvedTxContact(username = "friend", displayName = null, avatarUrl = null, userId = "friend-id")
+
+    @Test
+    fun `contact send planned without the engine net shows its fee in details`() {
+        // After a restart with the send still pending, no engine net is known, so the
+        // planner writes the fee-free principal — and still attaches the contact.
+        val record = reattributedContactSend()
+        val row = planL1DisplaySync(
+            records = listOf(record), existingByRowId = emptyMap(), groupedTxIds = emptySet(),
+            resolve = { "str:$it" }, nowMs = 1_770_000_000_000L,
+            contactByTxid = mapOf(record.txidHex to friend)
+        ).inserts.single()
+        assertEquals(-10_000_000L, row.valueSatoshis)
+        assertEquals("friend-id", row.contactUserId)
+
+        val detail = loadContactSend(row, record)
+        assertEquals(-10_000_227L, detail.netAmountDuffs) // not −10 000 000
+        assertEquals(227L, detail.feeDuffs)
+    }
+
+    @Test
+    fun `contact send planned from the engine net is not counted twice`() {
+        val record = reattributedContactSend()
+        val row = planL1DisplaySync(
+            records = listOf(record), existingByRowId = emptyMap(), groupedTxIds = emptySet(),
+            resolve = { "str:$it" }, nowMs = 1_770_000_000_000L,
+            contactByTxid = mapOf(record.txidHex to friend),
+            signedNetByTxid = mapOf(record.txidHex to -10_000_227L)
+        ).inserts.single()
+        assertEquals(-10_000_227L, row.valueSatoshis)
+
+        val detail = loadContactSend(row, record)
+        assertEquals(-10_000_227L, detail.netAmountDuffs) // not −10 000 454
+        assertEquals(227L, detail.feeDuffs)
+    }
 }
