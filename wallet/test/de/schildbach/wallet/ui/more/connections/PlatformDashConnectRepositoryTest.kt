@@ -65,16 +65,7 @@ class PlatformDashConnectRepositoryTest {
     fun parseQr_classifiesKeyUriAsLogin_onTestnet() = runBlocking {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
         val result = repository.parseQr(testnetKeyUri())
-        assertTrue(result is DashConnectQr.Login)
-        assertEquals("cd".repeat(32), org.bitcoinj.core.Utils.HEX.encode((result as DashConnectQr.Login).request.contractId))
-    }
-
-    @Test
-    fun parseQr_classifiesStUriAsKeyRegistration_onTestnet() = runBlocking {
-        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
-        val uri = "dash-st:${Base58.encode(ByteArray(40) { it.toByte() })}?n=t&v=1"
-        val result = repository.parseQr(uri)
-        assertTrue(result is DashConnectQr.KeyRegistration)
+        assertEquals("cd".repeat(32), org.bitcoinj.core.Utils.HEX.encode(result.request.contractId))
     }
 
     @Test

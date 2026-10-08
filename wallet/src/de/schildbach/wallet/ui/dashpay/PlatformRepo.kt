@@ -166,7 +166,7 @@ class PlatformRepo @Inject constructor(
             val encryptionKey = wallet.keyCrypter!!.deriveKey(password)
             wallet.keyChainSeed.decrypt(wallet.keyCrypter, "", encryptionKey)
         } else {
-            null
+            wallet.keyChainSeed
         }
     }
 

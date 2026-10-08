@@ -25,10 +25,8 @@ import de.schildbach.wallet.ui.more.connections.protocol.DashConnectNetwork
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException
 import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
-import de.schildbach.wallet.ui.more.connections.protocol.DashStRequest
 import de.schildbach.wallet.ui.more.connections.protocol.KeyExchangeCrypto
 import de.schildbach.wallet.ui.more.connections.protocol.LoginKeyDerivation
-import org.dashj.platform.dpp.statetransition.NativeStateTransition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -42,17 +40,14 @@ import org.dashj.platform.dashpay.Profile
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.sdk.platform.DomainDocument
-import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.sdk.BlockHeight
 import org.dashj.platform.sdk.CoreBlockHeight
-import org.dashj.platform.sdk.KeyID
 import org.dashj.platform.sdk.KeyType
 import org.dashj.platform.sdk.Purpose
 import org.dashj.platform.sdk.SecurityLevel
 import org.dashj.platform.sdk.callbacks.Signer
 import org.dashj.platform.sdk.client.ClientAppDefinition
 import org.dashj.platform.sdk.dashsdk
-import org.dashj.platform.dashpay.callback.SimpleSignerCallback
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dapiclient.model.DocumentQuery
 import org.slf4j.LoggerFactory
@@ -84,14 +79,6 @@ class PlatformDashConnectRepository @Inject constructor(
         private const val APP_NAME = "dash-connect-key-exchange"
         private const val DOCUMENT_TYPE = "loginKeyResponse"
 
-        /** StateTransitionType discriminant for IdentityUpdate. */
-        private const val IDENTITY_UPDATE_TYPE = 5
-
-        /**
-         * Bincode variant tag of IdentityUpdate in DPP's StateTransition enum (positional; note it
-         * differs from the StateTransitionType above). Prepended to yappr's tagless dash-st bytes.
-         */
-        private const val STATE_TRANSITION_IDENTITY_UPDATE_VARIANT: Byte = 6
         private const val TYPE_LOCATOR = "$APP_NAME.$DOCUMENT_TYPE"
 
         // loginKeyResponse fields
@@ -120,12 +107,7 @@ class PlatformDashConnectRepository @Inject constructor(
             DashConnectUri.isKeyUri(content) -> {
                 val request = DashConnectUri.parseKeyRequest(content)
                 requireNetworkMatch(request.network)
-                DashConnectQr.Login(request)
-            }
-            DashConnectUri.isStUri(content) -> {
-                val request = DashConnectUri.parseStRequest(content)
-                requireNetworkMatch(request.network)
-                DashConnectQr.KeyRegistration(request)
+                DashConnectQr(request)
             }
             else -> throw DashConnectUriException("not a DashConnect QR code")
         }
@@ -144,10 +126,12 @@ class PlatformDashConnectRepository @Inject constructor(
         val identityIdBytes = blockchainIdentity.uniqueIdData
         val keyParameter = platformRepo.getWalletEncryptionKey()
 
-        // 1. deterministic login key from the BLOCKCHAIN_IDENTITY auth chain
-        val chainKey = platformRepo.getBlockchainIdentityKey(LoginKeyDerivation.DEFAULT_KEY_INDEX, keyParameter)
-            ?: throw IllegalStateException("could not derive authentication chain key")
-        val chainKeyPrivateBytes = chainKey.privKeyBytes
+        // 1. deterministic DIP-13 session key from the wallet seed. The on-chain lookup uses
+        // hash160(appEphPub); the derivation leaf is hash256(appEphPub). Keep them separate.
+        val seedBytes = platformRepo.getWalletSeed()?.seedBytes
+            ?: throw IllegalStateException("could not obtain wallet seed")
+        val appEphemeralPubKeyHash = KeyExchangeCrypto.hash160(request.appEphemeralPubKey)
+        val appEphemeralPubKeyRequestId = KeyExchangeCrypto.hash256(request.appEphemeralPubKey)
 
         var loginKey: ByteArray? = null
         var walletEphemeralPriv: ByteArray? = null
@@ -155,11 +139,21 @@ class PlatformDashConnectRepository @Inject constructor(
         var encPriv: ByteArray? = null
         var keysAlreadyRegistered = false
         try {
-            loginKey = LoginKeyDerivation.deriveLoginKey(
-                chainKeyPrivateBytes = chainKeyPrivateBytes,
-                identityIdBytes = identityIdBytes,
-                appContractIdBytes = request.contractId
+            val loginKeyResult = dashsdk.applicationSessionAuthenticationPrivateKeyFromSeed(
+                Constants.IS_TESTNET_BUILD,
+                seedBytes,
+                identityIdBytes,
+                appEphemeralPubKeyRequestId
             )
+            val loginKeyError = loginKeyResult.error
+            if (loginKeyError != null) {
+                throw IllegalStateException("could not derive DashConnect session key: $loginKeyError")
+            }
+            loginKey = loginKeyResult.ok
+                ?: throw IllegalStateException("could not derive DashConnect session key")
+            require(loginKey.size == KeyExchangeCrypto.LOGIN_KEY_LENGTH) {
+                "DashConnect session key must be ${KeyExchangeCrypto.LOGIN_KEY_LENGTH} bytes"
+            }
 
             // 2. fresh ephemeral keypair
             val walletEphemeral = ECKey()
@@ -172,8 +166,6 @@ class PlatformDashConnectRepository @Inject constructor(
                 walletEphemeralPriv = walletEphemeralPriv,
                 appEphemeralPub = request.appEphemeralPubKey
             )
-            val appEphemeralPubKeyHash = KeyExchangeCrypto.hash160(request.appEphemeralPubKey)
-
             // 6. publish (or replace) the loginKeyResponse document
             publishLoginKeyResponse(
                 identity = identity,
@@ -185,9 +177,8 @@ class PlatformDashConnectRepository @Inject constructor(
                 keyParameter = keyParameter
             )
 
-            // 7. Determine whether this login completes immediately. If our derived login keys are
-            // already on the identity, the app logs in without a dash-st registration, so the
-            // connection is ACTIVE now. Otherwise it's APPROVED, awaiting the key-registration QR.
+            // 7. Determine whether this login completes immediately. If our derived login key is
+            // already on the identity, the app logs in without another identity update.
             authPriv = KeyExchangeCrypto.deriveAuthPrivateKey(loginKey, identityIdBytes)
             encPriv = KeyExchangeCrypto.deriveEncryptionPrivateKey(loginKey, identityIdBytes)
             val authData = KeyExchangeCrypto.hash160(KeyExchangeCrypto.compressedPublicKey(authPriv))
@@ -203,7 +194,8 @@ class PlatformDashConnectRepository @Inject constructor(
             KeyExchangeCrypto.wipe(walletEphemeralPriv)
             KeyExchangeCrypto.wipe(authPriv)
             KeyExchangeCrypto.wipe(encPriv)
-            KeyExchangeCrypto.wipe(chainKeyPrivateBytes)
+            KeyExchangeCrypto.wipe(seedBytes)
+            KeyExchangeCrypto.wipe(appEphemeralPubKeyRequestId)
         }
 
         // Resolve a friendly name/handle for the app from Platform (its contract owner's DashPay
@@ -282,8 +274,8 @@ class PlatformDashConnectRepository @Inject constructor(
             ?: throw IllegalStateException("wallet not available")
         val signer: Signer = WalletSignerCallback(wallet, keyParameter)
         // Documents default to a HIGH security-level authentication key (DPP default). Must be
-        // the wallet-controlled ECDSA_SECP256K1 key: after a dash-st key registration the identity
-        // also carries a HIGH ECDSA_HASH160 login key (derived, not in the wallet keychain), and
+        // the wallet-controlled ECDSA_SECP256K1 key: after Connect registration the identity also
+        // carries a HIGH ECDSA_HASH160 login key (derived, not in the wallet keychain), and
         // getFirstPublicKey(HIGH) would otherwise pick that and the signer callback fails.
         val highKey = identity.getFirstPublicKey(
             Purpose.AUTHENTICATION, SecurityLevel.HIGH, KeyType.ECDSA_SECP256K1
@@ -339,157 +331,6 @@ class PlatformDashConnectRepository @Inject constructor(
             .where(FIELD_CONTRACT_ID, "==", appContractIdBytes)
             .build()
         return platform.platform.documents.get(TYPE_LOCATOR, query).firstOrNull()
-    }
-
-    // ── complete key registration (QR #2) ──────────────────────────────────────────
-
-    override suspend fun completeKeyRegistration(request: DashStRequest) = withContext(Dispatchers.IO) {
-        checkTestnet()
-        requireNetworkMatch(request.network)
-
-        val blockchainIdentity = identityRepository.blockchainIdentity
-            ?: throw IllegalStateException("blockchain identity not available")
-        val identityIdBytes = blockchainIdentity.uniqueIdData
-        val keyParameter = platformRepo.getWalletEncryptionKey()
-
-        // The dash-st payload is a wasm-sdk (bincode) serialized IdentityUpdateTransition, which
-        // this SDK cannot deserialize (its factory is CBOR-only) and whose embedded revision and
-        // nonce snapshots go stale anyway. The keys it registers are fully deterministic from our
-        // login key, so instead of countersigning the app's bytes we rebuild the equivalent update
-        // against fresh identity state: the same two derived keys, at the current revision, signed
-        // by the master key. The wallet therefore never signs app-supplied transition content.
-        val connection = config.getConnections()
-            .filter { it.status == ConnectionStatus.APPROVED.name }
-            .maxByOrNull { it.updatedAt }
-            ?: throw DashConnectUriException("no login awaiting key registration — scan the app's login QR first")
-        val contractIdBytes = Base58.decode(connection.contractId)
-
-        val chainKey = platformRepo.getBlockchainIdentityKey(LoginKeyDerivation.DEFAULT_KEY_INDEX, keyParameter)
-            ?: throw IllegalStateException("could not derive authentication chain key")
-        val chainKeyPrivateBytes = chainKey.privKeyBytes
-        var loginKey: ByteArray? = null
-        var authPriv: ByteArray? = null
-        var encPriv: ByteArray? = null
-        try {
-            loginKey = LoginKeyDerivation.deriveLoginKey(chainKeyPrivateBytes, identityIdBytes, contractIdBytes)
-            authPriv = KeyExchangeCrypto.deriveAuthPrivateKey(loginKey, identityIdBytes)
-            encPriv = KeyExchangeCrypto.deriveEncryptionPrivateKey(loginKey, identityIdBytes)
-            val authData = KeyExchangeCrypto.hash160(KeyExchangeCrypto.compressedPublicKey(authPriv))
-            val encData = KeyExchangeCrypto.compressedPublicKey(encPriv)
-
-            // Double-check the app's dash-st transition against what we independently derive: it
-            // must be an IdentityUpdate for THIS identity whose added keys are exactly our login
-            // keys. This detects a tampered/forged QR. (We still sign our own rebuilt update below
-            // rather than the app's bytes, so this is defence-in-depth.)
-            verifyKeyRegistrationTransition(request.transitionBytes, identityIdBytes, authData, encData)
-
-            val updatedIdentity = platform.platform.identities.get(blockchainIdentity.uniqueIdentifier)
-                ?: error("identity not found on platform")
-            val hasAuth = updatedIdentity.publicKeys.any { it.data.contentEquals(authData) }
-            val hasEnc = updatedIdentity.publicKeys.any { it.data.contentEquals(encData) }
-
-            if (hasAuth && hasEnc) {
-                log.info("login keys for app ${connection.contractId} already registered on identity")
-            } else {
-                var nextKeyId = updatedIdentity.publicKeys.maxOf { it.id } + 1
-                val addKeys = mutableListOf<IdentityPublicKey>()
-                val signingKeys = mutableMapOf<IdentityPublicKey, ECKey>()
-                if (!hasAuth) {
-                    val key = IdentityPublicKey(
-                        nextKeyId++, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION,
-                        SecurityLevel.HIGH, null, authData, false
-                    )
-                    addKeys += key
-                    signingKeys[key] = ECKey.fromPrivate(authPriv, true)
-                }
-                if (!hasEnc) {
-                    val key = IdentityPublicKey(
-                        nextKeyId, KeyType.ECDSA_SECP256K1, Purpose.ENCRYPTION,
-                        SecurityLevel.MEDIUM, null, encData, false
-                    )
-                    addKeys += key
-                    signingKeys[key] = ECKey.fromPrivate(encPriv, true)
-                }
-
-                val masterPublicKey = updatedIdentity.getFirstPublicKey(Purpose.AUTHENTICATION, SecurityLevel.MASTER)
-                    ?: error("no MASTER authentication key on identity")
-                val masterEcKey = blockchainIdentity.getPrivateKeyByPurpose(
-                    org.dashj.platform.dashpay.BlockchainIdentity.KeyIndexPurpose.MASTER,
-                    keyParameter
-                )
-                signingKeys[masterPublicKey] = masterEcKey
-                val signer = SimpleSignerCallback(signingKeys, keyParameter)
-
-                updatedIdentity.revision++
-                val result = dashsdk.platformMobilePutPutIdentityUpdateSdk(
-                    platform.platform.rustSdk,
-                    updatedIdentity.toNative(),
-                    KeyID(masterPublicKey.id),
-                    addKeys.map { it.toNative() },
-                    arrayListOf(),
-                    signer.nativeContext,
-                    BigInteger.valueOf(signer.signerCallback)
-                )
-                result.unwrap()
-                log.info(
-                    "registered ${addKeys.size} login key(s) on identity " +
-                        "${blockchainIdentity.uniqueIdString} for app ${connection.contractId}"
-                )
-            }
-        } finally {
-            KeyExchangeCrypto.wipe(loginKey)
-            KeyExchangeCrypto.wipe(authPriv)
-            KeyExchangeCrypto.wipe(encPriv)
-            KeyExchangeCrypto.wipe(chainKeyPrivateBytes)
-        }
-
-        // the app auto-completes login as soon as the keys land on the identity
-        config.updateStatus(connection.contractId, ConnectionStatus.ACTIVE.name, System.currentTimeMillis())
-    }
-
-    /**
-     * Natively deserializes the scanned dash-st transition and verifies its contents match what
-     * this wallet expects: an IdentityUpdate for [identityIdBytes] whose added public keys include
-     * exactly our derived authentication key ([expectedAuthData], hash160) and encryption key
-     * ([expectedEncData], compressed). Throws [DashConnectUriException] on any mismatch.
-     */
-    private fun verifyKeyRegistrationTransition(
-        transitionBytes: ByteArray,
-        identityIdBytes: ByteArray,
-        expectedAuthData: ByteArray,
-        expectedEncData: ByteArray
-    ) {
-        // yappr serializes the IdentityUpdateTransition WITHOUT the outer StateTransition enum
-        // tag: the payload starts with the transition's own version byte (0x00 = V0) followed by
-        // the identity id. StateTransition::deserialize expects the enum variant tag first, so
-        // prepend IdentityUpdate's tag (6).
-        //
-        // The framing is incidental, not contractual: wasm-dpp2's
-        // IdentityUpdateTransition::to_bytes() serializes the bare inner transition, while the
-        // StateTransition wrapper's own to_bytes() (which yappr DOES use on its document path,
-        // via toStateTransition()) emits the tag. So a future yappr refactor could start sending
-        // tagged bytes — hence both framings are accepted here rather than only the tagless one.
-        // No upstream spec states which to expect.
-        val info = try {
-            NativeStateTransition.deserialize(byteArrayOf(STATE_TRANSITION_IDENTITY_UPDATE_VARIANT) + transitionBytes)
-        } catch (ex: Exception) {
-            log.info("dash-st is not a tagless IdentityUpdate, retrying as full StateTransition bytes")
-            NativeStateTransition.deserialize(transitionBytes)
-        }
-        if (info.type != IDENTITY_UPDATE_TYPE) {
-            throw DashConnectUriException("dash-st is not an identity update (type=${info.type})")
-        }
-        if (info.ownerId?.toBuffer()?.contentEquals(identityIdBytes) != true) {
-            throw DashConnectUriException("dash-st is for a different identity")
-        }
-        val addedKeyData = info.addPublicKeys.map { it.data }
-        if (addedKeyData.none { it.contentEquals(expectedAuthData) }) {
-            throw DashConnectUriException("dash-st does not add this wallet's authentication key (possible forged QR)")
-        }
-        if (addedKeyData.none { it.contentEquals(expectedEncData) }) {
-            throw DashConnectUriException("dash-st does not add this wallet's encryption key (possible forged QR)")
-        }
-        log.info("dash-st verified: IdentityUpdate for our identity adds our derived login keys")
     }
 
     // ── disconnect ───────────────────────────────────────────────────────────────

@@ -60,19 +60,6 @@ class DashConnectUriTest {
         )
     }
 
-    // ── real-world dash-st sample captured from yappr testnet (2026-07-22) ─────────
-    @Test
-    fun realWorldYapprRegistrationUri_parses() {
-        val uri = "dash-st:1PtK3t938SqV4ADV89QrEUMadrDs3eMyMnWnDa2RuHhmgvJK1qCTVvLh4DCyhBaZgcPq3quGT2" +
-            "A7Qz1JEWgVN9S9aqMTNG72pCQ9YZZKyghtzFMfLcrs4gunKyWRN73j6By2KF5Jg4RM3RcwJE2HEB4uocvYeeEnkQ" +
-            "C174YyLpGZaY2ZR7yefwYWx1eRBbhtJhwDbTiBRbjXn9ngxnHhxXJpYoV5U28uaasnJR3BaCECGqDZ?n=t&v=1"
-        val request = DashConnectUri.parseStRequest(uri)
-
-        assertEquals(DashConnectNetwork.TESTNET, request.network)
-        assertTrue(request.transitionBytes.isNotEmpty())
-        println("real-world dash-st parsed: ${request.transitionBytes.size} transition bytes")
-    }
-
     // ── serialization matches the exact fixture ────────────────────────────────────
     @Test
     fun serializedFixture_decodesToExpectedFields() {
@@ -191,19 +178,8 @@ class DashConnectUriTest {
         assertEquals("", request.label)
     }
 
-    // ── dash-st envelope ──────────────────────────────────────────────────────────
-    @Test
-    fun parsesDashStEnvelope() {
-        val transition = ByteArray(50) { it.toByte() }
-        val uri = "dash-st:${Base58.encode(transition)}?n=t&v=1"
-        val request = DashConnectUri.parseStRequest(uri)
-        assertArrayEquals(transition, request.transitionBytes)
-        assertEquals(DashConnectNetwork.TESTNET, request.network)
-    }
-
     @Test
     fun schemeDetectors() {
         assertTrue(DashConnectUri.isKeyUri("dash-key:abc?n=t&v=1"))
-        assertTrue(DashConnectUri.isStUri("dash-st:abc?n=t&v=1"))
     }
 }
