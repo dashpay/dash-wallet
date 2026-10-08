@@ -17,6 +17,7 @@
 package org.dash.wallet.integrations.coinbase
 
 import android.content.Context
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants
 import java.io.File
 import java.net.URLEncoder
@@ -38,6 +39,20 @@ object CoinbaseConstants {
     const val MIN_USD_COINBASE_AMOUNT = "2"
     const val BASE_IDS_REQUEST_URL = "v2/assets/prices?filter=holdable&resolution=latest"
     const val BUY_FEE = 0.006
+
+    /**
+     * Amount format for Coinbase request bodies: two decimals, plain ASCII digits and a
+     * dot.
+     *
+     * Deliberately NOT locale-aware. `Constants.SEND_PAYMENT_LOCAL_FORMAT`, which the buy
+     * flow used to format these with, calls `withLocale(deviceLocale)` and so renders
+     * "12,34" on every comma-decimal locale (de, fr, es, it, pt, nl, pl, ru, be_BY ...).
+     * That string is not a number Coinbase will accept on a deposit or a buy order.
+     */
+    val API_AMOUNT_FORMAT: MonetaryFormat = MonetaryFormat()
+        .noCode()
+        .minDecimals(2)
+        .optionalDecimals()
     const val REDIRECT_URL = "dashwallet://brokers/coinbase/connect"
     const val AUTH_RESULT_ACTION = "Coinbase.AUTH_RESULT"
     val LINK_URL get() = "https://login.coinbase.com/oauth2/auth?response_type=code" +
