@@ -6,6 +6,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentWelcomeToDashpayBinding
@@ -32,6 +33,9 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
         requestUserNameViewModel.identityBalance.observe(viewLifecycleOwner) {
             updateView()
         }
+        ContestedUsernameFees.protocolVersions.observe(viewLifecycleOwner) {
+            updateView()
+        }
     }
 
     fun updateView() {
@@ -45,7 +49,7 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
                 binding.balanceRequirementDisclaimer.text = getString(
                     R.string.welcome_request_username_min_balance_disclaimer_all,
                     requestUserNameViewModel.walletBalance.value.toPlainString(),
-                    Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+                    ContestedUsernameFees.fee.toPlainString()
                 )
             }
             binding.balanceRequirementDisclaimer.isVisible = !requestUserNameViewModel.canAffordContestedUsername()

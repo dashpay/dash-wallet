@@ -177,6 +177,8 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     suspend fun getInvitedUserProfile(): DashPayProfile? = dashPayProfileDao.loadByUserId(identityId.value!!)
 
+    suspend fun refreshProtocolVersion(): Int = platformRepo.refreshProtocolVersion()
+
     override fun onCleared() {
         super.onCleared()
         workerJob.cancel()

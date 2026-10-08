@@ -449,7 +449,7 @@ gebruikersnaam</b></string>
     <string name="request_username_username_voting_message">+ wat is stemmen met gebruikersnaam\?</string>
     <string name="request_username_character_requirement">Alleen letters, cijfers en koppeltekens</string>
     <string name="request_username_character_requirement_invite_noncontested">Cijfers 2-9</string>
-    <string name="request_username_balance_requirement">Je hebt 0,25 DASH nodig om deze gebruikersnaam aan te maken</string>
+    <string name="request_username_balance_requirement">Je hebt %s DASH nodig om deze gebruikersnaam aan te maken</string>
     <string name="request_username_requirements_message_invite_noncontested">De gebruikersnaam moet aan een van deze criteria voldoen</string>
     <string name="request_username_requirements_message">De gebruikersnaam moet aan deze criteria voldoen</string>
     <string name="request_username_length_requirement">Tussen 3 en 23 tekens</string>

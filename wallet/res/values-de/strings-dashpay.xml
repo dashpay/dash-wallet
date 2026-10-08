@@ -456,7 +456,7 @@ Benutzernamen</b></string>
     <string name="request_username_username_voting_message">+ was ist die Abstimmung über Nutzernamen\?</string>
     <string name="request_username_character_requirement">Nur Buchstaben, Zahlen und Bindestriche</string>
     <string name="request_username_character_requirement_invite_noncontested">Nummern 2-9</string>
-    <string name="request_username_balance_requirement">Du benötigst 0,25 DASH um einen Benutzernamen erstellen zu können</string>
+    <string name="request_username_balance_requirement">Du benötigst %s DASH um einen Benutzernamen erstellen zu können</string>
     <string name="request_username_requirements_message_invite_noncontested">Der Nutzername muss eine dieser Kriterien entsprechen</string>
     <string name="request_username_requirements_message">Der Nutzername muss diesen Kriterien entsprechen</string>
     <string name="request_username_length_requirement">Zwischen 3 und 23 Zeichen</string>

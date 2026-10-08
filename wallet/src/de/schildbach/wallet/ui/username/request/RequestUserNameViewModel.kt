@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.username.request
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -87,6 +89,7 @@ data class RequestUserNameUIState(
     /** The name the availability flags above were checked for, or null when there is no current result. */
     val checkedUsername: String? = null,
     val enoughBalance: Boolean = false,
+    val feeProtocolVersion: Int = 0,
     val usernameNonContestedChars: Boolean = false,
     val usernameNonContestedLength: Boolean = false,
     val votingPeriodStart: Long = System.currentTimeMillis()
@@ -106,7 +109,8 @@ class RequestUserNameViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
-        private val CONTEST_DOCUMENT_FEE = Coin.valueOf(0, 20).value * 1000
+        private val CONTEST_DOCUMENT_FEE: Long
+            get() = ContestedUsernameFees.nameFee.value * 1000
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
     }
 
@@ -205,7 +209,7 @@ class RequestUserNameViewModel @Inject constructor(
             val credits = _identityBalance.value
             credits > CONTEST_DOCUMENT_FEE
         } else {
-            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
+            _walletBalance.value >= ContestedUsernameFees.fee
         }
     }
 
@@ -214,6 +218,16 @@ class RequestUserNameViewModel @Inject constructor(
     private val _myUsernameRequest = MutableStateFlow<UsernameRequest?>(null)
 
     init {
+        // learn the platform protocol version early; the contested username fee depends on it
+        viewModelScope.launch { platformRepo.refreshProtocolVersion() }
+        combine(ContestedUsernameFees.protocolVersions, _walletBalance, _identityBalance, _inviteBalance) {
+                version, _, _, _ -> version
+        }.onEach { version ->
+            // A fee or balance change must not invalidate the username availability result.
+            _uiState.update {
+                it.copy(enoughBalance = hasEnoughBalance(it.usernameContestable), feeProtocolVersion = version)
+            }
+        }.launchIn(viewModelScope)
         viewModelScope.launch {
             _requestedUserNameLink.value = withContext(Dispatchers.IO) {
                 identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
@@ -522,20 +536,7 @@ class RequestUserNameViewModel @Inject constructor(
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
 
-        val identityBalance = _identityBalance.value
-        val walletBalance = _walletBalance.value
-        val inviteBalance = _inviteBalance.value
-        val enoughBalance = when {
-            isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
-            isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
-            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
-                CONTEST_DOCUMENT_FEE / 1000)
-            identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
-                NON_CONTEST_DOCUMENT_FEE / 1000)
-            identityBalance == 0L && contestable -> walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
-            identityBalance == 0L && !contestable -> walletBalance >= Constants.DASH_PAY_FEE
-            else -> false // how can we get here?
-        }
+        val enoughBalance = hasEnoughBalance(contestable)
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,
@@ -552,6 +553,20 @@ class RequestUserNameViewModel @Inject constructor(
             )
         }
         return validCharacters && validLength
+    }
+
+    private fun hasEnoughBalance(contestable: Boolean): Boolean {
+        val identityBalance = _identityBalance.value
+        val walletBalance = _walletBalance.value
+        val inviteBalance = _inviteBalance.value
+        return when {
+            isUsingInvite() && contestable -> inviteBalance >= ContestedUsernameFees.fee
+            isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_FEE
+            identityBalance > 0L -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
+                (if (contestable) CONTEST_DOCUMENT_FEE else NON_CONTEST_DOCUMENT_FEE) / 1000)
+            identityBalance == 0L -> walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
+            else -> false
+        }
     }
 
     @Throws(NullPointerException::class)
@@ -607,7 +622,7 @@ class RequestUserNameViewModel @Inject constructor(
         } ?: Coin.ZERO
     }
 
-    fun isInviteForContestedNames(): Boolean = getInvitationAmount() >= Constants.DASH_PAY_FEE_CONTESTED
+    fun isInviteForContestedNames(): Boolean = getInvitationAmount() >= ContestedUsernameFees.fee
 
     private suspend fun isInviteMixed(): Unit = withContext(Dispatchers.IO) {
         _isInviteMixed.value = inviteAssetLockTx.value?.let {

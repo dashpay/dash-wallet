@@ -15,14 +15,17 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -215,6 +218,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // binding.walletBalanceContainer.isVisible = !it.enoughBalance
                 if ((!requestUserNameViewModel.isUsingInvite() || isInviteContested) && usernameType != UsernameType.Secondary) {
                     binding.walletBalanceContainer.isVisible = !it.enoughBalance
+                    val requiredFee = if (it.usernameContestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
+                    binding.balanceRequirement.text = getString(
+                        R.string.request_username_balance_requirement,
+                        java.text.NumberFormat.getNumberInstance(resources.configuration.locales[0])
+                            .format(requiredFee.toPlainString().toBigDecimal())
+                    )
 
                     if (it.usernameContestable || it.usernameContested) {
                         val startDate = Date(it.votingPeriodStart)
@@ -317,9 +326,10 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         } else {
             binding.inviteWithUnmixedFunds.isVisible = false
         }
-        requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
-            val isInviteForContestedNames = requestUserNameViewModel.isInviteForContestedNames()
-            val isInviteContested = requestUserNameViewModel.isUsingInvite() && requestUserNameViewModel.isInviteForContestedNames()
+        combine(requestUserNameViewModel.inviteBalance, ContestedUsernameFees.protocolVersions) { _, _ ->
+            requestUserNameViewModel.isInviteForContestedNames()
+        }.observe(viewLifecycleOwner) { isInviteForContestedNames ->
+            val isInviteContested = requestUserNameViewModel.isUsingInvite() && isInviteForContestedNames
             binding.charLengthRequirement.text = getString(
                 if (isInviteContested) {
                     R.string.request_username_length_requirement

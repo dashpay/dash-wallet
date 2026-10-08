@@ -188,10 +188,11 @@
                 />
 
             <TextView
+                android:id="@+id/balance_requirement"
                 style="@style/Overline.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/request_username_balance_requirement"
+                tools:text="@string/request_username_balance_requirement"
                 android:maxLines="2"
                 />
         </LinearLayout>
