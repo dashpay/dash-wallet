@@ -116,7 +116,10 @@ class TxDisplayCacheService @Inject constructor(
     // Lazy: this service is constructed on the home screen's critical path,
     // while CutoverUiDataService pulls in the whole SDK graph. Only the
     // completeness check (a background coroutine) ever resolves it.
-    private val cutoverUiDataService: dagger.Lazy<CutoverUiDataService>
+    private val cutoverUiDataService: dagger.Lazy<CutoverUiDataService>,
+    // Lazy for the same reason: it pulls in the SDK sync graph, and only the
+    // post-cutover completeness check reads it.
+    private val l1SyncStatusService: dagger.Lazy<L1SyncStatusService>
 ) {
 
     companion object {
@@ -611,6 +614,15 @@ class TxDisplayCacheService @Inject constructor(
                 val wallet = walletData.wallet
                     ?: walletData.observeWallet().filterNotNull().first()
                 val cutoverCommitted = cutoverCommittedOrUnknown()
+                // An unreadable latch reads "not done": the check then costs one more walk.
+                val postCutoverCheckDone = cutoverCommitted && runCatching {
+                    dashPayConfig.get(DashPayConfig.POST_CUTOVER_COMPLETENESS_CHECKED) == true
+                }.getOrDefault(false)
+                val runPostCutoverCheck = cutoverCommitted && !postCutoverCheckDone
+                // The post-cutover check runs once, when the one-time sync has
+                // finished: measured mid-scan, the SDK count is still climbing
+                // (run 17 logged SDK=0, then 7346, then 7460 across three ticks).
+                if (runPostCutoverCheck) awaitSdkScanCaughtUp()
                 // Post-cutover the SDK owns the transactions, so its record count IS
                 // the measurement — and it only resolves once the cutover tx pipeline
                 // is running, which is after the SDK bind and therefore after this
@@ -619,7 +631,7 @@ class TxDisplayCacheService @Inject constructor(
                 // so answering "unavailable" once meant the check never ran at all
                 // for the whole session. Wait for the pipeline rather than reporting
                 // a permanent unknown.
-                val sdkRecordCount = if (cutoverCommitted) {
+                val sdkRecordCount = if (runPostCutoverCheck) {
                     awaitSdkRecordCount(
                         polls = SDK_RECORD_COUNT_WAIT_POLLS,
                         intervalMs = SDK_RECORD_COUNT_WAIT_INTERVAL_MS,
@@ -644,6 +656,7 @@ class TxDisplayCacheService @Inject constructor(
 
                 val decision = decideCacheRebuild(
                     cutoverCommitted = cutoverCommitted,
+                    postCutoverCheckDone = postCutoverCheckDone,
                     sdkRecordCount = sdkRecordCount,
                     walletTxCount = walletTxCount,
                     cachedTxCount = cachedTxCount,
@@ -669,9 +682,29 @@ class TxDisplayCacheService @Inject constructor(
                         runCatching { cutoverUiDataService.get().requestFullReconcile() }
                             .onFailure { log.warn("could not request an SDK reconcile pass", it) }
                 }
+                // Latch only a check that measured something: an unavailable SDK
+                // count is retried on the next trigger.
+                if (runPostCutoverCheck && sdkRecordCount != null) {
+                    runCatching { dashPayConfig.set(DashPayConfig.POST_CUTOVER_COMPLETENESS_CHECKED, true) }
+                        .onFailure { log.warn("could not latch the post-cutover completeness check", it) }
+                }
             } finally {
                 completenessCheckInFlight.set(false)
             }
+        }
+    }
+
+    /**
+     * Suspend until the SDK's L1 scan has caught up to the tip — the end of
+     * the one-time sync after a cutover or restore. Unbounded on purpose: a
+     * large restore scans for hours, and the single-flight guard keeps every
+     * other trigger out meanwhile.
+     */
+    private suspend fun awaitSdkScanCaughtUp() {
+        val caughtUp = l1SyncStatusService.get().sdkScanCaughtUp
+        if (!caughtUp.first()) {
+            log.info("sync-complete check: waiting for the SDK's one-time sync to reach the tip")
+            caughtUp.first { it }
         }
     }
 
@@ -1732,6 +1765,15 @@ internal data class CacheRebuildDecision(
  *
  * ## Post-cutover ([cutoverCommitted])
  *
+ * Runs ONCE per wallet, after the SDK's one-time sync first reaches the tip
+ * ([postCutoverCheckDone] latches it). Records collapse into rows on a
+ * CoinJoin wallet (per-day historical-mixing groups — dashj folded 7456
+ * transactions into 434 rows on run 17's Wallet B), so the comparison below
+ * reads "missing rows" on every pass there; run on every sync-complete tick it
+ * requested a full reconcile each time (D-M-01 §4b). One reconcile after the
+ * one-time sync is the useful part, and the 60s ticker keeps the cache
+ * converged after it.
+ *
  * Every row comes from the SDK ([CutoverUiDataService]), so the only source
  * with anything to compare against is the SDK's own wallet-relevant record
  * count. The dashj numbers below cannot express this: dashj is held at zero
@@ -1758,6 +1800,7 @@ internal data class CacheRebuildDecision(
  */
 internal fun decideCacheRebuild(
     cutoverCommitted: Boolean,
+    postCutoverCheckDone: Boolean,
     sdkRecordCount: Int?,
     walletTxCount: Int,
     cachedTxCount: Int,
@@ -1765,6 +1808,12 @@ internal fun decideCacheRebuild(
     displayRowCount: Int
 ): CacheRebuildDecision {
     if (cutoverCommitted) {
+        if (postCutoverCheckDone) {
+            return CacheRebuildDecision(
+                CacheRebuildAction.NONE,
+                "the post-cutover check already ran once, after the one-time sync"
+            )
+        }
         if (sdkRecordCount == null) {
             return CacheRebuildDecision(
                 CacheRebuildAction.NONE,
