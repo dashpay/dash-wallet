@@ -73,6 +73,14 @@ data class DashjTxFacts(
     val height: Int,
     val dead: Boolean = false,
     val netDuffs: Long = 0L,
+    /**
+     * Whether [netDuffs] was actually read from the wallet. FALSE means "not
+     * computed", which is NOT the same as a net of zero — the value comparison
+     * skips these rather than treating them as 0 and reporting a false
+     * mismatch. `getValue` can throw, and a row whose value threw must not be
+     * read as agreeing with, or differing from, anything.
+     */
+    val valueKnown: Boolean = false,
     val timeMs: Long = 0L,
     val coinJoinType: CoinJoinTransactionType = CoinJoinTransactionType.None,
     val dashPayContact: Boolean = false,
@@ -149,6 +157,29 @@ internal data class MoneyTx(
 internal data class SdkOnlyTx(val txidHex: String, val height: Int)
 
 /**
+ * What the SDK store holds for one txid: its block height, and its stored net.
+ *
+ * [netDuffs] is NULL when the txid is known from `txos`/`pending_inputs` but has
+ * no `transactions` row, so no net is stored. Null means UNKNOWN, never zero —
+ * the value comparison skips these.
+ */
+data class SdkTxFacts(val height: Int, val netDuffs: Long?)
+
+/**
+ * One shared txid whose two engines disagree on the money. [dashjDuffs] is
+ * `tx.getValue(wallet)`; [sdkDuffs] is the SDK store's `transactions.netAmount`.
+ */
+internal data class ValueDiffTx(
+    val txidHex: String,
+    val height: Int,
+    val dashjDuffs: Long,
+    val sdkDuffs: Long
+) {
+    /** SDK minus dashj: positive means the SDK stores MORE than dashj computes. */
+    val deltaDuffs: Long get() = sdkDuffs - dashjDuffs
+}
+
+/**
  * The result of [computeParityBreakdown].
  *
  * @property dashjConsidered dashj transactions at or below [dashjLastBlockSeenHeight] plus its unconfirmed ones.
@@ -178,7 +209,20 @@ internal data class ParityBreakdown(
     val sdkOnlyAtOrBelow: Int,
     val sdkOnlyAbove: Int,
     val sdkOnlyNoHeight: Int,
-    val sdkOnlyExamples: List<SdkOnlyTx>
+    val sdkOnlyExamples: List<SdkOnlyTx>,
+    /**
+     * Shared txids whose values could actually be compared — both engines had a
+     * value, the row is confirmed, not dead, and at or below dashj's last block.
+     * Reported alongside [valueDiffers] so that a zero cannot be read as "the
+     * two engines agree" when the truth is "nothing was compared".
+     */
+    val valueCompared: Int = 0,
+    /** Of [valueCompared], how many disagree. */
+    val valueDiffers: Int = 0,
+    /** Sum over the differing rows of (SDK net - dashj net). */
+    val valueDeltaDuffs: Long = 0L,
+    /** The largest disagreements, |delta| first. */
+    val valueDiffExamples: List<ValueDiffTx> = emptyList()
 ) {
     val dashjOnly: Int get() = dashjOnlyGroups.values.sumOf { it.count }
     val dashjOnlyNetDuffs: Long get() = dashjOnlyGroups.values.sumOf { it.netDuffs }
@@ -191,15 +235,27 @@ internal data class ParityBreakdown(
  *
  * @param dashjTxs every dashj wallet transaction (any height; those above
  *   [dashjLastBlockSeenHeight] are counted and excluded).
- * @param sdkTxidHeights every SDK txid with its block height; 0 or less
- *   means no height.
+ * @param sdkTxidHeights every SDK txid with its stored height and net; a height
+ *   of 0 or less means no height, and a null net means no stored value.
+ *
+ * Shared txids are compared on VALUE, which is the whole point of a parity
+ * check and what this breakdown originally skipped: a txid present in both
+ * engines was counted and dropped, so a wallet whose two engines disagreed
+ * about the money still reported a clean sheet.
+ *
+ * Only the net is compared. DIRECTION IS DELIBERATELY NOT COMPARED: it is a
+ * derived label, and the two engines label the same money differently on a
+ * large fraction of an ordinary CoinJoin wallet (4795 rows on one measured
+ * mainnet wallet, every one of them with identical values). Comparing it would
+ * bury a real finding under thousands of non-findings.
  */
 internal fun computeParityBreakdown(
     dashjTxs: List<DashjTxFacts>,
-    sdkTxidHeights: Map<Sha256Hash, Int>,
+    sdkTxidHeights: Map<Sha256Hash, SdkTxFacts>,
     dashjLastBlockSeenHeight: Int,
     maxMoneyTxs: Int = PARITY_BREAKDOWN_MAX_MONEY_TXS,
-    maxSdkExamples: Int = PARITY_BREAKDOWN_MAX_SDK_EXAMPLES
+    maxSdkExamples: Int = PARITY_BREAKDOWN_MAX_SDK_EXAMPLES,
+    maxValueDiffs: Int = PARITY_BREAKDOWN_MAX_VALUE_DIFFS
 ): ParityBreakdown {
     // References to the facts' own hash objects — no copies.
     val dashjTxids = HashSet<Sha256Hash>(dashjTxs.size * 4 / 3 + 1)
@@ -211,6 +267,9 @@ internal fun computeParityBreakdown(
     var above = 0
     var shared = 0
     var dead = 0
+    var valueCompared = 0
+    var valueDelta = 0L
+    val valueDiffs = ArrayList<ValueDiffTx>()
     for (tx in dashjTxs) {
         dashjTxids += tx.txid
         if (tx.height != NO_BLOCK && tx.height > dashjLastBlockSeenHeight) {
@@ -219,8 +278,20 @@ internal fun computeParityBreakdown(
         }
         considered++
         if (tx.height == NO_BLOCK) unconfirmed++
-        if (tx.txid in sdkTxidHeights) {
+        val sdk = sdkTxidHeights[tx.txid]
+        if (sdk != null) {
             shared++
+            val sdkNet = sdk.netDuffs
+            // Compare only where both sides genuinely have a value AND dashj
+            // could know about the transaction at all. An unconfirmed or dead
+            // row, or one above dashj's last block, proves nothing.
+            if (tx.valueKnown && sdkNet != null && !tx.dead && tx.height != NO_BLOCK) {
+                valueCompared++
+                if (tx.netDuffs != sdkNet) {
+                    valueDelta += sdkNet - tx.netDuffs
+                    valueDiffs += ValueDiffTx(tx.txid.toString(), tx.height, tx.netDuffs, sdkNet)
+                }
+            }
             continue
         }
         val group = dashjOnlyGroupOf(tx)
@@ -234,8 +305,9 @@ internal fun computeParityBreakdown(
     var sdkAbove = 0
     var sdkNoHeight = 0
     val sdkExamples = ArrayList<SdkOnlyTx>()
-    for ((txid, height) in sdkTxidHeights) {
+    for ((txid, facts) in sdkTxidHeights) {
         if (txid in dashjTxids) continue
+        val height = facts.height
         when {
             height <= 0 -> sdkNoHeight++
             height <= dashjLastBlockSeenHeight -> {
@@ -268,7 +340,17 @@ internal fun computeParityBreakdown(
         sdkOnlyNoHeight = sdkNoHeight,
         sdkOnlyExamples = sdkExamples
             .sortedWith(compareBy<SdkOnlyTx> { it.height }.thenBy { it.txidHex })
-            .take(maxSdkExamples)
+            .take(maxSdkExamples),
+        valueCompared = valueCompared,
+        valueDiffers = valueDiffs.size,
+        valueDeltaDuffs = valueDelta,
+        valueDiffExamples = valueDiffs
+            .sortedWith(
+                compareByDescending<ValueDiffTx> { abs(it.deltaDuffs) }
+                    .thenBy { it.height }
+                    .thenBy { it.txidHex }
+            )
+            .take(maxValueDiffs)
     )
 }
 
@@ -315,6 +397,18 @@ internal fun parityBreakdownLog(
         append("\n    ").append(g.label).append('=').append(b.group(g).count)
         append(" net=").append(signed(b.group(g).netDuffs))
     }
+    append("\n  value: compared=").append(b.valueCompared)
+    append(" differs=").append(b.valueDiffers)
+    if (b.valueDiffers > 0) {
+        append(" delta=").append(signed(b.valueDeltaDuffs))
+        append(" (sdk-dashj, largest |delta| first):")
+        for (d in b.valueDiffExamples) {
+            append("\n    ").append(d.txidHex).append(" h=").append(d.height)
+            append(" dashj=").append(signed(d.dashjDuffs))
+            append(" sdk=").append(signed(d.sdkDuffs))
+            append(" delta=").append(signed(d.deltaDuffs))
+        }
+    }
     val money = b.group(DashjOnlyGroup.MOVES_MONEY).count
     append("\n  moves-money txids (").append(b.movesMoney.size).append(" of ").append(money)
     append(", largest |net| first):")
@@ -354,10 +448,10 @@ internal fun parityBreakdownLog(
  * `SdkTxStoreWalker` uses for membership. Not the whole `transactions`
  * table: it has no walletId column, so it is not this wallet's set.
  */
-internal fun querySdkTxidHeights(db: SupportSQLiteDatabase, walletId: ByteArray): Map<Sha256Hash, Int> =
+internal fun querySdkTxidHeights(db: SupportSQLiteDatabase, walletId: ByteArray): Map<Sha256Hash, SdkTxFacts> =
     db.query(
         SimpleSQLiteQuery(
-            "SELECT u.t, tx.blockHeight FROM (" +
+            "SELECT u.t, tx.blockHeight, tx.netAmount FROM (" +
                 "SELECT txid AS t FROM txos WHERE walletId = ? AND txid IS NOT NULL " +
                 "UNION " +
                 "SELECT spendingTxid AS t FROM txos WHERE walletId = ? AND spendingTxid IS NOT NULL " +
@@ -368,12 +462,18 @@ internal fun querySdkTxidHeights(db: SupportSQLiteDatabase, walletId: ByteArray)
         )
     ).use { cursor ->
         // Read straight off the cursor into one map.
-        val out = HashMap<Sha256Hash, Int>(cursor.count * 4 / 3 + 1)
+        val out = HashMap<Sha256Hash, SdkTxFacts>(cursor.count * 4 / 3 + 1)
         while (cursor.moveToNext()) {
             val wire = cursor.getBlob(0) ?: continue
             if (wire.size != 32) continue
             // Room stores wire order; dashj's Sha256Hash is display order.
-            out[Sha256Hash.wrapReversed(wire)] = if (cursor.isNull(1)) 0 else cursor.getInt(1)
+            // A LEFT JOIN miss leaves BOTH null: no `transactions` row, so no
+            // height and — importantly — no stored net. Null net means unknown,
+            // which the comparison skips; it must not become a zero.
+            out[Sha256Hash.wrapReversed(wire)] = SdkTxFacts(
+                height = if (cursor.isNull(1)) 0 else cursor.getInt(1),
+                netDuffs = if (cursor.isNull(2)) null else cursor.getLong(2)
+            )
         }
         out
     }
@@ -406,7 +506,18 @@ internal fun collectDashjBreakdownFacts(wallet: Wallet, sdkTxids: Set<Sha256Hash
         val dead = confidenceType == ConfidenceType.DEAD
         val txid = tx.txId
         if (txid in sdkTxids) {
-            out += DashjTxFacts(txid, height, dead)
+            // Shared with the SDK. The classification fields describe dashj-ONLY
+            // rows and stay unread, but the VALUE is now needed: it is half of
+            // the parity comparison. Reading it is the cost of this check, and
+            // it is the cheap half — `getValue` walks the tx, the classifiers
+            // walk the wallet.
+            out += try {
+                DashjTxFacts(txid, height, dead, netDuffs = tx.getValue(wallet).value, valueKnown = true)
+            } catch (e: Exception) {
+                failures++
+                if (failures == 1) log.info("ParityBreakdown: could not value {}", txid, e)
+                DashjTxFacts(txid, height, dead)
+            }
             continue
         }
         out += try {
@@ -415,6 +526,7 @@ internal fun collectDashjBreakdownFacts(wallet: Wallet, sdkTxids: Set<Sha256Hash
                 height = height,
                 dead = dead,
                 netDuffs = tx.getValue(wallet).value,
+                valueKnown = true,
                 timeMs = tx.updateTime?.time ?: 0L,
                 coinJoinType = CoinJoinTransactionType.fromTx(tx, wallet),
                 dashPayContact = wallet.getFriendFromTransaction(tx) != null,
@@ -546,7 +658,13 @@ internal fun parityBreakdownAppliesToReport(cutoverCommitted: Boolean, dashjDiag
  * for.
  */
 internal fun sdkStillProcessingReason(sdkWalletHeight: Long, dashjLastBlockSeenHeight: Int): String? = when {
-    dashjLastBlockSeenHeight <= 0 -> null
+    // dashj has seen NO blocks. Previously this returned null ("nothing is
+    // wrong, go ahead"), and the breakdown duly reported dashj-only=0,
+    // sdk-only=0 against an empty dashj wallet — which reads as perfect parity
+    // and means nothing at all. A verdict computed at 0% synced is worse than
+    // no verdict, because it is indistinguishable from a good one.
+    dashjLastBlockSeenHeight <= 0 ->
+        "dashj wallet has seen no blocks (lastBlockSeenHeight=$dashjLastBlockSeenHeight)"
     sdkWalletHeight <= 0L ->
         "SDK still processing transactions (wallet height unknown, dashj $dashjLastBlockSeenHeight)"
     sdkWalletHeight < dashjLastBlockSeenHeight ->
@@ -640,3 +758,4 @@ internal const val PARITY_BREAKDOWN_REPORT_TIMEOUT_MS = 30_000L
 
 internal const val PARITY_BREAKDOWN_MAX_MONEY_TXS = 50
 internal const val PARITY_BREAKDOWN_MAX_SDK_EXAMPLES = 20
+internal const val PARITY_BREAKDOWN_MAX_VALUE_DIFFS = 20

@@ -1827,7 +1827,7 @@ interface L1ShadowSource {
      * spenders, so it can exceed [sdkTxCount] by in-flight change-less sends.
      * Null when unavailable; default null so test fakes stay source-compatible.
      */
-    suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, Int>? = null
+    suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, SdkTxFacts>? = null
 
     /**
      * The dashj side of the [ParityBreakdown] ([collectDashjBreakdownFacts]),
@@ -2006,7 +2006,7 @@ internal class DashSdkL1ShadowSource(
             )
         }
 
-    override suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, Int>? {
+    override suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, SdkTxFacts>? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
         val db = database()
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

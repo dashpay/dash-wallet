@@ -182,7 +182,7 @@ class L1ShadowSyncServiceTest {
         override suspend fun dashjUnspentUtxos(): List<L1Utxo>? = dashjUtxos
 
         // The parity breakdown's two inputs; null = unavailable (the seam default).
-        var sdkTxidHeights: Map<Sha256Hash, Int>? = null
+        var sdkTxidHeights: Map<Sha256Hash, SdkTxFacts>? = null
         var dashjFacts: DashjBreakdownFacts? = null
         @Volatile
         var breakdownDashjCalls = 0
@@ -190,7 +190,7 @@ class L1ShadowSyncServiceTest {
         /** Breakdown runs that read the SDK side; atomic for the concurrent-report test. */
         val sdkTxidCalls = java.util.concurrent.atomic.AtomicInteger()
 
-        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, Int>? {
+        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, SdkTxFacts>? {
             sdkTxidCalls.incrementAndGet()
             return sdkTxidHeights
         }
@@ -3679,7 +3679,7 @@ class L1ShadowSyncServiceTest {
     private fun breakdownSource() = FakeSource(boundWalletId = walletIdHex).apply {
         // The SDK has processed every block through dashj's last block seen.
         walletSyncedHeight = 1_000
-        sdkTxidHeights = mapOf(sharedTxid to 900)
+        sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, null))
         dashjFacts = DashjBreakdownFacts(
             lastBlockSeenHeight = 1_000,
             txs = listOf(DashjTxFacts(sharedTxid, 900), DashjTxFacts(dashjOnlyTxid, 950, netDuffs = -5))
