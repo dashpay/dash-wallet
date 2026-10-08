@@ -53,7 +53,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         setMode(true)
         binding.mixButton.setOnClickListener {
             CheckPinDialog.show(requireActivity()) { pin ->
-                if (pin != null && protocolVersionRefreshed && spendableBalance >= selectedFee) {
+                if (pin != null && canContinue()) {
                     findNavController().navigate(
                         InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
                     )
@@ -101,6 +101,9 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     }
 
     private fun updateContinueButton() {
-        binding.mixButton.isEnabled = protocolVersionRefreshed && spendableBalance >= selectedFee
+        binding.mixButton.isEnabled = canContinue()
     }
+
+    private fun canContinue(): Boolean =
+        (!binding.contestedName.isSelected || protocolVersionRefreshed) && spendableBalance >= selectedFee
 }
