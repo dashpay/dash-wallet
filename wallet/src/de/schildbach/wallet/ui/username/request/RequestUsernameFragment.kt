@@ -220,7 +220,8 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                     val requiredFee = if (it.usernameContestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
                     binding.balanceRequirement.text = getString(
                         R.string.request_username_balance_requirement,
-                        requiredFee.toPlainString()
+                        java.text.NumberFormat.getNumberInstance(resources.configuration.locales[0])
+                            .format(requiredFee.toPlainString().toBigDecimal())
                     )
 
                     if (it.usernameContestable || it.usernameContested) {

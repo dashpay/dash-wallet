@@ -33,6 +33,9 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
         requestUserNameViewModel.identityBalance.observe(viewLifecycleOwner) {
             updateView()
         }
+        ContestedUsernameFees.protocolVersions.observe(viewLifecycleOwner) {
+            updateView()
+        }
     }
 
     fun updateView() {

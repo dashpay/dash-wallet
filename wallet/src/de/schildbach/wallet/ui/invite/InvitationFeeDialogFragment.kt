@@ -41,6 +41,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
     private var selectedFee = ContestedUsernameFees.fee
     private var spendableBalance = Coin.ZERO
+    private var protocolVersionRefreshed = false
     @OptIn(ExperimentalCoroutinesApi::class)
     private val viewModel by viewModels<InvitationFragmentViewModel>()
     private val args by navArgs<InvitationFeeDialogFragmentArgs>()
@@ -48,10 +49,11 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        protocolVersionRefreshed = false
         setMode(true)
         binding.mixButton.setOnClickListener {
             CheckPinDialog.show(requireActivity()) { pin ->
-                if (pin != null) {
+                if (pin != null && protocolVersionRefreshed && spendableBalance >= selectedFee) {
                     findNavController().navigate(
                         InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
                     )
@@ -72,9 +74,14 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         binding.nonContestedName.setOnClickListener {
             setMode(false)
         }
+        ContestedUsernameFees.protocolVersions.observe(viewLifecycleOwner) {
+            binding.contestedName.isEnabled = spendableBalance >= ContestedUsernameFees.fee
+            setMode(binding.contestedName.isSelected)
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             // the contested fee depends on the platform protocol version
             viewModel.refreshProtocolVersion()
+            protocolVersionRefreshed = true
             binding.contestedName.isEnabled = spendableBalance >= ContestedUsernameFees.fee
             setMode(binding.contestedName.isSelected)
         }
@@ -94,6 +101,6 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     }
 
     private fun updateContinueButton() {
-        binding.mixButton.isEnabled = spendableBalance >= selectedFee
+        binding.mixButton.isEnabled = protocolVersionRefreshed && spendableBalance >= selectedFee
     }
 }

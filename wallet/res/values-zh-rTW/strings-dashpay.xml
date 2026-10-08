@@ -448,7 +448,7 @@
     <string name="request_username_username_voting_message">+ 什麼是用戶名投票\?</string>
     <string name="request_username_character_requirement">僅限字母、數字和連字符</string>
     <string name="request_username_character_requirement_invite_noncontested">數字 2-9</string>
-    <string name="request_username_balance_requirement">您需要 %s DASH 才能建立此使用這個用戶名</string>
+    <string name="request_username_balance_requirement">您需要 %s DASH 才能建立此用戶名</string>
     <string name="request_username_requirements_message_invite_noncontested">用戶名必須符合以下標準之一</string>
     <string name="request_username_requirements_message">用戶名必須符合這些標準</string>
     <string name="request_username_length_requirement">名稱介乎3 到 23 個字元之間</string>
