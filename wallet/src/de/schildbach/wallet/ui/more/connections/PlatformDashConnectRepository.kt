@@ -126,10 +126,12 @@ class PlatformDashConnectRepository @Inject constructor(
         val identityIdBytes = blockchainIdentity.uniqueIdData
         val keyParameter = platformRepo.getWalletEncryptionKey()
 
-        // 1. deterministic login key from the BLOCKCHAIN_IDENTITY auth chain
-        val chainKey = platformRepo.getBlockchainIdentityKey(LoginKeyDerivation.DEFAULT_KEY_INDEX, keyParameter)
-            ?: throw IllegalStateException("could not derive authentication chain key")
-        val chainKeyPrivateBytes = chainKey.privKeyBytes
+        // 1. deterministic DIP-13 session key from the wallet seed. The on-chain lookup uses
+        // hash160(appEphPub); the derivation leaf is hash256(appEphPub). Keep them separate.
+        val seedBytes = platformRepo.getWalletSeed()?.seedBytes
+            ?: throw IllegalStateException("could not obtain wallet seed")
+        val appEphemeralPubKeyHash = KeyExchangeCrypto.hash160(request.appEphemeralPubKey)
+        val appEphemeralPubKeyRequestId = KeyExchangeCrypto.hash256(request.appEphemeralPubKey)
 
         var loginKey: ByteArray? = null
         var walletEphemeralPriv: ByteArray? = null
@@ -137,11 +139,21 @@ class PlatformDashConnectRepository @Inject constructor(
         var encPriv: ByteArray? = null
         var keysAlreadyRegistered = false
         try {
-            loginKey = LoginKeyDerivation.deriveLoginKey(
-                chainKeyPrivateBytes = chainKeyPrivateBytes,
-                identityIdBytes = identityIdBytes,
-                appContractIdBytes = request.contractId
+            val loginKeyResult = dashsdk.applicationSessionAuthenticationPrivateKeyFromSeed(
+                Constants.IS_TESTNET_BUILD,
+                seedBytes,
+                identityIdBytes,
+                appEphemeralPubKeyRequestId
             )
+            val loginKeyError = loginKeyResult.error
+            if (loginKeyError != null) {
+                throw IllegalStateException("could not derive DashConnect session key: $loginKeyError")
+            }
+            loginKey = loginKeyResult.ok
+                ?: throw IllegalStateException("could not derive DashConnect session key")
+            require(loginKey.size == KeyExchangeCrypto.LOGIN_KEY_LENGTH) {
+                "DashConnect session key must be ${KeyExchangeCrypto.LOGIN_KEY_LENGTH} bytes"
+            }
 
             // 2. fresh ephemeral keypair
             val walletEphemeral = ECKey()
@@ -154,8 +166,6 @@ class PlatformDashConnectRepository @Inject constructor(
                 walletEphemeralPriv = walletEphemeralPriv,
                 appEphemeralPub = request.appEphemeralPubKey
             )
-            val appEphemeralPubKeyHash = KeyExchangeCrypto.hash160(request.appEphemeralPubKey)
-
             // 6. publish (or replace) the loginKeyResponse document
             publishLoginKeyResponse(
                 identity = identity,
@@ -184,7 +194,8 @@ class PlatformDashConnectRepository @Inject constructor(
             KeyExchangeCrypto.wipe(walletEphemeralPriv)
             KeyExchangeCrypto.wipe(authPriv)
             KeyExchangeCrypto.wipe(encPriv)
-            KeyExchangeCrypto.wipe(chainKeyPrivateBytes)
+            KeyExchangeCrypto.wipe(seedBytes)
+            KeyExchangeCrypto.wipe(appEphemeralPubKeyRequestId)
         }
 
         // Resolve a friendly name/handle for the app from Platform (its contract owner's DashPay
