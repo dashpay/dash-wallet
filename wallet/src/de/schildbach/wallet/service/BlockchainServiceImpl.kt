@@ -3748,11 +3748,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // Fresh = captured at/after the catch-up moment (same wall clock).
         val caughtUpAtMs = dashjCaughtUpAtMs
         val freshReport = report?.takeIf { caughtUpAtMs != null && it.timestampMs >= caughtUpAtMs }
+        // The balance-and-count report is NOT a parity check on its own: two
+        // engines can hold the same number of transactions, totalling the same
+        // balance, and still disagree about WHICH transactions those are, or
+        // about what an individual transaction was worth. Both cases have been
+        // seen on real wallets. So MATCH additionally requires a fresh
+        // transaction-level breakdown that found nothing — and a breakdown that
+        // compared no values does not count as having found nothing.
+        val freshFindings = l1ShadowSyncService.latestBreakdownFindings.value
+            ?.takeIf { caughtUpAtMs != null && it.computedAtMs >= caughtUpAtMs }
+            ?.findings
         val parity = if (percent >= 100 && freshReport != null) {
             when {
-                freshReport.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
-                // Both balance comparisons agree exactly, only the tx counts
-                // differ — the funds are all accounted for on both sides.
+                freshReport.fullMatch && freshFindings?.clean == true ->
+                    DashjDiagnosticSyncState.Parity.MATCH
+                // Something the breakdown found, or it has not run since dashj
+                // caught up. The balances still agree, so say exactly that and
+                // no more.
                 freshReport.balancesMatch && freshReport.confirmedBalancesMatch ->
                     DashjDiagnosticSyncState.Parity.BALANCE_MATCH
                 else -> DashjDiagnosticSyncState.Parity.MISMATCH
@@ -3760,10 +3772,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (verdict != lastDiagnosticParity) {
                     log.info(
                         "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
-                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
+                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={} " +
+                            "breakdown={}",
                         verdict, freshReport.sdkDuffs, freshReport.dashjDuffs,
                         freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
-                        freshReport.sdkTxCount, freshReport.dashjTxCount
+                        freshReport.sdkTxCount, freshReport.dashjTxCount,
+                        freshFindings?.let { it.reason ?: "clean (${it.valueCompared} values compared)" }
+                            ?: "not run since dashj caught up"
                     )
                 }
             }

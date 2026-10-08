@@ -2583,6 +2583,16 @@ class L1ShadowSyncService internal constructor(
     /** Live shadow SPV progress ([ShadowSyncProgress.IDLE] while stopped). */
     val progress: StateFlow<ShadowSyncProgress> = _progress.asStateFlow()
 
+    /**
+     * The newest breakdown's findings, in memory only, for the dashj diagnostic
+     * verdict. A StateFlow rather than [latestParityBreakdown] because that one
+     * reads a file on first call and the verdict runs on a progress callback.
+     * Null means "no breakdown has run in this process", which must never be
+     * read as parity.
+     */
+    private val _latestBreakdownFindings = MutableStateFlow<TimedBreakdownFindings?>(null)
+    val latestBreakdownFindings: StateFlow<TimedBreakdownFindings?> = _latestBreakdownFindings.asStateFlow()
+
     private val _latestParity = MutableStateFlow<ParityReport?>(null)
 
     /** The most recent parity measurement, for a future debug UI. */
@@ -4090,6 +4100,10 @@ class L1ShadowSyncService internal constructor(
             synchronized(breakdownLock) {
                 breakdownEpoch++
                 latestBreakdown = null
+                // The findings described the wiped wallet. Clearing them means
+                // the verdict falls back to "not established" rather than
+                // carrying a stale clean sheet across a wipe.
+                _latestBreakdownFindings.value = null
                 breakdownStoreLoaded = true // the file is gone; nothing to load
                 lastBreakdownRunMs = null
                 breakdownRetryNotBeforeMs = 0L
@@ -4251,9 +4265,11 @@ class L1ShadowSyncService internal constructor(
                         val breakdown = computeParityBreakdown(dashj.txs, sdkTxids, dashj.lastBlockSeenHeight)
                         val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
                         val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
-                        val stored = StoredParityBreakdown(walletIdHex, startedMs, text)
+                        val stored = StoredParityBreakdown(walletIdHex, startedMs, text, findingsOf(breakdown))
                         if (keepParityBreakdown(stored, epoch)) {
                             log.info(text)
+                            _latestBreakdownFindings.value =
+                                TimedBreakdownFindings(startedMs, findingsOf(breakdown))
                             ParityBreakdownRunResult.Done(stored)
                         } else {
                             log.info("ParityBreakdown discarded: the wallet was wiped while it ran")

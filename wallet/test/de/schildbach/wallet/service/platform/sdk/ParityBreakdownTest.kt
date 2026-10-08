@@ -643,4 +643,46 @@ class ParityBreakdownTest {
         assertNotNull(sdkStillProcessingReason(1_000L, -1))
         assertNull(sdkStillProcessingReason(1_000L, 900))
     }
+
+    // ── findings: what the diagnostic verdict is allowed to call parity ───
+
+    @Test
+    fun findings_areCleanOnlyWhenValuesWereActuallyCompared() {
+        // The distinction the whole change rests on: "found nothing" and
+        // "checked nothing" must not produce the same verdict.
+        assertTrue(ParityBreakdownFindings(0, 0, valueCompared = 6795, valueDiffers = 0).clean)
+        assertFalse(ParityBreakdownFindings(0, 0, valueCompared = 0, valueDiffers = 0).clean)
+        assertEquals(
+            "no values could be compared",
+            ParityBreakdownFindings(0, 0, valueCompared = 0, valueDiffers = 0).reason
+        )
+        assertNull(ParityBreakdownFindings(0, 0, valueCompared = 1, valueDiffers = 0).reason)
+    }
+
+    @Test
+    fun findings_areNotCleanWhenTheSetsOrTheValuesDiffer() {
+        // Equal counts, different hashes: the balance-and-count report calls
+        // this a match, and it is not one.
+        val setsDiffer = ParityBreakdownFindings(dashjOnly = 1, sdkOnly = 1, valueCompared = 10, valueDiffers = 0)
+        assertFalse(setsDiffer.clean)
+        assertEquals("sets differ (dashj-only=1 sdk-only=1)", setsDiffer.reason)
+
+        val valuesDiffer = ParityBreakdownFindings(0, 0, valueCompared = 6795, valueDiffers = 1)
+        assertFalse(valuesDiffer.clean)
+        assertEquals("1 transaction value(s) differ", valuesDiffer.reason)
+    }
+
+    @Test
+    fun findingsOf_carriesTheBreakdownsOwnNumbers() {
+        val b = computeParityBreakdown(
+            listOf(DashjTxFacts(h(1), 900, netDuffs = -18_669L, valueKnown = true)),
+            mapOf(h(1) to sdkAt(900, 7_781_409L)), last
+        )
+        val f = findingsOf(b)
+        assertEquals(0, f.dashjOnly)
+        assertEquals(0, f.sdkOnly)
+        assertEquals(1, f.valueCompared)
+        assertEquals(1, f.valueDiffers)
+        assertFalse("a value disagreement is not parity", f.clean)
+    }
 }

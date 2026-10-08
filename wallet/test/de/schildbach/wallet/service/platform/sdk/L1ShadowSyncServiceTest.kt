@@ -3708,6 +3708,22 @@ class L1ShadowSyncServiceTest {
 
     private val previouslyStored = StoredParityBreakdown(walletIdHex, 500L, "ParityBreakdown from an earlier run")
 
+    /**
+     * Equality on what the breakdown FILE can carry. `findings` is in-memory
+     * only — a breakdown restored after a restart has none — so comparing a
+     * freshly computed result against a round-tripped one must ignore it.
+     * These assertions are about WHICH breakdown is kept, not about findings.
+     */
+    private fun assertSameStored(
+        message: String? = null,
+        expected: StoredParityBreakdown?,
+        actual: StoredParityBreakdown?
+    ) {
+        val e = expected?.copy(findings = null)
+        val a = actual?.copy(findings = null)
+        if (message != null) assertEquals(message, e, a) else assertEquals(e, a)
+    }
+
     private fun storeWithPreviousResult() =
         ParityBreakdownStore(dataDir.resolve("breakdown.txt")).also { it.save(previouslyStored) }
 
@@ -3739,8 +3755,8 @@ class L1ShadowSyncServiceTest {
         assertTrue(fresh.text, fresh.text.contains("moves-money=1 net=-5"))
         assertEquals(1, source.breakdownDashjCalls)
         // Kept for a later report to fall back on.
-        assertEquals(fresh, ParityBreakdownStore(file).load())
-        assertEquals(fresh, service.latestParityBreakdown(walletIdHex))
+        assertSameStored(expected = fresh, actual = ParityBreakdownStore(file).load())
+        assertSameStored(expected = fresh, actual = service.latestParityBreakdown(walletIdHex))
         service.stop()
     }
 
@@ -3787,7 +3803,7 @@ class L1ShadowSyncServiceTest {
         }
         val finished = checkNotNull(store.load())
         assertTrue(finished.text, finished.text.contains("trigger=report"))
-        assertEquals(finished, service.latestParityBreakdown(walletIdHex))
+        assertSameStored(expected = finished, actual = service.latestParityBreakdown(walletIdHex))
         service.stop()
     }
 
@@ -3877,8 +3893,8 @@ class L1ShadowSyncServiceTest {
 
         val reason = "SDK still processing transactions (wallet height 990 < dashj 1000)"
         assertEquals(ReportParityBreakdown(previouslyStored, reason), service.parityBreakdownForReport())
-        assertEquals("the incomplete comparison must not replace the stored result", previouslyStored, store.load())
-        assertEquals(previouslyStored, service.latestParityBreakdown(walletIdHex))
+        assertSameStored("the incomplete comparison must not replace the stored result", previouslyStored, store.load())
+        assertSameStored(expected = previouslyStored, actual = service.latestParityBreakdown(walletIdHex))
 
         // With dashj's height known up front, neither side is even read.
         source.dashjChainHead = 1_000
@@ -3890,7 +3906,7 @@ class L1ShadowSyncServiceTest {
         source.eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 1000 }")
         val report = service.parityBreakdownForReport()
         assertNull(report.notRefreshedReason)
-        assertEquals(checkNotNull(report.stored), store.load())
+        assertSameStored(expected = checkNotNull(report.stored), actual = store.load())
         service.stop()
     }
 
@@ -3938,7 +3954,7 @@ class L1ShadowSyncServiceTest {
         }
         val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
         service.startSynced(source)
-        assertEquals(previouslyStored, service.latestParityBreakdown(walletIdHex))
+        assertSameStored(expected = previouslyStored, actual = service.latestParityBreakdown(walletIdHex))
 
         val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
         withTimeout(5_000) { inside.await() }

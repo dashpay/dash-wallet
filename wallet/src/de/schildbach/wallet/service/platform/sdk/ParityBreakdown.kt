@@ -554,7 +554,57 @@ private fun specialTag(tx: Transaction): String? = when {
  * was computed for, when, and the [parityBreakdownLog] text (txids and
  * amounts). A result is only ever shown for the wallet it came from.
  */
-internal data class StoredParityBreakdown(val walletIdHex: String, val computedAtMs: Long, val text: String)
+/**
+ * The structured verdict of one breakdown, so a caller can ask "did this find
+ * anything?" without parsing the log text.
+ *
+ * [clean] deliberately requires that the value half ACTUALLY RAN: a breakdown
+ * that compared no values has not established parity, it has only failed to
+ * disprove it. Treating those as equivalent is how a check comes to mean
+ * nothing.
+ */
+data class ParityBreakdownFindings(
+    val dashjOnly: Int,
+    val sdkOnly: Int,
+    val valueCompared: Int,
+    val valueDiffers: Int
+) {
+    /** The sets agree AND the values agree AND the values were genuinely compared. */
+    val clean: Boolean
+        get() = dashjOnly == 0 && sdkOnly == 0 && valueDiffers == 0 && valueCompared > 0
+
+    /** Why this is not clean, for the log. Null when it is. */
+    val reason: String?
+        get() = when {
+            dashjOnly > 0 || sdkOnly > 0 -> "sets differ (dashj-only=$dashjOnly sdk-only=$sdkOnly)"
+            valueDiffers > 0 -> "$valueDiffers transaction value(s) differ"
+            valueCompared == 0 -> "no values could be compared"
+            else -> null
+        }
+}
+
+/** [ParityBreakdownFindings] with the moment it was computed, for freshness checks. */
+data class TimedBreakdownFindings(val computedAtMs: Long, val findings: ParityBreakdownFindings)
+
+/** The findings of [b], for a caller that needs the verdict rather than the text. */
+internal fun findingsOf(b: ParityBreakdown): ParityBreakdownFindings = ParityBreakdownFindings(
+    dashjOnly = b.dashjOnly,
+    sdkOnly = b.sdkOnly,
+    valueCompared = b.valueCompared,
+    valueDiffers = b.valueDiffers
+)
+
+/**
+ * @property findings null for a breakdown restored from [breakdownStore] after a
+ *   restart, which carries only its text. A null findings set can never support
+ *   a MATCH verdict — the conservative reading, on purpose.
+ */
+internal data class StoredParityBreakdown(
+    val walletIdHex: String,
+    val computedAtMs: Long,
+    val text: String,
+    val findings: ParityBreakdownFindings? = null
+)
 
 /**
  * The latest [StoredParityBreakdown] in one small file (a few KB), so a

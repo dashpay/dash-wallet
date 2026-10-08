@@ -399,7 +399,7 @@ private fun dashjDiagnosticReadout(state: DashjDiagnosticUIState): Pair<String, 
     state.parity == DashjDiagnosticSyncState.Parity.MATCH ->
         "dashj 100% — matches SDK" to MyTheme.Colors.green
     state.parity == DashjDiagnosticSyncState.Parity.BALANCE_MATCH ->
-        "dashj 100% — balances match SDK, tx counts differ" to DiagnosticPurple
+        "dashj 100% — balances match SDK, full parity not established" to DiagnosticPurple
     state.parity == DashjDiagnosticSyncState.Parity.MISMATCH ->
         "dashj 100% — MISMATCH vs SDK" to MyTheme.Colors.red
     else ->
