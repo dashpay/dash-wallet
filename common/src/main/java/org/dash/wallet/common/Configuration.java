@@ -115,6 +115,24 @@ public class Configuration {
         }
     }
 
+    /**
+     * Like {@link #clear()}, but keeps the analytics opt-out (MO-1065): it is the user's
+     * privacy choice, not wallet state. The wipe and the re-write go in one synchronous
+     * commit, so a process death mid-reset can never leave the key missing (which would
+     * read back as the "on" default).
+     */
+    @SuppressLint("ApplySharedPref")
+    public void clearPreservingAnalytics() {
+        final boolean analyticsEnabled = getAnalyticsEnabled();
+        Editor edit = prefs.edit();
+        try {
+            edit.clear();
+            edit.putBoolean(PREFS_KEY_ANALYTICS_ENABLED, analyticsEnabled);
+        } finally {
+            edit.commit();
+        }
+    }
+
     public int getBtcShift() {
         return PREFS_DEFAULT_BTC_SHIFT;
     }

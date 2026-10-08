@@ -19,6 +19,7 @@ package org.dash.wallet.common.services.analytics
 
 import android.content.SharedPreferences
 import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.analytics.FirebaseAnalytics
 import io.mockk.clearMocks
 import io.mockk.every
@@ -26,6 +27,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import io.mockk.verifySequence
 import org.dash.wallet.common.Configuration
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
@@ -42,12 +44,16 @@ class FirebaseAnalyticsServiceImplTest {
         // process-wide field (it is FirebaseAnalytics.getInstance(FirebaseApp
         // .getInstance()...) on first use), so every test shares one mock.
         private val firebaseAnalytics = mockk<FirebaseAnalytics>(relaxed = true)
+        private val firebaseOptions = mockk<FirebaseOptions>(relaxed = true)
+        private val firebaseApp = mockk<FirebaseApp>(relaxed = true) {
+            every { options } returns firebaseOptions
+        }
 
         @JvmStatic
         @BeforeClass
         fun mockFirebase() {
             mockkStatic(FirebaseApp::class, FirebaseAnalytics::class)
-            every { FirebaseApp.getInstance() } returns mockk(relaxed = true)
+            every { FirebaseApp.getInstance() } returns firebaseApp
             every { FirebaseAnalytics.getInstance(any()) } returns firebaseAnalytics
         }
 
@@ -60,12 +66,17 @@ class FirebaseAnalyticsServiceImplTest {
 
     private val store = mutableMapOf<String, Any?>()
     private lateinit var configuration: Configuration
+    private lateinit var editor: SharedPreferences.Editor
 
     @Before
     fun setUp() {
-        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        editor = mockk(relaxed = true)
         every { editor.putBoolean(any(), any()) } answers {
             store[firstArg()] = secondArg<Boolean>()
+            editor
+        }
+        every { editor.clear() } answers {
+            store.clear()
             editor
         }
         val prefs = mockk<SharedPreferences>(relaxed = true)
@@ -75,6 +86,7 @@ class FirebaseAnalyticsServiceImplTest {
         every { prefs.edit() } returns editor
         configuration = Configuration(prefs)
         clearMocks(firebaseAnalytics, answers = false)
+        every { firebaseOptions.projectId } returns "dash-wallet-real-project"
     }
 
     @Test
@@ -119,5 +131,78 @@ class FirebaseAnalyticsServiceImplTest {
         )
 
         verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
+    }
+
+    @Test
+    fun releaseBuild_whenOn_logEventReachesFirebase() {
+        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+
+        service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+
+        verify(exactly = 1) { firebaseAnalytics.logEvent(AnalyticsConstants.Home.NAV_HOME, any()) }
+    }
+
+    @Test
+    fun releaseBuild_whenOff_logEventNeverReachesFirebase() {
+        configuration.analyticsEnabled = false
+        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+
+        service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+
+        verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
+    }
+
+    @Test
+    fun releaseBuild_turningOffAfterLogging_stopsForwarding() {
+        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+        service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+
+        service.isEnabled = false
+        service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+
+        verify(exactly = 1) { firebaseAnalytics.logEvent(any(), any()) }
+    }
+
+    @Test
+    fun configuredFirebaseApp_isAvailable() {
+        assertTrue(FirebaseAnalyticsServiceImpl(configuration).isAvailable)
+    }
+
+    @Test
+    fun placeholderFirebaseApp_isNotAvailable_andNeverReachesFirebase() {
+        every { firebaseOptions.projectId } returns AnalyticsService.PLACEHOLDER_FIREBASE_PROJECT_ID
+        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+
+        assertFalse(service.isAvailable)
+        service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+        verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
+    }
+
+    @Test
+    fun uninitializedFirebaseApp_isNotAvailable() {
+        every { FirebaseApp.getInstance() } throws IllegalStateException("Default FirebaseApp is not initialized")
+        try {
+            assertFalse(FirebaseAnalyticsServiceImpl(configuration).isAvailable)
+        } finally {
+            every { FirebaseApp.getInstance() } returns firebaseApp
+        }
+    }
+
+    @Test
+    fun walletReset_keepsTheOptOut_inASingleCommit() {
+        configuration.analyticsEnabled = false
+        store["some_wallet_pref"] = true
+        clearMocks(editor, answers = false)
+
+        configuration.clearPreservingAnalytics()
+
+        assertEquals(mapOf(Configuration.PREFS_KEY_ANALYTICS_ENABLED to false), store)
+        // one editor, one synchronous commit: a process death cannot land between
+        // the wipe and the re-write of the opt-out
+        verifySequence {
+            editor.clear()
+            editor.putBoolean(Configuration.PREFS_KEY_ANALYTICS_ENABLED, false)
+            editor.commit()
+        }
     }
 }

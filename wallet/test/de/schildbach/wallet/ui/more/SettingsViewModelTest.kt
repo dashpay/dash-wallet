@@ -24,6 +24,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
@@ -39,6 +40,7 @@ import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -82,11 +84,13 @@ class SettingsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = SettingsViewModel(
+    private fun viewModel(
+        analytics: AnalyticsService = mockk<AnalyticsService>(relaxed = true)
+    ) = SettingsViewModel(
         walletApplication = walletApplication,
         walletUIConfig = walletUIConfig,
         walletDataProvider = walletDataProvider,
-        analytics = mockk<AnalyticsService>(relaxed = true),
+        analytics = analytics,
         configuration = mockk<Configuration>(),
         dashPayConfig = dashPayConfig,
         blockchainIdentityConfig = blockchainIdentityConfig,
@@ -115,5 +119,55 @@ class SettingsViewModelTest {
         viewModel.updateTransactionMetadataSubtitle("Last saved: Jan 15, 2024")
 
         assertEquals("Last saved: Jan 15, 2024", viewModel.uiState.value.transactionMetadataSubtitle)
+    }
+
+    private fun analyticsService(enabled: Boolean, available: Boolean) = mockk<AnalyticsService>(relaxed = true) {
+        every { isEnabled } returns enabled
+        every { isAvailable } returns available
+    }
+
+    @Test
+    fun analyticsState_enabled_isInitializedFromService() = runTest(dispatcher) {
+        val state = viewModel(analyticsService(enabled = true, available = true)).uiState.value
+
+        assertTrue(state.analyticsEnabled)
+        assertTrue(state.analyticsAvailable)
+    }
+
+    @Test
+    fun analyticsState_disabled_isInitializedFromService() = runTest(dispatcher) {
+        val state = viewModel(analyticsService(enabled = false, available = true)).uiState.value
+
+        assertFalse(state.analyticsEnabled)
+        assertTrue(state.analyticsAvailable)
+    }
+
+    @Test
+    fun analyticsState_unavailable_isInitializedFromService() = runTest(dispatcher) {
+        val state = viewModel(analyticsService(enabled = true, available = false)).uiState.value
+
+        assertFalse(state.analyticsAvailable)
+    }
+
+    @Test
+    fun setAnalyticsEnabled_false_updatesServiceAndState() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = true, available = true)
+        val viewModel = viewModel(analytics)
+
+        viewModel.setAnalyticsEnabled(false)
+
+        verify { analytics.isEnabled = false }
+        assertFalse(viewModel.uiState.value.analyticsEnabled)
+    }
+
+    @Test
+    fun setAnalyticsEnabled_true_updatesServiceAndState() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = false, available = true)
+        val viewModel = viewModel(analytics)
+
+        viewModel.setAnalyticsEnabled(true)
+
+        verify { analytics.isEnabled = true }
+        assertTrue(viewModel.uiState.value.analyticsEnabled)
     }
 }

@@ -499,7 +499,7 @@ public class WalletApplication extends MultiDexApplication
                 log.warn("no Firebase config in this build; initializing placeholder FirebaseApp");
                 FirebaseApp.initializeApp(this, new com.google.firebase.FirebaseOptions.Builder()
                         .setApplicationId("1:000000000000:android:0000000000000000000000")
-                        .setProjectId("dash-wallet-local-build")
+                        .setProjectId(AnalyticsService.PLACEHOLDER_FIREBASE_PROJECT_ID)
                         // must match Firebase's AIza[0-9A-Za-z\-_]{35} API-key format check
                         .setApiKey("AIzaSyPlaceholderLocalBuild000000000000")
                         .build());
@@ -2797,10 +2797,9 @@ public class WalletApplication extends MultiDexApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         // The analytics opt-out is the user's privacy choice, not wallet state:
-        // a reset must not silently turn collection back on (MO-1065).
-        final boolean analyticsEnabled = config.getAnalyticsEnabled();
-        config.clear();
-        config.setAnalyticsEnabled(analyticsEnabled);
+        // a reset must not silently turn collection back on (MO-1065). One commit,
+        // so it survives a process death mid-reset.
+        config.clearPreservingAnalytics();
     }
 
     /** Wipe phase 4c: the secrets and the last of the per-wallet preferences. */
