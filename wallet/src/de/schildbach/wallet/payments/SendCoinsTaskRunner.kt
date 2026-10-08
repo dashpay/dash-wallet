@@ -1332,8 +1332,8 @@ class SendCoinsTaskRunner @Inject constructor(
 }
 
 /**
- * The dashj send tail's analytics (SEND_TX / SEND_TX_CONTACT with the value
- * sent, identity users only) — extracted from [SendCoinsTaskRunner] so the
+ * The dashj send tail's analytics (SEND_TX / SEND_TX_CONTACT, identity users
+ * only; no amount is logged) — extracted from [SendCoinsTaskRunner] so the
  * Phase 5c.2 bridged-commit tail
  * ([de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory])
  * runs the exact same hook as the dashj path.
@@ -1346,29 +1346,14 @@ suspend fun logSendTxEvent(
     analyticsService: AnalyticsService
 ) {
     identityConfig.get(IDENTITY_ID)?.let {
-        val valueSent: Long = transaction.outputs.filter {
-            !it.isMine(wallet)
-        }.sumOf {
-            it.value.value
-        }
         val isSentToContact = try {
             identityRepository.blockchainIdentity?.getContactForTransaction(transaction) != null
         } catch (e: Exception) {
             false
         }
-        analyticsService.logEvent(
-            AnalyticsConstants.SendReceive.SEND_TX,
-            mapOf(
-                AnalyticsConstants.Parameter.VALUE to valueSent
-            )
-        )
+        analyticsService.logEvent(AnalyticsConstants.SendReceive.SEND_TX, mapOf())
         if (isSentToContact) {
-            analyticsService.logEvent(
-                AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
-                mapOf(
-                    AnalyticsConstants.Parameter.VALUE to valueSent
-                )
-            )
+            analyticsService.logEvent(AnalyticsConstants.SendReceive.SEND_TX_CONTACT, mapOf())
         }
     }
 }

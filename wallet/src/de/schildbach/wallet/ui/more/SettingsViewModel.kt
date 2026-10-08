@@ -46,7 +46,9 @@ data class SettingsUIState(
     val ignoringBatteryOptimizations: Boolean = false,
     val localCurrencySymbol: String = Constants.USD_CURRENCY,
     val transactionMetadataVisible: Boolean = false,
-    val transactionMetadataSubtitle: String? = null
+    val transactionMetadataSubtitle: String? = null,
+    val analyticsEnabled: Boolean = true,
+    val analyticsAvailable: Boolean = true
 )
 
 @HiltViewModel
@@ -70,7 +72,10 @@ class SettingsViewModel @Inject constructor(
 
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
-    private val _uiState = MutableStateFlow(SettingsUIState())
+    private val _uiState = MutableStateFlow(SettingsUIState(
+            analyticsEnabled = analytics.isEnabled,
+            analyticsAvailable = analytics.isAvailable
+        ))
     val uiState: StateFlow<SettingsUIState> = _uiState.asStateFlow()
 
     init {
@@ -119,6 +124,11 @@ class SettingsViewModel @Inject constructor(
         } catch (e: Exception) {
             log.error("Error logging analytics event: $event", e)
         }
+    }
+
+    fun setAnalyticsEnabled(enabled: Boolean) {
+        analytics.isEnabled = enabled
+        _uiState.update { it.copy(analyticsEnabled = enabled) }
     }
 
     fun updateLastBlockchainResetTime() {

@@ -57,6 +57,7 @@ public class Configuration {
     public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
     private static final String PREFS_KEY_SPENDING_CONFIRMATION_ENABLED = "spending_confirmation_enabled";
     private static final String PREFS_KEY_BIOMETRIC_LIMIT = "biometric_limit";
+    public static final String PREFS_KEY_ANALYTICS_ENABLED = "analytics_enabled";
 
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
@@ -190,6 +191,15 @@ public class Configuration {
 
     public void setBiometricLimit(final float limit) {
         prefs.edit().putFloat(PREFS_KEY_BIOMETRIC_LIMIT, limit).apply();
+    }
+
+    /** Whether the user allows Firebase analytics event collection (MO-1065). On by default. */
+    public boolean getAnalyticsEnabled() {
+        return prefs.getBoolean(PREFS_KEY_ANALYTICS_ENABLED, true);
+    }
+
+    public void setAnalyticsEnabled(final boolean enabled) {
+        prefs.edit().putBoolean(PREFS_KEY_ANALYTICS_ENABLED, enabled).apply();
     }
 
     public long getLastBackupTime() {

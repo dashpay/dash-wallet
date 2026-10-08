@@ -23,20 +23,50 @@ import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
 import org.dash.wallet.common.BuildConfig
+import org.dash.wallet.common.Configuration
 import javax.inject.Inject
 
 interface AnalyticsService {
+    /**
+     * Whether the user allows analytics event collection (Settings, MO-1065;
+     * on by default). While false, [logEvent] drops every event and the
+     * analytics SDK's own automatic events are switched off too.
+     * [logError] (crash reporting) is not affected.
+     *
+     * Setting it persists the choice and applies it to the analytics SDK.
+     */
+    var isEnabled: Boolean
+
+    /**
+     * Whether analytics can run at all in this build. False when Firebase was
+     * never configured (built without google-services.json): every call is a
+     * no-op then, so there is nothing for the user to opt out of. Devices
+     * without Google Play services are still available — Firebase Analytics
+     * uploads events without it.
+     */
+    val isAvailable: Boolean
+
     fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>)
     fun logError(error: Throwable, details: String? = null)
 }
 
-class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
+class FirebaseAnalyticsServiceImpl @Inject constructor(
+    private val configuration: Configuration
+) : AnalyticsService {
     // Firebase is only configured when the build included google-services.json
     // (see gradle/google-services.gradle). Builds without it must not crash —
     // analytics simply no-ops. Resolved lazily so construction never throws.
+    //
+    // Never resolve it before FirebaseApp.initializeApp has run (WalletApplication
+    // applies [isEnabled] right after that stage): a premature failure would be
+    // cached as null for the life of this instance.
     private val firebaseAnalytics by lazy {
         try {
-            Firebase.analytics
+            Firebase.analytics.also {
+                // Keep the SDK's automatic events (screen_view, session_start, ...)
+                // in step with the user's choice whichever call resolves it first.
+                it.setAnalyticsCollectionEnabled(configuration.analyticsEnabled)
+            }
         } catch (ex: IllegalStateException) {
             Log.w("FIREBASE", "FirebaseApp not initialized (built without google-services.json); analytics disabled")
             null
@@ -50,7 +80,25 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
         }
     }
 
+    override var isEnabled: Boolean
+        get() = configuration.analyticsEnabled
+        set(enabled) {
+            configuration.analyticsEnabled = enabled
+            try {
+                firebaseAnalytics?.setAnalyticsCollectionEnabled(enabled)
+            } catch (ex: Exception) {
+                Log.w("FIREBASE", "failed to apply analytics collection setting", ex)
+            }
+        }
+
+    override val isAvailable: Boolean
+        get() = firebaseAnalytics != null
+
     override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {
+        if (!isEnabled) {
+            return
+        }
+
         if (BuildConfig.DEBUG) {
             Log.i("FIREBASE", "Skip event logging in debug mode: $event")
 

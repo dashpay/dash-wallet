@@ -126,7 +126,8 @@ class SettingsFragment : Fragment() {
                             }
                         }
                     },
-                    onBatteryOptimizationClick = { batteryOptimization() }
+                    onBatteryOptimizationClick = { batteryOptimization() },
+                    onAnalyticsInfoClick = { showAnalyticsInfo() }
                 )
                 }
             }
@@ -235,6 +236,15 @@ class SettingsFragment : Fragment() {
             val balance = walletApplication.getWalletBalance()
             WalletBalanceWidgetProvider.updateWidgets(requireContext(), balance)
         }
+    }
+
+    private fun showAnalyticsInfo() {
+        AdaptiveDialog.create(
+            R.drawable.ic_info_blue,
+            getString(R.string.settings_analytics_info_title),
+            getString(R.string.settings_analytics_info_message),
+            getString(R.string.button_okay)
+        ).show(requireActivity())
     }
 
     private fun batteryOptimization() {

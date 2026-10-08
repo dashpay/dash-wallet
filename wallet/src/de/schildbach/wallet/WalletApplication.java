@@ -505,6 +505,10 @@ public class WalletApplication extends MultiDexApplication
                         .build());
             }
         });
+        // Apply the user's analytics choice (Settings, MO-1065) to the Firebase SDK now that
+        // FirebaseApp exists, so its automatic events (session_start, screen_view, ...) follow
+        // it even on a launch that never logs an event of ours.
+        analyticsService.setEnabled(analyticsService.isEnabled());
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
@@ -2792,7 +2796,11 @@ public class WalletApplication extends MultiDexApplication
         WorkManager.getInstance(this.getApplicationContext()).cancelAllWork();
         shutdownAndDeleteWallet();
         cleanupFiles();
+        // The analytics opt-out is the user's privacy choice, not wallet state:
+        // a reset must not silently turn collection back on (MO-1065).
+        final boolean analyticsEnabled = config.getAnalyticsEnabled();
         config.clear();
+        config.setAnalyticsEnabled(analyticsEnabled);
     }
 
     /** Wipe phase 4c: the secrets and the last of the per-wallet preferences. */
