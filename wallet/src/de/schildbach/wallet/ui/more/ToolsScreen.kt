@@ -385,9 +385,12 @@ private fun ToolsScreenContent(
 /**
  * The diagnostic percentage readout + its colour: neutral while dashj is still
  * syncing, a neutral "Verifying" once dashj has caught up but the fresh parity
- * report is still being computed, then GREEN once fully matching the SDK,
- * PURPLE when the balances match exactly but the tx counts differ, RED on a
- * balance mismatch.
+ * report is still being computed, then GREEN once everything the check can
+ * compare agrees — balances, counts, the transaction sets AND every shared
+ * transaction's value. PURPLE when something short of that holds: either the
+ * sets and counts agree and only N individual values differ ("matches SDK
+ * (not N values)"), or the balances agree but full parity could not be
+ * established. RED on a balance mismatch.
  */
 @Composable
 private fun dashjDiagnosticReadout(state: DashjDiagnosticUIState): Pair<String, Color> = when {
@@ -398,6 +401,8 @@ private fun dashjDiagnosticReadout(state: DashjDiagnosticUIState): Pair<String, 
         "dashj syncing ${state.percent}%" to MyTheme.Colors.textSecondary
     state.parity == DashjDiagnosticSyncState.Parity.MATCH ->
         "dashj 100% — matches SDK" to MyTheme.Colors.green
+    state.parity == DashjDiagnosticSyncState.Parity.VALUES_DIFFER ->
+        "dashj 100% — matches SDK (not ${state.valueDiffers} values)" to DiagnosticPurple
     state.parity == DashjDiagnosticSyncState.Parity.BALANCE_MATCH ->
         "dashj 100% — balances match SDK, full parity not established" to DiagnosticPurple
     state.parity == DashjDiagnosticSyncState.Parity.MISMATCH ->

@@ -3762,6 +3762,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             when {
                 freshReport.fullMatch && freshFindings?.clean == true ->
                     DashjDiagnosticSyncState.Parity.MATCH
+                // Balances, counts AND the transaction sets all agree; only
+                // individual stored values differ. Distinguished from the
+                // catch-all below so the readout can say how many, because
+                // "everything agrees except N values" is a materially
+                // different thing to report than "counts differ".
+                freshReport.fullMatch &&
+                    freshFindings != null &&
+                    freshFindings.dashjOnly == 0 &&
+                    freshFindings.sdkOnly == 0 &&
+                    freshFindings.valueDiffers > 0 ->
+                    DashjDiagnosticSyncState.Parity.VALUES_DIFFER
                 // Something the breakdown found, or it has not run since dashj
                 // caught up. The balances still agree, so say exactly that and
                 // no more.
@@ -3792,7 +3803,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // together when the report arrives.
         val verifying = percent >= 100 && parity == DashjDiagnosticSyncState.Parity.UNKNOWN
         val displayPercent = if (verifying) 99 else percent
-        dashjDiagnosticSyncState.update(displayPercent, parity, stage?.name, verifying)
+        dashjDiagnosticSyncState.update(
+            displayPercent, parity, stage?.name, verifying,
+            valueDiffers = freshFindings?.valueDiffers ?: 0
+        )
         // Feed the support-log history buffer (deduplicated inside).
         dashjDiagnosticSyncState.recordParity(displayPercent, parity, report)
     }

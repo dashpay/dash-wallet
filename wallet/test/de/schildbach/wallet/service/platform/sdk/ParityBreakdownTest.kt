@@ -685,4 +685,45 @@ class ParityBreakdownTest {
         assertEquals(1, f.valueDiffers)
         assertFalse("a value disagreement is not parity", f.clean)
     }
+
+    @Test
+    fun valuesDifferCase_isDistinguishableFromEveryOtherNonMatch() {
+        // The readout says "matches SDK (not N values)" only for this exact
+        // shape: balances, counts AND the sets all agree, and the ONLY
+        // disagreement is individual stored values. These are the inputs the
+        // verdict keys on, so pin them.
+        val onlyValues = ParityBreakdownFindings(
+            dashjOnly = 0, sdkOnly = 0, valueCompared = 6795, valueDiffers = 1
+        )
+        assertFalse(onlyValues.clean)
+        assertEquals(0, onlyValues.dashjOnly)
+        assertEquals(0, onlyValues.sdkOnly)
+        assertEquals(1, onlyValues.valueDiffers)
+        assertEquals("1 transaction value(s) differ", onlyValues.reason)
+
+        // Sets differing must NOT take the "(not N values)" wording, even when
+        // values differ too — the set difference is the bigger fact.
+        val setsToo = ParityBreakdownFindings(
+            dashjOnly = 1, sdkOnly = 0, valueCompared = 6795, valueDiffers = 1
+        )
+        assertEquals("sets differ (dashj-only=1 sdk-only=0)", setsToo.reason)
+    }
+
+    @Test
+    fun theMainnetDefect_producesTheValuesDifferShape() {
+        // End to end on the measured mainnet numbers: the restore-arm store
+        // holds +7,781,409 where dashj computes -18,669. Sets agree, so this
+        // is the "matches SDK (not 1 values)" case and nothing else.
+        val txid = h(0x8add)
+        val b = computeParityBreakdown(
+            listOf(DashjTxFacts(txid, 2_072_687, netDuffs = -18_669L, valueKnown = true)),
+            mapOf(txid to sdkAt(2_072_687, 7_781_409L)),
+            2_551_341
+        )
+        val f = findingsOf(b)
+        assertEquals(0, f.dashjOnly)
+        assertEquals(0, f.sdkOnly)
+        assertEquals(1, f.valueDiffers)
+        assertEquals(7_800_078L, b.valueDeltaDuffs)
+    }
 }
