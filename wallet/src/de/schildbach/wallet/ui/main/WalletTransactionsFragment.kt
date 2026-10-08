@@ -466,6 +466,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             header.statusHint = when (hint) {
                 RetryStatusHint.CORE_HEIGHT_LAG -> getString(R.string.identity_processing_network_catching_up)
                 RetryStatusHint.WAITING_FOR_ISLOCK -> getString(R.string.identity_processing_waiting_confirmation)
+                RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED -> getString(R.string.identity_processing_funding_reconfirmation_required)
                 null -> null
             }
         }

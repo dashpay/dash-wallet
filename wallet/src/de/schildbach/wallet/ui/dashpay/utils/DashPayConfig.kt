@@ -146,15 +146,6 @@ open class DashPayConfig @Inject constructor(
         val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
 
         /**
-         * The duffs amount the confirm sheet showed and the user approved for
-         * the in-flight identity creation, persisted so a process-death restart
-         * (null intent to [de.schildbach.wallet.ui.dashpay.CreateIdentityService.onStartCommand])
-         * or [de.schildbach.wallet.ui.dashpay.CreateIdentityService] retry can
-         * re-apply the same cap instead of funding unbounded.
-         */
-        val APPROVED_FUNDING_AMOUNT_DUFFS = longPreferencesKey("approved_funding_amount_duffs")
-
-        /**
          * Pending invite-claim OVERAGE record (see
          * [de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp]):
          * a claimed shielded invite whose note value exceeded the clamped exit

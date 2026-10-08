@@ -131,6 +131,14 @@ class IdentityRetryStatusHintTest {
     }
 
     @Test
+    fun fundingReconfirmationRequired_mapsToReconfirmString() {
+        assertEquals(
+            R.string.identity_processing_funding_reconfirmation_required,
+            retryStatusHintTextRes(RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED)
+        )
+    }
+
+    @Test
     fun nullHint_mapsToNull() {
         // No hint → no secondary line (the dialog/tile clears it).
         assertNull(retryStatusHintTextRes(null))

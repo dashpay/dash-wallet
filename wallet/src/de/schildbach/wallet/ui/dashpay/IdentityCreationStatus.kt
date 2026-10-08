@@ -40,7 +40,16 @@ enum class RetryStatusHint {
     CORE_HEIGHT_LAG,
 
     /** No IS lock on the funding tx yet ("instantLock == null" / invalid instant lock proof). */
-    WAITING_FOR_ISLOCK
+    WAITING_FOR_ISLOCK,
+
+    /**
+     * A service retry/restart ([de.schildbach.wallet.ui.dashpay.CreateIdentityService])
+     * found no persisted [de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+     * .approvedFundingAmountDuffs] for the in-flight request — funding was refused rather
+     * than defaulting to unbounded (MO-1069 review 5447932359). The user must reopen the
+     * username/invite request to reconfirm the fee before this can proceed.
+     */
+    FUNDING_RECONFIRMATION_REQUIRED
 }
 
 /**
@@ -82,6 +91,7 @@ internal fun identityRetryStatusHint(t: Throwable): RetryStatusHint? {
 internal fun retryStatusHintTextRes(hint: RetryStatusHint?): Int? = when (hint) {
     RetryStatusHint.CORE_HEIGHT_LAG -> R.string.identity_processing_network_catching_up
     RetryStatusHint.WAITING_FOR_ISLOCK -> R.string.identity_processing_waiting_confirmation
+    RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED -> R.string.identity_processing_funding_reconfirmation_required
     null -> null
 }
 

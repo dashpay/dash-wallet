@@ -84,7 +84,8 @@ import kotlin.coroutines.resume
 import androidx.core.net.toUri
 
 /**
- * Thrown by [TopUpRepository.createAssetLockTransaction] when the live-resolved
+ * Thrown by [TopUpRepository.createAssetLockTransaction] and
+ * [TopUpRepository.createTopupTransaction] when the live-resolved
  * identity-funding fee exceeds the amount the confirm sheet showed and the
  * user authenticated against — provably pre-broadcast (nothing is built or
  * signed before this check), so [CreateIdentityService]'s generic exception
@@ -98,6 +99,20 @@ class FundingAmountExceededException(
 )
 
 /**
+ * The shared confirmed-amount funding guard (MO-1069 review 5447932359): a
+ * fresh resolution may only CONFIRM or LOWER the amount the user approved —
+ * never raise it silently. Every funding entry point
+ * ([TopUpRepositoryImpl.createAssetLockTransaction],
+ * [TopUpRepositoryImpl.createTopupTransaction]) calls this before building or
+ * signing anything.
+ */
+internal fun requireWithinApprovedAmount(resolvedAmountDuffs: Long, approvedAmountDuffs: Long) {
+    if (resolvedAmountDuffs > approvedAmountDuffs) {
+        throw FundingAmountExceededException(resolvedAmountDuffs, approvedAmountDuffs)
+    }
+}
+
+/**
  * contains topup related functions that are used by:
  * 1. [CreateIdentityService] to create an identity
  * 2. [checkTopUps] to retry/complete legacy top-ups
@@ -108,13 +123,20 @@ interface TopUpRepository {
         blockchainIdentity: BlockchainIdentity,
         username: String,
         keyParameter: KeyParameter?,
-        approvedAmountDuffs: Long = Long.MAX_VALUE
+        approvedAmountDuffs: Long
     )
 
+    /**
+     * @param approvedAmountDuffs the amount the confirm sheet showed and the
+     * user authenticated against for this identity-creation request; this
+     * resumed top-up's [topupAmount] is refused (see [FundingAmountExceededException])
+     * rather than funded if it exceeds it (MO-1069 review 5447932359).
+     */
     fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
-        keyParameter: KeyParameter?
+        keyParameter: KeyParameter?,
+        approvedAmountDuffs: Long
     ): AssetLockTransaction
 
     fun obtainAssetLockTransaction(
@@ -224,9 +246,7 @@ class TopUpRepositoryImpl @Inject constructor(
         // (nothing is signed/broadcast yet) and fund silently, mirroring
         // SdkTransparentUsernameCreation.createUsernameTransparent's identical
         // guard (MO-1069 review 5431682794).
-        if (fee.value > approvedAmountDuffs) {
-            throw FundingAmountExceededException(fee.value, approvedAmountDuffs)
-        }
+        requireWithinApprovedAmount(fee.value, approvedAmountDuffs)
         val balance = walletDataProvider.observeTotalBalance().first()
         val emptyWallet = balance == fee ||
                 (balance >= fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR)))
@@ -244,8 +264,15 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
-        keyParameter: KeyParameter?
+        keyParameter: KeyParameter?,
+        approvedAmountDuffs: Long
     ): AssetLockTransaction {
+        // This branch resumes an identity whose asset lock already exists and
+        // tops it up to the (possibly re-resolved) fee requirement — the same
+        // confirmed-amount guard as createAssetLockTransaction applies: a
+        // fresh resolution may only confirm or lower the top-up, never raise
+        // it past what the user approved (MO-1069 review 5447932359).
+        requireWithinApprovedAmount(topupAmount.value, approvedAmountDuffs)
         Context.propagate(walletDataProvider.wallet!!.context)
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
