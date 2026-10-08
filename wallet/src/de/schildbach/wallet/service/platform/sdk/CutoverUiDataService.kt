@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
@@ -115,8 +116,46 @@ data class L1TxUiRecord(
     /** Epoch-millis of first observation (or the block timestamp), 0 when unknown. */
     val timestampMs: Long,
     val status: L1TxUiStatus,
-    val direction: L1TxUiDirection
-)
+    val direction: L1TxUiDirection,
+    /**
+     * Epoch-millis of the containing block's header time, 0 while the tx is
+     * unconfirmed (or for a stub row). Kept apart from [timestampMs] so a
+     * planner can tell a block-backed time from a first-sighting time.
+     */
+    val blockTimestampMs: Long = 0L,
+    /**
+     * The SDK's `transactions.transactionTypeKind` (Rust `TransactionType`
+     * discriminant, e.g. [TX_TYPE_KIND_COINBASE]); [TX_TYPE_KIND_UNKNOWN] when
+     * not populated or not known to the producing feed.
+     */
+    val transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
+) {
+    /**
+     * The value a history row shows: a send WITHOUT its fee, as dashj's
+     * `TransactionRowView.fromTransaction` has always rendered one (its
+     * `removeFee`: `value.add(fee)` whenever the value is negative). Applies to
+     * every sent shape — Sent, Internal and the asset-lock "…Fee"/Invitation
+     * rows alike — so a wallet shows the same figure whichever engine wrote the
+     * row (D-M-01: an upgraded wallet kept dashj's fee-free −0.03 Invitation
+     * while a restore of the same phrase showed −0.03000241). [netAmountDuffs]
+     * unchanged when the fee is unknown or the value is not negative.
+     */
+    val sentValueWithoutFeeDuffs: Long
+        get() = if (netAmountDuffs < 0L && feeDuffs != null) netAmountDuffs + feeDuffs else netAmountDuffs
+
+    /** A coinbase payout: shown as "Mining Reward", as the dashj path does. */
+    val isCoinbase: Boolean get() = transactionTypeKind == TX_TYPE_KIND_COINBASE
+
+    /**
+     * The SDK's TXO-parent STUB, not a transaction yet. When an output lands
+     * before its transaction, the SDK writes `TransactionEntity(txid,
+     * ByteArray(0))` so the TXO foreign key holds: context 0, direction 0,
+     * net 0, and BOTH timestamps 0. Every real record has a non-zero time
+     * (the SDK stamps `firstSeen` with the block time, or with "now" when it
+     * has neither), so a zero [timestampMs] identifies the stub exactly.
+     */
+    val isStoreStub: Boolean get() = timestampMs == 0L
+}
 
 /**
  * Map the SDK `transactions` row's raw columns to the neutral record.
@@ -132,7 +171,8 @@ fun l1TxUiRecord(
     contextCode: Int,
     directionCode: Int,
     firstSeenSec: Long,
-    blockTimestampSec: Int
+    blockTimestampSec: Int,
+    transactionTypeKind: Int = TX_TYPE_KIND_UNKNOWN
 ): L1TxUiRecord {
     val status = when (contextCode) {
         1 -> L1TxUiStatus.INSTANT_LOCKED
@@ -165,7 +205,9 @@ fun l1TxUiRecord(
         feeDuffs = feeDuffs,
         timestampMs = timestampMs,
         status = status,
-        direction = direction
+        direction = direction,
+        blockTimestampMs = if (blockTimestampSec > 0) blockTimestampSec * 1000L else 0L,
+        transactionTypeKind = transactionTypeKind
     )
 }
 
@@ -197,9 +239,10 @@ internal data class L1TxRowPlan(
 
 internal fun planL1TxRow(
     record: L1TxUiRecord,
-    // The Platform-funding role of an INTERNAL/COINJOIN-classified asset lock,
-    // resolved app-side before this pure planner runs (null for a plain move).
-    // When present, the row renders as a SENT "…Fee" instead of "Internal".
+    // The Platform-funding role of an INTERNAL/COINJOIN- or OUTGOING-recorded
+    // asset lock, resolved app-side before this pure planner runs (null for a
+    // plain move). When present, the row renders as a SENT "…Fee" instead of
+    // "Internal"/"Sent".
     assetLockKind: AssetLockKind? = null,
     // The DashPay contact this row pays to / receives from (IDENTITY only, from the
     // DIP-15 friendship match). Direction/amount do NOT come from the contact or the
@@ -258,7 +301,29 @@ internal fun planL1TxRow(
         }
     }
     return when (record.direction) {
-    L1TxUiDirection.OUTGOING -> L1TxRowPlan(
+    L1TxUiDirection.OUTGOING -> if (assetLockKind != null && assetLockKind.appliesToOutgoing) {
+        // An asset lock stored, or corrected by the store walker, as the OUTGOING
+        // spend it is: net −(burn + fee), since the credit burn has no address
+        // and leaves the wallet (dashpay/platform#4412). Same title, icon and
+        // flags as the INTERNAL asset-lock branch above, so the row reads alike
+        // whichever shape the store persisted; the value keeps this direction's
+        // fee-excluded rule (the burn — the credits funded), as dashj showed it.
+        L1TxRowPlan(
+            rowId = record.txidHex,
+            titleRes = assetLockTitleRes(assetLockKind),
+            statusRes = -1,
+            iconType = if (assetLockKind.isPoolTransfer) {
+                TxDisplayCacheEntry.ICON_INTERNAL
+            } else {
+                TxDisplayCacheEntry.ICON_SENT
+            },
+            iconBgType = TxDisplayCacheEntry.BG_SENT,
+            filterFlags = TxDisplayCacheEntry.FLAG_SENT,
+            valueDuffs = record.netAmountDuffs + (record.feeDuffs ?: 0L),
+            timestampMs = record.timestampMs,
+            isIncoming = false
+        )
+    } else L1TxRowPlan(
         rowId = record.txidHex,
         titleRes = if (record.status == L1TxUiStatus.PENDING) {
             R.string.transaction_row_status_sending
@@ -269,9 +334,7 @@ internal fun planL1TxRow(
         iconType = TxDisplayCacheEntry.ICON_SENT,
         iconBgType = TxDisplayCacheEntry.BG_SENT,
         filterFlags = TxDisplayCacheEntry.FLAG_SENT,
-        // netAmount includes the fee; the dashj list shows the amount
-        // without it (TransactionRowView's removeFee: value.add(fee)).
-        valueDuffs = record.netAmountDuffs + (record.feeDuffs ?: 0L),
+        valueDuffs = record.sentValueWithoutFeeDuffs,
         timestampMs = record.timestampMs,
         isIncoming = false
     )
@@ -293,7 +356,7 @@ internal fun planL1TxRow(
             },
             iconBgType = TxDisplayCacheEntry.BG_SENT,
             filterFlags = TxDisplayCacheEntry.FLAG_SENT,
-            valueDuffs = record.netAmountDuffs,
+            valueDuffs = record.sentValueWithoutFeeDuffs,
             timestampMs = record.timestampMs,
             isIncoming = false
         )
@@ -304,7 +367,7 @@ internal fun planL1TxRow(
         iconType = TxDisplayCacheEntry.ICON_INTERNAL,
         iconBgType = TxDisplayCacheEntry.BG_SENT,
         filterFlags = 0,
-        valueDuffs = record.netAmountDuffs,
+        valueDuffs = record.sentValueWithoutFeeDuffs,
         timestampMs = record.timestampMs,
         isIncoming = false
     )
@@ -357,7 +420,13 @@ internal fun planL1TxRow(
         )
     } else L1TxRowPlan(
         rowId = record.txidHex,
-        titleRes = R.string.transaction_row_status_received,
+        // dashj parity (TxResourceMapper): every coinbase reads "Mining Reward" —
+        // neither path can tell a masternode payout from a miner's.
+        titleRes = if (record.isCoinbase) {
+            R.string.transaction_row_status_mining_reward
+        } else {
+            R.string.transaction_row_status_received
+        },
         statusRes = if (record.status == L1TxUiStatus.PENDING) {
             R.string.transaction_row_status_processing
         } else {
@@ -382,6 +451,23 @@ internal fun planL1TxRow(
 internal val AssetLockKind.isPoolTransfer: Boolean
     get() = this == AssetLockKind.SHIELD || this == AssetLockKind.UNSHIELD
 
+/**
+ * The kinds an OUTGOING asset lock can carry: the Platform-funding ones and the
+ * shield (a lock into the wallet's own pool, kept on its transfer treatment).
+ * The unshield pair are AssetUnlocks, recorded INCOMING, never an outgoing lock.
+ */
+internal val AssetLockKind.appliesToOutgoing: Boolean
+    get() = this == AssetLockKind.UPGRADE || this == AssetLockKind.TOPUP ||
+        this == AssetLockKind.INVITE || this == AssetLockKind.SHIELD
+
+/**
+ * Whether the display pass asks the asset-lock resolver about an OUTGOING
+ * record: only when the SDK typed it an AssetLock. A plain send never pays the
+ * probe. Pure — host-testable.
+ */
+internal fun probesOutgoingAssetLockKind(record: L1TxUiRecord): Boolean =
+    record.direction == L1TxUiDirection.OUTGOING && record.transactionTypeKind == TX_TYPE_KIND_ASSET_LOCK
+
 /** The list/detail title string for a Platform-funding asset-lock kind. */
 internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.UPGRADE -> R.string.dashpay_upgrade_fee
@@ -392,9 +478,13 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.INVITE -> R.string.transaction_row_invitation
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
-    // Same label as the self-move — the arrow, not the title, carries the
-    // internal/external distinction (product decision, 2026-08-10).
-    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded
+    // Every AssetUnlock without evidence that THIS wallet's pool authored it.
+    // That is not only a foreign pool's unshield: a Platform identity credit
+    // withdrawal (evonode reward withdrawals included) is an AssetUnlock too,
+    // and plain "Unshielded" on it read as a shielded-pool move the user never
+    // made (field report, 2026-09-30). Product decision, 2026-09-30, replacing
+    // the shared label of 2026-08-10; the arrow still carries the receive.
+    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded_withdrawal
 }
 
 /**
@@ -426,8 +516,9 @@ internal val TxGroupCacheEntry.isMultiTxGroupRow: Boolean
  *   the "invisible receive" fix (a tx the held dashj wallet never saw).
  * - [updates]: SURGICAL fixes to existing dashj-era rows whose live
  *   status dashj can no longer learn — the "stuck Sending" fix. Only the
- *   title/status strings change; value, time, metadata, contact and
- *   service fields are preserved.
+ *   title/status strings change; value, metadata, contact and service
+ *   fields are preserved, and time is only ever moved back to the block
+ *   time ([redatedFromBlock]).
  * - [notifyIncoming]: freshly-discovered incoming transactions (subset of
  *   [inserts]) the user should get a coins-received notification for.
  */
@@ -455,6 +546,61 @@ internal data class L1DisplaySyncPlan(
 internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
 
 /**
+ * How far a cached row's time may sit AFTER its block's header time before
+ * [redatedFromBlock] treats it as wrong. A header may lag real time by about
+ * an hour (it need only beat the median of the previous 11 blocks), so a tx
+ * first seen just before it was mined can legitimately read up to that much
+ * later than its block. Three hours clears that with margin, while a row a
+ * restore stamped "now" for a tx mined days or years ago is far outside it.
+ */
+internal const val L1_BLOCK_TIME_SKEW_TOLERANCE_MS = 3L * 60 * 60 * 1000
+
+/**
+ * [entry] with the fee dropped from its value, when it was cached WITH it
+ * (D-M-01). Rows authored while the store's fee column was NULL hold the
+ * fee-included net; once the fee is known
+ * ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free value every
+ * other row shows. It is the only value edit a service-tagged, swap, gift-card,
+ * asset-lock or "Internal" row ever takes, so it fires on the exact
+ * fee-included figure alone: a row holding anything else (dashj's own fee-free
+ * value on an upgraded wallet, a contact amount, a swap's own amount) is left as
+ * it is. Contact rows are excluded outright: their value comes from the engine's
+ * signed net, not this record. Idempotent — the corrected value no longer
+ * equals the net. Returns [entry] itself when nothing changes. Pure —
+ * host-testable.
+ */
+internal fun withoutCachedFee(
+    entry: TxDisplayCacheEntry,
+    record: L1TxUiRecord,
+    contact: ResolvedTxContact?
+): TxDisplayCacheEntry =
+    if (contact == null && entry.contactUserId == null &&
+        record.sentValueWithoutFeeDuffs != record.netAmountDuffs &&
+        entry.valueSatoshis == record.netAmountDuffs
+    ) {
+        entry.copy(valueSatoshis = record.sentValueWithoutFeeDuffs)
+    } else {
+        entry
+    }
+
+/**
+ * [existing] with its time moved back to [record]'s block time when the cached
+ * time is impossible: LATER than the block that contains the tx, by more than
+ * [L1_BLOCK_TIME_SKEW_TOLERANCE_MS]. A tx can be seen before it is mined, never
+ * long after, so such a time was never a sighting; it is a placeholder "now"
+ * (a stub row inserted during a restore, before [planL1DisplaySync] skipped
+ * stubs). Moving the time EARLIER only, and only to a block time, leaves every
+ * genuine first-sighting time alone, including a tx that sat in the mempool for
+ * days before it was mined. Returns [existing] itself when nothing changes.
+ * Pure — host-testable.
+ */
+internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecord): TxDisplayCacheEntry {
+    val blockMs = record.blockTimestampMs
+    if (blockMs <= 0L || existing.time - blockMs <= L1_BLOCK_TIME_SKEW_TOLERANCE_MS) return existing
+    return existing.copy(time = blockMs)
+}
+
+/**
  * Pure sync-pass planner. Rules:
  * - Transactions living inside a multi-tx group row ([groupedTxIds]) are
  *   never touched — group rows are dashj-era history.
@@ -472,6 +618,13 @@ internal const val L1_NOTIFY_RECENCY_WINDOW_MS = 24L * 60 * 60 * 1000
  *   A row whose only extra semantics is a metadata-supplied `service`
  *   classification still takes these status edges (its title/status ARE
  *   the plain pending texts) but none of the value/rate/shape re-stamps.
+ * - SDK store stubs ([L1TxUiRecord.isStoreStub]) are skipped outright.
+ * - Every existing row, the never-touch ones included, takes
+ *   [redatedFromBlock]: a time later than the tx's own block is reset to it.
+ * - A non-contact sent row holding exactly the fee-included net takes the
+ *   fee-free value ([L1TxUiRecord.sentValueWithoutFeeDuffs]) once the fee is
+ *   known ([withoutCachedFee]) — service-tagged, swap and gift-card rows
+ *   included.
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -487,9 +640,10 @@ internal fun planL1DisplaySync(
     // historical rate, exactly as before this fix.
     incomingFiatCode: String? = null,
     incomingFiatValue: Long? = null,
-    // Platform-funding role per (INTERNAL/COINJOIN) txid, resolved app-side
-    // before this pure planner runs — turns the mislabelled "Internal" row
-    // into the SENT "…Fee" it funded. Empty = no known asset locks.
+    // Platform-funding role per (INTERNAL/COINJOIN, or OUTGOING AssetLock) txid,
+    // resolved app-side before this pure planner runs — turns the mislabelled
+    // "Internal"/"Sent" row into the SENT "…Fee" it funded. Empty = no known
+    // asset locks.
     kindByTxid: Map<String, AssetLockKind> = emptyMap(),
     // Resolved DashPay contact per txid, from the dashj DIP-15 resolver run
     // app-side before this pure planner runs — stamps the avatar/username on
@@ -544,6 +698,12 @@ internal fun planL1DisplaySync(
 
     for (record in records) {
         if (record.txidHex in groupedTxIds) continue
+        // A stub carries nothing displayable (net 0, no direction, no time). Rendering
+        // it inserted a "Received 0" row stamped NOW, and the real record later fixed
+        // that row's value and title but never its time, so a restore dated history it
+        // scanned as "today". Skip it; the real record reaches this planner on a later
+        // pass (the periodic full walk re-reads every TXO's transaction).
+        if (record.isStoreStub) continue
         val contact = contactByTxid[record.txidHex]
         val contactSignedNet = signedNetByTxid[record.txidHex]
         val plan = planL1TxRow(record, kindByTxid[record.txidHex], contact, contactSignedNet)
@@ -609,10 +769,23 @@ internal fun planL1DisplaySync(
         // (verified on-device, 2026-08-07 Maya field test). The swap reconciler
         // restores swapStatus on the next display-cache write signal, so this guard
         // then holds the row stable instead of flip-flopping once per sync pass.
+        //
+        // The one edit EVERY row takes, the never-touch rows included: a time that is
+        // impossible for the record's block (see [redatedFromBlock]).
+        val redated = redatedFromBlock(existing, record)
         if (existing.hasErrors || existing.swapStatus != null ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0 ||
             (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0
         ) {
+            // Swap and gift-card rows are sends too, so they also take the fee-only
+            // value fix ([withoutCachedFee]) — their title/icon/status stay theirs.
+            // Error and CoinJoin rows take nothing else.
+            val kept = if (existing.hasErrors || (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0) {
+                redated
+            } else {
+                withoutCachedFee(redated, record, contact)
+            }
+            if (kept != existing) updates += kept
             continue
         }
         // A service-CLASSIFIED row is only half-rich. The service column is a
@@ -630,7 +803,7 @@ internal fun planL1DisplaySync(
             sdkAuthoritative += record.txidHex
         }
 
-        var updated = existing
+        var updated = redated
         if (existing.title == resolve(R.string.transaction_row_status_sending) &&
             plan.titleRes == R.string.transaction_row_status_sent
         ) {
@@ -652,6 +825,8 @@ internal fun planL1DisplaySync(
         ) {
             updated = updated.copy(statusText = "")
         }
+        // Ahead of the service exit so a merchant send converges too.
+        updated = withoutCachedFee(updated, record, contact)
         if (serviceClassified) {
             // Status transitions only (see the guard split above).
             if (updated != existing) updates += updated
@@ -696,19 +871,34 @@ internal fun planL1DisplaySync(
         // and contact fields are preserved via copy(). Idempotent: once the shape
         // matches the plan, nothing is written. The never-touch guards above
         // already excluded service/gift-card/error/CoinJoin rows, and kindByTxid
-        // is only ever populated for INTERNAL/COINJOIN/INCOMING self-moves.
+        // is only populated for INTERNAL/COINJOIN/INCOMING self-moves and for
+        // OUTGOING records the SDK typed an AssetLock. (d) is that last case: a
+        // restored asset lock the store walker corrected to OUTGOING, cached
+        // "Sent" before its kind resolved. Its value is definitive too — the
+        // plain-row re-stamp below, which would otherwise keep it current, skips
+        // kind rows — so a snapshot record also carries the value over.
         if (kindByTxid[record.txidHex] != null) {
             val desiredTitle = resolve(plan.titleRes)
+            val desiredValue = if (restampFromDefinitiveRecord &&
+                record.direction == L1TxUiDirection.OUTGOING &&
+                record.netAmountDuffs != 0L
+            ) {
+                plan.valueDuffs
+            } else {
+                updated.valueSatoshis
+            }
             if (updated.title != desiredTitle ||
                 updated.iconType != plan.iconType ||
                 updated.iconBgType != plan.iconBgType ||
-                updated.filterFlags != plan.filterFlags
+                updated.filterFlags != plan.filterFlags ||
+                updated.valueSatoshis != desiredValue
             ) {
                 updated = updated.copy(
                     title = desiredTitle,
                     iconType = plan.iconType,
                     iconBgType = plan.iconBgType,
-                    filterFlags = plan.filterFlags
+                    filterFlags = plan.filterFlags,
+                    valueSatoshis = desiredValue
                 )
             }
         }
@@ -799,6 +989,15 @@ internal fun planL1DisplaySync(
                     statusText = if (keepConfirming) updated.statusText else desiredStatus
                 )
             }
+        }
+        // A coinbase cached as plain "Received" — before records carried their kind,
+        // or by the dashj-side writer — takes its "Mining Reward" title. Title only:
+        // the shape (receive arrow, value) is already right. Idempotent, since the
+        // relabelled title is no longer "Received".
+        if (record.isCoinbase && contact == null && updated.contactUserId == null &&
+            updated.title == resolve(R.string.transaction_row_status_received)
+        ) {
+            updated = updated.copy(title = resolve(R.string.transaction_row_status_mining_reward))
         }
         if (contact != null) {
             // Always attach the contact IDENTITY the insert could not (identity/
@@ -1036,6 +1235,36 @@ internal fun planMixingGroupUpdates(
                 )
             )
         }
+}
+
+/** Which figure [overlayBalanceChoice] put on screen. */
+internal enum class OverlayBalanceSource(val logName: String) {
+    /** The SDK has not published yet this launch; the dashj wallet's own balance. */
+    DASHJ("dashj"),
+
+    /** The live SDK balance — the figure the parity check compares. */
+    SDK("sdk"),
+
+    /** The SDK is still scanning; the last-known figure held under "Syncing balance". */
+    LAST_KNOWN("lastKnown")
+}
+
+/**
+ * The display choice behind [CutoverUiDataService.overlayTotalBalance], with the
+ * source it came from: dashj until the SDK publishes, the live SDK figure once it
+ * is synced, the positive last-known figure while it is still scanning, otherwise
+ * the live SDK figure. Pure — host-testable.
+ */
+internal fun overlayBalanceChoice(
+    sdk: Coin?,
+    synced: Boolean,
+    lastKnown: Coin?,
+    dashj: Coin
+): Pair<Coin, OverlayBalanceSource> = when {
+    sdk == null -> dashj to OverlayBalanceSource.DASHJ
+    synced -> sdk to OverlayBalanceSource.SDK
+    lastKnown != null && lastKnown.isPositive -> lastKnown to OverlayBalanceSource.LAST_KNOWN
+    else -> sdk to OverlayBalanceSource.SDK
 }
 
 // ── Seam tx snapshot (post-cutover WalletDataProvider reads) ──────────
@@ -2266,6 +2495,20 @@ class CutoverUiDataService internal constructor(
         }
 
     /**
+     * The first fee any sibling event of a txid carried, next to
+     * [seenEventDirections]: only the OUTGOING sibling knows the fee, so the
+     * combined INTERNAL record would otherwise keep it or lose it depending on
+     * which sibling arrived last — rendering the same self-transfer as 0 in one
+     * order and −fee in the other (D-M-01). Same cap and collector as
+     * [seenEventDirections].
+     */
+    private val seenEventFees =
+        object : LinkedHashMap<String, Long>() {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>): Boolean =
+                size > SEEN_TX_DIRECTIONS_MAX
+        }
+
+    /**
      * Deferred coins-received notifications per txid ([scheduleDeferredCoinsReceivedNotify]).
      * An engine-event-born incoming insert notifies only after
      * [SELF_SPEND_NOTIFY_GRACE_MS], so an OUTGOING sibling event landing
@@ -3366,20 +3609,25 @@ class CutoverUiDataService internal constructor(
      *   has no balance to "lose", and holding 0 over freshly-discovered
      *   funds would be the one case where the hold is the alarming state).
      */
-    fun overlayTotalBalance(dashjBalance: Flow<Coin>): Flow<Coin> =
+    @JvmOverloads
+    fun overlayTotalBalance(dashjBalance: Flow<Coin>, feed: String = "total"): Flow<Coin> =
         combine(
             _sdkTotalBalance,
             _l1Synced,
             _lastKnownTotalBalance,
             dashjBalance
-        ) { sdk, synced, lastKnown, dashj ->
-            when {
-                sdk == null -> dashj
-                synced -> sdk
-                lastKnown != null && lastKnown.isPositive -> lastKnown
-                else -> sdk
+        ) { sdk, synced, lastKnown, dashj -> overlayBalanceChoice(sdk, synced, lastKnown, dashj) }
+            .distinctUntilChanged()
+            // What the header actually SHOWS, and why. The published/persisted lines
+            // record what the SDK computed, not which of the three figures the overlay
+            // put on screen, so a field report could not show what the user saw (field
+            // report, 2026-10-04: a balance compared against another wallet, with no way
+            // to tell a live SDK figure from a held seed or the dashj diagnostic's).
+            // Logs on a change of value or source only; each subscriber logs its own.
+            .onEach { (value, source) ->
+                log.info("displayed balance ({}): {} duffs from {}", feed, value.value, source.logName)
             }
-        }
+            .map { it.first }
 
     /**
      * The cutover-aware MAX-SENDABLE feed for the send screen
@@ -3796,6 +4044,7 @@ class CutoverUiDataService internal constructor(
         noNetWarnedTxids.clear()
         terminalResolvedTxids.clear()
         seenEventDirections.clear()
+        seenEventFees.clear()
         engineNetByTxid.clear()
     }
 
@@ -4237,8 +4486,12 @@ class CutoverUiDataService internal constructor(
         data class Snapshot(val records: List<L1TxUiRecord>) : TxFeedAction()
         data class EngineEvent(val event: L1TxEvent) : TxFeedAction()
 
-        /** Request for a FULL paged reconcile walk (ticker / contact re-resolution). */
-        object Reconcile : TxFeedAction()
+        /**
+         * Request for a FULL paged reconcile walk. [requested] is true for an
+         * explicit request (completeness check / contact re-resolution), false
+         * for the 60s ticker — only for the log line.
+         */
+        data class Reconcile(val requested: Boolean) : TxFeedAction()
     }
 
     /**
@@ -4295,26 +4548,28 @@ class CutoverUiDataService internal constructor(
                     val reconcilePages = MutableSharedFlow<List<L1TxUiRecord>>()
                     var reconcileJob: kotlinx.coroutines.Job? = null
                     val reconcileAgain = AtomicBoolean(false)
+                    // Whether a request (not the ticker) is among the walks
+                    // coalesced into [reconcileAgain] — for the log line only.
+                    val reconcileAgainRequested = AtomicBoolean(false)
                     merge(
                         source.observeWalletTxRecords(walletIdHex)
                             .map { TxFeedAction.Snapshot(it) as TxFeedAction },
                         reconcilePages.map { TxFeedAction.Snapshot(it) as TxFeedAction },
                         merge(
-                            reconcileTicker(),
+                            reconcileTicker().map { false },
                             // Replay a request made while nothing collected. Checked
                             // AFTER the subscription is live, so no request can fall
                             // between the check and the subscribe.
                             contactReResolveRequests.onSubscription {
                                 if (fullReconcilePending.get()) emit(Unit)
-                            }
-                        )
-                            .map { TxFeedAction.Reconcile as TxFeedAction },
+                            }.map { true }
+                        ).map { TxFeedAction.Reconcile(requested = it) as TxFeedAction },
                         txEvents.map { TxFeedAction.EngineEvent(it) }
                     ).collect { action ->
                         when (action) {
                             is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
                             is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
-                            TxFeedAction.Reconcile -> {
+                            is TxFeedAction.Reconcile -> {
                                 // Whatever triggered this, the walk it starts (or
                                 // the one more it queues) covers a pending request.
                                 fullReconcilePending.set(false)
@@ -4324,14 +4579,30 @@ class CutoverUiDataService internal constructor(
                                 // pass over freshly-busted caches).
                                 if (reconcileJob?.isActive == true) {
                                     reconcileAgain.set(true)
+                                    if (action.requested) {
+                                        reconcileAgainRequested.set(true)
+                                        log.info("full reconcile walk requested mid-walk; one more walk follows it")
+                                    }
                                 } else {
                                     reconcileJob = launch {
+                                        var requested = action.requested
                                         do {
                                             reconcileAgain.set(false)
+                                            val walk = reconcileWalkCount.incrementAndGet()
+                                            if (requested) log.info("full reconcile walk #{} started (requested)", walk)
+                                            val startedMs = System.currentTimeMillis()
+                                            var pages = 0
+                                            var records = 0
                                             try {
                                                 source.forEachWalletTxRecordPage(walletIdHex) { page ->
+                                                    pages++
+                                                    records += page.size
                                                     reconcilePages.emit(page)
                                                 }
+                                                logReconcileWalk(
+                                                    walk, requested, records, pages,
+                                                    System.currentTimeMillis() - startedMs
+                                                )
                                             } catch (t: Throwable) {
                                                 if (t is CancellationException) throw t
                                                 log.warn(
@@ -4339,6 +4610,7 @@ class CutoverUiDataService internal constructor(
                                                     t
                                                 )
                                             }
+                                            requested = reconcileAgainRequested.getAndSet(false)
                                         } while (reconcileAgain.get())
                                     }
                                 }
@@ -4473,6 +4745,7 @@ class CutoverUiDataService internal constructor(
                     // engine's original per-account figure).
                     siblingNets.putIfAbsent(record.direction, event.netAmountDuffs)
                 }
+                event.feeDuffs?.let { seenEventFees.putIfAbsent(record.txidHex, it) }
                 val outgoingNet = siblingNets[L1TxUiDirection.OUTGOING]
                 val incomingNet = siblingNets[L1TxUiDirection.INCOMING]
                 if (outgoingNet != null && incomingNet != null) {
@@ -4507,7 +4780,9 @@ class CutoverUiDataService internal constructor(
                         )
                         record = record.copy(
                             direction = L1TxUiDirection.INTERNAL,
-                            netAmountDuffs = combinedNet
+                            netAmountDuffs = combinedNet,
+                            // Whichever sibling carried it — see [seenEventFees].
+                            feeDuffs = record.feeDuffs ?: seenEventFees[record.txidHex]
                         )
                     }
                 }
@@ -4595,6 +4870,30 @@ class CutoverUiDataService internal constructor(
      * change feed alone carries the launch window; thereafter one walk per
      * [refreshIntervalMs] preserves the 60s convergence semantics.
      */
+    /** Full reconcile walks started by this service — the `#n` in their log lines. */
+    private val reconcileWalkCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** Record count of the last logged ticker walk; -1 before the first. */
+    @Volatile
+    private var lastLoggedTickerWalkRecords = -1
+
+    /**
+     * One line per finished walk, so a QA log shows whether the reconcile ran
+     * and what it covered — before this a successful walk logged nothing, and
+     * "never ran" read the same as "ran fine" (D-M-01 §5). Requested walks
+     * always log; the 60s ticker logs its first walk and any walk whose record
+     * count moved, so a settled wallet does not log once a minute forever.
+     */
+    private fun logReconcileWalk(walk: Int, requested: Boolean, records: Int, pages: Int, elapsedMs: Long) {
+        if (requested || records != lastLoggedTickerWalkRecords) {
+            log.info(
+                "full reconcile walk #{} ({}) finished: {} records over {} pages in {}ms",
+                walk, if (requested) "requested" else "ticker", records, pages, elapsedMs
+            )
+        }
+        if (!requested) lastLoggedTickerWalkRecords = records
+    }
+
     private fun reconcileTicker(): Flow<Unit> = flow {
         delay(reconcileInitialDelayMs)
         while (true) {
@@ -4676,7 +4975,8 @@ class CutoverUiDataService internal constructor(
 
             // Classify INTERNAL/COINJOIN rows as Platform-funding asset locks so
             // the mislabelled "Internal" row renders the SENT "…Fee" it funded.
-            // Only these directions can be asset-lock funding — a fast app-side
+            // Only these directions, and OUTGOING records the SDK typed an
+            // AssetLock, can be asset-lock funding — a fast app-side
             // Room/DataStore probe per candidate, never blocking the pipeline.
             val kindByTxid = mutableMapOf<String, AssetLockKind>()
             for (record in records) {
@@ -4700,6 +5000,16 @@ class CutoverUiDataService internal constructor(
                             AssetLockKind.UNSHIELD,
                             AssetLockKind.UNSHIELD_EXTERNAL -> kindByTxid[record.txidHex] = kind
                             else -> {}
+                        }
+                    L1TxUiDirection.OUTGOING ->
+                        // A restored identity registration, top-up or invite lock
+                        // the store walker corrected from INTERNAL/net-0 to the
+                        // OUTGOING −(burn + fee) it is. Typed AssetLock only, so a
+                        // plain send pays no probe.
+                        if (probesOutgoingAssetLockKind(record)) {
+                            resolveAssetLockKind(record.txidHex)
+                                ?.takeIf { it.appliesToOutgoing }
+                                ?.let { kindByTxid[record.txidHex] = it }
                         }
                     else -> {}
                 }

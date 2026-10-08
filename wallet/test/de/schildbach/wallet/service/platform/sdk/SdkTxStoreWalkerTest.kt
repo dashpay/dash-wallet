@@ -18,6 +18,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import android.app.Application
 import androidx.room.Room
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.runBlocking
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.junit.After
@@ -609,6 +610,109 @@ class SdkTxStoreWalkerTest {
         assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
         assertEquals(-3_000_241L, healed.netAmountDuffs)
         assertEquals(241L, healed.feeDuffs)
+    }
+
+    /**
+     * The display pipeline end to end for that healed record: the walker's
+     * OUTGOING asset lock is probed (typed AssetLock), and with its resolved
+     * kind it renders "Upgrade Fee" valued at the burn — not plain "Sent".
+     */
+    @Test
+    fun reattribution_assetLock_healedOutgoing_rendersItsPlatformTitle() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al3", bip44Account)
+        insertCoreAddress("bip44_al3_change", bip44Account)
+        val funding = txid(91)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al3")
+        val assetLock = txid(92)
+        insertTx(
+            assetLock, direction = 2, netAmount = 0, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al3_change")
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 14_886_248, outputCount = 2, inputCount = 1)
+            } else {
+                null
+            }
+        })
+        val records = ArrayList<L1TxUiRecord>()
+        w.walkAll { page -> records += page }
+        val healed = records.single { it.txidHex == displayHexOf(assetLock) }
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals("the copy keeps the type kind", TX_TYPE_KIND_ASSET_LOCK, healed.transactionTypeKind)
+        assertTrue(probesOutgoingAssetLockKind(healed))
+        assertFalse(
+            "the plain funding receive is never probed",
+            probesOutgoingAssetLockKind(records.single { it.txidHex == displayHexOf(funding) })
+        )
+
+        val resolve: (Int) -> String = { id -> "str:$id" }
+        val plan = planL1DisplaySync(
+            listOf(healed), emptyMap(), emptySet(), resolve, nowMs = 1_700_000_100_000L,
+            kindByTxid = mapOf(healed.txidHex to AssetLockKind.UPGRADE)
+        )
+        val row = plan.inserts.single()
+        assertEquals(resolve(R.string.dashpay_upgrade_fee), row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    /**
+     * D-M-01: the store leaves `fee` NULL, so the walker recovers it for the
+     * display. A walk that sees only SOME of a send's spend marks cannot — and
+     * must try again once the rest land, in the same walker (the 60s reconcile
+     * reuses it), then persist the fee durably.
+     */
+    @Test
+    fun feeRecovery_partialSpendMarks_retriesWhenTheRestLand() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_fr_a", bip44Account)
+        insertCoreAddress("bip44_fr_b", bip44Account)
+        insertCoreAddress("bip44_fr_change", bip44Account)
+        val fundingA = txid(61)
+        val fundingB = txid(62)
+        insertTx(fundingA, direction = 0, netAmount = 2_000_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTx(fundingB, direction = 0, netAmount = 1_500_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(fundingA, 0, 2_000_000, "bip44_fr_a")
+        insertTxo(fundingB, 0, 1_500_000, "bip44_fr_b")
+
+        // A two-input credit purchase with the net the engine persists
+        // (−(burn+fee)) and no fee: 3 000 000 burn + 499 759 change, 241 fee.
+        val assetLock = txid(63)
+        insertTx(
+            assetLock, direction = 2, netAmount = -3_000_241, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        insertTxo(assetLock, 1, 499_759, "bip44_fr_change")
+        // Only the first input's spend mark has landed.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingA)
+
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 3_499_759, outputCount = 2, inputCount = 2)
+            } else {
+                null
+            }
+        })
+        fun walkedAssetLock(): L1TxUiRecord {
+            val byHex = HashMap<String, L1TxUiRecord>()
+            runBlocking { w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } } }
+            return requireNotNull(byHex[displayHexOf(assetLock)])
+        }
+
+        assertNull("one of two inputs proves no fee", walkedAssetLock().feeDuffs)
+        assertNull(storedShape(assetLock).third)
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingB)
+
+        val recovered = walkedAssetLock()
+        assertEquals(241L, recovered.feeDuffs)
+        assertEquals(-3_000_241L, recovered.netAmountDuffs) // the net itself is untouched
+        assertEquals(241L, storedShape(assetLock).third)
     }
 
     /**

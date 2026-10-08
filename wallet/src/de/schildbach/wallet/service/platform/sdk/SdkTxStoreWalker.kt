@@ -179,12 +179,7 @@ internal fun reattributeIncomingRecord(
     if (net >= 0L) {
         return if (record.netAmountDuffs == net) record else record.copy(netAmountDuffs = net)
     }
-    val allInputsOurs = payload != null && payload.inputCount == spentOwnedCount
-    val fee = if (payload != null && allInputsOurs && spentOwnedDuffs >= payload.outputsTotalDuffs) {
-        spentOwnedDuffs - payload.outputsTotalDuffs
-    } else {
-        null
-    }
+    val fee = payload?.let { recoveredFeeDuffs(it, spentOwnedCount, spentOwnedDuffs) }
     val internal = fundedForeignDuffs == 0L && payload != null &&
         payload.outputsTotalDuffs == fundedOwnedDuffs
     return record.copy(
@@ -193,6 +188,39 @@ internal fun reattributeIncomingRecord(
         feeDuffs = fee ?: record.feeDuffs
     )
 }
+
+/**
+ * The fee this wallet paid for a transaction: `spentOwned − outputsTotal`,
+ * or null when it cannot be known. Only valid when the payload proves ALL
+ * inputs were ours (`inputCount == spentOwnedCount`) — otherwise other
+ * participants funded part of the tx (a CoinJoin round) and the difference
+ * is not our fee. Every output counts, a value-bearing OP_RETURN credit burn
+ * included, so an AssetLock's fee is the miner fee, not the burn. Pure —
+ * host-testable.
+ */
+internal fun recoveredFeeDuffs(payload: TxPayloadFacts, spentOwnedCount: Int, spentOwnedDuffs: Long): Long? =
+    if (spentOwnedCount > 0 &&
+        payload.inputCount == spentOwnedCount &&
+        spentOwnedDuffs >= payload.outputsTotalDuffs
+    ) {
+        spentOwnedDuffs - payload.outputsTotalDuffs
+    } else {
+        null
+    }
+
+/**
+ * Whether [record] is a send whose fee the store left unset and the walker
+ * should recover ([recoveredFeeDuffs]). The SDK persists `transactions.fee`
+ * as NULL for every row (run 17, Wallet B: 7460/7460), so the display — which
+ * shows a send WITHOUT its fee, as dashj's `TransactionRowView` always has —
+ * otherwise renders fee-included values. OUTGOING and INTERNAL only: a
+ * COINJOIN-direction round is multi-party, so its fee is never ours to show,
+ * and a receive has no fee to remove. Pure — host-testable.
+ */
+internal fun needsFeeRecovery(record: L1TxUiRecord): Boolean =
+    record.feeDuffs == null &&
+        record.netAmountDuffs < 0L &&
+        (record.direction == L1TxUiDirection.OUTGOING || record.direction == L1TxUiDirection.INTERNAL)
 
 /**
  * Rust `TransactionType` discriminant for a classic (Standard) transaction —
@@ -211,6 +239,12 @@ internal const val TX_TYPE_KIND_STANDARD = 0
  * special kind stays excluded per the note above.
  */
 internal const val TX_TYPE_KIND_ASSET_LOCK = 6
+
+/** Rust `TransactionType` discriminant for a Coinbase — a mining or masternode payout. */
+internal const val TX_TYPE_KIND_COINBASE = 8
+
+/** `transactions.transactionTypeKind`'s not-yet-populated sentinel (the entity default). */
+internal const val TX_TYPE_KIND_UNKNOWN = 0xFF
 
 /**
  * BOUNDED reader over the Kotlin SDK's L1 Room store (`txos` +
@@ -432,7 +466,8 @@ internal class SdkTxStoreWalker(
                 contextCode = c.getInt(startCol + 3),
                 directionCode = c.getInt(startCol + 4),
                 firstSeenSec = c.getLong(startCol + 5),
-                blockTimestampSec = c.getInt(startCol + 6)
+                blockTimestampSec = c.getInt(startCol + 6),
+                transactionTypeKind = c.getInt(startCol + 7)
             ),
             wireTxid = txid,
             typeKind = c.getInt(startCol + 7),
@@ -611,7 +646,126 @@ internal class SdkTxStoreWalker(
      * (which stays flagged and is recomputed every pass anyway, so a gap
      * self-heals) are unchanged.
      */
-    private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> {
+    private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> =
+        withRecoveredFees(rows, reattributedStored(rows))
+
+    /**
+     * Fill the fee the store left NULL ([needsFeeRecovery]) on [records]
+     * (index-aligned with [rows]), so the display can show a send without its
+     * fee. One `pending_inputs` aggregate plus one chunked payload fetch, paid
+     * only while some send is still missing a fee.
+     *
+     * Durable like [persistCorrections]: a fee recovered from CONFIRMED spent
+     * marks alone is written into the store row (`fee IS NULL` guarded, so a
+     * value the engine wrote is never replaced), and the row then never
+     * qualifies again. A fee that needs a `pending_inputs` reservation is
+     * served from memory only — the reservation is an in-flight claim, the
+     * same rule as reattribution.
+     *
+     * A send whose fee could not be recovered is retried whenever its spend
+     * evidence changes ([feeEvidenceTried]): a null fee may mean another
+     * participant funded it, but equally that the mirror holds only some of
+     * its spend marks so far, and the next mark must get another try.
+     */
+    private fun withRecoveredFees(rows: List<RecordRow>, records: List<L1TxUiRecord>): List<L1TxUiRecord> {
+        val candidates = records.indices.filter { needsFeeRecovery(records[it]) }
+        if (candidates.isEmpty()) return records
+        val pending = pendingSpentAggregates()
+        fun evidenceOf(i: Int) = FeeEvidence(
+            spentOwnedCount = rows[i].spentOwnedCount,
+            pendingCount = pending[records[i].txidHex]?.count ?: 0
+        )
+        val due = candidates.filter {
+            val evidence = evidenceOf(it)
+            evidence.inputCount > 0 && feeEvidenceTried[records[it].txidHex] != evidence
+        }
+        if (due.isEmpty()) return records
+
+        val facts = HashMap<String, TxPayloadFacts>()
+        val payloadSeen = HashSet<String>()
+        for (chunk in due.chunked(TXID_IN_CHUNK)) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            rawQuery(
+                "SELECT txid, transactionData FROM transactions WHERE txid IN ($placeholders)",
+                chunk.map<Int, Any?> { rows[it].wireTxid }.toTypedArray()
+            ) { c ->
+                while (c.moveToNext()) {
+                    if (c.isNull(1)) continue
+                    val hex = displayHexOf(c.getBlob(0))
+                    payloadSeen += hex
+                    payloadFacts(c.getBlob(1))?.let { facts[hex] = it }
+                }
+            }
+        }
+
+        val out = records.toMutableList()
+        val toPersist = ArrayList<Pair<ByteArray, Long>>()
+        for (i in due) {
+            val row = rows[i]
+            val hex = records[i].txidHex
+            val pend = pending[hex]
+            val fee = facts[hex]?.let {
+                recoveredFeeDuffs(it, row.spentOwnedCount + (pend?.count ?: 0), row.spentOwnedDuffs + (pend?.duffs ?: 0L))
+            }
+            if (fee == null) {
+                // A payload that is not there yet gets another try every pass;
+                // one that is there was judged on this evidence.
+                if (hex in payloadSeen) feeEvidenceTried[hex] = evidenceOf(i)
+                continue
+            }
+            feeEvidenceTried.remove(hex)
+            out[i] = records[i].copy(feeDuffs = fee)
+            if (pend == null) toPersist += row.wireTxid to fee
+        }
+        persistRecoveredFees(toPersist)
+        return out
+    }
+
+    /** The spend marks a fee-recovery attempt saw — see [feeEvidenceTried]. */
+    private data class FeeEvidence(val spentOwnedCount: Int, val pendingCount: Int) {
+        val inputCount: Int get() = spentOwnedCount + pendingCount
+    }
+
+    /**
+     * Sends whose fee [withRecoveredFees] could not recover, with the evidence
+     * that attempt saw. Skipped only while the evidence is unchanged. Per
+     * walker: a fee is unrecoverable for good only when an input was not ours,
+     * which is rare outside CoinJoin rounds (never candidates), so re-trying
+     * those once per walker costs little. Bounded; an evicted txid costs one
+     * re-parse. Synchronized: the point lookups ([recordFor]) reach it from
+     * any thread.
+     */
+    private val feeEvidenceTried: MutableMap<String, FeeEvidence> =
+        java.util.Collections.synchronizedMap(
+            object : LinkedHashMap<String, FeeEvidence>() {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, FeeEvidence>): Boolean =
+                    size > WALK_DEDUP_LRU_MAX
+            }
+        )
+
+    /** Write recovered fees into the store's NULL `fee` columns — see [withRecoveredFees]. */
+    private fun persistRecoveredFees(fees: List<Pair<ByteArray, Long>>) {
+        if (fees.isEmpty()) return
+        try {
+            val writable = db.openHelper.writableDatabase
+            writable.beginTransaction()
+            try {
+                val sql = "UPDATE transactions SET fee = ? WHERE txid = ? AND fee IS NULL"
+                for ((wireTxid, fee) in fees) {
+                    onQuery?.invoke(sql)
+                    writable.execSQL(sql, arrayOf(fee, wireTxid))
+                }
+                writable.setTransactionSuccessful()
+            } finally {
+                writable.endTransaction()
+            }
+            log.info("persisted {} recovered fee(s) into the SDK store's NULL fee column", fees.size)
+        } catch (t: Throwable) {
+            log.warn("failed to persist recovered fees; served from memory, recovered again next pass", t)
+        }
+    }
+
+    private fun reattributedStored(rows: List<RecordRow>): List<L1TxUiRecord> {
         // Pending-input reservations ([pendingSpentAggregates]) supplement the
         // confirmed spent marks for DISPLAY, so a just-broadcast send is
         // corrected the moment it is planned instead of after its block lands.

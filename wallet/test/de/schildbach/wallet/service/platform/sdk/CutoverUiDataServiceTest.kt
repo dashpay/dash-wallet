@@ -230,15 +230,15 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun rowPlan_externalUnshieldKeepsReceiveSemantics() {
-        // A FOREIGN pool's AssetUnlock paying this wallet (field case: an
-        // unshield from a different seed) is a genuine receive: same
-        // "Unshielded" label as the self-move, but the green inbound arrow,
-        // Received treatment and the coins-received notification.
+        // An AssetUnlock this wallet's pool did not author (a foreign pool's
+        // unshield, or a Platform identity credit withdrawal) is a genuine
+        // receive: "Unshielded Withdrawal", the green inbound arrow, Received
+        // treatment and the coins-received notification.
         val plan = planL1TxRow(
             record(net = 300_000, context = 1, direction = 0),
             AssetLockKind.UNSHIELD_EXTERNAL
         )
-        assertEquals(R.string.transaction_row_unshielded, plan.titleRes)
+        assertEquals(R.string.transaction_row_unshielded_withdrawal, plan.titleRes)
         assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, plan.iconType)
         assertEquals(TxDisplayCacheEntry.BG_RECEIVED, plan.iconBgType)
         assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, plan.filterFlags)
@@ -256,6 +256,94 @@ class CutoverUiDataServiceTest {
         assertEquals(TxDisplayCacheEntry.ICON_SENT, upgrade.iconType)
         assertEquals(TxDisplayCacheEntry.BG_SENT, upgrade.iconBgType)
         assertEquals(TxDisplayCacheEntry.FLAG_SENT, upgrade.filterFlags)
+    }
+
+    /** A walker-corrected restored asset lock: OUTGOING −(burn + fee), typed AssetLock. */
+    private fun outgoingAssetLock(firstByte: Int = 1, context: Int = 3) = l1TxUiRecord(
+        wireTxid(firstByte), -3_000_241L, 241L, context, 1, now / 1000, 0,
+        transactionTypeKind = TX_TYPE_KIND_ASSET_LOCK
+    )
+
+    @Test
+    fun rowPlan_outgoingAssetLock_takesItsPlatformTitleAndKeepsTheSendValue() {
+        val expected = mapOf(
+            AssetLockKind.UPGRADE to R.string.dashpay_upgrade_fee,
+            AssetLockKind.TOPUP to R.string.dashpay_topup_fee,
+            AssetLockKind.INVITE to R.string.transaction_row_invitation
+        )
+        for ((kind, title) in expected) {
+            val plan = planL1TxRow(outgoingAssetLock(), kind)
+            assertEquals(title, plan.titleRes)
+            assertEquals(-1, plan.statusRes)
+            assertEquals(TxDisplayCacheEntry.ICON_SENT, plan.iconType)
+            assertEquals(TxDisplayCacheEntry.BG_SENT, plan.iconBgType)
+            assertEquals(TxDisplayCacheEntry.FLAG_SENT, plan.filterFlags)
+            assertEquals("the burn, fee excluded", -3_000_000L, plan.valueDuffs)
+            assertFalse(plan.isIncoming)
+        }
+        // Pending: the Platform title, not "Sending".
+        assertEquals(
+            R.string.dashpay_upgrade_fee,
+            planL1TxRow(outgoingAssetLock(context = 0), AssetLockKind.UPGRADE).titleRes
+        )
+        // A shield keeps its pool-transfer treatment.
+        val shield = planL1TxRow(outgoingAssetLock(), AssetLockKind.SHIELD)
+        assertEquals(R.string.transaction_row_shielded, shield.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, shield.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, shield.filterFlags)
+    }
+
+    @Test
+    fun rowPlan_outgoingWithoutAnApplicableKind_isAPlainSend() {
+        val plain = planL1TxRow(outgoingAssetLock())
+        for (kind in listOf(null, AssetLockKind.UNSHIELD, AssetLockKind.UNSHIELD_EXTERNAL)) {
+            assertEquals(plain, planL1TxRow(outgoingAssetLock(), kind))
+        }
+        assertEquals(R.string.transaction_row_status_sent, plain.titleRes)
+        assertEquals(-3_000_000L, plain.valueDuffs)
+    }
+
+    @Test
+    fun outgoingProbeGate_onlyTypedAssetLocks() {
+        assertTrue(probesOutgoingAssetLockKind(outgoingAssetLock()))
+        assertFalse("a plain send", probesOutgoingAssetLockKind(record(net = -500_000, direction = 1)))
+        assertFalse(
+            "an INTERNAL asset lock takes the existing probe",
+            probesOutgoingAssetLockKind(outgoingAssetLock().copy(direction = L1TxUiDirection.INTERNAL))
+        )
+    }
+
+    @Test
+    fun syncPlan_outgoingAssetLock_insertsWithItsPlatformTitle() {
+        val r = outgoingAssetLock(firstByte = 0x51)
+        val plan = planL1DisplaySync(
+            listOf(r), emptyMap(), emptySet(), resolve, now,
+            kindByTxid = mapOf(r.txidHex to AssetLockKind.UPGRADE)
+        )
+        val row = plan.inserts.single()
+        assertEquals(resolve(R.string.dashpay_upgrade_fee), row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
+        assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_outgoingAssetLockCachedAsSent_isRelabelledOnce() {
+        val r = outgoingAssetLock(firstByte = 0x52)
+        val existing = cacheEntry(rowId = r.txidHex, title = resolve(R.string.transaction_row_status_sent))
+        val kinds = mapOf(r.txidHex to AssetLockKind.TOPUP)
+        val plan = planL1DisplaySync(listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now, kindByTxid = kinds)
+        val row = plan.updates.single()
+        assertEquals(resolve(R.string.dashpay_topup_fee), row.title)
+        assertEquals("the stale cached value is corrected too", -3_000_000L, row.valueSatoshis)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
+        assertEquals("memo", row.comment)
+
+        val second = planL1DisplaySync(listOf(r), mapOf(row.rowId to row), emptySet(), resolve, now, kindByTxid = kinds)
+        assertTrue(second.inserts.isEmpty())
+        assertTrue(second.updates.isEmpty())
     }
 
     // ── planL1DisplaySync ─────────────────────────────────────────────
@@ -276,6 +364,167 @@ class CutoverUiDataServiceTest {
         assertNull(row.service)
         assertEquals(listOf(displayHex(7) to 1_000_000L), plan.notifyIncoming)
         assertTrue(plan.updates.isEmpty())
+    }
+
+    // ── store stubs and block-time re-dating (restore "today" history) ──
+
+    /** A confirmed record whose SDK row carries the block time in both timestamp columns. */
+    private fun minedRecord(firstByte: Int, net: Long, blockSec: Long, direction: Int = 0) =
+        l1TxUiRecord(wireTxid(firstByte), net, null, 3, direction, blockSec, blockSec.toInt())
+
+    /** The SDK's TXO-parent stub: every column at its entity default. */
+    private fun stubRecord(firstByte: Int) = l1TxUiRecord(wireTxid(firstByte), 0, null, 0, 0, 0, 0)
+
+    private val twoYearsAgoSec = (now - 2L * 365 * 24 * 60 * 60 * 1000) / 1000
+
+    @Test
+    fun record_carriesBlockTimeAndFlagsTheStoreStub() {
+        val mined = minedRecord(1, 1_000, twoYearsAgoSec)
+        assertEquals(twoYearsAgoSec * 1000, mined.blockTimestampMs)
+        assertFalse(mined.isStoreStub)
+        // A mempool record has a first-seen time but no block time, and is no stub.
+        assertEquals(0L, record(context = 0).blockTimestampMs)
+        assertFalse(record(context = 0).isStoreStub)
+        assertTrue(stubRecord(1).isStoreStub)
+    }
+
+    @Test
+    fun syncPlan_skipsTheStoreStub() {
+        val plan = planL1DisplaySync(listOf(stubRecord(7)), emptyMap(), emptySet(), resolve, now)
+        // Before the fix this inserted a "Received 0" row stamped `now`.
+        assertTrue(plan.inserts.isEmpty())
+        assertTrue(plan.updates.isEmpty())
+        assertTrue(plan.notifyIncoming.isEmpty())
+        assertTrue(plan.sdkAuthoritative.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_stubDoesNotDisturbAnExistingRow() {
+        val row = cacheEntry(displayHex(7), resolve(R.string.transaction_row_status_sent))
+        val plan = planL1DisplaySync(
+            listOf(stubRecord(7)), mapOf(row.rowId to row), emptySet(), resolve, now
+        )
+        assertTrue(plan.updates.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_restoreStampedRowIsRedatedToItsBlock() {
+        // The field shape: a stub was cached as "Received 0" at restore time, then
+        // the real record arrived for a tx mined two years earlier.
+        val stamped = cacheEntry(displayHex(7), resolve(R.string.transaction_row_status_received))
+            .copy(valueSatoshis = 0L, time = now, filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED)
+        val mined = minedRecord(7, 1_000_000, twoYearsAgoSec)
+        val plan = planL1DisplaySync(listOf(mined), mapOf(stamped.rowId to stamped), emptySet(), resolve, now)
+
+        val updated = plan.updates.single()
+        assertEquals(twoYearsAgoSec * 1000, updated.time)
+        // The existing value re-stamp still applies alongside the new date.
+        assertEquals(1_000_000L, updated.valueSatoshis)
+        assertEquals("memo", updated.comment)
+    }
+
+    @Test
+    fun syncPlan_neverTouchRowsTakeOnlyTheRedate() {
+        val giftCard = cacheEntry(
+            displayHex(7), "Gift card", filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD
+        ).copy(time = now)
+        val mined = minedRecord(7, -1_000_000, twoYearsAgoSec, direction = 1)
+        val plan = planL1DisplaySync(listOf(mined), mapOf(giftCard.rowId to giftCard), emptySet(), resolve, now)
+
+        assertEquals(giftCard.copy(time = twoYearsAgoSec * 1000), plan.updates.single())
+    }
+
+    @Test
+    fun syncPlan_genuineSightingTimesAreNotRedated() {
+        val blockSec = (now - 24L * 60 * 60 * 1000) / 1000
+        val blockMs = blockSec * 1000
+        val sent = resolve(R.string.transaction_row_status_sent)
+        val mined = minedRecord(7, -1_000_000, blockSec, direction = 1)
+        // Seen in the mempool days before it was mined: earlier than the block.
+        val early = cacheEntry(displayHex(7), sent).copy(time = blockMs - 3L * 24 * 60 * 60 * 1000)
+        // Seen an hour after its header time (a lagging header): inside the tolerance.
+        val lagging = cacheEntry(displayHex(7), sent).copy(time = blockMs + 60L * 60 * 1000)
+
+        for (row in listOf(early, lagging)) {
+            assertEquals(row, redatedFromBlock(row, mined))
+        }
+        // An unconfirmed record has no block time to re-date against.
+        val late = cacheEntry(displayHex(7), sent).copy(time = now)
+        assertEquals(late, redatedFromBlock(late, record(firstByte = 7, context = 0, firstSeenSec = blockSec)))
+    }
+
+    // ── coinbase payouts ("Mining Reward", dashj parity) ──
+
+    private fun coinbaseRecord(firstByte: Int, kind: Int = TX_TYPE_KIND_COINBASE) =
+        l1TxUiRecord(wireTxid(firstByte), 450_000_000, null, 3, 0, now / 1000, (now / 1000).toInt(), kind)
+
+    @Test
+    fun syncPlan_coinbaseInsertsAsMiningReward() {
+        val plan = planL1DisplaySync(listOf(coinbaseRecord(7)), emptyMap(), emptySet(), resolve, now)
+        val row = plan.inserts.single()
+        assertEquals(resolve(R.string.transaction_row_status_mining_reward), row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, row.filterFlags)
+        assertEquals(450_000_000L, row.valueSatoshis)
+        // Any other kind, or an unpopulated one, stays a plain receive.
+        for (kind in listOf(TX_TYPE_KIND_STANDARD, TX_TYPE_KIND_UNKNOWN)) {
+            val other = planL1DisplaySync(listOf(coinbaseRecord(7, kind)), emptyMap(), emptySet(), resolve, now)
+            assertEquals(resolve(R.string.transaction_row_status_received), other.inserts.single().title)
+        }
+    }
+
+    @Test
+    fun syncPlan_cachedReceivedCoinbaseIsRelabelled() {
+        val cached = cacheEntry(displayHex(7), resolve(R.string.transaction_row_status_received)).copy(
+            valueSatoshis = 450_000_000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED,
+            time = now
+        )
+        val plan = planL1DisplaySync(listOf(coinbaseRecord(7)), mapOf(cached.rowId to cached), emptySet(), resolve, now)
+        assertEquals(
+            cached.copy(title = resolve(R.string.transaction_row_status_mining_reward)),
+            plan.updates.single()
+        )
+        // Idempotent: the relabelled row produces no further update.
+        val again = planL1DisplaySync(
+            listOf(coinbaseRecord(7)), mapOf(cached.rowId to plan.updates.single()), emptySet(), resolve, now
+        )
+        assertTrue(again.updates.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_cachedUnshieldedRowTakesTheWithdrawalLabel() {
+        // A row cached under the old shared label is relabelled by the kind re-stamp.
+        val cached = cacheEntry(displayHex(7), resolve(R.string.transaction_row_unshielded)).copy(
+            valueSatoshis = 300_000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            iconBgType = TxDisplayCacheEntry.BG_RECEIVED,
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        )
+        val plan = planL1DisplaySync(
+            listOf(record(firstByte = 7, net = 300_000, context = 3, direction = 0)),
+            mapOf(cached.rowId to cached), emptySet(), resolve, now,
+            kindByTxid = mapOf(displayHex(7) to AssetLockKind.UNSHIELD_EXTERNAL)
+        )
+        assertEquals(resolve(R.string.transaction_row_unshielded_withdrawal), plan.updates.single().title)
+    }
+
+    @Test
+    fun overlayChoice_reportsTheSourceOfTheDisplayedFigure() {
+        val sdk = Coin.valueOf(6_506_830_476)
+        val held = Coin.valueOf(6_606_830_703)
+        val dashj = Coin.valueOf(999)
+        // Before the SDK publishes this launch: the dashj wallet's own figure.
+        assertEquals(dashj to OverlayBalanceSource.DASHJ, overlayBalanceChoice(null, true, held, dashj))
+        // Synced: the live SDK figure, the one the parity check compares.
+        assertEquals(sdk to OverlayBalanceSource.SDK, overlayBalanceChoice(sdk, true, held, dashj))
+        // Still scanning with a positive seed: the held last-known figure.
+        assertEquals(held to OverlayBalanceSource.LAST_KNOWN, overlayBalanceChoice(sdk, false, held, dashj))
+        // Still scanning with no usable seed: the live SDK figure.
+        assertEquals(sdk to OverlayBalanceSource.SDK, overlayBalanceChoice(sdk, false, null, dashj))
+        assertEquals(sdk to OverlayBalanceSource.SDK, overlayBalanceChoice(sdk, false, Coin.ZERO, dashj))
     }
 
     @Test
@@ -670,6 +919,7 @@ class CutoverUiDataServiceTest {
         val richTitles = listOf(
             R.string.transaction_row_shielded,
             R.string.transaction_row_unshielded,
+            R.string.transaction_row_unshielded_withdrawal,
             R.string.transaction_row_invitation,
             R.string.dashpay_upgrade_fee,
             R.string.dashpay_topup_fee,
@@ -3867,7 +4117,9 @@ class CutoverUiDataServiceTest {
         assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
         assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
         assertEquals(0, row.filterFlags)
-        assertEquals(-146L, row.valueSatoshis) // combined net = the fee
+        // Combined net −146, shown without the 146 fee the OUTGOING sibling carried —
+        // the same 0 the incoming-first order shows (D-M-01).
+        assertEquals(0L, row.valueSatoshis)
         assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty())
 
@@ -3921,7 +4173,9 @@ class CutoverUiDataServiceTest {
         assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
         assertEquals(TxDisplayCacheEntry.BG_SENT, row.iconBgType)
         assertEquals(0, row.filterFlags)
-        assertEquals(-146L, row.valueSatoshis) // combined net, not the +0.009 partial
+        // The combined net (−146), not the +0.009 partial — shown without its
+        // 146 fee, so the self-transfer reads 0 as dashj renders it (D-M-01).
+        assertEquals(0L, row.valueSatoshis)
         assertEquals("", row.statusText)
         assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty()) // the pending push was cancelled

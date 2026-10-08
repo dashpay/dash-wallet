@@ -423,7 +423,7 @@ class SdkTxDetailTest {
         }
 
         val row = runBlocking {
-            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true))
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
                 .defaultMetadataFor(TxId.wrap(txIdHex))
         }
 
@@ -442,11 +442,274 @@ class SdkTxDetailTest {
         val sdkService = mockk<DashSdkService> { every { databaseOrNull() } returns null }
 
         val row = runBlocking {
-            SdkTxDetailProvider(sdkService, mockk(), mockk(relaxed = true))
+            SdkTxDetailProvider(sdkService, mockk(), mockk(relaxed = true)) { _, _ -> null }
                 .defaultMetadataFor(TxId.wrap("e5169bfc4989585abd4b0476188611b981e3c750539da5b8a39fe135e3bbb957"))
         }
 
         assertNull(row)
         coVerify(exactly = 0) { sdkService.ensureStarted() }
+    }
+
+    @Test
+    fun `defaultMetadataFor follows the walker record over a misattributed store row`() {
+        // A contact send the store row records as INCOMING +change; the walker
+        // reattributes it to OUTGOING with the whole-wallet net. The metadata row
+        // must match what the history list shows, not the raw store row.
+        val txIdHex = decoded.txidDisplayHex
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { netAmount } returns 4_000L
+            every { fee } returns null
+            every { context } returns 3
+            every { direction } returns 0 // incoming (misattributed)
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val db = mockk<DashDatabase> {
+            every { transactionDao() } returns mockk<TransactionDao> { coEvery { getByTxid(any()) } returns entity }
+        }
+        val sdkService = mockk<DashSdkService> { every { databaseOrNull() } returns db }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+        val walkerRecord = L1TxUiRecord(
+            txidHex = txIdHex,
+            netAmountDuffs = -10_000_227L,
+            feeDuffs = 227L,
+            timestampMs = 1_770_000_000_000L,
+            status = L1TxUiStatus.CHAINLOCKED,
+            direction = L1TxUiDirection.OUTGOING
+        )
+
+        val row = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> walkerRecord }
+                .defaultMetadataFor(TxId.wrap(txIdHex))
+        }
+
+        assertNotNull(row)
+        assertEquals(TransactionCategory.Sent, row!!.type)
+        assertEquals(NeutralCoin.valueOf(-10_000_227L), row.value)
+        coVerify(exactly = 0) { sdkService.ensureStarted() }
+    }
+
+    // ── D-M-01: the fee is never counted twice ────────────────────────
+
+    /**
+     * [SdkTxDetailProvider.load] for a send whose history row holds [cachedValue],
+     * with the SDK row's [storedNet]/[storedFee]. With [inputTxoAmount] null the decode
+     * is forced to fail, so only the row-to-net reconstruction is under test; with it
+     * set, the fixture decodes and its one input is a wallet TXO of that amount.
+     */
+    private fun detailFor(
+        cachedValue: Long,
+        storedNet: Long,
+        storedFee: Long?,
+        storedDirection: Int,
+        contactUserId: String? = null,
+        storedContext: Int = 3,
+        inputTxoAmount: Long? = null
+    ): SdkTxDetail {
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns storedNet
+            every { fee } returns storedFee
+            every { context } returns storedContext
+            every { direction } returns storedDirection
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val db = mockk<DashDatabase> {
+            every { transactionDao() } returns mockk<TransactionDao> { coEvery { getByTxid(any()) } returns entity }
+            every { txoDao() } returns mockk<org.dashfoundation.dashsdk.persistence.dao.TxoDao> {
+                val inputOutpoint = txoOutpoint(decoded.inputs.single().prevTxid, decoded.inputs.single().prevVout)
+                coEvery { getByOutpoint(any()) } answers {
+                    if (inputTxoAmount != null && firstArg<ByteArray>().contentEquals(inputOutpoint)) {
+                        mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+                            every { amount } returns inputTxoAmount
+                            every { address } returns "input-address"
+                        }
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+        }
+        val row = de.schildbach.wallet.database.entity.TxDisplayCacheEntry(
+            rowId = decoded.txidDisplayHex,
+            title = "Sent",
+            valueSatoshis = cachedValue,
+            iconType = de.schildbach.wallet.database.entity.TxDisplayCacheEntry.ICON_SENT,
+            iconBgType = de.schildbach.wallet.database.entity.TxDisplayCacheEntry.BG_SENT,
+            statusText = "",
+            comment = "",
+            transactionAmount = 1,
+            time = 1_770_000_000_000L,
+            hasErrors = false,
+            service = null,
+            exchangeRateFiatCode = null,
+            exchangeRateFiatValue = null,
+            contactUsername = contactUserId?.let { "friend" },
+            contactDisplayName = null,
+            contactAvatarUrl = null,
+            contactUserId = contactUserId,
+            filterFlags = de.schildbach.wallet.database.entity.TxDisplayCacheEntry.FLAG_SENT
+        )
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns listOf(row)
+        }
+        mockkObject(TransactionDecoder)
+        try {
+            if (inputTxoAmount == null) {
+                every { TransactionDecoder.decode(any(), any()) } throws UnsatisfiedLinkError("no decode in this test")
+            } else {
+                every { TransactionDecoder.decode(any(), any()) } returns decoded
+            }
+            return requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true))
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    private fun detailNetFor(
+        cachedValue: Long,
+        storedNet: Long,
+        storedFee: Long?,
+        storedDirection: Int,
+        contactUserId: String? = null
+    ): Long = detailFor(cachedValue, storedNet, storedFee, storedDirection, contactUserId).netAmountDuffs
+
+    @Test
+    fun `pending send whose fee is only known in memory shows the amount with its fee`() {
+        // Not yet confirmed: the walker recovers the 247-duff fee from the input
+        // reservation and serves the fee-free row (−70 000), but the store's fee stays
+        // NULL. The sheet derives the same fee from the input TXO instead of reading 0.
+        val detail = detailFor(
+            cachedValue = -70_000L, storedNet = -70_247L, storedFee = null, storedDirection = 1,
+            storedContext = 0, inputTxoAmount = 95_247L
+        )
+        assertEquals(-70_247L, detail.netAmountDuffs) // not −70 000
+        assertEquals(247L, detail.feeDuffs)
+    }
+
+    @Test
+    fun `contact send keeps its fee-inclusive net once the walker recovers the fee`() {
+        // The SDK row shows only the +change; the history row holds the engine's
+        // signed net, fee included. Before and after the fee is persisted.
+        val before = detailNetFor(-10_000_227L, storedNet = 499_773L, storedFee = null, storedDirection = 0, contactUserId = "id")
+        val after = detailNetFor(-10_000_227L, storedNet = 499_773L, storedFee = 227L, storedDirection = 0, contactUserId = "id")
+        assertEquals(-10_000_227L, before)
+        assertEquals(-10_000_227L, after) // not −10 000 454
+    }
+
+    @Test
+    fun `send still cached with its fee is not counted twice`() {
+        // Fee persisted, history row not yet corrected by the next planner pass.
+        assertEquals(-10_000_227L, detailNetFor(-10_000_227L, storedNet = -10_000_227L, storedFee = 227L, storedDirection = 1))
+    }
+
+    @Test
+    fun `fee-free send gets its fee back for the detail sheet`() {
+        assertEquals(-10_000_227L, detailNetFor(-10_000_000L, storedNet = -10_000_227L, storedFee = 227L, storedDirection = 1))
+    }
+
+    // ── D-M-01: a contact row's amount is read from the wallet record ─
+
+    /**
+     * [SdkTxDetailProvider.load] for the history [row] of a send whose stored SDK row is
+     * the misattributed INCOMING +change (what a contact send persists), with the
+     * walker's corrected [walletRecord] supplied through the provider's seam.
+     */
+    private fun loadContactSend(row: de.schildbach.wallet.database.entity.TxDisplayCacheEntry, walletRecord: L1TxUiRecord): SdkTxDetail {
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns 499_773L
+            every { fee } returns null
+            every { context } returns 0
+            every { direction } returns 0
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val db = mockk<DashDatabase> {
+            every { transactionDao() } returns mockk<TransactionDao> { coEvery { getByTxid(any()) } returns entity }
+            every { txoDao() } returns mockk()
+        }
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns listOf(row)
+        }
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } throws UnsatisfiedLinkError("no decode in this test")
+            return requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, hex ->
+                        walletRecord.takeIf { it.txidHex == hex }
+                    }.load(decoded.txidDisplayHex)
+                }
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    /** The walker's record: the pending contact send reattributed OUTGOING, fee recovered in memory. */
+    private fun reattributedContactSend() = l1TxUiRecord(
+        txidWireBytes = decoded.txid,
+        netAmountDuffs = -10_000_227L,
+        feeDuffs = 227L,
+        contextCode = 0,
+        directionCode = 1,
+        firstSeenSec = 1_770_000_000L,
+        blockTimestampSec = 0
+    )
+
+    private val friend = ResolvedTxContact(username = "friend", displayName = null, avatarUrl = null, userId = "friend-id")
+
+    @Test
+    fun `contact send planned without the engine net shows its fee in details`() {
+        // After a restart with the send still pending, no engine net is known, so the
+        // planner writes the fee-free principal — and still attaches the contact.
+        val record = reattributedContactSend()
+        val row = planL1DisplaySync(
+            records = listOf(record), existingByRowId = emptyMap(), groupedTxIds = emptySet(),
+            resolve = { "str:$it" }, nowMs = 1_770_000_000_000L,
+            contactByTxid = mapOf(record.txidHex to friend)
+        ).inserts.single()
+        assertEquals(-10_000_000L, row.valueSatoshis)
+        assertEquals("friend-id", row.contactUserId)
+
+        val detail = loadContactSend(row, record)
+        assertEquals(-10_000_227L, detail.netAmountDuffs) // not −10 000 000
+        assertEquals(227L, detail.feeDuffs)
+    }
+
+    @Test
+    fun `contact send planned from the engine net is not counted twice`() {
+        val record = reattributedContactSend()
+        val row = planL1DisplaySync(
+            records = listOf(record), existingByRowId = emptyMap(), groupedTxIds = emptySet(),
+            resolve = { "str:$it" }, nowMs = 1_770_000_000_000L,
+            contactByTxid = mapOf(record.txidHex to friend),
+            signedNetByTxid = mapOf(record.txidHex to -10_000_227L)
+        ).inserts.single()
+        assertEquals(-10_000_227L, row.valueSatoshis)
+
+        val detail = loadContactSend(row, record)
+        assertEquals(-10_000_227L, detail.netAmountDuffs) // not −10 000 454
+        assertEquals(227L, detail.feeDuffs)
     }
 }
