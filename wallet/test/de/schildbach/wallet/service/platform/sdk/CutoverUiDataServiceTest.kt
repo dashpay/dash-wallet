@@ -4117,7 +4117,9 @@ class CutoverUiDataServiceTest {
         assertEquals(resolve(R.string.transaction_row_status_sent_internally), row.title)
         assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
         assertEquals(0, row.filterFlags)
-        assertEquals(-146L, row.valueSatoshis) // combined net = the fee
+        // Combined net −146, shown without the 146 fee the OUTGOING sibling carried —
+        // the same 0 the incoming-first order shows (D-M-01).
+        assertEquals(0L, row.valueSatoshis)
         assertEquals(bornTime, row.time) // the tx's own timestamp is kept
         assertTrue(notified.isEmpty())
 

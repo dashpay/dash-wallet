@@ -568,12 +568,15 @@ open class DashPayConfig @Inject constructor(
          * Set once the post-cutover display-cache completeness check
          * (`TxDisplayCacheService.rebuildIfCacheIncomplete`) has run — which it
          * does exactly once, after the SDK's one-time sync first reaches the
-         * tip — and never cleared except by a wallet wipe, so a restore gets
-         * its own single check. The check compares SDK records against display
-         * rows, and on a CoinJoin wallet records legitimately fold into
-         * per-day group rows, so run on every sync-complete tick it requested
-         * a full reconcile every time (D-M-01 §4b). The 60s reconcile ticker
-         * keeps the cache converged after that one check.
+         * tip — and never cleared except by a wallet wipe (which clears every
+         * DashPayConfig key), so a restore gets its own single check.
+         *
+         * Why only once: the check compares SDK records against display rows,
+         * and on a CoinJoin wallet records legitimately fold into per-day group
+         * rows, so it always reads "missing rows". Before this latch it ran on
+         * every sync-complete tick and requested a full reconcile each time
+         * (D-M-01 §4b). Keeping the cache converged after that one check is the
+         * separate 60s reconcile ticker's job, not this check's.
          */
         val POST_CUTOVER_COMPLETENESS_CHECKED =
             booleanPreferencesKey("post_cutover_completeness_checked")

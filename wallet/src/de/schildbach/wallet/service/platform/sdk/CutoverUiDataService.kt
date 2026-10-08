@@ -2495,6 +2495,20 @@ class CutoverUiDataService internal constructor(
         }
 
     /**
+     * The first fee any sibling event of a txid carried, next to
+     * [seenEventDirections]: only the OUTGOING sibling knows the fee, so the
+     * combined INTERNAL record would otherwise keep it or lose it depending on
+     * which sibling arrived last — rendering the same self-transfer as 0 in one
+     * order and −fee in the other (D-M-01). Same cap and collector as
+     * [seenEventDirections].
+     */
+    private val seenEventFees =
+        object : LinkedHashMap<String, Long>() {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>): Boolean =
+                size > SEEN_TX_DIRECTIONS_MAX
+        }
+
+    /**
      * Deferred coins-received notifications per txid ([scheduleDeferredCoinsReceivedNotify]).
      * An engine-event-born incoming insert notifies only after
      * [SELF_SPEND_NOTIFY_GRACE_MS], so an OUTGOING sibling event landing
@@ -4030,6 +4044,7 @@ class CutoverUiDataService internal constructor(
         noNetWarnedTxids.clear()
         terminalResolvedTxids.clear()
         seenEventDirections.clear()
+        seenEventFees.clear()
         engineNetByTxid.clear()
     }
 
@@ -4730,6 +4745,7 @@ class CutoverUiDataService internal constructor(
                     // engine's original per-account figure).
                     siblingNets.putIfAbsent(record.direction, event.netAmountDuffs)
                 }
+                event.feeDuffs?.let { seenEventFees.putIfAbsent(record.txidHex, it) }
                 val outgoingNet = siblingNets[L1TxUiDirection.OUTGOING]
                 val incomingNet = siblingNets[L1TxUiDirection.INCOMING]
                 if (outgoingNet != null && incomingNet != null) {
@@ -4764,7 +4780,9 @@ class CutoverUiDataService internal constructor(
                         )
                         record = record.copy(
                             direction = L1TxUiDirection.INTERNAL,
-                            netAmountDuffs = combinedNet
+                            netAmountDuffs = combinedNet,
+                            // Whichever sibling carried it — see [seenEventFees].
+                            feeDuffs = record.feeDuffs ?: seenEventFees[record.txidHex]
                         )
                     }
                 }
