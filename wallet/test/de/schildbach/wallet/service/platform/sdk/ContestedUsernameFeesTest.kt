@@ -58,6 +58,16 @@ class ContestedUsernameFeesTest {
     }
 
     @Test
+    fun `resume top-up is decided and sized by the strictly resolved pair`() {
+        // 0.20 DASH of credits: above the live 0.15 requirement at protocol 14 (no top-up,
+        // whatever a conservative pre-check concluded), below the legacy 0.25 at 13.
+        val credits = 20_000_000L * 1000
+        assertEquals(null, contestedTopUpFor(credits, ContestedUsernameFees.CURRENT))
+        assertEquals(ContestedUsernameFees.LEGACY.contestedName, contestedTopUpFor(credits, ContestedUsernameFees.LEGACY))
+        assertEquals(ContestedUsernameFees.CURRENT.contestedName, contestedTopUpFor(1_000L * 1000, ContestedUsernameFees.CURRENT))
+    }
+
+    @Test
     fun `an unknown protocol version refuses to resolve a funding fee`() {
         assertThrows(ProtocolVersionUnavailableException::class.java) {
             runBlocking { ContestedUsernameFees.resolved(sdkService(null)) }

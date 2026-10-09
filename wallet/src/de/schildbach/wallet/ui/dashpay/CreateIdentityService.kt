@@ -25,6 +25,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.uniqueIdStringOrNull
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.contestedTopUpFor
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
@@ -669,16 +670,23 @@ class CreateIdentityService : LifecycleService() {
                 }
 
                 if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
+                    // Inside the candidate branch the strictly resolved pair decides BOTH
+                    // whether a top-up is still needed and how much: the conservative read
+                    // above may have entered this branch on the legacy requirement while the
+                    // live one is already covered (null→14, or a 13→14 activation between
+                    // the reads) — constructing a top-up then moves wallet funds for nothing.
                     val topupValue = if (contestable) {
-                        ContestedUsernameFees.resolved(dashSdkService).contestedName
+                        contestedTopUpFor(balanceInfo.balance, ContestedUsernameFees.resolved(dashSdkService))
                     } else {
                         Constants.DASH_PAY_FEE
                     }
-                    assetLockTransaction = topUpRepository.createTopupTransaction(
-                        blockchainIdentity,
-                        topupValue,
-                        encryptionKey
-                    )
+                    if (topupValue != null) {
+                        assetLockTransaction = topUpRepository.createTopupTransaction(
+                            blockchainIdentity,
+                            topupValue,
+                            encryptionKey
+                        )
+                    }
                 }
             }
         }

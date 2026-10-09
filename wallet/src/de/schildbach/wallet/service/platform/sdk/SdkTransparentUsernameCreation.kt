@@ -50,9 +50,10 @@ import javax.inject.Singleton
  * `feeDuffs`, extracted so the protocol-gating (MO-1069) is host-JVM
  * unit-testable without standing up the rest of the SDK plumbing. Contested
  * labels resolve through [ContestedUsernameFees.resolved] (a live
- * [DashSdkService.currentProtocolVersion] read: 0.25 DASH pre-v4.2/unknown,
- * 0.15 DASH once the network reports protocol >= 14); non-contested labels
- * are the fixed `DASH_PAY_FEE` (0.03 DASH).
+ * [DashSdkService.currentProtocolVersion] read: 0.25 DASH pre-v4.2, 0.15 DASH
+ * once the network reports protocol >= 14, and [ProtocolVersionUnavailableException]
+ * when the version is unknown — funding never falls back to a fee); non-contested
+ * labels are the fixed `DASH_PAY_FEE` (0.03 DASH).
  */
 internal suspend fun transparentUsernameFeeDuffs(contested: Boolean, sdkService: DashSdkService): Long =
     if (contested) {
@@ -606,12 +607,6 @@ class SdkTransparentUsernameCreation internal constructor(
             if (t is CancellationException) throw t
             return notBroadcast("contested-ness check failed", t)
         }
-        val amountDuffs = try {
-            feeDuffs(contested)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            return notBroadcast("username funding amount unavailable", t)
-        }
 
         val walletId = try {
             source.boundWalletIdOrNull()
@@ -649,6 +644,22 @@ class SdkTransparentUsernameCreation internal constructor(
             return notBroadcast("resume-gate recovery lookup failed", t)
         }
         val includeDashPayKeys = existingLock == null
+
+        // The funding quote is needed ONLY to build fresh funding. Resolving it before the
+        // recovery lookup made a transient protocol-version failure block the resume of an
+        // asset lock a previous attempt already built or broadcast — committed funds that need
+        // no new quote. So: inspect the recovery record first, resolve strictly only for the
+        // fresh arm (pre-broadcast refusal retained there).
+        val amountDuffs = if (existingLock != null) {
+            0L
+        } else {
+            try {
+                feeDuffs(contested)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast("username funding amount unavailable", t)
+            }
+        }
 
         // The canonical key set for that choice. previewRegistrationKeySet
         // returns the private scalars in hand (IdentityKeyPreview.privateKey)

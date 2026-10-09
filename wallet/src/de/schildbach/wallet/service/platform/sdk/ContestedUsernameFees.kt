@@ -91,3 +91,14 @@ data class ContestedUsernameFees(val contested: Coin, val contestedName: Coin) {
             )
     }
 }
+
+/**
+ * Top-up an existing identity needs for a contested name under [fees], given its
+ * balance in Platform credits (duffs × 1000) — or null when the credits already
+ * cover [ContestedUsernameFees.contested] and no transaction must be built. Pure:
+ * the resume path in CreateIdentityService decides AND sizes the top-up from the
+ * same strictly resolved pair through this, so a conservative pre-check can never
+ * turn into an unnecessary funding.
+ */
+fun contestedTopUpFor(identityBalanceCredits: Long, fees: ContestedUsernameFees): Coin? =
+    if (identityBalanceCredits < fees.contested.value * 1000) fees.contestedName else null

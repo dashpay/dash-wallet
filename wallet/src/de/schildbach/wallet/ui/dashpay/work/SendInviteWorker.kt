@@ -58,6 +58,17 @@ class SendInviteWorker @AssistedInject constructor(
         const val KEY_APPSFLYER_LINK = "SendInviteWorker.KEY_APPSFLYER_LINK"
         const val KEY_VALUE = "SendInviteWorker.KEY_VALUE"
         const val KEY_CONTESTED = "SendInviteWorker.KEY_CONTESTED"
+
+        /**
+         * The invitation's contested-ness for funding. An explicit [KEY_CONTESTED] wins;
+         * a work request persisted by a build that stored only the amount (it survives an
+         * app upgrade) infers it from that amount with the same CURRENT.contested floor
+         * ConfirmInviteDialogFragment classifies with — so an unfinished contested
+         * request still goes through the funding-time resolver instead of funding the
+         * stale quote verbatim. Pure — host-testable.
+         */
+        fun contestedFor(storedAmountDuffs: Long, explicit: Boolean?): Boolean =
+            explicit ?: (storedAmountDuffs >= ContestedUsernameFees.CURRENT.contested.value)
         private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
     }
 
@@ -82,7 +93,7 @@ class SendInviteWorker @AssistedInject constructor(
         val password = inputData.getString(KEY_PASSWORD)
             ?: return errorResult("missing KEY_PASSWORD parameter")
         val value = inputData.getLong(KEY_VALUE, 0L)
-        val contested = inputData.getBoolean(KEY_CONTESTED, false)
+        val contested = contestedFor(value, if (inputData.keyValueMap.containsKey(KEY_CONTESTED)) inputData.getBoolean(KEY_CONTESTED, false) else null)
         var fundedValue = value
         val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS)
             ?: return errorResult("missing KEY_FUNDING_ADDRESS parameter")
