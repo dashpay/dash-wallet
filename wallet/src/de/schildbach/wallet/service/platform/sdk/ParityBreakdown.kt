@@ -746,13 +746,11 @@ internal fun parityBreakdownAppliesToReport(cutoverCommitted: Boolean, dashjDiag
  * or below it has been processed. Until it reaches
  * [dashjLastBlockSeenHeight], a transaction the SDK is still importing would
  * be counted dashj-only. An unknown height (0) cannot prove anything, so it
- * waits too. A dashj wallet with no block seen has nothing confirmed to wait
- * for.
+ * waits too. A dashj wallet that has seen no blocks is REFUSED outright: an
+ * empty dashj side produces dashj-only=0 and sdk-only=0, which reads as
+ * perfect parity and means nothing.
  */
 internal fun sdkStillProcessingReason(sdkWalletHeight: Long, dashjLastBlockSeenHeight: Int): String? = when {
-    // NOTE: a dashj wallet that has seen no blocks is REFUSED here, not waved
-    // through — see the branch below. Any older description of this function
-    // returning null for that case is out of date.
     // dashj has seen NO blocks. Previously this returned null ("nothing is
     // wrong, go ahead"), and the breakdown duly reported dashj-only=0,
     // sdk-only=0 against an empty dashj wallet — which reads as perfect parity
