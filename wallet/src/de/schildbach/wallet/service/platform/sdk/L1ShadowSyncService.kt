@@ -3436,6 +3436,9 @@ class L1ShadowSyncService internal constructor(
                     }
                     val event = parseL1TxEvent(debug) ?: return@collect
                     log.info("L1 engine tx event: {}", event)
+                    // A transaction the findings never saw makes them stale:
+                    // they described the history without it.
+                    expireParityFindingsForNewTx()
                     if (!_txEvents.tryEmit(event)) {
                         log.warn("L1 tx-event buffer full; dropped {} (Room snapshot will reconcile)", event)
                     }
@@ -4113,6 +4116,35 @@ class L1ShadowSyncService internal constructor(
      * and resetting the cadence lets a fresh breakdown run immediately rather
      * than waiting out the hour.
      */
+    /**
+     * A new transaction arrived: the completed findings described a history
+     * that did not contain it, so they can no longer establish parity for the
+     * history that does. Dropping them makes the verdict fall back to "not
+     * established" until a run has compared the new state.
+     *
+     * Unlike [discardParityBreakdown] this keeps the stored breakdown text —
+     * it is timestamped and remains a valid account of the moment it was
+     * computed, which is what a support report wants. Only the verdict's
+     * input goes.
+     *
+     * The cadence is reset so the next probe tick can recompute rather than
+     * waiting out the hour, held off by [PARITY_BREAKDOWN_TX_SETTLE_MS] so a
+     * burst of events (one per CoinJoin record) produces one run, not one per
+     * transaction.
+     */
+    private fun expireParityFindingsForNewTx() {
+        synchronized(breakdownLock) {
+            if (_latestBreakdownFindings.value == null && lastBreakdownRunMs == null) return
+            _latestBreakdownFindings.value = null
+            lastBreakdownRunMs = null
+            breakdownRetryNotBeforeMs = maxOf(
+                breakdownRetryNotBeforeMs,
+                nowMs() + PARITY_BREAKDOWN_TX_SETTLE_MS
+            )
+        }
+        log.info("ParityBreakdown: findings expired by a new transaction; recomputing after the settle window")
+    }
+
     private suspend fun discardParityBreakdown(why: String) {
         val run = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             synchronized(breakdownLock) {
@@ -4974,5 +5006,13 @@ class L1ShadowSyncService internal constructor(
 
         /** After a failed or skipped breakdown run, the wait before the next attempt. */
         internal const val PARITY_BREAKDOWN_RETRY_MS = 10 * 60_000L
+
+        /**
+         * After a new transaction, how long to let the two stacks settle
+         * before recomputing the findings it invalidated. Long enough to
+         * absorb a CoinJoin burst (one event per record), short enough that
+         * the verdict comes back in the same sitting.
+         */
+        internal const val PARITY_BREAKDOWN_TX_SETTLE_MS = 60_000L
     }
 }

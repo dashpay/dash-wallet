@@ -3794,6 +3794,36 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun aNewTransaction_expiresTheFindings_butKeepsTheStoredBreakdown() = runBlocking {
+        // The findings described a history that did not contain this
+        // transaction, so they cannot establish parity for the one that does.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+        val computed = checkNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+        withTimeout(5_000) { while (source.eventStrings.subscriptionCount.value == 0) delay(10) }
+
+        source.eventStrings.emit(detectedDebug())
+
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value != null) delay(10) }
+        // The stored text is a timestamped account of the moment it was
+        // computed and still belongs in a support report; only the verdict's
+        // input went.
+        assertSameStored(expected = computed, actual = ParityBreakdownStore(file).load())
+        assertSameStored(expected = computed, actual = service.latestParityBreakdown(walletIdHex))
+        // And a run against the new state restores them.
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
     fun walletRecreation_discardsTheFindingsToo() = runBlocking {
         val file = dataDir.resolve("breakdown.txt")
         val source = breakdownSource()
