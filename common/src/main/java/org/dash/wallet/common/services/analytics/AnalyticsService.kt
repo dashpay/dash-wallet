@@ -84,11 +84,11 @@ class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
                 Log.w("FIREBASE", "placeholder FirebaseApp (built without google-services.json); analytics disabled")
                 return@lazy null
             }
-            Firebase.analytics.also {
-                // Keep the SDK's automatic events (screen_view, session_start, ...)
-                // in step with the user's choice whichever call resolves it first.
-                it.setAnalyticsCollectionEnabled(configuration.analyticsEnabled)
-            }
+            // No collection-setting side effect here: instances are unscoped, so a
+            // background instance resolving late could overwrite a newer opt-out.
+            // The setting is applied only through [isEnabled] (WalletApplication
+            // applies the stored value right after Firebase initializes).
+            Firebase.analytics
         } catch (ex: IllegalStateException) {
             Log.w("FIREBASE", "FirebaseApp not initialized (built without google-services.json); analytics disabled")
             null
@@ -105,9 +105,16 @@ class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
     override var isEnabled: Boolean
         get() = configuration.analyticsEnabled
         set(enabled) {
-            configuration.analyticsEnabled = enabled
+            // Write only on a change, so the startup re-apply costs no disk write.
+            val persisted = configuration.analyticsEnabled == enabled ||
+                configuration.setAnalyticsEnabled(enabled)
+            if (!persisted) {
+                Log.w("FIREBASE", "failed to persist analytics setting: $enabled")
+            }
             try {
-                firebaseAnalytics?.setAnalyticsCollectionEnabled(enabled)
+                // An opt-out applies for this session even if the write failed; an
+                // opt-in only once it is saved, so collection never outruns the choice.
+                firebaseAnalytics?.setAnalyticsCollectionEnabled(enabled && persisted)
             } catch (ex: Exception) {
                 Log.w("FIREBASE", "failed to apply analytics collection setting", ex)
             }

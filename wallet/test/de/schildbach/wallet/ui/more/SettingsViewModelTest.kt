@@ -121,9 +121,13 @@ class SettingsViewModelTest {
         assertEquals("Last saved: Jan 15, 2024", viewModel.uiState.value.transactionMetadataSubtitle)
     }
 
-    private fun analyticsService(enabled: Boolean, available: Boolean) = mockk<AnalyticsService>(relaxed = true) {
-        every { isEnabled } returns enabled
-        every { isAvailable } returns available
+    private fun analyticsService(enabled: Boolean, available: Boolean): AnalyticsService {
+        var stored = enabled
+        return mockk(relaxed = true) {
+            every { isEnabled } answers { stored }
+            every { isEnabled = any() } answers { stored = firstArg() }
+            every { isAvailable } returns available
+        }
     }
 
     @Test

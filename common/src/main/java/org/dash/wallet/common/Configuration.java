@@ -216,8 +216,15 @@ public class Configuration {
         return prefs.getBoolean(PREFS_KEY_ANALYTICS_ENABLED, true);
     }
 
-    public void setAnalyticsEnabled(final boolean enabled) {
-        prefs.edit().putBoolean(PREFS_KEY_ANALYTICS_ENABLED, enabled).apply();
+    /**
+     * Persists the choice synchronously: an opt-out must be on disk before it is treated
+     * as saved, or a process death could bring collection back on the next launch.
+     *
+     * @return whether the write reached disk
+     */
+    @SuppressLint("ApplySharedPref")
+    public boolean setAnalyticsEnabled(final boolean enabled) {
+        return prefs.edit().putBoolean(PREFS_KEY_ANALYTICS_ENABLED, enabled).commit();
     }
 
     public long getLastBackupTime() {

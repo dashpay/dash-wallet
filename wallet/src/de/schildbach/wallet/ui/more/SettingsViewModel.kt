@@ -128,7 +128,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setAnalyticsEnabled(enabled: Boolean) {
         analytics.isEnabled = enabled
-        _uiState.update { it.copy(analyticsEnabled = enabled) }
+        _uiState.update { it.copy(analyticsEnabled = analytics.isEnabled) }
     }
 
     fun updateLastBlockchainResetTime() {

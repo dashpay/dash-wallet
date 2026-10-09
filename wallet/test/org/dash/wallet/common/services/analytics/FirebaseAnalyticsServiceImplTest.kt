@@ -75,6 +75,7 @@ class FirebaseAnalyticsServiceImplTest {
             store[firstArg()] = secondArg<Boolean>()
             editor
         }
+        every { editor.commit() } returns true
         every { editor.clear() } answers {
             store.clear()
             editor
@@ -109,7 +110,7 @@ class FirebaseAnalyticsServiceImplTest {
 
     @Test
     fun turningBackOn_resumesFirebaseCollection() {
-        configuration.analyticsEnabled = false
+        configuration.setAnalyticsEnabled(false)
         val service = FirebaseAnalyticsServiceImpl(configuration)
 
         service.isEnabled = true
@@ -121,7 +122,7 @@ class FirebaseAnalyticsServiceImplTest {
 
     @Test
     fun whenOff_logEventNeverReachesFirebase() {
-        configuration.analyticsEnabled = false
+        configuration.setAnalyticsEnabled(false)
         val service = FirebaseAnalyticsServiceImpl(configuration)
 
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
@@ -144,7 +145,7 @@ class FirebaseAnalyticsServiceImplTest {
 
     @Test
     fun releaseBuild_whenOff_logEventNeverReachesFirebase() {
-        configuration.analyticsEnabled = false
+        configuration.setAnalyticsEnabled(false)
         val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
 
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
@@ -190,7 +191,7 @@ class FirebaseAnalyticsServiceImplTest {
 
     @Test
     fun walletReset_keepsTheOptOut_inASingleCommit() {
-        configuration.analyticsEnabled = false
+        configuration.setAnalyticsEnabled(false)
         store["some_wallet_pref"] = true
         clearMocks(editor, answers = false)
 
@@ -204,5 +205,40 @@ class FirebaseAnalyticsServiceImplTest {
             editor.putBoolean(Configuration.PREFS_KEY_ANALYTICS_ENABLED, false)
             editor.commit()
         }
+    }
+
+    @Test
+    fun resolvingFirebase_doesNotTouchTheCollectionSetting() {
+        // A late-resolving instance must not overwrite a newer opt-out made through another one.
+        val background = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+        FirebaseAnalyticsServiceImpl(configuration).isEnabled = false
+        clearMocks(firebaseAnalytics, answers = false)
+        every { firebaseOptions.projectId } returns "dash-wallet-real-project"
+
+        assertTrue(background.isAvailable)
+
+        verify(exactly = 0) { firebaseAnalytics.setAnalyticsCollectionEnabled(any()) }
+    }
+
+    @Test
+    fun optOut_whoseWriteFails_stillStopsCollectionThisSession() {
+        every { editor.commit() } returns false
+        val service = FirebaseAnalyticsServiceImpl(configuration)
+
+        service.isEnabled = false
+
+        verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
+    }
+
+    @Test
+    fun optIn_whoseWriteFails_leavesCollectionOff() {
+        configuration.setAnalyticsEnabled(false)
+        every { editor.commit() } returns false
+        val service = FirebaseAnalyticsServiceImpl(configuration)
+
+        service.isEnabled = true
+
+        verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
+        verify(exactly = 0) { firebaseAnalytics.setAnalyticsCollectionEnabled(true) }
     }
 }
