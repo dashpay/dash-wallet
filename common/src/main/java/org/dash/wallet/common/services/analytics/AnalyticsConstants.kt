@@ -91,8 +91,8 @@ object AnalyticsConstants {
     }
 
     object SendReceive {
-        const val SEND_TX = "send_tx" // also include amount sent
-        const val SEND_TX_CONTACT = "send_tx_to_contact"  // also include amount sent
+        const val SEND_TX = "send_tx"
+        const val SEND_TX_CONTACT = "send_tx_to_contact"
         const val SCAN_TO_SEND = "send_scan_to_send"
         const val SEND_TO_ADDRESS = "send_to_address"
         const val SHOW_QR_CODE = "receive_show_qr_code"

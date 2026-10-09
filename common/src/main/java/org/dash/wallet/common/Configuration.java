@@ -57,6 +57,7 @@ public class Configuration {
     public static final String PREFS_KEY_AUTO_LOGOUT_MINUTES = "auto_logout_minutes";
     private static final String PREFS_KEY_SPENDING_CONFIRMATION_ENABLED = "spending_confirmation_enabled";
     private static final String PREFS_KEY_BIOMETRIC_LIMIT = "biometric_limit";
+    public static final String PREFS_KEY_ANALYTICS_ENABLED = "analytics_enabled";
 
     private static final String PREFS_KEY_LAST_VERSION = "last_version";
     private static final String PREFS_KEY_LAST_USED = "last_used";
@@ -109,6 +110,24 @@ public class Configuration {
         Editor edit = prefs.edit();
         try {
             edit.clear();
+        } finally {
+            edit.commit();
+        }
+    }
+
+    /**
+     * Like {@link #clear()}, but keeps the analytics opt-out (MO-1065): it is the user's
+     * privacy choice, not wallet state. The wipe and the re-write go in one synchronous
+     * commit, so a process death mid-reset can never leave the key missing (which would
+     * read back as the "on" default).
+     */
+    @SuppressLint("ApplySharedPref")
+    public void clearPreservingAnalytics() {
+        final boolean analyticsEnabled = getAnalyticsEnabled();
+        Editor edit = prefs.edit();
+        try {
+            edit.clear();
+            edit.putBoolean(PREFS_KEY_ANALYTICS_ENABLED, analyticsEnabled);
         } finally {
             edit.commit();
         }
@@ -190,6 +209,22 @@ public class Configuration {
 
     public void setBiometricLimit(final float limit) {
         prefs.edit().putFloat(PREFS_KEY_BIOMETRIC_LIMIT, limit).apply();
+    }
+
+    /** Whether the user allows Firebase analytics event collection (MO-1065). On by default. */
+    public boolean getAnalyticsEnabled() {
+        return prefs.getBoolean(PREFS_KEY_ANALYTICS_ENABLED, true);
+    }
+
+    /**
+     * Persists the choice synchronously: an opt-out must be on disk before it is treated
+     * as saved, or a process death could bring collection back on the next launch.
+     *
+     * @return whether the write reached disk
+     */
+    @SuppressLint("ApplySharedPref")
+    public boolean setAnalyticsEnabled(final boolean enabled) {
+        return prefs.edit().putBoolean(PREFS_KEY_ANALYTICS_ENABLED, enabled).commit();
     }
 
     public long getLastBackupTime() {

@@ -53,7 +53,8 @@ fun SettingsScreen(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onAnalyticsInfoClick: () -> Unit = {}
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
 
@@ -65,7 +66,9 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onAnalyticsToggle = viewModel::setAnalyticsEnabled,
+        onAnalyticsInfoClick = onAnalyticsInfoClick
     )
 }
 
@@ -78,7 +81,9 @@ fun SettingsScreen(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onAnalyticsToggle: (Boolean) -> Unit = {},
+    onAnalyticsInfoClick: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -90,7 +95,9 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onAnalyticsToggle = onAnalyticsToggle,
+        onAnalyticsInfoClick = onAnalyticsInfoClick
     )
 }
 
@@ -103,7 +110,9 @@ private fun SettingsScreenContent(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onAnalyticsToggle: (Boolean) -> Unit = {},
+    onAnalyticsInfoClick: () -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     Column(
@@ -184,6 +193,22 @@ private fun SettingsScreenContent(
                         icon = R.drawable.ic_battery,
                         action = onBatteryOptimizationClick
                     )
+
+                    // Share usage data / analytics opt-out (MO-1065). Hidden when the
+                    // build has no Firebase: nothing is collected, so nothing to opt out of.
+                    // Figma "Action item / Var 2": title + 20dp blue info icon, no subtitle.
+                    if (uiState.analyticsAvailable) {
+                        MenuItem(
+                            title = stringResource(R.string.settings_analytics_title),
+                            icon = R.drawable.ic_usage,
+                            showInfo = true,
+                            onInfoClick = onAnalyticsInfoClick,
+                            infoIcon = R.drawable.ic_nav_bar_info,
+                            infoIconSize = 20.dp,
+                            checked = uiState.analyticsEnabled,
+                            onCheckedChange = onAnalyticsToggle
+                        )
+                    }
                 }
             }
         }
@@ -206,7 +231,8 @@ fun MoreScreenPreviewPopulated() {
         localCurrencySymbol = "USD",
         ignoringBatteryOptimizations = true,
         transactionMetadataVisible = true,
-        transactionMetadataSubtitle = "Last saved: Jan 15, 2024"
+        transactionMetadataSubtitle = "Last saved: Jan 15, 2024",
+        analyticsEnabled = true
     )
     DashWalletTheme {
         SettingsScreenContent(uiState = customState)

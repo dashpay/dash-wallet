@@ -36,11 +36,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.getTransactionHex
-import org.dash.wallet.common.getTransactionValue
-import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.TxIds
-import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -102,8 +98,6 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var cardIndex: Int = 0
     private var tickerJob: Job? = null
 
-    /** The metadata exchange rate: the fiat price of one Dash. */
-    private var exchangeRate: FiatValue? = null
     private var retries = 3
 
     private val _uiState = MutableStateFlow(GiftCardUIState())
@@ -116,10 +110,6 @@ class GiftCardDetailsViewModel @Inject constructor(
         metadataProvider.observeTransactionMetadata(transactionId)
             .filterNotNull()
             .onEach { metadata ->
-                if (!metadata.currencyCode.isNullOrEmpty() && !metadata.rate.isNullOrEmpty()) {
-                    exchangeRate = FiatValue.parseFiat(metadata.currencyCode!!, metadata.rate!!)
-                }
-
                 _uiState.update { currentState ->
                     currentState.copy(
                         date = LocalDateTime.ofInstant(
@@ -703,20 +693,6 @@ class GiftCardDetailsViewModel @Inject constructor(
             AnalyticsConstants.DashSpend.MERCHANT_NAME,
             mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.merchantName)
         )
-
-        exchangeRate?.let {
-            val fiatValue = it.dashToFiat(walletData.getTransactionValue(transactionId) ?: Dash.ZERO)
-
-            analyticsService.logEvent(
-                AnalyticsConstants.DashSpend.PURCHASE_AMOUNT,
-                mapOf(AnalyticsConstants.Parameter.VALUE to giftCard.price)
-            )
-
-            analyticsService.logEvent(
-                AnalyticsConstants.DashSpend.DISCOUNT_AMOUNT,
-                mapOf(AnalyticsConstants.Parameter.VALUE to fiatValue.toFriendlyString())
-            )
-        }
     }
 
     private fun cancelTicker() {
