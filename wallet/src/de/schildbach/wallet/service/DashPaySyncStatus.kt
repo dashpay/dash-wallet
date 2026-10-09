@@ -77,6 +77,15 @@ import javax.inject.Singleton
  *   Not a settledness term of its own: it tells [L1SyncStatusService] not to
  *   run its time ceiling down against a wait that only an unlock can end (and
  *   that is itself bounded once the device is unlocked).
+ * @property accountBuildsAwaitingFirstDrain the unsettled account builds have
+ *   not been touched by any drain yet this process
+ *   ([de.schildbach.wallet.service.platform.sdk.AccountBuildDrainState.NOT_ATTEMPTED]):
+ *   the restore shape, where the first drain only runs after the first contact
+ *   sync — 28 minutes after the scan caught up on QA phone 2. Like the
+ *   locked-device hold it is not a settledness term; it tells
+ *   [L1SyncStatusService] to run the longer pre-first-drain ceiling instead of
+ *   the ordinary one, which would otherwise report the wallet finished while
+ *   that queue sits untouched.
  */
 data class DashPaySyncTerms(
     val applicable: Boolean = false,
@@ -84,7 +93,8 @@ data class DashPaySyncTerms(
     val contactSyncInFlight: Boolean = false,
     val accountBuildsSettled: Boolean = true,
     val backfillSettled: Boolean = true,
-    val accountBuildsHeldByLockedDevice: Boolean = false
+    val accountBuildsHeldByLockedDevice: Boolean = false,
+    val accountBuildsAwaitingFirstDrain: Boolean = false
 ) {
     val settled: Boolean
         get() = !applicable || (initialSyncCompleted && accountBuildsSettled && backfillSettled)
@@ -92,6 +102,10 @@ data class DashPaySyncTerms(
     /** Unsettled, and the account builds are waiting on a device unlock. */
     val heldByLockedDevice: Boolean
         get() = !settled && !accountBuildsSettled && accountBuildsHeldByLockedDevice
+
+    /** Unsettled, and no drain has touched the account builds yet. */
+    val awaitingFirstDrain: Boolean
+        get() = !settled && !accountBuildsSettled && accountBuildsAwaitingFirstDrain
 }
 
 /**
@@ -171,16 +185,27 @@ class DashPaySyncStatus @Inject constructor() {
             contactSyncInFlight = false,
             accountBuildsSettled = true,
             backfillSettled = true,
-            accountBuildsHeldByLockedDevice = false
+            accountBuildsHeldByLockedDevice = false,
+            accountBuildsAwaitingFirstDrain = false
         )
     }
 
     /**
      * The account-build term, and whether an unsettled one is waiting on the
-     * device being unlocked ([DashPaySyncTerms.accountBuildsHeldByLockedDevice]).
+     * device being unlocked ([DashPaySyncTerms.accountBuildsHeldByLockedDevice])
+     * or on the first drain of this process
+     * ([DashPaySyncTerms.accountBuildsAwaitingFirstDrain]).
      */
-    fun setAccountBuildsSettled(settled: Boolean, heldByLockedDevice: Boolean = false) = update {
-        it.copy(accountBuildsSettled = settled, accountBuildsHeldByLockedDevice = !settled && heldByLockedDevice)
+    fun setAccountBuildsSettled(
+        settled: Boolean,
+        heldByLockedDevice: Boolean = false,
+        awaitingFirstDrain: Boolean = false
+    ) = update {
+        it.copy(
+            accountBuildsSettled = settled,
+            accountBuildsHeldByLockedDevice = !settled && heldByLockedDevice,
+            accountBuildsAwaitingFirstDrain = !settled && awaitingFirstDrain
+        )
     }
 
     fun setBackfillSettled(settled: Boolean) = update { it.copy(backfillSettled = settled) }
@@ -189,14 +214,18 @@ class DashPaySyncStatus @Inject constructor() {
         val before = _terms.value
         _terms.update(transform)
         val after = _terms.value
-        if (before.settled != after.settled || before.heldByLockedDevice != after.heldByLockedDevice) {
+        if (before.settled != after.settled ||
+            before.heldByLockedDevice != after.heldByLockedDevice ||
+            before.awaitingFirstDrain != after.awaitingFirstDrain
+        ) {
             log.info(
                 "DashPay sync {}: applicable={} initialSyncCompleted={} accountBuilds={} " +
-                    "(heldByLockedDevice={}) backfill={} (contactSyncInFlight={} — diagnostic " +
-                    "only, a scheduled refresh never re-raises the indicator)",
+                    "(heldByLockedDevice={}, awaitingFirstDrain={}) backfill={} (contactSyncInFlight={} " +
+                    "— diagnostic only, a scheduled refresh never re-raises the indicator)",
                 if (after.settled) "SETTLED" else "still in progress",
                 after.applicable, after.initialSyncCompleted, after.accountBuildsSettled,
-                after.accountBuildsHeldByLockedDevice, after.backfillSettled, after.contactSyncInFlight
+                after.accountBuildsHeldByLockedDevice, after.accountBuildsAwaitingFirstDrain,
+                after.backfillSettled, after.contactSyncInFlight
             )
         }
     }

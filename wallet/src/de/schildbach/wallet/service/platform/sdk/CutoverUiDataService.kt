@@ -1999,15 +1999,18 @@ class CutoverUiDataService internal constructor(
      * the account-build queue and the backfill bookkeeping — to the
      * user-facing "still syncing" signal ([de.schildbach.wallet.service.DashPaySyncStatus]).
      * `buildsHeldByLockedDevice` says the unsettled builds are waiting on a
-     * device unlock, which the signal's time ceiling does not count against.
+     * device unlock, which the signal's time ceiling does not count against;
+     * `buildsAwaitingFirstDrain` says no drain has touched them yet this
+     * process, which runs the signal's longer pre-first-drain ceiling.
      * Pure fan-out; no behaviour of this service depends on it. Default no-op
      * for the fake-fed tests.
      */
     private val publishDashPaySyncTerms: (
         buildsSettled: Boolean,
         backfillSettled: Boolean,
-        buildsHeldByLockedDevice: Boolean
-    ) -> Unit = { _, _, _ -> },
+        buildsHeldByLockedDevice: Boolean,
+        buildsAwaitingFirstDrain: Boolean
+    ) -> Unit = { _, _, _, _ -> },
     /**
      * PERSIST one engine-reported IS lock (display-hex txid, observation
      * epoch-millis) into the APP-OWNED `instant_send_locks` table
@@ -2120,8 +2123,8 @@ class CutoverUiDataService internal constructor(
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         accountBuildDrainState = { walletIdHex -> sdkService.dashPayAccountBuildDrainState(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
-        publishDashPaySyncTerms = { buildsSettled, backfillSettled, buildsHeldByLockedDevice ->
-            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled, buildsHeldByLockedDevice)
+        publishDashPaySyncTerms = { buildsSettled, backfillSettled, heldByLockedDevice, awaitingFirstDrain ->
+            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled, heldByLockedDevice, awaitingFirstDrain)
             dashPaySyncStatus.setBackfillSettled(backfillSettled)
         },
         persistInstantLock = { txidHex, lockedAtMs ->
@@ -3184,6 +3187,11 @@ class CutoverUiDataService internal constructor(
         )
         val buildsHeldByLockedDevice = !buildsSettled &&
             deferredBuilds.drainState == AccountBuildDrainState.BLOCKED_DEVICE_LOCKED
+        // …and builds no drain has touched yet (the restore shape) hold the
+        // indicator under its longer pre-first-drain ceiling; once the first
+        // drain runs this drops and a fresh ordinary ceiling starts.
+        val buildsAwaitingFirstDrain = !buildsSettled &&
+            deferredBuilds.drainState == AccountBuildDrainState.NOT_ATTEMPTED
         // Fan the two DashPay terms out to the user-facing sync signal — same
         // cadence, same readings.
         //
@@ -3196,7 +3204,9 @@ class CutoverUiDataService internal constructor(
         // (S21, 11.10.87). The DURABLE seed below still uses the strict test,
         // where the cost of being wrong is a persisted figure that poisons
         // every later launch; its armed term carries its own deadline.
-        publishDashPaySyncTerms(buildsSettled, !backfillStatus.ledgerIncomplete, buildsHeldByLockedDevice)
+        publishDashPaySyncTerms(
+            buildsSettled, !backfillStatus.ledgerIncomplete, buildsHeldByLockedDevice, buildsAwaitingFirstDrain
+        )
         // …and the block/tx pipeline must have DRAINED. This is the veto that
         // left the display predicate on 2026-09-21 (see [pipelineLagging]):
         // "synced" above now means what iOS means by it, which can be true

@@ -36,10 +36,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -388,7 +391,20 @@ internal enum class DashPaySettleVerdict {
      * [de.schildbach.wallet.service.platform.sdk.ACCOUNT_BUILD_UNLOCK_GRACE_MS],
      * whichever is first — and that change starts a fresh ordinary ceiling.
      */
-    HELD_BY_LOCKED_DEVICE
+    HELD_BY_LOCKED_DEVICE,
+
+    /**
+     * Unsettled, and no drain has touched the contact account builds yet this
+     * process ([DashPaySyncTerms.awaitingFirstDrain]): reported as syncing
+     * under [DASHPAY_FIRST_DRAIN_CEILING_MS] of caught-up time instead of the
+     * ordinary ceiling. On a restore the first drain only runs after the first
+     * contact sync — 28 minutes after the scan caught up on QA phone 2, with
+     * 211 builds (1.856 DASH of contact payments) still unmatched — so the
+     * ordinary 15 minutes would hide the indicator while those funds are
+     * missing. When the first drain runs the verdict becomes
+     * [UNSETTLED] (or [SETTLED]), which starts a fresh ordinary ceiling.
+     */
+    AWAITING_FIRST_DRAIN
 }
 
 /**
@@ -400,26 +416,55 @@ internal enum class DashPaySettleVerdict {
  */
 internal const val DASHPAY_LOCKED_HOLD_CEILING_MS = 12 * 60 * 60_000L
 
+/**
+ * Ceiling for [DashPaySettleVerdict.AWAITING_FIRST_DRAIN], counted only while
+ * the L1 scan is caught up — the same clock the producer's own pre-first-drain
+ * pin runs on
+ * ([de.schildbach.wallet.service.platform.sdk.DEFERRED_BUILDS_UNDRAINED_SETTLED_READS]:
+ * 60 caught-up refreshes a minute apart, ~1 h). Set half an hour above that
+ * pin so the producer's verdict is what normally ends the hold, and this only
+ * backstops a producer that stops publishing. Time before the scan catches up
+ * does not count: the header shows syncing for the scan itself, and a restore
+ * scan can outlast any wall-clock ceiling (QA phone 2: 2.5 h).
+ */
+internal const val DASHPAY_FIRST_DRAIN_CEILING_MS = 90 * 60_000L
+
+/**
+ * Wall-clock backstop for [DashPaySettleVerdict.AWAITING_FIRST_DRAIN], should
+ * the caught-up clock never run (an L1 feed that never reports caught up):
+ * the hold must still end. Same length as [DASHPAY_LOCKED_HOLD_CEILING_MS].
+ */
+internal const val DASHPAY_FIRST_DRAIN_WALL_CEILING_MS = 12 * 60 * 60_000L
+
 /** The ceiling's view of [terms]. Pure — host-testable. */
 internal fun dashPaySettleVerdict(terms: DashPaySyncTerms): DashPaySettleVerdict = when {
     terms.settled -> DashPaySettleVerdict.SETTLED
     terms.heldByLockedDevice -> DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE
+    terms.awaitingFirstDrain -> DashPaySettleVerdict.AWAITING_FIRST_DRAIN
     else -> DashPaySettleVerdict.UNSETTLED
 }
 
 /**
- * [dashPaySyncSettledWithDeadline] over the three-way [DashPaySettleVerdict]:
+ * [dashPaySyncSettledWithDeadline] over the four-way [DashPaySettleVerdict]:
  * [deadlineMs] runs while [DashPaySettleVerdict.UNSETTLED], [lockedHoldMs]
- * while [DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE], and every change of
- * verdict restarts the clock — so builds that start draining after an unlock
- * are reported as syncing again even if a ceiling ran out earlier.
- * Pure — host-testable.
+ * while [DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE], and [firstDrainHoldMs]
+ * of time with [firstDrainClockRunning] true (the scan caught up) — capped at
+ * [firstDrainWallCeilingMs] of wall time — while
+ * [DashPaySettleVerdict.AWAITING_FIRST_DRAIN]. Every change of verdict
+ * restarts the clock — so builds that start draining after an unlock, or after
+ * the first drain, are reported as syncing again even if a ceiling ran out
+ * earlier. [elapsedMs] is the monotonic clock the caught-up time is measured
+ * on. Pure — host-testable.
  */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 internal fun dashPaySyncVerdictWithDeadline(
     verdicts: Flow<DashPaySettleVerdict>,
     deadlineMs: Long = DASHPAY_SETTLE_DEADLINE_MS,
-    lockedHoldMs: Long = DASHPAY_LOCKED_HOLD_CEILING_MS
+    lockedHoldMs: Long = DASHPAY_LOCKED_HOLD_CEILING_MS,
+    firstDrainHoldMs: Long = DASHPAY_FIRST_DRAIN_CEILING_MS,
+    firstDrainWallCeilingMs: Long = DASHPAY_FIRST_DRAIN_WALL_CEILING_MS,
+    firstDrainClockRunning: Flow<Boolean> = flowOf(true),
+    elapsedMs: () -> Long = { System.nanoTime() / 1_000_000 }
 ): Flow<Boolean> = verdicts
     .distinctUntilChanged()
     .flatMapLatest { verdict ->
@@ -427,6 +472,9 @@ internal fun dashPaySyncVerdictWithDeadline(
             DashPaySettleVerdict.SETTLED -> flowOf(true)
             DashPaySettleVerdict.UNSETTLED -> unsettledUntil(deadlineMs)
             DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE -> unsettledUntil(lockedHoldMs)
+            DashPaySettleVerdict.AWAITING_FIRST_DRAIN -> unsettledForRunningTime(
+                firstDrainHoldMs, firstDrainWallCeilingMs, firstDrainClockRunning, elapsedMs
+            )
         }
     }
     .distinctUntilChanged()
@@ -434,6 +482,43 @@ internal fun dashPaySyncVerdictWithDeadline(
 private fun unsettledUntil(ceilingMs: Long): Flow<Boolean> = flow {
     emit(false)
     delay(ceilingMs)
+    emit(true)
+}
+
+/**
+ * False until [ceilingMs] has accumulated while [running] reads true (or
+ * [wallCeilingMs] of wall time has passed, whichever is first), then true.
+ * Time while [running] is false is not counted, and a pause does not reset
+ * what was already spent. If [running] ends without reaching the ceiling, the
+ * remainder runs on wall time — fail open, the hold must end.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+private fun unsettledForRunningTime(
+    ceilingMs: Long,
+    wallCeilingMs: Long,
+    running: Flow<Boolean>,
+    elapsedMs: () -> Long
+): Flow<Boolean> = flow {
+    emit(false)
+    // Only touched from one [transformLatest] block at a time: it cancels AND
+    // joins the previous block before starting the next.
+    var spentMs = 0L
+    withTimeoutOrNull(wallCeilingMs) {
+        val reached = running
+            .distinctUntilChanged()
+            .transformLatest { isRunning ->
+                if (!isRunning) return@transformLatest
+                val startMs = elapsedMs()
+                try {
+                    delay((ceilingMs - spentMs).coerceAtLeast(0))
+                    emit(Unit)
+                } finally {
+                    spentMs += elapsedMs() - startMs
+                }
+            }
+            .firstOrNull()
+        if (reached == null) delay((ceilingMs - spentMs).coerceAtLeast(0))
+    }
     emit(true)
 }
 
@@ -743,7 +828,11 @@ class L1SyncStatusService @Inject constructor(
      * never flicker into "syncing" on the way to its first emission.
      */
     private val dashPaySettled: StateFlow<Boolean> =
-        dashPaySyncVerdictWithDeadline(dashPaySyncStatus.terms.map(::dashPaySettleVerdict))
+        dashPaySyncVerdictWithDeadline(
+            dashPaySyncStatus.terms.map(::dashPaySettleVerdict),
+            // The producer counts its pre-first-drain pin on this same signal.
+            firstDrainClockRunning = sdkScanCaughtUp
+        )
             .catch { e ->
                 // Fail OPEN: the indicator must never be stuck on because a
                 // bookkeeping feed failed.

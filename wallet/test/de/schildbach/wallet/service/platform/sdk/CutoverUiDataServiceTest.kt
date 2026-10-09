@@ -919,8 +919,11 @@ class CutoverUiDataServiceTest {
         deferredContactBuildFeed: (suspend () -> Int?)? = null,
         /** The contact-account-build drain state read with each count; default = the drain has run. */
         drainState: () -> AccountBuildDrainState = { AccountBuildDrainState.RAN },
-        /** Receives (buildsSettled, backfillSettled, buildsHeldByLockedDevice) per publication. */
-        publishDashPaySyncTerms: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
+        /**
+         * Receives (buildsSettled, backfillSettled, buildsHeldByLockedDevice,
+         * buildsAwaitingFirstDrain) per publication.
+         */
+        publishDashPaySyncTerms: (Boolean, Boolean, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
         /** When non-null, backs BOTH the IS-lock persist and the persisted-lock read (restart-safe store fake). */
         persistedIsLocks: MutableSet<String>? = null,
         /**
@@ -1374,13 +1377,15 @@ class CutoverUiDataServiceTest {
         val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
         var drain = AccountBuildDrainState.BLOCKED_DEVICE_LOCKED
-        val published = mutableListOf<Triple<Boolean, Boolean, Boolean>>()
+        val published = mutableListOf<PublishedTerms>()
 
         val service = buildService(
             source, configWithState("CUT_OVER"), backgroundScope,
             walletUIConfig = walletUIConfig, deferredContactBuildFeed = { 212 },
             drainState = { drain },
-            publishDashPaySyncTerms = { builds, backfill, held -> published += Triple(builds, backfill, held) }
+            publishDashPaySyncTerms = { builds, backfill, held, firstDrain ->
+                published += PublishedTerms(builds, backfill, held, firstDrain)
+            }
         )
         service.start()
         runCurrent()
@@ -1390,7 +1395,11 @@ class CutoverUiDataServiceTest {
         }
 
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
-        assertEquals("builds unsettled and held by the locked device", Triple(false, true, true), published.last())
+        assertEquals(
+            "builds unsettled and held by the locked device",
+            PublishedTerms(false, true, true, false),
+            published.last()
+        )
 
         // Unlocked: the drain ran but these entries stay queued (the stuck
         // shape). Fresh evidence is gathered under the new state, then the
@@ -1401,14 +1410,14 @@ class CutoverUiDataServiceTest {
             testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
             runCurrent()
         }
-        assertEquals(Triple(false, true, false), published.last())
+        assertEquals(PublishedTerms(false, true, false, false), published.last())
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
 
         repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
             testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
             runCurrent()
         }
-        assertEquals(Triple(true, true, false), published.last())
+        assertEquals(PublishedTerms(true, true, false, false), published.last())
         coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 3_554_481_263L) }
     }
 
@@ -1434,6 +1443,84 @@ class CutoverUiDataServiceTest {
 
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
     }
+
+    @Test
+    fun postCutover_buildsNoDrainHasTouched_holdTheIndicatorUntilTheFirstDrainRuns() = runTest {
+        // The same restore shape, as the header sees it: the builds must be
+        // published as awaiting their first drain (the longer ceiling), not as
+        // ordinary unsettled builds the 15-minute ceiling would clear. When the
+        // first drain runs the flag drops while the builds stay unsettled, so
+        // the header starts a fresh ordinary ceiling.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        var drain = AccountBuildDrainState.NOT_ATTEMPTED
+        val published = mutableListOf<PublishedTerms>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            deferredContactBuildFeed = { 211 },
+            drainState = { drain },
+            publishDashPaySyncTerms = { builds, backfill, held, firstDrain ->
+                published += PublishedTerms(builds, backfill, held, firstDrain)
+            }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS * 5) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(
+            "unsettled, awaiting the first drain",
+            PublishedTerms(false, true, false, true),
+            published.last()
+        )
+
+        drain = AccountBuildDrainState.RAN
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(
+            "the first drain ran: still unsettled, now an ordinary drain",
+            PublishedTerms(false, true, false, false),
+            published.last()
+        )
+
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(PublishedTerms(true, true, false, false), published.last())
+    }
+
+    @Test
+    fun postCutover_buildsNoDrainHasTouched_stopAwaitingOnceTheUndrainedPinSettlesThem() = runTest {
+        // The producer's own ~1 h caught-up backstop still ends the hold.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        val published = mutableListOf<PublishedTerms>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            deferredContactBuildFeed = { 211 },
+            drainState = { AccountBuildDrainState.NOT_ATTEMPTED },
+            publishDashPaySyncTerms = { builds, backfill, held, firstDrain ->
+                published += PublishedTerms(builds, backfill, held, firstDrain)
+            }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_UNDRAINED_SETTLED_READS + 2) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(PublishedTerms(true, true, false, false), published.last())
+    }
+
+    /** One `publishDashPaySyncTerms` call. */
+    private data class PublishedTerms(
+        val buildsSettled: Boolean,
+        val backfillSettled: Boolean,
+        val heldByLockedDevice: Boolean,
+        val awaitingFirstDrain: Boolean
+    )
 
     @Test
     fun deferredBuilds_aCountThatCannotMove_isNoEvidenceOfAStuckQueue() {
