@@ -24,9 +24,12 @@ import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.service.platform.PlatformSynchronizationService
+import de.schildbach.wallet.service.platform.TxMetadataSaveInfo
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.TRANSACTION_METADATA_LAST_PAST_SAVE
+import de.schildbach.wallet.util.WalletWipeState
+import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.InsufficientMoneyException
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -39,11 +42,45 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
     private val analytics: AnalyticsService,
     private val platformSynchronizationService: PlatformSynchronizationService,
     private val walletDataProvider: WalletData,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val saveQueue: TransactionMetadataSaveQueue
 ) : BaseWorker(context, parameters) {
     companion object {
         private val log = LoggerFactory.getLogger(PublishTransactionMetadataWorker::class.java)
+        private const val WALLET_RESET = "wallet reset in progress"
+
+        /**
+         * Publishes, then records the save — neither once a wallet reset is
+         * under way. Reset Wallet cancels publish work as it starts, but a
+         * worker can already be past its last cancellation point, and work
+         * WorkManager persisted can start again in a process that is about to
+         * resume an interrupted wipe.
+         *
+         * @return what was published, or null when a reset stopped it
+         */
+        internal suspend fun publishUnlessWalletReset(
+            walletResetInProgress: () -> Boolean,
+            publish: suspend () -> TxMetadataSaveInfo,
+            recordSave: suspend () -> Unit
+        ): TxMetadataSaveInfo? {
+            if (walletResetInProgress()) {
+                return null
+            }
+            val saveInfo = publish()
+            if (saveInfo.itemsSaved == saveInfo.itemsToSave) {
+                if (walletResetInProgress()) {
+                    return null
+                }
+                recordSave()
+            }
+            return saveInfo
+        }
     }
+
+    // Any wipe marker short of a confirmed absence counts, an unverified one included.
+    private fun walletResetInProgress() = saveQueue.isPaused ||
+        WalletWipeState.inspect(applicationContext.filesDir, applicationContext.noBackupFilesDir) !=
+        WalletWipeState.State.NONE
 
     override suspend fun doWorkWithBaseProgress(): Result {
 
@@ -51,11 +88,21 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
             org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
             val now = System.currentTimeMillis()
             setProgress(0)
-            val saveInfo = platformSynchronizationService.publishPastTxMetadata() { progress ->
-                setProgress(progress)
-            }
-            if (saveInfo.itemsSaved == saveInfo.itemsToSave) {
-                dashPayConfig.set(TRANSACTION_METADATA_LAST_PAST_SAVE, now)
+            val saveInfo = publishUnlessWalletReset(
+                ::walletResetInProgress,
+                publish = {
+                    // checked again before each document: the SDK publishes
+                    // them one by one and cannot be cancelled part way
+                    platformSynchronizationService.publishPastTxMetadata(::walletResetInProgress) { progress ->
+                        setProgress(progress)
+                    }
+                },
+                recordSave = { dashPayConfig.set(TRANSACTION_METADATA_LAST_PAST_SAVE, now) }
+            )
+            if (saveInfo == null) {
+                log.info("publish txmetadata skipped: $WALLET_RESET")
+                Result.failure(workDataOf(KEY_EXCEPTION to WALLET_RESET))
+            } else if (saveInfo.itemsSaved == saveInfo.itemsToSave) {
                 log.info("publish txmetadata successful: $saveInfo")
                 Result.success(
                     workDataOf(
@@ -70,6 +117,9 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
                     )
                 )
             }
+        } catch (ex: CancellationException) {
+            // cancelled, e.g. by Reset Wallet — not a failure to report
+            throw ex
         } catch (ex: Exception) {
             analytics.logError(ex, ": failed to txmetadata identity")
             val args = when (ex) {

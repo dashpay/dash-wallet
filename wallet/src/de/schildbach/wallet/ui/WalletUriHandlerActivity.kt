@@ -41,6 +41,7 @@ import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.formatString
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.uphold.ui.UpholdPortalFragment
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 /**
  * The only purpose of this Activity is to handle all so called Wallet Uris
@@ -83,6 +84,7 @@ class WalletUriHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
+        if (redirectDegradedWallet(application as WalletApplication)) return
         if (wallet == null) {
             setResult(RESULT_CANCELED)
             finish()
@@ -184,13 +186,19 @@ class WalletUriHandlerActivity : AppCompatActivity() {
         // save (measured 1.2s at 215 friend chains) — see
         // freshReceiveAddressOffMain.
         lifecycleScope.launch {
-            val address = (application as WalletApplication).freshReceiveAddressOffMain()
-            val requestData = intent.data
-            val result = WalletUri.createAddressResult(requestData, address.toString(), appName)
-            setResult(RESULT_OK, result)
+            try {
+                val address = (application as WalletApplication).freshReceiveAddressOffMain()
+                val requestData = intent.data
+                val result = WalletUri.createAddressResult(requestData, address.toString(), appName)
+                setResult(RESULT_OK, result)
+            } catch (ex: ReceiveAddressUnavailableException) {
+                // Handing the calling app the held dashj chain's frozen address
+                // would have it advertise an already-paid address on our behalf
+                // (SR-03). Decline instead; the caller can ask again.
+                setResult(RESULT_CANCELED)
+            }
             finish()
         }
         Unit
     }
 }
-

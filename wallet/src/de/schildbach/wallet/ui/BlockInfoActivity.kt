@@ -50,9 +50,8 @@ class BlockInfoActivity : LockScreenActivity() {
     @Inject
     lateinit var analytics: AnalyticsService
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (finishedForNoWallet) return // LockScreenActivity finished early: no usable wallet
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         binding = ActivityBlockInfoBinding.inflate(layoutInflater)
         setContentView(binding.root)

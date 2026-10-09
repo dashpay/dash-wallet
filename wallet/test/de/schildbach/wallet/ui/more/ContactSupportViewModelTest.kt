@@ -18,6 +18,12 @@
 package de.schildbach.wallet.ui.more
 
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ReportParityBreakdown
+import de.schildbach.wallet.service.platform.sdk.StoredParityBreakdown
+import de.schildbach.wallet.service.platform.sdk.parityBreakdownReportSection
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -29,8 +35,10 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.bitcoinj.wallet.Wallet
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Collections
 import java.util.concurrent.Executors
@@ -42,14 +50,17 @@ import java.util.concurrent.Executors
  */
 class ContactSupportViewModelTest {
 
-    private fun viewModel(application: WalletApplication) = ContactSupportViewModel(
+    private fun viewModel(
+        application: WalletApplication,
+        l1ShadowSyncService: L1ShadowSyncService = mockk(relaxed = true)
+    ) = ContactSupportViewModel(
         configuration = mockk(relaxed = true),
         application = application,
         packageInfoProvider = mockk(relaxed = true),
         transactionMetadataDocumentDao = mockk(relaxed = true),
         dashPayConfig = mockk(relaxed = true),
         dashjDiagnosticSyncState = mockk(relaxed = true),
-        l1ShadowSyncService = mockk(relaxed = true),
+        l1ShadowSyncService = l1ShadowSyncService,
         sdkService = mockk(relaxed = true)
     )
 
@@ -134,5 +145,56 @@ class ContactSupportViewModelTest {
             Dispatchers.resetMain()
             mainDispatcher.close()
         }
+    }
+
+    @Test
+    fun parityLog_isAttachedWhenTheDiagnosticRan_orABreakdownApplies() {
+        val applies = ReportParityBreakdown(null, "SDK not synced")
+        val notApplicable = ReportParityBreakdown.NOT_APPLICABLE
+        // Committed cutover: a breakdown applies even with the diagnostic off.
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = false, breakdown = applies))
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = true, hasParityHistory = false, breakdown = notApplicable))
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = true, breakdown = notApplicable))
+        // Before the cutover, diagnostic off and never run: no parity log.
+        assertFalse(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = false, breakdown = notApplicable))
+    }
+
+    /**
+     * The breakdown lists txids and amounts. With "Append application log"
+     * (and "Append wallet dump") unticked it is not computed, the parity
+     * log's section reads "omitted", and it does not attach the parity log
+     * on its own — even though the cutover is committed and a fresh
+     * breakdown would apply.
+     */
+    @Test
+    fun applicationLogNotShared_breakdownIsNeitherComputedNorAttached() = runBlocking {
+        val applicable = ReportParityBreakdown(
+            StoredParityBreakdown("cd".repeat(32), 42L, "ParityBreakdown … 2222…2222 net=-5"),
+            notRefreshedReason = null
+        )
+        val l1 = mockk<L1ShadowSyncService> {
+            coEvery { parityBreakdownForReport(any()) } returns applicable
+        }
+        val application = mockk<WalletApplication>(relaxed = true) {
+            every { isSafeModeRetryInProgress } returns false
+        }
+        val viewModel = viewModel(application, l1)
+
+        val notShared = viewModel.parityBreakdownForReport(collectApplicationLog = false)
+        assertEquals(ReportParityBreakdown.NOT_SHARED, notShared)
+        coVerify(exactly = 0) { l1.parityBreakdownForReport(any()) }
+        // Diagnostic off, never ran: no parity log at all.
+        assertFalse(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = false, breakdown = notShared))
+        // Diagnostic on: the parity log carries its totals as before, and the
+        // breakdown section says why it is missing.
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = true, hasParityHistory = false, breakdown = notShared))
+        val section = parityBreakdownReportSection(notShared) { "unused" }
+        assertEquals("\n--- latest parity breakdown ---\nomitted (application log not shared)\n", section)
+
+        // Application log shared: computed and attached.
+        val shared = viewModel.parityBreakdownForReport(collectApplicationLog = true)
+        assertEquals(applicable, shared)
+        coVerify(exactly = 1) { l1.parityBreakdownForReport(any()) }
+        assertTrue(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = false, breakdown = shared))
     }
 }

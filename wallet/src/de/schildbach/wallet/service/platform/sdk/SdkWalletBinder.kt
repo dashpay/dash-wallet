@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.NativeLogBridge
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dashj.platform.dpp.identifier.Identifier
@@ -301,6 +302,8 @@ class SdkWalletBinder internal constructor(
     // Injectable so the post-arm rewind watch is testable on the host JVM
     // without a minute of real time per poll. Production uses the constant.
     private val backfillWatchIntervalMs: Long = BACKFILL_WATCH_INTERVAL_MS,
+    // Same, for the watch that confirms an armed owed rewind became durable.
+    private val owedRescanWatchIntervalMs: Long = OWED_RESCAN_WATCH_INTERVAL_MS,
     /**
      * `KeyguardManager.isDeviceLocked`. A FIRST bind (no SDK wallet yet)
      * needs the lock-bound master alias, which Keystore2 refuses while this
@@ -310,7 +313,10 @@ class SdkWalletBinder internal constructor(
      * Phase 1a item 4). Unknowable reads as unlocked: attempt, and let the
      * keystore answer.
      */
-    private val deviceProvablyLocked: () -> Boolean = { false }
+    private val deviceProvablyLocked: () -> Boolean = { false },
+    // Where an owed rescan that keeps going unconfirmed is reported as a
+    // non-fatal (see [reportUnconfirmedOwedRescan]). Never throws.
+    private val reportNonFatal: (Throwable) -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -338,6 +344,13 @@ class SdkWalletBinder internal constructor(
                 context.getSystemService(KeyguardManager::class.java)?.isDeviceLocked == true
             } catch (t: Throwable) {
                 false
+            }
+        },
+        reportNonFatal = { t ->
+            try {
+                CrashReporter.saveBackgroundTrace(t, context.packageManager.getPackageInfo(context.packageName, 0))
+            } catch (e: Throwable) {
+                log.warn("could not save the background trace", e)
             }
         }
     )
@@ -570,6 +583,8 @@ class SdkWalletBinder internal constructor(
             // A re-created SDK wallet comes up at the default windows again.
             widenedWalletIdHex = null
             debtRecordedWalletIdHex = null
+            // The re-created wallet has no in-memory rewind: an owed one is armed again.
+            owedRescanArmedInProcess = null
         }
     }
 
@@ -1183,6 +1198,9 @@ class SdkWalletBinder internal constructor(
                 revalidateBoundWallet()
                 if (completed) {
                     noteBindConfirmedForCurrentWallet()
+                    // A recovery reset in this process can owe a rescan after
+                    // the bind latched; the latch must not skip repaying it.
+                    boundWalletIdHex?.let { repayOwedOnCompletedBind(it) }
                     return
                 }
                 try {
@@ -1512,6 +1530,9 @@ class SdkWalletBinder internal constructor(
                         "windows — a rescan is owed to the next successful widening"
                 )
                 noteWideningFailed(walletIdHex)
+                // A recovery reset's rewind is mandatory: arm it now at the
+                // default windows, keeping the widening's debt.
+                repayBeforeScan(walletIdHex, widened = false)
                 return
             }
             // Wide windows: nothing this session scans can be missed.
@@ -1519,8 +1540,9 @@ class SdkWalletBinder internal constructor(
             val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
             if (done >= GAP_WIDEN_HEAL_VERSION) {
                 // Windows re-applied; the heal already ran. Pay a rescan an
-                // earlier session's failed widening left owed, if any.
-                repayWidenRescanOwed(walletIdHex)
+                // earlier session's failed widening or a recovery reset left
+                // owed, if any.
+                repayOwedRescans(walletIdHex, widened = true)
                 return
             }
             // Retroactivity: rewind the SPV filter watermark to the wallet's
@@ -1529,7 +1551,17 @@ class SdkWalletBinder internal constructor(
             // runs on a wallet without a platform identity, and the frontier
             // gap does not require one. Double-arming on identity wallets is
             // harmless: the Rust side never moves the watermark forward.
-            if (!sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())) {
+            //
+            // The arm is only in SDK memory (review, 2026-10-02), and the
+            // version recorded below suppresses another heal: the rewind is
+            // owed DURABLY first, as a wide-window debt, and paid like any
+            // other ([repayOwedRescans]), which keeps it, and any recovery
+            // debt, until the rewind is known to have been persisted.
+            if (!recordWidenRescanOwed()) {
+                log.warn("address-window heal: its rescan could not be owed; will retry next bind")
+                return
+            }
+            if (!repayOwedRescans(walletIdHex, widened = true)) {
                 log.warn("address-window heal: rescan arm failed; will retry next bind")
                 return
             }
@@ -1541,8 +1573,9 @@ class SdkWalletBinder internal constructor(
             dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT)
             dashPayConfig.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED)
             dashPayConfig.set(DashPayConfig.SDK_GAP_WIDENED_VERSION, GAP_WIDEN_HEAL_VERSION)
-            // The heal's rewind to birth covers any owed rescan too.
-            dashPayConfig.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED)
+            // The heal's rewind to birth, at wide windows, covers any owed
+            // rescan too, a failed widening's and a recovery reset's; they
+            // clear once that rewind is durable, not here.
             log.info(
                 "address-window heal v{} applied on {}…: gaps widened, backfill coverage " +
                     "invalidated — next gate pass rewinds with the widened script set",
@@ -1552,7 +1585,10 @@ class SdkWalletBinder internal constructor(
             throw e
         } catch (t: Throwable) {
             log.warn("address-window heal failed; will retry next bind", t)
-            if (!widened) noteWideningFailed(walletIdHex)
+            if (!widened) {
+                noteWideningFailed(walletIdHex)
+                repayBeforeScan(walletIdHex, widened = false)
+            }
         }
     }
 
@@ -1568,6 +1604,10 @@ class SdkWalletBinder internal constructor(
     /** Persist the owed-rescan flag; false (logged) when the write failed. Never throws except cancellation. */
     private suspend fun recordWidenRescanOwed(): Boolean = try {
         dashPayConfig.set(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED, true)
+        // A wide-window arm made before this debt does not pay it: the debt
+        // needs a fresh rewind with the wide script set.
+        owedRescanArmedInProcess = owedRescanArmedInProcess?.copy(wide = false)
+        readArmedOwedRescan()?.takeIf { it.wide }?.let { writeArmedOwedRescan(it.copy(wide = false)) }
         true
     } catch (e: CancellationException) {
         throw e
@@ -1610,10 +1650,25 @@ class SdkWalletBinder internal constructor(
      * with the bind's own widening, so a start during that step sees its
      * outcome. False only when widening and the debt write both fail; the
      * engine start then retries later. Never throws except cancellation.
+     *
+     * Once the windows are wide, a recorded rescan debt (a recovery reset's,
+     * or an earlier session's failed widening) is repaid here before the scan
+     * may advance (review, 2026-10-02): a recovery reset in a process whose
+     * wallet is already bound and widened has no later bind pass to pay it,
+     * so a failed arm holds the scan instead of letting it resume from the
+     * old watermark. At narrow windows a failed widening's own debt is left
+     * to the next successful widening, as before, but a recovery reset's
+     * rewind is mandatory (review, 2026-10-02, second pass): it is armed at
+     * the default windows before the scan may advance, with the widening's
+     * debt kept so a later successful widening rescans again with the wider
+     * script set; a failed arm holds the scan.
      */
     suspend fun ensureScanMayAdvance(walletIdHex: String): Boolean = wideningMutex.withLock {
-        if (widenedWalletIdHex == walletIdHex || debtRecordedWalletIdHex == walletIdHex) {
-            return@withLock true
+        if (widenedWalletIdHex == walletIdHex) {
+            return@withLock repayBeforeScan(walletIdHex, widened = true)
+        }
+        if (debtRecordedWalletIdHex == walletIdHex) {
+            return@withLock repayBeforeScan(walletIdHex, widened = false)
         }
         val widened = try {
             sdkService.widenAddressWindows(walletIdHex)
@@ -1626,16 +1681,16 @@ class SdkWalletBinder internal constructor(
         if (widened) {
             widenedWalletIdHex = walletIdHex
             log.info("scan gate: address windows widened on {}… before the SPV start", walletIdHex.take(8))
-            return@withLock true
+            return@withLock repayBeforeScan(walletIdHex, widened = true)
         }
         if (recordWidenRescanOwed()) {
             debtRecordedWalletIdHex = walletIdHex
             log.warn(
                 "scan gate: widening failed on {}…; its rescan is owed and recorded, so the scan may " +
-                    "advance at the default windows",
+                    "advance at the default windows once any owed recovery rewind is armed",
                 walletIdHex.take(8)
             )
-            return@withLock true
+            return@withLock repayBeforeScan(walletIdHex, widened = false)
         }
         log.warn(
             "scan gate: holding the SPV scan — the address windows are still narrow and the owed " +
@@ -1644,19 +1699,283 @@ class SdkWalletBinder internal constructor(
         false
     }
 
-    /** Arm the owed rescan, then clear the debt; a failed arm keeps it for the next bind. */
-    private suspend fun repayWidenRescanOwed(walletIdHex: String) {
-        if (dashPayConfig.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) != true) return
-        if (!sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())) {
-            log.warn("owed address-window rescan: arm failed; will retry next bind")
-            return
+    /**
+     * The SDK half of a backup-recovered wallet's owed reset. Arming
+     * directly ([armSpvRescanForBlockchainReset]) needs a bound or loaded
+     * wallet, which the blockchain service does not have when it performs
+     * that reset, so the rescan is owed durably
+     * ([DashPayConfig.SDK_RECOVERY_RESCAN_OWED]): [ensureScanMayAdvance]
+     * holds the scan until the rewind to birth is armed, and the bind's
+     * widening step repays it too. It clears only once the rewind is durable
+     * ([repayOwedRescans]), and any arm made before this call is discarded. When this process
+     * already widened a bound wallet, it is paid at once.
+     *
+     * This debt is kept apart from a failed widening's best-effort
+     * [DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED] (review, 2026-10-02, second
+     * pass): sharing that flag let a scan at narrow windows advance from the
+     * previous watermark with the recovery's rewind never armed.
+     *
+     * Returns whether the debt is recorded and, when this process already
+     * widened the wallet, paid; false when the write failed or the immediate
+     * arm failed (review, 2026-10-02). In the latter case the debt stays
+     * recorded, so the caller keeps the reset pending, and
+     * [ensureScanMayAdvance] holds the scan until it is repaid. Never throws
+     * except cancellation.
+     */
+    suspend fun oweSpvRescanForRecoveryReset(): Boolean = wideningMutex.withLock {
+        try {
+            dashPayConfig.set(DashPayConfig.SDK_RECOVERY_RESCAN_OWED, true)
+            // An arm made before this reset does not pay it.
+            owedRescanArmedInProcess = null
+            dashPayConfig.remove(DashPayConfig.SDK_OWED_RESCAN_ARMED)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("recovery reset: could not record the owed SDK rescan", t)
+            return@withLock false
         }
-        dashPayConfig.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED)
-        log.info(
-            "owed address-window rescan armed on {}…: an earlier session scanned at the default " +
-                "windows after its widening failed",
-            walletIdHex.take(8)
+        try {
+            val walletIdHex = boundWalletIdHex ?: sdkService.loadedWalletIds().singleOrNull()
+            if (walletIdHex != null && walletIdHex == widenedWalletIdHex) {
+                repayOwedRescans(walletIdHex, widened = true)
+            } else {
+                // The scan gate arms it before any scan of this wallet.
+                true
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("recovery reset: immediate rescan arm failed; the debt stays owed", t)
+            false
+        }
+    }
+
+    /**
+     * Repay recorded debts on the completed-bind fast path: everything on a
+     * wallet this process widened, the recovery rewind (at the default
+     * windows) on one whose widening failed. Never throws except cancellation.
+     */
+    private suspend fun repayOwedOnCompletedBind(walletIdHex: String) {
+        wideningMutex.withLock {
+            when (walletIdHex) {
+                widenedWalletIdHex -> repayBeforeScan(walletIdHex, widened = true)
+                debtRecordedWalletIdHex -> repayBeforeScan(walletIdHex, widened = false)
+            }
+        }
+    }
+
+    /** [repayOwedRescans] for the scan gate: false (hold) on any failure. Caller holds [wideningMutex]. */
+    private suspend fun repayBeforeScan(walletIdHex: String, widened: Boolean): Boolean = try {
+        repayOwedRescans(walletIdHex, widened).also { repaid ->
+            if (!repaid) log.warn("scan gate: holding the SPV scan until the owed rescan is armed")
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("scan gate: holding the SPV scan — the owed rescan could not be checked or armed", t)
+        false
+    }
+
+    /**
+     * Arm the owed rescan; a failed arm keeps every debt. True when nothing
+     * payable was owed or the rescan is armed (now, or earlier in this
+     * process).
+     *
+     * At wide windows ([widened]) one rewind to birth pays both debts. At the
+     * default windows only the mandatory recovery rewind is armed, and a
+     * failed widening's debt is recorded (or kept) first, so the next
+     * successful widening rescans again with the wider script set; the
+     * widening debt alone is left to that widening.
+     *
+     * A successful arm does NOT clear the debts (review, 2026-10-02):
+     * [DashSdkService.armSpvRescan] rewinds the SDK's checkpoint in memory
+     * only, and a process that dies before the filter loop persists progress
+     * forgets the rewind. The debts stay set, with an [ArmedOwedRescan]
+     * record of what the arm was measured against, until
+     * [settleArmedOwedRescanIfDurable] sees the durable watermark at or below
+     * the rewind target, or below where it stood at the arm. Until then:
+     * - this process does not arm again (the in-memory rewind stands, and
+     *   re-arming would restart a replay already under way and extend the
+     *   last-known-balance hold);
+     * - a later process finds the debts still owed and arms again.
+     *
+     * Only durable confirmation clears a debt (review, PR #1576): an arm count
+     * measures arms that succeeded in memory, not replays that completed, so
+     * giving up after N of them dropped a mandatory recovery that ten
+     * terminated processes never made durable, and opened the scan at the old
+     * watermark. Every start that owes a debt therefore arms it again, and
+     * the scan never advances in a process where it is owed but not armed.
+     * What is bounded is the noise: once the record shows
+     * [OWED_RESCAN_ARMS_BEFORE_REPORT] unconfirmed arms, the next arm in each
+     * process is reported once as a non-fatal ([reportUnconfirmedOwedRescan]).
+     */
+    private suspend fun repayOwedRescans(walletIdHex: String, widened: Boolean): Boolean {
+        settleArmedOwedRescanIfDurable(walletIdHex)
+        val recoveryOwed = dashPayConfig.get(DashPayConfig.SDK_RECOVERY_RESCAN_OWED) == true
+        val wideningOwed = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED) == true
+        if (widened) {
+            if (!recoveryOwed && !wideningOwed) return true
+        } else {
+            if (!recoveryOwed) return true
+            // Durable BEFORE the recovery rewind is armed: a rescan at the
+            // default windows still owes one at the wider windows.
+            if (!recordWidenRescanOwed()) return false
+        }
+        // What this arm must pay: the widening debt only at wide windows.
+        val needsWide = widened && wideningOwed
+        val inProcess = owedRescanArmedInProcess
+        if (inProcess != null && inProcess.walletIdHex == walletIdHex && (inProcess.wide || !needsWide)) {
+            return true
+        }
+        val previous = readArmedOwedRescan()?.takeIf { it.walletIdHex == walletIdHex }
+        val birthTimeSecs = resolveBirthTimeSecs()
+        val preArmHeight = sdkService.durableSpvSyncedHeight(walletIdHex)
+        if (!sdkService.armSpvRescan(walletIdHex, birthTimeSecs)) {
+            log.warn("owed SDK rescan: arm failed; the debt stays owed")
+            return false
+        }
+        val armed = ArmedOwedRescan(
+            walletIdHex = walletIdHex,
+            preArmHeight = preArmHeight,
+            targetHeight = sdkService.spvRescanTargetHeight(birthTimeSecs),
+            wide = widened,
+            arms = saturatingIncrement(previous?.arms ?: 0)
         )
+        owedRescanArmedInProcess = armed
+        writeArmedOwedRescan(armed)
+        log.info(
+            "owed SDK rescan armed on {}… at the {} windows ({}; durable watermark {}, target {}, arm {}): " +
+                "the debt stays owed until the rewind is durable",
+            walletIdHex.take(8),
+            if (widened) "widened" else "default",
+            if (recoveryOwed) "a recovery reset owed it" else "an earlier session scanned at the default windows",
+            preArmHeight, armed.targetHeight, armed.arms
+        )
+        if (armed.arms > OWED_RESCAN_ARMS_BEFORE_REPORT) reportUnconfirmedOwedRescan(armed, recoveryOwed)
+        if (!settleArmedOwedRescanIfDurable(walletIdHex)) watchArmedOwedRescan(walletIdHex)
+        return true
+    }
+
+    /** One report per process of an owed rescan that keeps going unconfirmed. */
+    private val unconfirmedOwedRescanReported = AtomicBoolean(false)
+
+    /**
+     * The debt stays owed and was armed again; this only makes a rewind that
+     * never becomes durable visible, once per process, instead of giving the
+     * debt up. Never throws.
+     */
+    private fun reportUnconfirmedOwedRescan(armed: ArmedOwedRescan, recoveryOwed: Boolean) {
+        if (!unconfirmedOwedRescanReported.compareAndSet(false, true)) return
+        val message = "owed SDK rescan on ${armed.walletIdHex.take(8)}… armed ${armed.arms} times without the " +
+            "durable watermark confirming the rewind (pre-arm ${armed.preArmHeight}, target ${armed.targetHeight}, " +
+            "${if (recoveryOwed) "recovery reset" else "widening"} debt); still owed and re-armed"
+        log.error(message)
+        try {
+            reportNonFatal(UnconfirmedOwedRescanException(message))
+        } catch (t: Throwable) {
+            log.warn("could not report the unconfirmed owed rescan", t)
+        }
+    }
+
+    /**
+     * Clear the debts an armed rewind paid once the SDK's DURABLE watermark
+     * proves the rewind survives a restart: at or below the rewind target
+     * (the arm was a no-op or the persisted replay sits there), or below the
+     * height it stood at when armed (the filter loop consumed the rewind and
+     * persisted replay progress, which a restart resumes). Any other reading,
+     * including an unknown one, keeps the debts. Caller holds [wideningMutex].
+     * Never throws except cancellation.
+     *
+     * A watermark that climbed back ABOVE the pre-arm height is deliberately
+     * not taken as proof: it cannot be told apart from an in-flight batch
+     * persisting forward before the rewind was consumed. It only happens when
+     * the replay is shorter than one watch interval, so re-arming it is cheap.
+     */
+    private suspend fun settleArmedOwedRescanIfDurable(walletIdHex: String): Boolean = try {
+        val armed = readArmedOwedRescan()?.takeIf { it.walletIdHex == walletIdHex }
+        val durable = armed?.let { sdkService.durableSpvSyncedHeight(walletIdHex) }
+        if (armed == null || durable == null || !armed.isConfirmedBy(durable)) {
+            false
+        } else {
+            clearPaidOwedRescans(paidWide = armed.wide)
+            log.info(
+                "owed SDK rescan on {}… is durable (watermark {}, pre-arm {}, target {}): debt cleared",
+                walletIdHex.take(8), durable, armed.preArmHeight, armed.targetHeight
+            )
+            true
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("owed SDK rescan: could not confirm the armed rewind; the debt stays owed", t)
+        false
+    }
+
+    /** Clear what a durable rewind paid: the recovery debt, and the widening debt when wide. */
+    private suspend fun clearPaidOwedRescans(paidWide: Boolean) {
+        if (paidWide) dashPayConfig.remove(DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED)
+        dashPayConfig.remove(DashPayConfig.SDK_RECOVERY_RESCAN_OWED)
+        dashPayConfig.remove(DashPayConfig.SDK_OWED_RESCAN_ARMED)
+        owedRescanArmedInProcess = null
+    }
+
+    /** The persisted arm record; null when absent or unreadable (both mean "arm again"). */
+    private suspend fun readArmedOwedRescan(): ArmedOwedRescan? = try {
+        ArmedOwedRescan.decode(dashPayConfig.get(DashPayConfig.SDK_OWED_RESCAN_ARMED))
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("could not read the armed owed-rescan record", t)
+        null
+    }
+
+    /** Best effort: without the record, the debts stay owed and a later process arms again. */
+    private suspend fun writeArmedOwedRescan(armed: ArmedOwedRescan) {
+        try {
+            dashPayConfig.set(DashPayConfig.SDK_OWED_RESCAN_ARMED, armed.encode())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("could not record the armed owed rescan; a later start arms it again", t)
+        }
+    }
+
+    /**
+     * The owed rescan armed in THIS process, so it is not armed again here.
+     * In memory on purpose: it is exactly as durable as the SDK's rewind.
+     */
+    @Volatile
+    private var owedRescanArmedInProcess: ArmedOwedRescan? = null
+
+    private val owedRescanWatchRunning = AtomicBoolean(false)
+
+    /**
+     * Poll the durable watermark after an arm until the rewind is confirmed
+     * durable and the debts clear. The SDK persists the rewound progress a
+     * filter-loop tick and a changeset batch after the arm (9–60 s observed),
+     * and nothing else would look again before the next start. Bounded; when
+     * it gives up, the debts stay owed for the next start.
+     */
+    private fun watchArmedOwedRescan(walletIdHex: String) {
+        if (!owedRescanWatchRunning.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                repeat(OWED_RESCAN_WATCH_MAX_POLLS) {
+                    delay(owedRescanWatchIntervalMs)
+                    val settled = wideningMutex.withLock {
+                        owedRescanArmedInProcess?.walletIdHex != walletIdHex ||
+                            settleArmedOwedRescanIfDurable(walletIdHex)
+                    }
+                    if (settled) return@launch
+                }
+                log.info(
+                    "owed SDK rescan watch on {}… gave up after {} polls; the debt stays owed for the next start",
+                    walletIdHex.take(8), OWED_RESCAN_WATCH_MAX_POLLS
+                )
+            } finally {
+                owedRescanWatchRunning.set(false)
+            }
+        }
     }
 
     // ── Bounded identity-discovery retry (restore safety net) ─────────
@@ -1907,6 +2226,23 @@ class SdkWalletBinder internal constructor(
          * a single cached signal read.
          */
         internal const val BACKFILL_WATCH_INTERVAL_MS = 60_000L
+
+        /** Poll interval of [watchArmedOwedRescan]. */
+        internal const val OWED_RESCAN_WATCH_INTERVAL_MS = 30_000L
+
+        /** Polls before [watchArmedOwedRescan] leaves it to the next start (20 minutes). */
+        internal const val OWED_RESCAN_WATCH_MAX_POLLS = 40
+
+        /**
+         * Unconfirmed arms of one owed rescan, across starts, after which the
+         * next arm in each process is reported as a non-fatal. The debt is
+         * never given up: only durable confirmation clears it.
+         */
+        internal const val OWED_RESCAN_ARMS_BEFORE_REPORT = 10
+
+        /** [count] + 1, saturating at [Int.MAX_VALUE] so the persisted count never wraps. */
+        internal fun saturatingIncrement(count: Int): Int = if (count >= Int.MAX_VALUE) Int.MAX_VALUE else count + 1
+
         internal const val BACKFILL_WATCH_MAX_POLLS = 45
 
         /**
@@ -1976,5 +2312,50 @@ internal object ContactCoverageDecider {
         registeredAt == null -> Verdict.NOT_DETERMINABLE
         registeredAt > floor -> Verdict.DEBT
         else -> Verdict.COVERED
+    }
+}
+
+/** The non-fatal [SdkWalletBinder] reports for an owed rescan that keeps going unconfirmed. */
+internal class UnconfirmedOwedRescanException(message: String) : IllegalStateException(message)
+
+/**
+ * An owed SPV rewind that was armed, persisted as
+ * [DashPayConfig.SDK_OWED_RESCAN_ARMED] until the rewind is durable.
+ *
+ * @property preArmHeight the durable watermark just before the arm; null when unknown.
+ * @property targetHeight the height the arm rewound to; null when unknown.
+ * @property wide whether the arm was at the widened windows, and so also pays
+ *   [DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED].
+ * @property arms how many starts have armed it without a confirmation;
+ *   saturates at [Int.MAX_VALUE].
+ */
+internal data class ArmedOwedRescan(
+    val walletIdHex: String,
+    val preArmHeight: Long?,
+    val targetHeight: Long?,
+    val wide: Boolean,
+    val arms: Int
+) {
+    /** Whether [durableHeight] shows the rewind persisted (see [SdkWalletBinder]'s settle rule). */
+    fun isConfirmedBy(durableHeight: Long): Boolean =
+        (targetHeight != null && durableHeight <= targetHeight) ||
+            (preArmHeight != null && durableHeight < preArmHeight)
+
+    fun encode(): String = listOf(walletIdHex, preArmHeight ?: "", targetHeight ?: "", wide, arms).joinToString("|")
+
+    companion object {
+        /** Null for an absent or malformed record. */
+        fun decode(encoded: String?): ArmedOwedRescan? {
+            val parts = encoded?.split("|")?.takeIf { it.size == 5 } ?: return null
+            val walletIdHex = parts[0].takeIf { it.isNotEmpty() } ?: return null
+            val arms = parts[4].toIntOrNull() ?: return null
+            return ArmedOwedRescan(
+                walletIdHex = walletIdHex,
+                preArmHeight = parts[1].toLongOrNull(),
+                targetHeight = parts[2].toLongOrNull(),
+                wide = parts[3].toBooleanStrictOrNull() ?: return null,
+                arms = arms
+            )
+        }
     }
 }

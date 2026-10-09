@@ -38,6 +38,7 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @HiltViewModel
 class CoinbaseConversionPreviewViewModel @Inject constructor(
@@ -76,6 +77,24 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
 
         _showLoading.value = true
+
+        // Acquire the destination BEFORE committing the trade. The commit is the
+        // financial side effect; reading the address after it meant an
+        // unavailable address reported a SUCCEEDED conversion as a failure, with
+        // no resumable state and no withdrawal. Only the non-DASH input branch
+        // needs it — the DASH branch sells instead of depositing.
+        val depositAddress = if (inputCurrency == Constants.DASH_CURRENCY) {
+            null
+        } else {
+            try {
+                walletDataProvider.freshReceiveAddressStringOffMain()
+            } catch (ex: ReceiveAddressUnavailableException) {
+                _showLoading.value = false
+                commitSwapTradeFailureState.call()
+                return@launch
+            }
+        }
+
         when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
@@ -90,17 +109,24 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             Dash.ZERO
                         }
                     } else {
+                        // Non-null by construction — this is the same
+                        // `inputCurrency != DASH` branch that populated it above —
+                        // but that invariant is non-local, so bind it rather than
+                        // force-unwrap. If the two branches ever drift apart this
+                        // fails the commit instead of throwing on a null address.
+                        val to = depositAddress ?: run {
+                            commitSwapTradeFailureState.call()
+                            return@launch
+                        }
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
-                            // Off-main: this launch runs on Main, and the underlying
-                            // freshReceiveAddress() forces a synchronous full-wallet save.
-                            to = walletDataProvider.freshReceiveAddressStringOffMain(),
+                            to = to,
                             type = CoinbaseConstants.TRANSACTION_TYPE_SEND
                         ).apply {
                             commitSwapTradeSuccessState.value = this
-                            transactionMetadataProvider.markAddressAsTransferInAsync(to!!, ServiceName.Coinbase)
+                            transactionMetadataProvider.markAddressAsTransferInAsync(to, ServiceName.Coinbase)
                         }
                     }
                 }
