@@ -29,13 +29,19 @@ class SendInviteWorkerContestedTest {
     @Test
     fun `explicit flag is honoured either way`() {
         assertTrue(SendInviteWorker.contestedFor(Constants.DASH_PAY_FEE.value, explicit = true))
-        assertFalse(SendInviteWorker.contestedFor(ContestedUsernameFees.LEGACY.contested.value, explicit = false))
+        assertFalse(
+            SendInviteWorker.contestedFor(ContestedUsernameFees.LEGACY.contested.value, explicit = false)
+        )
     }
 
     @Test
     fun `a persisted request without the flag is inferred from its stored amount`() {
-        assertTrue(SendInviteWorker.contestedFor(ContestedUsernameFees.LEGACY.contested.value, explicit = null))
-        assertTrue(SendInviteWorker.contestedFor(ContestedUsernameFees.CURRENT.contested.value, explicit = null))
+        assertTrue(
+            SendInviteWorker.contestedFor(ContestedUsernameFees.LEGACY.contested.value, explicit = null)
+        )
+        assertTrue(
+            SendInviteWorker.contestedFor(ContestedUsernameFees.CURRENT.contested.value, explicit = null)
+        )
         assertFalse(SendInviteWorker.contestedFor(Constants.DASH_PAY_FEE.value, explicit = null))
     }
 }

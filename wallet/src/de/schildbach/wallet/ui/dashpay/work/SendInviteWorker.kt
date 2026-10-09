@@ -93,7 +93,10 @@ class SendInviteWorker @AssistedInject constructor(
         val password = inputData.getString(KEY_PASSWORD)
             ?: return errorResult("missing KEY_PASSWORD parameter")
         val value = inputData.getLong(KEY_VALUE, 0L)
-        val contested = contestedFor(value, if (inputData.keyValueMap.containsKey(KEY_CONTESTED)) inputData.getBoolean(KEY_CONTESTED, false) else null)
+        val contested = contestedFor(
+            value,
+            explicit = if (inputData.keyValueMap.containsKey(KEY_CONTESTED)) inputData.getBoolean(KEY_CONTESTED, false) else null
+        )
         var fundedValue = value
         val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS)
             ?: return errorResult("missing KEY_FUNDING_ADDRESS parameter")

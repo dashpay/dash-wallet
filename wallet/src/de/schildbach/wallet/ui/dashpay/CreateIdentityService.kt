@@ -676,7 +676,10 @@ class CreateIdentityService : LifecycleService() {
                     // live one is already covered (null→14, or a 13→14 activation between
                     // the reads) — constructing a top-up then moves wallet funds for nothing.
                     val topupValue = if (contestable) {
-                        contestedTopUpFor(balanceInfo.balance, ContestedUsernameFees.resolved(dashSdkService))
+                        contestedTopUpFor(
+                            balanceInfo.balance,
+                            ContestedUsernameFees.resolved(dashSdkService)
+                        )
                     } else {
                         Constants.DASH_PAY_FEE
                     }

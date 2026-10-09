@@ -63,8 +63,14 @@ class ContestedUsernameFeesTest {
         // whatever a conservative pre-check concluded), below the legacy 0.25 at 13.
         val credits = 20_000_000L * 1000
         assertEquals(null, contestedTopUpFor(credits, ContestedUsernameFees.CURRENT))
-        assertEquals(ContestedUsernameFees.LEGACY.contestedName, contestedTopUpFor(credits, ContestedUsernameFees.LEGACY))
-        assertEquals(ContestedUsernameFees.CURRENT.contestedName, contestedTopUpFor(1_000L * 1000, ContestedUsernameFees.CURRENT))
+        assertEquals(
+            ContestedUsernameFees.LEGACY.contestedName,
+            contestedTopUpFor(credits, ContestedUsernameFees.LEGACY)
+        )
+        assertEquals(
+            ContestedUsernameFees.CURRENT.contestedName,
+            contestedTopUpFor(1_000L * 1000, ContestedUsernameFees.CURRENT)
+        )
     }
 
     @Test
