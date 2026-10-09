@@ -1273,6 +1273,32 @@ internal class SdkTxStoreWalker(
     }
 
     /**
+     * Batch [recordFor]: the wallet-relevant records among [displayHexes], keyed
+     * by lowercase display hex, with the same membership rule and corrections.
+     *
+     * Named for the keying, not just pluralised, because `recordsFor` is taken
+     * by the group re-sum's unkeyed read, which deliberately SKIPS the
+     * membership probe (its caller already knows the txids are the wallet's).
+     * The two differ only in return type, which Kotlin cannot overload on, and
+     * the difference that matters is not the return type but whether
+     * membership is checked.
+     * One reattribution pass for the whole set, so the wallet-wide
+     * [pendingSpentAggregates] read runs once per call instead of once per txid
+     * as N [recordFor] calls would. For bulk callers such as the metadata import
+     * of a platform sync. Chunked like every `txid IN (…)` read.
+     */
+    fun recordsByHex(displayHexes: Collection<String>): Map<String, L1TxUiRecord> {
+        val wireByHex = LinkedHashMap<String, ByteArray>()
+        for (hex in displayHexes) {
+            val lower = hex.lowercase()
+            hexToBytesOrNull(lower)?.reversedArray()?.let { wireByHex[lower] = it }
+        }
+        val relevant = walletRelevantSubset(wireByHex)
+        if (relevant.isEmpty()) return emptyMap()
+        return queryTxRecords(relevant.mapNotNull { wireByHex[it] }).associateBy { it.txidHex }
+    }
+
+    /**
      * Whether the wallet owns output `displayHex:vout` — one indexed EXISTS.
      * A watch-only contact-payment output ([txoIsForeignSql]) is NOT mine:
      * dashj's `isMine` (the seam contract) means spendable-by-this-wallet,

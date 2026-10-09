@@ -1404,4 +1404,39 @@ class SdkTxStoreWalkerTest {
         assertNull(dashjPayloadFacts(ByteArray(0)))
         assertNull(dashjPayloadFacts(byteArrayOf(1, 2, 3)))
     }
+
+    // ── Batch point lookup (metadata import) ──────────────────────────
+
+    @Test
+    fun recordsFor_matchesRecordFor_withOnePendingAggregatePerBatch() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_0", bip44Account)
+        insertCoreAddress("chg_0", bip44Account)
+        // A just-broadcast send whose only spent evidence is its pending_inputs
+        // reservation (the case the wallet-wide aggregate exists for)…
+        val receive = txid(21)
+        val send = txid(22)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(4), firstSeen = 1_700_000_002)
+        val receiveOutpoint = insertTxo(receive, 0, 50_000_000, "bip44_0")
+        insertTxo(send, 1, 29_999_774, "chg_0")
+        insertPendingInput(receiveOutpoint, send)
+        // …plus ordinary standard receives, each of which also triggers the aggregate.
+        seedWalletTxs(count = 20, startAt = 100)
+        val notInStore = displayHexOf(txid(9_999))
+        val hexes = listOf(displayHexOf(receive), displayHexOf(send)) + (100 until 120).map { displayHex(it) }
+
+        val single = hexes.associateWith { walker(payloadFacts = pendingSendPayloadFacts).recordFor(it) }
+        queryLog.clear()
+        val batch = walker(payloadFacts = pendingSendPayloadFacts).recordsByHex(hexes + notInStore)
+
+        // Same records as one recordFor per txid, including the pending correction.
+        assertEquals(single.filterValues { it != null }, batch)
+        assertEquals(L1TxUiDirection.OUTGOING, batch.getValue(displayHexOf(send)).direction)
+        assertEquals(-20_000_226L, batch.getValue(displayHexOf(send)).netAmountDuffs)
+        // The wallet-wide pending_inputs aggregate: at most once for reattribution and
+        // once for fee recovery, for the whole batch of 22 — not once per txid.
+        val aggregates = queryLog.count { it.contains("GROUP BY s.spendingTxid") }
+        assertTrue("pending aggregate ran $aggregates times", aggregates in 1..2)
+    }
 }
