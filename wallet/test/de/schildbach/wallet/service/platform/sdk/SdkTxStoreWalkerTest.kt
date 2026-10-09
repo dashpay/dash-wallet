@@ -1428,7 +1428,7 @@ class SdkTxStoreWalkerTest {
 
         val single = hexes.associateWith { walker(payloadFacts = pendingSendPayloadFacts).recordFor(it) }
         queryLog.clear()
-        val batch = walker(payloadFacts = pendingSendPayloadFacts).recordsFor(hexes + notInStore)
+        val batch = walker(payloadFacts = pendingSendPayloadFacts).recordsByHex(hexes + notInStore)
 
         // Same records as one recordFor per txid, including the pending correction.
         assertEquals(single.filterValues { it != null }, batch)

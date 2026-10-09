@@ -293,7 +293,7 @@ private suspend fun boundWalletRecordsOrEmpty(
     displayHexes: Collection<String>
 ): Map<String, L1TxUiRecord> = try {
     val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
-    walletId?.let { withContext(Dispatchers.IO) { SdkTxStoreWalker(db, it).recordsFor(displayHexes) } }
+    walletId?.let { withContext(Dispatchers.IO) { SdkTxStoreWalker(db, it).recordsByHex(displayHexes) } }
         ?: emptyMap()
 } catch (e: CancellationException) {
     throw e
