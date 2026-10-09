@@ -45,6 +45,8 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.evolution.EvolutionContact
+import org.bitcoinj.wallet.FriendChainAccess
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
@@ -160,6 +162,20 @@ interface IdentityRepository {
     suspend fun addInviteUserAlert()
     suspend fun shouldShowAlert(): Boolean
     fun getNextContactAddress(userId: String, accountReference: Int): Address?
+
+    /**
+     * After a SUCCESSFUL payment to a contact, mark the dashj SENDING-chain key for
+     * [address] used so dashj's [getNextContactAddress] moves past it. dashj only
+     * does this itself when it sees the transaction, which it never does once the
+     * SDK broadcasts (cutover). [userId] / [accountReference] select the chain
+     * exactly as [getNextContactAddress] does. Returns the dashj outcome, or null
+     * when there is no dashj identity / wallet to mark.
+     */
+    fun markContactAddressUsed(
+        userId: String,
+        accountReference: Int,
+        address: Address
+    ): FriendChainAccess.MarkResult?
     suspend fun clearDatabase(includeInvitations: Boolean)
     fun updateIdentity()
 }
@@ -942,6 +958,25 @@ class IdentityRepositoryImpl @Inject constructor(
             log.error("Failed to get contact address due to null key chain", e)
             null
         }
+    }
+
+    override fun markContactAddressUsed(
+        userId: String,
+        accountReference: Int,
+        address: Address
+    ): FriendChainAccess.MarkResult? {
+        val identity = _blockchainIdentity ?: return null
+        val wallet = identity.wallet ?: return null
+        // The same EvolutionContact BlockchainIdentity.getContactNextPaymentAddress
+        // builds for the SENDING chain, so the key marked is on the chain the
+        // address was (or would have been) served from.
+        val contact = EvolutionContact(
+            identity.uniqueIdString,
+            identity.account,
+            Identifier.from(userId).toString(),
+            accountReference
+        )
+        return FriendChainAccess.markSendingAddressUsed(wallet, contact, address.hash)
     }
 
     /**

@@ -30,6 +30,9 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.sdk.SEND_ALL_FEE_RESERVE_DUFFS
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddress
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddressProvider
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentTarget
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.Dispatchers
@@ -86,7 +89,8 @@ class SendCoinsViewModel @Inject constructor(
     private val notificationService: NotificationService,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
-    private val dashPayContactRequestDao: DashPayContactRequestDao
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val contactPaymentAddressProvider: ContactPaymentAddressProvider
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -155,6 +159,13 @@ class SendCoinsViewModel @Inject constructor(
     private val _contactData = MutableLiveData<UsernameSearchResult>()
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
+
+    /**
+     * The contact payment address [handleDashIdentity] resolved, so the send can
+     * mark it paid once it succeeds. Null for non-contact payments.
+     */
+    @Volatile
+    private var contactPaymentAddress: ContactPaymentAddress? = null
 
 
     init {
@@ -303,11 +314,17 @@ class SendCoinsViewModel @Inject constructor(
             } else {
                 null
             }
-            sendCoinsTaskRunner.sendCoins(
-                finalSendRequest,
-                checkBalanceConditions = checkBalance,
-                intendedRecipient = intendedRecipient
-            )
+            // A contact payment: once the send succeeds, mark the address paid so
+            // the next payment to this contact gets a new one (DIP-15). Only when
+            // the request still pays the address resolved for the contact.
+            val contactPayment = contactPaymentAddress?.takeIf { it.address == intendedRecipient }
+            contactPaymentAddressProvider.sendThenMarkUsed(contactPayment) {
+                sendCoinsTaskRunner.sendCoins(
+                    finalSendRequest,
+                    checkBalanceConditions = checkBalance,
+                    intendedRecipient = intendedRecipient
+                )
+            }
         } catch (ex: Exception) {
             _state.postValue(State.FAILED)
             throw ex
@@ -557,6 +574,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private suspend fun checkIdentity(paymentIntent: PaymentIntent): PaymentIntent {
+        contactPaymentAddress = null
         var isDashUserOrNotMe = identityRepository.hasIdentity()
 
         // make sure that this payment intent is not to me
@@ -627,10 +645,17 @@ class SendCoinsViewModel @Inject constructor(
             .maxByOrNull { it.timestamp }
             ?: receivedFromContact
 
-        val address = identityRepository.getNextContactAddress(
-            dashPayProfile.userId,
-            contactRequest.accountReference
+        // Post-cutover from the SDK's sending account for this contact and
+        // channel, else dashj — see ContactPaymentAddressProvider.
+        val contactAddress = contactPaymentAddressProvider.nextAddress(
+            ContactPaymentTarget(
+                ourUserId = ourUserId,
+                contactUserId = dashPayProfile.userId,
+                accountReference = contactRequest.accountReference
+            )
         )
+        contactPaymentAddress = contactAddress
+        val address = contactAddress?.address
         return if (address != null) {
             PaymentIntent.fromAddressWithIdentity(
                 address.toBase58(),
