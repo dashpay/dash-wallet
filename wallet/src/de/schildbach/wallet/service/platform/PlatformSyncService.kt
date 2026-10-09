@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.LEGACY_CONTACT_QUERY_TIMEOUT_MS
 import de.schildbach.wallet.service.platform.sdk.boundedLegacyPlatformQuery
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
@@ -306,6 +307,63 @@ class PlatformSynchronizationService @Inject constructor(
         @JvmStatic
         internal fun isDashPayContractLoaded(platform: org.dashj.platform.sdk.platform.Platform): Boolean =
             runCatching { platform.apps["dashpay"]?.contract != null }.getOrDefault(false)
+
+        /**
+         * Loads the dashpay data contract into `apps["dashpay"].contract` if it
+         * is not there yet, so [isDashPayContractLoaded] can pass.
+         *
+         * Nothing in the sync path does this. The legacy client only fills
+         * that field lazily, from `Contracts.get`, and the only callers of
+         * `Contracts.get` for dashpay are document BUILDS (`Documents.create`:
+         * sending a request, editing the profile, and
+         * `DashPayContactRequest.toContactRequest`); every READ (contact
+         * requests, profiles, names — legacy or SDK) goes by contract id and
+         * never touches it. The integrity pass's own `toContactRequest` was
+         * therefore the load, and the [isDashPayContractLoaded] guard put in
+         * front of it (11.10.58) meant it could never run to do so — unless
+         * the user happened to send a request or edit their profile first in
+         * the same process. Field logs (12.0.0-qa28/qa30): 831
+         * integrity passes, 831 skips, zero `getDataContract` calls.
+         *
+         * `Contracts.get` fetches with a proved `getDataContract`; when that
+         * fails the legacy client returns null and `Contracts.get` NPEs on
+         * it (the NPE the guard was added for). Every failure — that NPE, any
+         * other exception, or a call that exceeds [timeoutMs] — is "not
+         * loaded" here, never thrown.
+         */
+        internal suspend fun ensureDashPayContractLoaded(
+            platform: org.dashj.platform.sdk.platform.Platform,
+            timeoutMs: Long = LEGACY_CONTACT_QUERY_TIMEOUT_MS
+        ): Boolean {
+            if (isDashPayContractLoaded(platform)) {
+                return true
+            }
+            val contractId = runCatching { platform.apps["dashpay"]?.contractId }.getOrNull()
+            if (contractId == null) {
+                log.warn("dashpay data contract: no dashpay app is registered; cannot load it")
+                return false
+            }
+            return try {
+                val fetched = boundedLegacyPlatformQuery("contracts.get(dashpay $contractId)", timeoutMs) {
+                    platform.contracts.get(contractId)
+                }
+                val loaded = isDashPayContractLoaded(platform)
+                log.info(
+                    "dashpay data contract: load {}",
+                    when {
+                        loaded -> "succeeded"
+                        fetched == null -> "timed out after ${timeoutMs}ms"
+                        else -> "returned no contract"
+                    }
+                )
+                loaded
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("dashpay data contract: load failed: {}", e.toString())
+                false
+            }
+        }
     }
 
     private var platformSyncJob: Job? = null
@@ -320,6 +378,10 @@ class PlatformSynchronizationService @Inject constructor(
      */
     private val contactUpdateRetryPolicy = ContactUpdateRetryPolicy()
     private var contactUpdateRetryJob: Job? = null
+
+    /** Key-chain/profile repair of [checkDatabaseIntegrity], with its per-contact backoff. */
+    private val contactIntegrityRepair = ContactIntegrityRepair()
+
     private val updatingContacts = AtomicBoolean(false)
 
     /** Ticks of the 15 s platform ticker since the last contact pass; seeded so the first tick runs. */
@@ -1001,6 +1063,13 @@ class PlatformSynchronizationService @Inject constructor(
              * the listener fire on [addedContact] silently dropped it.
              */
             var insertedContactRequest = false
+            /**
+             * Whether [checkDatabaseIntegrity] re-added a key chain that an
+             * earlier pass skipped. It posts its own bloom-filter update; this
+             * only drives the listener fire and the SDK friend-account
+             * provisioning below, which must learn of the repaired contact too.
+             */
+            var repairedKeyChains = false
             /** Received requests newly inserted by this pass, for the system notification. */
             val newReceivedRequests = mutableListOf<DashPayContactRequest>()
             Context.propagate(platformRepo.walletApplication.wallet!!.context)
@@ -1040,7 +1109,7 @@ class PlatformSynchronizationService @Inject constructor(
             updateSyncStatus(PreBlockStage.Starting)
             updateSyncStatus(PreBlockStage.Initialization)
             if (!initialSync) {
-                checkDatabaseIntegrity(userId)
+                repairedKeyChains = checkDatabaseIntegrity(userId)
                 updateSyncStatus(PreBlockStage.FixMissingProfiles)
             } else {
                 // Refresh our own identity (revision/keys/balance) before the
@@ -1190,7 +1259,7 @@ class PlatformSynchronizationService @Inject constructor(
             // keychain came with it. Gating this on `addedContact` alone meant a
             // received request whose sending keychain already existed never woke the
             // contacts/notification observers, so the home-screen bell stayed unlit.
-            if (addedContact || insertedContactRequest) {
+            if (addedContact || insertedContactRequest || repairedKeyChains) {
                 fireContactsUpdatedListeners()
                 // Post-restore contact-attribution repair: display-cache rows planned
                 // by CutoverUiDataService BEFORE the DIP-15 friendship keychains were
@@ -1217,7 +1286,7 @@ class PlatformSynchronizationService @Inject constructor(
             // the new friend account provisions immediately; otherwise
             // throttled — the binder no-ops unless a USE_KOTLIN_SDK_* flag is
             // on and a wallet is bound. Fire-and-forget (never blocks sync).
-            sdkWalletBinder.provisionContactAccountsInBackground(force = addedContact)
+            sdkWalletBinder.provisionContactAccountsInBackground(force = addedContact || repairedKeyChains)
 
             // One-shot-per-process DIP-15 derivation evidence. The contact set
             // and its friendship keychains are established by the time this pass
@@ -1636,75 +1705,77 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    // This will check for missing profiles, download them and update the database
-    private suspend fun checkDatabaseIntegrity(userId: String) {
+    /**
+     * Repairs what an earlier contact pass left half-done: re-adds DIP-15
+     * friend key chains for stored request rows that are missing from the
+     * wallet (a skipped `getContactIdentity` lookup), and re-fetches contacts
+     * that have no profile. The incremental contact fetch never revisits a
+     * stored row, so this pass is the only retry for both — see
+     * [ContactIntegrityRepair] for the field incident and the bounds.
+     *
+     * Rebuilding a request document (`toContactRequest` -> `Documents.create`)
+     * needs the dashpay data contract LOADED, and nothing in the sync path
+     * loads it — the old "skip until loaded" guard therefore skipped every
+     * pass. The contract is now loaded here ([ensureDashPayContractLoaded],
+     * bounded and backed off), and only when a key chain is actually missing;
+     * documents are still only built once it is loaded. Profile repair needs
+     * no contract and runs regardless.
+     *
+     * @return true when a key chain was added to the wallet
+     */
+    private suspend fun checkDatabaseIntegrity(userId: String): Boolean {
         val watch = Stopwatch.createStarted()
         log.info("check database integrity: starting")
-
-        // The reconciliation below REBUILDS ContactRequest documents from the
-        // database rows (toContactRequest -> Documents.create), which needs the
-        // dashpay data contract to be LOADED — hasApp("dashpay") upstream only
-        // proves the app registration exists. Running before the contract
-        // fetch completed NPEd out of Contracts.get and aborted the integrity
-        // pass every cycle. Skip this round; the next sync cycle retries.
-        if (!isDashPayContractLoaded(platform.platform)) {
-            log.warn("check database integrity: skipped — the dashpay data contract is not loaded yet")
-            return
-        }
-
-        try {
-            val userIdList = HashSet<String>()
-            val missingProfiles = HashSet<String>()
-
-            val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
-            val toContactMap = HashMap<String, DashPayContactRequest>()
-            var addedContactRequests = false
-            toContactDocuments.forEach {
-                userIdList.add(it.toUserId)
-                toContactMap[it.toUserId] = it
-
-                // check to see if wallet has this contact request's keys
-                val added = checkAndAddSentRequest(userId, it.toContactRequest(platform.platform))
-                if (added) {
-                    log.warn(
-                        "check database integrity: added sent $it to wallet since it was missing.  " +
-                            "Transactions may also be missing"
-                    )
-                    addedContactRequests = true
-                }
+        return try {
+            val wallet = platformRepo.walletApplication.wallet
+            if (wallet == null) {
+                log.warn("check database integrity: skipped — no wallet is loaded")
+                return false
             }
-            // Get all contact requests where toUserId == userId, the users who have added me
-            val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
-            val fromContactMap = HashMap<String, DashPayContactRequest>()
-            fromContactDocuments.forEach {
-                userIdList.add(it.userId)
-                fromContactMap[it.userId] = it
-
-                // check to see if wallet has this contact request's keys
-                val added = checkAndAddReceivedRequest(userId, it.toContactRequest(platform.platform))
-                if (added) {
-                    log.warn("check database integrity: added received $it to wallet since it was missing")
-                    addedContactRequests = true
-                }
-            }
-
+            Context.propagate(wallet.context)
+            val result = contactIntegrityRepair.run(
+                sentRequests = dashPayContactRequestDao.loadToOthers(userId),
+                receivedRequests = dashPayContactRequestDao.loadFromOthers(userId),
+                hasKeyChain = { row, direction ->
+                    when (direction) {
+                        // the same checks checkAndAddSentRequest / checkAndAddReceivedRequest make
+                        ContactIntegrityRepair.Direction.SENT ->
+                            wallet.hasReceivingKeyChain(EvolutionContact(userId, row.toUserId))
+                        ContactIntegrityRepair.Direction.RECEIVED ->
+                            wallet.hasSendingKeyChain(EvolutionContact(userId, 0, row.userId, row.accountReference))
+                    }
+                },
+                ensureContractLoaded = { ensureDashPayContractLoaded(platform.platform) },
+                addKeyChain = { row, direction ->
+                    when (direction) {
+                        ContactIntegrityRepair.Direction.SENT ->
+                            checkAndAddSentRequest(userId, row.toContactRequest(platform.platform))
+                        ContactIntegrityRepair.Direction.RECEIVED ->
+                            checkAndAddReceivedRequest(userId, row.toContactRequest(platform.platform))
+                    }
+                },
+                hasProfile = { dashPayProfileDao.loadByUserId(it) != null },
+                fetchProfiles = { updateContactProfiles(it, 0, true) }
+            )
+            log.info(
+                "check database integrity: key chains missing={} added={} deferred={} contractUnavailable={}; " +
+                    "profiles re-fetched={}",
+                result.keyChainsMissing,
+                result.keyChainsAdded,
+                result.keyChainsDeferred,
+                result.contractUnavailable,
+                result.profilesRefetched.size
+            )
             // If new keychains were added to the wallet, then update the bloom filters
-            if (addedContactRequests) {
+            if (result.keyChainsAdded > 0) {
                 postUpdateBloomFilters()
             }
-
-            for (user in userIdList) {
-                val profile = dashPayProfileDao.loadByUserId(user)
-                if (profile == null) {
-                    missingProfiles.add(user)
-                }
-            }
-
-            if (missingProfiles.isNotEmpty()) {
-                updateContactProfiles(missingProfiles.toList(), 0, true)
-            }
+            result.keyChainsAdded > 0
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             platformRepo.formatExceptionMessage("check database integrity", e)
+            false
         } finally {
             log.info("check database integrity complete in $watch")
         }
