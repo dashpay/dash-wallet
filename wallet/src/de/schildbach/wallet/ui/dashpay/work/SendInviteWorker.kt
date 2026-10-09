@@ -95,7 +95,11 @@ class SendInviteWorker @AssistedInject constructor(
         val value = inputData.getLong(KEY_VALUE, 0L)
         val contested = contestedFor(
             value,
-            explicit = if (inputData.keyValueMap.containsKey(KEY_CONTESTED)) inputData.getBoolean(KEY_CONTESTED, false) else null
+            explicit = if (inputData.keyValueMap.containsKey(KEY_CONTESTED)) {
+                inputData.getBoolean(KEY_CONTESTED, false)
+            } else {
+                null
+            }
         )
         var fundedValue = value
         val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS)
