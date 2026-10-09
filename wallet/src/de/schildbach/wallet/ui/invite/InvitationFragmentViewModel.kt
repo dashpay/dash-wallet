@@ -193,8 +193,7 @@ internal enum class InviteCreationFailureKind {
  * validation-failure reason strings are matched here by construction):
  * - insufficient funds / coin selection → [InviteCreationFailureKind.INSUFFICIENT_FUNDS];
  * - deterministic refusals (FFI input/identity validation — including the
- *   invitation-amount cap's "Invalid identity data" — a funding-time fee
- *   resolution exceeding the confirmed amount — plus this-session
+ *   invitation-amount cap's "Invalid identity data" — plus this-session
  *   impossibilities like the flag/cutover gates) → [InviteCreationFailureKind.REJECTED];
  * - everything else → [InviteCreationFailureKind.UNREACHABLE] (bounded retry).
  * Pure — host-testable.
@@ -220,7 +219,6 @@ internal fun classifyInviteCreationFailure(result: SdkWriteResult<*>): InviteCre
             InviteCreationFailureKind.INSUFFICIENT_FUNDS
         "invalid identity data" in text ||
             "exceeds the cap" in text ||
-            "exceeds the confirmed amount" in text ||
             "validation failure" in text ||
             "flag off" in text ||
             "cutover not committed" in text ||
@@ -282,20 +280,6 @@ open class InvitationFragmentViewModel @Inject constructor(
      */
     private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
     val contestedFees: StateFlow<ContestedUsernameFees> = _contestedFees.asStateFlow()
-
-    /**
-     * Re-resolves [contestedFees] from a live [DashSdkService.currentProtocolVersion]
-     * read. This ViewModel is obtained through `activityViewModels()`, so [init]
-     * only resolves once per activity instance — reopening the invite flow
-     * (e.g. after a protocol 13-to-14 activation, or a failed initial lookup)
-     * must call this explicitly to pick up the current fee instead of quoting
-     * the stale one.
-     */
-    fun refreshContestedFees() {
-        viewModelScope.launch {
-            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
-        }
-    }
 
     private val pubkeyHash: ByteArray
         get() = authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
@@ -450,14 +434,10 @@ open class InvitationFragmentViewModel @Inject constructor(
      * [createShieldedInvite] — on success the funded deep link is published to
      * [shieldedInviteLink] and its shareable OneLink to [shieldedInviteShareLink]
      * (the created-invite screen's generic out-of-band link channel). [contested]
-     * (derived from the fee the inviter picked) selects the funding fee.
-     * [approvedAmountDuffs] is the amount the confirm dialog showed and
-     * authenticated against — passed through so a fresh funding-time fee
-     * resolution exceeding it is refused instead of silently overspending (see
-     * [de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation.createL1Invite]).
-     * Runs the funding spend off the main thread.
+     * (derived from the fee the inviter picked) selects the funding fee. Runs the
+     * funding spend off the main thread.
      */
-    suspend fun createL1Invite(contested: Boolean, approvedAmountDuffs: Long): SdkWriteResult<InvitationLinkData> {
+    suspend fun createL1Invite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
         _inviteCreationInFlight.value = true
         return try {
             withContext(Dispatchers.IO) {
@@ -468,8 +448,7 @@ open class InvitationFragmentViewModel @Inject constructor(
                     displayName = profile.displayName,
                     avatarUrl = profile.avatarUrl,
                     inviterIdentityIdBase58 = profile.userId,
-                    contested = contested,
-                    approvedAmountDuffs = approvedAmountDuffs
+                    contested = contested
                 )) {
                     is SdkWriteResult.Broadcast -> {
                         _shieldedInviteLink.value = result.value.linkData
@@ -553,6 +532,20 @@ open class InvitationFragmentViewModel @Inject constructor(
                 _invitation.value = invitation
             }.launchIn(workerScope)
         refreshContestedFees()
+    }
+
+    /**
+     * Re-resolves [contestedFees] from a live [DashSdkService.currentProtocolVersion]
+     * read. This ViewModel is obtained through `activityViewModels()`, so [init]
+     * only resolves once per activity instance — reopening the invite flow
+     * (e.g. after a protocol 13-to-14 activation, or a failed initial lookup)
+     * must call this explicitly to pick up the current fee instead of quoting
+     * the stale one.
+     */
+    fun refreshContestedFees() {
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+        }
     }
 
     suspend fun getInvitedUserProfile(): DashPayProfile? = dashPayProfileDao.loadByUserId(identityId.value!!)
