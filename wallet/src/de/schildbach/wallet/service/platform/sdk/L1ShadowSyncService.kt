@@ -4038,7 +4038,7 @@ class L1ShadowSyncService internal constructor(
     private val breakdownLock = Any()
 
     /**
-     * Bumped by a wallet wipe ([clearParityBreakdownForWalletWipe]); under
+     * Bumped by [discardParityBreakdown] (wallet wipe, ledger rebuild); under
      * [breakdownLock]. A run, or a first [breakdownStore] read, that began in
      * an earlier epoch keeps nothing, so a run that finishes after the wipe
      * cannot write the wiped wallet's txids back.
@@ -4091,18 +4091,36 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * Wallet wipe: forget the breakdown (memory and [breakdownStore]) and
-     * cancel a run in flight. The epoch bump fences a run that cannot be
-     * stopped in time — it finishes without keeping or logging anything.
+     * Forget the breakdown (memory and [breakdownStore]) and cancel a run in
+     * flight. The epoch bump fences a run that cannot be stopped in time — it
+     * finishes without keeping or logging anything.
+     *
+     * Two callers, one rule: the breakdown describes a ledger that is about to
+     * stop existing.
+     *
+     *  - a wallet wipe ([clearForWalletWipe]) — the stored breakdown carries
+     *    this wallet's txids and amounts and must never reach the next
+     *    wallet's support report;
+     *  - an SDK LEDGER REBUILD: `resetShadowState()` deletes the L1 rows and
+     *    `recoverByRecreatingWallet()` removes and restores the SDK wallet.
+     *    Neither is a wipe, so neither used to come through here and completed
+     *    findings survived both. With dashj still at 100 % a pre-rebuild clean
+     *    sheet stayed eligible, so a rebuilt ledger with matching balances and
+     *    counts but a wrong stored net could be published as MATCH without any
+     *    value comparison of the rebuilt state — until the next hourly run.
+     *
+     * Clearing the findings makes the verdict fall back to "not established",
+     * and resetting the cadence lets a fresh breakdown run immediately rather
+     * than waiting out the hour.
      */
-    private suspend fun clearParityBreakdownForWalletWipe() {
+    private suspend fun discardParityBreakdown(why: String) {
         val run = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             synchronized(breakdownLock) {
                 breakdownEpoch++
                 latestBreakdown = null
-                // The findings described the wiped wallet. Clearing them means
-                // the verdict falls back to "not established" rather than
-                // carrying a stale clean sheet across a wipe.
+                // The findings described the ledger that is going away.
+                // Clearing them means the verdict falls back to "not
+                // established" rather than carrying a stale clean sheet over.
                 _latestBreakdownFindings.value = null
                 breakdownStoreLoaded = true // the file is gone; nothing to load
                 lastBreakdownRunMs = null
@@ -4112,7 +4130,7 @@ class L1ShadowSyncService internal constructor(
             }
         }
         run?.cancel()
-        log.info("ParityBreakdown: cleared for the wallet wipe")
+        log.info("ParityBreakdown: discarded — {}", why)
     }
 
     /**
@@ -4416,6 +4434,9 @@ class L1ShadowSyncService internal constructor(
                     log.info("L1 shadow reset skipped: shadow sync not running")
                     return false
                 }
+                // BEFORE the L1 rows go: a clean sheet describes the ledger that
+                // is about to stop existing.
+                discardParityBreakdown("L1 shadow state reset")
                 log.warn(
                     "L1 shadow {} reset: stopping SPV, {}, clearing L1 rows, rescanning",
                     if (hard) "HARD" else "soft",
@@ -4573,6 +4594,9 @@ class L1ShadowSyncService internal constructor(
                     log.info("L1 shadow wallet re-creation skipped: no SDK wallet bound")
                     return false
                 }
+                // stop() cancels an in-flight breakdown but keeps completed
+                // findings; the wallet is about to be removed and restored.
+                discardParityBreakdown("SDK wallet re-creation")
                 log.warn(
                     "L1 shadow RECOVERY BY WALLET RE-CREATION for SDK wallet {}…: stopping " +
                         "shadow + shielded sync, removing the SDK wallet (full cascade — this " +
@@ -4667,7 +4691,7 @@ class L1ShadowSyncService internal constructor(
         // First and unconditionally: the stored parity breakdown carries this
         // wallet's txids and amounts, and must never reach the next wallet's
         // support report.
-        clearParityBreakdownForWalletWipe()
+        discardParityBreakdown("the wallet wipe")
         val recreator = this.recreator ?: run {
             log.info("wallet-wipe SDK cleanup skipped: no recreator wired (test construction?)")
             return

@@ -219,6 +219,12 @@ internal data class ParityBreakdown(
     val valueCompared: Int = 0,
     /** Of [valueCompared], how many disagree. */
     val valueDiffers: Int = 0,
+    /**
+     * Eligible shared transactions whose value could NOT be compared because one
+     * side had none — dashj's `getValue` threw, or the SDK has no `transactions`
+     * row. Never counted as agreement.
+     */
+    val valueUnknown: Int = 0,
     /** Sum over the differing rows of (SDK net - dashj net). */
     val valueDeltaDuffs: Long = 0L,
     /** The largest disagreements, |delta| first. */
@@ -268,6 +274,7 @@ internal fun computeParityBreakdown(
     var shared = 0
     var dead = 0
     var valueCompared = 0
+    var valueUnknown = 0
     var valueDelta = 0L
     val valueDiffs = ArrayList<ValueDiffTx>()
     for (tx in dashjTxs) {
@@ -285,11 +292,24 @@ internal fun computeParityBreakdown(
             // Compare only where both sides genuinely have a value AND dashj
             // could know about the transaction at all. An unconfirmed or dead
             // row, or one above dashj's last block, proves nothing.
-            if (tx.valueKnown && sdkNet != null && !tx.dead && tx.height != NO_BLOCK) {
-                valueCompared++
-                if (tx.netDuffs != sdkNet) {
-                    valueDelta += sdkNet - tx.netDuffs
-                    valueDiffs += ValueDiffTx(tx.txid.toString(), tx.height, tx.netDuffs, sdkNet)
+            if (!tx.dead && tx.height != NO_BLOCK) {
+                // Eligible: dashj could be expected to agree about this one.
+                // The SDK side must be confirmed too (height > 0). An SDK row
+                // still carrying height 0 holds the net of an unconfirmed
+                // transaction, which the engine revises when it lands; against
+                // a confirmed dashj row that reads as a disagreement when it is
+                // only a race.
+                if (tx.valueKnown && sdkNet != null && sdk.height > 0) {
+                    valueCompared++
+                    if (tx.netDuffs != sdkNet) {
+                        valueDelta += sdkNet - tx.netDuffs
+                        valueDiffs += ValueDiffTx(tx.txid.toString(), tx.height, tx.netDuffs, sdkNet)
+                    }
+                } else {
+                    // Eligible but unvalued, or not yet confirmed on the SDK
+                    // side. NOT agreement — counted separately so a partly
+                    // valued history cannot pass as parity.
+                    valueUnknown++
                 }
             }
             continue
@@ -342,6 +362,7 @@ internal fun computeParityBreakdown(
             .sortedWith(compareBy<SdkOnlyTx> { it.height }.thenBy { it.txidHex })
             .take(maxSdkExamples),
         valueCompared = valueCompared,
+        valueUnknown = valueUnknown,
         valueDiffers = valueDiffs.size,
         valueDeltaDuffs = valueDelta,
         valueDiffExamples = valueDiffs
@@ -399,6 +420,7 @@ internal fun parityBreakdownLog(
     }
     append("\n  value: compared=").append(b.valueCompared)
     append(" differs=").append(b.valueDiffers)
+    if (b.valueUnknown > 0) append(" unknown=").append(b.valueUnknown)
     if (b.valueDiffers > 0) {
         append(" delta=").append(signed(b.valueDeltaDuffs))
         append(" (sdk-dashj, largest |delta| first):")
@@ -567,17 +589,36 @@ data class ParityBreakdownFindings(
     val dashjOnly: Int,
     val sdkOnly: Int,
     val valueCompared: Int,
-    val valueDiffers: Int
+    val valueDiffers: Int,
+    /**
+     * Shared transactions that were ELIGIBLE for a value comparison — confirmed,
+     * not dead, at or below dashj's last block — but where one side had no value
+     * to compare. They are excluded from [valueDiffers] rather than counted as
+     * agreement, and they block [clean]: a history that is only partly valued
+     * cannot establish parity.
+     */
+    val valueUnknown: Int = 0
 ) {
-    /** The sets agree AND the values agree AND the values were genuinely compared. */
+    /**
+     * The sets agree, every eligible shared value was compared, and they all
+     * agreed.
+     *
+     * `valueCompared > 0` alone is NOT enough, and that was the original bug
+     * here: with two eligible shared transactions, one compared equal and one
+     * skipped because its value could not be read, the old condition reported a
+     * clean sheet. The aggregate balance and count checks do not validate the
+     * skipped transaction's stored net, so nothing else would have caught it.
+     */
     val clean: Boolean
-        get() = dashjOnly == 0 && sdkOnly == 0 && valueDiffers == 0 && valueCompared > 0
+        get() = dashjOnly == 0 && sdkOnly == 0 && valueDiffers == 0 &&
+            valueUnknown == 0 && valueCompared > 0
 
     /** Why this is not clean, for the log. Null when it is. */
     val reason: String?
         get() = when {
             dashjOnly > 0 || sdkOnly > 0 -> "sets differ (dashj-only=$dashjOnly sdk-only=$sdkOnly)"
             valueDiffers > 0 -> "$valueDiffers transaction value(s) differ"
+            valueUnknown > 0 -> "$valueUnknown eligible value(s) could not be compared"
             valueCompared == 0 -> "no values could be compared"
             else -> null
         }
@@ -591,7 +632,8 @@ internal fun findingsOf(b: ParityBreakdown): ParityBreakdownFindings = ParityBre
     dashjOnly = b.dashjOnly,
     sdkOnly = b.sdkOnly,
     valueCompared = b.valueCompared,
-    valueDiffers = b.valueDiffers
+    valueDiffers = b.valueDiffers,
+    valueUnknown = b.valueUnknown
 )
 
 /**
@@ -708,6 +750,9 @@ internal fun parityBreakdownAppliesToReport(cutoverCommitted: Boolean, dashjDiag
  * for.
  */
 internal fun sdkStillProcessingReason(sdkWalletHeight: Long, dashjLastBlockSeenHeight: Int): String? = when {
+    // NOTE: a dashj wallet that has seen no blocks is REFUSED here, not waved
+    // through — see the branch below. Any older description of this function
+    // returning null for that case is out of date.
     // dashj has seen NO blocks. Previously this returned null ("nothing is
     // wrong, go ahead"), and the breakdown duly reported dashj-only=0,
     // sdk-only=0 against an empty dashj wallet — which reads as perfect parity

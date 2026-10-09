@@ -286,7 +286,7 @@ class ParityBreakdownTest {
                 "    unconfirmed=1 net=-3000\n" +
                 "    moves-money=2 net=+249000000\n" +
                 "    other=1 net=0\n" +
-                "  value: compared=0 differs=0\n" +
+                "  value: compared=0 differs=0 unknown=1\n" +
                 "  moves-money txids (2 of 2, largest |net| first):\n" +
                 "    $h3 height=902 net=+250000000 date=2023-11-14T22:13:20Z received\n" +
                 "    $h4 height=903 net=-1000000 date=2023-11-14T22:15:00Z coinjoin-send/sent\n" +
@@ -552,6 +552,25 @@ class ParityBreakdownTest {
         assertEquals(1, b.shared)
         assertEquals(0, b.valueCompared)
         assertEquals(0, b.valueDiffers)
+        // Counted, not silently dropped: an uncomparable eligible value is the
+        // one case that used to pass for parity.
+        assertEquals(1, b.valueUnknown)
+    }
+
+    @Test
+    fun sharedTxid_theSdkHasNotConfirmedYet_isNotCompared() {
+        // The SDK row still carries height 0: its stored net is the
+        // unconfirmed one and the engine revises it when the block lands.
+        // Comparing it against a confirmed dashj row reports a race as a
+        // disagreement.
+        val dashj = listOf(DashjTxFacts(h(1), 900, netDuffs = -18_669L, valueKnown = true))
+        val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(0, 7_781_409L)), last)
+        assertEquals(1, b.shared)
+        assertEquals(0, b.valueCompared)
+        assertEquals(0, b.valueDiffers)
+        // Not agreement either: it blocks a clean sheet until the SDK catches up.
+        assertEquals(1, b.valueUnknown)
+        assertFalse(findingsOf(b).clean)
     }
 
     @Test
@@ -561,6 +580,7 @@ class ParityBreakdownTest {
         val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(900, 7_781_409L)), last)
         assertEquals(0, b.valueCompared)
         assertEquals(0, b.valueDiffers)
+        assertEquals(1, b.valueUnknown)
     }
 
     @Test
@@ -575,6 +595,8 @@ class ParityBreakdownTest {
         assertEquals(2, b.shared)
         assertEquals(0, b.valueCompared)
         assertEquals(0, b.valueDiffers)
+        // Neither is eligible for comparison, so neither is an unknown.
+        assertEquals(0, b.valueUnknown)
     }
 
     @Test
@@ -585,6 +607,7 @@ class ParityBreakdownTest {
         assertEquals(0, b.shared)
         assertEquals(0, b.valueCompared)
         assertEquals(0, b.valueDiffers)
+        assertEquals(0, b.valueUnknown)
     }
 
     @Test
@@ -660,6 +683,20 @@ class ParityBreakdownTest {
     }
 
     @Test
+    fun findings_areNotCleanWhenSomeEligibleValueCouldNotBeCompared() {
+        // A history that is only partly valued cannot establish full parity:
+        // the uncompared part is exactly where a disagreement would hide.
+        val partly = ParityBreakdownFindings(0, 0, valueCompared = 6794, valueDiffers = 0, valueUnknown = 1)
+        assertFalse(partly.clean)
+        assertEquals("1 eligible value(s) could not be compared", partly.reason)
+        // Differences still win the explanation: they are the stronger fact.
+        assertEquals(
+            "2 transaction value(s) differ",
+            ParityBreakdownFindings(0, 0, valueCompared = 10, valueDiffers = 2, valueUnknown = 1).reason
+        )
+    }
+
+    @Test
     fun findings_areNotCleanWhenTheSetsOrTheValuesDiffer() {
         // Equal counts, different hashes: the balance-and-count report calls
         // this a match, and it is not one.
@@ -683,6 +720,7 @@ class ParityBreakdownTest {
         assertEquals(0, f.sdkOnly)
         assertEquals(1, f.valueCompared)
         assertEquals(1, f.valueDiffers)
+        assertEquals(0, f.valueUnknown)
         assertFalse("a value disagreement is not parity", f.clean)
     }
 

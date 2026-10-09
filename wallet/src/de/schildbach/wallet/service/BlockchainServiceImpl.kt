@@ -2515,6 +2515,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
+        // Same reason, other input: MATCH now also needs a fresh
+        // transaction-level breakdown, and that run finishes on its own
+        // schedule — after the report that triggered it, and after a ledger
+        // rebuild cleared the previous one. Without this the verdict would
+        // hold at "not established" until some later report happened to
+        // change.
+        serviceScope.launch {
+            l1ShadowSyncService.latestBreakdownFindings.collect { findings ->
+                if (findings != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+                    publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
+                }
+            }
+        }
+
         // Idle detector, SDK side: the post-cutover analogue of the dashj
         // wallet's transactionsReceived counter (see SyncActivityIdleDetector).
         // Counting only — the tick receiver reads and clears it.

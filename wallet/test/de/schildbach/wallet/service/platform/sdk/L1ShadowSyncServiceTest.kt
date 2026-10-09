@@ -3761,6 +3761,60 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun ledgerRebuild_discardsTheFindings_theStoredBreakdown_andTheHourlyCadence() = runBlocking {
+        // A clean sheet describes the ledger that the reset is about to
+        // delete. Carrying it across the rebuild let the diagnostic publish
+        // MATCH for a freshly rebuilt ledger nothing had yet compared.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull("the run publishes findings", service.latestBreakdownFindings.value)
+        assertTrue(file.exists())
+
+        assertTrue(service.resetShadowState(hard = true))
+
+        assertNull("findings must not survive the rebuild", service.latestBreakdownFindings.value)
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        assertNull("the stored breakdown describes the deleted ledger", ParityBreakdownStore(file).load())
+        // The cadence was reset too: once the restarted sync is caught up a
+        // fresh breakdown may run at once, instead of leaving the verdict
+        // unestablished for the rest of the hour.
+        source.driveSyncedEdgesUntil { service.progress.value.synced }
+        val after = service.parityBreakdownForReport()
+        assertNotNull(after.notRefreshedReason ?: "", after.stored)
+        assertEquals(2, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    @Test
+    fun walletRecreation_discardsTheFindingsToo() = runBlocking {
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            recreator = FakeRecreator(),
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        assertNull(service.latestBreakdownFindings.value)
+        assertNull(ParityBreakdownStore(file).load())
+        service.stop()
+    }
+
+    @Test
     fun report_sdkNotSynced_fallsBackToTheStoredResultWithTheReason() = runBlocking {
         val source = breakdownSource()
         source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))

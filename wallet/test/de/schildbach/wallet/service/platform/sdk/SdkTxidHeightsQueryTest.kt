@@ -86,15 +86,16 @@ class SdkTxidHeightsQueryTest {
     /** The key [querySdkTxidHeights] uses: display order, the way dashj keys its transactions. */
     private fun key(n: Int): Sha256Hash = Sha256Hash.wrapReversed(wire(n))
 
-    private fun insertTx(n: Int, blockHeight: Int) {
+    private fun insertTx(n: Int, blockHeight: Int, netAmount: Long = 0L) {
         exec(
             "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
                 "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
                 "netAmount, label, firstSeen, createdAt, lastUpdated) " +
-                "VALUES (?, ?, 0, ?, 0, 0, 0, 0, 'standard', 0, 0, '', 0, 0, 0)",
+                "VALUES (?, ?, 0, ?, 0, 0, 0, 0, 'standard', 0, ?, '', 0, 0, 0)",
             wire(n),
             ByteArray(0),
-            blockHeight
+            blockHeight,
+            netAmount
         )
     }
 
@@ -135,13 +136,15 @@ class SdkTxidHeightsQueryTest {
     @Test
     fun theWalletsFundingSpendingAndReservedTxids_withTheirHeights_andNoOtherWallets() {
         // A receive (900) whose output was spent (950).
-        insertTx(1, 900)
-        insertTx(2, 950)
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTx(2, 950, netAmount = -7_500_000L)
         insertTxo(walletId, funding = 1, spending = 2)
         // A receive (920) reserved by an in-flight change-less send: the send
         // has a transactions row (no height yet) but no TXO row of its own.
-        insertTx(3, 920)
-        insertTx(4, 0)
+        insertTx(3, 920, netAmount = 250_000L)
+        // Height 0 AND a stored net of 0: proves a real zero is distinguishable
+        // from the null a missing transactions row produces (key 5 below).
+        insertTx(4, 0, netAmount = 0L)
         val reserved = insertTxo(walletId, funding = 3)
         insertReservation(walletId, reserved, spending = 4)
         // A reservation whose spender has no transactions row: no height.
@@ -153,13 +156,25 @@ class SdkTxidHeightsQueryTest {
         insertTx(8, 995)
 
         assertEquals(
-            mapOf(key(1) to 900, key(2) to 950, key(3) to 920, key(4) to 0, key(5) to 0),
+            mapOf(
+                key(1) to SdkTxFacts(900, 11_000_000L),
+                key(2) to SdkTxFacts(950, -7_500_000L),
+                key(3) to SdkTxFacts(920, 250_000L),
+                key(4) to SdkTxFacts(0, 0L),
+                // Reservation whose spender has no transactions row: no height AND
+                // no stored net. The null must survive as null — read as 0 it would
+                // look like agreement in the parity comparison.
+                key(5) to SdkTxFacts(0, null)
+            ),
             querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
         )
     }
 
     @Test
     fun anEmptyWallet_hasNoTxids() {
-        assertEquals(emptyMap<Sha256Hash, Int>(), querySdkTxidHeights(db.openHelper.readableDatabase, walletId))
+        assertEquals(
+            emptyMap<Sha256Hash, SdkTxFacts>(),
+            querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
+        )
     }
 }
