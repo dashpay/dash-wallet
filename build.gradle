@@ -11,11 +11,13 @@ buildscript {
         // Pre-release SDK snapshot published to the Sonatype snapshots repository
         // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
         // the exact timestamped build, not the -SNAPSHOT name, so a later upload
-        // can't change what this commit builds. v42int29: HashEngineering/platform
-        // integration/v42int29 @ 762b2ddcdd (int28 without rust-dashcore #979,
-        // #4439's hole repair, #4474 and the transaction-record folding; adds
-        // dashpay/platform#5259). Recipe: dash-wallet-qa recipes/platform/v42int29.yaml.
-        dashSdkVersion = '0.1.0-v42int29-20261007.000257-1'
+        // can't change what this commit builds. v42int30: HashEngineering/platform
+        // integration/v42int30 @ c4a2b6e83d = int29 (762b2ddcdd: no rust-dashcore #979,
+        // no #4439 hole repair, #4474 or transaction-record folding; adds #5259) plus
+        // #5026's newer backfill-record commits, #5256 (docs) and the fallback that
+        // opens DashPay contact requests dashj encrypted with its altered ECDH key.
+        // Recipe: dash-wallet-qa recipes/platform/v42int30.yaml.
+        dashSdkVersion = '0.1.0-v42int30-20261009.200225-1'
         // 4.0.1 fixes the CBOR crash that aborted every identity read:
         // IdentityPublicKey.toObject() put the raw ContractBounds object
         // (SingleContractDocumentType) into the map handed to Cbor, which has
