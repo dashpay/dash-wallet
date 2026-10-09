@@ -372,7 +372,7 @@ class SdkL1InviteCreation internal constructor(
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
         feeDuffs = { contested ->
             if (contested) {
-                ContestedUsernameFees.current(sdkService).contested.value
+                ContestedUsernameFees.resolved(sdkService).contested.value
             } else {
                 Constants.DASH_PAY_FEE.value
             }

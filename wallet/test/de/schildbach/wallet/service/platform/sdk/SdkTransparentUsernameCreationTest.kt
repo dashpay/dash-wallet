@@ -21,8 +21,10 @@ import de.schildbach.wallet.Constants
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -56,9 +58,13 @@ class SdkTransparentUsernameCreationTest {
     }
 
     @Test
-    fun `an unresolved protocol version falls back to the 0_25 legacy fee, never the newer one`() = runTest {
-        val amountDuffs = transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(null))
-        assertEquals(Constants.DASH_PAY_FEE_CONTESTED_LEGACY.value, amountDuffs)
+    fun `an unresolved protocol version refuses to fund rather than falling back to a fee`() = runTest {
+        // A lower successful quote followed by a failed funding-time lookup must
+        // not become a higher actual funding; the service turns the throw into a
+        // NotBroadcast the user can retry.
+        assertThrows(ProtocolVersionUnavailableException::class.java) {
+            runBlocking { transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(null)) }
+        }
     }
 
     @Test

@@ -27,6 +27,14 @@ import org.bitcoinj.core.Coin
 private const val CONTESTED_FEE_PROTOCOL_VERSION = 14
 
 /**
+ * Thrown by [ContestedUsernameFees.resolved] when the live protocol-version
+ * read returns null: at funding time an unknown version must not silently
+ * select a fee, because the older fee is the HIGHER one.
+ */
+class ProtocolVersionUnavailableException :
+    IllegalStateException("Platform protocol version unavailable; contested fee cannot be resolved")
+
+/**
  * The contested-username fee pair ACTUALLY in effect on the network right
  * now, gated on [DashSdkService.currentProtocolVersion] rather than assumed
  * from the release train: a build can ship before or after the network
@@ -34,11 +42,17 @@ private const val CONTESTED_FEE_PROTOCOL_VERSION = 14
  * assumed against a still-pre-v4.2 network causes a real DPNS registration
  * rejection (insufficient identity balance).
  *
- * [current] (0.15 / 0.10) applies once the network reports protocol >= 14;
- * [legacy] (0.25 / 0.20) is the fallback for every OTHER case — an older
- * protocol version, or a null (unknown/unreachable) read, per
- * [DashSdkService.currentProtocolVersion]'s contract that null must fall
- * back to the OLDER behavior.
+ * [CURRENT] (0.15 / 0.10) applies once the network reports protocol >= 14;
+ * [LEGACY] (0.25 / 0.20) applies to an older protocol version.
+ *
+ * A null (unknown/unreachable) read is handled by WHO is asking:
+ *  - [current] — quotes and display — falls back to [LEGACY], the
+ *    conservative figure to show;
+ *  - [resolved] — funding, where money leaves the wallet — throws
+ *    [ProtocolVersionUnavailableException] instead. Falling back there would
+ *    let a lower successful quote be followed by a higher actual funding
+ *    whenever the second lookup fails; every funding service already turns a
+ *    throwing fee resolver into a refusal the user can retry.
  */
 data class ContestedUsernameFees(val contested: Coin, val contestedName: Coin) {
     companion object {
@@ -58,8 +72,22 @@ data class ContestedUsernameFees(val contested: Coin, val contestedName: Coin) {
                 LEGACY
             }
 
-        /** Resolve the fee pair from a live [dashSdkService] protocol-version read. */
+        /**
+         * Resolve the fee pair from a live [dashSdkService] protocol-version read,
+         * for quotes and display: an unknown version shows the [LEGACY] figure.
+         */
         suspend fun current(dashSdkService: DashSdkService): ContestedUsernameFees =
             forProtocolVersion(dashSdkService.currentProtocolVersion())
+
+        /**
+         * Resolve the fee pair for FUNDING: the amount about to leave the wallet
+         * must come from a known protocol version, so a null read throws
+         * [ProtocolVersionUnavailableException] rather than defaulting to the
+         * higher [LEGACY] fee.
+         */
+        suspend fun resolved(dashSdkService: DashSdkService): ContestedUsernameFees =
+            forProtocolVersion(
+                dashSdkService.currentProtocolVersion() ?: throw ProtocolVersionUnavailableException()
+            )
     }
 }

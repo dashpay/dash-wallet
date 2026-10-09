@@ -751,9 +751,11 @@ interface DashSdkService {
      * never learn a different version than another.
      *
      * Null when the SDK cannot be started or the query fails — callers MUST
-     * treat null as "unknown", never as any particular version; the safe
-     * fallback is always the OLDER behavior. Default null so read-only fakes
-     * stay source-compatible.
+     * treat null as "unknown", never as any particular version. For quotes
+     * and display the safe fallback is the OLDER behavior; at FUNDING time
+     * "older" means the higher fee, so a null read refuses the operation
+     * instead (see [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees.resolved]).
+     * Default null so read-only fakes stay source-compatible.
      */
     suspend fun currentProtocolVersion(): Int? = null
 }

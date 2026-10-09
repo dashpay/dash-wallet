@@ -271,7 +271,7 @@ class SdkShieldedInviteCreation internal constructor(
         invitationsDao = invitationsDao,
         feeCredits = { contested ->
             val fee = if (contested) {
-                ContestedUsernameFees.current(sdkService).contested
+                ContestedUsernameFees.resolved(sdkService).contested
             } else {
                 Constants.DASH_PAY_FEE
             }

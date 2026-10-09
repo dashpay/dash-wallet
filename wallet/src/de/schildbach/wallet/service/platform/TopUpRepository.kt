@@ -197,7 +197,7 @@ class TopUpRepositoryImpl @Inject constructor(
         keyParameter: KeyParameter?
     ) {
         val fee = if (Names.isUsernameContestable(username)) {
-            ContestedUsernameFees.current(dashSdkService).contested
+            ContestedUsernameFees.resolved(dashSdkService).contested
         } else {
             Constants.DASH_PAY_FEE
         }

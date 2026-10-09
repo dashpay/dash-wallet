@@ -654,7 +654,7 @@ class CreateIdentityService : LifecycleService() {
             } else {
                 // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
                 val balanceInfo = blockchainIdentityData.identity?.let { platformRepo.getIdentityBalance(it.id) }
-                val contestedFees = ContestedUsernameFees.current(dashSdkService)
+                val contestedFees = ContestedUsernameFees.resolved(dashSdkService)
                 val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
                     contestedFees.contested
                 } else {

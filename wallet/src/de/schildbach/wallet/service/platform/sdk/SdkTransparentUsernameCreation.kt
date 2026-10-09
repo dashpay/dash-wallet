@@ -56,7 +56,7 @@ import javax.inject.Singleton
  */
 internal suspend fun transparentUsernameFeeDuffs(contested: Boolean, sdkService: DashSdkService): Long =
     if (contested) {
-        ContestedUsernameFees.current(sdkService).contested.value
+        ContestedUsernameFees.resolved(sdkService).contested.value
     } else {
         Constants.DASH_PAY_FEE.value
     }

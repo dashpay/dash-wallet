@@ -733,7 +733,7 @@ class SdkShieldedUsernameCreation internal constructor(
         // Lazy: Constants untouched at construction (inert-until-called).
         feeCredits = { contested ->
             val fee = if (contested) {
-                ContestedUsernameFees.current(sdkService).contested
+                ContestedUsernameFees.resolved(sdkService).contested
             } else {
                 Constants.DASH_PAY_FEE
             }
