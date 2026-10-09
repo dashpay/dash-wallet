@@ -402,27 +402,19 @@ class SdkL1InviteCreation internal constructor(
      * ([username]/[displayName]/[avatarUrl]), funded from the wallet's
      * transparent Core UTXOs (held by the SDK post-cutover). [contested]
      * selects the funding fee (the inviter picks the username kind at the fee
-     * step, exactly as for a dashj invite). [approvedAmountDuffs] is the
-     * amount the confirm dialog showed and the user authenticated against;
-     * since [feeDuffs] re-resolves the fee live at funding time (a
-     * protocol-version activation or a failed read can land on a HIGHER fee
-     * than what was confirmed), the resolved amount is refused rather than
-     * funded when it exceeds [approvedAmountDuffs] — the caller must re-quote
-     * and get renewed confirmation instead of spending the difference
-     * silently. [inviterIdentityIdBase58] is the inviter's own identity id
-     * (enables the invitee's contact-bootstrap opt-in); null-safe — a
-     * null/unparseable id degrades to a pure funding voucher. On success
-     * returns the ready-to-share [InvitationLinkData] + OneLink and persists a
-     * tracking [Invitation] row. The funding transfer is attempted once and
-     * classified via [classifyBroadcastFailure].
+     * step, exactly as for a dashj invite). [inviterIdentityIdBase58] is the
+     * inviter's own identity id (enables the invitee's contact-bootstrap
+     * opt-in); null-safe — a null/unparseable id degrades to a pure funding
+     * voucher. On success returns the ready-to-share [InvitationLinkData] +
+     * OneLink and persists a tracking [Invitation] row. The funding transfer is
+     * attempted once and classified via [classifyBroadcastFailure].
      */
     suspend fun createL1Invite(
         username: String,
         displayName: String,
         avatarUrl: String,
         inviterIdentityIdBase58: String?,
-        contested: Boolean,
-        approvedAmountDuffs: Long
+        contested: Boolean
     ): SdkWriteResult<L1Invite> {
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
 
@@ -441,18 +433,6 @@ class SdkL1InviteCreation internal constructor(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return notBroadcast("invite fee unavailable", t)
-        }
-
-        // The confirm dialog authenticated the user against approvedAmountDuffs;
-        // a fresh resolution here (protocol activation, or LEGACY fallback on a
-        // failed live read) must never fund more than that without renewed
-        // confirmation.
-        if (amountDuffs > approvedAmountDuffs) {
-            return notBroadcast(
-                "resolved funding amount ($amountDuffs duffs) exceeds the confirmed amount " +
-                    "($approvedAmountDuffs duffs)",
-                null
-            )
         }
 
         val walletId = try {

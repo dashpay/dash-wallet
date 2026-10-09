@@ -95,7 +95,6 @@
     <!-- Transient status hints on the identity processing tile while the registration retries -->
     <string name="identity_processing_network_catching_up">Waiting for the network to catch up — this can take a few extra minutes.</string>
     <string name="identity_processing_waiting_confirmation">Waiting for network confirmation of your payment…</string>
-    <string name="identity_processing_funding_reconfirmation_required">Please reopen your username request to confirm the fee again.</string>
 
     <string name="dashpay_upgrade_fee">Upgrade Fee</string>
     <string name="dashpay_invite_fee">Invite Fee</string>

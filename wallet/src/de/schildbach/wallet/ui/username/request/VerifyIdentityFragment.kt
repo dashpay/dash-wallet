@@ -133,13 +133,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
 
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
-        // A recoverable approval is required, not just the cancellation
-        // marker: without one, authenticateThenSubmit would have nothing
-        // valid to cap the spend at (MO-1069 review 5462459067) — show the
-        // confirm sheet instead so the user re-approves a concrete amount.
-        if (requestUserNameViewModel.hasUserCancelledVerification() &&
-            requestUserNameViewModel.approvedFundingAmountDuffs != null
-        ) {
+        if (requestUserNameViewModel.hasUserCancelledVerification()) {
             authenticateThenSubmit(this, authManager, requestUserNameViewModel)
         } else {
             safeNavigate(

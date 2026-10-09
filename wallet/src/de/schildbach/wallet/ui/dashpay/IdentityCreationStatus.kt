@@ -40,16 +40,7 @@ enum class RetryStatusHint {
     CORE_HEIGHT_LAG,
 
     /** No IS lock on the funding tx yet ("instantLock == null" / invalid instant lock proof). */
-    WAITING_FOR_ISLOCK,
-
-    /**
-     * A service retry/restart ([de.schildbach.wallet.ui.dashpay.CreateIdentityService])
-     * found no persisted [de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
-     * .approvedFundingAmountDuffs] for the in-flight request — funding was refused rather
-     * than defaulting to unbounded (MO-1069 review 5447932359). The user must reopen the
-     * username/invite request to reconfirm the fee before this can proceed.
-     */
-    FUNDING_RECONFIRMATION_REQUIRED
+    WAITING_FOR_ISLOCK
 }
 
 /**
@@ -70,29 +61,12 @@ internal fun identityRetryStatusHint(t: Throwable): RetryStatusHint? {
                 message.contains("Invalid instant lock proof") ||
                 message.contains("instantLock == null") ->
                 return RetryStatusHint.WAITING_FOR_ISLOCK
-            current is FundingReconfirmationRequiredException ->
-                return RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED
         }
         current = current.cause
         depth++
     }
     return null
 }
-
-/**
- * Thrown by [CreateIdentityService] when a resumed record needs NEW funding
- * (a fresh asset lock, or a top-up) and no approved amount survived to cap
- * it — see [de.schildbach.wallet.ui.dashpay.needsFreshFundingApproval].
- * Routed through the service's normal failure path so the refusal is both
- * reflected in the transient [RetryStatusHint] (via [identityRetryStatusHint])
- * AND persisted as [de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
- * .creationStateErrorMessage] — the condition [MoreFragment][de.schildbach.wallet.ui.more.MoreFragment]
- * reads to show an actionable retry tile instead of a silent stuck "processing" state,
- * and to route that retry back through the confirm-amount screen rather than
- * reattempting the same refused funding.
- */
-internal class FundingReconfirmationRequiredException :
-    Exception("fresh funding approval required to resume identity creation")
 
 /**
  * The user-facing string for a [RetryStatusHint], or null when there is
@@ -108,7 +82,6 @@ internal class FundingReconfirmationRequiredException :
 internal fun retryStatusHintTextRes(hint: RetryStatusHint?): Int? = when (hint) {
     RetryStatusHint.CORE_HEIGHT_LAG -> R.string.identity_processing_network_catching_up
     RetryStatusHint.WAITING_FOR_ISLOCK -> R.string.identity_processing_waiting_confirmation
-    RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED -> R.string.identity_processing_funding_reconfirmation_required
     null -> null
 }
 

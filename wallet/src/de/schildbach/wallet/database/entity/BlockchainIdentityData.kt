@@ -92,7 +92,6 @@ class BlockchainIdentityData(
     cancelledVerificationLink: Boolean? = null,
     usernameRequested: UsernameRequestStatus? = null,
     votingPeriodStart: Long? = null,
-    approvedFundingAmountDuffs: Long? = null,
     // Extended properties specific to full identity data
     var identity: Identity? = null,
     var preorderSalt: ByteArray? = null,
@@ -120,8 +119,7 @@ class BlockchainIdentityData(
     verificationLink = verificationLink,
     cancelledVerificationLink = cancelledVerificationLink,
     usernameRequested = usernameRequested,
-    votingPeriodStart = votingPeriodStart,
-    approvedFundingAmountDuffs = approvedFundingAmountDuffs
+    votingPeriodStart = votingPeriodStart
 ) {
 
     companion object {
@@ -228,16 +226,6 @@ open class BlockchainIdentityConfig @Inject constructor(
         val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
 
         /**
-         * The duffs amount the confirm sheet showed and the user approved for
-         * the in-flight identity-creation request, persisted next to
-         * [USERNAME] so a process-death restart or service retry
-         * ([de.schildbach.wallet.ui.dashpay.CreateIdentityService]) reads the
-         * SAME cap instead of defaulting to unbounded (MO-1069 review
-         * 5447932359).
-         */
-        val APPROVED_FUNDING_AMOUNT_DUFFS = longPreferencesKey("approved_funding_amount_duffs")
-
-        /**
          * The WorkManager request id (UUID string) of the Buy Credits purchase
          * that last reached the SDK hand-off, written DURABLY by
          * [de.schildbach.wallet.service.platform.work.PerformTopUpWorker]
@@ -274,8 +262,7 @@ open class BlockchainIdentityConfig @Inject constructor(
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
                 cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
                 usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
-                votingPeriodStart = prefs[VOTING_PERIOD_START],
-                approvedFundingAmountDuffs = prefs[APPROVED_FUNDING_AMOUNT_DUFFS]
+                votingPeriodStart = prefs[VOTING_PERIOD_START]
             )
         }
 
@@ -294,8 +281,7 @@ open class BlockchainIdentityConfig @Inject constructor(
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
                 cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
                 usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
-                votingPeriodStart = prefs[VOTING_PERIOD_START],
-                approvedFundingAmountDuffs = prefs[APPROVED_FUNDING_AMOUNT_DUFFS]
+                votingPeriodStart = prefs[VOTING_PERIOD_START]
             )
         }
 
@@ -347,7 +333,6 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
             blockchainIdentityData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
             blockchainIdentityData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
-            blockchainIdentityData.approvedFundingAmountDuffs?.let { prefs[APPROVED_FUNDING_AMOUNT_DUFFS] = it }
         }
     }
 
@@ -364,7 +349,6 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityBaseData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
             blockchainIdentityBaseData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
             blockchainIdentityBaseData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
-            blockchainIdentityBaseData.approvedFundingAmountDuffs?.let { prefs[APPROVED_FUNDING_AMOUNT_DUFFS] = it }
         }
     }
 

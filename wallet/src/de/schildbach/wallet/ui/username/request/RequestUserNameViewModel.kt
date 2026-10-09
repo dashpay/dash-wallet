@@ -448,6 +448,7 @@ class RequestUserNameViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
+        private val CONTEST_DOCUMENT_FEE = Coin.valueOf(0, 20).value * 1000
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
 
         /**
@@ -485,38 +486,6 @@ class RequestUserNameViewModel @Inject constructor(
     var identity: BlockchainIdentityData? = null
     var requestedUserName: String? = null
     var requestedUsernameSecondary: String? = null
-
-    /**
-     * The funding amount the most recent confirm sheet showed and the user
-     * authenticated against — the single cap every [submit] call funds
-     * against, including a retry (the shared error dialog's "Try again")
-     * and the cancelled-verification shortcuts, neither of which shows a
-     * fresh confirm sheet. A fee that resolves higher at spend time than
-     * what the user actually saw is refused rather than funded silently
-     * (MO-1069 review 5431682794). Updated on every [submit] call.
-     *
-     * Nullable — NOT defaulted to `Long.MAX_VALUE` — because a missing
-     * approval must never be read as unlimited (MO-1069 review 5462459067).
-     * Starts `null` and is restored from the persisted
-     * [BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS] on creation
-     * (see `init`) so a fresh ViewModel instance (a process restart between
-     * screens) can recover a still-valid approval instead of treating it as
-     * gone. [submit] itself refuses to fund when it needs a cap and this is
-     * still null.
-     */
-    var approvedFundingAmountDuffs: Long? = null
-        private set
-
-    /**
-     * The primary confirm sheet's approved amount, recorded when it hands
-     * off to the instant-secondary-name flow instead of submitting
-     * directly: the secondary confirm always shows [Coin.ZERO] (the extra
-     * name itself is free), so the eventual dual-name submit must cap
-     * against the PRIMARY's approval, not the secondary sheet's.
-     */
-    fun recordApprovedFundingAmount(amountDuffs: Long) {
-        approvedFundingAmountDuffs = amountDuffs
-    }
 
     /**
      * Which balance the user chose to pay the username fee from on the
@@ -649,18 +618,6 @@ class RequestUserNameViewModel @Inject constructor(
      */
     private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
     val contestedFees: StateFlow<ContestedUsernameFees> get() = _contestedFees
-
-    /**
-     * The existing-identity contested-NAME document fee (0.20 DASH legacy,
-     * 0.10 DASH current — [ContestedUsernameFees.contestedName]), in
-     * credits, resolved from the live-gated [_contestedFees]. An existing
-     * identity pays this document fee out of its identity-credit balance
-     * rather than the full [ContestedUsernameFees.contested] top-up a fresh
-     * identity needs, so every existing-identity gate must track the SAME
-     * resolved fee the confirm sheet shows instead of a fixed legacy amount.
-     */
-    private val contestedDocumentFeeCredits: Long
-        get() = _contestedFees.value.contestedName.value * 1000
 
     private val _identityBalance = MutableStateFlow(0L)
     val identityBalance: StateFlow<Long>
@@ -804,7 +761,7 @@ class RequestUserNameViewModel @Inject constructor(
     fun canAffordContestedUsername(): Boolean {
         return if (identity?.userId != null) {
             val credits = _identityBalance.value
-            credits > contestedDocumentFeeCredits
+            credits > CONTEST_DOCUMENT_FEE
         } else {
             _walletBalance.value >= _contestedFees.value.contested
         }
@@ -818,16 +775,6 @@ class RequestUserNameViewModel @Inject constructor(
         viewModelScope.launch {
             _requestedUserNameLink.value = withContext(Dispatchers.IO) {
                 identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
-            }
-        }
-        // Recover a still-valid approval across a fresh ViewModel instance
-        // (a process restart between the confirm sheet and the cancelled-
-        // verification shortcuts) instead of leaving it null — which
-        // submit() would otherwise read as "no approval, refuse to fund"
-        // (MO-1069 review 5462459067).
-        viewModelScope.launch {
-            approvedFundingAmountDuffs = withContext(Dispatchers.IO) {
-                identityConfig.get(BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS)
             }
         }
         viewModelScope.launch {
@@ -1093,14 +1040,7 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    /**
-     * [approvedAmountDuffs] is null only for an invite claim (either branch
-     * below funded from the invite's own pre-committed voucher, never the
-     * user's own spend decision) — the two non-invite branches always
-     * receive a non-null value here, guaranteed by [submit]'s guard before
-     * this is called (MO-1069 review 5462459067).
-     */
-    private fun triggerIdentityCreation(reuseTransaction: Boolean, approvedAmountDuffs: Long?) {
+    private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
         val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
@@ -1129,8 +1069,7 @@ class RequestUserNameViewModel @Inject constructor(
                     CreateIdentityService.createIntentForNewUsername(
                         walletApplication,
                         username,
-                        usernameSecondary,
-                        approvedAmountDuffs!!
+                        usernameSecondary
                     )
                 )
             }
@@ -1139,31 +1078,14 @@ class RequestUserNameViewModel @Inject constructor(
                     CreateIdentityService.createIntent(
                         walletApplication,
                         username,
-                        usernameSecondary,
-                        approvedAmountDuffs!!
+                        usernameSecondary
                     )
                 )
             }
         }
     }
 
-    /**
-     * [approvedAmountDuffs] is the amount the confirm sheet showed and the
-     * user authenticated against — carried into
-     * [SdkTransparentUsernameCreation.submit] (and, pre-cutover,
-     * [TopUpRepository.createAssetLockTransaction] via [triggerIdentityCreation])
-     * so a fee re-resolved higher at funding time (a protocol activation, or
-     * a failed live read falling back to LEGACY) is refused rather than
-     * funded silently (MO-1069 review 5431682794). Defaults to
-     * [approvedFundingAmountDuffs] — the last confirm sheet's amount — so a
-     * retry or the cancelled-verification shortcuts (neither shows a fresh
-     * confirm sheet) cap against the ORIGINAL approval instead of falling
-     * back to unbounded; recorded here so the next such call sees it too.
-     * Nullable: a missing approval is refused below rather than read as
-     * unlimited (MO-1069 review 5462459067).
-     */
-    fun submit(approvedAmountDuffs: Long? = this.approvedFundingAmountDuffs) {
-        approvedAmountDuffs?.let { this.approvedFundingAmountDuffs = it }
+    fun submit() {
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
         viewModelScope.launch {
@@ -1191,21 +1113,9 @@ class RequestUserNameViewModel @Inject constructor(
             val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
                 submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
                 transparentUsernameCreation.isCutoverCommitted()
-            val reachesShieldedPath = submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
+            if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
-            // Every path except an invite claim (funded from its own
-            // pre-committed voucher) and the shielded pool (fixed exit
-            // denominations, no cap to check) spends the user's own funds at
-            // the amount the confirm sheet showed — refuse rather than fund
-            // unbounded when no valid approval survived the process this
-            // request is resuming in (MO-1069 review 5462459067: a missing
-            // approval must never be read as "unlimited").
-            if (!isUsingInvite() && !reachesShieldedPath && approvedAmountDuffs == null) {
-                log.warn("submit() refused: no approved funding amount survived for this request")
-                _uiState.update { it.copy(usernameSubmittedError = true) }
-                return@launch
-            }
-            if (reachesShieldedPath) {
+            ) {
                 // The user picked the shielded balance on the payment-option
                 // sheet: fund the identity DIRECTLY from the shielded pool
                 // (Type 20) instead of the L1 asset-lock path. Invite and
@@ -1259,15 +1169,7 @@ class RequestUserNameViewModel @Inject constructor(
                 // single-flight + no-double-broadcast contract as the
                 // shielded path.
                 log.info("routing username creation to the transparent-funded SDK path (cutover committed)")
-                val accepted = transparentUsernameCreation.submit(
-                    requestedUserName!!,
-                    requestedUsernameSecondary,
-                    // Guaranteed non-null here: cutoverCommitted implies
-                    // !isUsingInvite() && submitSource != SHIELDED_BALANCE,
-                    // so the guard above already refused and returned if it
-                    // were null.
-                    approvedAmountDuffs!!
-                )
+                val accepted = transparentUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
                 if (accepted) {
                     // The funding runs on the app-scoped executor (survives the
                     // screen), but the app would still go cached on a screen
@@ -1306,7 +1208,7 @@ class RequestUserNameViewModel @Inject constructor(
                 // status the shielded path shows; it is dismissed with the
                 // screen (or replaced by the error state below).
                 _uiState.update { it.copy(usernameRequestSubmitting = true) }
-                triggerIdentityCreation(reuseTransaction, approvedAmountDuffs)
+                triggerIdentityCreation(reuseTransaction)
             }
         }
     }
@@ -1575,7 +1477,7 @@ class RequestUserNameViewModel @Inject constructor(
         val walletBalance = _walletBalance.value
         return when {
             identityBalance > 0L && contestable ->
-                (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(contestedDocumentFeeCredits / 1000)
+                (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
             identityBalance > 0L && !contestable ->
                 (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
             contestable ->
@@ -1664,7 +1566,7 @@ class RequestUserNameViewModel @Inject constructor(
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && contestable ->
                 canShieldedFundContestedUsername()
             identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
-                contestedDocumentFeeCredits / 1000)
+                CONTEST_DOCUMENT_FEE / 1000)
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 NON_CONTEST_DOCUMENT_FEE / 1000)
             identityBalance == 0L && contestable ->
@@ -1696,7 +1598,7 @@ class RequestUserNameViewModel @Inject constructor(
                 shieldedIdentityFundingRequirement(
                     Dash((if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE).value)
                 )?.toPlainString() ?: _contestedFees.value.contested.toPlainString()
-            identityBalance > 0L && contestable -> Coin.valueOf(contestedDocumentFeeCredits / 1000).toPlainString()
+            identityBalance > 0L && contestable -> Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000).toPlainString()
             identityBalance > 0L && !contestable -> Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000).toPlainString()
             contestable -> _contestedFees.value.contested.toPlainString()
             else -> Constants.DASH_PAY_FEE.toPlainString()

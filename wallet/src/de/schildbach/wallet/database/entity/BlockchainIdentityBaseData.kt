@@ -35,18 +35,7 @@ open class BlockchainIdentityBaseData(
     var verificationLink: String? = null,
     val cancelledVerificationLink: Boolean? = null,
     var usernameRequested: UsernameRequestStatus? = null,
-    var votingPeriodStart: Long? = null,
-    /**
-     * The duffs amount the confirm sheet showed and the user approved for
-     * this identity-creation request, persisted next to [username] so every
-     * funding path — first submit, in-app retry, notification
-     * ACTION_RETRY_AFTER_INTERRUPTION, the sticky null-intent service
-     * restart, and a resumed top-up — reads the SAME cap instead of each
-     * re-resolving (or losing) it independently. Null means no approval is
-     * on record for the current request; a funding path must then refuse to
-     * fund and ask the user to reconfirm rather than defaulting to unbounded.
-     */
-    var approvedFundingAmountDuffs: Long? = null
+    var votingPeriodStart: Long? = null
 ) {
 
     val creationInProgress: Boolean

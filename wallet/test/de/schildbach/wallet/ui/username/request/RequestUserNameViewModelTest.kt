@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui.username.request
 
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
@@ -53,10 +52,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -73,7 +69,6 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -120,11 +115,6 @@ class RequestUserNameViewModelTest {
         every { observe(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns emptyFlow()
         coEvery { get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK) } returns null
         coEvery { get(BlockchainIdentityConfig.USERNAME) } returns null
-        // No persisted approval / no cancellation marker by default — tests
-        // pinning the restore-on-creation behavior (MO-1069 review
-        // 5462459067) override these explicitly.
-        coEvery { get(BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS) } returns null
-        coEvery { get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) } returns false
         coEvery { set(BlockchainIdentityConfig.USERNAME, any()) } just Runs
         coEvery { set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, any()) } just Runs
     }
@@ -338,7 +328,7 @@ class RequestUserNameViewModelTest {
         viewModel.requestedUserName = "alice2"
         // DASH_BALANCE is the default paymentSource.
 
-        viewModel.submit(25_000_000L)
+        viewModel.submit()
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
@@ -348,7 +338,7 @@ class RequestUserNameViewModelTest {
     fun l1Creation_terminalState_clearsTheProcessingDialog() = runVmTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
-        viewModel.submit(25_000_000L) // L1 path: sets usernameRequestSubmitting = true
+        viewModel.submit() // L1 path: sets usernameRequestSubmitting = true
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
 
         // CreateIdentityService completes out-of-band; the persisted state flips DONE.
@@ -387,7 +377,7 @@ class RequestUserNameViewModelTest {
             usernameRequested = UsernameRequestStatus.LOCKED
         )
 
-        viewModel.submit(25_000_000L)
+        viewModel.submit()
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
@@ -623,63 +613,6 @@ class RequestUserNameViewModelTest {
         assertTrue("brian must be contested", state.usernameContestable)
         assertEquals("0.25", state.requiredAmount)
         assertFalse("0.15 DASH must not satisfy the legacy 0.25 requirement", state.enoughBalance)
-    }
-
-    // ── existing-identity contested gate (MO-1069 review 5431682794) ────────
-
-    private fun existingIdentity(userId: String = "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr") =
-        BlockchainIdentityData(IdentityCreationState.DONE, null, "brian", null, userId, false)
-
-    /**
-     * Wires [identityConfig] so the VM resolves an EXISTING identity (userId
-     * set) whose identity-credit balance is [credits] — the precondition for
-     * [RequestUserNameViewModel.canAffordContestedUsername]'s
-     * `identity?.userId != null` branch.
-     */
-    private fun existingIdentityWithCredits(credits: Long): PlatformRepo {
-        val userId = existingIdentity().userId!!
-        every { identityConfig.observe(BlockchainIdentityConfig.IDENTITY_ID) } returns
-            MutableStateFlow(userId)
-        coEvery { identityConfig.load() } returns existingIdentity(userId)
-        return mockk<PlatformRepo>(relaxed = true) {
-            coEvery { getIdentityBalance(any()) } returns CreditBalanceInfo(credits)
-        }
-    }
-
-    @Test
-    fun canAffordContestedUsername_existingIdentity_protocol14_pointOneFiveDashPasses() = runVmTest {
-        // thepastaclaw's review (5431682794): the existing-identity gate must
-        // track the live-resolved contestedName fee (0.10 DASH current /
-        // 0.20 DASH legacy), not the fixed legacy 0.20 constant. 0.15 DASH of
-        // identity credits clears the 0.10 DASH current name fee.
-        coEvery { dashSdkService.currentProtocolVersion() } returns 14
-        val platformRepo = existingIdentityWithCredits(credits = 15_000_000_000L) // 0.15 DASH
-        val viewModel = viewModel(platformRepo = platformRepo)
-        // identityConfig.observe(IDENTITY_ID) is collected on viewModelWorkerScope
-        // (a REAL Dispatchers.IO scope, not the test's virtual-time Main dispatcher —
-        // see RequestUserNameViewModel.viewModelWorkerScope), so the balance update
-        // lands on a real thread the virtual scheduler never advances for. withTimeout
-        // must run under a real dispatcher too, or its own virtual deadline fires
-        // before the real update ever gets a chance to land.
-        withContext(Dispatchers.Default.limitedParallelism(1)) {
-            withTimeout(5_000) { viewModel.identityBalance.first { it != 0L } }
-        }
-
-        assertTrue(viewModel.canAffordContestedUsername())
-    }
-
-    @Test
-    fun canAffordContestedUsername_existingIdentity_protocol13_pointOneFiveDashFails() = runVmTest {
-        // Same 0.15 DASH identity-credit balance, but the network still runs
-        // protocol 13: the legacy 0.20 DASH name fee is NOT cleared by 0.15.
-        coEvery { dashSdkService.currentProtocolVersion() } returns 13
-        val platformRepo = existingIdentityWithCredits(credits = 15_000_000_000L) // 0.15 DASH
-        val viewModel = viewModel(platformRepo = platformRepo)
-        withContext(Dispatchers.Default.limitedParallelism(1)) {
-            withTimeout(5_000) { viewModel.identityBalance.first { it != 0L } }
-        }
-
-        assertFalse(viewModel.canAffordContestedUsername())
     }
 
     @Test
@@ -1279,72 +1212,10 @@ class RequestUserNameViewModelTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
 
-        viewModel.submit(25_000_000L)
+        viewModel.submit()
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         assertTrue(viewModel.uiState.value.usernameRequestSubmitting)
-    }
-
-    @Test
-    fun submit_dashSource_noApprovedAmount_refusesWithoutStartingTheService() = runVmTest {
-        // Long.MAX_VALUE must never stand in for "no approval" (MO-1069
-        // review 5462459067) — a non-invite, non-shielded submit with
-        // nothing recorded or persisted must refuse rather than fund
-        // unbounded.
-        val viewModel = viewModel()
-        viewModel.requestedUserName = "alice2"
-
-        viewModel.submit(null)
-
-        viewModel.uiState.first { it.usernameSubmittedError }
-        assertTrue(viewModel.uiState.value.usernameSubmittedError)
-        verify(exactly = 0) { walletApplication.startService(any()) }
-    }
-
-    // ── approvedFundingAmountDuffs restore-on-creation (MO-1069 review 5462459067) ──
-
-    @Test
-    fun approvedFundingAmountDuffs_restoredFromPersistedConfig_onCreation() = runVmTest {
-        // A fresh ViewModel instance (e.g. a process restart between the
-        // confirm sheet and the cancelled-verification shortcut) must
-        // recover a still-valid persisted approval instead of starting null.
-        coEvery {
-            identityConfig.get(BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS)
-        } returns 15_000_000L
-        coEvery {
-            identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK)
-        } returns true
-        val viewModel = viewModel()
-
-        // The restore hops over Dispatchers.IO (a real dispatcher, not the
-        // test's virtual-time Main) — poll under a real dispatcher too, same
-        // pattern as the identityBalance waits above.
-        withContext(Dispatchers.Default.limitedParallelism(1)) {
-            withTimeout(5_000) {
-                while (viewModel.approvedFundingAmountDuffs == null) {
-                    delay(10)
-                }
-            }
-        }
-
-        assertEquals(15_000_000L, viewModel.approvedFundingAmountDuffs)
-        assertTrue(viewModel.hasUserCancelledVerification())
-    }
-
-    @Test
-    fun approvedFundingAmountDuffs_noPersistedCap_staysNull_evenWithCancellationMarker() = runVmTest {
-        // The cancellation marker alone is not a recoverable approval — a
-        // record with no persisted cap must stay null (never fall back to
-        // unbounded), so the cancelled-verification shortcut's guard
-        // (RequestUsernameFragment/VerifyIdentityFragment) falls through to
-        // the confirm sheet instead of calling authenticateThenSubmit blind.
-        coEvery {
-            identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK)
-        } returns true
-        val viewModel = viewModel()
-
-        assertNull(viewModel.approvedFundingAmountDuffs)
-        assertTrue(viewModel.hasUserCancelledVerification())
     }
 
     // ── Pure request-button gate (Fix B) ────────────────────────────────────

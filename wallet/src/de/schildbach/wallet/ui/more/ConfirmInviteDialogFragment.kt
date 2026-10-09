@@ -171,12 +171,7 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                         // correctly regardless of which era funded the amount
                         // shown on the fee dialog.
                         val contested = inviteAmount.value >= ContestedUsernameFees.CURRENT.contested.value
-                        when (
-                            val result = invitationFragmentViewModel.createL1Invite(
-                                contested,
-                                approvedAmountDuffs = inviteAmount.value
-                            )
-                        ) {
+                        when (val result = invitationFragmentViewModel.createL1Invite(contested)) {
                             is SdkWriteResult.Broadcast -> result.value.user
                             else -> {
                                 onCreateFailed(classifyInviteCreationFailure(result), inviteAmount)

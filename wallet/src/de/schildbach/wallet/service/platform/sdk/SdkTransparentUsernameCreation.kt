@@ -518,17 +518,9 @@ class SdkTransparentUsernameCreation internal constructor(
      * Start the creation on the application scope. Returns false — and
      * submits NOTHING — unless the current state is Idle or the
      * provably-pre-broadcast NotSent (retry-safe). The Idle→Proving
-     * transition is atomic under [this]. [approvedAmountDuffs] is the amount
-     * the confirm sheet showed and the user authenticated against — see
-     * [createUsernameTransparent]; defaults to unbounded for callers (tests,
-     * and any future non-confirm-sheet path) that don't have a confirmed
-     * amount to cap against.
+     * transition is atomic under [this].
      */
-    fun submit(
-        username: String,
-        secondaryUsername: String? = null,
-        approvedAmountDuffs: Long = Long.MAX_VALUE
-    ): Boolean {
+    fun submit(username: String, secondaryUsername: String? = null): Boolean {
         val scope = executorScope
         if (scope == null) {
             log.warn("transparent username creation submit refused: no executor scope")
@@ -546,7 +538,7 @@ class SdkTransparentUsernameCreation internal constructor(
         }
         scope.launch {
             val result = withContext(ioDispatcher) {
-                createUsernameTransparent(username, secondaryUsername, approvedAmountDuffs)
+                createUsernameTransparent(username, secondaryUsername)
             }
             val outcome = when (result) {
                 is SdkWriteResult.Broadcast -> ShieldedUsernameSubmitState.Created(result.value)
@@ -580,21 +572,10 @@ class SdkTransparentUsernameCreation internal constructor(
      * The full pipeline. One funding attempt (resume-gated); the
      * [SdkWriteResult] three-valued contract holds
      * ([SdkWriteResult.Ambiguous] is never retried by anyone).
-     *
-     * [approvedAmountDuffs] is the amount the confirm sheet showed and the
-     * user authenticated against; since [feeDuffs] re-resolves the fee LIVE
-     * at funding time (a protocol-version activation, or a failed read
-     * falling back to the higher LEGACY fee, can land on a HIGHER amount
-     * than what was confirmed), the resolved amount is refused — no
-     * broadcast — rather than funded when it exceeds [approvedAmountDuffs],
-     * mirroring [SdkL1InviteCreation.createL1Invite]'s confirmed-amount
-     * guard. Defaults to unbounded so callers without a confirmed amount to
-     * cap against (tests) are unaffected.
      */
     suspend fun createUsernameTransparent(
         username: String,
-        secondaryUsername: String? = null,
-        approvedAmountDuffs: Long = Long.MAX_VALUE
+        secondaryUsername: String? = null
     ): SdkWriteResult<ShieldedUsernameCreationOutcome> {
         // Fail closed unless the cutover is committed — pre-cutover this path
         // must submit nothing (the dashj path owns funding then).
@@ -630,18 +611,6 @@ class SdkTransparentUsernameCreation internal constructor(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return notBroadcast("username funding amount unavailable", t)
-        }
-
-        // The confirm sheet authenticated the user against approvedAmountDuffs;
-        // a fresh resolution here (protocol activation, or LEGACY fallback on a
-        // failed live read) must never fund more than that without renewed
-        // confirmation — see SdkL1InviteCreation.createL1Invite's identical guard.
-        if (amountDuffs > approvedAmountDuffs) {
-            return notBroadcast(
-                "resolved funding amount ($amountDuffs duffs) exceeds the confirmed amount " +
-                    "($approvedAmountDuffs duffs)",
-                null
-            )
         }
 
         val walletId = try {

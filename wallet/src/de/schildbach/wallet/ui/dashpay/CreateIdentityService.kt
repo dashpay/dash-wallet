@@ -212,24 +212,6 @@ internal fun repairClaimedInviteRecordNames(
     }
 }
 
-/**
- * Whether resuming an identity-creation record at [creationState] must
- * refuse rather than proceed because it still needs to construct NEW
- * funding (a fresh asset lock, or a top-up) and no [approvedAmountDuffs]
- * survived to cap it. Once a record has moved PAST
- * [IdentityCreationState.CREDIT_FUNDING_TX_CREATING] its funding is already
- * committed — registration-stage states like PREORDER_REGISTERING or
- * USERNAME_REGISTERING never construct new funding, so an older record
- * resumed with no persisted approval (created before this field existed)
- * must still be allowed through (MO-1069 review 5462459067: the prior fix
- * refused EVERY resume with a missing approval, including already-funded
- * ones).
- */
-internal fun needsFreshFundingApproval(
-    creationState: IdentityCreationState,
-    approvedAmountDuffs: Long?
-): Boolean = approvedAmountDuffs == null && creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING
-
 @AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
     companion object {
@@ -261,39 +243,26 @@ class CreateIdentityService : LifecycleService() {
         private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
         private const val EXTRA_INVITE = "org.dash.dashpay.extra.INVITE"
         private const val EXTRA_SHIELDED = "org.dash.dashpay.extra.SHIELDED"
-        private const val EXTRA_APPROVED_AMOUNT_DUFFS = "org.dash.dashpay.extra.APPROVED_AMOUNT_DUFFS"
 
         @JvmStatic
-        fun createIntentForNewUsername(
-            context: Context,
-            username: String,
-            usernameSecondary: String?,
-            approvedAmountDuffs: Long
-        ): Intent {
+        fun createIntentForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_WITH_NEW_USERNAME
                 putExtra(EXTRA_USERNAME, username)
                 usernameSecondary?.let {
                     putExtra(EXTRA_USERNAME_SECONDARY, it)
                 }
-                putExtra(EXTRA_APPROVED_AMOUNT_DUFFS, approvedAmountDuffs)
             }
         }
 
         @JvmStatic
-        fun createIntent(
-            context: Context,
-            username: String,
-            usernameSecondary: String?,
-            approvedAmountDuffs: Long
-        ): Intent {
+        fun createIntent(context: Context, username: String, usernameSecondary: String?): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_CREATE_IDENTITY
                 putExtra(EXTRA_USERNAME, username)
                 usernameSecondary?.let {
                     putExtra(EXTRA_USERNAME_SECONDARY, it)
                 }
-                putExtra(EXTRA_APPROVED_AMOUNT_DUFFS, approvedAmountDuffs)
             }
         }
 
@@ -480,7 +449,7 @@ class CreateIdentityService : LifecycleService() {
                 identityRepository.loadBlockchainIdentityBaseData()
             }
             if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
-                resumeCreateIdentityAction(blockchainIdentityData.approvedFundingAmountDuffs)
+                handleCreateIdentityAction(null, null)
             }
 
         } else if (!workInProgress) {
@@ -491,22 +460,7 @@ class CreateIdentityService : LifecycleService() {
                     val username = intent.getStringExtra(EXTRA_USERNAME)
                     val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
                     val retryWithNewUserName = intent.action == ACTION_RETRY_WITH_NEW_USERNAME
-                    // No implicit cap here: the confirm sheet always supplies this
-                    // extra (CreateIdentityService.createIntent/createIntentForNewUsername
-                    // require it); its absence means funding must be refused, not
-                    // defaulted to unbounded (MO-1069 review 5447932359).
-                    val approvedAmountDuffs = if (intent.hasExtra(EXTRA_APPROVED_AMOUNT_DUFFS)) {
-                        intent.getLongExtra(EXTRA_APPROVED_AMOUNT_DUFFS, 0L)
-                    } else {
-                        null
-                    }
-                    if (approvedAmountDuffs == null) {
-                        log.warn("no approved funding amount in the create-identity intent — refusing to fund without reconfirmation")
-                        identityCreationStatus.setHint(RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED)
-                        stopSelf()
-                    } else {
-                        handleCreateIdentityAction(username, usernameSecondary, retryWithNewUserName, approvedAmountDuffs)
-                    }
+                    handleCreateIdentityAction(username, usernameSecondary, retryWithNewUserName)
                 }
                 ACTION_CREATE_IDENTITY_FROM_INVITATION,
                 ACTION_RETRY_INVITE_WITH_NEW_USERNAME -> {
@@ -521,10 +475,7 @@ class CreateIdentityService : LifecycleService() {
                     if (startForegroundPromised) {
                         createIdentityNotification.startServiceForeground()
                     }
-                    val approvedAmountDuffs = runBlocking {
-                        identityRepository.loadBlockchainIdentityBaseData().approvedFundingAmountDuffs
-                    }
-                    resumeCreateIdentityAction(approvedAmountDuffs)
+                    handleCreateIdentityAction(null, null)
                 }
                 ACTION_RETRY_INVITE_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
@@ -553,46 +504,17 @@ class CreateIdentityService : LifecycleService() {
         return if (sdkHoldMode) Service.START_NOT_STICKY else Service.START_STICKY
     }
 
-    /**
-     * Resume point for a RETRY/RESTART of an in-flight identity creation — a
-     * process-death null-intent restart or ACTION_RETRY_AFTER_INTERRUPTION —
-     * neither of which carries a fresh confirm-sheet amount. [approvedAmountDuffs]
-     * is whatever is persisted alongside the request
-     * ([de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
-     * .approvedFundingAmountDuffs]); null means no approval survived (e.g. a
-     * record created before this field existed). Whether that is actually a
-     * problem depends on how far the record has already gotten — a resume
-     * past the funding stage needs no approval at all — so the refusal is
-     * decided inside [createIdentity], immediately before any NEW funding
-     * would be constructed ([needsFreshFundingApproval]), not here (MO-1069
-     * review 5462459067: refusing every null-approval resume also blocked
-     * already-funded records with nothing left to approve).
-     */
-    private fun resumeCreateIdentityAction(approvedAmountDuffs: Long?) {
-        handleCreateIdentityAction(null, null, approvedAmountDuffs = approvedAmountDuffs)
-    }
-
-    private fun handleCreateIdentityAction(
-        username: String?,
-        usernameSecondary: String?,
-        retryWithNewUserName: Boolean = false,
-        approvedAmountDuffs: Long?
-    ) {
+    private fun handleCreateIdentityAction(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean = false) {
         workInProgress = true
         identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
-            createIdentity(username, usernameSecondary, retryWithNewUserName, approvedAmountDuffs)
+            createIdentity(username, usernameSecondary, retryWithNewUserName)
             workInProgress = false
             stopSelf()
         }
     }
 
-    private suspend fun createIdentity(
-        username: String?,
-        usernameSecondary: String?,
-        retryWithNewUserName: Boolean,
-        approvedAmountDuffs: Long?
-    ) {
+    private suspend fun createIdentity(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean) {
         log.info("username registration starting($username, $retryWithNewUserName)")
         org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
         val timerEntireProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE)
@@ -616,28 +538,13 @@ class CreateIdentityService : LifecycleService() {
                     usernameSecondary,
                     null,
                     false,
-                    verificationLink = blockchainIdentityDataBase?.verificationLink,
-                    approvedFundingAmountDuffs = approvedAmountDuffs
+                    verificationLink = blockchainIdentityDataBase?.verificationLink
                 )
                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
                 throw IllegalStateException()
             }
-        }
-
-        // Keep the persisted approval in sync with what THIS call is about to
-        // fund with: a retry/restart supplying the recovered cap back is a
-        // no-op write, while a fresh confirm sheet on an existing in-progress
-        // record (ACTION_CREATE_IDENTITY re-entered with a new/changed quote)
-        // updates it so the next resume sees the NEW approval, not a stale one
-        // (MO-1069 review 5447932359). A null approvedAmountDuffs (a resume
-        // with nothing fresh to record) must never overwrite an existing
-        // persisted finite cap — only a concrete amount ever updates it
-        // (MO-1069 review 5462459067).
-        if (approvedAmountDuffs != null && blockchainIdentityData.approvedFundingAmountDuffs != approvedAmountDuffs) {
-            blockchainIdentityData.approvedFundingAmountDuffs = approvedAmountDuffs
-            identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
         }
 
         var isRetry = false
@@ -736,20 +643,10 @@ class CreateIdentityService : LifecycleService() {
             // check to see if the funding transaction exists
             if (blockchainIdentity.assetLockTransaction == null) {
                 if (blockchainIdentity.identity == null) {
-                    // The approval requirement lives HERE, immediately before
-                    // constructing NEW funding — not at the resume entry
-                    // point — so an older already-funded record (resumed past
-                    // this stage) is never caught by it (MO-1069 review
-                    // 5462459067).
-                    if (needsFreshFundingApproval(blockchainIdentityData.creationState, approvedAmountDuffs)) {
-                        log.warn("fresh asset-lock funding needs a confirmed amount but none survived — asking the user to reconfirm")
-                        throw FundingReconfirmationRequiredException()
-                    }
                     topUpRepository.createAssetLockTransaction(
                         blockchainIdentity,
                         blockchainIdentityData.username!!,
-                        encryptionKey,
-                        approvedAmountDuffs!!
+                        encryptionKey
                     )
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
                     walletApplication.broadcastTransaction(assetLockTransaction)
@@ -765,10 +662,6 @@ class CreateIdentityService : LifecycleService() {
                 }
 
                 if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
-                    if (needsFreshFundingApproval(blockchainIdentityData.creationState, approvedAmountDuffs)) {
-                        log.warn("a top-up needs a confirmed amount but none survived — asking the user to reconfirm")
-                        throw FundingReconfirmationRequiredException()
-                    }
                     val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
                         contestedFees.contestedName
                     } else {
@@ -777,8 +670,7 @@ class CreateIdentityService : LifecycleService() {
                     assetLockTransaction = topUpRepository.createTopupTransaction(
                         blockchainIdentity,
                         topupValue,
-                        encryptionKey,
-                        approvedAmountDuffs!!
+                        encryptionKey
                     )
                 }
             }

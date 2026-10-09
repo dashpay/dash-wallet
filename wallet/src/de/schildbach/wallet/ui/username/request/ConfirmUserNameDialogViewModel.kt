@@ -56,14 +56,7 @@ data class ConfirmUserNameUIState(
     /** The shown amount leaves the SHIELDED pool — render the source label. */
     val fromShieldedBalance: Boolean = false,
     val usernameSubmittedSuccess: Boolean = false,
-    val usernameSubmittedError: Boolean = false,
-    /**
-     * The confirmed amount in DUFFS this sheet showed — carried into the
-     * funding call so a fee re-resolved higher at spend time (a protocol
-     * activation, or a failed live read falling back to LEGACY) is refused
-     * rather than funded silently (MO-1069 review 5431682794).
-     */
-    val amountDuffs: Long = 0L
+    val usernameSubmittedError: Boolean = false
 )
 
 /** What the username confirm sheet must show: the amount actually spent and where it comes from. */
@@ -153,17 +146,6 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
             _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
         }
 
-        // The DASH amount (amountDuffs) is the funding cap the submit guard
-        // checks — it must be ready as soon as the contested fee resolves,
-        // independent of whether fiat currency/exchange-rate data ever
-        // arrives. Gating it on the fiat combine below left it at its
-        // uninitialized zero default whenever fiat data was unavailable,
-        // and the confirm button has no other readiness gate, so every real
-        // funding amount was refused (MO-1069 review fac5fd3ec1ff).
-        _contestedFees
-            .onEach { fees -> updateAmount(fees) }
-            .launchIn(viewModelScope)
-
         combine(
             walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
                 .filterNotNull()
@@ -174,25 +156,16 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
             _contestedFees
         ) { exchangeRate, fees -> exchangeRate to fees }
             .onEach { (exchangeRate, fees) ->
-                updateFiatAmount(exchangeRate, fees)
+                updateFees(exchangeRate, fees)
             }
             .launchIn(viewModelScope)
     }
 
-    private fun updateAmount(fees: ContestedUsernameFees) {
+
+    private fun updateFees(exchangeRateData: ExchangeRate, fees: ContestedUsernameFees) {
         val cost = cost(fees)
         val amountStr = MonetaryFormat.BTC.noCode().format(cost.amount.toNeutralCoin()).toString()
-        _uiState.update {
-            it.copy(
-                amountStr = amountStr,
-                fromShieldedBalance = cost.fromShieldedBalance,
-                amountDuffs = cost.amount.value
-            )
-        }
-    }
 
-    private fun updateFiatAmount(exchangeRateData: ExchangeRate, fees: ContestedUsernameFees) {
-        val cost = cost(fees)
         val exchangeRate = exchangeRateData.run {
             org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat.toDashjFiat())
         }
@@ -202,8 +175,10 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
         val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
         _uiState.update {
             it.copy(
+                amountStr = amountStr,
                 fiatAmountStr = fiatAmountStr,
-                fiatSymbol = fiatSymbol
+                fiatSymbol = fiatSymbol,
+                fromShieldedBalance = cost.fromShieldedBalance
             )
         }
     }
