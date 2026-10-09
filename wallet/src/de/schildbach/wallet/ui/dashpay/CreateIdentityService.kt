@@ -743,8 +743,7 @@ class CreateIdentityService : LifecycleService() {
                     // 5462459067).
                     if (needsFreshFundingApproval(blockchainIdentityData.creationState, approvedAmountDuffs)) {
                         log.warn("fresh asset-lock funding needs a confirmed amount but none survived — asking the user to reconfirm")
-                        identityCreationStatus.setHint(RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED)
-                        return
+                        throw FundingReconfirmationRequiredException()
                     }
                     topUpRepository.createAssetLockTransaction(
                         blockchainIdentity,
@@ -768,8 +767,7 @@ class CreateIdentityService : LifecycleService() {
                 if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
                     if (needsFreshFundingApproval(blockchainIdentityData.creationState, approvedAmountDuffs)) {
                         log.warn("a top-up needs a confirmed amount but none survived — asking the user to reconfirm")
-                        identityCreationStatus.setHint(RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED)
-                        return
+                        throw FundingReconfirmationRequiredException()
                     }
                     val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
                         contestedFees.contestedName

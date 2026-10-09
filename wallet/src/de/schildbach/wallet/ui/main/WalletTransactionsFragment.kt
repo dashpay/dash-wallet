@@ -691,7 +691,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             viewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
-            if (identityCreationStatus.statusHint.value == RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED) {
+            if (identityCreationStatus.statusHint.value == RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED ||
+                // The in-memory hint above doesn't survive process death; the
+                // persisted error message does, so a process-recreated retry
+                // still recognizes this case (MO-1069 review b47bc1340983).
+                blockchainIdentityData.creationStateErrorMessage?.contains("FundingReconfirmationRequiredException") == true
+            ) {
                 // The service refused to fund without a fresh approval —
                 // starting the retry service again would just refuse again.
                 // Route to the amount-confirmation sheet instead (MO-1069
@@ -761,7 +766,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         // do we need this, cause the error could be due to a stale node
                         blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&
                         (errorMessage?.contains("invalid quorum: quorum not found") != true ||
-                                errorMessage.contains("invalid peer certificate: certificate expired") == true)
+                                errorMessage.contains("invalid peer certificate: certificate expired") == true) ||
+                        // No approval survived to fund this resume (MO-1069
+                        // review b47bc1340983) — open the confirm-amount
+                        // screen instead of the raw-error toast below.
+                        errorMessage?.contains("FundingReconfirmationRequiredException") == true
                     ) {
                         startActivity(
                             CreateUsernameActivity.createIntentReuseTransaction(

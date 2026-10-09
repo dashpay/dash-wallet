@@ -70,12 +70,29 @@ internal fun identityRetryStatusHint(t: Throwable): RetryStatusHint? {
                 message.contains("Invalid instant lock proof") ||
                 message.contains("instantLock == null") ->
                 return RetryStatusHint.WAITING_FOR_ISLOCK
+            current is FundingReconfirmationRequiredException ->
+                return RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED
         }
         current = current.cause
         depth++
     }
     return null
 }
+
+/**
+ * Thrown by [CreateIdentityService] when a resumed record needs NEW funding
+ * (a fresh asset lock, or a top-up) and no approved amount survived to cap
+ * it — see [de.schildbach.wallet.ui.dashpay.needsFreshFundingApproval].
+ * Routed through the service's normal failure path so the refusal is both
+ * reflected in the transient [RetryStatusHint] (via [identityRetryStatusHint])
+ * AND persisted as [de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+ * .creationStateErrorMessage] — the condition [MoreFragment][de.schildbach.wallet.ui.more.MoreFragment]
+ * reads to show an actionable retry tile instead of a silent stuck "processing" state,
+ * and to route that retry back through the confirm-amount screen rather than
+ * reattempting the same refused funding.
+ */
+internal class FundingReconfirmationRequiredException :
+    Exception("fresh funding approval required to resume identity creation")
 
 /**
  * The user-facing string for a [RetryStatusHint], or null when there is

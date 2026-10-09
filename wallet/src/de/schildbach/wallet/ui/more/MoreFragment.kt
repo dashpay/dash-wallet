@@ -581,7 +581,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 errorMessage.contains("primary username was lost") ||
                 errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
                 errorMessage.contains(Regex("does not have .* as a contender")) ||
-                errorMessage.contains("missing domain document for ")
+                errorMessage.contains("missing domain document for ") ||
+                // No approval survived to fund this resume (MO-1069 review
+                // b47bc1340983) — re-enter instead of retrying the same
+                // refused funding, so the user lands back on the
+                // confirm-amount screen and reconfirms a concrete amount.
+                errorMessage.contains("FundingReconfirmationRequiredException")
         if (!needsNewName) {
             createIdentityViewModel.retryCreateIdentity()
         } else {
