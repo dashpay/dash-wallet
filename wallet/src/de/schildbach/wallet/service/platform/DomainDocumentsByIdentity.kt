@@ -79,7 +79,8 @@ internal fun Platform.domainDocumentsForIdentities(identityIds: List<Identifier>
  * are asked again. Documents are de-duplicated by [documentIdOf], since the
  * last identity's documents come back twice. Each round either finishes the
  * batch or shrinks it; a page filled entirely by ONE identity cannot shrink
- * it, so that case keeps the page and stops with a warning rather than loop.
+ * it that way, so that identity keeps the page it got (with a warning) and
+ * leaves the batch, and the identities strictly above it are queried on.
  */
 internal fun <D> fetchAllByIdentity(
     identityIds: List<Identifier>,
@@ -103,11 +104,20 @@ internal fun <D> fetchAllByIdentity(
             }
             val next = remaining.filter { compareIdentifiers(it, lastIdentity) >= 0 }
             if (next.size >= remaining.size) {
+                // The whole page is [lastIdentity]'s. Its further documents
+                // are not fetched (that would need a cursor — see
+                // [domainDocumentsForIdentities]), but the identities above it
+                // are still owed their names: drop only this one and go on.
                 log.warn(
                     "identity {} alone fills a {}-document page; its further documents are not fetched",
                     lastIdentity, pageLimit
                 )
-                break
+                val above = remaining.filter { compareIdentifiers(it, lastIdentity) > 0 }
+                // Always shrinks when [lastIdentity] is one of [remaining];
+                // a page naming an identity not asked for must not loop.
+                if (above.size >= remaining.size) break
+                remaining = above
+                continue
             }
             log.info(
                 "document page capped at {} for {} identities; re-querying the {} not yet complete",
