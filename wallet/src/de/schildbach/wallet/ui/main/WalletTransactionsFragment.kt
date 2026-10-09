@@ -691,6 +691,19 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             viewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
+            if (identityCreationStatus.statusHint.value == RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED) {
+                // The service refused to fund without a fresh approval —
+                // starting the retry service again would just refuse again.
+                // Route to the amount-confirmation sheet instead (MO-1069
+                // review 5462459067).
+                startActivity(
+                    CreateUsernameActivity.createIntentReuseTransaction(
+                        requireActivity(),
+                        blockchainIdentityData
+                    )
+                )
+                return@let
+            }
             // check to see if restoring or if an invite was used
             if (blockchainIdentityData.restoring) {
                 RestoreIdentityOperation(requireActivity().application)

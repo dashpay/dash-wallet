@@ -212,6 +212,24 @@ internal fun repairClaimedInviteRecordNames(
     }
 }
 
+/**
+ * Whether resuming an identity-creation record at [creationState] must
+ * refuse rather than proceed because it still needs to construct NEW
+ * funding (a fresh asset lock, or a top-up) and no [approvedAmountDuffs]
+ * survived to cap it. Once a record has moved PAST
+ * [IdentityCreationState.CREDIT_FUNDING_TX_CREATING] its funding is already
+ * committed — registration-stage states like PREORDER_REGISTERING or
+ * USERNAME_REGISTERING never construct new funding, so an older record
+ * resumed with no persisted approval (created before this field existed)
+ * must still be allowed through (MO-1069 review 5462459067: the prior fix
+ * refused EVERY resume with a missing approval, including already-funded
+ * ones).
+ */
+internal fun needsFreshFundingApproval(
+    creationState: IdentityCreationState,
+    approvedAmountDuffs: Long?
+): Boolean = approvedAmountDuffs == null && creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING
+
 @AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
     companion object {
@@ -542,17 +560,15 @@ class CreateIdentityService : LifecycleService() {
      * is whatever is persisted alongside the request
      * ([de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
      * .approvedFundingAmountDuffs]); null means no approval survived (e.g. a
-     * record created before this field existed), so funding is refused
-     * outright rather than defaulting to unbounded, and the user is asked to
-     * reconfirm (MO-1069 review 5447932359).
+     * record created before this field existed). Whether that is actually a
+     * problem depends on how far the record has already gotten — a resume
+     * past the funding stage needs no approval at all — so the refusal is
+     * decided inside [createIdentity], immediately before any NEW funding
+     * would be constructed ([needsFreshFundingApproval]), not here (MO-1069
+     * review 5462459067: refusing every null-approval resume also blocked
+     * already-funded records with nothing left to approve).
      */
     private fun resumeCreateIdentityAction(approvedAmountDuffs: Long?) {
-        if (approvedAmountDuffs == null) {
-            log.warn("no persisted funding approval for the in-flight identity creation — refusing to resume without reconfirmation")
-            identityCreationStatus.setHint(RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED)
-            stopSelf()
-            return
-        }
         handleCreateIdentityAction(null, null, approvedAmountDuffs = approvedAmountDuffs)
     }
 
@@ -560,7 +576,7 @@ class CreateIdentityService : LifecycleService() {
         username: String?,
         usernameSecondary: String?,
         retryWithNewUserName: Boolean = false,
-        approvedAmountDuffs: Long
+        approvedAmountDuffs: Long?
     ) {
         workInProgress = true
         identityCreationStatus.clear() // fresh run — drop any stale hint
@@ -575,7 +591,7 @@ class CreateIdentityService : LifecycleService() {
         username: String?,
         usernameSecondary: String?,
         retryWithNewUserName: Boolean,
-        approvedAmountDuffs: Long
+        approvedAmountDuffs: Long?
     ) {
         log.info("username registration starting($username, $retryWithNewUserName)")
         org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
@@ -615,8 +631,11 @@ class CreateIdentityService : LifecycleService() {
         // no-op write, while a fresh confirm sheet on an existing in-progress
         // record (ACTION_CREATE_IDENTITY re-entered with a new/changed quote)
         // updates it so the next resume sees the NEW approval, not a stale one
-        // (MO-1069 review 5447932359).
-        if (blockchainIdentityData.approvedFundingAmountDuffs != approvedAmountDuffs) {
+        // (MO-1069 review 5447932359). A null approvedAmountDuffs (a resume
+        // with nothing fresh to record) must never overwrite an existing
+        // persisted finite cap — only a concrete amount ever updates it
+        // (MO-1069 review 5462459067).
+        if (approvedAmountDuffs != null && blockchainIdentityData.approvedFundingAmountDuffs != approvedAmountDuffs) {
             blockchainIdentityData.approvedFundingAmountDuffs = approvedAmountDuffs
             identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
         }
@@ -717,11 +736,21 @@ class CreateIdentityService : LifecycleService() {
             // check to see if the funding transaction exists
             if (blockchainIdentity.assetLockTransaction == null) {
                 if (blockchainIdentity.identity == null) {
+                    // The approval requirement lives HERE, immediately before
+                    // constructing NEW funding — not at the resume entry
+                    // point — so an older already-funded record (resumed past
+                    // this stage) is never caught by it (MO-1069 review
+                    // 5462459067).
+                    if (needsFreshFundingApproval(blockchainIdentityData.creationState, approvedAmountDuffs)) {
+                        log.warn("fresh asset-lock funding needs a confirmed amount but none survived — asking the user to reconfirm")
+                        identityCreationStatus.setHint(RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED)
+                        return
+                    }
                     topUpRepository.createAssetLockTransaction(
                         blockchainIdentity,
                         blockchainIdentityData.username!!,
                         encryptionKey,
-                        approvedAmountDuffs
+                        approvedAmountDuffs!!
                     )
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
                     walletApplication.broadcastTransaction(assetLockTransaction)
@@ -737,6 +766,11 @@ class CreateIdentityService : LifecycleService() {
                 }
 
                 if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
+                    if (needsFreshFundingApproval(blockchainIdentityData.creationState, approvedAmountDuffs)) {
+                        log.warn("a top-up needs a confirmed amount but none survived — asking the user to reconfirm")
+                        identityCreationStatus.setHint(RetryStatusHint.FUNDING_RECONFIRMATION_REQUIRED)
+                        return
+                    }
                     val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
                         contestedFees.contestedName
                     } else {
@@ -746,7 +780,7 @@ class CreateIdentityService : LifecycleService() {
                         blockchainIdentity,
                         topupValue,
                         encryptionKey,
-                        approvedAmountDuffs
+                        approvedAmountDuffs!!
                     )
                 }
             }

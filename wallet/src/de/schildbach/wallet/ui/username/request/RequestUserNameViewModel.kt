@@ -493,10 +493,18 @@ class RequestUserNameViewModel @Inject constructor(
      * and the cancelled-verification shortcuts, neither of which shows a
      * fresh confirm sheet. A fee that resolves higher at spend time than
      * what the user actually saw is refused rather than funded silently
-     * (MO-1069 review 5431682794). Updated on every [submit] call; stays
-     * unbounded until the first confirm sheet records a real amount.
+     * (MO-1069 review 5431682794). Updated on every [submit] call.
+     *
+     * Nullable — NOT defaulted to `Long.MAX_VALUE` — because a missing
+     * approval must never be read as unlimited (MO-1069 review 5462459067).
+     * Starts `null` and is restored from the persisted
+     * [BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS] on creation
+     * (see `init`) so a fresh ViewModel instance (a process restart between
+     * screens) can recover a still-valid approval instead of treating it as
+     * gone. [submit] itself refuses to fund when it needs a cap and this is
+     * still null.
      */
-    var approvedFundingAmountDuffs: Long = Long.MAX_VALUE
+    var approvedFundingAmountDuffs: Long? = null
         private set
 
     /**
@@ -812,6 +820,16 @@ class RequestUserNameViewModel @Inject constructor(
                 identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
             }
         }
+        // Recover a still-valid approval across a fresh ViewModel instance
+        // (a process restart between the confirm sheet and the cancelled-
+        // verification shortcuts) instead of leaving it null — which
+        // submit() would otherwise read as "no approval, refuse to fund"
+        // (MO-1069 review 5462459067).
+        viewModelScope.launch {
+            approvedFundingAmountDuffs = withContext(Dispatchers.IO) {
+                identityConfig.get(BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS)
+            }
+        }
         viewModelScope.launch {
             _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
             recomputeBalanceGate()
@@ -1075,7 +1093,14 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private fun triggerIdentityCreation(reuseTransaction: Boolean, approvedAmountDuffs: Long) {
+    /**
+     * [approvedAmountDuffs] is null only for an invite claim (either branch
+     * below funded from the invite's own pre-committed voucher, never the
+     * user's own spend decision) — the two non-invite branches always
+     * receive a non-null value here, guaranteed by [submit]'s guard before
+     * this is called (MO-1069 review 5462459067).
+     */
+    private fun triggerIdentityCreation(reuseTransaction: Boolean, approvedAmountDuffs: Long?) {
         val username = requestedUserName!!
         val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
@@ -1105,7 +1130,7 @@ class RequestUserNameViewModel @Inject constructor(
                         walletApplication,
                         username,
                         usernameSecondary,
-                        approvedAmountDuffs
+                        approvedAmountDuffs!!
                     )
                 )
             }
@@ -1115,7 +1140,7 @@ class RequestUserNameViewModel @Inject constructor(
                         walletApplication,
                         username,
                         usernameSecondary,
-                        approvedAmountDuffs
+                        approvedAmountDuffs!!
                     )
                 )
             }
@@ -1134,9 +1159,11 @@ class RequestUserNameViewModel @Inject constructor(
      * retry or the cancelled-verification shortcuts (neither shows a fresh
      * confirm sheet) cap against the ORIGINAL approval instead of falling
      * back to unbounded; recorded here so the next such call sees it too.
+     * Nullable: a missing approval is refused below rather than read as
+     * unlimited (MO-1069 review 5462459067).
      */
-    fun submit(approvedAmountDuffs: Long = this.approvedFundingAmountDuffs) {
-        this.approvedFundingAmountDuffs = approvedAmountDuffs
+    fun submit(approvedAmountDuffs: Long? = this.approvedFundingAmountDuffs) {
+        approvedAmountDuffs?.let { this.approvedFundingAmountDuffs = it }
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
         viewModelScope.launch {
@@ -1164,9 +1191,21 @@ class RequestUserNameViewModel @Inject constructor(
             val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
                 submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
                 transparentUsernameCreation.isCutoverCommitted()
-            if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
+            val reachesShieldedPath = submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
-            ) {
+            // Every path except an invite claim (funded from its own
+            // pre-committed voucher) and the shielded pool (fixed exit
+            // denominations, no cap to check) spends the user's own funds at
+            // the amount the confirm sheet showed — refuse rather than fund
+            // unbounded when no valid approval survived the process this
+            // request is resuming in (MO-1069 review 5462459067: a missing
+            // approval must never be read as "unlimited").
+            if (!isUsingInvite() && !reachesShieldedPath && approvedAmountDuffs == null) {
+                log.warn("submit() refused: no approved funding amount survived for this request")
+                _uiState.update { it.copy(usernameSubmittedError = true) }
+                return@launch
+            }
+            if (reachesShieldedPath) {
                 // The user picked the shielded balance on the payment-option
                 // sheet: fund the identity DIRECTLY from the shielded pool
                 // (Type 20) instead of the L1 asset-lock path. Invite and
@@ -1223,7 +1262,11 @@ class RequestUserNameViewModel @Inject constructor(
                 val accepted = transparentUsernameCreation.submit(
                     requestedUserName!!,
                     requestedUsernameSecondary,
-                    approvedAmountDuffs
+                    // Guaranteed non-null here: cutoverCommitted implies
+                    // !isUsingInvite() && submitSource != SHIELDED_BALANCE,
+                    // so the guard above already refused and returned if it
+                    // were null.
+                    approvedAmountDuffs!!
                 )
                 if (accepted) {
                     // The funding runs on the app-scoped executor (survives the

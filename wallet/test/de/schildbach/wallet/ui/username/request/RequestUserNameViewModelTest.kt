@@ -53,6 +53,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -72,6 +73,7 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -118,6 +120,11 @@ class RequestUserNameViewModelTest {
         every { observe(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns emptyFlow()
         coEvery { get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK) } returns null
         coEvery { get(BlockchainIdentityConfig.USERNAME) } returns null
+        // No persisted approval / no cancellation marker by default — tests
+        // pinning the restore-on-creation behavior (MO-1069 review
+        // 5462459067) override these explicitly.
+        coEvery { get(BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS) } returns null
+        coEvery { get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK) } returns false
         coEvery { set(BlockchainIdentityConfig.USERNAME, any()) } just Runs
         coEvery { set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, any()) } just Runs
     }
@@ -331,7 +338,7 @@ class RequestUserNameViewModelTest {
         viewModel.requestedUserName = "alice2"
         // DASH_BALANCE is the default paymentSource.
 
-        viewModel.submit()
+        viewModel.submit(25_000_000L)
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
@@ -341,7 +348,7 @@ class RequestUserNameViewModelTest {
     fun l1Creation_terminalState_clearsTheProcessingDialog() = runVmTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
-        viewModel.submit() // L1 path: sets usernameRequestSubmitting = true
+        viewModel.submit(25_000_000L) // L1 path: sets usernameRequestSubmitting = true
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
 
         // CreateIdentityService completes out-of-band; the persisted state flips DONE.
@@ -380,7 +387,7 @@ class RequestUserNameViewModelTest {
             usernameRequested = UsernameRequestStatus.LOCKED
         )
 
-        viewModel.submit()
+        viewModel.submit(25_000_000L)
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
@@ -1272,10 +1279,72 @@ class RequestUserNameViewModelTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice2"
 
-        viewModel.submit()
+        viewModel.submit(25_000_000L)
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         assertTrue(viewModel.uiState.value.usernameRequestSubmitting)
+    }
+
+    @Test
+    fun submit_dashSource_noApprovedAmount_refusesWithoutStartingTheService() = runVmTest {
+        // Long.MAX_VALUE must never stand in for "no approval" (MO-1069
+        // review 5462459067) — a non-invite, non-shielded submit with
+        // nothing recorded or persisted must refuse rather than fund
+        // unbounded.
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice2"
+
+        viewModel.submit(null)
+
+        viewModel.uiState.first { it.usernameSubmittedError }
+        assertTrue(viewModel.uiState.value.usernameSubmittedError)
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    // ── approvedFundingAmountDuffs restore-on-creation (MO-1069 review 5462459067) ──
+
+    @Test
+    fun approvedFundingAmountDuffs_restoredFromPersistedConfig_onCreation() = runVmTest {
+        // A fresh ViewModel instance (e.g. a process restart between the
+        // confirm sheet and the cancelled-verification shortcut) must
+        // recover a still-valid persisted approval instead of starting null.
+        coEvery {
+            identityConfig.get(BlockchainIdentityConfig.APPROVED_FUNDING_AMOUNT_DUFFS)
+        } returns 15_000_000L
+        coEvery {
+            identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK)
+        } returns true
+        val viewModel = viewModel()
+
+        // The restore hops over Dispatchers.IO (a real dispatcher, not the
+        // test's virtual-time Main) — poll under a real dispatcher too, same
+        // pattern as the identityBalance waits above.
+        withContext(Dispatchers.Default.limitedParallelism(1)) {
+            withTimeout(5_000) {
+                while (viewModel.approvedFundingAmountDuffs == null) {
+                    delay(10)
+                }
+            }
+        }
+
+        assertEquals(15_000_000L, viewModel.approvedFundingAmountDuffs)
+        assertTrue(viewModel.hasUserCancelledVerification())
+    }
+
+    @Test
+    fun approvedFundingAmountDuffs_noPersistedCap_staysNull_evenWithCancellationMarker() = runVmTest {
+        // The cancellation marker alone is not a recoverable approval — a
+        // record with no persisted cap must stay null (never fall back to
+        // unbounded), so the cancelled-verification shortcut's guard
+        // (RequestUsernameFragment/VerifyIdentityFragment) falls through to
+        // the confirm sheet instead of calling authenticateThenSubmit blind.
+        coEvery {
+            identityConfig.get(BlockchainIdentityConfig.CANCELED_REQUESTED_USERNAME_LINK)
+        } returns true
+        val viewModel = viewModel()
+
+        assertNull(viewModel.approvedFundingAmountDuffs)
+        assertTrue(viewModel.hasUserCancelledVerification())
     }
 
     // ── Pure request-button gate (Fix B) ────────────────────────────────────

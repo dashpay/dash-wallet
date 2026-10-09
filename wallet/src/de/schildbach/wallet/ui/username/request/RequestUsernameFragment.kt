@@ -606,7 +606,13 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
 
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
-        if (requestUserNameViewModel.hasUserCancelledVerification()) {
+        // A recoverable approval is required, not just the cancellation
+        // marker: without one, authenticateThenSubmit would have nothing
+        // valid to cap the spend at (MO-1069 review 5462459067) — show the
+        // confirm sheet instead so the user re-approves a concrete amount.
+        if (requestUserNameViewModel.hasUserCancelledVerification() &&
+            requestUserNameViewModel.approvedFundingAmountDuffs != null
+        ) {
             authenticateThenSubmit(this, authManager, requestUserNameViewModel)
         } else {
             when (usernameType) {
