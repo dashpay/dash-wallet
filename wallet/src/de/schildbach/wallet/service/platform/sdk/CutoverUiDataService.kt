@@ -1237,6 +1237,48 @@ internal fun planMixingGroupUpdates(
         }
 }
 
+/**
+ * The re-summed value and member count of one per-day "Mixing" group row, or
+ * null when [existing] needs no write.
+ *
+ * [planMixingGroupUpdates] adds a member's net ONCE, when it is first
+ * grouped; the member is skipped by every later pass. During a restore a round
+ * is often grouped while its record still carries the born income-only net,
+ * and the record is corrected only later (by the engine — rust-dashcore#979 —
+ * or by [recomputeCoinJoinRecordNet]), so the group row kept the stale sum
+ * (measured on two testnet wallets, A and B: +1.86 and +4.78 DASH shown where the
+ * true sums were −0.085 and −0.012). This re-derives the row from its members
+ * as they are NOW:
+ *  - value = Σ current net of the [presentMemberCount] members the SDK store
+ *    holds ([presentNetSumDuffs]); a member it does not hold is left out of
+ *    the sum (deterministic, so it can never cause a write loop);
+ *  - count = [memberCount], every `tx_group_cache` member of the group.
+ *
+ * Only `coinjoin_<date>` rows are touched, and only their value and count —
+ * title, memo, rate, time and flags are the other writers' business. A group
+ * with NO member in the store (an SDK store still filling, or a dashj-era group
+ * the store never saw) is left as it is: there is nothing to re-derive it from.
+ * Pure — host-testable.
+ */
+internal fun planMixingGroupResum(
+    existing: TxDisplayCacheEntry,
+    memberCount: Int,
+    presentMemberCount: Int,
+    presentNetSumDuffs: Long
+): MixingGroupResum? {
+    if (!existing.rowId.startsWith(MIXING_GROUP_ROWID_PREFIX)) return null
+    if (presentMemberCount <= 0) return null
+    if (existing.valueSatoshis == presentNetSumDuffs && existing.transactionAmount == memberCount) return null
+    return MixingGroupResum(existing.rowId, presentNetSumDuffs, memberCount)
+}
+
+/** One planned group-row rewrite from [planMixingGroupResum]. */
+internal data class MixingGroupResum(
+    val groupId: String,
+    val valueSatoshis: Long,
+    val transactionAmount: Int
+)
+
 /** Which figure [overlayBalanceChoice] put on screen. */
 internal enum class OverlayBalanceSource(val logName: String) {
     /** The SDK has not published yet this launch; the dashj wallet's own balance. */
@@ -1476,6 +1518,29 @@ interface CutoverUiSource {
         walletIdHex: String,
         txidHexes: Collection<String>
     ): Set<String> = emptySet()
+
+    /**
+     * The CURRENT net (duffs) of each of [txidHexes] (display-order hex) as the
+     * store serves its record right now — the same reattributed record the
+     * change feed and the reconcile walk emit — keyed by display hex. A txid
+     * the store does not hold is absent from the map. Used by the per-day
+     * "Mixing" group re-sum ([planMixingGroupResum]) to re-derive a group
+     * row's value from its members. Callers pass bounded batches. Default
+     * empty: sources without a store (test fixtures) — every group then reads
+     * as "no member present" and is left untouched.
+     */
+    suspend fun recordNetsFor(
+        walletIdHex: String,
+        txidHexes: Collection<String>
+    ): Map<String, Long> = emptyMap()
+
+    /**
+     * Display-hex txids whose STORED record the app just corrected in place
+     * ([SdkTxStoreWalker]'s durable write-back) — hot, lossy (a dropped batch
+     * is converged by the next full reconcile walk). The pipeline re-sums the
+     * "Mixing" group rows holding any of them. Default: never emits.
+     */
+    fun observeCorrectedRecordTxids(): Flow<Set<String>> = emptyFlow()
 
     /**
      * Live wallet-relevant transaction records, neutral shape, in BOUNDED
@@ -1786,6 +1851,36 @@ internal class DashSdkCutoverUiSource(
         return out
     }
 
+    /**
+     * Txid batches every walker this source builds reports as durably corrected
+     * ([SdkTxStoreWalker]'s `onCorrectionsPersisted`). Hot and lossy by design:
+     * a burst past the buffer drops its oldest batches, and the pipeline's next
+     * full reconcile walk re-sums every group anyway.
+     */
+    private val correctedRecordTxids = MutableSharedFlow<Set<String>>(
+        extraBufferCapacity = CORRECTED_TXIDS_BUFFER,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    private fun walker(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walletId: ByteArray
+    ) = SdkTxStoreWalker(db, walletId, onCorrectionsPersisted = { correctedRecordTxids.tryEmit(it) })
+
+    override fun observeCorrectedRecordTxids(): Flow<Set<String>> = correctedRecordTxids
+
+    override suspend fun recordNetsFor(
+        walletIdHex: String,
+        txidHexes: Collection<String>
+    ): Map<String, Long> {
+        if (txidHexes.isEmpty()) return emptyMap()
+        val walletId = walletIdFromHex(walletIdHex) ?: return emptyMap()
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            walker(db, walletId).recordsFor(txidHexes).associate { it.txidHex to it.netAmountDuffs }
+        }
+    }
+
     override fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>> = flow {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         val db = database()
@@ -1805,7 +1900,7 @@ internal class DashSdkCutoverUiSource(
         // only NEW rows past the keyset watermark plus a bounded recent-tail
         // status refresh — never the whole table. Whole-wallet convergence
         // is [forEachWalletTxRecordPage] (the pipeline's 60s reconcile).
-        val walker = SdkTxStoreWalker(db, walletId)
+        val walker = walker(db, walletId)
         walker.primeWatermarks()
         // Initial bounded emission: the recent tail, so recent statuses are
         // fresh long before the first full reconcile walk finishes.
@@ -1826,7 +1921,7 @@ internal class DashSdkCutoverUiSource(
         // between pages, cooperative — an arbitrarily large table walks in
         // O(page) memory and never blocks the pipeline's event lane (the
         // service interleaves these pages with engine events).
-        SdkTxStoreWalker(database(), walletId).walkAll(onPage)
+        walker(database(), walletId).walkAll(onPage)
     }
 
     override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> = flow {
@@ -1841,7 +1936,7 @@ internal class DashSdkCutoverUiSource(
         // stale), per-outpoint indexed EXISTS/lookup, per-txid fresh record
         // reads, and an on-demand paged enumeration for the rare full reads.
         // Nothing O(wallet) is ever built on the per-second path.
-        val walker = SdkTxStoreWalker(db, walletId)
+        val walker = walker(db, walletId)
         walker.primeWatermarks()
         emit(seamSnapshot(db, walker, walker.tailRecords()))
         emitAll(
@@ -1981,6 +2076,9 @@ internal class DashSdkCutoverUiSource(
 
         /** Chunk size for raw `txid IN (…)` queries (SQLite's variable cap is 999). */
         const val TXID_IN_CHUNK = 500
+
+        /** Buffered correction batches before the oldest are dropped (see [correctedRecordTxids]). */
+        const val CORRECTED_TXIDS_BUFFER = 64
 
         /**
          * [payloadLru] cap — sized to the walker's page window
@@ -2440,6 +2538,14 @@ class CutoverUiDataService internal constructor(
      * (worst case after eviction: one repeated WARN per >1000-tx window).
      */
     private val noNetWarnedTxids: MutableSet<String> = boundedSet(SEEN_TX_DIRECTIONS_MAX)
+
+    /**
+     * Once-per-process latch for the "mixing group has members the SDK store
+     * does not hold" INFO in [resumMixingGroups] — the re-sum repeats every
+     * reconcile walk. Keyed by group id; only touched from [txPipeline]'s
+     * sequential collector.
+     */
+    private val mixingResumMissingLogged: MutableSet<String> = boundedSet(SEEN_TX_DIRECTIONS_MAX)
 
     /**
      * Txids whose rows are TERMINAL for resolution purposes — CHAINLOCKED and
@@ -4492,6 +4598,12 @@ class CutoverUiDataService internal constructor(
          * for the 60s ticker — only for the log line.
          */
         data class Reconcile(val requested: Boolean) : TxFeedAction()
+
+        /** Re-sum these per-day "Mixing" group rows from their members' current nets. */
+        data class ResumMixingGroups(val groupIds: Collection<String>) : TxFeedAction()
+
+        /** These stored records were just corrected in place — re-sum any "Mixing" group holding one. */
+        data class RecordsCorrected(val txids: Set<String>) : TxFeedAction()
     }
 
     /**
@@ -4517,7 +4629,7 @@ class CutoverUiDataService internal constructor(
      */
     private suspend fun txPipeline(walletIdHex: String) {
         bindReceiveAddressWallet(walletIdHex)
-        // Three feeds, one sequential collector (merge never runs two
+        // Four feeds, one sequential collector (merge never runs two
         // actions concurrently — that serial execution is what makes the
         // insert/notify dedup race-free):
         // - the Room CHANGE feed — bounded incremental pages of new/changed
@@ -4532,7 +4644,10 @@ class CutoverUiDataService internal constructor(
         //   cache rebuild can never permanently drop SDK rows) are preserved;
         // - the engine's instant tx events — the FAST feed: a mempool
         //   receive renders (and notifies) the moment the engine sees the
-        //   tx, and an IS lock flips the row before any block confirms it.
+        //   tx, and an IS lock flips the row before any block confirms it;
+        // - the store's in-place record corrections — re-sum the per-day
+        //   "Mixing" group rows holding a corrected member ([resumMixingGroups];
+        //   a complete reconcile walk re-sums every such group as well).
         //
         // Never dies silently: one upstream exception terminates the WHOLE
         // merged flow, so a single .catch would leave the tx list frozen
@@ -4544,8 +4659,9 @@ class CutoverUiDataService internal constructor(
                 coroutineScope {
                     // Unbuffered: each page emission suspends the walker until
                     // the sequential collector has processed it — natural
-                    // backpressure, and events slot in between pages.
-                    val reconcilePages = MutableSharedFlow<List<L1TxUiRecord>>()
+                    // backpressure, and events slot in between pages. Carries
+                    // the walk's pages, then its per-group mixing re-sums.
+                    val reconcilePages = MutableSharedFlow<TxFeedAction>()
                     var reconcileJob: kotlinx.coroutines.Job? = null
                     val reconcileAgain = AtomicBoolean(false)
                     // Whether a request (not the ticker) is among the walks
@@ -4554,7 +4670,7 @@ class CutoverUiDataService internal constructor(
                     merge(
                         source.observeWalletTxRecords(walletIdHex)
                             .map { TxFeedAction.Snapshot(it) as TxFeedAction },
-                        reconcilePages.map { TxFeedAction.Snapshot(it) as TxFeedAction },
+                        reconcilePages,
                         merge(
                             reconcileTicker().map { false },
                             // Replay a request made while nothing collected. Checked
@@ -4564,11 +4680,14 @@ class CutoverUiDataService internal constructor(
                                 if (fullReconcilePending.get()) emit(Unit)
                             }.map { true }
                         ).map { TxFeedAction.Reconcile(requested = it) as TxFeedAction },
-                        txEvents.map { TxFeedAction.EngineEvent(it) }
+                        txEvents.map { TxFeedAction.EngineEvent(it) },
+                        source.observeCorrectedRecordTxids().map { TxFeedAction.RecordsCorrected(it) }
                     ).collect { action ->
                         when (action) {
                             is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
                             is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
+                            is TxFeedAction.ResumMixingGroups -> resumMixingGroups(action.groupIds)
+                            is TxFeedAction.RecordsCorrected -> resumMixingGroupsHolding(action.txids)
                             is TxFeedAction.Reconcile -> {
                                 // Whatever triggered this, the walk it starts (or
                                 // the one more it queues) covers a pending request.
@@ -4597,7 +4716,17 @@ class CutoverUiDataService internal constructor(
                                                 source.forEachWalletTxRecordPage(walletIdHex) { page ->
                                                     pages++
                                                     records += page.size
-                                                    reconcilePages.emit(page)
+                                                    reconcilePages.emit(TxFeedAction.Snapshot(page))
+                                                }
+                                                // The walk is COMPLETE: every member record has been
+                                                // served as the store holds it now (and any correction
+                                                // persisted). Re-sum every mixing group from those
+                                                // current nets — the convergence point for a member
+                                                // corrected after it was grouped (engine #979 or the
+                                                // walker's own re-net). One action per group, so
+                                                // events still interleave between groups.
+                                                for (groupId in txGroupCacheDao.getCoinJoinGroupIds()) {
+                                                    reconcilePages.emit(TxFeedAction.ResumMixingGroups(listOf(groupId)))
                                                 }
                                                 logReconcileWalk(
                                                     walk, requested, records, pages,
@@ -4855,6 +4984,87 @@ class CutoverUiDataService internal constructor(
             runCatching { notifyCoinsReceived(duffs) }
                 .onFailure { log.warn("coins-received notification failed for {}", txidHex, it) }
         }
+    }
+
+    /**
+     * Re-derive each per-day "Mixing" group row in [groupIds] from its members'
+     * CURRENT nets ([planMixingGroupResum]) — the convergence pass for a member
+     * whose record was corrected after it was grouped. Runs on [txPipeline]'s
+     * sequential collector, so it never interleaves with a [syncDisplayCache]
+     * pass extending the same group.
+     *
+     * Bounded: per group, ⌈members / [MIXING_RESUM_PAGE]⌉ keyset reads of
+     * `tx_group_cache` plus as many chunked record reads
+     * ([CutoverUiSource.recordNetsFor]); at most one page of txids is held at a
+     * time, never a group's (let alone the wallet's) whole member list. Writes
+     * only a row whose value or count differs, and only those two columns.
+     * Fail-soft per group: the next reconcile walk retries.
+     */
+    private suspend fun resumMixingGroups(groupIds: Collection<String>) {
+        val walletIdHex = activeWalletIdHex ?: return
+        for (groupId in groupIds) {
+            if (!groupId.startsWith(MIXING_GROUP_ROWID_PREFIX)) continue
+            try {
+                val existing = txDisplayCacheDao.getEntriesByIds(listOf(groupId)).firstOrNull() ?: continue
+                var memberCount = 0
+                var presentCount = 0
+                var presentSum = 0L
+                var after = ""
+                while (true) {
+                    val page = txGroupCacheDao.getGroupMemberTxIdsAfter(groupId, after, MIXING_RESUM_PAGE)
+                    if (page.isEmpty()) break
+                    memberCount += page.size
+                    val nets = source.recordNetsFor(walletIdHex, page)
+                    for (txid in page) {
+                        val net = nets[txid] ?: continue
+                        presentCount++
+                        presentSum += net
+                    }
+                    after = page.last()
+                    if (page.size < MIXING_RESUM_PAGE) break
+                }
+                val missing = memberCount - presentCount
+                if (missing > 0 && mixingResumMissingLogged.add(groupId)) {
+                    log.info(
+                        "mixing group {}: {} of {} member(s) are not in the SDK store — left out of " +
+                            "the group value",
+                        groupId, missing, memberCount
+                    )
+                }
+                val plan = planMixingGroupResum(existing, memberCount, presentCount, presentSum) ?: continue
+                txDisplayCacheDao.updateGroupValueAndCount(plan.groupId, plan.valueSatoshis, plan.transactionAmount)
+                displayCacheRefreshBus.signalChanged()
+                log.info(
+                    "mixing group {} re-summed from its members' current nets: value {} → {} duffs, " +
+                        "count {} → {}",
+                    groupId, existing.valueSatoshis, plan.valueSatoshis,
+                    existing.transactionAmount, plan.transactionAmount
+                )
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("mixing group {} re-sum failed; the next reconcile walk retries", groupId, t)
+            }
+        }
+    }
+
+    /**
+     * [resumMixingGroups] for every CoinJoin group holding one of [txids] — the
+     * store just corrected those records in place. A txid in no group (the
+     * common case: not a grouped mixing member) costs one indexed lookup.
+     */
+    private suspend fun resumMixingGroupsHolding(txids: Set<String>) {
+        if (txids.isEmpty()) return
+        val groupIds = try {
+            txids.toList().chunked(500)
+                .flatMap { txGroupCacheDao.getGroupsForTxIds(it) }
+                .filter { it.wrapperType == TxGroupCacheEntry.TYPE_COINJOIN }
+                .mapTo(LinkedHashSet()) { it.groupId }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("group lookup for {} corrected record(s) failed; the next reconcile walk re-sums", txids.size, t)
+            return
+        }
+        if (groupIds.isNotEmpty()) resumMixingGroups(groupIds)
     }
 
     private fun ticker(): Flow<Unit> = flow {
@@ -5316,6 +5526,9 @@ class CutoverUiDataService internal constructor(
          * events with an unanswered probe ever wait, and only once.
          */
         internal const val NEGATIVE_EVENT_MIRROR_RETRY_MS = 400L
+
+        /** Group members read per keyset page by [resumMixingGroups] (also its record-read batch). */
+        internal const val MIXING_RESUM_PAGE = 500
 
         /** Grace before an activation's first full reconcile walk — see [reconcileInitialDelayMs]. */
         internal const val RECONCILE_INITIAL_DELAY_MS = 10_000L

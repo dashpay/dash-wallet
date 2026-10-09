@@ -75,6 +75,24 @@ interface TxGroupCacheDao {
     @Query("SELECT * FROM tx_group_cache WHERE groupId = :groupId ORDER BY sortOrder ASC")
     suspend fun getGroupEntries(groupId: String): List<TxGroupCacheEntry>
 
+    /**
+     * The ids of every CoinJoin mixing group ("coinjoin_<date>") — one row per day
+     * of historical mixing, so small. Used by the post-cutover group re-sum.
+     */
+    @Query("SELECT DISTINCT groupId FROM tx_group_cache WHERE wrapperType = 'coinjoin'")
+    suspend fun getCoinJoinGroupIds(): List<String>
+
+    /**
+     * One keyset page (at most [limit]) of [groupId]'s member txids past [afterTxId],
+     * in txId order — walks the primary key (groupId, txId), so a group of any size is
+     * read in bounded windows. Pass "" for the first page.
+     */
+    @Query(
+        "SELECT txId FROM tx_group_cache WHERE groupId = :groupId AND txId > :afterTxId " +
+            "ORDER BY txId ASC LIMIT :limit"
+    )
+    suspend fun getGroupMemberTxIdsAfter(groupId: String, afterTxId: String, limit: Int): List<String>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entries: List<TxGroupCacheEntry>)
 

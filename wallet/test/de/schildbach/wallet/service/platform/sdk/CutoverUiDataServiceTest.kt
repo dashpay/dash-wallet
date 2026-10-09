@@ -1226,6 +1226,19 @@ class CutoverUiDataServiceTest {
 
         override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> =
             records.map { SdkSeamTxSnapshot(it, emptyMap(), emptySet(), emptyMap()) }
+
+        /** The store's CURRENT record nets, for the mixing-group re-sum (absent = not in the store). */
+        var storeNets: Map<String, Long> = emptyMap()
+
+        override suspend fun recordNetsFor(
+            walletIdHex: String,
+            txidHexes: Collection<String>
+        ): Map<String, Long> = storeNets.filterKeys { it in txidHexes }
+
+        /** In-place record corrections the store reports (the walker's write-back signal). */
+        val corrected = kotlinx.coroutines.flow.MutableSharedFlow<Set<String>>(extraBufferCapacity = 8)
+
+        override fun observeCorrectedRecordTxids(): Flow<Set<String>> = corrected
     }
 
     private fun configWithState(state: String?): DashPayConfig = mockk {
@@ -4576,5 +4589,204 @@ class CutoverUiDataServiceTest {
         coVerify(exactly = 0) { displayDao.upsertGroupRows(any(), any()) }
         coVerify(exactly = 0) { displayDao.insertAll(any()) }
         coVerify(exactly = 0) { groupDao.insertAll(any()) }
+    }
+
+    // ── Mixing group re-sum (members corrected after they were grouped) ──
+
+    private fun mixingRow(groupId: String, value: Long, count: Int) = TxDisplayCacheEntry(
+        rowId = groupId,
+        title = "Mixing Transactions",
+        valueSatoshis = value,
+        iconType = TxDisplayCacheEntry.ICON_COINJOIN,
+        iconBgType = TxDisplayCacheEntry.BG_SENT,
+        statusText = "",
+        comment = "my memo",
+        transactionAmount = count,
+        time = now - 3_600_000,
+        hasErrors = false,
+        service = null,
+        exchangeRateFiatCode = "USD",
+        exchangeRateFiatValue = 42L,
+        contactUsername = null,
+        contactDisplayName = null,
+        contactAvatarUrl = null,
+        contactUserId = null,
+        filterFlags = TxDisplayCacheEntry.FLAG_COINJOIN
+    )
+
+    /** One `tx_group_cache` group as the fake DAO serves it. */
+    private data class FakeGroup(val groupId: String, val wrapperType: String, val members: List<String>)
+
+    /** A `tx_group_cache` fake over [groups]: keyset member pages, txid → group lookups. */
+    private fun groupDaoOver(groups: List<FakeGroup>): TxGroupCacheDao {
+        val dao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { dao.getCoinJoinGroupIds() } returns
+            groups.filter { it.wrapperType == TxGroupCacheEntry.TYPE_COINJOIN }.map { it.groupId }
+        coEvery { dao.getGroupMemberTxIdsAfter(any(), any(), any()) } coAnswers {
+            val groupId = firstArg<String>()
+            val after = secondArg<String>()
+            val limit = thirdArg<Int>()
+            groups.firstOrNull { it.groupId == groupId }?.members.orEmpty()
+                .sorted().filter { it > after }.take(limit)
+        }
+        coEvery { dao.getGroupsForTxIds(any()) } coAnswers {
+            val ids = firstArg<List<String>>().toSet()
+            groups.flatMap { g ->
+                g.members.filter { it in ids }.map { txid ->
+                    TxGroupCacheEntry(g.groupId, txid, g.wrapperType, g.groupId.substringAfter('_'), 0)
+                }
+            }
+        }
+        return dao
+    }
+
+    /** [statefulDisplayDao] plus the re-sum's targeted value/count UPDATE. */
+    private fun resumDisplayDao(store: MutableMap<String, TxDisplayCacheEntry>): TxDisplayCacheDao {
+        val dao = statefulDisplayDao(store)
+        coEvery { dao.updateGroupValueAndCount(any(), any(), any()) } coAnswers {
+            val rowId = firstArg<String>()
+            val row = store[rowId]
+            if (row == null) {
+                0
+            } else {
+                store[rowId] = row.copy(valueSatoshis = secondArg(), transactionAmount = thirdArg())
+                1
+            }
+        }
+        return dao
+    }
+
+    private fun memberHex(n: Int) = "%064x".format(n)
+
+    @Test
+    fun mixingResum_plan_onlyStaleCoinJoinRowsWithPresentMembers() {
+        val stale = mixingRow("coinjoin_2025-07-20", value = 200_002L, count = 1)
+        // The born income-only net was summed at grouping time; the members
+        // now net −446 over 2 grouped txs → value AND count corrected.
+        val plan = requireNotNull(planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 2, presentNetSumDuffs = -446L))
+        assertEquals(MixingGroupResum("coinjoin_2025-07-20", -446L, 2), plan)
+        // Already equal → no write.
+        assertNull(planMixingGroupResum(mixingRow("coinjoin_2025-07-20", -446L, 2), 2, 2, -446L))
+        // Never a non-CoinJoin group row.
+        assertNull(planMixingGroupResum(stale.copy(rowId = "crowdnode"), 2, 2, -446L))
+        // No member in the store → nothing to re-derive from; left as is.
+        assertNull(planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 0, presentNetSumDuffs = 0L))
+        // A member the store does not hold is left out of the value but still counted.
+        assertEquals(
+            MixingGroupResum("coinjoin_2025-07-20", -100L, 2),
+            planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 1, presentNetSumDuffs = -100L)
+        )
+    }
+
+    @Test
+    fun mixingResum_fullWalkResumsStaleGroupsOnly_andConverges() = runTest {
+        val stale = "coinjoin_2025-07-20"
+        val correct = "coinjoin_2025-07-21"
+        val partial = "coinjoin_2025-07-22"
+        val big = "coinjoin_2025-07-23"
+        val bigMembers = (1_000 until 2_203).map { memberHex(it) } // > 2 keyset pages
+        val store = mutableMapOf(
+            // Grouped while m1 still had its born +200002 net; m1 was later
+            // corrected to 0 (#979 / the walker's re-net), m2 nets −446.
+            stale to mixingRow(stale, value = 200_002L - 446L, count = 2),
+            correct to mixingRow(correct, value = -300L, count = 1),
+            // One member (m5) the SDK store does not hold.
+            partial to mixingRow(partial, value = -50L, count = 2),
+            big to mixingRow(big, value = 0L, count = bigMembers.size),
+            "crowdnode" to mixingRow("crowdnode", value = -1_000L, count = 3).copy(filterFlags = 0)
+        )
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(
+            listOf(
+                FakeGroup(stale, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(1), memberHex(2))),
+                FakeGroup(correct, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(3))),
+                FakeGroup(partial, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(4), memberHex(5))),
+                FakeGroup(big, TxGroupCacheEntry.TYPE_COINJOIN, bigMembers),
+                FakeGroup("crowdnode", TxGroupCacheEntry.TYPE_CROWDNODE, listOf(memberHex(6), memberHex(7), memberHex(8)))
+            )
+        )
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = mapOf(
+                memberHex(1) to 0L,
+                memberHex(2) to -446L,
+                memberHex(3) to -300L,
+                memberHex(4) to -100L,
+                memberHex(6) to 5L
+            ) + bigMembers.associateWith { -1L }
+        }
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+        // Nothing before the first full walk.
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+
+        // The stale group converges to Σ current member nets.
+        assertEquals(-446L, store.getValue(stale).valueSatoshis)
+        assertEquals(2, store.getValue(stale).transactionAmount)
+        // Its memo, rate and title are untouched.
+        assertEquals("my memo", store.getValue(stale).comment)
+        assertEquals(42L, store.getValue(stale).exchangeRateFiatValue)
+        assertEquals("Mixing Transactions", store.getValue(stale).title)
+        // The absent member is left out of the value, still counted.
+        assertEquals(-100L, store.getValue(partial).valueSatoshis)
+        assertEquals(2, store.getValue(partial).transactionAmount)
+        // Multi-page group summed across every keyset page.
+        assertEquals(-bigMembers.size.toLong(), store.getValue(big).valueSatoshis)
+        // Correct and non-CoinJoin groups are never rewritten.
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(correct, any(), any()) }
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount("crowdnode", any(), any()) }
+        assertEquals(-1_000L, store.getValue("crowdnode").valueSatoshis)
+
+        // The next walk finds everything equal: no write loop (the absent
+        // member included).
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(2, source.reconcileWalks)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(stale, any(), any()) }
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(partial, any(), any()) }
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(big, any(), any()) }
+        coVerify(exactly = 3) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+    }
+
+    @Test
+    fun mixingResum_storeCorrectionResumsTheHoldingGroupImmediately() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val store = mutableMapOf(
+            groupId to mixingRow(groupId, value = 200_002L, count = 1),
+            "crowdnode" to mixingRow("crowdnode", value = -1_000L, count = 1).copy(filterFlags = 0)
+        )
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(
+            listOf(
+                FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(1))),
+                FakeGroup("crowdnode", TxGroupCacheEntry.TYPE_CROWDNODE, listOf(memberHex(2)))
+            )
+        )
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = mapOf(memberHex(1) to 0L, memberHex(2) to 7L)
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        // The walker persists corrections for a grouped member and a
+        // non-CoinJoin one — no reconcile walk has run yet.
+        source.corrected.emit(setOf(memberHex(1), memberHex(2)))
+        runCurrent()
+        assertEquals(0, source.reconcileWalks)
+        assertEquals(0L, store.getValue(groupId).valueSatoshis)
+        assertEquals(1, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount("crowdnode", any(), any()) }
     }
 }
