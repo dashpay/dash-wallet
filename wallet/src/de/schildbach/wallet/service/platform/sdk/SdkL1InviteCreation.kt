@@ -326,7 +326,7 @@ class SdkL1InviteCreation internal constructor(
     /**
      * Invitation-voucher funding amount in Core DUFFS for the given
      * contested-ness — the same fee the dashj path funds the voucher with
-     * (contested → [ContestedUsernameFees.current]'s protocol-gated fee
+     * (contested → [ContestedUsernameFees.resolved]'s protocol-gated fee
      * (MO-1069), non-contested → `DASH_PAY_FEE`). Suspend: resolving the
      * contested fee needs a live protocol-version read.
      */
@@ -432,6 +432,10 @@ class SdkL1InviteCreation internal constructor(
             feeDuffs(contested)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
+            // Distinct reason on purpose: classifyInviteCreationFailure maps "invite fee
+            // unavailable" to REJECTED (deterministic, retry blocked), while an unavailable
+            // protocol version is transient and must stay within the bounded retry budget.
+            if (t is ProtocolVersionUnavailableException) return notBroadcast("protocol version unavailable", t)
             return notBroadcast("invite fee unavailable", t)
         }
 

@@ -448,7 +448,6 @@ class RequestUserNameViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
-        private val CONTEST_DOCUMENT_FEE = Coin.valueOf(0, 20).value * 1000
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
 
         /**
@@ -761,7 +760,7 @@ class RequestUserNameViewModel @Inject constructor(
     fun canAffordContestedUsername(): Boolean {
         return if (identity?.userId != null) {
             val credits = _identityBalance.value
-            credits > CONTEST_DOCUMENT_FEE
+            credits > contestedNameFeeCredits()
         } else {
             _walletBalance.value >= _contestedFees.value.contested
         }
@@ -777,10 +776,7 @@ class RequestUserNameViewModel @Inject constructor(
                 identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
             }
         }
-        viewModelScope.launch {
-            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
-            recomputeBalanceGate()
-        }
+        refreshContestedFees()
         // L1/non-shielded creation completion feedback. The L1 branch of
         // submit() starts CreateIdentityService and sets
         // usernameRequestSubmitting=true, but that service runs out-of-band
@@ -952,6 +948,29 @@ class RequestUserNameViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Re-resolves [contestedFees] from a live [DashSdkService.currentProtocolVersion]
+     * read and recomputes the balance gate. This ViewModel is activity-scoped,
+     * so [init] resolves once per activity; a null (unreachable) first read
+     * would otherwise pin the legacy quote — and the legacy requirement — for
+     * the ViewModel's whole lifetime even after connectivity recovers.
+     * Called on every username-flow entry (RequestUsernameFragment).
+     */
+    fun refreshContestedFees() {
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+            recomputeBalanceGate()
+        }
+    }
+
+    /**
+     * The name-only contested fee an EXISTING identity pays, in Platform
+     * credits (identity balances are credits = duffs × 1000). Resolved from the
+     * live protocol version like every other fee figure (MO-1069) — a fixed
+     * 0.20 DASH here rejected identities that cover the activated 0.10 DASH.
+     */
+    private fun contestedNameFeeCredits(): Long = _contestedFees.value.contestedName.value * 1000
 
     /**
      * Shared uiState mapping for a [ShieldedUsernameSubmitState] emitted by
@@ -1477,7 +1496,7 @@ class RequestUserNameViewModel @Inject constructor(
         val walletBalance = _walletBalance.value
         return when {
             identityBalance > 0L && contestable ->
-                (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
+                (Coin.valueOf(identityBalance / 1000) + walletBalance) > _contestedFees.value.contestedName
             identityBalance > 0L && !contestable ->
                 (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
             contestable ->
@@ -1565,8 +1584,8 @@ class RequestUserNameViewModel @Inject constructor(
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && !contestable -> true
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && contestable ->
                 canShieldedFundContestedUsername()
-            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
-                CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && contestable ->
+                (Coin.valueOf(identityBalance / 1000) + walletBalance) > _contestedFees.value.contestedName
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 NON_CONTEST_DOCUMENT_FEE / 1000)
             identityBalance == 0L && contestable ->
@@ -1598,7 +1617,7 @@ class RequestUserNameViewModel @Inject constructor(
                 shieldedIdentityFundingRequirement(
                     Dash((if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE).value)
                 )?.toPlainString() ?: _contestedFees.value.contested.toPlainString()
-            identityBalance > 0L && contestable -> Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000).toPlainString()
+            identityBalance > 0L && contestable -> _contestedFees.value.contestedName.toPlainString()
             identityBalance > 0L && !contestable -> Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000).toPlainString()
             contestable -> _contestedFees.value.contested.toPlainString()
             else -> Constants.DASH_PAY_FEE.toPlainString()

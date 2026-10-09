@@ -179,7 +179,10 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                             }
                         }
                     } else {
-                        invitationFragmentViewModel.sendInviteTransaction(inviteAmount)
+                        // Same contested classification as the SDK branch above; the worker
+                        // re-resolves the live contested fee before funding (MO-1069).
+                        val contested = inviteAmount.value >= ContestedUsernameFees.CURRENT.contested.value
+                        invitationFragmentViewModel.sendInviteTransaction(inviteAmount, contested)
                     }
                     // The spend deliberately outlives the view (fragment
                     // lifecycleScope — cancelling a ~30s funding spend on a

@@ -319,7 +319,7 @@ open class InvitationFragmentViewModel @Inject constructor(
         }
     }
 
-    suspend fun sendInviteTransaction(value: Coin): String {
+    suspend fun sendInviteTransaction(value: Coin, contested: Boolean): String {
         // ensure that the fundingAddress hasn't been used
         withContext(Dispatchers.IO) {
             Context.propagate(walletData.wallet!!.context)
@@ -333,7 +333,7 @@ open class InvitationFragmentViewModel @Inject constructor(
         }
         val fundingAddress = this.fundingAddress // save the address locally
         SendInviteOperation(walletApplication)
-            .create(fundingAddress, value)
+            .create(fundingAddress, value, contested)
             .enqueue()
         return fundingAddress
     }

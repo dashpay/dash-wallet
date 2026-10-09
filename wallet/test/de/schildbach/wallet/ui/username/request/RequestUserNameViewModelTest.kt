@@ -25,6 +25,7 @@ import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.AssetLockFundingEvidence
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
@@ -60,6 +61,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import de.schildbach.wallet.data.WalletData
@@ -549,6 +551,23 @@ class RequestUserNameViewModelTest {
         assertEquals("0.03", state.requiredAmount)
         assertTrue(state.enoughBalance)
         assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun refreshContestedFees_afterUnresolvedFirstRead_picksUpProtocol14() = runVmTest {
+        // init() ran against a null (unreachable) read → legacy quote. The flow entry
+        // refresh must re-read and move the quote to CURRENT once protocol 14 is
+        // reported, instead of pinning the legacy requirement for the ViewModel's
+        // whole lifetime (MO-1069 re-review finding).
+        coEvery { dashSdkService.currentProtocolVersion() } returns null
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertEquals(ContestedUsernameFees.LEGACY, vm.contestedFees.value)
+
+        coEvery { dashSdkService.currentProtocolVersion() } returns 14
+        vm.refreshContestedFees()
+        advanceUntilIdle()
+        assertEquals(ContestedUsernameFees.CURRENT, vm.contestedFees.value)
     }
 
     @Test

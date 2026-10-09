@@ -659,7 +659,7 @@ class SdkShieldedUsernameCreation internal constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     /**
      * Creation fee in credits for a username of the given contested-ness —
-     * [ContestedUsernameFees.current]'s protocol-gated contested fee (MO-1069)
+     * [ContestedUsernameFees.resolved]'s protocol-gated contested fee (MO-1069)
      * for contested labels, `DASH_PAY_FEE` = 0.03 DASH otherwise — the input
      * to the denomination mapping, NOT the amount spent. Suspend: resolving
      * the contested fee needs a live protocol-version read. Both the LEGACY

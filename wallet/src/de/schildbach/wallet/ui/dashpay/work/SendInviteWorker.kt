@@ -33,6 +33,8 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -45,7 +47,8 @@ class SendInviteWorker @AssistedInject constructor(
     private val platformRepo: PlatformRepo,
     private val invitationsDao: InvitationsDao,
     private val topUpRepository: TopUpRepository,
-    private val walletDataProvider: WalletData
+    private val walletDataProvider: WalletData,
+    private val dashSdkService: DashSdkService
 ): BaseWorker(context, parameters) {
     companion object {
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"
@@ -54,6 +57,7 @@ class SendInviteWorker @AssistedInject constructor(
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
         const val KEY_APPSFLYER_LINK = "SendInviteWorker.KEY_APPSFLYER_LINK"
         const val KEY_VALUE = "SendInviteWorker.KEY_VALUE"
+        const val KEY_CONTESTED = "SendInviteWorker.KEY_CONTESTED"
         private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
     }
 
@@ -78,6 +82,8 @@ class SendInviteWorker @AssistedInject constructor(
         val password = inputData.getString(KEY_PASSWORD)
             ?: return errorResult("missing KEY_PASSWORD parameter")
         val value = inputData.getLong(KEY_VALUE, 0L)
+        val contested = inputData.getBoolean(KEY_CONTESTED, false)
+        var fundedValue = value
         val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS)
             ?: return errorResult("missing KEY_FUNDING_ADDRESS parameter")
 
@@ -98,11 +104,25 @@ class SendInviteWorker @AssistedInject constructor(
                 if (value == 0L) {
                     error("missing KEY_VALUE parameter or KEY_VALUE is 0")
                 }
+                // The fee dialog's amount is a QUOTE; the invite is funded with the fee in
+                // effect NOW. A contested invite therefore re-resolves the live protocol
+                // version right before the asset lock is built (and refuses on an unknown
+                // one — the worker's failure is retryable), so a conservative legacy quote
+                // or a 13→14 activation in between cannot fund more than the active fee
+                // into the recipient-controlled invitation. Non-contested invites are the
+                // fixed DASH_PAY_FEE and use the quote as-is. Reuse of an already-created
+                // transaction (the branch below) is deliberately untouched.
+                val fundingAmount = if (contested) {
+                    ContestedUsernameFees.resolved(dashSdkService).contested
+                } else {
+                    Coin.valueOf(value)
+                }
+                fundedValue = fundingAmount.value
                 topUpRepository.createInviteFundingTransaction(
                     blockchainIdentity,
                     Address.fromBase58(wallet.params, fundingAddress),
                     encryptionKey,
-                    Coin.valueOf(value)
+                    fundingAmount
                 )
             } else {
                 val tx = authGroupExtension.invitationFundingTransactions.find { it.txId == invitation!!.txid }
@@ -139,7 +159,7 @@ class SendInviteWorker @AssistedInject constructor(
             Result.success(
                 workDataOf(
                     KEY_TX_ID to assetLockTx.txId.bytes,
-                    KEY_VALUE to value,
+                    KEY_VALUE to fundedValue,
                     KEY_USER_ID to assetLockTx.identityId.toStringBase58(),
                     KEY_APPSFLYER_LINK to invitation.shortDynamicLink
                 )

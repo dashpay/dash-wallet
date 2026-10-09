@@ -49,7 +49,7 @@ import javax.inject.Singleton
  * [SdkTransparentUsernameCreation]'s `@Inject` constructor wires as
  * `feeDuffs`, extracted so the protocol-gating (MO-1069) is host-JVM
  * unit-testable without standing up the rest of the SDK plumbing. Contested
- * labels resolve through [ContestedUsernameFees.current] (a live
+ * labels resolve through [ContestedUsernameFees.resolved] (a live
  * [DashSdkService.currentProtocolVersion] read: 0.25 DASH pre-v4.2/unknown,
  * 0.15 DASH once the network reports protocol >= 14); non-contested labels
  * are the fixed `DASH_PAY_FEE` (0.03 DASH).
@@ -397,7 +397,7 @@ class SdkTransparentUsernameCreation internal constructor(
     private val cutoverCommitted: suspend () -> Boolean,
     /**
      * Identity-registration funding amount in Core DUFFS for the given
-     * contested-ness — [ContestedUsernameFees.current]'s protocol-gated
+     * contested-ness — [ContestedUsernameFees.resolved]'s protocol-gated
      * contested fee for contested labels, `DASH_PAY_FEE` = 0.03 DASH
      * otherwise — the same fee the dashj path funds the asset lock with
      * ([de.schildbach.wallet.service.platform.TopUpRepository.createAssetLockTransaction]).

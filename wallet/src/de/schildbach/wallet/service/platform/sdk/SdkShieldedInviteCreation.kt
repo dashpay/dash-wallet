@@ -309,6 +309,9 @@ class SdkShieldedInviteCreation internal constructor(
             feeCredits(contested)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
+            // See SdkL1InviteCreation: a transient protocol-version failure must not be
+            // classified as a deterministic rejection.
+            if (t is ProtocolVersionUnavailableException) return notBroadcast("protocol version unavailable", t)
             return notBroadcast("invite fee unavailable", t)
         }
         val denominationCredits = shieldedInviteDenominationCredits(fee)

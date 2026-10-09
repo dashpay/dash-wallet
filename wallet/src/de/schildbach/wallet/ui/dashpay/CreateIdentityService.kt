@@ -654,16 +654,23 @@ class CreateIdentityService : LifecycleService() {
             } else {
                 // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
                 val balanceInfo = blockchainIdentityData.identity?.let { platformRepo.getIdentityBalance(it.id) }
-                val contestedFees = ContestedUsernameFees.resolved(dashSdkService)
-                val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                    contestedFees.contested
+                val contestable = Names.isUsernameContestable(blockchainIdentityData.username!!)
+                // The protocol version is only consulted for a CONTESTED name, and strictly
+                // (ContestedUsernameFees.resolved) only once a top-up is actually about to be
+                // built: a non-contested resume has a fixed fee, and a resume whose identity
+                // balance already covers the requirement constructs nothing — neither may be
+                // aborted by an unavailable protocol read. The affordability check itself uses
+                // the conservative (legacy on unknown) read, so it can only over-estimate the
+                // requirement, never fund more than the live fee.
+                val balanceRequirement = if (contestable) {
+                    ContestedUsernameFees.current(dashSdkService).contested
                 } else {
                     Constants.DASH_PAY_FEE
                 }
 
                 if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
-                    val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                        contestedFees.contestedName
+                    val topupValue = if (contestable) {
+                        ContestedUsernameFees.resolved(dashSdkService).contestedName
                     } else {
                         Constants.DASH_PAY_FEE
                     }
