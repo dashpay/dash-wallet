@@ -64,6 +64,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
+        // Fresh fee quote on every flow entry: the activity-scoped ViewModel's
+        // init read may have failed (legacy fallback) or predate a 13→14 activation.
+        requestUserNameViewModel.refreshContestedFees()
         
         // Get username type from arguments if provided. Consider error states
         usernameType = if (dashPayViewModel.createUsernameArgs?.actions == CreateUsernameActions.REUSE_TRANSACTION) {

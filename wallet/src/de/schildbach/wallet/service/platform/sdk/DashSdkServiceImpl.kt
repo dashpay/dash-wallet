@@ -466,6 +466,30 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
+     * See [DashSdkService.currentProtocolVersion] for the full contract.
+     * Always a live `sdk.system.refreshProtocolVersion()` read — NOT cached
+     * across calls. A process can span network activation (this runtime
+     * outlives [de.schildbach.wallet.service.platform.PlatformSyncService]
+     * .stopSdkEngines(), which only stops the sync engines, not this
+     * service), so a value read before activation must never be served
+     * again after it. A query failure surfaces as null, per the interface
+     * contract that null means "unknown, fall back to the older behavior"
+     * — never a particular version.
+     */
+    override suspend fun currentProtocolVersion(): Int? {
+        return try {
+            ensureStarted()
+            val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
+            sdk.system.refreshProtocolVersion()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("currentProtocolVersion: refreshProtocolVersion failed; returning null (unknown)", e)
+            null
+        }
+    }
+
+    /**
      * See [DashSdkService.bindAppWallet] for the contract. Serialized under
      * [bindLock] so two concurrent binds of the same phrase can't both miss
      * the dedup check and double-create.

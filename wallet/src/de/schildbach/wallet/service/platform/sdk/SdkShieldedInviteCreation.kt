@@ -246,7 +246,7 @@ class SdkShieldedInviteCreation internal constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val invitationsDao: InvitationsDao,
     /** Same fee → denomination input as [SdkShieldedUsernameCreation.feeCredits]. */
-    private val feeCredits: (contested: Boolean) -> Long,
+    private val feeCredits: suspend (contested: Boolean) -> Long,
     /**
      * Wraps the raw shielded deep link in an AppsFlyer OneLink (H1),
      * returning the OneLink short URL — or `null` when generation fails or
@@ -270,7 +270,11 @@ class SdkShieldedInviteCreation internal constructor(
         shieldedBalanceService = shieldedBalanceService,
         invitationsDao = invitationsDao,
         feeCredits = { contested ->
-            val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+            val fee = if (contested) {
+                ContestedUsernameFees.resolved(sdkService).contested
+            } else {
+                Constants.DASH_PAY_FEE
+            }
             dashToCredits(Dash(fee.value))
         },
         generateOneLink = { link ->
@@ -305,6 +309,9 @@ class SdkShieldedInviteCreation internal constructor(
             feeCredits(contested)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
+            // See SdkL1InviteCreation: a transient protocol-version failure must not be
+            // classified as a deterministic rejection.
+            if (t is ProtocolVersionUnavailableException) return notBroadcast("protocol version unavailable", t)
             return notBroadcast("invite fee unavailable", t)
         }
         val denominationCredits = shieldedInviteDenominationCredits(fee)
