@@ -55,6 +55,11 @@ class CoinJoinFundsMigrationServiceTest {
         "confirmed":$confirmed,"unconfirmed":0,"immature":0,
         "locked":0,"keysUsed":0,"keysTotal":40,"derivationPath":null}"""
 
+    @Test
+    fun promptHardSuppression_isDisabledForCutoverRecovery() {
+        assertEquals(false, MIXED_FUNDS_PROMPT_HARD_SUPPRESSED)
+    }
+
     // ── parseCoinJoinConfirmedDuffs ───────────────────────────────────
 
     @Test
