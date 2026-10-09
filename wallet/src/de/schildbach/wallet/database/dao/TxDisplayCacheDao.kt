@@ -97,6 +97,18 @@ interface TxDisplayCacheDao {
     @Query("SELECT valueSatoshis FROM tx_display_cache WHERE rowId = :rowId LIMIT 1")
     fun getValueSatoshisByIdSync(rowId: String): Long?
 
+    /**
+     * Rewrite ONLY a group row's value and member count — the per-day "Mixing" group
+     * re-sum. A targeted UPDATE rather than a read-modify-write upsert, so a memo,
+     * rate or title written concurrently by another writer is never clobbered.
+     * Returns the number of rows updated (0 when the row is gone).
+     */
+    @Query(
+        "UPDATE tx_display_cache SET valueSatoshis = :valueSatoshis, " +
+            "transactionAmount = :transactionAmount WHERE rowId = :rowId"
+    )
+    suspend fun updateGroupValueAndCount(rowId: String, valueSatoshis: Long, transactionAmount: Int): Int
+
     @Query("DELETE FROM tx_display_cache")
     suspend fun deleteAll()
 
