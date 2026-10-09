@@ -28,6 +28,8 @@ import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.flow.*
 import okhttp3.*
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
@@ -75,6 +77,19 @@ class WalletTransactionMetadataProvider @Inject constructor(
 ) : TransactionMetadataProvider {
     companion object {
         private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
+    }
+
+    /**
+     * SDK store rows prefetched by [withBatchedImport] for the txids it was given.
+     * Carried in the coroutine context, so it is scoped to that one batch and its
+     * caller, never shared with concurrent callers. A txid in [requested] but not
+     * in [rows] is known to be absent from the SDK store.
+     */
+    private class PreparedSdkRows(
+        val requested: Set<TxId>,
+        val rows: Map<TxId, TransactionMetadata>
+    ) : AbstractCoroutineContextElement(Key) {
+        companion object Key : CoroutineContext.Key<PreparedSdkRows>
     }
 
     private val syncScope = CoroutineScope(
@@ -173,7 +188,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
      * transaction carried and platform lacked, and the SDK store holds no memo or rate.
      */
     private suspend fun insertSdkTransactionMetadata(txId: TxId): TransactionMetadata? {
-        val sdkRow = sdkTxMetadataSource.defaultMetadataFor(txId) ?: return null
+        val prepared = currentCoroutineContext()[PreparedSdkRows]
+        val sdkRow = if (prepared != null && txId in prepared.requested) {
+            prepared.rows[txId]
+        } else {
+            sdkTxMetadataSource.defaultMetadataFor(txId)
+        } ?: return null
 
         val platformSentTimestamp = transactionMetadataDocumentDao.getSentTimestamp(txId)
         val platformMemo = transactionMetadataDocumentDao.getTransactionMemo(txId)
@@ -279,6 +299,23 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
             inserted?.let { update(it) }
         }
+    }
+
+    /**
+     * Prefetches, in one SDK batch, the store rows for the txids in [txIds] that
+     * have no metadata row and are not in the dashj wallet — the ones whose import
+     * would otherwise each run the SDK lookup and its wallet-wide walker work.
+     * [block] then reads them from the coroutine context ([PreparedSdkRows]).
+     */
+    override suspend fun <T> withBatchedImport(txIds: Collection<TxId>, block: suspend () -> T): T {
+        val wallet = walletData.wallet
+        val needSdk = txIds.toSet().filter { txId ->
+            wallet?.getTransaction(txId.toSha256Hash()) == null && !transactionMetadataDao.exists(txId)
+        }
+        if (needSdk.isEmpty()) return block()
+        val rows = sdkTxMetadataSource.defaultMetadataFor(needSdk)
+        log.info("txmetadata batch: prefetched {} of {} SDK store row(s)", rows.size, needSdk.size)
+        return withContext(PreparedSdkRows(needSdk.toSet(), rows)) { block() }
     }
 
     override suspend fun importTransactionMetadata(txId: TxId) {

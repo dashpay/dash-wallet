@@ -63,6 +63,8 @@ class WalletTransactionMetadataProviderSdkStoreTest {
     )
 
     private val store = mutableMapOf<TxId, TransactionMetadata>()
+    private var singleLookups = 0
+    private val batchLookups = mutableListOf<Set<TxId>>()
     private lateinit var metadataDao: TransactionMetadataDao
     private lateinit var documentDao: TransactionMetadataDocumentDao
     private lateinit var changeCacheDao: TransactionMetadataChangeCacheDao
@@ -76,6 +78,11 @@ class WalletTransactionMetadataProviderSdkStoreTest {
             store[m.txId] = m
         }
         coEvery { metadataDao.load(any<TxId>()) } answers { store[firstArg()] }
+        coEvery { metadataDao.exists(any()) } answers { store.containsKey(firstArg()) }
+        coEvery { metadataDao.update(any()) } answers {
+            val m = firstArg<TransactionMetadata>()
+            store[m.txId] = m
+        }
         coEvery { metadataDao.updateMemo(any(), any()) } answers {
             val id = firstArg<TxId>()
             store[id]?.let { store[id] = it.copy(memo = secondArg()) }
@@ -108,8 +115,15 @@ class WalletTransactionMetadataProviderSdkStoreTest {
         every { walletData.wallet } returns wallet
 
         val sdkStore = object : SdkTxMetadataSource {
-            override suspend fun defaultMetadataFor(txId: TxId): TransactionMetadata? =
-                sdkRow.takeIf { txId == sdkOnlyTxId }?.copy()
+            override suspend fun defaultMetadataFor(txId: TxId): TransactionMetadata? {
+                singleLookups++
+                return sdkRow.takeIf { txId == sdkOnlyTxId }?.copy()
+            }
+
+            override suspend fun defaultMetadataFor(txIds: Collection<TxId>): Map<TxId, TransactionMetadata> {
+                batchLookups.add(txIds.toSet())
+                return txIds.filter { it == sdkOnlyTxId }.associateWith { sdkRow.copy() }
+            }
         }
 
         provider = WalletTransactionMetadataProvider(
@@ -202,5 +216,42 @@ class WalletTransactionMetadataProviderSdkStoreTest {
 
         assertNull(store[unknownTxId])
         coVerify(exactly = 0) { metadataDao.insert(match { it.txId == unknownTxId }) }
+    }
+
+    @Test
+    fun `should resolve a platform sync batch with one SDK lookup`() = runTest {
+        val existingTxId = TxId.wrap("00000000000000000000000000000000000000000000000000000000000000bb")
+        store[existingTxId] = sdkRow.copy(txId = existingTxId)
+        val platformRow = TransactionMetadata(
+            sdkOnlyTxId,
+            timestamp = 0L,
+            value = Coin.ZERO,
+            type = TransactionCategory.Invalid,
+            memo = "rent share"
+        )
+
+        // What PlatformSyncService does: one batch around the per-item imports.
+        provider.withBatchedImport(listOf(sdkOnlyTxId, unknownTxId, existingTxId)) {
+            provider.syncPlatformMetadata(sdkOnlyTxId, platformRow, null, null)
+            provider.syncPlatformMetadata(unknownTxId, platformRow.copy(txId = unknownTxId), null, null)
+        }
+
+        // Only the txids with no metadata row were looked up, in one batch.
+        assertEquals(listOf(setOf(sdkOnlyTxId, unknownTxId)), batchLookups)
+        assertEquals(0, singleLookups)
+        // The SDK row supplied the value; the platform row supplied the memo.
+        assertEquals(Coin.valueOf(100_000), store[sdkOnlyTxId]?.value)
+        assertEquals(TransactionCategory.Received, store[sdkOnlyTxId]?.type)
+        assertEquals("rent share", store[sdkOnlyTxId]?.memo)
+        // Known absent from the SDK store: the caller's row is used, with no extra lookup.
+        assertEquals(Coin.ZERO, store[unknownTxId]?.value)
+    }
+
+    @Test
+    fun `should look up a single SDK row outside a batch`() = runTest {
+        provider.importTransactionMetadata(sdkOnlyTxId)
+
+        assertEquals(1, singleLookups)
+        assertEquals(emptyList<Set<TxId>>(), batchLookups)
     }
 }

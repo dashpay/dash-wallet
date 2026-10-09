@@ -59,6 +59,14 @@ interface TransactionMetadataProvider {
         iconUrl: String?
     )
 
+    /**
+     * Runs [block], which will import metadata for [txIds] one at a time (for
+     * example a platform metadata sync), with any per-transaction lookup work
+     * for those txids done once for the whole batch. Purely an optimization:
+     * the result is the same as running [block] alone, which is the default.
+     */
+    suspend fun <T> withBatchedImport(txIds: Collection<TxId>, block: suspend () -> T): T = block()
+
     suspend fun getTransactionMetadata(txId: TxId): TransactionMetadata?
     fun observeTransactionMetadata(txId: TxId): Flow<TransactionMetadata?>
 

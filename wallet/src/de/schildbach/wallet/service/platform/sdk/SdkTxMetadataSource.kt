@@ -37,4 +37,12 @@ interface SdkTxMetadataSource {
      * call it once per platform metadata document during a sync.
      */
     suspend fun defaultMetadataFor(txId: TxId): TransactionMetadata?
+
+    /**
+     * [defaultMetadataFor] for many txids at once, for bulk imports such as a
+     * platform metadata sync. Keyed by txid; a txid the SDK store does not hold
+     * is absent. Shares one wallet pass across the batch, so the cost grows with
+     * the batch size, not batch size × wallet-wide work per txid.
+     */
+    suspend fun defaultMetadataFor(txIds: Collection<TxId>): Map<TxId, TransactionMetadata>
 }

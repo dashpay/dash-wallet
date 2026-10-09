@@ -282,6 +282,27 @@ private suspend fun boundWalletRecordOrNull(
     null
 }
 
+/**
+ * Batch [boundWalletRecordOrNull]: one walker and one [SdkTxStoreWalker.recordsFor]
+ * pass for all of [displayHexes], keyed by lowercase display hex. Empty when the
+ * manager is not up, no single wallet is bound, or the read fails.
+ */
+private suspend fun boundWalletRecordsOrEmpty(
+    sdkService: DashSdkService,
+    db: DashDatabase,
+    displayHexes: Collection<String>
+): Map<String, L1TxUiRecord> = try {
+    val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
+    walletId?.let { withContext(Dispatchers.IO) { SdkTxStoreWalker(db, it).recordsFor(displayHexes) } }
+        ?: emptyMap()
+} catch (e: CancellationException) {
+    throw e
+} catch (t: Throwable) {
+    LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+        .warn("batch wallet record lookup failed for {} txid(s); using the store rows", displayHexes.size, t)
+    emptyMap()
+}
+
 /** Display-order txid hex → 32 wire-order bytes, or null when malformed. */
 internal fun displayTxIdToWireBytes(txIdDisplayHex: String): ByteArray? {
     if (txIdDisplayHex.length != 64 || !txIdDisplayHex.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
@@ -327,6 +348,10 @@ class SdkTxDetailProvider internal constructor(
     private val sdkService: DashSdkService,
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val assetLockKindResolver: AssetLockKindResolver,
+    // Batch form of [walletRecordFor] for bulk metadata imports: one walker pass
+    // for many txids ([SdkTxStoreWalker.recordsFor]), keyed by lowercase display hex.
+    private val walletRecordsFor: suspend (DashDatabase, Collection<String>) -> Map<String, L1TxUiRecord> =
+        { db, displayHexes -> boundWalletRecordsOrEmpty(sdkService, db, displayHexes) },
     // The bound wallet's record for a txid as the history list sees it
     // ([SdkTxStoreWalker.recordFor]): reattributed, with its fee recovered.
     // Null when no wallet is bound or the tx is not the wallet's. A seam so
@@ -342,7 +367,7 @@ class SdkTxDetailProvider internal constructor(
         sdkService,
         txDisplayCacheDao,
         assetLockKindResolver,
-        { db, displayHex -> boundWalletRecordOrNull(sdkService, db, displayHex) }
+        walletRecordFor = { db, displayHex -> boundWalletRecordOrNull(sdkService, db, displayHex) }
     )
 
     /**
@@ -399,9 +424,9 @@ class SdkTxDetailProvider internal constructor(
         // NULL — Σin−Σout from the wallet's input TXOs, which the walker also uses
         // (persisted, or in memory for a pending send). See [correctedRecord].
         val record = correctedRecord(
-            db,
             entity,
-            txIdDisplayHex,
+            walletRecord = walletRecordFor(db, txIdDisplayHex.lowercase()),
+            cacheEntry = cacheEntryFor(txIdDisplayHex),
             derivedFee = derivedFeeDuffs(decoded, inputTxos.map { it?.amount })
         )
 
@@ -420,16 +445,22 @@ class SdkTxDetailProvider internal constructor(
         )
     }
 
+    /** The tx_display_cache row for [txIdDisplayHex], keyed by lowercase display hex. */
+    private suspend fun cacheEntryFor(txIdDisplayHex: String): TxDisplayCacheEntry? =
+        txDisplayCacheDao.getEntriesByIds(listOf(txIdDisplayHex.lowercase())).firstOrNull()
+
     /**
-     * The record the history list was built from for [entity], with the
-     * tx_display_cache correction applied. [derivedFee] is the Σin−Σout fee when
-     * the caller decoded the transaction, else null. Cheap: the walker's three
-     * indexed queries plus one cache read, no decode.
+     * The record the history list was built from for [entity]: the bound wallet's
+     * [walletRecord] when there is one, else the store row, with the
+     * tx_display_cache [cacheEntry] correction applied. [derivedFee] is the Σin−Σout
+     * fee when the caller decoded the transaction, else null. Pure: the caller
+     * fetches the inputs, one at a time for the detail sheet or once per batch for
+     * a metadata import.
      */
-    private suspend fun correctedRecord(
-        db: DashDatabase,
+    private fun correctedRecord(
         entity: TransactionEntity,
-        txIdDisplayHex: String,
+        walletRecord: L1TxUiRecord?,
+        cacheEntry: TxDisplayCacheEntry?,
         derivedFee: Long?
     ): L1TxUiRecord {
         // The fee the history list used: the store's, or — while the store still has it
@@ -443,7 +474,6 @@ class SdkTxDetailProvider internal constructor(
         // or in memory for a pending send. Reading it here keeps the sheet and the
         // list on the same net and fee (D-M-01). The raw store row is the fallback
         // when no wallet is bound.
-        val walletRecord = walletRecordFor(db, txIdDisplayHex.lowercase())
         val effectiveFee = walletRecord?.feeDuffs ?: entity.fee ?: derivedFee
         val baseRecord = (
             walletRecord ?: l1TxUiRecord(
@@ -472,9 +502,6 @@ class SdkTxDetailProvider internal constructor(
         //   send's engine net (fee included) from a fallback principal (fee excluded),
         //   since both carry the contact identity. Without a walker record,
         //   [detailSignedNet] reconstructs it from the row.
-        val cacheEntry = txDisplayCacheDao
-            .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
-            .firstOrNull()
         val cachedValue = cacheEntry?.valueSatoshis
         return if (
             cacheEntry != null && cachedValue != null && cachedValue != 0L &&
@@ -517,7 +544,12 @@ class SdkTxDetailProvider internal constructor(
         return try {
             val db = sdkService.databaseOrNull() ?: return null
             val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
-            correctedRecord(db, entity, txIdDisplayHex, derivedFee = null).toDefaultMetadata()
+            correctedRecord(
+                entity,
+                walletRecord = walletRecordFor(db, txIdDisplayHex),
+                cacheEntry = cacheEntryFor(txIdDisplayHex),
+                derivedFee = null
+            ).toDefaultMetadata()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -526,7 +558,51 @@ class SdkTxDetailProvider internal constructor(
         }
     }
 
+    /**
+     * [SdkTxMetadataSource] batch form, for a platform metadata sync that imports
+     * many SDK-only transactions. Same rows as [defaultMetadataFor] per txid, but
+     * the wallet records come from one [walletRecordsFor] pass and the cache rows
+     * from chunked reads, so the wallet-wide walker work runs once per batch, not
+     * once per txid. One indexed store read per txid remains.
+     */
+    override suspend fun defaultMetadataFor(txIds: Collection<TxId>): Map<TxId, TransactionMetadata> {
+        if (txIds.isEmpty()) return emptyMap()
+        return try {
+            val db = sdkService.databaseOrNull() ?: return emptyMap()
+            val txDao = db.transactionDao()
+            val entities = LinkedHashMap<String, Pair<TxId, TransactionEntity>>()
+            for (txId in txIds) {
+                val hex = txId.toString().lowercase()
+                val wire = displayTxIdToWireBytes(hex) ?: continue
+                txDao.getByTxid(wire)?.let { entities[hex] = txId to it }
+            }
+            if (entities.isEmpty()) return emptyMap()
+
+            val walletRecords = walletRecordsFor(db, entities.keys)
+            val cacheEntries = entities.keys.chunked(CACHE_READ_CHUNK)
+                .flatMap { txDisplayCacheDao.getEntriesByIds(it) }
+                .associateBy { it.rowId.lowercase() }
+            entities.entries.associate { (hex, txIdAndEntity) ->
+                val (txId, entity) = txIdAndEntity
+                txId to correctedRecord(
+                    entity,
+                    walletRecord = walletRecords[hex],
+                    cacheEntry = cacheEntries[hex],
+                    derivedFee = null
+                ).toDefaultMetadata()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("SDK store batch lookup for metadata of {} txid(s) failed", txIds.size, e)
+            emptyMap()
+        }
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+
+        /** Ids per tx_display_cache `IN (…)` read; SQLite caps bound variables at 999. */
+        private const val CACHE_READ_CHUNK = 500
     }
 }

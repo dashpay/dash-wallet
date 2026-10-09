@@ -123,6 +123,9 @@ class WalletTransactionMetadataProviderObserveTest {
             // The SDK store holds none of these transactions either.
             sdkTxMetadataSource = object : SdkTxMetadataSource {
                 override suspend fun defaultMetadataFor(txId: org.dash.wallet.common.data.TxId): TransactionMetadata? = null
+                override suspend fun defaultMetadataFor(
+                    txIds: Collection<org.dash.wallet.common.data.TxId>
+                ): Map<org.dash.wallet.common.data.TxId, TransactionMetadata> = emptyMap()
             }
         )
     }
