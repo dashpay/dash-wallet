@@ -93,6 +93,14 @@ interface TxGroupCacheDao {
     )
     suspend fun getGroupMemberTxIdsAfter(groupId: String, afterTxId: String, limit: Int): List<String>
 
+    /**
+     * How many members [groupId] has — an indexed count over the primary key. The
+     * post-cutover group re-sum checks it before writing, to detect a group that
+     * gained or lost members while its member nets were being read.
+     */
+    @Query("SELECT COUNT(*) FROM tx_group_cache WHERE groupId = :groupId")
+    suspend fun countGroupMembers(groupId: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entries: List<TxGroupCacheEntry>)
 

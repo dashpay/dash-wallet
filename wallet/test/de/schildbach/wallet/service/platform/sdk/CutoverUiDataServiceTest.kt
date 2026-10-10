@@ -35,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
@@ -1230,10 +1231,20 @@ class CutoverUiDataServiceTest {
         /** The store's CURRENT record nets, for the mixing-group re-sum (absent = not in the store). */
         var storeNets: Map<String, Long> = emptyMap()
 
+        /** [recordNetsFor] invocations — the re-sum's record-read count. */
+        var recordNetsCalls = 0
+
+        /** Called before each [recordNetsFor] answers, with its 1-based call number. */
+        var beforeRecordNets: (suspend (call: Int) -> Unit)? = null
+
         override suspend fun recordNetsFor(
             walletIdHex: String,
             txidHexes: Collection<String>
-        ): Map<String, Long> = storeNets.filterKeys { it in txidHexes }
+        ): Map<String, Long> {
+            val call = ++recordNetsCalls
+            beforeRecordNets?.invoke(call)
+            return storeNets.filterKeys { it in txidHexes }
+        }
 
         /** In-place record corrections the store reports (the walker's write-back signal). */
         val corrected = kotlinx.coroutines.flow.MutableSharedFlow<Set<String>>(extraBufferCapacity = 8)
@@ -4629,6 +4640,9 @@ class CutoverUiDataServiceTest {
             groups.firstOrNull { it.groupId == groupId }?.members.orEmpty()
                 .sorted().filter { it > after }.take(limit)
         }
+        coEvery { dao.countGroupMembers(any()) } coAnswers {
+            groups.firstOrNull { it.groupId == firstArg<String>() }?.members.orEmpty().size
+        }
         coEvery { dao.getGroupsForTxIds(any()) } coAnswers {
             val ids = firstArg<List<String>>().toSet()
             groups.flatMap { g ->
@@ -4806,5 +4820,111 @@ class CutoverUiDataServiceTest {
         assertEquals(0L, store.getValue(groupId).valueSatoshis)
         assertEquals(1, store.getValue(groupId).transactionAmount)
         coVerify(exactly = 0) { displayDao.updateGroupValueAndCount("crowdnode", any(), any()) }
+    }
+
+    @Test
+    fun mixingResumQueue_coalescesByGroupId_andRequeuesARunningGroupOnce() = runTest {
+        val queue = MixingResumQueue()
+        queue.enqueue(listOf("a", "b", "a"))
+        queue.enqueue(listOf("b"))
+        assertEquals("a", queue.take())
+        // "a" is being re-summed: corrections for it queue ONE more pass,
+        // however many arrive meanwhile.
+        queue.enqueue(listOf("a"))
+        queue.enqueue(listOf("a"))
+        assertEquals("b", queue.take())
+        assertEquals("a", queue.take())
+        assertNull(queue.poll())
+        // take() waits for the next request.
+        val next = backgroundScope.async { queue.take() }
+        runCurrent()
+        assertFalse(next.isCompleted)
+        queue.enqueue(listOf("c"))
+        runCurrent()
+        assertEquals("c", next.await())
+    }
+
+    @Test
+    fun mixingResum_largeGroupDoesNotHoldTxEventsBehindIt() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val members = (1_000 until 2_203).map { memberHex(it) } // 3 keyset pages
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = 200_002L, count = members.size))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, members)))
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val secondPage = CompletableDeferred<Unit>()
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = members.associateWith { -1L }
+            beforeRecordNets = { call -> if (call == 2) secondPage.await() }
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events
+        )
+        service.start()
+        runCurrent()
+
+        source.corrected.emit(setOf(members.first()))
+        runCurrent()
+        // The re-sum has read its first page and is held on the second.
+        assertEquals(2, source.recordNetsCalls)
+        assertEquals(200_002L, store.getValue(groupId).valueSatoshis)
+
+        // A live transaction lands mid-group: it is rendered NOW, between the
+        // group's pages, not after the whole group has been read.
+        val txid = displayHex(7)
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+        assertEquals(1_000_000L, store.getValue(txid).valueSatoshis)
+        assertEquals(2, source.recordNetsCalls)
+
+        // The re-sum then finishes with the same result as before.
+        secondPage.complete(Unit)
+        runCurrent()
+        assertEquals(3, source.recordNetsCalls)
+        assertEquals(-members.size.toLong(), store.getValue(groupId).valueSatoshis)
+        assertEquals(members.size, store.getValue(groupId).transactionAmount)
+    }
+
+    @Test
+    fun mixingResum_groupGrownWhileItWasRead_isReadAgainNotOverwritten() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val members = (1_000 until 2_203).mapTo(mutableListOf()) { memberHex(it) } // 3 keyset pages
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = 0L, count = members.size))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, members)))
+        val secondPage = CompletableDeferred<Unit>()
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = members.associateWith { -1L }
+            beforeRecordNets = { call -> if (call == 2) secondPage.await() }
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+        source.corrected.emit(setOf(members.first()))
+        runCurrent()
+        assertEquals(2, source.recordNetsCalls)
+
+        // While the read is held, a pass groups a new round into the same day
+        // (member + row extended, as syncDisplayCache does). Its txid sorts
+        // before the read's cursor, so the held read never sees it.
+        val newMember = memberHex(1)
+        members += newMember
+        source.storeNets = source.storeNets + (newMember to -500L)
+        store[groupId] = store.getValue(groupId).let {
+            it.copy(valueSatoshis = it.valueSatoshis - 500L, transactionAmount = it.transactionAmount + 1)
+        }
+        secondPage.complete(Unit)
+        runCurrent()
+
+        // The held tally (missing the new member) is NOT written; the group is
+        // read again and written once, complete.
+        assertEquals(6, source.recordNetsCalls)
+        assertEquals(-1_203L - 500L, store.getValue(groupId).valueSatoshis)
+        assertEquals(1_204, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(groupId, any(), any()) }
     }
 }
