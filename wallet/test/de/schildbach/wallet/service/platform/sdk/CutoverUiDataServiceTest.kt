@@ -4659,7 +4659,7 @@ class CutoverUiDataServiceTest {
     private fun memberHex(n: Int) = "%064x".format(n)
 
     @Test
-    fun mixingResum_plan_onlyStaleCoinJoinRowsWithPresentMembers() {
+    fun mixingResum_plan_onlyStaleCoinJoinRowsWithEveryMemberPresent() {
         val stale = mixingRow("coinjoin_2025-07-20", value = 200_002L, count = 1)
         // The born income-only net was summed at grouping time; the members
         // now net −446 over 2 grouped txs → value AND count corrected.
@@ -4671,10 +4671,17 @@ class CutoverUiDataServiceTest {
         assertNull(planMixingGroupResum(stale.copy(rowId = "crowdnode"), 2, 2, -446L))
         // No member in the store → nothing to re-derive from; left as is.
         assertNull(planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 0, presentNetSumDuffs = 0L))
-        // A member the store does not hold is left out of the value but still counted.
+        // A member the store does not hold has an UNKNOWN net, not a zero one:
+        // a complete cached total (−300 = −100 + −200, e.g. a dashj-era group)
+        // is never cut to the −100 of the one member the store holds.
+        val complete = mixingRow("coinjoin_2025-07-20", value = -300L, count = 2)
+        assertNull(planMixingGroupResum(complete, memberCount = 2, presentMemberCount = 1, presentNetSumDuffs = -100L))
+        // Even a stale row waits for every member rather than taking a partial sum.
+        assertNull(planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 1, presentNetSumDuffs = -100L))
+        // Once the missing member arrives the row is re-summed as usual.
         assertEquals(
-            MixingGroupResum("coinjoin_2025-07-20", -100L, 2),
-            planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 1, presentNetSumDuffs = -100L)
+            MixingGroupResum("coinjoin_2025-07-20", -250L, 2),
+            planMixingGroupResum(complete, memberCount = 2, presentMemberCount = 2, presentNetSumDuffs = -250L)
         )
     }
 
@@ -4690,8 +4697,9 @@ class CutoverUiDataServiceTest {
             // corrected to 0 (#979 / the walker's re-net), m2 nets −446.
             stale to mixingRow(stale, value = 200_002L - 446L, count = 2),
             correct to mixingRow(correct, value = -300L, count = 1),
-            // One member (m5) the SDK store does not hold.
-            partial to mixingRow(partial, value = -50L, count = 2),
+            // One member (m5) the SDK store does not hold: the complete cached
+            // total (−100 + −200) must survive the store's partial history.
+            partial to mixingRow(partial, value = -300L, count = 2),
             big to mixingRow(big, value = 0L, count = bigMembers.size),
             "crowdnode" to mixingRow("crowdnode", value = -1_000L, count = 3).copy(filterFlags = 0)
         )
@@ -4735,9 +4743,10 @@ class CutoverUiDataServiceTest {
         assertEquals("my memo", store.getValue(stale).comment)
         assertEquals(42L, store.getValue(stale).exchangeRateFiatValue)
         assertEquals("Mixing Transactions", store.getValue(stale).title)
-        // The absent member is left out of the value, still counted.
-        assertEquals(-100L, store.getValue(partial).valueSatoshis)
+        // A group with a member the store does not hold keeps its cached total.
+        assertEquals(-300L, store.getValue(partial).valueSatoshis)
         assertEquals(2, store.getValue(partial).transactionAmount)
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(partial, any(), any()) }
         // Multi-page group summed across every keyset page.
         assertEquals(-bigMembers.size.toLong(), store.getValue(big).valueSatoshis)
         // Correct and non-CoinJoin groups are never rewritten.
@@ -4745,15 +4754,24 @@ class CutoverUiDataServiceTest {
         coVerify(exactly = 0) { displayDao.updateGroupValueAndCount("crowdnode", any(), any()) }
         assertEquals(-1_000L, store.getValue("crowdnode").valueSatoshis)
 
-        // The next walk finds everything equal: no write loop (the absent
-        // member included).
+        // The next walk finds everything equal: no write loop, and the
+        // partial group is still left alone.
         testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
         runCurrent()
         assertEquals(2, source.reconcileWalks)
         coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(stale, any(), any()) }
-        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(partial, any(), any()) }
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(partial, any(), any()) }
         coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(big, any(), any()) }
-        coVerify(exactly = 3) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+        coVerify(exactly = 2) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+        assertEquals(-300L, store.getValue(partial).valueSatoshis)
+
+        // The missing member's record arrives: the group is re-summed from
+        // its complete, current history.
+        source.storeNets = source.storeNets + (memberHex(5) to -150L)
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(-250L, store.getValue(partial).valueSatoshis)
+        assertEquals(2, store.getValue(partial).transactionAmount)
     }
 
     @Test

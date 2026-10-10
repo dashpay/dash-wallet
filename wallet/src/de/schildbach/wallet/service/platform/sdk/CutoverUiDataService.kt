@@ -1249,15 +1249,20 @@ internal fun planMixingGroupUpdates(
  * (measured on two testnet wallets, A and B: +1.86 and +4.78 DASH shown where the
  * true sums were −0.085 and −0.012). This re-derives the row from its members
  * as they are NOW:
- *  - value = Σ current net of the [presentMemberCount] members the SDK store
- *    holds ([presentNetSumDuffs]); a member it does not hold is left out of
- *    the sum (deterministic, so it can never cause a write loop);
+ *  - value = Σ current net of every member ([presentNetSumDuffs]);
  *  - count = [memberCount], every `tx_group_cache` member of the group.
  *
+ * Only when the SDK store holds a current net for EVERY member
+ * ([presentMemberCount] == [memberCount]). A member the store does not hold
+ * has an UNKNOWN net, not a zero one: dashj-era groups share these group ids,
+ * so a cached total built from the dashj wallet (say −300 = −100 + −200) must
+ * not be cut to the −100 of the one member the store happens to hold. Such a
+ * group — including one with no member in the store yet (a store still
+ * filling, or a dashj-era group the store never saw) — keeps its cached value
+ * and count until the missing records arrive.
+ *
  * Only `coinjoin_<date>` rows are touched, and only their value and count —
- * title, memo, rate, time and flags are the other writers' business. A group
- * with NO member in the store (an SDK store still filling, or a dashj-era group
- * the store never saw) is left as it is: there is nothing to re-derive it from.
+ * title, memo, rate, time and flags are the other writers' business.
  * Pure — host-testable.
  */
 internal fun planMixingGroupResum(
@@ -1267,7 +1272,7 @@ internal fun planMixingGroupResum(
     presentNetSumDuffs: Long
 ): MixingGroupResum? {
     if (!existing.rowId.startsWith(MIXING_GROUP_ROWID_PREFIX)) return null
-    if (presentMemberCount <= 0) return null
+    if (presentMemberCount <= 0 || presentMemberCount != memberCount) return null
     if (existing.valueSatoshis == presentNetSumDuffs && existing.transactionAmount == memberCount) return null
     return MixingGroupResum(existing.rowId, presentNetSumDuffs, memberCount)
 }
@@ -5026,8 +5031,8 @@ class CutoverUiDataService internal constructor(
                 val missing = memberCount - presentCount
                 if (missing > 0 && mixingResumMissingLogged.add(groupId)) {
                     log.info(
-                        "mixing group {}: {} of {} member(s) are not in the SDK store — left out of " +
-                            "the group value",
+                        "mixing group {}: {} of {} member(s) are not in the SDK store — the group " +
+                            "row keeps its cached value until they arrive",
                         groupId, missing, memberCount
                     )
                 }
