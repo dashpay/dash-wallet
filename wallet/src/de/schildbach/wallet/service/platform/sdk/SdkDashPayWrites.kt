@@ -174,7 +174,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // whose message names the alias and the KeyguardManager state at throw
     // time — so it no longer contains "User not authenticated" and would fall
     // through to the generic arms without this.
-    t.message?.contains("as device-locked") == true ->
+    t.message?.contains(KEYSTORE_DEVICE_LOCKED_MARKER) == true ->
         SdkWriteResult.NotBroadcast(
             "signing failure (pre-broadcast): Keystore refused the signing key because " +
                 "it considers the device locked — ${t.message}",
@@ -194,7 +194,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // opposite ("no auth window"): a bare "User not authenticated" does not
     // say which gate or alias refused, and on the legacy alias it really is
     // the auth window.
-    t.message?.contains("User not authenticated") == true ->
+    t.message?.contains(KEYSTORE_UNAUTHENTICATED_MARKER) == true ->
         SdkWriteResult.NotBroadcast(
             "signing failure (pre-broadcast): Keystore refused the signing key as " +
                 "unauthenticated (the device's Keystore authentication or lock gate " +
@@ -304,6 +304,56 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     } == true ->
         SdkWriteResult.NotBroadcast("pre-broadcast shielded build-input validation failure", t)
     else -> SdkWriteResult.Ambiguous(t)
+}
+
+/**
+ * Message markers of the Android Keystore SIGNING REFUSALS that
+ * [classifyBroadcastFailure] reads as pre-broadcast (see its two Keystore
+ * arms). Shared with [isKeystoreSigningRefusal] so the classifier and the
+ * callers that react to a Keystore refusal can never drift apart.
+ *
+ * - [KEYSTORE_DEVICE_LOCKED_MARKER]: the SDK's `KeystoreDeviceLockedException`
+ *   (dashpay/platform#4643) — "Keystore denied '<op>' on lock-bound alias
+ *   '<alias>' as device-locked; KeyguardManager at throw time:
+ *   isDeviceLocked=<bool> …", surfaced through the FFI as a Generic error
+ *   carrying that text.
+ * - [KEYSTORE_UNAUTHENTICATED_MARKER]: Android's raw
+ *   `UserNotAuthenticatedException` on AAR lines older than #4643, or the
+ *   legacy auth-gated alias.
+ */
+internal const val KEYSTORE_DEVICE_LOCKED_MARKER = "as device-locked"
+internal const val KEYSTORE_UNAUTHENTICATED_MARKER = "User not authenticated"
+
+/**
+ * True when [t] is the Android Keystore refusing the identity signing key —
+ * the same two message shapes [classifyBroadcastFailure] maps to a
+ * pre-broadcast signing failure. Signing happens strictly before Platform
+ * submission, but on a FUNDED write (an identity registration built from an
+ * L1 asset lock) the L1 half may already be on chain when the signer refuses,
+ * so callers re-check their tracked funding before trusting "nothing spent".
+ */
+internal fun isKeystoreSigningRefusal(t: Throwable): Boolean =
+    t.message?.let {
+        it.contains(KEYSTORE_DEVICE_LOCKED_MARKER) || it.contains(KEYSTORE_UNAUTHENTICATED_MARKER)
+    } == true
+
+/**
+ * True when [t] is a Keystore signing refusal of the FALSE-LOCKED class: the
+ * Keystore denied a lock-bound key as device-locked while `KeyguardManager`
+ * reported the device UNLOCKED (the Keystore2 defect seen on HONOR/MagicOS,
+ * Google Issue Tracker 506989112). The SDK's `KeystoreDeviceLockedException`
+ * says so in its message (`isDeviceLocked=false` / `FALSE-LOCKED`). Unlike a
+ * genuinely locked device this is retryable immediately: once the SDK has
+ * recorded the defect, re-stored identity keys land under the never-lock-bound
+ * alias and the next signing attempt cannot be denied.
+ *
+ * A bare [KEYSTORE_UNAUTHENTICATED_MARKER] carries no lock-state sample, so it
+ * is never read as false-locked.
+ */
+internal fun isKeystoreFalseLockedRefusal(t: Throwable): Boolean {
+    val message = t.message ?: return false
+    return message.contains(KEYSTORE_DEVICE_LOCKED_MARKER) &&
+        (message.contains("isDeviceLocked=false") || message.contains("FALSE-LOCKED"))
 }
 
 /**

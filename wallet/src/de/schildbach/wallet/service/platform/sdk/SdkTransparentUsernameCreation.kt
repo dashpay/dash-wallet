@@ -26,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -433,7 +434,9 @@ class SdkTransparentUsernameCreation internal constructor(
         restoring: Boolean
     ) -> Unit = { _, _, _, _ -> },
     /** Scope for [submit]; null (tests' default path) makes submit inert. */
-    private val executorScope: CoroutineScope? = null
+    private val executorScope: CoroutineScope? = null,
+    /** Back-off between false-locked auto-resume attempts; injectable for tests. */
+    private val pause: suspend (delayMs: Long) -> Unit = { delay(it) }
 ) {
     @Inject
     constructor(
@@ -551,9 +554,12 @@ class SdkTransparentUsernameCreation internal constructor(
     }
 
     /**
-     * The full pipeline. One funding attempt (resume-gated); the
-     * [SdkWriteResult] three-valued contract holds
-     * ([SdkWriteResult.Ambiguous] is never retried by anyone).
+     * The full pipeline. One funding attempt (resume-gated) — plus, only
+     * after a FALSE-LOCKED Keystore signing refusal with the asset lock
+     * already tracked, at most [AUTO_RESUME_DELAYS_MS].size RESUMES of that
+     * same lock (never a second fresh build); the [SdkWriteResult]
+     * three-valued contract holds ([SdkWriteResult.Ambiguous] is never
+     * retried by anyone).
      */
     suspend fun createUsernameTransparent(
         username: String,
@@ -674,7 +680,10 @@ class SdkTransparentUsernameCreation internal constructor(
             return notBroadcast("registration key persist failed", t)
         }
 
-        // THE funding spend — one attempt (resume or fresh build).
+        // THE funding spend — one attempt (resume or fresh build), plus the
+        // bounded false-locked auto-resume below. [fundingLock] is the lock the
+        // identity was finally funded from (null = the fresh build's own).
+        var fundingLock = existingLock
         val identityId = try {
             if (existingLock != null) {
                 log.info(
@@ -694,18 +703,36 @@ class SdkTransparentUsernameCreation internal constructor(
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            return when (val classified = classifyBroadcastFailure(t)) {
-                is SdkWriteResult.NotBroadcast -> {
-                    log.warn("transparent identity funding rejected pre-broadcast", t)
-                    classified
+            // A Keystore SIGNING refusal is pre-broadcast for the Platform
+            // transition, but the SDK builds AND BROADCASTS the L1 asset lock
+            // BEFORE it signs IdentityCreate — so "nothing spent" is only true
+            // when no lock is tracked. MO-1023: on a false-locked device the
+            // lock was on chain (instant-locked) while this reported NotSent and
+            // retracted the tile; a manual retry then always resumed it.
+            val recovered = if (isKeystoreSigningRefusal(t)) {
+                recoverFromKeystoreRefusal(walletId, identityIndex, t)
+            } else {
+                null
+            }
+            when (recovered) {
+                is KeystoreRefusalRecovery.Resumed -> {
+                    fundingLock = recovered.lock
+                    recovered.identityId
                 }
-                else -> {
-                    log.error(
-                        "transparent identity funding outcome unconfirmed — the asset lock MAY be on " +
-                            "chain; it stays durably tracked and the resume gate re-consumes it. Do NOT retry",
-                        t
-                    )
-                    SdkWriteResult.Ambiguous(t)
+                is KeystoreRefusalRecovery.Failed -> return recovered.result
+                null -> return when (val classified = classifyBroadcastFailure(t)) {
+                    is SdkWriteResult.NotBroadcast -> {
+                        log.warn("transparent identity funding rejected pre-broadcast", t)
+                        classified
+                    }
+                    else -> {
+                        log.error(
+                            "transparent identity funding outcome unconfirmed — the asset lock MAY be on " +
+                                "chain; it stays durably tracked and the resume gate re-consumes it. Do NOT retry",
+                            t
+                        )
+                        SdkWriteResult.Ambiguous(t)
+                    }
                 }
             }
         }
@@ -728,11 +755,12 @@ class SdkTransparentUsernameCreation internal constructor(
         // simply stays labelled "Internal". Persist the DISPLAY-hex (lowercase,
         // reversed-wire) form matching Sha256Hash.toString() / tx_display_cache.
         try {
-            // The resume branch already holds the lock (wire-order txid → display).
+            // The resume branch (incl. a false-locked auto-resume) already holds
+            // the lock (wire-order txid → display).
             // The fresh branch's register CONSUMED the lock, so the eligible-only
             // recovery query now DROPS it — read the retaining `asset_locks` Room
             // table instead (already display form, no displayHexOf conversion).
-            val lockTxidDisplayHex = existingLock?.let { displayHexOf(it.outpointTxid) }
+            val lockTxidDisplayHex = fundingLock?.let { displayHexOf(it.outpointTxid) }
                 ?: source.registrationAssetLockTxidDisplayHex(walletId, identityIndex)
             if (lockTxidDisplayHex != null) {
                 // Seed the kind in-memory FIRST (synchronous, same turn) so the
@@ -888,6 +916,146 @@ class SdkTransparentUsernameCreation internal constructor(
         )
     }
 
+    /** Outcome of [recoverFromKeystoreRefusal]. */
+    private sealed class KeystoreRefusalRecovery {
+        /** An automatic resume funded the identity from [lock]. */
+        class Resumed(val identityId: ByteArray, val lock: TrackedAssetLock) : KeystoreRefusalRecovery()
+
+        /** No automatic resume succeeded; [result] is the terminal outcome to return. */
+        class Failed(val result: SdkWriteResult<Nothing>) : KeystoreRefusalRecovery()
+    }
+
+    /**
+     * The funding call ([failure]) was refused by the Android Keystore signer
+     * ([isKeystoreSigningRefusal]). Returns null when NO asset lock is tracked
+     * for [identityIndex] (or the lookup failed) — the refusal truly was
+     * pre-broadcast and the caller keeps today's classification.
+     *
+     * When a lock IS tracked, the funds are committed on L1 and a retry must
+     * RESUME that lock (the resume gate's own contract — never a second fresh
+     * build). For the FALSE-LOCKED class ([isKeystoreFalseLockedRefusal]) the
+     * SDK has by now recorded the Keystore defect, so re-storing the keys puts
+     * them under the never-lock-bound alias and a resume signs fine: this
+     * re-runs the key persist + [TransparentUsernameSource.resumeRegistrationFromAssetLock]
+     * up to [AUTO_RESUME_DELAYS_MS].size times. A genuinely locked device
+     * (or a bare "User not authenticated") is not spun on — it cannot succeed
+     * until the user unlocks.
+     *
+     * If no automatic resume lands, the result is
+     * [SdkWriteResult.NotBroadcast] with [REASON_FUNDS_LOCKED_RESUMABLE]
+     * (unless a resume attempt itself failed ambiguously — then
+     * [SdkWriteResult.Ambiguous]). NotBroadcast is deliberate: it is the only
+     * outcome the executor + UI treat as re-submittable (NotSent), and the
+     * NEXT submit is guaranteed to take the resume gate with this same lock,
+     * so it cannot double-pay; the requested username stays persisted (the
+     * foreground hold only resets the creation state to NONE, which is what
+     * re-enables the Create entry point). Ambiguous would instead pin the
+     * executor at MayHaveGoneThrough and block the resume until a restart.
+     */
+    private suspend fun recoverFromKeystoreRefusal(
+        walletId: String,
+        identityIndex: Int,
+        failure: Throwable
+    ): KeystoreRefusalRecovery? {
+        val lock = try {
+            source.unresolvedRegistrationAssetLock(walletId, identityIndex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn(
+                "Keystore refused the identity signing key at index {}, and the tracked-lock re-check failed; " +
+                    "classifying the refusal as-is",
+                identityIndex,
+                t
+            )
+            return null
+        }
+        if (lock == null) {
+            log.info(
+                "Keystore refused the identity signing key at index {} and no asset lock is tracked — " +
+                    "the refusal was pre-broadcast",
+                identityIndex
+            )
+            return null
+        }
+        if (!isKeystoreFalseLockedRefusal(failure)) {
+            log.warn(
+                "Keystore refused the identity signing key at index {} (not false-locked; no auto-resume) " +
+                    "AFTER the asset lock was built (status={}); the next submit resumes it",
+                identityIndex,
+                lock.status,
+                failure
+            )
+            return KeystoreRefusalRecovery.Failed(lockedResumable(failure))
+        }
+        log.warn(
+            "Keystore false-locked refusal at index {} AFTER the asset lock was built (status={}); " +
+                "auto-resuming from the tracked lock",
+            identityIndex,
+            lock.status,
+            failure
+        )
+        var lastFailure = failure
+        for ((attempt, delayMs) in AUTO_RESUME_DELAYS_MS.withIndex()) {
+            pause(delayMs)
+            log.info(
+                "auto-resume {}/{} of transparent identity funding at index {} from tracked asset lock (status={})",
+                attempt + 1,
+                AUTO_RESUME_DELAYS_MS.size,
+                identityIndex,
+                lock.status
+            )
+            // Re-persist with the RESUME key set (4 keys — a resume must never
+            // grow past the set the original attempt committed to). Now that
+            // the SDK recorded the defect, these land under the unbound alias.
+            val keys = try {
+                source.previewRegistrationKeySet(walletId, identityIndex, includeDashPayKeys = false)
+                    .also { check(it.isNotEmpty()) { "empty registration key set" } }
+                    .onEach { key ->
+                        source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
+                        key.privateKey.fill(0)
+                    }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                // Nothing new was submitted — the lock simply stays tracked.
+                log.warn("auto-resume {} at index {}: key re-persist failed; stopping", attempt + 1, identityIndex, t)
+                return KeystoreRefusalRecovery.Failed(lockedResumable(t))
+            }
+            try {
+                val identityId = source.resumeRegistrationFromAssetLock(walletId, lock, identityIndex, keys)
+                log.info("auto-resume {} at index {} succeeded", attempt + 1, identityIndex)
+                return KeystoreRefusalRecovery.Resumed(identityId, lock)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                lastFailure = t
+                if (isKeystoreFalseLockedRefusal(t)) {
+                    log.warn("auto-resume {} at index {} refused false-locked again", attempt + 1, identityIndex, t)
+                    continue
+                }
+                if (classifyBroadcastFailure(t) is SdkWriteResult.Ambiguous) {
+                    log.error(
+                        "auto-resume {} at index {} outcome unconfirmed — the identity create MAY have been " +
+                            "submitted; the lock stays tracked and the resume gate re-consumes it. Do NOT retry",
+                        attempt + 1,
+                        identityIndex,
+                        t
+                    )
+                    return KeystoreRefusalRecovery.Failed(SdkWriteResult.Ambiguous(t))
+                }
+                log.warn("auto-resume {} at index {} failed pre-broadcast; stopping", attempt + 1, identityIndex, t)
+                return KeystoreRefusalRecovery.Failed(lockedResumable(t))
+            }
+        }
+        log.warn(
+            "auto-resume exhausted at index {}: the asset lock (status={}) stays tracked; the next submit resumes it",
+            identityIndex,
+            lock.status
+        )
+        return KeystoreRefusalRecovery.Failed(lockedResumable(lastFailure))
+    }
+
+    private fun lockedResumable(cause: Throwable) =
+        SdkWriteResult.NotBroadcast(REASON_FUNDS_LOCKED_RESUMABLE, cause)
+
     /**
      * One REQUIRED, state-tracked DPNS registration for an identity that
      * already exists on chain. Drives the creation state around
@@ -1009,5 +1177,21 @@ class SdkTransparentUsernameCreation internal constructor(
 
         /** BIP44 account the identity asset lock is funded from (same as the SDK's plain send). */
         private const val ACCOUNT_INDEX = 0
+
+        /**
+         * Back-off before each automatic resume after a FALSE-LOCKED Keystore
+         * refusal (see [recoverFromKeystoreRefusal]) — bounded to two attempts.
+         */
+        internal val AUTO_RESUME_DELAYS_MS = longArrayOf(500L, 1_500L)
+
+        /**
+         * [SdkWriteResult.NotBroadcast] reason when the Platform transition was
+         * refused pre-broadcast but the identity's L1 asset lock IS built and
+         * tracked: the funds are committed and the next submit RESUMES that
+         * lock (no second payment).
+         */
+        internal const val REASON_FUNDS_LOCKED_RESUMABLE =
+            "identity create not signed (Keystore refused the signing key); the funding asset lock is " +
+                "tracked and the next attempt resumes it at no extra cost"
     }
 }
