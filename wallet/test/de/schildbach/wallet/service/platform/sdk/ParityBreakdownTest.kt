@@ -239,6 +239,21 @@ class ParityBreakdownTest {
     }
 
     @Test
+    fun usable_onlyWhenComputedAtOrAfterDashjCaughtUp() {
+        // The hourly slot may only be spent on a result the verdict can accept.
+        // D-27TA-01: a run that beat dashj to 100 % was rejected by the verdict
+        // AND recorded against the cadence, so the row read "not established"
+        // for up to an hour after parity was established. Measured at 49 and 52
+        // minutes on two wallets in QA run 27.
+        assertFalse("dashj has not caught up at all", parityBreakdownIsUsable(1_000L, null))
+        assertFalse("computed before the catch-up", parityBreakdownIsUsable(999L, 1_000L))
+        // The restart race: the stamp and the run land in the same millisecond.
+        // Equal is usable — it is the same test the verdict applies.
+        assertTrue("computed at the catch-up moment", parityBreakdownIsUsable(1_000L, 1_000L))
+        assertTrue("computed after", parityBreakdownIsUsable(1_001L, 1_000L))
+    }
+
+    @Test
     fun report_getsABreakdownOnceCommitted_orWithTheDiagnosticBeforeTheCutover() {
         assertTrue(parityBreakdownAppliesToReport(cutoverCommitted = true, dashjDiagnosticEnabled = false))
         assertTrue(parityBreakdownAppliesToReport(cutoverCommitted = true, dashjDiagnosticEnabled = true))

@@ -718,6 +718,18 @@ internal enum class ParityBreakdownTrigger(val label: String) {
  * Whether the hourly [ParityBreakdownTrigger.PROBE] run is due, given when
  * this process last completed one (null = not yet).
  */
+/**
+ * Whether a finished breakdown is one the diagnostic verdict can actually use:
+ * computed at or after the moment dashj reached 100 %.
+ *
+ * The same test `BlockchainServiceImpl` applies to the findings it reads, kept
+ * here so the harness can apply it to its own cadence. A run that fails it is
+ * not wrong — its dashj side is simply incomplete — but it can never become
+ * the verdict, so it must not consume the hourly slot.
+ */
+internal fun parityBreakdownIsUsable(computedAtMs: Long, dashjCaughtUpAtMs: Long?): Boolean =
+    dashjCaughtUpAtMs != null && computedAtMs >= dashjCaughtUpAtMs
+
 internal fun parityBreakdownDue(
     nowMs: Long,
     lastRunMs: Long?,

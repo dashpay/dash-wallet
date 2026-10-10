@@ -4062,6 +4062,37 @@ class L1ShadowSyncService internal constructor(
     @Volatile
     private var lastBreakdownRunMs: Long? = null
 
+    /**
+     * When dashj last reached 100 % this stretch, as
+     * `BlockchainServiceImpl.dashjCaughtUpAtMs` stamped it — or null while it
+     * is still behind (or the diagnostic is off).
+     *
+     * The breakdown has two gates and they used to disagree. This one decides
+     * whether a run is WORTH STARTING; the diagnostic's own freshness check
+     * decides whether its result may be used, and only accepts findings
+     * computed at or after this moment. A run launched while dashj was behind
+     * therefore produced findings the verdict could never accept — and still
+     * consumed the hourly slot, so the readout said "full parity not
+     * established" for up to an hour after it was. Measured at 49 and 52
+     * minutes on two wallets in QA run 27.
+     *
+     * Volatile rather than locked: written from the service's publish path,
+     * read from the probe loop and the breakdown's own completion.
+     */
+    @Volatile
+    private var dashjCaughtUpAtMs: Long? = null
+
+    /**
+     * Tell the harness when dashj reached 100 % ([atMs]), or that it is behind
+     * again (null). Called by the diagnostic as it stamps its own catch-up
+     * moment, so both gates read one fact instead of two.
+     */
+    fun dashjCaughtUp(atMs: Long?) {
+        if (dashjCaughtUpAtMs == atMs) return
+        dashjCaughtUpAtMs = atMs
+        log.info("ParityBreakdown: dashj caught-up stamp {}", atMs ?: "cleared (dashj is behind)")
+    }
+
     /** After a failed or skipped run, no hourly attempt before this (wall clock, [nowMs]). */
     @Volatile
     private var breakdownRetryNotBeforeMs = 0L
@@ -4182,6 +4213,12 @@ class L1ShadowSyncService internal constructor(
      */
     private fun maybeLaunchParityBreakdown(walletIdHex: String) {
         if (!sdkCaughtUpForBreakdown()) return
+        // dashj still behind: the comparison would be against a partial dashj
+        // set — every transaction it has not reached yet counts as sdk-only —
+        // and the verdict would reject the result anyway for being older than
+        // the catch-up moment. Starting it would spend the hourly slot on an
+        // answer nobody can use.
+        if (dashjCaughtUpAtMs == null) return
         if (inFlightParityBreakdown(breakdownRun) != null) return
         val now = nowMs()
         if (now < breakdownRetryNotBeforeMs) return
@@ -4336,7 +4373,21 @@ class L1ShadowSyncService internal constructor(
         synchronized(breakdownLock) {
             if (epoch == breakdownEpoch) {
                 if (result is ParityBreakdownRunResult.Done) {
-                    lastBreakdownRunMs = result.stored.computedAtMs
+                    // Spend the hourly slot only on a result the verdict can
+                    // accept. The stamp can move WHILE a run is in flight —
+                    // after an app restart the run and the stamp land in the
+                    // same second — and a run that lost that race must not
+                    // lock the next one out for an hour.
+                    if (parityBreakdownIsUsable(result.stored.computedAtMs, dashjCaughtUpAtMs)) {
+                        lastBreakdownRunMs = result.stored.computedAtMs
+                    } else {
+                        log.info(
+                            "ParityBreakdown: computed at {} but dashj caught up at {} — not recorded " +
+                                "against the hourly cadence, the next probe recomputes",
+                            result.stored.computedAtMs,
+                            dashjCaughtUpAtMs
+                        )
+                    }
                 } else {
                     breakdownRetryNotBeforeMs = nowMs() + PARITY_BREAKDOWN_RETRY_MS
                 }

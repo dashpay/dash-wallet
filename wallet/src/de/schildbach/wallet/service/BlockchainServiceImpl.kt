@@ -3754,8 +3754,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     "dashj-sync-diagnostic: dashj chain caught up — showing 'Verifying' " +
                         "until a parity report computed against the caught-up state arrives"
                 )
+                // The harness gates its hourly breakdown on the same moment:
+                // a run started while dashj was behind produces findings this
+                // method will reject, and used to spend the slot anyway.
+                l1ShadowSyncService.dashjCaughtUp(dashjCaughtUpAtMs)
             }
         } else {
+            if (dashjCaughtUpAtMs != null) l1ShadowSyncService.dashjCaughtUp(null)
             dashjCaughtUpAtMs = null
         }
         val report = l1ShadowSyncService.latestParity.value

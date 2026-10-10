@@ -3912,9 +3912,60 @@ class L1ShadowSyncServiceTest {
         val source = breakdownSource()
         val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
         assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // the probe will not start one until dashj is up
         source.driveSyncedEdgesUntil { service.latestParityBreakdown(walletIdHex) != null }
         val text = checkNotNull(service.latestParityBreakdown(walletIdHex)).text
         assertTrue(text, text.contains("trigger=probe"))
+        service.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_waitsForDashj_andAnUnusableRunDoesNotSpendTheHour() = runBlocking {
+        // D-27TA-01, found on build 33. The probe gated only on the SDK being
+        // caught up, so with dashj still downloading it ran, produced findings
+        // the verdict rejects for being older than dashj's catch-up moment, and
+        // recorded the run against the hourly cadence anyway. The readout then
+        // said "full parity not established" for up to an hour after it was —
+        // 49 and 52 minutes, measured on two wallets.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+
+        // dashj behind: the probe ticks and the breakdown does NOT start.
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("a run now could never become the verdict", 0, source.breakdownDashjCalls)
+
+        // dashj catches up at a moment LATER than anything this run can compute
+        // (nowMs is fixed at 1_000_000), so every result is unusable. The slot
+        // must stay free: a run that lost the race must not lock out the next.
+        service.dashjCaughtUp(2_000_000L)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+        val afterFirst = source.breakdownDashjCalls
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls > afterFirst }
+        service.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_aUsableRunDoesTakeTheHour() = runBlocking {
+        // The other half: once the result IS one the verdict can accept, the
+        // hourly cadence must hold, or the fix would turn a wasted slot into a
+        // breakdown on every probe tick.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // well before the fixed 1_000_000 clock
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("the hour is spent, so no second run", 1, source.breakdownDashjCalls)
         service.stop()
     }
 
@@ -3951,6 +4002,7 @@ class L1ShadowSyncServiceTest {
         val source = breakdownSource().apply { dashjFacts = null }
         val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
         assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // the probe will not start a run until dashj is up
         source.driveSyncedEdgesUntil { source.breakdownDashjCalls > 0 }
         repeat(5) {
             source.progressFlow.value = SpvSyncProgressData.EMPTY
