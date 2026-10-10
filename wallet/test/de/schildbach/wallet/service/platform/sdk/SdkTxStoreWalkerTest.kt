@@ -1492,6 +1492,21 @@ class SdkTxStoreWalkerTest {
     }
 
     @Test
+    fun coinJoin_recordsForWithoutListener_stillPersistsTheCorrection() {
+        // The mixing re-sum reads its members through a walker with NO
+        // corrections listener (the nets it gets back already carry the
+        // correction). The correction must still be persisted, exactly once.
+        val ids = seedCoinJoinRound()
+        val quiet = SdkTxStoreWalker(db = db, walletId = walletId, pageThrottleMs = 0L, payloadFacts = coinJoinFacts)
+        val served = quiet.recordsFor(listOf(displayHexOf(ids.round)))
+        assertEquals(0L, served.single().netAmountDuffs)
+        assertEquals(0L, storedShape(ids.round).second)
+        queryLog.clear()
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(0, queryLog.count { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
     fun recomputeCoinJoinRecordNet_netOnly() {
         val born = l1TxUiRecord(txid(85), 2 * denom, 50L, 3, 3, 1_700_000_000, 0)
         val fixed = recomputeCoinJoinRecordNet(born, spentOwnedDuffs = 2 * denom, fundedOwnedDuffs = 2 * denom - 10)

@@ -1589,6 +1589,11 @@ interface CutoverUiSource {
      * row's value from its members. Callers pass bounded batches. Default
      * empty: sources without a store (test fixtures) — every group then reads
      * as "no member present" and is left untouched.
+     *
+     * A correction these reads persist is NOT reported on
+     * [observeCorrectedRecordTxids]: the returned nets already carry it, and
+     * the re-sum that asked is the one consumer of that signal — reporting it
+     * would only queue the same group again.
      */
     suspend fun recordNetsFor(
         walletIdHex: String,
@@ -1923,10 +1928,22 @@ internal class DashSdkCutoverUiSource(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
+    /**
+     * A walker over [walletId]. [reportCorrections] false is for the mixing
+     * re-sum's own member reads ([recordNetsFor]): the corrections they persist
+     * are already in the nets they return, so signalling them would only
+     * re-queue the group being re-summed — one extra full-group pass per
+     * corrected page.
+     */
     private fun walker(
         db: org.dashfoundation.dashsdk.persistence.DashDatabase,
-        walletId: ByteArray
-    ) = SdkTxStoreWalker(db, walletId, onCorrectionsPersisted = { correctedRecordTxids.tryEmit(it) })
+        walletId: ByteArray,
+        reportCorrections: Boolean = true
+    ) = SdkTxStoreWalker(
+        db,
+        walletId,
+        onCorrectionsPersisted = if (reportCorrections) ({ correctedRecordTxids.tryEmit(it) }) else null
+    )
 
     override fun observeCorrectedRecordTxids(): Flow<Set<String>> = correctedRecordTxids
 
@@ -1938,7 +1955,9 @@ internal class DashSdkCutoverUiSource(
         val walletId = walletIdFromHex(walletIdHex) ?: return emptyMap()
         val db = database()
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            walker(db, walletId).recordsFor(txidHexes).associate { it.txidHex to it.netAmountDuffs }
+            walker(db, walletId, reportCorrections = false)
+                .recordsFor(txidHexes)
+                .associate { it.txidHex to it.netAmountDuffs }
         }
     }
 

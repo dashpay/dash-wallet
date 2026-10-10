@@ -1237,12 +1237,25 @@ class CutoverUiDataServiceTest {
         /** Called before each [recordNetsFor] answers, with its 1-based call number. */
         var beforeRecordNets: (suspend (call: Int) -> Unit)? = null
 
+        /**
+         * When set, [recordNetsFor] reports each txid it reads as corrected on
+         * [corrected] — once per txid, as the store's compare-and-set write
+         * corrects a record once. Models a re-sum read whose corrections come
+         * back as store-correction signals.
+         */
+        var reportCorrectionsOnRead = false
+        private val reportedCorrections = HashSet<String>()
+
         override suspend fun recordNetsFor(
             walletIdHex: String,
             txidHexes: Collection<String>
         ): Map<String, Long> {
             val call = ++recordNetsCalls
             beforeRecordNets?.invoke(call)
+            if (reportCorrectionsOnRead) {
+                val fresh = txidHexes.filterTo(HashSet()) { reportedCorrections.add(it) }
+                if (fresh.isNotEmpty()) corrected.emit(fresh)
+            }
             return storeNets.filterKeys { it in txidHexes }
         }
 
@@ -4926,5 +4939,40 @@ class CutoverUiDataServiceTest {
         assertEquals(-1_203L - 500L, store.getValue(groupId).valueSatoshis)
         assertEquals(1_204, store.getValue(groupId).transactionAmount)
         coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(groupId, any(), any()) }
+    }
+
+    @Test
+    fun mixingResum_correctionsReportedByItsOwnReads_costAtMostOneMorePass() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val members = (10_000 until 20_000).map { memberHex(it) }
+        val pages = members.size / CutoverUiDataService.MIXING_RESUM_PAGE // 20
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = 0L, count = members.size))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, members)))
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = members.associateWith { -1L }
+            // Every page the re-sum reads corrects (and reports) its records.
+            reportCorrectionsOnRead = true
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        source.corrected.emit(setOf(members.first()))
+        runCurrent()
+
+        // The 20 correction batches the first pass reports re-queue the group
+        // ONCE (coalesced by group id) — one more pass, not one more full pass
+        // per corrected page (20 × 20 further reads).
+        assertEquals(2 * pages, source.recordNetsCalls)
+        assertEquals(-members.size.toLong(), store.getValue(groupId).valueSatoshis)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(groupId, any(), any()) }
+        // And it settles: nothing further is queued.
+        testScheduler.advanceTimeBy(1_000)
+        runCurrent()
+        assertEquals(2 * pages, source.recordNetsCalls)
     }
 }
