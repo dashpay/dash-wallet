@@ -34,6 +34,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -49,6 +50,12 @@ import java.nio.file.Files
 class ParityBreakdownTest {
 
     private fun h(n: Int): Sha256Hash = Sha256Hash.wrap(String.format("%064x", n))
+
+    /** An SDK entry with a height but no stored net — the shape these tests had before values were compared. */
+    private fun sdkAt(height: Int): SdkTxFacts = SdkTxFacts(height, null)
+
+    /** An SDK entry with both a height and a stored net. */
+    private fun sdkAt(height: Int, net: Long): SdkTxFacts = SdkTxFacts(height, net)
 
     private val last = 1_000
 
@@ -140,7 +147,7 @@ class ParityBreakdownTest {
             DashjTxFacts(h(3), last + 1, netDuffs = 7),
             DashjTxFacts(h(4), last, netDuffs = 8)
         )
-        val sdk = mapOf(h(1) to 10, h(2) to last + 50, h(3) to last + 1)
+        val sdk = mapOf(h(1) to sdkAt(10), h(2) to sdkAt(last + 50), h(3) to sdkAt(last + 1))
         val b = computeParityBreakdown(txs, sdk, last)
 
         assertEquals(3, b.dashjConsidered)
@@ -174,13 +181,13 @@ class ParityBreakdownTest {
 
     @Test
     fun sdkOnly_isSplitAtDashjsLastBlock_withCappedLowestHeightExamples() {
-        val sdk = HashMap<Sha256Hash, Int>()
-        (1..25).forEach { sdk[h(100 + it)] = last - it } // at/below: heights 975..999
-        sdk[h(200)] = last // exactly at the last block counts as at/below
-        sdk[h(201)] = last + 1
-        sdk[h(202)] = last + 500
-        sdk[h(203)] = 0 // no height
-        sdk[h(1)] = 5 // shared with dashj
+        val sdk = HashMap<Sha256Hash, SdkTxFacts>()
+        (1..25).forEach { sdk[h(100 + it)] = sdkAt(last - it) } // at/below: heights 975..999
+        sdk[h(200)] = sdkAt(last) // exactly at the last block counts as at/below
+        sdk[h(201)] = sdkAt(last + 1)
+        sdk[h(202)] = sdkAt(last + 500)
+        sdk[h(203)] = sdkAt(0) // no height
+        sdk[h(1)] = sdkAt(5) // shared with dashj
         val b = computeParityBreakdown(listOf(DashjTxFacts(h(1), 5)), sdk, last)
 
         assertEquals(30, b.sdkTotal)
@@ -202,7 +209,7 @@ class ParityBreakdownTest {
             DashjTxFacts(h(2), NO_BLOCK, dead = true, coinJoinType = CoinJoinTransactionType.Mixing),
             DashjTxFacts(h(3), NO_BLOCK, dead = true) // shared: not counted
         )
-        val b = computeParityBreakdown(txs, mapOf(h(3) to 0), last)
+        val b = computeParityBreakdown(txs, mapOf(h(3) to sdkAt(0)), last)
         assertEquals(2, b.dashjOnlyDead)
         assertEquals(1, group(b, DashjOnlyGroup.UNCONFIRMED).count)
     }
@@ -232,6 +239,21 @@ class ParityBreakdownTest {
     }
 
     @Test
+    fun usable_onlyWhenComputedAtOrAfterDashjCaughtUp() {
+        // The hourly slot may only be spent on a result the verdict can accept.
+        // D-27TA-01: a run that beat dashj to 100 % was rejected by the verdict
+        // AND recorded against the cadence, so the row read "not established"
+        // for up to an hour after parity was established. Measured at 49 and 52
+        // minutes on two wallets in QA run 27.
+        assertFalse("dashj has not caught up at all", parityBreakdownIsUsable(1_000L, null))
+        assertFalse("computed before the catch-up", parityBreakdownIsUsable(999L, 1_000L))
+        // The restart race: the stamp and the run land in the same millisecond.
+        // Equal is usable — it is the same test the verdict applies.
+        assertTrue("computed at the catch-up moment", parityBreakdownIsUsable(1_000L, 1_000L))
+        assertTrue("computed after", parityBreakdownIsUsable(1_001L, 1_000L))
+    }
+
+    @Test
     fun report_getsABreakdownOnceCommitted_orWithTheDiagnosticBeforeTheCutover() {
         assertTrue(parityBreakdownAppliesToReport(cutoverCommitted = true, dashjDiagnosticEnabled = false))
         assertTrue(parityBreakdownAppliesToReport(cutoverCommitted = true, dashjDiagnosticEnabled = true))
@@ -254,7 +276,7 @@ class ParityBreakdownTest {
             DashjTxFacts(h(6), 904),
             DashjTxFacts(h(7), 905)
         )
-        val sdk = mapOf(h(7) to 905, h(8) to 950, h(9) to 1_200, h(10) to 0)
+        val sdk = mapOf(h(7) to sdkAt(905), h(8) to sdkAt(950), h(9) to sdkAt(1_200), h(10) to sdkAt(0))
         return computeParityBreakdown(txs, sdk, last)
     }
 
@@ -279,6 +301,7 @@ class ParityBreakdownTest {
                 "    unconfirmed=1 net=-3000\n" +
                 "    moves-money=2 net=+249000000\n" +
                 "    other=1 net=0\n" +
+                "  value: compared=0 differs=0 unknown=1\n" +
                 "  moves-money txids (2 of 2, largest |net| first):\n" +
                 "    $h3 height=902 net=+250000000 date=2023-11-14T22:13:20Z received\n" +
                 "    $h4 height=903 net=-1000000 date=2023-11-14T22:15:00Z coinjoin-send/sent\n" +
@@ -365,8 +388,11 @@ class ParityBreakdownTest {
         assertNull(sdkStillProcessingReason(sdkWalletHeight = 1_000, dashjLastBlockSeenHeight = 1_000))
         // A held dashj far below the SDK: nothing to wait for.
         assertNull(sdkStillProcessingReason(sdkWalletHeight = 1_400_000, dashjLastBlockSeenHeight = 1_000))
-        // dashj has seen no block: nothing confirmed to wait for.
-        assertNull(sdkStillProcessingReason(sdkWalletHeight = 0, dashjLastBlockSeenHeight = -1))
+        // dashj has seen no block. This is now REFUSED rather than waved
+        // through: a breakdown computed against an empty dashj wallet reports
+        // dashj-only=0 / sdk-only=0, which reads as perfect parity and means
+        // nothing at all.
+        assertNotNull(sdkStillProcessingReason(sdkWalletHeight = 0, dashjLastBlockSeenHeight = -1))
     }
 
     // ── Single flight ─────────────────────────────────────────────────
@@ -457,6 +483,7 @@ class ParityBreakdownTest {
         val c = byTxid.getValue(confirmed.txId)
         assertEquals(900, c.height)
         assertEquals(250_000_000L, c.netDuffs)
+        assertTrue(c.valueKnown)
         assertFalse(c.dashPayContact)
         assertEquals(CoinJoinTransactionType.None, c.coinJoinType)
 
@@ -464,14 +491,292 @@ class ParityBreakdownTest {
         assertEquals(NO_BLOCK, p.height)
         assertEquals(70_000L, p.netDuffs)
 
-        // Shared: its height is read, its classification is skipped.
+        // Shared: its height AND its value are read — the value is half of the
+        // parity comparison. Only the CLASSIFICATION is skipped, because those
+        // fields describe dashj-only rows.
         val s = byTxid.getValue(shared.txId)
         assertEquals(950, s.height)
-        assertEquals(0L, s.netDuffs)
+        assertEquals(5_000L, s.netDuffs)
+        assertTrue(s.valueKnown)
+        assertFalse(s.dashPayContact)
+        assertEquals(CoinJoinTransactionType.None, s.coinJoinType)
 
-        val b = computeParityBreakdown(facts.txs, mapOf(shared.txId to 950), facts.lastBlockSeenHeight)
+        val b = computeParityBreakdown(facts.txs, mapOf(shared.txId to sdkAt(950)), facts.lastBlockSeenHeight)
         assertEquals(1, b.shared)
         assertEquals(GroupTotal(1, 250_000_000), b.group(DashjOnlyGroup.MOVES_MONEY))
         assertEquals(GroupTotal(1, 70_000), b.group(DashjOnlyGroup.UNCONFIRMED))
+    }
+
+    // ── shared-txid VALUE comparison ──────────────────────────────────────
+    //
+    // The breakdown used to count a shared txid and drop it, so two engines
+    // that disagreed about the money still reported a clean sheet. These pin
+    // the comparison, and — just as important — pin the cases it must NOT
+    // report, because a check that cries wolf on an ordinary wallet is a check
+    // that gets ignored.
+
+    @Test
+    fun sharedTxid_withDifferentValues_isReported() {
+        val dashj = listOf(DashjTxFacts(h(1), 900, netDuffs = -18_669L, valueKnown = true))
+        val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(900, 7_781_409L)), last)
+        assertEquals(1, b.shared)
+        assertEquals(1, b.valueCompared)
+        assertEquals(1, b.valueDiffers)
+        // delta is SDK minus dashj: the SDK stores 7,800,078 more than dashj computes.
+        assertEquals(7_800_078L, b.valueDeltaDuffs)
+        val d = b.valueDiffExamples.single()
+        assertEquals(-18_669L, d.dashjDuffs)
+        assertEquals(7_781_409L, d.sdkDuffs)
+        assertEquals(7_800_078L, d.deltaDuffs)
+    }
+
+    @Test
+    fun sharedTxid_withEqualValues_isComparedAndNotReported() {
+        val dashj = listOf(DashjTxFacts(h(1), 900, netDuffs = -18_669L, valueKnown = true))
+        val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(900, -18_669L)), last)
+        assertEquals(1, b.valueCompared)
+        assertEquals(0, b.valueDiffers)
+        assertEquals(0L, b.valueDeltaDuffs)
+        assertTrue(b.valueDiffExamples.isEmpty())
+    }
+
+    @Test
+    fun zeroDiffers_isDistinguishableFromNothingCompared() {
+        // The whole point of reporting `compared` next to `differs`: a run that
+        // compared nothing must not read like a run where both engines agreed.
+        val agreed = computeParityBreakdown(
+            listOf(DashjTxFacts(h(1), 900, netDuffs = 5L, valueKnown = true)),
+            mapOf(h(1) to sdkAt(900, 5L)), last
+        )
+        val comparedNothing = computeParityBreakdown(
+            listOf(DashjTxFacts(h(1), 900, netDuffs = 5L, valueKnown = false)),
+            mapOf(h(1) to sdkAt(900, 5L)), last
+        )
+        assertEquals(0, agreed.valueDiffers)
+        assertEquals(0, comparedNothing.valueDiffers)
+        assertEquals(1, agreed.valueCompared)
+        assertEquals(0, comparedNothing.valueCompared)
+    }
+
+    @Test
+    fun sharedTxid_withUnknownSdkNet_isNotCompared() {
+        // No `transactions` row means no stored net. Unknown is not zero: a
+        // wallet mid-build would otherwise report every such row as a mismatch.
+        val dashj = listOf(DashjTxFacts(h(1), 900, netDuffs = -18_669L, valueKnown = true))
+        val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(900)), last)
+        assertEquals(1, b.shared)
+        assertEquals(0, b.valueCompared)
+        assertEquals(0, b.valueDiffers)
+        // Counted, not silently dropped: an uncomparable eligible value is the
+        // one case that used to pass for parity.
+        assertEquals(1, b.valueUnknown)
+    }
+
+    @Test
+    fun sharedTxid_theSdkHasNotConfirmedYet_isNotCompared() {
+        // The SDK row still carries height 0: its stored net is the
+        // unconfirmed one and the engine revises it when the block lands.
+        // Comparing it against a confirmed dashj row reports a race as a
+        // disagreement.
+        val dashj = listOf(DashjTxFacts(h(1), 900, netDuffs = -18_669L, valueKnown = true))
+        val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(0, 7_781_409L)), last)
+        assertEquals(1, b.shared)
+        assertEquals(0, b.valueCompared)
+        assertEquals(0, b.valueDiffers)
+        // Not agreement either: it blocks a clean sheet until the SDK catches up.
+        assertEquals(1, b.valueUnknown)
+        assertFalse(findingsOf(b).clean)
+    }
+
+    @Test
+    fun sharedTxid_whoseDashjValueThrew_isNotCompared() {
+        // collectDashjBreakdownFacts leaves valueKnown=false when getValue throws.
+        val dashj = listOf(DashjTxFacts(h(1), 900, netDuffs = 0L, valueKnown = false))
+        val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(900, 7_781_409L)), last)
+        assertEquals(0, b.valueCompared)
+        assertEquals(0, b.valueDiffers)
+        assertEquals(1, b.valueUnknown)
+    }
+
+    @Test
+    fun sharedUnconfirmedOrDeadTx_isNotCompared() {
+        val unconfirmed = DashjTxFacts(h(1), NO_BLOCK, netDuffs = 5L, valueKnown = true)
+        val deadTx = DashjTxFacts(h(2), 900, dead = true, netDuffs = 5L, valueKnown = true)
+        val b = computeParityBreakdown(
+            listOf(unconfirmed, deadTx),
+            mapOf(h(1) to sdkAt(0, 99L), h(2) to sdkAt(900, 99L)),
+            last
+        )
+        assertEquals(2, b.shared)
+        assertEquals(0, b.valueCompared)
+        assertEquals(0, b.valueDiffers)
+        // Neither is eligible for comparison, so neither is an unknown.
+        assertEquals(0, b.valueUnknown)
+    }
+
+    @Test
+    fun sharedTxAboveDashjLastBlock_isNotCompared() {
+        // dashj cannot be expected to agree about a block it has not seen.
+        val dashj = listOf(DashjTxFacts(h(1), last + 10, netDuffs = 5L, valueKnown = true))
+        val b = computeParityBreakdown(dashj, mapOf(h(1) to sdkAt(last + 10, 99L)), last)
+        assertEquals(0, b.shared)
+        assertEquals(0, b.valueCompared)
+        assertEquals(0, b.valueDiffers)
+        assertEquals(0, b.valueUnknown)
+    }
+
+    @Test
+    fun valueDiffs_areOrderedByLargestAbsoluteDeltaAndCapped() {
+        val dashj = (1..5).map { DashjTxFacts(h(it), 900 + it, netDuffs = 0L, valueKnown = true) }
+        val sdk = mapOf(
+            h(1) to sdkAt(901, 10L), h(2) to sdkAt(902, -5_000L), h(3) to sdkAt(903, 300L),
+            h(4) to sdkAt(904, 7L), h(5) to sdkAt(905, 40L)
+        )
+        val b = computeParityBreakdown(dashj, sdk, last, maxValueDiffs = 3)
+        assertEquals(5, b.valueDiffers)
+        assertEquals(3, b.valueDiffExamples.size)
+        assertEquals(listOf(-5_000L, 300L, 40L), b.valueDiffExamples.map { it.deltaDuffs })
+        // every differing row still counts toward the total, not just the shown ones
+        assertEquals(10L - 5_000L + 300L + 7L + 40L, b.valueDeltaDuffs)
+    }
+
+    @Test
+    fun theRealDefect_isCaught() {
+        // Regression guard, built from the measured mainnet case: a
+        // self-consolidation of 125 CoinJoin denominations, typed Standard and
+        // in no mixing group, that a restored SDK store recorded income-only.
+        // dashj, holding the same keys, computes the fee correctly. Before this
+        // change the breakdown reported a clean sheet on exactly this input.
+        val txid = h(0x8add)
+        val dashj = listOf(DashjTxFacts(txid, 2_072_687, netDuffs = -18_669L, valueKnown = true))
+        val sdk = mapOf(txid to sdkAt(2_072_687, 7_781_409L))
+        val b = computeParityBreakdown(dashj, sdk, 2_551_341)
+        assertEquals(0, b.dashjOnly)
+        assertEquals(0, b.sdkOnly)
+        assertEquals(1, b.shared)
+        assertEquals("the defect must not hide behind a clean set comparison", 1, b.valueDiffers)
+        assertEquals(7_800_078L, b.valueDeltaDuffs)
+        val text = parityBreakdownLog(b, 0L, 1L, "test")
+        assertTrue("the report must name it", text.contains("differs=1"))
+        assertTrue(text.contains("delta=+7800078"))
+    }
+
+    @Test
+    fun aCleanWalletReportsComparedButNoDifferences() {
+        val text = parityBreakdownLog(
+            computeParityBreakdown(
+                listOf(DashjTxFacts(h(1), 900, netDuffs = -1L, valueKnown = true)),
+                mapOf(h(1) to sdkAt(900, -1L)), last
+            ), 0L, 1L, "test"
+        )
+        assertTrue(text.contains("value: compared=1 differs=0"))
+        assertFalse("no delta section when nothing differs", text.contains("delta="))
+    }
+
+    @Test
+    fun dashjThatHasSeenNoBlocks_isRefusedRatherThanReported() {
+        // A verdict computed against an empty dashj wallet reads as perfect
+        // parity and means nothing. It must be refused, not published.
+        assertNotNull(sdkStillProcessingReason(1_000L, 0))
+        assertNotNull(sdkStillProcessingReason(1_000L, -1))
+        assertNull(sdkStillProcessingReason(1_000L, 900))
+    }
+
+    // ── findings: what the diagnostic verdict is allowed to call parity ───
+
+    @Test
+    fun findings_areCleanOnlyWhenValuesWereActuallyCompared() {
+        // The distinction the whole change rests on: "found nothing" and
+        // "checked nothing" must not produce the same verdict.
+        assertTrue(ParityBreakdownFindings(0, 0, valueCompared = 6795, valueDiffers = 0).clean)
+        assertFalse(ParityBreakdownFindings(0, 0, valueCompared = 0, valueDiffers = 0).clean)
+        assertEquals(
+            "no values could be compared",
+            ParityBreakdownFindings(0, 0, valueCompared = 0, valueDiffers = 0).reason
+        )
+        assertNull(ParityBreakdownFindings(0, 0, valueCompared = 1, valueDiffers = 0).reason)
+    }
+
+    @Test
+    fun findings_areNotCleanWhenSomeEligibleValueCouldNotBeCompared() {
+        // A history that is only partly valued cannot establish full parity:
+        // the uncompared part is exactly where a disagreement would hide.
+        val partly = ParityBreakdownFindings(0, 0, valueCompared = 6794, valueDiffers = 0, valueUnknown = 1)
+        assertFalse(partly.clean)
+        assertEquals("1 eligible value(s) could not be compared", partly.reason)
+        // Differences still win the explanation: they are the stronger fact.
+        assertEquals(
+            "2 transaction value(s) differ",
+            ParityBreakdownFindings(0, 0, valueCompared = 10, valueDiffers = 2, valueUnknown = 1).reason
+        )
+    }
+
+    @Test
+    fun findings_areNotCleanWhenTheSetsOrTheValuesDiffer() {
+        // Equal counts, different hashes: the balance-and-count report calls
+        // this a match, and it is not one.
+        val setsDiffer = ParityBreakdownFindings(dashjOnly = 1, sdkOnly = 1, valueCompared = 10, valueDiffers = 0)
+        assertFalse(setsDiffer.clean)
+        assertEquals("sets differ (dashj-only=1 sdk-only=1)", setsDiffer.reason)
+
+        val valuesDiffer = ParityBreakdownFindings(0, 0, valueCompared = 6795, valueDiffers = 1)
+        assertFalse(valuesDiffer.clean)
+        assertEquals("1 transaction value(s) differ", valuesDiffer.reason)
+    }
+
+    @Test
+    fun findingsOf_carriesTheBreakdownsOwnNumbers() {
+        val b = computeParityBreakdown(
+            listOf(DashjTxFacts(h(1), 900, netDuffs = -18_669L, valueKnown = true)),
+            mapOf(h(1) to sdkAt(900, 7_781_409L)), last
+        )
+        val f = findingsOf(b)
+        assertEquals(0, f.dashjOnly)
+        assertEquals(0, f.sdkOnly)
+        assertEquals(1, f.valueCompared)
+        assertEquals(1, f.valueDiffers)
+        assertEquals(0, f.valueUnknown)
+        assertFalse("a value disagreement is not parity", f.clean)
+    }
+
+    @Test
+    fun valuesDifferCase_isDistinguishableFromEveryOtherNonMatch() {
+        // The readout says "matches SDK (not N values)" only for this exact
+        // shape: balances, counts AND the sets all agree, and the ONLY
+        // disagreement is individual stored values. These are the inputs the
+        // verdict keys on, so pin them.
+        val onlyValues = ParityBreakdownFindings(
+            dashjOnly = 0, sdkOnly = 0, valueCompared = 6795, valueDiffers = 1
+        )
+        assertFalse(onlyValues.clean)
+        assertEquals(0, onlyValues.dashjOnly)
+        assertEquals(0, onlyValues.sdkOnly)
+        assertEquals(1, onlyValues.valueDiffers)
+        assertEquals("1 transaction value(s) differ", onlyValues.reason)
+
+        // Sets differing must NOT take the "(not N values)" wording, even when
+        // values differ too — the set difference is the bigger fact.
+        val setsToo = ParityBreakdownFindings(
+            dashjOnly = 1, sdkOnly = 0, valueCompared = 6795, valueDiffers = 1
+        )
+        assertEquals("sets differ (dashj-only=1 sdk-only=0)", setsToo.reason)
+    }
+
+    @Test
+    fun theMainnetDefect_producesTheValuesDifferShape() {
+        // End to end on the measured mainnet numbers: the restore-arm store
+        // holds +7,781,409 where dashj computes -18,669. Sets agree, so this
+        // is the "matches SDK (not 1 values)" case and nothing else.
+        val txid = h(0x8add)
+        val b = computeParityBreakdown(
+            listOf(DashjTxFacts(txid, 2_072_687, netDuffs = -18_669L, valueKnown = true)),
+            mapOf(txid to sdkAt(2_072_687, 7_781_409L)),
+            2_551_341
+        )
+        val f = findingsOf(b)
+        assertEquals(0, f.dashjOnly)
+        assertEquals(0, f.sdkOnly)
+        assertEquals(1, f.valueDiffers)
+        assertEquals(7_800_078L, b.valueDeltaDuffs)
     }
 }

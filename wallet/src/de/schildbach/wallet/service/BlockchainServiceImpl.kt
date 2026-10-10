@@ -2515,6 +2515,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
+        // Same reason, other input: MATCH now also needs a fresh
+        // transaction-level breakdown, and that run finishes on its own
+        // schedule — after the report that triggered it, and after a ledger
+        // rebuild cleared the previous one. Without this the verdict would
+        // hold at "not established" until some later report happened to
+        // change.
+        serviceScope.launch {
+            l1ShadowSyncService.latestBreakdownFindings.collect { findings ->
+                if (findings != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+                    publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
+                }
+            }
+        }
+
         // Idle detector, SDK side: the post-cutover analogue of the dashj
         // wallet's transactionsReceived counter (see SyncActivityIdleDetector).
         // Counting only — the tick receiver reads and clears it.
@@ -3740,19 +3754,47 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     "dashj-sync-diagnostic: dashj chain caught up — showing 'Verifying' " +
                         "until a parity report computed against the caught-up state arrives"
                 )
+                // The harness gates its hourly breakdown on the same moment:
+                // a run started while dashj was behind produces findings this
+                // method will reject, and used to spend the slot anyway.
+                l1ShadowSyncService.dashjCaughtUp(dashjCaughtUpAtMs)
             }
         } else {
+            if (dashjCaughtUpAtMs != null) l1ShadowSyncService.dashjCaughtUp(null)
             dashjCaughtUpAtMs = null
         }
         val report = l1ShadowSyncService.latestParity.value
         // Fresh = captured at/after the catch-up moment (same wall clock).
         val caughtUpAtMs = dashjCaughtUpAtMs
         val freshReport = report?.takeIf { caughtUpAtMs != null && it.timestampMs >= caughtUpAtMs }
+        // The balance-and-count report is NOT a parity check on its own: two
+        // engines can hold the same number of transactions, totalling the same
+        // balance, and still disagree about WHICH transactions those are, or
+        // about what an individual transaction was worth. Both cases have been
+        // seen on real wallets. So MATCH additionally requires a fresh
+        // transaction-level breakdown that found nothing — and a breakdown that
+        // compared no values does not count as having found nothing.
+        val freshFindings = l1ShadowSyncService.latestBreakdownFindings.value
+            ?.takeIf { caughtUpAtMs != null && it.computedAtMs >= caughtUpAtMs }
+            ?.findings
         val parity = if (percent >= 100 && freshReport != null) {
             when {
-                freshReport.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
-                // Both balance comparisons agree exactly, only the tx counts
-                // differ — the funds are all accounted for on both sides.
+                freshReport.fullMatch && freshFindings?.clean == true ->
+                    DashjDiagnosticSyncState.Parity.MATCH
+                // Balances, counts AND the transaction sets all agree; only
+                // individual stored values differ. Distinguished from the
+                // catch-all below so the readout can say how many, because
+                // "everything agrees except N values" is a materially
+                // different thing to report than "counts differ".
+                freshReport.fullMatch &&
+                    freshFindings != null &&
+                    freshFindings.dashjOnly == 0 &&
+                    freshFindings.sdkOnly == 0 &&
+                    freshFindings.valueDiffers > 0 ->
+                    DashjDiagnosticSyncState.Parity.VALUES_DIFFER
+                // Something the breakdown found, or it has not run since dashj
+                // caught up. The balances still agree, so say exactly that and
+                // no more.
                 freshReport.balancesMatch && freshReport.confirmedBalancesMatch ->
                     DashjDiagnosticSyncState.Parity.BALANCE_MATCH
                 else -> DashjDiagnosticSyncState.Parity.MISMATCH
@@ -3760,10 +3802,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (verdict != lastDiagnosticParity) {
                     log.info(
                         "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
-                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
+                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={} " +
+                            "breakdown={}",
                         verdict, freshReport.sdkDuffs, freshReport.dashjDuffs,
                         freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
-                        freshReport.sdkTxCount, freshReport.dashjTxCount
+                        freshReport.sdkTxCount, freshReport.dashjTxCount,
+                        freshFindings?.let { it.reason ?: "clean (${it.valueCompared} values compared)" }
+                            ?: "not run since dashj caught up"
                     )
                 }
             }
@@ -3777,7 +3822,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // together when the report arrives.
         val verifying = percent >= 100 && parity == DashjDiagnosticSyncState.Parity.UNKNOWN
         val displayPercent = if (verifying) 99 else percent
-        dashjDiagnosticSyncState.update(displayPercent, parity, stage?.name, verifying)
+        dashjDiagnosticSyncState.update(
+            displayPercent, parity, stage?.name, verifying,
+            valueDiffers = freshFindings?.valueDiffers ?: 0
+        )
         // Feed the support-log history buffer (deduplicated inside).
         dashjDiagnosticSyncState.recordParity(displayPercent, parity, report)
     }

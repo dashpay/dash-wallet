@@ -53,7 +53,24 @@ class DashjDiagnosticSyncState @Inject constructor() {
      * stacks' transaction counts differ — usually a bookkeeping difference
      * (e.g. self-transfers counted differently), not missing funds.
      */
-    enum class Parity { UNKNOWN, MATCH, BALANCE_MATCH, MISMATCH }
+    enum class Parity {
+        UNKNOWN,
+        MATCH,
+
+        /**
+         * Balances, transaction counts AND the transaction SETS all agree, but
+         * one or more individual transactions are stored with a different
+         * value. The funds are all accounted for and both stacks hold the same
+         * transactions — the disagreement is about what an individual one was
+         * worth. Carries [Snapshot.valueDiffers] so the readout can say how
+         * many. Before the value comparison existed this was indistinguishable
+         * from [MATCH].
+         */
+        VALUES_DIFFER,
+
+        BALANCE_MATCH,
+        MISMATCH
+    }
 
     /**
      * One entry of the recent parity history kept for the support-log bundle:
@@ -86,7 +103,12 @@ class DashjDiagnosticSyncState @Inject constructor() {
         val parity: Parity = Parity.UNKNOWN,
         val stageName: String? = null,
         val verifying: Boolean = false,
-        val active: Boolean = false
+        val active: Boolean = false,
+        /**
+         * How many shared transactions are stored with different values.
+         * Meaningful only with [Parity.VALUES_DIFFER]; 0 otherwise.
+         */
+        val valueDiffers: Int = 0
     )
 
     private val _state = MutableStateFlow(Snapshot())
@@ -95,13 +117,20 @@ class DashjDiagnosticSyncState @Inject constructor() {
     val state: StateFlow<Snapshot> = _state.asStateFlow()
 
     /** Push one dashj progress sample (from [BlockchainServiceImpl]). */
-    fun update(percent: Int, parity: Parity, stageName: String?, verifying: Boolean = false) {
+    fun update(
+        percent: Int,
+        parity: Parity,
+        stageName: String?,
+        verifying: Boolean = false,
+        valueDiffers: Int = 0
+    ) {
         _state.value = Snapshot(
             percent = percent.coerceIn(0, 100),
             parity = parity,
             stageName = stageName,
             verifying = verifying,
-            active = true
+            active = true,
+            valueDiffers = valueDiffers
         )
     }
 

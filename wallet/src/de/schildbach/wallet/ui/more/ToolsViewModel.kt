@@ -78,7 +78,12 @@ data class DashjDiagnosticUIState(
     val percent: Int = 0,
     val parity: DashjDiagnosticSyncState.Parity = DashjDiagnosticSyncState.Parity.UNKNOWN,
     /** dashj caught up, fresh parity report pending — show "Verifying". */
-    val verifying: Boolean = false
+    val verifying: Boolean = false,
+    /**
+     * How many shared transactions the two stacks store with different values.
+     * Meaningful only with [DashjDiagnosticSyncState.Parity.VALUES_DIFFER].
+     */
+    val valueDiffers: Int = 0
 )
 
 /**
@@ -150,7 +155,8 @@ class ToolsViewModel @Inject constructor(
             enabled = enabled,
             percent = snapshot.percent,
             parity = snapshot.parity,
-            verifying = snapshot.verifying
+            verifying = snapshot.verifying,
+            valueDiffers = snapshot.valueDiffers
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashjDiagnosticUIState())
 

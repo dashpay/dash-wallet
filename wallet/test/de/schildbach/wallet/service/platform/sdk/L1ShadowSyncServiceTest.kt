@@ -182,7 +182,7 @@ class L1ShadowSyncServiceTest {
         override suspend fun dashjUnspentUtxos(): List<L1Utxo>? = dashjUtxos
 
         // The parity breakdown's two inputs; null = unavailable (the seam default).
-        var sdkTxidHeights: Map<Sha256Hash, Int>? = null
+        var sdkTxidHeights: Map<Sha256Hash, SdkTxFacts>? = null
         var dashjFacts: DashjBreakdownFacts? = null
         @Volatile
         var breakdownDashjCalls = 0
@@ -190,7 +190,7 @@ class L1ShadowSyncServiceTest {
         /** Breakdown runs that read the SDK side; atomic for the concurrent-report test. */
         val sdkTxidCalls = java.util.concurrent.atomic.AtomicInteger()
 
-        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, Int>? {
+        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, SdkTxFacts>? {
             sdkTxidCalls.incrementAndGet()
             return sdkTxidHeights
         }
@@ -3679,7 +3679,7 @@ class L1ShadowSyncServiceTest {
     private fun breakdownSource() = FakeSource(boundWalletId = walletIdHex).apply {
         // The SDK has processed every block through dashj's last block seen.
         walletSyncedHeight = 1_000
-        sdkTxidHeights = mapOf(sharedTxid to 900)
+        sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, null))
         dashjFacts = DashjBreakdownFacts(
             lastBlockSeenHeight = 1_000,
             txs = listOf(DashjTxFacts(sharedTxid, 900), DashjTxFacts(dashjOnlyTxid, 950, netDuffs = -5))
@@ -3707,6 +3707,22 @@ class L1ShadowSyncServiceTest {
     }
 
     private val previouslyStored = StoredParityBreakdown(walletIdHex, 500L, "ParityBreakdown from an earlier run")
+
+    /**
+     * Equality on what the breakdown FILE can carry. `findings` is in-memory
+     * only — a breakdown restored after a restart has none — so comparing a
+     * freshly computed result against a round-tripped one must ignore it.
+     * These assertions are about WHICH breakdown is kept, not about findings.
+     */
+    private fun assertSameStored(
+        message: String? = null,
+        expected: StoredParityBreakdown?,
+        actual: StoredParityBreakdown?
+    ) {
+        val e = expected?.copy(findings = null)
+        val a = actual?.copy(findings = null)
+        if (message != null) assertEquals(message, e, a) else assertEquals(e, a)
+    }
 
     private fun storeWithPreviousResult() =
         ParityBreakdownStore(dataDir.resolve("breakdown.txt")).also { it.save(previouslyStored) }
@@ -3739,8 +3755,92 @@ class L1ShadowSyncServiceTest {
         assertTrue(fresh.text, fresh.text.contains("moves-money=1 net=-5"))
         assertEquals(1, source.breakdownDashjCalls)
         // Kept for a later report to fall back on.
-        assertEquals(fresh, ParityBreakdownStore(file).load())
-        assertEquals(fresh, service.latestParityBreakdown(walletIdHex))
+        assertSameStored(expected = fresh, actual = ParityBreakdownStore(file).load())
+        assertSameStored(expected = fresh, actual = service.latestParityBreakdown(walletIdHex))
+        service.stop()
+    }
+
+    @Test
+    fun ledgerRebuild_discardsTheFindings_theStoredBreakdown_andTheHourlyCadence() = runBlocking {
+        // A clean sheet describes the ledger that the reset is about to
+        // delete. Carrying it across the rebuild let the diagnostic publish
+        // MATCH for a freshly rebuilt ledger nothing had yet compared.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull("the run publishes findings", service.latestBreakdownFindings.value)
+        assertTrue(file.exists())
+
+        assertTrue(service.resetShadowState(hard = true))
+
+        assertNull("findings must not survive the rebuild", service.latestBreakdownFindings.value)
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        assertNull("the stored breakdown describes the deleted ledger", ParityBreakdownStore(file).load())
+        // The cadence was reset too: once the restarted sync is caught up a
+        // fresh breakdown may run at once, instead of leaving the verdict
+        // unestablished for the rest of the hour.
+        source.driveSyncedEdgesUntil { service.progress.value.synced }
+        val after = service.parityBreakdownForReport()
+        assertNotNull(after.notRefreshedReason ?: "", after.stored)
+        assertEquals(2, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    @Test
+    fun aNewTransaction_expiresTheFindings_butKeepsTheStoredBreakdown() = runBlocking {
+        // The findings described a history that did not contain this
+        // transaction, so they cannot establish parity for the one that does.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+        val computed = checkNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+        withTimeout(5_000) { while (source.eventStrings.subscriptionCount.value == 0) delay(10) }
+
+        source.eventStrings.emit(detectedDebug())
+
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value != null) delay(10) }
+        // The stored text is a timestamped account of the moment it was
+        // computed and still belongs in a support report; only the verdict's
+        // input went.
+        assertSameStored(expected = computed, actual = ParityBreakdownStore(file).load())
+        assertSameStored(expected = computed, actual = service.latestParityBreakdown(walletIdHex))
+        // And a run against the new state restores them.
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
+    fun walletRecreation_discardsTheFindingsToo() = runBlocking {
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            recreator = FakeRecreator(),
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        assertNull(service.latestBreakdownFindings.value)
+        assertNull(ParityBreakdownStore(file).load())
         service.stop()
     }
 
@@ -3787,7 +3887,7 @@ class L1ShadowSyncServiceTest {
         }
         val finished = checkNotNull(store.load())
         assertTrue(finished.text, finished.text.contains("trigger=report"))
-        assertEquals(finished, service.latestParityBreakdown(walletIdHex))
+        assertSameStored(expected = finished, actual = service.latestParityBreakdown(walletIdHex))
         service.stop()
     }
 
@@ -3812,9 +3912,60 @@ class L1ShadowSyncServiceTest {
         val source = breakdownSource()
         val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
         assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // the probe will not start one until dashj is up
         source.driveSyncedEdgesUntil { service.latestParityBreakdown(walletIdHex) != null }
         val text = checkNotNull(service.latestParityBreakdown(walletIdHex)).text
         assertTrue(text, text.contains("trigger=probe"))
+        service.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_waitsForDashj_andAnUnusableRunDoesNotSpendTheHour() = runBlocking {
+        // D-27TA-01, found on build 33. The probe gated only on the SDK being
+        // caught up, so with dashj still downloading it ran, produced findings
+        // the verdict rejects for being older than dashj's catch-up moment, and
+        // recorded the run against the hourly cadence anyway. The readout then
+        // said "full parity not established" for up to an hour after it was —
+        // 49 and 52 minutes, measured on two wallets.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+
+        // dashj behind: the probe ticks and the breakdown does NOT start.
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("a run now could never become the verdict", 0, source.breakdownDashjCalls)
+
+        // dashj catches up at a moment LATER than anything this run can compute
+        // (nowMs is fixed at 1_000_000), so every result is unusable. The slot
+        // must stay free: a run that lost the race must not lock out the next.
+        service.dashjCaughtUp(2_000_000L)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+        val afterFirst = source.breakdownDashjCalls
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls > afterFirst }
+        service.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_aUsableRunDoesTakeTheHour() = runBlocking {
+        // The other half: once the result IS one the verdict can accept, the
+        // hourly cadence must hold, or the fix would turn a wasted slot into a
+        // breakdown on every probe tick.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // well before the fixed 1_000_000 clock
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("the hour is spent, so no second run", 1, source.breakdownDashjCalls)
         service.stop()
     }
 
@@ -3851,6 +4002,7 @@ class L1ShadowSyncServiceTest {
         val source = breakdownSource().apply { dashjFacts = null }
         val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
         assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // the probe will not start a run until dashj is up
         source.driveSyncedEdgesUntil { source.breakdownDashjCalls > 0 }
         repeat(5) {
             source.progressFlow.value = SpvSyncProgressData.EMPTY
@@ -3877,8 +4029,8 @@ class L1ShadowSyncServiceTest {
 
         val reason = "SDK still processing transactions (wallet height 990 < dashj 1000)"
         assertEquals(ReportParityBreakdown(previouslyStored, reason), service.parityBreakdownForReport())
-        assertEquals("the incomplete comparison must not replace the stored result", previouslyStored, store.load())
-        assertEquals(previouslyStored, service.latestParityBreakdown(walletIdHex))
+        assertSameStored("the incomplete comparison must not replace the stored result", previouslyStored, store.load())
+        assertSameStored(expected = previouslyStored, actual = service.latestParityBreakdown(walletIdHex))
 
         // With dashj's height known up front, neither side is even read.
         source.dashjChainHead = 1_000
@@ -3890,7 +4042,7 @@ class L1ShadowSyncServiceTest {
         source.eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 1000 }")
         val report = service.parityBreakdownForReport()
         assertNull(report.notRefreshedReason)
-        assertEquals(checkNotNull(report.stored), store.load())
+        assertSameStored(expected = checkNotNull(report.stored), actual = store.load())
         service.stop()
     }
 
@@ -3938,7 +4090,7 @@ class L1ShadowSyncServiceTest {
         }
         val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
         service.startSynced(source)
-        assertEquals(previouslyStored, service.latestParityBreakdown(walletIdHex))
+        assertSameStored(expected = previouslyStored, actual = service.latestParityBreakdown(walletIdHex))
 
         val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
         withTimeout(5_000) { inside.await() }
