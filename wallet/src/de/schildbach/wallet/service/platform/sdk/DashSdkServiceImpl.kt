@@ -34,6 +34,7 @@ import org.dashfoundation.dashsdk.config.SdkConfig
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashfoundation.dashsdk.security.KeySecurityPolicy
 import org.dashfoundation.dashsdk.security.WalletStorage
+import org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashfoundation.dashsdk.wallet.WalletManagerStore
 import org.slf4j.LoggerFactory
@@ -856,15 +857,16 @@ class DashSdkServiceImpl @Inject constructor(
             var allPresentWidened = true
             managed.coreWallet().use { core ->
                 for (family in listOf(
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP44,
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP32,
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.COIN_JOIN,
+                    CoreTransactionBuilder.AccountType.BIP44,
+                    CoreTransactionBuilder.AccountType.BIP32,
+                    CoreTransactionBuilder.AccountType.COIN_JOIN,
                 )) {
+                    val gapLimit = widenedGapLimit(family)
                     try {
-                        core.setGapLimit(family, 0, MIGRATION_GAP_LIMIT)
+                        core.setGapLimit(family, 0, gapLimit)
                         log.info(
                             "widenAddressWindows: {} account 0 gap -> {} on {}…",
-                            family, MIGRATION_GAP_LIMIT, walletIdHex.take(8)
+                            family, gapLimit, walletIdHex.take(8)
                         )
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
@@ -1404,13 +1406,25 @@ class DashSdkServiceImpl @Inject constructor(
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
 
         /**
-         * Gap limit the migration heal widens each standard account to —
-         * the Rust-side MAX_GAP_LIMIT. See
-         * [DashSdkService.widenAddressWindows] for why 1000 covers
-         * arbitrarily deep frontiers once the rescan's mark-used roll
-         * kicks in.
+         * Gap limit the widening gives the standard accounts (BIP44, BIP32):
+         * dashj's own lookahead (`DeterministicKeyChain`
+         * DEFAULT_LOOKAHEAD_SIZE), so every address dashj could have handed
+         * out past its last used one stays watched after migration.
          */
-        internal const val MIGRATION_GAP_LIMIT = 1000
+        internal const val STANDARD_GAP_LIMIT = 100
+
+        /**
+         * Gap limit the widening gives the CoinJoin account — the Rust-side
+         * MAX_GAP_LIMIT. Mixing sessions consume CoinJoin addresses that may
+         * stay empty, in runs far longer than a standard account's.
+         */
+        internal const val COINJOIN_GAP_LIMIT = 1000
+
+        /** The gap limit [widenAddressWindows] gives [family], account 0. */
+        internal fun widenedGapLimit(family: CoreTransactionBuilder.AccountType): Int = when (family) {
+            CoreTransactionBuilder.AccountType.COIN_JOIN -> COINJOIN_GAP_LIMIT
+            else -> STANDARD_GAP_LIMIT
+        }
 
         /**
          * The gap limit [widenAddressWindows] gives the account stored as
@@ -1419,8 +1433,9 @@ class DashSdkServiceImpl @Inject constructor(
          * (type 0, tag 0), BIP32 (type 0, tag 1) and CoinJoin (type 1).
          */
         internal fun widenedGapLimit(accountType: Int, standardTag: Int): Int? = when {
-            accountType == 0 && (standardTag == 0 || standardTag == 1) -> MIGRATION_GAP_LIMIT
-            accountType == 1 -> MIGRATION_GAP_LIMIT
+            accountType == 0 && standardTag == 0 -> widenedGapLimit(CoreTransactionBuilder.AccountType.BIP44)
+            accountType == 0 && standardTag == 1 -> widenedGapLimit(CoreTransactionBuilder.AccountType.BIP32)
+            accountType == 1 -> widenedGapLimit(CoreTransactionBuilder.AccountType.COIN_JOIN)
             else -> null
         }
 

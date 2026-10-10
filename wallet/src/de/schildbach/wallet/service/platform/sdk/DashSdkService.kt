@@ -355,9 +355,10 @@ interface DashSdkService {
     fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
 
     /**
-     * Widen the SDK wallet's address-pool gap limits to the Rust-side
-     * maximum (1000) on the standard families (BIP44 / BIP32 / CoinJoin,
-     * account 0), deriving the addresses the wider windows require.
+     * Widen the SDK wallet's address-pool gap limits on account 0 of the
+     * standard families — 100 for BIP44 and BIP32 (dashj's lookahead), 1000
+     * for CoinJoin (the Rust-side maximum) — deriving the addresses the
+     * wider windows require.
      *
      * The migration heal for a wallet whose usage frontier advanced
      * OUTSIDE the SDK's watched window: dashj (or any same-seed client)
@@ -365,7 +366,7 @@ interface DashSdkService {
      * compact-filter scan never matched it, and every descendant
      * transaction was invisible (observed in the field as "synced but
      * wrong balance / history stops at a date"). Widening alone covers
-     * frontiers up to 1000 past the SDK's own used-index; deeper
+     * frontiers up to the gap limit past the SDK's own used-index; deeper
      * frontiers are swept by the follow-up rescan, whose found
      * transactions mark indices used and roll the window forward ahead
      * of the scan. Callers pair this with a backfill-coverage

@@ -25,6 +25,7 @@ import org.bitcoinj.params.OuzoDevNetParams
 import org.bitcoinj.params.RegTestParams
 import org.bitcoinj.params.TestNet3Params
 import org.dashfoundation.dashsdk.Network
+import org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -55,6 +56,21 @@ class DashSdkServiceImplTest {
         context = mockk<Context>(relaxed = true),
         mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true))
     )
+
+    @Test
+    fun widenedGapLimit_isDashjLookaheadForStandard_andTheRustMaxForCoinJoin() {
+        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44))
+        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP32))
+        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.COIN_JOIN))
+
+        // The backfill reads accounts as stored rows; each must map to the
+        // gap the widening set, or it would persist the wrong window.
+        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(accountType = 0, standardTag = 0))
+        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(accountType = 0, standardTag = 1))
+        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(accountType = 1, standardTag = 0))
+        assertNull("identity registration is not widened", DashSdkServiceImpl.widenedGapLimit(2, 0))
+        assertNull("platform payment is not widened", DashSdkServiceImpl.widenedGapLimit(14, 0))
+    }
 
     @Test
     fun construction_isJvmSafe_andDoesNotStartSdk() {
