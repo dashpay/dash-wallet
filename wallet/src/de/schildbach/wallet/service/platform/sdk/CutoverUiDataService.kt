@@ -1526,37 +1526,55 @@ data class SdkBalanceSplitDuffs(val confirmed: Long, val unconfirmed: Long) {
 
 /**
  * One observation of the SDK's deferred contact-account-build queue: the
- * queued [count] and how many CONSECUTIVE refreshes (beyond the one that
- * first saw it) have returned that same count ([unchangedReads], saturated
- * at [DEFERRED_BUILDS_SETTLED_READS]). Input to [deferredBuildsSettled].
+ * queued [count], the [drainState] it was read under, and how many
+ * CONSECUTIVE refreshes (beyond the one that first saw it) have returned that
+ * same count as evidence of a stuck queue ([unchangedReads], saturated at
+ * [deferredBuildsSettledReads]). Built by [nextDeferredBuildObservation];
+ * input to [deferredBuildsSettled].
  */
 internal data class DeferredBuildObservation(
     val count: Int = 0,
-    val unchangedReads: Int = 0
+    val unchangedReads: Int = 0,
+    val drainState: AccountBuildDrainState = AccountBuildDrainState.RAN
 )
 
 /**
- * Whether the deferred contact-account-build queue counts as SETTLED for the
- * purpose of persisting [org.dash.wallet.common.data.WalletUIConfig.LAST_TOTAL_BALANCE]:
+ * Whether the deferred contact-account-build queue counts as SETTLED — the
+ * gate on persisting [org.dash.wallet.common.data.WalletUIConfig.LAST_TOTAL_BALANCE]
+ * and the account-build term of the user-facing "still syncing" signal:
  *
  * - drained ([count] == 0) — provably nothing pending, settled immediately;
  * - PINNED — the same non-zero count observed across
- *   [DEFERRED_BUILDS_SETTLED_READS] consecutive refreshes. Some queue entries
- *   never complete (the SDK re-queues them on every drain pass without ever
- *   marking them broken — observed live: a sender key-purpose mismatch the
- *   drain can never resolve), and the app cannot see WHY an entry is queued.
- *   A count that has stopped moving is the only available evidence that the
- *   queue is stuck rather than draining — and on such a wallet a bare
- *   `count == 0` gate would block the persist FOREVER, freezing the launch
- *   seed on a stale figure (the very staleness the gate exists to prevent).
+ *   [deferredBuildsSettledReads] consecutive refreshes in which the drain
+ *   could have moved it. Some queue entries never complete (the SDK
+ *   re-queues them on every drain pass without ever marking them broken —
+ *   observed live: a sender key-purpose mismatch the drain can never
+ *   resolve), and the app cannot see WHY an entry is queued. A count that has
+ *   stopped moving is the only available evidence that the queue is stuck
+ *   rather than draining — and on such a wallet a bare `count == 0` gate
+ *   would block the persist FOREVER, freezing the launch seed on a stale
+ *   figure (the very staleness the gate exists to prevent).
  *
  * A count still MOVING (each refresh differs from the last) is an active
  * drain: every completed build can add previously-unmatched receives to the
  * total, so the figure is still provably incomplete and must not be
- * persisted. Pure — host-testable.
+ * persisted.
+ *
+ * A count that CANNOT move is not evidence of anything, which is what
+ * [drainState] adds: while the drain is blocked by the locked device
+ * ([AccountBuildDrainState.BLOCKED_DEVICE_LOCKED]) the queue never settles —
+ * QA phone 2 (12.0.0-qa28, restore) "settled" 212 such builds and showed
+ * 35.54 DASH as final, 1.856 DASH short of the contact payments those builds
+ * would match. Before any drain has run
+ * ([AccountBuildDrainState.NOT_ATTEMPTED]) it takes a much longer pin. Both
+ * are bounded — see [AccountBuildDrainTracker] and
+ * [DEFERRED_BUILDS_UNDRAINED_SETTLED_READS]. Pure — host-testable.
  */
-internal fun deferredBuildsSettled(count: Int, unchangedReads: Int): Boolean =
-    count == 0 || unchangedReads >= DEFERRED_BUILDS_SETTLED_READS
+internal fun deferredBuildsSettled(
+    count: Int,
+    unchangedReads: Int,
+    drainState: AccountBuildDrainState = AccountBuildDrainState.RAN
+): Boolean = count == 0 || unchangedReads >= deferredBuildsSettledReads(drainState)
 
 /**
  * Consecutive unchanged refreshes (at the balance pipeline's
@@ -1565,6 +1583,57 @@ internal fun deferredBuildsSettled(count: Int, unchangedReads: Int): Boolean =
  * fit in the window, so a queue that was genuinely draining would have moved.
  */
 internal const val DEFERRED_BUILDS_SETTLED_READS = 3
+
+/**
+ * The pin for a queue no drain has touched yet this process
+ * ([AccountBuildDrainState.NOT_ATTEMPTED]), counted only in refreshes taken
+ * while the L1 scan is caught up — ~1 hour of caught-up time. On a restore
+ * the SDK queues the builds during the scan, the app recovers the identity
+ * after it and drains only once its first contact sync has finished: QA phone
+ * 2 sat 2.5 h with 211 untouched builds, "pinned" them two minutes in, and
+ * persisted a seed 1.856 DASH short when the scan finished. The first drain
+ * came 28 minutes after the scan caught up (a 230-contact first sync). The
+ * pin stays as the backstop for a wallet whose app never drains.
+ */
+internal const val DEFERRED_BUILDS_UNDRAINED_SETTLED_READS = 60
+
+/** How many evidence-bearing unchanged reads pin a non-zero queue under [drainState]. */
+internal fun deferredBuildsSettledReads(drainState: AccountBuildDrainState): Int = when (drainState) {
+    AccountBuildDrainState.RAN -> DEFERRED_BUILDS_SETTLED_READS
+    AccountBuildDrainState.NOT_ATTEMPTED -> DEFERRED_BUILDS_UNDRAINED_SETTLED_READS
+    AccountBuildDrainState.BLOCKED_DEVICE_LOCKED -> Int.MAX_VALUE
+}
+
+/**
+ * The next [DeferredBuildObservation] after one refresh read [count] queued
+ * builds under [drainState]. A new count or a new drain state starts a fresh
+ * streak: evidence gathered while the drain could not run says nothing about
+ * whether it is stuck once it can. An unchanged read adds to the streak only
+ * when it IS evidence — always after a drain has run, never while the drain is
+ * blocked by the locked device, and before the first drain only while the
+ * scan is caught up ([l1Synced]). Pure — host-testable.
+ */
+internal fun nextDeferredBuildObservation(
+    previous: DeferredBuildObservation,
+    count: Int,
+    drainState: AccountBuildDrainState,
+    l1Synced: Boolean
+): DeferredBuildObservation {
+    if (count != previous.count || drainState != previous.drainState) {
+        return DeferredBuildObservation(count = count, drainState = drainState)
+    }
+    val evidence = when (drainState) {
+        AccountBuildDrainState.RAN -> true
+        AccountBuildDrainState.NOT_ATTEMPTED -> l1Synced
+        AccountBuildDrainState.BLOCKED_DEVICE_LOCKED -> false
+    }
+    if (!evidence) return previous
+    // Saturating: only the threshold crossing matters, and an unbounded
+    // counter would eventually overflow on a long session.
+    return previous.copy(
+        unchangedReads = (previous.unchangedReads + 1).coerceAtMost(deferredBuildsSettledReads(drainState))
+    )
+}
 
 /** Production [CutoverUiSource]: the live SDK Room DB, reactive. */
 internal class DashSdkCutoverUiSource(
@@ -2220,6 +2289,16 @@ class CutoverUiDataService internal constructor(
      */
     private val deferredContactBuildCount: suspend (String) -> Int? = { null },
     /**
+     * Whether the drain that would empty [deferredContactBuildCount]'s queue
+     * has run, has not been attempted yet, or is held up by the locked device
+     * ([DashSdkService.dashPayAccountBuildDrainState]) — what decides whether
+     * a count that is not moving counts as stuck ([nextDeferredBuildObservation]).
+     * Read alongside the count. Default [AccountBuildDrainState.RAN]: the
+     * plain pinned-count rule, for the fake-fed tests.
+     */
+    private val accountBuildDrainState: (String) -> AccountBuildDrainState =
+        { AccountBuildDrainState.RAN },
+    /**
      * The DIP-15 contact-backfill bookkeeping ([DashPayBackfillGate.readBackfillStatus]) —
      * the THIRD guard on persisting [WalletUIConfig.LAST_TOTAL_BALANCE].
      *
@@ -2249,11 +2328,19 @@ class CutoverUiDataService internal constructor(
      * Publishes the DashPay-side sync terms this service already observes —
      * the account-build queue and the backfill bookkeeping — to the
      * user-facing "still syncing" signal ([de.schildbach.wallet.service.DashPaySyncStatus]).
+     * `buildsHeldByLockedDevice` says the unsettled builds are waiting on a
+     * device unlock, which the signal's time ceiling does not count against;
+     * `buildsAwaitingFirstDrain` says no drain has touched them yet this
+     * process, which runs the signal's longer pre-first-drain ceiling.
      * Pure fan-out; no behaviour of this service depends on it. Default no-op
      * for the fake-fed tests.
      */
-    private val publishDashPaySyncTerms: (buildsSettled: Boolean, backfillSettled: Boolean) -> Unit =
-        { _, _ -> },
+    private val publishDashPaySyncTerms: (
+        buildsSettled: Boolean,
+        backfillSettled: Boolean,
+        buildsHeldByLockedDevice: Boolean,
+        buildsAwaitingFirstDrain: Boolean
+    ) -> Unit = { _, _, _, _ -> },
     /**
      * PERSIST one engine-reported IS lock (display-hex txid, observation
      * epoch-millis) into the APP-OWNED `instant_send_locks` table
@@ -2364,9 +2451,10 @@ class CutoverUiDataService internal constructor(
         walletBindConfirmations = sdkWalletBinder.walletBindConfirmations,
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
+        accountBuildDrainState = { walletIdHex -> sdkService.dashPayAccountBuildDrainState(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
-        publishDashPaySyncTerms = { buildsSettled, backfillSettled ->
-            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled)
+        publishDashPaySyncTerms = { buildsSettled, backfillSettled, heldByLockedDevice, awaitingFirstDrain ->
+            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled, heldByLockedDevice, awaitingFirstDrain)
             dashPaySyncStatus.setBackfillSettled(backfillSettled)
         },
         persistInstantLock = { txidHex, lockedAtMs ->
@@ -3580,7 +3668,9 @@ class CutoverUiDataService internal constructor(
      * an unknown/failed read leaves the previous observation rather than
      * claiming zero. The unchanged-read streak is what lets
      * [deferredBuildsSettled] tell a PERMANENTLY STUCK queue (count pinned,
-     * never drains) from an actively draining one (count moving).
+     * never drains) from an actively draining one (count moving); the drain
+     * state read with it ([accountBuildDrainState]) tells both from a queue
+     * that cannot move yet.
      */
     private val _deferredContactBuilds = MutableStateFlow(DeferredBuildObservation())
 
@@ -4241,48 +4331,70 @@ class CutoverUiDataService internal constructor(
      * (no probe wired, SDK down, read failed) leaves the last observation
      * alone — claiming zero would unlock the balance persist on no evidence,
      * and counting it as an unchanged read would advance the settled streak
-     * on no evidence.
+     * on no evidence. The drain state is read with it: an unchanged count
+     * only counts as stuck while the drain could have moved it
+     * ([nextDeferredBuildObservation]).
      */
     private suspend fun refreshDeferredContactBuilds(walletIdHex: String) {
+        val drainState = try {
+            accountBuildDrainState(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Fail open: the plain pinned-count rule, as before the drain
+            // state existed.
+            log.warn("contact-account-build drain state read failed", t)
+            AccountBuildDrainState.RAN
+        }
+        val previous = _deferredContactBuilds.value
         val pending = try {
             deferredContactBuildCount(walletIdHex)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("deferred contact-account-build count read failed", t)
             null
-        } ?: return
-        val previous = _deferredContactBuilds.value
-        val next = if (pending == previous.count) {
-            // Saturating: only the threshold crossing matters, and an
-            // unbounded counter would eventually overflow on a long session.
-            previous.copy(
-                unchangedReads = (previous.unchangedReads + 1)
-                    .coerceAtMost(DEFERRED_BUILDS_SETTLED_READS)
-            )
-        } else {
-            DeferredBuildObservation(count = pending)
         }
+        if (pending == null) {
+            // Unknown count: keep the observation — but not a drain state the
+            // tracker has moved on from, or a lock hold could outlive the
+            // tracker's own unlock grace while the count is unreadable.
+            if (drainState != previous.drainState) {
+                _deferredContactBuilds.value = previous.copy(drainState = drainState, unchangedReads = 0)
+            }
+            return
+        }
+        val next = nextDeferredBuildObservation(previous, pending, drainState, _l1Synced.value)
         _deferredContactBuilds.value = next
+        val settled = deferredBuildsSettled(next.count, next.unchangedReads, next.drainState)
         if (previous.count != pending) {
             log.info(
-                "deferred DashPay contact account builds: {} (was {}) — the balance {} be " +
+                "deferred DashPay contact account builds: {} (was {}, drain {}) — the balance {} be " +
                     "persisted as the next launch's last-known figure",
-                pending, previous.count,
-                if (deferredBuildsSettled(next.count, next.unchangedReads)) "may" else "will NOT"
+                pending, previous.count, drainState, if (settled) "may" else "will NOT"
             )
-        } else if (pending != 0 &&
-            next.unchangedReads == DEFERRED_BUILDS_SETTLED_READS &&
-            previous.unchangedReads < DEFERRED_BUILDS_SETTLED_READS
+        } else if (pending != 0 && previous.drainState != drainState) {
+            log.info(
+                "deferred DashPay contact account builds: {} still queued, drain {} (was {}) — {}",
+                pending, drainState, previous.drainState,
+                when (drainState) {
+                    AccountBuildDrainState.BLOCKED_DEVICE_LOCKED ->
+                        "the drain resumes once the device is unlocked; until then the balance " +
+                            "stays not-final and is not persisted"
+                    else -> "re-checking whether the queue is still moving"
+                }
+            )
+        } else if (pending != 0 && settled &&
+            !deferredBuildsSettled(previous.count, previous.unchangedReads, previous.drainState)
         ) {
             // The Joel shape: entries the SDK re-queues forever (it cannot mark
             // them broken, and the app cannot see why they are queued). A count
-            // that has stopped moving is settled — blocking the persist any
-            // longer would freeze the launch seed on a stale figure for good.
+            // that has stopped moving while the drain could run is settled —
+            // blocking the persist any longer would freeze the launch seed on a
+            // stale figure for good.
             log.info(
                 "deferred DashPay contact account builds pinned at {} across {} consecutive " +
-                    "reads — treating the queue as settled (stuck, not draining); the balance " +
-                    "may be persisted as the next launch's last-known figure",
-                pending, next.unchangedReads
+                    "reads (drain {}) — treating the queue as settled (stuck, not draining); " +
+                    "the balance may be persisted as the next launch's last-known figure",
+                pending, next.unchangedReads, drainState
             )
         }
     }
@@ -4408,7 +4520,8 @@ class CutoverUiDataService internal constructor(
         // on a stale figure, the exact staleness this gate exists to prevent.
         // So the gate is SETTLED-ness ([deferredBuildsSettled]): drained, or
         // pinned at the same non-zero count long enough to prove nothing is
-        // moving.
+        // moving — counted only while the drain could have moved it, so a
+        // queue held up by the locked device never reads as settled.
         val deferredBuilds = _deferredContactBuilds.value
         // …and an app-armed rescan/replay in flight makes the figure
         // untrustworthy even while the caught-up gate still reads true —
@@ -4422,7 +4535,16 @@ class CutoverUiDataService internal constructor(
         // addresses will find, so this figure is short by exactly them. This
         // is the guard that would have caught the field incident; see
         // [dashPayBackfillStatus].
-        val buildsSettled = deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
+        val buildsSettled = deferredBuildsSettled(
+            deferredBuilds.count, deferredBuilds.unchangedReads, deferredBuilds.drainState
+        )
+        val buildsHeldByLockedDevice = !buildsSettled &&
+            deferredBuilds.drainState == AccountBuildDrainState.BLOCKED_DEVICE_LOCKED
+        // …and builds no drain has touched yet (the restore shape) hold the
+        // indicator under its longer pre-first-drain ceiling; once the first
+        // drain runs this drops and a fresh ordinary ceiling starts.
+        val buildsAwaitingFirstDrain = !buildsSettled &&
+            deferredBuilds.drainState == AccountBuildDrainState.NOT_ATTEMPTED
         // Fan the two DashPay terms out to the user-facing sync signal — same
         // cadence, same readings.
         //
@@ -4435,7 +4557,9 @@ class CutoverUiDataService internal constructor(
         // (S21, 11.10.87). The DURABLE seed below still uses the strict test,
         // where the cost of being wrong is a persisted figure that poisons
         // every later launch; its armed term carries its own deadline.
-        publishDashPaySyncTerms(buildsSettled, !backfillStatus.ledgerIncomplete)
+        publishDashPaySyncTerms(
+            buildsSettled, !backfillStatus.ledgerIncomplete, buildsHeldByLockedDevice, buildsAwaitingFirstDrain
+        )
         // …and the block/tx pipeline must have DRAINED. This is the veto that
         // left the display predicate on 2026-09-21 (see [pipelineLagging]):
         // "synced" above now means what iOS means by it, which can be true
@@ -4453,10 +4577,10 @@ class CutoverUiDataService internal constructor(
             log.info(
                 "SDK balance published: {} duffs (was {}) | l1Synced={} pipelineLagging={} " +
                     "rescanArmedHold={} dashPayBackfill(armed={},replaying={}) " +
-                    "deferredContactBuilds={} (unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
+                    "deferredContactBuilds={} (unchangedReads={}, drain {}) persistedAsLastKnown={} lastKnown={}",
                 duffs, previous?.value ?: "none", synced, lagging, armedRescanHold,
                 backfillStatus.armed, backfillStatus.replaying, deferredBuilds.count,
-                deferredBuilds.unchangedReads, persist,
+                deferredBuilds.unchangedReads, deferredBuilds.drainState, persist,
                 _lastKnownTotalBalance.value?.value ?: "none"
             )
         }

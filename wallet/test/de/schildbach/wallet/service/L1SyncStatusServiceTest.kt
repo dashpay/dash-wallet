@@ -22,6 +22,8 @@ import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -884,6 +886,276 @@ class L1SyncStatusServiceTest {
         testScheduler.advanceTimeBy(600)
         runCurrent()
         assertEquals("the ceiling lands one deadline after the FIRST false", true, seen.last())
+        job.cancel()
+    }
+
+    // ── QA phone 2 (12.0.0-qa28): builds waiting on a locked device ──────
+
+    @Test
+    fun buildsHeldByTheLockedDevice_mapToTheirOwnVerdict() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE, dashPaySettleVerdict(status.terms.value))
+
+        status.setAccountBuildsSettled(false)
+        assertEquals(DashPaySettleVerdict.UNSETTLED, dashPaySettleVerdict(status.terms.value))
+
+        // A settled term can never be "held".
+        status.setAccountBuildsSettled(true, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+        assertFalse(status.terms.value.accountBuildsHeldByLockedDevice)
+    }
+
+    @Test
+    fun aWalletWithoutAnIdentityIsNeverHeldByTheLockedDevice() {
+        val status = DashPaySyncStatus()
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+    }
+
+    /**
+     * The phone sat locked for hours with 212 builds unable to drain. The
+     * ordinary ceiling must not run out meanwhile, or the user unlocks to the
+     * short balance reported as final.
+     */
+    @Test
+    fun aLockedDeviceHold_outlastsTheOrdinaryCeiling_butNotItsOwn() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(feed, deadlineMs = 1_000, lockedHoldMs = 50_000)
+                .collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE)
+        testScheduler.advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals("a locked-device hold is not cut short by the ordinary ceiling", false, seen.last())
+
+        testScheduler.advanceTimeBy(41_000)
+        runCurrent()
+        assertEquals("the hold has an independent backstop of its own", true, seen.last())
+        job.cancel()
+    }
+
+    /**
+     * After the unlock the drain runs and the builds start moving: the hold
+     * becomes an ordinary unsettled verdict, which must show as syncing again
+     * with a FRESH ceiling, even though an earlier ceiling had run out.
+     */
+    @Test
+    fun theDrainResumingAfterAnUnlock_reRaisesTheIndicatorWithAFreshCeiling() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(feed, deadlineMs = 1_000, lockedHoldMs = 5_000)
+                .collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(6_000)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        runCurrent()
+        assertEquals("draining builds show as syncing again", false, seen.last())
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.SETTLED)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
+    // ── Restore: builds no drain has touched yet ─────────────────────────
+
+    @Test
+    fun buildsAwaitingTheirFirstDrain_mapToTheirOwnVerdict() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        assertEquals(DashPaySettleVerdict.AWAITING_FIRST_DRAIN, dashPaySettleVerdict(status.terms.value))
+
+        // The first drain ran; the builds are still draining.
+        status.setAccountBuildsSettled(false)
+        assertEquals(DashPaySettleVerdict.UNSETTLED, dashPaySettleVerdict(status.terms.value))
+
+        // The locked-device hold is unchanged and takes precedence.
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE, dashPaySettleVerdict(status.terms.value))
+
+        // A settled term is never "awaiting".
+        status.setAccountBuildsSettled(true, awaitingFirstDrain = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+        assertFalse(status.terms.value.accountBuildsAwaitingFirstDrain)
+
+        // Nor is a wallet DashPay does not apply to.
+        val noIdentity = DashPaySyncStatus()
+        noIdentity.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(noIdentity.terms.value))
+
+        // A reset forgets it.
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        status.resetForWalletReset()
+        assertFalse(status.terms.value.accountBuildsAwaitingFirstDrain)
+    }
+
+    /**
+     * QA phone 2 restore: the first drain came 28 minutes after the scan
+     * caught up. The ordinary ceiling must not clear the indicator meanwhile;
+     * the hold's own clock runs only while the scan is caught up and does not
+     * restart when it briefly falls behind.
+     */
+    @Test
+    fun aFirstDrainHold_outlastsTheOrdinaryCeiling_countingOnlyCaughtUpTime() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val caughtUp = MutableStateFlow(false)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                feed, deadlineMs = 1_000, lockedHoldMs = 50_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 100_000,
+                firstDrainClockRunning = caughtUp, elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.AWAITING_FIRST_DRAIN)
+        // The scan itself: however long, none of it counts.
+        testScheduler.advanceTimeBy(20_000)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        caughtUp.value = true
+        testScheduler.advanceTimeBy(2_000)
+        runCurrent()
+        assertEquals("not cut short by the ordinary ceiling", false, seen.last())
+
+        // Falls behind for a while: paused, not reset.
+        caughtUp.value = false
+        testScheduler.advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        caughtUp.value = true
+        testScheduler.advanceTimeBy(900)
+        runCurrent()
+        assertEquals("2.9 s of caught-up time: still held", false, seen.last())
+        testScheduler.advanceTimeBy(200)
+        runCurrent()
+        assertEquals("the hold has an independent backstop of its own", true, seen.last())
+        job.cancel()
+    }
+
+    @Test
+    fun aFirstDrainHold_isBoundedInWallTimeEvenIfTheScanNeverCatchesUp() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                feed, deadlineMs = 1_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 30_000,
+                firstDrainClockRunning = MutableStateFlow(false), elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.AWAITING_FIRST_DRAIN)
+        testScheduler.advanceTimeBy(29_000)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
+    /**
+     * NOT_ATTEMPTED → RAN with the builds still unsettled: the verdict
+     * changes from the first-drain hold to ordinary UNSETTLED, which must
+     * re-raise the indicator with a FRESH ordinary ceiling even after the
+     * hold's own ceiling ran out — the drain has only just started matching
+     * contact payments.
+     */
+    @Test
+    fun theFirstDrainRunning_startsAFreshOrdinaryCeiling() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                feed, deadlineMs = 1_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 100_000,
+                firstDrainClockRunning = MutableStateFlow(true), elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.AWAITING_FIRST_DRAIN)
+        testScheduler.advanceTimeBy(3_100)
+        runCurrent()
+        assertEquals("the hold's backstop ran out", true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        runCurrent()
+        assertEquals("the first drain ran: syncing again", false, seen.last())
+        testScheduler.advanceTimeBy(900)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(200)
+        runCurrent()
+        assertEquals("a fresh ordinary ceiling, not the expired one", true, seen.last())
+        job.cancel()
+    }
+
+    /** The same transition end to end, from the published terms. */
+    @Test
+    fun theFirstDrainRunning_fromTheTerms_reRaisesTheIndicator() = runTest {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                status.terms.map(::dashPaySettleVerdict), deadlineMs = 1_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 100_000,
+                firstDrainClockRunning = MutableStateFlow(true), elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        testScheduler.advanceTimeBy(2_000)
+        runCurrent()
+        assertEquals("past the ordinary ceiling, still held", false, seen.last())
+
+        // Republishing the same terms (60 s producer cadence) must not
+        // restart the hold's clock.
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        status.setAccountBuildsSettled(false)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
         job.cancel()
     }
 

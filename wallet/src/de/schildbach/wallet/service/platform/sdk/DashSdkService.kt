@@ -682,6 +682,16 @@ interface DashSdkService {
     suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int?
 
     /**
+     * Whether the contact-account-build drain on [walletIdHex] has run, has
+     * not been attempted yet this process, or was last held up by the device
+     * being locked — see [AccountBuildDrainState]. In-memory, no I/O beyond a
+     * `KeyguardManager` read. Default [AccountBuildDrainState.RAN] keeps fakes
+     * on the plain pinned-count rule.
+     */
+    fun dashPayAccountBuildDrainState(walletIdHex: String): AccountBuildDrainState =
+        AccountBuildDrainState.RAN
+
+    /**
      * Read-only receival-account coverage of the wallet's established
      * DashPay contacts — see [DashPayReceivalCoverage] for what it names and
      * why. Pure Room reads through [databaseOrNull] (no [ensureStarted], no

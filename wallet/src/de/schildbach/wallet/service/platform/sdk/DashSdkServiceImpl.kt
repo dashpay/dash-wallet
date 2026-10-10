@@ -422,6 +422,28 @@ class DashSdkServiceImpl @Inject constructor(
         return armedAt != 0L && android.os.SystemClock.elapsedRealtime() - armedAt < windowMs
     }
 
+    /**
+     * Outcome of each contact-account-build drain ([drainContactCryptoQueue]),
+     * read by the balance pipeline through [dashPayAccountBuildDrainState].
+     * In-memory only, like [lastSpvRescanArmElapsedMs]: a new process drains
+     * again before it can know anything.
+     */
+    private val accountBuildDrains = AccountBuildDrainTracker(
+        deviceLocked = {
+            try {
+                context.getSystemService(android.app.KeyguardManager::class.java)?.isDeviceLocked == true
+            } catch (t: Throwable) {
+                // Unknowable reads as unlocked: the drain failure then counts as
+                // having no known temporary cause, the fail-open direction.
+                false
+            }
+        },
+        elapsedMs = { android.os.SystemClock.elapsedRealtime() }
+    )
+
+    override fun dashPayAccountBuildDrainState(walletIdHex: String): AccountBuildDrainState =
+        accountBuildDrains.state(walletIdHex)
+
     override val isStarted: Boolean
         get() = runtime != null
 
@@ -608,6 +630,8 @@ class DashSdkServiceImpl @Inject constructor(
                 walletIdHex.take(8)
             )
             current.walletManager.removeWallet(walletId)
+            // The re-created wallet (same deterministic id) has drained nothing yet.
+            accountBuildDrains.forget(walletIdHex)
             log.info("SDK wallet {}… removed", walletIdHex.take(8))
         }
     }
@@ -959,21 +983,29 @@ class DashSdkServiceImpl @Inject constructor(
         val manager = checkNotNull(runtime) { "SDK runtime missing" }.walletManager
         val queuedBefore = manager.contactCryptoPendingCount(walletId)
         if (queuedBefore == 0) {
+            accountBuildDrains.onDrainRan(walletIdHex)
             return DashPayContactDrainReport(
                 bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
             )
         }
         val drainScheduled = try {
-            manager.unlockWalletFromKeystore(managed)
+            manager.unlockWalletFromKeystore(managed).also {
+                // false = a genuine watch-only wallet, which can never drain:
+                // no temporary cause, so the pinned-count rule applies.
+                accountBuildDrains.onDrainRan(walletIdHex)
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
             // Non-fatal: the next signer-present pass retries the drain;
-            // the sweep rebuilds the queue if it was lost.
+            // the sweep rebuilds the queue if it was lost. While the device is
+            // locked this is the expected Keystore refusal, and the balance
+            // pipeline keeps the figure not-final until a drain can run.
+            val deviceLocked = accountBuildDrains.onDrainDeferred(walletIdHex)
             log.warn(
                 "DashPay contact-crypto drain deferred on SDK wallet {}… " +
-                    "(seed verify / Keystore unavailable): {}",
-                walletIdHex.take(8), e.message
+                    "(seed verify / Keystore unavailable, deviceLocked={}): {}",
+                walletIdHex.take(8), deviceLocked, e.message
             )
             false
         }
