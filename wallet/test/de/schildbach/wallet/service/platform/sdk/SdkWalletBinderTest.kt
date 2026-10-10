@@ -97,6 +97,16 @@ class SdkWalletBinderTest {
             widenCalls++
             return onWiden(walletIdHex)
         }
+
+        /** Address-pool backfill hook — default: nothing missing. NOT in [totalCalls]. */
+        var onBackfill: suspend (String) -> AddressPoolBackfillResult? = {
+            AddressPoolBackfillResult(inserted = 0, holesFilled = 0, poolsRefused = 0)
+        }
+        var backfillCalls = 0
+        override suspend fun backfillAddressPoolHoles(walletIdHex: String): AddressPoolBackfillResult? {
+            backfillCalls++
+            return onBackfill(walletIdHex)
+        }
         var onArmRescan: suspend (String, Long?) -> Boolean = { _, _ -> true }
         var armRescanCalls = 0
         override suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean {
@@ -330,6 +340,7 @@ class SdkWalletBinderTest {
         owedRescanWatchIntervalMs: Long = 5L,
         deviceProvablyLocked: () -> Boolean = { false },
         reportNonFatal: (Throwable) -> Unit = {},
+        processToken: String = "test-process",
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -345,7 +356,8 @@ class SdkWalletBinderTest {
         backfillWatchIntervalMs = backfillWatchIntervalMs,
         owedRescanWatchIntervalMs = owedRescanWatchIntervalMs,
         deviceProvablyLocked = deviceProvablyLocked,
-        reportNonFatal = reportNonFatal
+        reportNonFatal = reportNonFatal,
+        processToken = processToken
     )
 
     // ── Phase 1a item 4: no first bind while the device is locked ─────
@@ -1987,6 +1999,9 @@ class SdkWalletBinderTest {
     /** The armed-but-unconfirmed owed rewind record as the store holds it; [healConfig] reads and writes it. */
     private var owedRescanArmed: String? = null
 
+    /** The address-pool backfill's pending-rescan token as the store holds it; [healConfig] reads and writes it. */
+    private var poolHolesRescanPending: String? = null
+
     /** A config whose gap-widened version (and owed-rescan flag) behave like the real store. */
     private fun healConfig(recordedVersion: Int? = null): Pair<DashPayConfig, () -> Int?> {
         var recorded: Int? = recordedVersion
@@ -2006,11 +2021,118 @@ class SdkWalletBinderTest {
         coEvery { config.get(DashPayConfig.SDK_OWED_RESCAN_ARMED) } answers { owedRescanArmed }
         coEvery { config.set(DashPayConfig.SDK_OWED_RESCAN_ARMED, any()) } answers { owedRescanArmed = secondArg() }
         coEvery { config.remove(DashPayConfig.SDK_OWED_RESCAN_ARMED) } answers { owedRescanArmed = null }
+        coEvery { config.get(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING) } answers { poolHolesRescanPending }
+        coEvery {
+            config.set(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING, any())
+        } answers { poolHolesRescanPending = secondArg() }
+        coEvery {
+            config.remove(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING)
+        } answers { poolHolesRescanPending = null }
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERED_FLOOR) } returns Unit
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COMPLETED_THROUGH) } returns Unit
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_CONTACT_FINGERPRINT) } returns Unit
         coEvery { config.remove(DashPayConfig.DASHPAY_BACKFILL_COVERAGE_OBSERVED) } returns Unit
         return config to { recorded }
+    }
+
+    // -- Step 4c: address-pool hole backfill --------------------------------
+
+    private fun holes(filled: Int) = AddressPoolBackfillResult(
+        inserted = filled, holesFilled = filled, poolsRefused = 0
+    )
+
+    @Test
+    fun backfill_fillingHoles_owesTheRescanOnlyAfterTheWalletReloads() = runBlocking {
+        // Field case, 2026-10-10: the widened window was never persisted, so
+        // a reloaded pool lacked internal index 637 and missed change iOS
+        // sent there. The backfill writes the rows, but they reach the engine
+        // only on its next load: a rescan in this process would scan the
+        // same holed pool.
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { holes(85) }
+        binder(sdk, config = config, processToken = "first", scope = this).bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.backfillCalls)
+        assertEquals("first", poolHolesRescanPending)
+        assertEquals("no rescan against the pool still loaded without the rows", 0, sdk.armRescanCalls)
+        assertNull(owedRescan)
+
+        // Another pass in the SAME process finds the rows in place but the
+        // engine still holds the holed pool: still no rescan.
+        sdk.onBackfill = { holes(0) }
+        binder(sdk, config = config, processToken = "first", scope = this).bindIfEnabled(unlock)
+        assertEquals(0, sdk.armRescanCalls)
+        assertEquals("first", poolHolesRescanPending)
+
+        // The next process loads the healed pool: now the rewind to birth is
+        // owed and armed, once.
+        binder(sdk, config = config, processToken = "second", scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(poolHolesRescanPending)
+        assertNull("the armed rewind persisted, so the debt is paid", owedRescan)
+
+        binder(sdk, config = config, processToken = "third", scope = this).bindIfEnabled(unlock)
+        assertEquals("paid once", 1, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun backfill_holesFoundAgainAfterAReload_keepsTheRescanWaiting() = runBlocking {
+        // A pool that is still missing rows in the next process (the inserts
+        // failed to land) must not be rescanned yet: the rescan would miss
+        // the same payments again and then be considered paid.
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { holes(85) }
+        binder(sdk, config = config, processToken = "first", scope = this).bindIfEnabled(unlock)
+        binder(sdk, config = config, processToken = "second", scope = this).bindIfEnabled(unlock)
+
+        assertEquals(0, sdk.armRescanCalls)
+        assertEquals("second", poolHolesRescanPending)
+    }
+
+    @Test
+    fun backfill_widenedTailOnly_owesNoRescan() = runBlocking {
+        // Rows above the highest stored index are the window the engine
+        // derived in memory this session; persisting them recovers nothing.
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { AddressPoolBackfillResult(inserted = 970, holesFilled = 0, poolsRefused = 0) }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.backfillCalls)
+        assertEquals(0, sdk.armRescanCalls)
+        assertNull(poolHolesRescanPending)
+    }
+
+    @Test
+    fun backfill_failure_neverFailsTheBindOrHoldsTheScan() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { throw IllegalStateException("database closed") }
+        val binder = binder(sdk, config = config, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.widenCalls)
+        assertEquals(1, sdk.backfillCalls)
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertNull(poolHolesRescanPending)
+    }
+
+    @Test
+    fun backfill_runsWhenTheScanGateWidens() = runBlocking {
+        // The scan gate can widen before any bind pass; the rows it derives
+        // need persisting just the same.
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { holes(3) }
+        val binder = binder(sdk, config = config, processToken = "first", scope = this)
+
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals(1, sdk.widenCalls)
+        assertEquals(1, sdk.backfillCalls)
+        assertEquals("first", poolHolesRescanPending)
+        assertEquals(0, sdk.armRescanCalls)
     }
 
     @Test
