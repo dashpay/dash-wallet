@@ -27,6 +27,7 @@ import org.bitcoinj.wallet.SendRequest
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.transactions.toTxInfo
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.SpendSelection
 import org.dash.wallet.common.transactions.TxInfo
@@ -87,21 +88,36 @@ class FakeDashSpendService @Inject constructor(
         return realService.estimateNetworkFee(address, amount, emptyWallet)
     }
 
-    override suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction {
+    override suspend fun payWithDashUrlTx(
+        dashUri: String,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata?,
+        onTransactionCreated: (suspend (String) -> Unit)?
+    ): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
-            realService.sendCoins(
+            val transaction = realService.sendCoins(
                 Address.fromBase58(walletDataProvider.networkParameters, "yiCvnqNp53bjCReThnPx8ttuhM7JXUUyfQ"),
                 amount
             )
+            // Callers persist the order from this callback, so skipping it leaves a completed
+            // purchase with nothing for the details screen to load. Later than the real path,
+            // which calls it before submitting, but sendCoins gives no pre-send suspension point.
+            onTransactionCreated?.invoke(transaction.txId.toString())
+            transaction
         } else {
-            realService.payWithDashUrlTx(dashUri, serviceName)
+            realService.payWithDashUrlTx(dashUri, serviceName, recovery, onTransactionCreated)
         }
     }
 
-    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): TxInfo {
-        return payWithDashUrlTx(dashUri, serviceName)
+    override suspend fun payWithDashUrl(
+        dashUri: String,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata?,
+        onTransactionCreated: (suspend (String) -> Unit)?
+    ): TxInfo {
+        return payWithDashUrlTx(dashUri, serviceName, recovery, onTransactionCreated)
             .toTxInfo(walletDataProvider.transactionBag, walletDataProvider.networkParameters)
     }
 

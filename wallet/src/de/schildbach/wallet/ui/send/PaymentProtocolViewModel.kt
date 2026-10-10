@@ -42,6 +42,7 @@ import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import de.schildbach.wallet.util.toDashjFiat
@@ -218,42 +219,37 @@ class PaymentProtocolViewModel @Inject constructor(
                 // Atomic take: whoever wins this getAndSet owns the
                 // reservation; any concurrent reader sees null.
                 val prebuilt = deferredPaymentRef.getAndSet(null)
-                val transaction = if (prebuilt != null) {
-                    // Post-cutover: submit the EXACT tx the preview showed.
-                    // The reservation is consumed (ack → broadcast) or
-                    // released (pre-ack failure) inside the runner either
-                    // way — this reference is dead after the call.
-                    try {
-                        sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
-                    } catch (ex: Exception) {
-                        // Re-arm ONLY on a definitive refusal (nack): the
-                        // server said no, nothing is on the network, and a
-                        // fresh reservation is safe.
-                        //
-                        // NEVER re-arm on an AMBIGUOUS failure (transport
-                        // error that the network-observation rescue could
-                        // not resolve): the engine cannot see the mempool
-                        // spend of the released inputs, so a rebuilt retry
-                        // may select DIFFERENT inputs and pay the merchant
-                        // twice if the server did broadcast after all.
-                        // Observed in the field test (2026-08-03): the
-                        // rebuild produced a different tx (ed08074b) for
-                        // an invoice whose original (2c3be7d8) was already
-                        // on-chain. The user must restart the payment.
-                        //
-                        // Also never re-arm after Bip70AckedDisplayException
-                        // — the merchant holds an ACKED tx.
-                        if (ex is org.dash.wallet.common.services.DirectPayException) {
-                            runCatching { createBaseSendRequest(finalPaymentIntent!!) }
-                        }
-                        throw ex
-                    }
-                } else {
                     // No armed reservation: the preview failed (the
                     // fragment gates on canSendPayment, so this is a
                     // backstop, not a fallback — the dashj leg is gone).
-                    error("no prepared payment to submit — the preview must build first")
+                    ?: error("no prepared payment to submit — the preview must build first")
+
+                // Before submitting anything, ask whether this invoice already has a submission
+                // out. Restored input locks only keep a new transaction off the old one's inputs;
+                // a wallet with other funds happily builds a second payment for the same invoice
+                // from different ones, and the payee can broadcast both. This screen keeps its own
+                // record of having sent in a fragment-scoped view model, which is gone after
+                // process death and was never there when the invoice is simply opened again, so
+                // the stored record is the only thing left that remembers.
+                sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!.paymentRequestHash)?.let { txId ->
+                    log.info("not submitting again, {} is still unresolved for this payment request", txId)
+                    sendCoinsTaskRunner.releaseDeferredPayment(prebuilt)
+                    throw PaymentSubmissionPendingException(txId.toString(), null)
                 }
+
+                // Submit the EXACT tx the preview showed. The reservation is consumed (ack →
+                // broadcast), held by the pending-payment watch (outcome unknown, a nack
+                // included) or released (the request never left) inside the runner — this
+                // reference is dead after the call either way.
+                //
+                // NEVER re-arm a fresh reservation after a failure here: only a request that
+                // never left the device is definitively unsent, and the runner already freed
+                // those inputs. Anything else may have reached the payee, and a rebuilt retry may
+                // select DIFFERENT inputs and pay the merchant twice if the server broadcasts
+                // after all. Observed in the field test (2026-08-03): the rebuild produced a
+                // different tx (ed08074b) for an invoice whose original (2c3be7d8) was already
+                // on-chain. The user must restart the payment.
+                val transaction = sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
 
                 directPaymentAckLiveData.postValue(Resource.success(transaction))
             } catch (ex: Exception) {

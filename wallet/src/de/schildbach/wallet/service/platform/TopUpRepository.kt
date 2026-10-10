@@ -24,12 +24,14 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DynamicLink
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.data.InviteShareLink
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
 import de.schildbach.wallet.service.platform.work.ResumeTopUpsOperation
@@ -94,7 +96,7 @@ interface TopUpRepository {
         keyParameter: KeyParameter?
     )
 
-    fun createTopupTransaction(
+    suspend fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
         keyParameter: KeyParameter?
@@ -176,7 +178,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val invitationsDao: InvitationsDao,
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService,
-    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService
+    private val sdkTopUpRecoveryService: SdkTopUpRecoveryService,
+    private val pendingPaymentVerifier: PendingDirectPaymentVerifier
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -193,6 +196,9 @@ class TopUpRepositoryImpl @Inject constructor(
         username: String,
         keyParameter: KeyParameter?
     ) {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         val fee = if (Names.isUsernameContestable(username)) {
             Constants.DASH_PAY_FEE_CONTESTED
         } else {
@@ -212,11 +218,14 @@ class TopUpRepositoryImpl @Inject constructor(
         blockchainIdentity.initializeAssetLockTransaction(cftx)
     }
 
-    override fun createTopupTransaction(
+    override suspend fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
         keyParameter: KeyParameter?
     ): AssetLockTransaction {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         Context.propagate(walletDataProvider.wallet!!.context)
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
@@ -291,6 +300,8 @@ class TopUpRepositoryImpl @Inject constructor(
      * @return True if successful
      */
     override suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
+        // Backstop for callers that built the transaction elsewhere, such as invite funding.
+        pendingPaymentVerifier.awaitRestored()
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
             log.info("adding credit funding transaction listener for ${cftx.txId}")
@@ -381,6 +392,9 @@ class TopUpRepositoryImpl @Inject constructor(
         topUpTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter?
     ) {
+        // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
+        // the input locks of an uncertain payment live only in memory until they are restored.
+        pendingPaymentVerifier.awaitRestored()
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
         ) ?: addTopUp(topUpTx.txId)
@@ -557,6 +571,9 @@ class TopUpRepositoryImpl @Inject constructor(
         keyParameter: KeyParameter?,
         topupAmount: Coin
     ): AssetLockTransaction {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)
@@ -604,8 +621,10 @@ class TopUpRepositoryImpl @Inject constructor(
         // in each suspend method that uses the dashj Context
         Context.propagate(walletDataProvider.wallet!!.context)
         val username = dashPayProfile.username
-        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
-        val invitationLinkData = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter)
+        // The link builder percent-encodes every parameter once. Pre-encoding the avatar URL here
+        // produced a double-encoded `avatar-url` that only Android knew how to undo; the iOS wallet
+        // (platform SDK parser) decodes once and showed a broken avatar.
+        val invitationLinkData = InvitationLinkData.create(username, dashPayProfile.displayName, dashPayProfile.avatarUrl, assetLockTx, aesKeyParameter)
 
         return generateInviteOneLink(invitationLinkData, dashPayProfile.nameLabel, dashPayProfile.avatarUrl)
     }
@@ -658,15 +677,22 @@ class TopUpRepositoryImpl @Inject constructor(
             )
             linkGenerator.generateLink(walletApplication, object : ResponseListener {
                 override fun onResponse(link: String?) {
+                    // `link` is AppsFlyer's answer: a short OneLink when the server accepted the
+                    // request, or the SDK's long link when it did not. A short link carries no
+                    // `af_dp`, and the iOS wallet has no AppsFlyer SDK to resolve it, so the link we
+                    // share is always the long one. See InviteShareLink for the host/path fix-ups.
+                    val longLink = linkGenerator.generateLink()
+                    val shareLink = InviteShareLink.from(longLink, BuildConfig.APPSFLYER_BRAND_DOMAIN)
                     log.info("AppsFlyer link generated successfully: {}", link)
-                    log.info("AppsFlyer link generator : {}", linkGenerator.generateLink())
+                    log.info("AppsFlyer link generator : {}", longLink)
+                    log.info("AppsFlyer share link : {}", shareLink)
                     log.info("AppsFlyer af_dp : {}", invitationLinkData.link.toString())
                     log.info("AppsFlyer user parameters {}", linkGenerator.userParams)
 
                     continuation.resume(
                         DynamicLink(
-                            link!!,
-                            linkGenerator.generateLink(),
+                            shareLink,
+                            link ?: longLink,
                             invitationLinkData.link.toString(),
                             DynamicLink.AppsFlyer
                         )

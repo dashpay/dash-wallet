@@ -112,7 +112,9 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
                 mockk(relaxed = true),
                 // Phase 5d bridge factory: only reached under a committed
                 // cutover, which these flows never take.
-                mockk(relaxed = true)
+                mockk(relaxed = true),
+                // Pending-payment barrier: relaxed, so awaitRestored() passes straight through.
+                mockk<PendingDirectPaymentVerifier>(relaxed = true)
             )
         )
         coEvery { runner.logSendTxEvent(any(), any()) } returns Unit

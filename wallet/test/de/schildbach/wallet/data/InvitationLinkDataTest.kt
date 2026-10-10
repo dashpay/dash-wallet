@@ -18,6 +18,7 @@
 package de.schildbach.wallet.data
 
 import android.app.Application
+import android.net.Uri
 import androidx.core.net.toUri
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -189,5 +190,36 @@ class InvitationLinkDataTest {
             "bob", "", "", ONE_TIME_KEY_HEX, FUNDING_HEIGHT
         ).link).isShielded)
         assertFalse(InvitationLinkData(l1Link()).isShielded)
+    }
+
+    // ── avatar-url encoding (#1587: share invite links the iOS wallet can open) ──
+
+    private val base = "dashpay://invite?du=alice&assetlocktx=a0963d1b&pk=cNihCPEQ&islock=0101b1" +
+        "&display-name=Test%20Wallet%20(CoinJoin)"
+
+    @Test
+    fun `single-encoded avatar url is read as is`() {
+        val link = Uri.parse("$base&avatar-url=https%3A%2F%2Fi.imgur.com%2FJgGDEQB.jpeg")
+        assertTrue(InvitationLinkData.isValid(link))
+        assertEquals("https://i.imgur.com/JgGDEQB.jpeg", InvitationLinkData(link).avatarUrl)
+    }
+
+    @Test
+    fun `single-encoded avatar url keeps its own percent escapes`() {
+        val link = Uri.parse("$base&avatar-url=https%3A%2F%2Fexample.com%2Fmy%2520avatar.png")
+        assertEquals("https://example.com/my%20avatar.png", InvitationLinkData(link).avatarUrl)
+    }
+
+    @Test
+    fun `double-encoded avatar url from older wallets is still decoded`() {
+        val link = Uri.parse("$base&avatar-url=https%253A%252F%252Fi.imgur.com%252FJgGDEQB.jpeg")
+        assertEquals("https://i.imgur.com/JgGDEQB.jpeg", InvitationLinkData(link).avatarUrl)
+    }
+
+    @Test
+    fun `missing avatar url is empty`() {
+        val data = InvitationLinkData(Uri.parse(base))
+        assertEquals("", data.avatarUrl)
+        assertEquals("Test Wallet (CoinJoin)", data.displayName)
     }
 }

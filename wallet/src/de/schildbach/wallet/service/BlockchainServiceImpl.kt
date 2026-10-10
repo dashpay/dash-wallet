@@ -61,6 +61,7 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -557,6 +558,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // Set to 0 to disable test timeout (use Android's default 6-hour limit)
         // Set to 1-2 minutes for testing the timeout behavior
         private val TEST_TIMEOUT_MINUTES = 0L // Change to 0 to disable
+        /** How long a new instance waits for the previous instance's cleanup before complaining. */
+        private const val CLEANUP_WAIT_MS = 15_000L
+        /** Additional wait before giving up, stopping and rescheduling the service. */
+        private const val CLEANUP_EXTRA_WAIT_MS = 60_000L
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -744,6 +749,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     lateinit var dashSystemService: DashSystemService
 
     @Inject lateinit var serviceConfig: BlockchainServiceConfig
+    @Inject lateinit var pendingDirectPaymentVerifier: PendingDirectPaymentVerifier
     @Inject lateinit var analyticsService: AnalyticsService
     @Inject lateinit var securityFunctions: AuthenticationManager
     @Inject lateinit var cutoverCoordinator: de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
@@ -1386,6 +1392,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (stopped.get()) return
             // The network-status flip is cheap in-memory state — keep it
             // immediate and per-event.
+            blockchainStateDataProvider.setConnectedPeerCount(numPeers)
             val networkStatus = blockchainStateDataProvider.getNetworkStatus()
             if (numPeers > 0 && networkStatus == NetworkStatus.CONNECTING) blockchainStateDataProvider.setNetworkStatus(
                 NetworkStatus.CONNECTED
@@ -2147,6 +2154,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.error("Error shutting down risk analyzer", e)
             }
             peerGroup = null
+            blockchainStateDataProvider.setConnectedPeerCount(0)
             log.debug("releasing wakelock")
             if (wakeLock!!.isHeld) {
                 wakeLock!!.release()
@@ -2564,12 +2572,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
 
-                val cleanupCompleted = awaitPreviousInstanceCleanup(15_000)
+                var cleanupCompleted = awaitPreviousInstanceCleanup(CLEANUP_WAIT_MS)
 
                 if (!cleanupCompleted) {
-                    log.error("CRITICAL: Cleanup did not complete within 15 seconds")
+                    // The previous instance is still shutting down (forced peergroup stop, long wallet
+                    // saves on big wallets). This is common when the user leaves and re-enters the app
+                    // within a minute, so keep waiting instead of giving up right away.
+                    log.error(
+                        "Cleanup of the previous service instance did not complete within {} seconds, " +
+                            "waiting up to {} more seconds",
+                        CLEANUP_WAIT_MS / 1000, CLEANUP_EXTRA_WAIT_MS / 1000
+                    )
+                    cleanupCompleted = awaitPreviousInstanceCleanup(CLEANUP_EXTRA_WAIT_MS)
+                }
+
+                if (!cleanupCompleted) {
+                    log.error("CRITICAL: Cleanup did not complete within {} seconds", (CLEANUP_WAIT_MS + CLEANUP_EXTRA_WAIT_MS) / 1000)
                     log.error("This indicates a deadlock in onDestroy - cannot proceed with onCreate")
-                    log.error("Stopping service to prevent resource conflicts and file lock exceptions")
+                    log.error("Stopping service to prevent resource conflicts and file lock exceptions; restart scheduled")
 
                     // Complete onCreate to unblock any waiting onStartCommand calls
                     if (onCreateCompleted.isActive) {
@@ -2604,6 +2624,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 "will (plan §37)"
                         )
                     }
+
+                    // Don't leave the wallet without a service (and without peers for any payment in
+                    // progress): come back once the old instance has had time to release its locks.
+                    rescheduleService()
 
                     // Stop the service - we cannot safely initialize with cleanup still running
                     withContext(Dispatchers.Main) {
@@ -2666,7 +2690,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
                 )
 
+                // re-lock inputs of BIP70 payments with an unknown result and keep watching for them
+                pendingDirectPaymentVerifier.resume()
                 peerConnectivityListener = PeerConnectivityListener()
+                blockchainStateDataProvider.setConnectedPeerCount(0)
                 broadcastPeerState(0)
                 blockChainFile =
                     File(getDir("blockstore", MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME)
@@ -3559,7 +3586,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onTrimMemory(level: Int) {
         log.info("onTrimMemory({}) called", level)
         if (shouldStopForMemoryPressure(level)) {
-            log.warn("memory pressure (onTrimMemory level {}), stopping service", level)
+            // Stop gracefully so the wallet is saved cleanly, and come back once memory frees up.
+            log.warn("memory pressure (onTrimMemory level {}), stopping service and scheduling restart", level)
+            rescheduleService()
             stopSelf()
         }
     }

@@ -35,6 +35,12 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameNameStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.livedata.Resource
 import org.dashj.platform.dpp.document.Document
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.voting.BlockInfo
+import org.dashj.platform.dpp.voting.ContenderWithSerializedDocument
+import org.dashj.platform.dpp.voting.Contenders
+import org.dashj.platform.dpp.voting.ContestedDocumentVotePollWinnerInfo
+import java.util.Optional
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
@@ -68,6 +74,7 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -832,6 +839,8 @@ class RequestUserNameViewModelTest {
             every { getVoteContendersOrThrow("alice") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
         }
         val viewModel = viewModel(platformRepo)
@@ -867,11 +876,15 @@ class RequestUserNameViewModelTest {
             every { getVoteContendersOrThrow("alice") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
             every { getUsername("bob") } returns Resource.success(mockk<Document>())
             every { getVoteContendersOrThrow("bob") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
         }
         val viewModel = viewModel(platformRepo)
@@ -905,6 +918,8 @@ class RequestUserNameViewModelTest {
             every { getVoteContendersOrThrow("alice") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
         }
         val viewModel = viewModel(platformRepo)
@@ -938,6 +953,8 @@ class RequestUserNameViewModelTest {
             every { getVoteContendersOrThrow("bob") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
         }
         val viewModel = viewModel(platformRepo)
@@ -986,11 +1003,15 @@ class RequestUserNameViewModelTest {
             every { getVoteContendersOrThrow("alice") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
             every { getUsername("bob") } returns Resource.success(null)
             every { getVoteContendersOrThrow("bob") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
         }
         val viewModel = viewModel(platformRepo)
@@ -1045,6 +1066,8 @@ class RequestUserNameViewModelTest {
             every { getVoteContendersOrThrow("alice") } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
         }
         val viewModel = viewModel(platformRepo)
@@ -1085,6 +1108,8 @@ class RequestUserNameViewModelTest {
             every { getVoteContendersOrThrow(any()) } returns mockk {
                 every { map } returns emptyMap()
                 every { lockVoteTally } returns 0
+                // no finished vote: the check reads the winner before the in-progress rule
+                every { winner } returns Optional.empty()
             }
         }
         val viewModel = viewModel(platformRepo)
@@ -1293,4 +1318,275 @@ class RequestUserNameViewModelTest {
             )
         )
     }
+
+    // ── Finished votes and the current-result guard (master #1567) ───────────
+    //
+    // A contested name whose vote has ENDED reports an empty contender map and no
+    // lock votes, so the in-progress rule alone read a locked or already-won name
+    // as available.
+
+    @Test
+    fun checkUsername_noDocumentAndNoVote_isAvailable() = runVmTest {
+        val state = checkUsernameWith(document = null, contenders = contenders())
+
+        assertTrue(state.usernameCheckSuccess)
+        assertFalse(state.usernameExists)
+        assertFalse(state.usernameContested)
+        assertFalse(state.usernameBlocked)
+        assertEquals(CHECKED_NAME, state.checkedUsername)
+    }
+
+    @Test
+    fun checkUsername_documentExists_isTaken() = runVmTest {
+        val state = checkUsernameWith(document = mockk<Document>(), contenders = contenders())
+
+        assertTrue(state.usernameCheckSuccess)
+        assertTrue(state.usernameExists)
+        assertFalse(state.usernameBlocked)
+    }
+
+    @Test
+    fun checkUsername_voteInProgress_isContestedButNotBlocked() = runVmTest {
+        val state = checkUsernameWith(
+            document = null,
+            contenders = contenders(map = mapOf(OTHER_IDENTITY to contender(votes = 3)), lockVoteTally = 1)
+        )
+
+        assertTrue(state.usernameCheckSuccess)
+        assertTrue(state.usernameContested)
+        assertFalse(state.usernameExists)
+        assertFalse(state.usernameBlocked)
+    }
+
+    @Test
+    fun checkUsername_voteInProgressWithNoContendersAndLockVotes_isBlocked() = runVmTest {
+        val state = checkUsernameWith(document = null, contenders = contenders(lockVoteTally = 2))
+
+        assertTrue(state.usernameBlocked)
+    }
+
+    @Test
+    fun checkUsername_lockedBallotWithEmptyContenderMap_isBlocked() = runVmTest {
+        val state = checkUsernameWith(document = null, contenders = contenders(winner = finishedVote(isLocked = true)))
+
+        assertTrue(state.usernameCheckSuccess)
+        assertTrue("masternodes locked this name, nobody can register it", state.usernameBlocked)
+        assertFalse(state.usernameExists)
+    }
+
+    @Test
+    fun checkUsername_wonBallotBeforeDomainLookupCatchesUp_isTaken() = runVmTest {
+        val state = checkUsernameWith(
+            document = null,
+            contenders = contenders(winner = finishedVote(isLocked = false, noWinner = false))
+        )
+
+        assertTrue(state.usernameCheckSuccess)
+        assertTrue("a won name is taken even before its document shows up", state.usernameExists)
+        assertFalse(state.usernameBlocked)
+    }
+
+    @Test
+    fun checkUsername_ballotEndedWithNoWinner_isAvailableAgain() = runVmTest {
+        val state = checkUsernameWith(
+            document = null,
+            contenders = contenders(winner = finishedVote(isLocked = false, noWinner = true))
+        )
+
+        assertTrue(state.usernameCheckSuccess)
+        assertFalse(state.usernameExists)
+        assertFalse(state.usernameBlocked)
+        assertFalse(state.usernameContested)
+    }
+
+    @Test
+    fun hasAvailableResultFor_onlyMatchesTheCheckedAvailableName() = runVmTest {
+        val viewModel = viewModelCheckingWith(document = null, contenders = contenders())
+        viewModel.checkUsername(CHECKED_NAME)
+        viewModel.uiState.first { it.usernameCheckSuccess }
+
+        assertTrue(viewModel.hasAvailableResultFor(CHECKED_NAME))
+        assertFalse(viewModel.hasAvailableResultFor("someothername"))
+    }
+
+    @Test
+    fun hasAvailableResultFor_isFalseOnceTheInputMovesOn() = runVmTest {
+        val viewModel = viewModelCheckingWith(document = null, contenders = contenders())
+        viewModel.checkUsername(CHECKED_NAME)
+        viewModel.uiState.first { it.usernameCheckSuccess }
+
+        // the user keeps typing: the per-keystroke validity pass clears the result
+        viewModel.checkUsernameValid("secondname", UsernameType.Primary)
+
+        assertNull(viewModel.uiState.value.checkedUsername)
+        assertFalse(viewModel.hasAvailableResultFor(CHECKED_NAME))
+        assertFalse(viewModel.hasAvailableResultFor("secondname"))
+    }
+
+    @Test
+    fun hasAvailableResultFor_isFalseForALockedName() = runVmTest {
+        val viewModel = viewModelCheckingWith(
+            document = null,
+            contenders = contenders(winner = finishedVote(isLocked = true))
+        )
+        viewModel.checkUsername(CHECKED_NAME)
+        viewModel.uiState.first { it.usernameCheckSuccess }
+
+        assertFalse(viewModel.hasAvailableResultFor(CHECKED_NAME))
+    }
+
+    @Test
+    fun buttonState_blockedName_isDisabledEvenWhenFunded() {
+        assertEquals(
+            UsernameSubmitButtonState.Disabled,
+            usernameSubmitButtonState(
+                usernameType = UsernameType.Primary,
+                paymentSource = UsernamePaymentSource.DASH_BALANCE,
+                shieldedSyncStatus = ShieldedSyncStatus.READY,
+                enoughBalance = true,
+                usernameExists = false,
+                usernameContestable = true,
+                usernameBlocked = true
+            )
+        )
+    }
+
+    // ── USERNAME_REQUESTED recovery (master #1567) ──────────────────────────
+
+    @Test
+    fun usernameRequestedAbsent_isNeitherLockedNorLost() = runVmTest {
+        // identity creation stuck before the request got a status: the key was never written
+        givenRequestedName(IdentityCreationState.USERNAME_REGISTERING, requested = null)
+        val viewModel = viewModel()
+
+        assertFalse(viewModel.isUsernameLocked())
+        assertFalse(viewModel.isUsernameLostAfterVoting())
+    }
+
+    @Test
+    fun usernameRequestedMalformed_isNeitherLockedNorLost() = runVmTest {
+        givenRequestedName(IdentityCreationState.VOTING, requested = "NOT_A_STATUS")
+        val viewModel = viewModel()
+
+        assertFalse(viewModel.isUsernameLocked())
+        assertFalse(viewModel.isUsernameLostAfterVoting())
+    }
+
+    @Test
+    fun usernameRequestedLocked_isLocked() = runVmTest {
+        givenRequestedName(IdentityCreationState.VOTING, requested = UsernameRequestStatus.LOCKED.name)
+        val viewModel = viewModel()
+
+        assertTrue(viewModel.isUsernameLocked())
+        assertFalse(viewModel.isUsernameLostAfterVoting())
+    }
+
+    @Test
+    fun usernameRequestedLostVote_isLostAfterVoting() = runVmTest {
+        givenRequestedName(IdentityCreationState.VOTING, requested = UsernameRequestStatus.LOST_VOTE.name)
+        val viewModel = viewModel()
+
+        assertTrue(viewModel.isUsernameLostAfterVoting())
+        assertFalse(viewModel.isUsernameLocked())
+    }
+
+    // ── submit: reuse of an already registered identity (master #1567) ──────
+    //
+    // Reuse keeps the identity and registers only the new name, which on this
+    // branch also means the legacy L1 path rather than the shielded service.
+
+    @Test
+    fun submit_usernameStepFailedAfterIdentityRegistered_reusesTheIdentity() = runVmTest {
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice2"
+        viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+        viewModel.identity = identity(IdentityCreationState.USERNAME_REGISTERING, errorMessage = "domain document rejected")
+
+        viewModel.submit()
+
+        verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
+        verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun submit_failedBeforeIdentityRegistered_doesNotReuse() = runVmTest {
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice2"
+        viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+        // the identity itself never made it, so there is nothing to reuse
+        viewModel.identity = identity(IdentityCreationState.UPGRADING_WALLET, errorMessage = "asset lock failed")
+
+        viewModel.submit()
+
+        verify(exactly = 1, timeout = 5_000) { shieldedUsernameCreation.submit("alice2", null) }
+    }
+
+    @Test
+    fun submit_identityRegisteredWithoutError_doesNotReuse() = runVmTest {
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice2"
+        viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+        viewModel.identity = identity(IdentityCreationState.IDENTITY_REGISTERED, errorMessage = null)
+
+        viewModel.submit()
+
+        verify(exactly = 1, timeout = 5_000) { shieldedUsernameCreation.submit("alice2", null) }
+    }
+
+    private companion object {
+        const val CHECKED_NAME = "dashuser"
+        val OTHER_IDENTITY: Identifier = Identifier.from(ByteArray(32) { 1 })
+    }
+
+    private fun viewModelCheckingWith(document: Document?, contenders: Contenders): RequestUserNameViewModel {
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { getUsername(CHECKED_NAME) } returns Resource.success(document)
+            every { getVoteContendersOrThrow(CHECKED_NAME) } returns contenders
+        }
+        return viewModel(platformRepo)
+    }
+
+    private suspend fun checkUsernameWith(document: Document?, contenders: Contenders): RequestUserNameUIState {
+        val viewModel = viewModelCheckingWith(document, contenders)
+        viewModel.checkUsername(CHECKED_NAME)
+        return viewModel.uiState.first { it.usernameCheckSuccess || it.usernameCheckFailed }
+    }
+
+    private fun contenders(
+        winner: ContestedDocumentVotePollWinnerInfo? = null,
+        map: Map<Identifier, ContenderWithSerializedDocument> = mapOf(),
+        lockVoteTally: Int = 0
+    ): Contenders = Contenders(
+        Optional.ofNullable(winner?.let { Pair(it, mockk<BlockInfo>()) }),
+        map,
+        0,
+        lockVoteTally
+    )
+
+    private fun contender(votes: Int): ContenderWithSerializedDocument = mockk {
+        every { this@mockk.votes } returns votes
+        // no document, so the voting period start stays unknown and no deserializing is needed
+        every { serializedDocument } returns null
+    }
+
+    private fun finishedVote(isLocked: Boolean, noWinner: Boolean = false): ContestedDocumentVotePollWinnerInfo =
+        mockk {
+            every { this@mockk.isLocked } returns isLocked
+            every { this@mockk.noWinner } returns noWinner
+        }
+
+    private fun givenRequestedName(creationState: IdentityCreationState, requested: String?) {
+        coEvery { identityConfig.get(BlockchainIdentityConfig.USERNAME) } returns "alice2"
+        coEvery { identityConfig.get(BlockchainIdentityConfig.CREATION_STATE) } returns creationState.name
+        coEvery { identityConfig.get(BlockchainIdentityConfig.USERNAME_REQUESTED) } returns requested
+    }
+
+    private fun identity(creationState: IdentityCreationState, errorMessage: String?) = BlockchainIdentityData(
+        creationState,
+        errorMessage,
+        "alice2",
+        null,
+        "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+        false
+    )
 }

@@ -41,6 +41,17 @@ interface BlockchainStateProvider {
     fun getNetworkStatus(): NetworkStatus
     fun observeNetworkStatus(): Flow<NetworkStatus>
 
+    /**
+     * Peers currently connected. [NetworkStatus] is not a substitute: it only leaves CONNECTED by
+     * way of DISCONNECTING, so it can read CONNECTED with no peers at all when P2P connectivity
+     * disappears while the device still has internet.
+     *
+     * Counts the dashj peer group only. Once the SDK owns L1 that peer group is held, so this
+     * reads 0 and says nothing about the network; the SDK engine exposes no peer count.
+     */
+    fun getConnectedPeerCount(): Int
+    fun observeConnectedPeerCount(): Flow<Int>
+
     fun observeSyncStage(): Flow<SyncStage?>
     fun getSyncStage(): SyncStage
 }

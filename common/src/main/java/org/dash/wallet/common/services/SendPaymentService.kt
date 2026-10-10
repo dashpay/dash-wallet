@@ -30,6 +30,34 @@ class LeftoverBalanceException(val missing: Dash, message: String) : Insufficien
 class DirectPayException(message: String) : Exception(message)
 
 /**
+ * Thrown when a BIP70 payment was submitted but the merchant's response was lost, so the
+ * transaction may or may not have been broadcast. The transaction's inputs stay locked while
+ * the wallet keeps checking the network in the background; once the transaction is seen it is
+ * committed as sent, and if it never appears the inputs are released.
+ *
+ * Open so the wallet module can say more precisely what is unknown (an acknowledged payment
+ * whose local record could not be written yet), while every caller that must keep the order
+ * and withhold a retry still catches this one type.
+ *
+ * @property txId the transaction id, as hex
+ */
+open class PaymentSubmissionPendingException(
+    val txId: String,
+    cause: Throwable?,
+    message: String = "Payment submission result unknown for $txId; verification pending"
+) : Exception(message, cause)
+
+/**
+ * Facts a caller wants kept with a payment so one recovered long afterwards looks like the
+ * original. Only for payments whose submission result may be unknown; ordinary payments record
+ * their metadata directly.
+ */
+data class PaymentRecoveryMetadata(
+    val isGiftCardPurchase: Boolean = false,
+    val merchantIconUrl: String? = null
+)
+
+/**
  * Describes which outputs a send may draw on. The wallet module maps these onto its
  * dashj coin selectors.
  */
@@ -96,6 +124,25 @@ interface SendPaymentService {
         val totalAmount: String
     )
 
-    /** Pays the given `dash:` payment URI and returns the created transaction. */
-    suspend fun payWithDashUrl(dashUri: String, serviceName: String?): TxInfo
+    /**
+     * Pays the given `dash:` payment URI and returns the created transaction.
+     *
+     * The payment is made from the wallet installed when this is called, and refused if a wipe
+     * takes that wallet away before it is submitted.
+     *
+     * @param recovery facts to keep with a payment whose submission result may turn out unknown
+     * @param onTransactionCreated invoked with the hex transaction id once the transaction is
+     *   built and signed, before it is submitted wherever the payment path allows it, so a caller
+     *   can persist anything it will need to recover the payment later. Runs while the payment is
+     *   still recoverable: after this point the transaction may reach the payee even if this
+     *   process dies.
+     * @throws PaymentSubmissionPendingException if the payment may have been sent but its outcome
+     *   is not known yet
+     */
+    suspend fun payWithDashUrl(
+        dashUri: String,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
+        onTransactionCreated: (suspend (String) -> Unit)? = null
+    ): TxInfo
 }
