@@ -556,6 +556,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
 
         val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
+        if (currentInvitation.link != invitation.link) {
+            // Replaced by another invite while this one was being validated;
+            // its verdict was discarded and the replacement is processed on
+            // its own emission.
+            return
+        }
         if (!isLockScreenActive) {
             showInviteValidationDialog(currentInvitation)
         }
@@ -568,22 +574,22 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     requireActivity(),
                     viewModel.analytics
                 ).showInvalidInviteDialog(invitation.displayName)
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expected = invitation)
             }
 
             InvitationValidationState.ALREADY_HAS_IDENTITY -> {
                 // show dialog
                 InviteHandler(requireActivity(), viewModel.analytics).showUsernameAlreadyDialog()
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expected = invitation)
             }
 
             InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME -> {
                 // show dialog
                 InviteHandler(requireActivity(), viewModel.analytics).showContestedUsernameAlreadyDialog()
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expected = invitation)
             }
 
             InvitationValidationState.VALID -> {
@@ -592,8 +598,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
             InvitationValidationState.ALREADY_CLAIMED -> {
                 InviteHandler(requireActivity(), viewModel.analytics).showInviteAlreadyClaimedDialog(invitation)
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expected = invitation)
             }
 
             InvitationValidationState.NONE -> {

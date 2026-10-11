@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import android.net.Uri
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.LoggerFactory
@@ -60,6 +62,13 @@ class InviteHandlerViewModel @Inject constructor(
 //    val validationState: StateFlow<InvitationValidationState?> = _validationState.asStateFlow()
 
     var fromOnboarding = false
+
+    /**
+     * Serialises [setInvitationLink] against [clearInvitation] so that a
+     * conditional clear's check of the stored link and its delete happen
+     * without a replacement invite being stored in between.
+     */
+    private val storeMutex = Mutex()
 
     val isUsingInvite: Boolean
         get() = _invitation.value != null
@@ -128,9 +137,11 @@ class InviteHandlerViewModel @Inject constructor(
      * the lock screen was up).
      */
     suspend fun setInvitationLink(invitation: InvitationLinkData, fromOnboarding: Boolean) {
-        dashPayConfig.set(DashPayConfig.INVITATION_LINK, invitation.link.toString())
-        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, fromOnboarding)
-        _invitation.value = InvitationLinkData(invitation.link)
+        storeMutex.withLock {
+            dashPayConfig.set(DashPayConfig.INVITATION_LINK, invitation.link.toString())
+            dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, fromOnboarding)
+            _invitation.value = InvitationLinkData(invitation.link)
+        }
     }
 
     /**
@@ -148,12 +159,40 @@ class InviteHandlerViewModel @Inject constructor(
         inviteClaimInProgress(blockchainIdentityDataDao.load())
     }
 
-    suspend fun clearInvitation() {
-        dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
-        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
-        _invitation.value = null
+    /**
+     * Discards the pending invite. With [expected], only if the stored invite
+     * is still that one: a verdict reached for invite A must not delete an
+     * invite B that replaced A while A was being validated or its dialog was
+     * up. Without [expected] (the user dismissing the tile) it clears
+     * whatever is stored.
+     *
+     * @return true if the invite was cleared
+     */
+    suspend fun clearInvitation(expected: InvitationLinkData? = null): Boolean {
+        storeMutex.withLock {
+            if (expected != null) {
+                val stored = dashPayConfig.get(DashPayConfig.INVITATION_LINK)
+                if (stored != expected.link.toString()) {
+                    log.info("not clearing the invite: it was replaced after it was validated")
+                    return false
+                }
+            }
+            dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
+            dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
+            if (expected == null || _invitation.value?.link == expected.link) {
+                _invitation.value = null
+            }
+            return true
+        }
     }
 
+    /**
+     * Validates the current invite and publishes the verdict — unless the
+     * invite was replaced (or cleared, or republished unvalidated) while the
+     * network check ran, in which case the stale verdict is discarded and
+     * [InvitationValidationState.NONE] returned; the replacement gets its own
+     * validation from its own emission.
+     */
     suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
         // Read the identity straight from the store: the LiveData behind
         // hasIdentity/inVotingPeriod is posted asynchronously, and on a cold
@@ -176,7 +215,7 @@ class InviteHandlerViewModel @Inject constructor(
             // already claimed.
             if (invite.isSameInvitation(identity?.invite)) {
                 log.info("dropping the invite that created this wallet's identity")
-                clearInvitation()
+                clearInvitation(expected = invite)
                 return@withContext InvitationValidationState.NONE
             }
 
@@ -200,7 +239,7 @@ class InviteHandlerViewModel @Inject constructor(
 
                 when {
                     updatedInvitation.isValid == null -> updatedInvitation = updatedInvitation.validate(InvitationValidationState.NOT_SYNCED)
-                    updatedInvitation.isValid!! ->  updatedInvitation = updatedInvitation.validate(InvitationValidationState.VALID)
+                    updatedInvitation.isValid == true -> updatedInvitation = updatedInvitation.validate(InvitationValidationState.VALID)
                     else -> {
                         log.info("${invite.isValid} invite already claimed?")
                          updatedInvitation = updatedInvitation.validate(InvitationValidationState.ALREADY_CLAIMED)
@@ -210,8 +249,16 @@ class InviteHandlerViewModel @Inject constructor(
                 log.info("error validating invite:", e)
                 updatedInvitation = updatedInvitation.validate(InvitationValidationState.INVALID)
             }
-            _invitation.value = updatedInvitation
-            updatedInvitation.validationState
+            // Publish only onto the exact snapshot that was validated. If a
+            // replacement invite B was stored meanwhile, publishing A's result
+            // would bring A back (VALID) or hand A's terminal verdict to the
+            // dialog, whose clear would then delete B.
+            if (_invitation.compareAndSet(invite, updatedInvitation)) {
+                updatedInvitation.validationState
+            } else {
+                log.info("discarding the verdict for an invite that was replaced during validation")
+                InvitationValidationState.NONE
+            }
         } ?: InvitationValidationState.NONE
     }
 }

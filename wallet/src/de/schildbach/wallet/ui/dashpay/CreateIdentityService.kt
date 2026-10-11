@@ -13,6 +13,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
@@ -445,22 +446,22 @@ class CreateIdentityService : LifecycleService() {
             val blockchainIdentityData = runBlocking {
                 identityRepository.loadBlockchainIdentityBaseData()
             }
-            if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
-                if (blockchainIdentityData.usingInvite) {
-                    // An invite claim must resume on the invite path:
-                    // createIdentity() refuses invite records
-                    // (checkState "use createIdentityFromInvite instead"), so a
-                    // system restart mid-claim used to stamp that error on the
-                    // home tile ("Error Upgrading"). Only resume a claim that
-                    // has not finished.
-                    if (blockchainIdentityData.creationState < IdentityCreationState.VOTING) {
-                        handleCreateIdentityFromInvitationAction(null, null, null)
-                    }
-                } else {
-                    handleCreateIdentityAction(null, null)
+            when (restartResumeAction(blockchainIdentityData)) {
+                RestartResumeAction.INVITE -> handleCreateIdentityFromInvitationAction(null, null, null)
+                RestartResumeAction.IDENTITY -> handleCreateIdentityAction(null, null)
+                RestartResumeAction.NONE -> {
+                    // Nothing to resume (no record, finished, restoring, or an
+                    // invite claim already at VOTING/DONE_AND_DISMISS). onCreate()
+                    // has already gone foreground and taken a wake lock, and no
+                    // handler will run to release them, so stop now rather than
+                    // idle with a "processing" notification.
+                    log.info(
+                        "restarted by the system with nothing to resume " +
+                            "(${blockchainIdentityData.creationState}); stopping"
+                    )
+                    stopSelf()
                 }
             }
-
         } else if (!workInProgress) {
 
             when (intent.action) {
@@ -2074,3 +2075,24 @@ internal fun requestedContestedCandidates(
     usernameStatusKeys = emptySet(),
     requestedLabel = requestedSecondary
 )
+
+internal enum class RestartResumeAction { NONE, IDENTITY, INVITE }
+
+/**
+ * What a START_STICKY null-intent restart of [CreateIdentityService] should
+ * resume for the stored identity record. An invite claim must resume on the
+ * invite path: createIdentity() refuses invite records (checkState "use
+ * createIdentityFromInvite instead"), so a system restart mid-claim used to
+ * stamp that error on the home tile ("Error Upgrading"). Only a claim that has
+ * not reached VOTING is resumed. [RestartResumeAction.NONE] means the service
+ * has no work and must stop itself.
+ */
+internal fun restartResumeAction(identity: BlockchainIdentityBaseData?): RestartResumeAction =
+    when {
+        identity == null ||
+            identity.creationState == IdentityCreationState.DONE ||
+            identity.restoring -> RestartResumeAction.NONE
+        !identity.usingInvite -> RestartResumeAction.IDENTITY
+        identity.creationState < IdentityCreationState.VOTING -> RestartResumeAction.INVITE
+        else -> RestartResumeAction.NONE
+    }
