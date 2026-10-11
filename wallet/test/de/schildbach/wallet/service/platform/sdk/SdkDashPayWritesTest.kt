@@ -290,6 +290,47 @@ class SdkDashPayWritesTest {
         assertSame(liveShape, result.cause)
     }
 
+    /**
+     * MO-1023: the transparent username path auto-resumes a tracked asset lock
+     * only on the FALSE-LOCKED class. The predicates must agree with the
+     * classifier's Keystore arms and tell the two lock states apart.
+     */
+    @Test
+    fun keystoreRefusalPredicates_matchTheClassifierAndSplitLockState() {
+        val falseLocked = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=false " +
+                "isKeyguardLocked=false (FALSE-LOCKED: device reports unlocked but " +
+                "Keystore denied — Keystore2 lock-state misreporting; retryable " +
+                "immediately)"
+        )
+        val genuinelyLocked = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=true " +
+                "isKeyguardLocked=true (genuinely locked — retry after unlock)"
+        )
+        val unauthenticated = RuntimeException("Generic Error: User not authenticated")
+        val unrelated = RuntimeException("connection reset")
+
+        for (t in listOf(falseLocked, genuinelyLocked, unauthenticated)) {
+            assertTrue("$t must be a Keystore refusal", isKeystoreSigningRefusal(t))
+            assertTrue(
+                "the classifier must agree it is pre-broadcast: $t",
+                classifyBroadcastFailure(t) is SdkWriteResult.NotBroadcast
+            )
+        }
+        assertFalse(isKeystoreSigningRefusal(unrelated))
+
+        assertTrue(isKeystoreFalseLockedRefusal(falseLocked))
+        assertFalse("a genuinely locked device must not spin", isKeystoreFalseLockedRefusal(genuinelyLocked))
+        assertFalse("no lock-state sample → never false-locked", isKeystoreFalseLockedRefusal(unauthenticated))
+        assertFalse(isKeystoreFalseLockedRefusal(unrelated))
+    }
+
     @Test
     fun classify_keystoreAuthWindowExpiry_isNotBroadcast() {
         // Pre-#4643 AAR lines (denial still unclassified), plus the genuinely
