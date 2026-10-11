@@ -493,9 +493,22 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         // TODO: can we remove this?
     }
 
+    /**
+     * Only an identity that is actually being created from an invite blocks a
+     * new one. Any other stored invite is replaced by [invite] and re-validated,
+     * so a wallet that already has a username gets "you already have a
+     * username" (and the invite is discarded) rather than "DashPay is currently
+     * processing an invite" — which a stale stored invite used to trigger on
+     * every link opened afterwards.
+     */
     private fun handleInvite(invite: InvitationLinkData) {
         lifecycleScope.launch {
-            inviteHandlerViewModel.setInvitationLink(invite, false)
+            if (inviteHandlerViewModel.isInviteClaimInProgress()) {
+                log.info("invite opened while an invite-based identity is being created; ignoring it")
+                InviteHandler(this@MainActivity, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
+            } else {
+                inviteHandlerViewModel.setInvitationLink(invite, false)
+            }
         }
     }
 
@@ -543,12 +556,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // change); without this, an invite the user already dealt with
             // is re-armed on each of those and re-runs validation.
             intent.removeExtra(EXTRA_INVITE)
-            if (inviteHandlerViewModel.invitation.value == null) {
-                handleInvite(invite)
-            } else {
-                // TODO: this is not the correct message, we are not onboarding
-                InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
-            }
+            handleInvite(invite)
         }
         if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
             try {

@@ -512,8 +512,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun onLockScreenDeactivated() {
         lifecycleScope.launch {
             inviteHandlerViewModel.invitation.value?.let {
-                // only process for the dialog
-                processInvitation(it, isLockScreenActive = false)
+                val state = it.validationState
+                if (state != null && state != InvitationValidationState.NOT_SYNCED) {
+                    // Validated while the lock screen was up: the verdict was
+                    // withheld then, and processInvitation() returns early for
+                    // any settled verdict, so show it (and, for the terminal
+                    // ones, discard the invite) here. Without this the invite
+                    // stayed stored forever behind a verdict nobody saw.
+                    showInviteValidationDialog(it)
+                } else {
+                    processInvitation(it, isLockScreenActive = false)
+                }
             }
         }
     }

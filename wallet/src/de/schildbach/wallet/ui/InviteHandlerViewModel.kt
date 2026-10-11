@@ -23,7 +23,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -65,10 +67,14 @@ class InviteHandlerViewModel @Inject constructor(
     init {
         dashPayConfig.observe(DashPayConfig.INVITATION_LINK)
             .onEach {
-                _invitation.value = if (!it.isNullOrEmpty()) {
-                    InvitationLinkData(it.toUri())
-                } else {
-                    null
+                if (it.isNullOrEmpty()) {
+                    _invitation.value = null
+                } else if (_invitation.value?.link?.toString() != it) {
+                    // Only adopt a DIFFERENT link. The in-memory copy carries the
+                    // validation verdict; re-wrapping the same link would reset it
+                    // to "unvalidated" and re-run validation (and its dialog).
+                    // setInvitationLink() publishes a fresh copy itself.
+                    _invitation.value = InvitationLinkData(it.toUri())
                 }
             }
             .launchIn(viewModelScope)
@@ -114,9 +120,32 @@ class InviteHandlerViewModel @Inject constructor(
         null
     }
 
+    /**
+     * Stores [invitation] as THE pending invite, replacing any earlier one, and
+     * publishes it unvalidated so it is (re)validated and the user gets a
+     * verdict for it — even when the same link is opened again, whose stored
+     * copy may carry a verdict that was never shown (e.g. it was reached while
+     * the lock screen was up).
+     */
     suspend fun setInvitationLink(invitation: InvitationLinkData, fromOnboarding: Boolean) {
         dashPayConfig.set(DashPayConfig.INVITATION_LINK, invitation.link.toString())
         dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, fromOnboarding)
+        _invitation.value = InvitationLinkData(invitation.link)
+    }
+
+    /**
+     * True while an identity is being created FROM AN INVITE (in progress or
+     * stopped on an error the user can retry). Only then is a newly opened
+     * invite answered with "DashPay is currently processing an invite"; in
+     * every other case the new invite replaces any stored one and goes
+     * through [validateInvitation], which answers a wallet that already has a
+     * username with ALREADY_HAS_IDENTITY.
+     *
+     * Read from the store rather than [blockchainIdentity], which is posted
+     * asynchronously and may not be populated yet on a cold start from a link.
+     */
+    suspend fun isInviteClaimInProgress(): Boolean = withContext(Dispatchers.IO) {
+        inviteClaimInProgress(blockchainIdentityDataDao.load())
     }
 
     suspend fun clearInvitation() {
@@ -126,6 +155,16 @@ class InviteHandlerViewModel @Inject constructor(
     }
 
     suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
+        // Read the identity straight from the store: the LiveData behind
+        // hasIdentity/inVotingPeriod is posted asynchronously, and on a cold
+        // start from an invite link validation can run before it is populated.
+        // A wallet that already has a username was then treated as having
+        // none, the invite was validated against the network instead (VALID),
+        // and that verdict latched — the invite was never cleared, so every
+        // later invite hit the "currently processing an invite" dialog.
+        val identity = blockchainIdentityDataDao.load()
+        val hasIdentity = identity?.hasUsername ?: false
+        val inVotingPeriod = identity?.votingInProgress ?: false
         _invitation.value?.let { invite ->
             // The invite that created THIS wallet's identity is not an error
             // to report back to its owner — that claim succeeded. It can
@@ -135,7 +174,7 @@ class InviteHandlerViewModel @Inject constructor(
             // replayed whenever the task is recreated. Drop it silently
             // instead of telling the user they cannot claim the invite they
             // already claimed.
-            if (invite.isSameInvitation(blockchainIdentity.value?.invite)) {
+            if (invite.isSameInvitation(identity?.invite)) {
                 log.info("dropping the invite that created this wallet's identity")
                 clearInvitation()
                 return@withContext InvitationValidationState.NONE
@@ -176,3 +215,14 @@ class InviteHandlerViewModel @Inject constructor(
         } ?: InvitationValidationState.NONE
     }
 }
+
+/**
+ * Pure rule behind [InviteHandlerViewModel.isInviteClaimInProgress]: an
+ * identity record that was started from an invite and has neither finished
+ * (VOTING or later) nor been reset.
+ */
+internal fun inviteClaimInProgress(identity: BlockchainIdentityBaseData?): Boolean =
+    identity != null &&
+        identity.usingInvite &&
+        identity.creationState > IdentityCreationState.NONE &&
+        identity.creationState < IdentityCreationState.VOTING

@@ -446,7 +446,19 @@ class CreateIdentityService : LifecycleService() {
                 identityRepository.loadBlockchainIdentityBaseData()
             }
             if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
-                handleCreateIdentityAction(null, null)
+                if (blockchainIdentityData.usingInvite) {
+                    // An invite claim must resume on the invite path:
+                    // createIdentity() refuses invite records
+                    // (checkState "use createIdentityFromInvite instead"), so a
+                    // system restart mid-claim used to stamp that error on the
+                    // home tile ("Error Upgrading"). Only resume a claim that
+                    // has not finished.
+                    if (blockchainIdentityData.creationState < IdentityCreationState.VOTING) {
+                        handleCreateIdentityFromInvitationAction(null, null, null)
+                    }
+                } else {
+                    handleCreateIdentityAction(null, null)
+                }
             }
 
         } else if (!workInProgress) {
@@ -464,8 +476,13 @@ class CreateIdentityService : LifecycleService() {
                     val username = intent.getStringExtra(EXTRA_USERNAME)
                     val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
                     val invitation = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
+                    // Without this flag a retry-with-new-username hit the
+                    // "existing record, different username" arm of
+                    // createIdentityFromInvitation and failed with a bare
+                    // IllegalStateException ("IllegalStateException: null").
+                    val retryWithNewUserName = intent.action == ACTION_RETRY_INVITE_WITH_NEW_USERNAME
 
-                    handleCreateIdentityFromInvitationAction(username, usernameSecondary, invitation)
+                    handleCreateIdentityFromInvitationAction(username, usernameSecondary, invitation, retryWithNewUserName)
                 }
                 ACTION_RETRY_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
@@ -737,11 +754,16 @@ class CreateIdentityService : LifecycleService() {
         timerEntireProcess.logTiming()
     }
 
-    private fun handleCreateIdentityFromInvitationAction(username: String?, usernameSecondary: String?, invite: InvitationLinkData?) {
+    private fun handleCreateIdentityFromInvitationAction(
+        username: String?,
+        usernameSecondary: String?,
+        invite: InvitationLinkData?,
+        retryWithNewUserName: Boolean = false
+    ) {
         workInProgress = true
         identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
-            createIdentityFromInvitation(username, usernameSecondary, invite)
+            createIdentityFromInvitation(username, usernameSecondary, invite, retryWithNewUserName)
             workInProgress = false
             stopSelf()
         }
@@ -992,7 +1014,7 @@ class CreateIdentityService : LifecycleService() {
      */
     private suspend fun claimL1Invitation(invite: InvitationLinkData, username: String) {
         when (val result = sdkL1InviteCreation.claimL1Invite(
-            uri = invite.link.toString(),
+            uri = invite.sdkClaimUri,
             label = username
         )) {
             is SdkWriteResult.Broadcast -> {
@@ -1004,7 +1026,14 @@ class CreateIdentityService : LifecycleService() {
             is SdkWriteResult.NotBroadcast ->
                 throw IllegalStateException("L1 invite claim failed: ${result.reason}", result.cause)
             is SdkWriteResult.Ambiguous ->
-                throw IllegalStateException("L1 invite claim outcome unconfirmed", result.cause)
+                // Carry the cause's message: this string is what gets stored
+                // as creationStateErrorMessage, and without it the reason
+                // (stale IS lock and no ChainLock yet, a Platform rejection,
+                // a DAPI failure) survived only in the logged stack trace.
+                throw IllegalStateException(
+                    "L1 invite claim outcome unconfirmed" + (result.cause.message?.let { ": $it" } ?: ""),
+                    result.cause
+                )
         }
     }
 
@@ -1017,8 +1046,26 @@ class CreateIdentityService : LifecycleService() {
         when {
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
-                if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
-                    throw IllegalStateException()
+                if (username != null && blockchainIdentityData.username != username) {
+                    throw IllegalStateException(
+                        "invite claim already in progress for a different username"
+                    )
+                }
+            }
+            // Retry-with-new-username before the invite was claimed (no
+            // identity yet): keep the record — it holds the invite link the
+            // claim needs, which the retry intent does not carry — and only
+            // swap in the newly requested names.
+            (blockchainIdentityDataTmp != null && retryWithNewUserName && blockchainIdentityDataTmp.userId == null) -> {
+                blockchainIdentityData = blockchainIdentityDataTmp
+                if (username != null) {
+                    log.info(
+                        "unclaimed-invite retry: requested primary '{}' -> '{}'",
+                        blockchainIdentityData.username,
+                        username
+                    )
+                    blockchainIdentityData.username = username
+                    blockchainIdentityData.usernameSecondary = usernameSecondary
                 }
             }
             // Retry-with-new-username on a CLAIMED invite (identity already on

@@ -209,14 +209,21 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         identityRepository: IdentityRepository
     ): Boolean {
         // handle errors
-        var exception: ConcensusException
-        if (blockchainIdentityData.creationStateErrorMessage.also {
-            val errorMetadata = ConcensusErrorMetadata(it!!)
-                exception = ConcensusException.Companion.create(errorMetadata)
-        } != null) {
+        val errorMessage = blockchainIdentityData.creationStateErrorMessage
+        if (errorMessage != null) {
+            // Post-cutover errors are plain exception messages (e.g.
+            // "IllegalStateException: L1 invite claim failed: ..."), not dashj
+            // consensus-error metadata. Parse defensively, as
+            // CreateIdentityService does: a parse failure must fall through to
+            // the generic retry instead of aborting the Retry tap.
+            val exception: ConcensusException? = try {
+                ConcensusException.create(ConcensusErrorMetadata(errorMessage))
+            } catch (e: Exception) {
+                null
+            }
 
             when {
-                // Shielded (and L1-SDK) double-claim surfaces as a plain
+                // Shielded double-claim surfaces as a plain
                 // IllegalStateException("Invite has already been used") from
                 // CreateIdentityService.claim*Invitation — it does NOT parse to an
                 // IdentityAssetLockTransactionOutPointAlreadyExistsException (that's the
