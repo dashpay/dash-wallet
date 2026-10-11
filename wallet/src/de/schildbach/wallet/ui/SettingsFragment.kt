@@ -127,6 +127,7 @@ class SettingsFragment : Fragment() {
                         }
                     },
                     onBatteryOptimizationClick = { batteryOptimization() },
+                    onAnalyticsToggle = { setAnalyticsEnabled(it) },
                     onAnalyticsInfoClick = { showAnalyticsInfo() }
                 )
                 }
@@ -235,6 +236,30 @@ class SettingsFragment : Fragment() {
             // Through the seam (not wallet.getBalance directly): cutover-aware.
             val balance = walletApplication.getWalletBalance()
             WalletBalanceWidgetProvider.updateWidgets(requireContext(), balance)
+        }
+    }
+
+    private fun setAnalyticsEnabled(enabled: Boolean) {
+        if (viewModel.setAnalyticsEnabled(enabled)) {
+            return
+        }
+
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.settings_analytics_save_failed_title),
+            getString(
+                if (enabled) {
+                    R.string.settings_analytics_save_failed_opt_in
+                } else {
+                    R.string.settings_analytics_save_failed_opt_out
+                }
+            ),
+            getString(R.string.close),
+            getString(org.dash.wallet.common.R.string.try_again)
+        ).show(requireActivity()) { retry ->
+            if (retry == true) {
+                setAnalyticsEnabled(enabled)
+            }
         }
     }
 

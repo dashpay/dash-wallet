@@ -33,11 +33,21 @@ interface AnalyticsService {
      * Whether the user allows analytics event collection (Settings, MO-1065;
      * on by default). While false, [logEvent] drops every event and the
      * analytics SDK's own automatic events are switched off too.
-     * [logError] (crash reporting) is not affected.
-     *
-     * Setting it persists the choice and applies it to the analytics SDK.
+     * [logError] (crash reporting) is not affected. Change it with [setEnabled].
      */
-    var isEnabled: Boolean
+    val isEnabled: Boolean
+
+    /**
+     * Persists the user's choice and applies it to the analytics SDK.
+     *
+     * @return false when the choice could not be saved. An opt-out still stops
+     * collection for this session (it may resume after a restart); an opt-in
+     * leaves collection off. Calling again retries the write.
+     */
+    fun setEnabled(enabled: Boolean): Boolean
+
+    /** Applies the stored choice to the analytics SDK without writing it (app startup). */
+    fun applyStoredSetting()
 
     /**
      * Whether analytics can run at all in this build. False when Firebase was
@@ -86,7 +96,7 @@ class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
             }
             // No collection-setting side effect here: instances are unscoped, so a
             // background instance resolving late could overwrite a newer opt-out.
-            // The setting is applied only through [isEnabled] (WalletApplication
+            // The setting is applied only through [setEnabled] / [applyStoredSetting] (WalletApplication
             // applies the stored value right after Firebase initializes).
             Firebase.analytics
         } catch (ex: IllegalStateException) {
@@ -102,23 +112,36 @@ class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
         }
     }
 
-    override var isEnabled: Boolean
+    override val isEnabled: Boolean
         get() = configuration.analyticsEnabled
-        set(enabled) {
-            // Write only on a change, so the startup re-apply costs no disk write.
-            val persisted = configuration.analyticsEnabled == enabled ||
-                configuration.setAnalyticsEnabled(enabled)
-            if (!persisted) {
-                Log.w("FIREBASE", "failed to persist analytics setting: $enabled")
-            }
-            try {
-                // An opt-out applies for this session even if the write failed; an
-                // opt-in only once it is saved, so collection never outruns the choice.
-                firebaseAnalytics?.setAnalyticsCollectionEnabled(enabled && persisted)
-            } catch (ex: Exception) {
-                Log.w("FIREBASE", "failed to apply analytics collection setting", ex)
+
+    override fun setEnabled(enabled: Boolean): Boolean {
+        // Always write, even when the value looks unchanged: after a failed write the
+        // in-memory value already matches, and a retry must still reach disk.
+        val persisted = configuration.setAnalyticsEnabled(enabled)
+        if (!persisted) {
+            Log.w("FIREBASE", "failed to persist analytics setting: $enabled")
+            if (enabled) {
+                // commit() updates memory even when the disk write fails; an unsaved
+                // opt-in must not read back as on.
+                configuration.setAnalyticsEnabled(false)
             }
         }
+        // An opt-out applies for this session even if the write failed; an opt-in
+        // only once it is saved, so collection never outruns the saved choice.
+        applyCollection(enabled && persisted)
+        return persisted
+    }
+
+    override fun applyStoredSetting() = applyCollection(isEnabled)
+
+    private fun applyCollection(enabled: Boolean) {
+        try {
+            firebaseAnalytics?.setAnalyticsCollectionEnabled(enabled)
+        } catch (ex: Exception) {
+            Log.w("FIREBASE", "failed to apply analytics collection setting", ex)
+        }
+    }
 
     override val isAvailable: Boolean
         get() = firebaseAnalytics != null

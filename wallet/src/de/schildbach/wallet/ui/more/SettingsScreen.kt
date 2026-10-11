@@ -54,6 +54,7 @@ fun SettingsScreen(
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
+    onAnalyticsToggle: ((Boolean) -> Unit)? = null,
     onAnalyticsInfoClick: () -> Unit = {}
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
@@ -67,7 +68,7 @@ fun SettingsScreen(
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
-        onAnalyticsToggle = viewModel::setAnalyticsEnabled,
+        onAnalyticsToggle = onAnalyticsToggle ?: { viewModel.setAnalyticsEnabled(it); Unit },
         onAnalyticsInfoClick = onAnalyticsInfoClick
     )
 }

@@ -64,7 +64,11 @@ class FirebaseAnalyticsServiceImplTest {
         }
     }
 
+    // SharedPreferences keeps an in-memory map that commit() updates even when the
+    // disk write fails; `store` is that memory, `disk` what survives a restart.
     private val store = mutableMapOf<String, Any?>()
+    private val disk = mutableMapOf<String, Any?>()
+    private var commitSucceeds = true
     private lateinit var configuration: Configuration
     private lateinit var editor: SharedPreferences.Editor
 
@@ -75,7 +79,13 @@ class FirebaseAnalyticsServiceImplTest {
             store[firstArg()] = secondArg<Boolean>()
             editor
         }
-        every { editor.commit() } returns true
+        every { editor.commit() } answers {
+            if (commitSucceeds) {
+                disk.clear()
+                disk.putAll(store)
+            }
+            commitSucceeds
+        }
         every { editor.clear() } answers {
             store.clear()
             editor
@@ -90,6 +100,12 @@ class FirebaseAnalyticsServiceImplTest {
         every { firebaseOptions.projectId } returns "dash-wallet-real-project"
     }
 
+    /** Process restart: memory reloads from disk. */
+    private fun restart() {
+        store.clear()
+        store.putAll(disk)
+    }
+
     @Test
     fun analyticsIsOnByDefault() {
         assertTrue(FirebaseAnalyticsServiceImpl(configuration).isEnabled)
@@ -99,7 +115,7 @@ class FirebaseAnalyticsServiceImplTest {
     fun turningOff_persistsTheChoice_andStopsFirebaseCollection() {
         val service = FirebaseAnalyticsServiceImpl(configuration)
 
-        service.isEnabled = false
+        service.setEnabled(false)
 
         assertEquals(false, store[Configuration.PREFS_KEY_ANALYTICS_ENABLED])
         assertFalse(configuration.analyticsEnabled)
@@ -113,7 +129,7 @@ class FirebaseAnalyticsServiceImplTest {
         configuration.setAnalyticsEnabled(false)
         val service = FirebaseAnalyticsServiceImpl(configuration)
 
-        service.isEnabled = true
+        service.setEnabled(true)
 
         assertTrue(configuration.analyticsEnabled)
         verify { firebaseAnalytics.setAnalyticsCollectionEnabled(true) }
@@ -158,7 +174,7 @@ class FirebaseAnalyticsServiceImplTest {
         val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
 
-        service.isEnabled = false
+        service.setEnabled(false)
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
 
         verify(exactly = 1) { firebaseAnalytics.logEvent(any(), any()) }
@@ -211,7 +227,7 @@ class FirebaseAnalyticsServiceImplTest {
     fun resolvingFirebase_doesNotTouchTheCollectionSetting() {
         // A late-resolving instance must not overwrite a newer opt-out made through another one.
         val background = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
-        FirebaseAnalyticsServiceImpl(configuration).isEnabled = false
+        FirebaseAnalyticsServiceImpl(configuration).setEnabled(false)
         clearMocks(firebaseAnalytics, answers = false)
         every { firebaseOptions.projectId } returns "dash-wallet-real-project"
 
@@ -221,24 +237,57 @@ class FirebaseAnalyticsServiceImplTest {
     }
 
     @Test
-    fun optOut_whoseWriteFails_stillStopsCollectionThisSession() {
-        every { editor.commit() } returns false
+    fun optOut_whoseWriteFails_isReported_stopsCollectionThisSession_andCanBeRetried() {
+        commitSucceeds = false
         val service = FirebaseAnalyticsServiceImpl(configuration)
 
-        service.isEnabled = false
-
+        assertFalse("the failure must be reported", service.setEnabled(false))
+        assertFalse(service.isEnabled)
         verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
+
+        // Retrying the same value must write again, not short-circuit on the in-memory value.
+        commitSucceeds = true
+        assertTrue(service.setEnabled(false))
+        verify(exactly = 2) { editor.commit() }
+
+        restart()
+        assertFalse("a saved retry survives a restart", FirebaseAnalyticsServiceImpl(configuration).isEnabled)
     }
 
     @Test
-    fun optIn_whoseWriteFails_leavesCollectionOff() {
+    fun optOut_whoseWriteFailsAndIsNeverRetried_isLostOnRestart() {
+        // The limitation the failure dialog warns about: only a saved opt-out is durable.
+        commitSucceeds = false
+        FirebaseAnalyticsServiceImpl(configuration).setEnabled(false)
+
+        restart()
+        val afterRestart = FirebaseAnalyticsServiceImpl(configuration)
+        assertTrue(afterRestart.isEnabled)
+        afterRestart.applyStoredSetting()
+        verify { firebaseAnalytics.setAnalyticsCollectionEnabled(true) }
+    }
+
+    @Test
+    fun optIn_whoseWriteFails_isReported_andReadsBackAsOff() {
         configuration.setAnalyticsEnabled(false)
-        every { editor.commit() } returns false
+        commitSucceeds = false
         val service = FirebaseAnalyticsServiceImpl(configuration)
 
-        service.isEnabled = true
+        assertFalse(service.setEnabled(true))
 
+        assertFalse("an unsaved opt-in must not read back as on", service.isEnabled)
         verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
         verify(exactly = 0) { firebaseAnalytics.setAnalyticsCollectionEnabled(true) }
+    }
+
+    @Test
+    fun applyStoredSetting_appliesWithoutWriting() {
+        configuration.setAnalyticsEnabled(false)
+        clearMocks(editor, answers = false)
+
+        FirebaseAnalyticsServiceImpl(configuration).applyStoredSetting()
+
+        verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
+        verify(exactly = 0) { editor.commit() }
     }
 }

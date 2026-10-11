@@ -21,6 +21,11 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 
 class FakeAnalyticsService : AnalyticsService {
     override var isEnabled: Boolean = true
+    override fun setEnabled(enabled: Boolean): Boolean {
+        isEnabled = enabled
+        return true
+    }
+    override fun applyStoredSetting() {}
     override val isAvailable: Boolean = true
 
     override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {

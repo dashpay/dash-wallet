@@ -508,7 +508,7 @@ public class WalletApplication extends MultiDexApplication
         // Apply the user's analytics choice (Settings, MO-1065) to the Firebase SDK now that
         // FirebaseApp exists, so its automatic events (session_start, screen_view, ...) follow
         // it even on a launch that never logs an event of ours.
-        analyticsService.setEnabled(analyticsService.isEnabled());
+        runStartupStage(-1, "ANALYTICS_PREFERENCE", analyticsService::applyStoredSetting);
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));

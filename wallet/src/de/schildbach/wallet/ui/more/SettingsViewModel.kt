@@ -126,9 +126,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAnalyticsEnabled(enabled: Boolean) {
-        analytics.isEnabled = enabled
+    /** @return false when the choice could not be saved; see [AnalyticsService.setEnabled]. */
+    fun setAnalyticsEnabled(enabled: Boolean): Boolean {
+        val saved = analytics.setEnabled(enabled)
         _uiState.update { it.copy(analyticsEnabled = analytics.isEnabled) }
+        return saved
     }
 
     fun updateLastBlockchainResetTime() {

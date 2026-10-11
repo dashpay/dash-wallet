@@ -121,11 +121,15 @@ class SettingsViewModelTest {
         assertEquals("Last saved: Jan 15, 2024", viewModel.uiState.value.transactionMetadataSubtitle)
     }
 
-    private fun analyticsService(enabled: Boolean, available: Boolean): AnalyticsService {
+    private fun analyticsService(enabled: Boolean, available: Boolean, saves: Boolean = true): AnalyticsService {
         var stored = enabled
         return mockk(relaxed = true) {
             every { isEnabled } answers { stored }
-            every { isEnabled = any() } answers { stored = firstArg() }
+            every { setEnabled(any()) } answers {
+                // Mirrors the service: a failed opt-out still applies, a failed opt-in doesn't.
+                if (saves || !firstArg<Boolean>()) stored = firstArg()
+                saves
+            }
             every { isAvailable } returns available
         }
     }
@@ -160,7 +164,7 @@ class SettingsViewModelTest {
 
         viewModel.setAnalyticsEnabled(false)
 
-        verify { analytics.isEnabled = false }
+        verify { analytics.setEnabled(false) }
         assertFalse(viewModel.uiState.value.analyticsEnabled)
     }
 
@@ -171,7 +175,17 @@ class SettingsViewModelTest {
 
         viewModel.setAnalyticsEnabled(true)
 
-        verify { analytics.isEnabled = true }
+        verify { analytics.setEnabled(true) }
         assertTrue(viewModel.uiState.value.analyticsEnabled)
+    }
+
+    @Test
+    fun setAnalyticsEnabled_reportsAFailedSave_andShowsTheServiceState() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = false, available = true, saves = false)
+        val viewModel = viewModel(analytics)
+
+        assertFalse(viewModel.setAnalyticsEnabled(true))
+
+        assertFalse("an unsaved opt-in stays off", viewModel.uiState.value.analyticsEnabled)
     }
 }
