@@ -3136,9 +3136,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * The SDK half of ACTION_RESET_BLOCKCHAIN: when the SDK owns L1
      * (cutover committed + SDK L1 engine enabled), arm the SPV filter
      * rescan ([SdkWalletBinder.armSpvRescanForBlockchainReset]) so the
-     * user-facing reset replays SDK history too — pre-cutover behavior is
-     * untouched (dashj's own file wipe + replay is the whole reset there,
-     * and a shadow-only SDK must not be forced through a full rescan).
+     * user-facing reset replays SDK history — pre-cutover it is a no-op (a
+     * shadow-only SDK must not be forced through a full rescan, and the
+     * dashj blockstore is no longer deleted on reset either).
      * Never throws; a failed arm only costs the user a retried reset.
      */
     private suspend fun armSdkRescanForResetIfCutOver() {
@@ -3229,12 +3229,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
                     }
                 } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
-                    log.info("will remove blockchain on service shutdown")
+                    log.info("will reset blockchain state on service shutdown")
                     resetBlockchainOnShutdown = true
-                    // Post-cutover the dashj-store wipe below is an SDK no-op
-                    // (the engine keeps its watermark and stays SYNCED — the
-                    // field reset where "nothing happened"): also arm the SDK
-                    // filter rescan so the reset actually replays SDK history.
+                    // The dashj blockstore is kept (no dashj rescan); the
+                    // reset is the SDK filter rescan armed here plus the
+                    // database/MN-list cleanup on shutdown.
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
                     armSdkRescanForResetIfCutOver()
@@ -3511,9 +3510,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                 }
                 if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
-                    log.info("removing blockchain")
-                    blockChainFile?.delete()
-                    headerChainFile?.delete()
+                    if (deleteWalletFileOnShutdown) {
+                        log.info("removing blockchain")
+                        blockChainFile?.delete()
+                        headerChainFile?.delete()
+                    } else {
+                        // Rescan keeps the dashj blockstore; only the SDK replays.
+                        log.info("resetting blockchain state (keeping dashj blockstore)")
+                    }
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")
