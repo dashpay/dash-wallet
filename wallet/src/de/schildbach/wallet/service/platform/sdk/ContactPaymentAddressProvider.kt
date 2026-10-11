@@ -17,17 +17,24 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.IdentityRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.wallet.FriendChainAccess
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
-import java.util.concurrent.ConcurrentHashMap
+import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -101,14 +108,20 @@ sealed interface SdkContactAddressSelection {
  *
  * Among the account's persisted addresses it takes the lowest-index one not
  * marked used — the engine's own rule (`AddressPool::next_unused`, which the
- * SDK's `send_payment` uses) — skipping [alreadyPaid], the addresses this
- * process has paid but the mirror may not have flagged yet (the engine writes
- * used-flags behind itself, one persistence pass later).
+ * SDK's `send_payment` uses) — skipping what the mirror may not have flagged
+ * yet (the engine writes used-flags behind itself, one persistence pass later):
+ * - every index below [dashjCursor], dashj's persisted sending cursor for the
+ *   same contact and channel (null: dashj has no chain for it). dashj and the
+ *   SDK derive this chain from the same contact xpub, so index i is the same
+ *   address on both, and every index below dashj's cursor has been paid;
+ * - [alreadyPaid], the addresses recorded paid ([PaidContactAddressStore]),
+ *   which covers the time until dashj's advanced cursor reaches disk.
  */
 internal fun selectSdkContactAddress(
     account: SdkContactSendingAccount?,
     expectedAccountReference: Int,
-    alreadyPaid: Set<String>
+    alreadyPaid: Set<String>,
+    dashjCursor: Int? = null
 ): SdkContactAddressSelection {
     fun unavailable(reason: String) = SdkContactAddressSelection.Unavailable(reason)
     if (account == null) return unavailable("SDK store not available")
@@ -127,10 +140,17 @@ internal fun selectSdkContactAddress(
     if (addresses.map { it.poolTypeTag }.distinct().size > 1) {
         return unavailable("SDK sending account has more than one address pool")
     }
+    val floor = dashjCursor ?: 0
     val next = addresses
-        .filter { !it.isUsed && it.address !in alreadyPaid }
+        .filter { !it.isUsed && it.address !in alreadyPaid && it.index >= floor }
         .minByOrNull { it.index }
-        ?: return unavailable("SDK sending account has no unused address persisted")
+        ?: return unavailable(
+            if (dashjCursor != null) {
+                "SDK sending account has no unused address persisted at or above dashj's cursor $dashjCursor"
+            } else {
+                "SDK sending account has no unused address persisted"
+            }
+        )
     return SdkContactAddressSelection.Selected(next.address, next.index)
 }
 
@@ -148,15 +168,23 @@ internal fun selectSdkContactAddress(
  * contact and channel — see [selectSdkContactAddress] for the cases, the real
  * one being a contact whose channel the SDK marked broken.
  *
- * Either way, after a successful send ([sendThenMarkUsed]) the paid key is
- * marked used on dashj's sending chain, so the dashj fallback moves on too.
+ * Either way, once the payment is broadcast ([sendThenMarkUsed]) the paid key
+ * is marked used on dashj's sending chain, so the dashj fallback moves on too,
+ * and the address is recorded in [paidAddresses].
  *
  * Why the Room mirror and not a live engine read: the Kotlin SDK exposes no
  * call that returns a contact sending account's next address
  * (`platform_wallet_account_address_pools` exists in the Rust FFI but has no
  * JNI binding; `Dashpay.sendPayment` derives one only inside its own send).
- * The mirror trails the engine by one persistence pass, which is covered by
- * remembering what this process has paid ([paidThisProcess]).
+ * The mirror trails the engine by one persistence pass, so an SDK pick is
+ * checked against what is known to be paid and survives a restart:
+ * - dashj's sending cursor for the contact and channel (saved with the dashj
+ *   wallet, advanced by every [sendThenMarkUsed]) — the state that already
+ *   exists, so no SDK address below it is offered;
+ * - [paidAddresses], a small file written at broadcast time. dashj's cursor
+ *   reaches disk only on the next wallet autosave (up to a minute on a large
+ *   wallet), and dashj cannot always advance it (no chain, key not found);
+ *   the file covers both.
  */
 @Singleton
 class ContactPaymentAddressProvider internal constructor(
@@ -172,10 +200,17 @@ class ContactPaymentAddressProvider internal constructor(
         accountReference: Int,
         address: Address
     ) -> FriendChainAccess.MarkResult?,
-    private val params: NetworkParameters
+    private val params: NetworkParameters,
+    /** [IdentityRepository.getContactSendingCursor]. */
+    private val dashjSendingCursor: (contactUserId: String, accountReference: Int) -> Int? = { _, _ -> null },
+    /** Addresses recorded paid; survives a restart when file-backed. */
+    private val paidAddresses: PaidContactAddressStore = PaidContactAddressStore(file = null),
+    /** Where the blocking dashj and file work runs. */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     @Inject
     constructor(
+        @ApplicationContext context: Context,
         sdkL1SendService: SdkL1SendService,
         sdkService: DashSdkService,
         identityRepository: IdentityRepository
@@ -191,32 +226,35 @@ class ContactPaymentAddressProvider internal constructor(
         },
         dashjNextAddress = identityRepository::getNextContactAddress,
         dashjMarkUsed = identityRepository::markContactAddressUsed,
-        params = Constants.NETWORK_PARAMETERS
+        params = Constants.NETWORK_PARAMETERS,
+        dashjSendingCursor = identityRepository::getContactSendingCursor,
+        paidAddresses = PaidContactAddressStore(File(context.filesDir, PaidContactAddressStore.FILE_NAME))
     )
-
-    /**
-     * Base58 addresses paid by this process. The SDK mirror flips an address to
-     * used one persistence pass after the engine sees the payment; without this,
-     * a second payment inside that window would be handed the same address.
-     */
-    private val paidThisProcess: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
      * The address to pay [target] on, or null when neither stack can supply one.
      * Logs which source was used and, on a post-cutover fallback, why.
      */
-    suspend fun nextAddress(target: ContactPaymentTarget): ContactPaymentAddress? {
+    suspend fun nextAddress(target: ContactPaymentTarget): ContactPaymentAddress? = withContext(ioDispatcher) {
         if (!cutoverCommitted()) {
-            return dashjAddress(target, "pre-cutover")
+            dashjAddress(target, "pre-cutover")
+        } else {
+            postCutoverAddress(target)
         }
+    }
+
+    private suspend fun postCutoverAddress(target: ContactPaymentTarget): ContactPaymentAddress? {
         val selection = try {
             val ourId = Identifier.from(target.ourUserId).toBuffer()
             val contactId = Identifier.from(target.contactUserId).toBuffer()
-            selectSdkContactAddress(
-                sdkAccountReader(ourId, contactId),
-                target.accountReference,
-                paidThisProcess.toSet()
-            )
+            val account = sdkAccountReader(ourId, contactId)
+            val cursor = try {
+                dashjSendingCursor(target.contactUserId, target.accountReference)
+            } catch (e: Exception) {
+                log.warn("contact payment address: reading dashj's sending cursor failed", e)
+                null
+            }
+            selectSdkContactAddress(account, target.accountReference, paidAddresses.paid(), cursor)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -253,11 +291,11 @@ class ContactPaymentAddressProvider internal constructor(
             )
             return null
         }
-        if (address.toBase58() in paidThisProcess) {
+        if (address.toBase58() in paidAddresses.paid()) {
             // Not fatal: the payment still reaches the contact. It means the
             // post-send mark below could not advance dashj's chain.
             log.warn(
-                "contact payment address for {}: dashj served an address this process already paid",
+                "contact payment address for {}: dashj served an address already recorded paid",
                 target.contactUserId
             )
         }
@@ -269,22 +307,44 @@ class ContactPaymentAddressProvider internal constructor(
     }
 
     /**
-     * Runs [send] and, only once it has returned (the payment was sent), records
-     * [payment]'s address as paid: in this process and on dashj's sending chain.
-     * A failed or aborted send throws out of [send] before anything is marked.
-     * A marking failure is logged, never thrown — the money has already moved.
+     * Runs [send] and records [payment]'s address as paid ([paidAddresses] and
+     * dashj's sending chain) as soon as the payment is known to be broadcast:
+     * - when [send] calls the `onBroadcast` it is handed — the send path signals
+     *   it the moment the network has the transaction, before any later step
+     *   that can still throw (post-cutover: bridging the transaction into the
+     *   dashj wallet for display, which may fail although the money moved);
+     * - otherwise when [send] returns.
+     * A send that throws or is cancelled before signalling marks nothing — that
+     * is a genuine pre-broadcast failure. Marking happens at most once and never
+     * throws: a marking failure is logged, the money has already moved.
      * [payment] null (not a contact payment) just runs [send].
      */
-    suspend fun <T> sendThenMarkUsed(payment: ContactPaymentAddress?, send: suspend () -> T): T {
-        val result = send()
-        if (payment != null) {
-            markPaid(payment)
+    suspend fun <T> sendThenMarkUsed(
+        payment: ContactPaymentAddress?,
+        send: suspend (onBroadcast: (txid: String) -> Unit) -> T
+    ): T {
+        if (payment == null) {
+            return send { }
+        }
+        val marked = AtomicBoolean(false)
+        val result = send { txid ->
+            if (marked.compareAndSet(false, true)) markPaid(payment, txid)
+        }
+        if (marked.compareAndSet(false, true)) {
+            // NonCancellable: the payment went out; a cancellation arriving now
+            // must not skip recording it.
+            withContext(NonCancellable + ioDispatcher) { markPaid(payment, txid = null) }
         }
         return result
     }
 
-    private fun markPaid(payment: ContactPaymentAddress) {
-        paidThisProcess.add(payment.address.toBase58())
+    /** Blocking (file write, dashj lock). Never throws. */
+    private fun markPaid(payment: ContactPaymentAddress, txid: String?) {
+        try {
+            paidAddresses.record(payment.address.toBase58())
+        } catch (e: Exception) {
+            log.warn("contact payment sent; recording the paid address failed", e)
+        }
         val outcome = try {
             dashjMarkUsed(payment.target.contactUserId, payment.target.accountReference, payment.address)
         } catch (e: Exception) {
@@ -292,8 +352,8 @@ class ContactPaymentAddressProvider internal constructor(
             return
         }
         log.info(
-            "contact payment to {} sent (address source {}); dashj sending key: {}",
-            payment.target.contactUserId, payment.source, outcome ?: "no dashj identity"
+            "contact payment to {} sent (tx {}, address source {}); dashj sending key: {}",
+            payment.target.contactUserId, txid ?: "-", payment.source, outcome ?: "no dashj identity"
         )
     }
 

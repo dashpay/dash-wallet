@@ -26,7 +26,8 @@ import org.bitcoinj.evolution.EvolutionContact;
 
 /**
  * Access to a DIP-15 SENDING friendship chain: READ-ONLY for its extended public
- * key ({@link #sendingExtendedPublicKeyOrNull}), plus one deliberate write —
+ * key ({@link #sendingExtendedPublicKeyOrNull}) and its cursor ({@link #sendingCursorOrNull}),
+ * plus one deliberate write —
  * {@link #markSendingAddressUsed}, which advances the chain past a key the SDK paid.
  *
  * <h2>Why this class lives in dashj's package</h2>
@@ -77,6 +78,38 @@ public final class FriendChainAccess {
         FriendKeyChain chain =
                 group.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
         return chain == null ? null : chain.getWatchingKey();
+    }
+
+    /**
+     * The child index of the key dashj would hand out next on the SENDING chain for
+     * {@code contact} — its current key, or, when none is memoized yet, the first key
+     * not yet issued — or {@code null} when this wallet holds no such chain. Never
+     * issues a key.
+     *
+     * <p>Every key BELOW this index has been paid (pre-cutover dashj only moves the
+     * current key on when it sees a payment to it; post-cutover
+     * {@link #markSendingAddressUsed} moves it past each paid key). This is persisted
+     * with the wallet: on reload dashj rebuilds the current key as the last issued one,
+     * which is this index. That makes it the restart-proof floor for picking the
+     * contact's next address from the SDK, whose mirror of used flags can lag.
+     */
+    public static Integer sendingCursorOrNull(Wallet wallet, EvolutionContact contact) {
+        wallet.keyChainGroupLock.lock();
+        try {
+            FriendKeyChainGroup group = wallet.sendingToFriendsGroup;
+            if (group == null) {
+                return null;
+            }
+            FriendKeyChain chain =
+                    group.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            if (chain == null) {
+                return null;
+            }
+            DeterministicKey current = group.currentContactKeys.get(chain.getAccountPath());
+            return current != null ? current.getChildNumber().num() : chain.getIssuedExternalKeys();
+        } finally {
+            wallet.keyChainGroupLock.unlock();
+        }
     }
 
     /** Outcome of {@link #markSendingAddressUsed}. */

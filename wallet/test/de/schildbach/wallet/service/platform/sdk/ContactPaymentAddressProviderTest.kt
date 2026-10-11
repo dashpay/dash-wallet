@@ -28,9 +28,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
 
 class ContactPaymentAddressProviderTest {
+
+    @get:Rule
+    val tmp = TemporaryFolder()
 
     private val params = TestNet3Params.get()
 
@@ -64,7 +70,10 @@ class ContactPaymentAddressProviderTest {
         var cutover: Boolean,
         var sdkAccount: SdkContactSendingAccount?,
         val dashjAddress: Address?,
-        val params: org.bitcoinj.core.NetworkParameters
+        val params: org.bitcoinj.core.NetworkParameters,
+        /** dashj's persisted sending cursor for the contact; null = no dashj chain. */
+        var dashjCursor: Int? = null,
+        paidFile: File? = null
     ) {
         var sdkReads = 0
         val sdkReadIds = mutableListOf<Pair<ByteArray, ByteArray>>()
@@ -89,14 +98,18 @@ class ContactPaymentAddressProviderTest {
                 marks += Triple(userId, ref, address)
                 markResult
             },
-            params = params
+            params = params,
+            dashjSendingCursor = { _, _ -> dashjCursor },
+            paidAddresses = PaidContactAddressStore(paidFile)
         )
     }
 
     private fun harness(
         cutover: Boolean = true,
-        sdkAccount: SdkContactSendingAccount? = account()
-    ) = Harness(cutover, sdkAccount, dashjAddress, params)
+        sdkAccount: SdkContactSendingAccount? = account(),
+        dashjCursor: Int? = null,
+        paidFile: File? = null
+    ) = Harness(cutover, sdkAccount, dashjAddress, params, dashjCursor, paidFile)
 
     @Test
     fun postCutover_usesTheSdkSendingAccountAddress() = runBlocking {
@@ -335,5 +348,143 @@ class ContactPaymentAddressProviderTest {
         assertEquals("txid", sent)
         // Still remembered as paid in-process, so the SDK path moves on.
         assertFalse(h.provider.nextAddress(target)?.address == payment?.address)
+    }
+
+    // ── paid addresses survive a restart (PR #1608 review) ──────────────
+
+    @Test
+    fun selection_skipsIndicesBelowDashjsCursor() {
+        val result = selectSdkContactAddress(
+            account(addresses = pool(true, false, false, false)),
+            selectedReference,
+            emptySet(),
+            dashjCursor = 2
+        )
+
+        assertEquals(SdkContactAddressSelection.Selected(sdkPool[2].toBase58(), 2), result)
+    }
+
+    @Test
+    fun selection_dashjCursorBeyondThePool_isUnavailable() {
+        val result = selectSdkContactAddress(
+            account(addresses = pool(true, false, false)),
+            selectedReference,
+            emptySet(),
+            dashjCursor = 3
+        )
+
+        assertTrue(result is SdkContactAddressSelection.Unavailable)
+        assertTrue((result as SdkContactAddressSelection.Unavailable).reason.contains("cursor"))
+    }
+
+    @Test
+    fun restart_unchangedSdkPool_advancedDashjCursor_choosesANewAddress() = runBlocking {
+        // Process 1: pay the SDK's lowest unused address (index 1). Marking it on
+        // dashj moves dashj's persisted cursor past it, to 2.
+        val before = harness(dashjCursor = 1)
+        val paid = before.provider.nextAddress(target)
+        assertEquals(sdkPool[1], paid?.address)
+        before.provider.sendThenMarkUsed(paid) { "txid" }
+        assertEquals(listOf(Triple(contactUserId, selectedReference, sdkPool[1])), before.marks)
+
+        // Process 2: nothing remembered in memory, and the SDK mirror has not
+        // flagged index 1 yet (pool unchanged) — but dashj's cursor was saved.
+        val after = harness(dashjCursor = 2)
+
+        val next = after.provider.nextAddress(target)
+
+        assertEquals(ContactAddressSource.SDK, next?.source)
+        assertEquals(sdkPool[2], next?.address)
+    }
+
+    @Test
+    fun restart_beforeDashjSaved_thePaidAddressFileStillSkipsIt() = runBlocking {
+        // The process dies after the payment but before dashj's autosave wrote
+        // the advanced cursor: dashj comes back at its old cursor (1) and the
+        // SDK mirror still has index 1 unused. The paid-address file was written
+        // at broadcast time.
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val before = harness(dashjCursor = 1, paidFile = file)
+        val paid = before.provider.nextAddress(target)
+        before.provider.sendThenMarkUsed(paid) { "txid" }
+
+        val after = harness(dashjCursor = 1, paidFile = file)
+
+        assertEquals(sdkPool[2], after.provider.nextAddress(target)?.address)
+    }
+
+    @Test
+    fun restart_dashjCursorPastTheSdkPool_fallsBackToDashj() = runBlocking {
+        val h = harness(dashjCursor = 3)
+
+        val result = h.provider.nextAddress(target)
+
+        assertEquals(ContactAddressSource.DASHJ, result?.source)
+        assertEquals(dashjAddress, result?.address)
+    }
+
+    @Test
+    fun dashjCursorReadFailure_fallsBackToTheSdkPoolAlone() = runBlocking {
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ -> account() },
+            dashjNextAddress = { _, _ -> dashjAddress },
+            dashjMarkUsed = { _, _, _ -> null },
+            params = params,
+            dashjSendingCursor = { _, _ -> throw IllegalStateException("wallet closed") }
+        )
+
+        assertEquals(sdkPool[1], provider.nextAddress(target)?.address)
+    }
+
+    // ── marking at the broadcast, not at the end of the send ────────────
+
+    @Test
+    fun broadcastSignalled_thenTheSendThrows_isStillMarked() = runBlocking {
+        val h = harness()
+        val payment = h.provider.nextAddress(target)
+
+        assertThrows(RuntimeException::class.java) {
+            runBlocking {
+                h.provider.sendThenMarkUsed(payment) { onBroadcast ->
+                    onBroadcast("txid")
+                    throw RuntimeException("sent, but the display bridge failed")
+                }
+            }
+        }
+
+        assertEquals(listOf(Triple(contactUserId, selectedReference, sdkPool[1])), h.marks)
+        assertEquals(sdkPool[2], h.provider.nextAddress(target)?.address)
+    }
+
+    @Test
+    fun broadcastSignalled_thenCancelled_isStillMarked() = runBlocking {
+        val h = harness()
+        val payment = h.provider.nextAddress(target)
+
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) {
+            runBlocking {
+                h.provider.sendThenMarkUsed(payment) { onBroadcast ->
+                    onBroadcast("txid")
+                    throw kotlinx.coroutines.CancellationException("left the screen")
+                }
+            }
+        }
+
+        assertEquals(1, h.marks.size)
+    }
+
+    @Test
+    fun broadcastSignalled_andReturned_marksOnce() = runBlocking {
+        val h = harness()
+        val payment = h.provider.nextAddress(target)
+
+        h.provider.sendThenMarkUsed(payment) { onBroadcast ->
+            onBroadcast("txid")
+            onBroadcast("txid")
+            "txid"
+        }
+
+        assertEquals(1, h.marks.size)
     }
 }

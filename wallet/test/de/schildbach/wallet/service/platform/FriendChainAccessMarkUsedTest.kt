@@ -178,4 +178,34 @@ class FriendChainAccessMarkUsedTest {
             FriendChainAccess.markSendingAddressUsed(wallet, otherReference, contactAddress(0).hash)
         )
     }
+
+    // ── sendingCursorOrNull ─────────────────────────────────────────────
+
+    @Test
+    fun cursor_isTheIndexDashjServesNext_andNeverIssues() {
+        val wallet = newWallet()
+        val before = FriendChainAccess.sendingCursorOrNull(wallet, contact)
+
+        // Reading it twice issues nothing: the address served is still index 0.
+        assertEquals(before, FriendChainAccess.sendingCursorOrNull(wallet, contact))
+        assertEquals(contactAddress(0), current(wallet))
+        assertEquals(0, FriendChainAccess.sendingCursorOrNull(wallet, contact))
+    }
+
+    @Test
+    fun cursor_movesPastAMarkedKey_inSessionAndAfterReload() {
+        val wallet = newWallet()
+        current(wallet)
+        FriendChainAccess.markSendingAddressUsed(wallet, contact, contactAddress(3).hash)
+
+        assertEquals(4, FriendChainAccess.sendingCursorOrNull(wallet, contact))
+        assertEquals(4, FriendChainAccess.sendingCursorOrNull(reload(wallet), contact))
+    }
+
+    @Test
+    fun cursor_noChain_isNull() {
+        val otherReference = EvolutionContact(ourId, 0, contactId, accountReference + 1)
+
+        assertEquals(null, FriendChainAccess.sendingCursorOrNull(newWallet(), otherReference))
+    }
 }

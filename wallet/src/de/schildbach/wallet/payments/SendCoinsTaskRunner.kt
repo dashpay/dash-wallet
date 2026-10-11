@@ -424,16 +424,23 @@ class SendCoinsTaskRunner @Inject constructor(
      * - broadcast OK but bridge failed → throw with the txid in the message.
      *   The coins ARE on the network; the wallet reconciles via the next
      *   sync, and the error text says exactly that.
+     *
+     * [onBroadcast] is told the txid as soon as the SDK reports
+     * [SdkWriteResult.Broadcast], BEFORE bridging — so a caller that must act
+     * on a proven payment (marking a contact address paid) still does when the
+     * bridge then fails. Never called for NotBroadcast / Ambiguous.
      */
     private suspend fun sendViaSdkBridged(
         address: Address,
         amount: Coin,
         beforeSending: Consumer<Transaction>?,
-        emptyWallet: Boolean = false
+        emptyWallet: Boolean = false,
+        onBroadcast: ((txid: String) -> Unit)? = null
     ): Transaction {
         val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet)
         return when (result) {
             is SdkWriteResult.Broadcast -> {
+                notifyBroadcast(onBroadcast, result.value)
                 when (val bridged = bridgedTransactionFactory.bridge(result.value)) {
                     is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> {
                         beforeSending?.accept(bridged.transaction)
@@ -449,6 +456,16 @@ class SendCoinsTaskRunner @Inject constructor(
             is SdkWriteResult.Ambiguous ->
                 throw (result.cause as? Exception ?: RuntimeException(result.cause))
             is SdkWriteResult.NotBroadcast -> throw sdkSendNotAttemptedException(result.reason)
+        }
+    }
+
+    /** Runs a caller's broadcast callback; its failure never turns a sent payment into a failed one. */
+    private fun notifyBroadcast(onBroadcast: ((txid: String) -> Unit)?, txid: String) {
+        if (onBroadcast == null) return
+        try {
+            onBroadcast(txid)
+        } catch (e: Exception) {
+            log.warn("broadcast callback failed for tx {}", txid, e)
         }
     }
 
@@ -1141,7 +1158,8 @@ class SendCoinsTaskRunner @Inject constructor(
         checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
-        intendedRecipient: Address? = null
+        intendedRecipient: Address? = null,
+        onBroadcast: ((txid: String) -> Unit)? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -1177,7 +1195,7 @@ class SendCoinsTaskRunner @Inject constructor(
                     if (payment.sendAll) ", send-all" else ""
                 )
                 return@withContext sendViaSdkBridged(
-                    payment.address, payment.amount, beforeSending, payment.sendAll
+                    payment.address, payment.amount, beforeSending, payment.sendAll, onBroadcast
                 )
             }
             throw SendNotSdkRoutableException(
@@ -1229,6 +1247,7 @@ class SendCoinsTaskRunner @Inject constructor(
             log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
             log.info("  transaction: {}", transaction.toStringHex())
             walletApplication.broadcastTransaction(transaction)
+            notifyBroadcast(onBroadcast, transaction.txId.toString())
             // EVERY dashj spend of the shared UTXOs (main send UI, CrowdNode,
             // BIP70 — they all funnel through here) briefly inflates the SDK's
             // shadow view by the fee until the next mined block, exactly like

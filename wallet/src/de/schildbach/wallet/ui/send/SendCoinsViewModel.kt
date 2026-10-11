@@ -314,15 +314,17 @@ class SendCoinsViewModel @Inject constructor(
             } else {
                 null
             }
-            // A contact payment: once the send succeeds, mark the address paid so
-            // the next payment to this contact gets a new one (DIP-15). Only when
+            // A contact payment: once it is broadcast, mark the address paid so
+            // the next payment to this contact gets a new one (DIP-15) — even if
+            // a later step of the send (the display bridge) then fails. Only when
             // the request still pays the address resolved for the contact.
             val contactPayment = contactPaymentAddress?.takeIf { it.address == intendedRecipient }
-            contactPaymentAddressProvider.sendThenMarkUsed(contactPayment) {
+            contactPaymentAddressProvider.sendThenMarkUsed(contactPayment) { onBroadcast ->
                 sendCoinsTaskRunner.sendCoins(
                     finalSendRequest,
                     checkBalanceConditions = checkBalance,
-                    intendedRecipient = intendedRecipient
+                    intendedRecipient = intendedRecipient,
+                    onBroadcast = onBroadcast
                 )
             }
         } catch (ex: Exception) {
