@@ -23,6 +23,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
@@ -30,6 +34,7 @@ import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
 import org.dashj.platform.dpp.identifier.Identifier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -278,4 +283,174 @@ class SdkTransparentUsernameCreationTest {
         coVerify(exactly = 2) { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) }
         assertEquals(listOf(500L), pauses)
     }
+
+    // ── Fee ledger (log-only credit snapshots) ───────────────────────────
+
+    /** A source whose fresh build succeeds outright (no Keystore refusal). */
+    private fun happySource() = source(lockAfterFailure = null).also {
+        coEvery { it.registerWithWalletFunding(walletIdHex, feeDuffs, 0, 0, any()) } returns identityId
+    }
+
+    @Test
+    fun `fee ledger arithmetic matches the verified mainnet example`() {
+        // 0.03 DASH asset lock → 3,000,000,000 credits; balance 2,693,390,540.
+        val credited = IdentityFeeLedger.creditedCredits(3_000_000L)
+        assertEquals(3_000_000_000L, credited)
+        assertEquals(306_609_460L, IdentityFeeLedger.feeCredits(credited, 2_693_390_540L))
+        assertEquals("0.0030660946", IdentityFeeLedger.creditsToDashString(306_609_460L))
+        assertNull(IdentityFeeLedger.feeCredits(null, 2_693_390_540L))
+        assertNull(IdentityFeeLedger.feeCredits(credited, null))
+
+        val line = IdentityFeeLedger.format(
+            step = IdentityFeeStep.IDENTITY_CREATE,
+            identityIdBase58 = "5zZxxQEwZ7awvRTNzi9dwh4DRkCFY9fVVxbRhuaqwbjm",
+            start = credited,
+            after = 2_693_390_540L,
+            startSource = "assetLock"
+        )
+        assertEquals(
+            "identity fee ledger: step=IDENTITY_CREATE identity=5zZxxQEw… credited=3000000000 (assetLock) " +
+                "balanceAfter=2693390540 fee=306609460 credits (≈0.0030660946 DASH)",
+            line
+        )
+    }
+
+    @Test
+    fun `fee ledger line marks unknown and possibly-stale figures`() {
+        val unknown = IdentityFeeLedger.format(IdentityFeeStep.DPNS, identityIdBase58, 100L, null, label = label)
+        assertTrue(unknown, unknown.contains("step=DPNS"))
+        assertTrue(unknown, unknown.contains("label=$label"))
+        assertTrue(unknown, unknown.contains("balanceBefore=100 balanceAfter=unknown fee=unknown"))
+
+        // A read that still shows the pre-write balance (lagging node).
+        val stale = IdentityFeeLedger.format(IdentityFeeStep.CONTACT_REQUEST, identityIdBase58, 100L, 100L)
+        assertTrue(stale, stale.contains("fee=0 credits (≈0 DASH) possiblyStale"))
+    }
+
+    @Test
+    fun `fee ledger balance read swallows failures, nulls and timeouts`() = runBlocking {
+        val step = IdentityFeeStep.DPNS
+        assertEquals(42L, IdentityFeeLedger.readBalanceOrNull(step, identityIdBase58) { 42L })
+        assertNull(IdentityFeeLedger.readBalanceOrNull(step, identityIdBase58) { null })
+        assertNull(IdentityFeeLedger.readBalanceOrNull(step, identityIdBase58) { error("DAPI down") })
+        assertNull(
+            IdentityFeeLedger.readBalanceOrNull(step, identityIdBase58, timeoutMs = 50L) {
+                CompletableDeferred<Long?>().await()
+            }
+        )
+    }
+
+    @Test
+    fun `fee ledger balance read rethrows the caller's cancellation`() = runBlocking {
+        val read = async(start = CoroutineStart.UNDISPATCHED) {
+            IdentityFeeLedger.readBalanceOrNull(IdentityFeeStep.DPNS, identityIdBase58, timeoutMs = 60_000L) {
+                CompletableDeferred<Long?>().await()
+            }
+        }
+        read.cancel()
+        read.join()
+        assertTrue("cancellation must propagate, not become a null read", read.isCancelled)
+    }
+
+    @Test
+    fun `balance snapshots are read after identity create and after each DPNS step`() = runBlocking {
+        val source = happySource()
+        val secondary = "bob3"
+        coEvery { source.registerDpnsName(walletIdHex, identityId, secondary) } returns "$secondary.dash"
+        coEvery { source.registrationAssetLockAmountDuffs(walletIdHex, 0) } returns feeDuffs
+        coEvery { source.identityCreditBalance(identityIdBase58) } returnsMany
+            listOf(2_700_000_000L, 2_690_000_000L, 2_680_000_000L)
+
+        val result = creation(source).createUsernameTransparent(label, secondary)
+
+        val outcome = (result as SdkWriteResult.Broadcast).value
+        assertEquals(ShieldedUsernameNameStatus.REGISTERED, outcome.nameStatus)
+        assertEquals(ShieldedUsernameNameStatus.REGISTERED, outcome.secondaryNameStatus)
+        // One post-create read, then one post-step read per DPNS name — the
+        // previous step's "after" is the next step's "before".
+        coVerify(exactly = 3) { source.identityCreditBalance(identityIdBase58) }
+        coVerify(exactly = 1) { source.registrationAssetLockAmountDuffs(walletIdHex, 0) }
+    }
+
+    @Test
+    fun `failing fee ledger reads never change the creation outcome`() = runBlocking {
+        val source = happySource()
+        coEvery { source.registrationAssetLockAmountDuffs(walletIdHex, 0) } throws IllegalStateException("no db")
+        coEvery { source.identityCreditBalance(identityIdBase58) } throws DashSdkError.NetworkError("DAPI down")
+
+        val result = creation(source).createUsernameTransparent(label)
+
+        assertEquals(
+            SdkWriteResult.Broadcast(
+                ShieldedUsernameCreationOutcome(
+                    identityIdBase58 = identityIdBase58,
+                    nameStatus = ShieldedUsernameNameStatus.REGISTERED,
+                    nameFailureReason = null,
+                    secondaryNameStatus = null,
+                    secondaryNameFailureReason = null
+                )
+            ),
+            result
+        )
+        assertEquals(
+            listOf(
+                IdentityCreationState.PREORDER_REGISTERING,
+                IdentityCreationState.USERNAME_REGISTERING,
+                IdentityCreationState.USERNAME_REGISTERED,
+                IdentityCreationState.DONE
+            ),
+            creationStates
+        )
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, label) }
+    }
+
+    @Test
+    fun `a hanging fee ledger read is abandoned and does not change the outcome`() = runBlocking {
+        val source = happySource()
+        coEvery { source.registrationAssetLockAmountDuffs(walletIdHex, 0) } returns feeDuffs
+        coEvery { source.identityCreditBalance(identityIdBase58) } coAnswers { CompletableDeferred<Long?>().await() }
+        val creation = creation(source).apply { feeLedgerReadTimeoutMs = 50L }
+
+        val result = creation.createUsernameTransparent(label)
+
+        val outcome = (result as SdkWriteResult.Broadcast).value
+        assertEquals(ShieldedUsernameNameStatus.REGISTERED, outcome.nameStatus)
+        assertEquals(IdentityCreationState.DONE, creationStates.last())
+    }
+
+    @Test
+    fun `a pre-broadcast DPNS rejection skips the post-step balance read`() = runBlocking {
+        val source = happySource()
+        coEvery { source.registrationAssetLockAmountDuffs(walletIdHex, 0) } returns feeDuffs
+        coEvery { source.identityCreditBalance(identityIdBase58) } returns 2_700_000_000L
+        coEvery { source.registerDpnsName(walletIdHex, identityId, label) } throws
+            DashSdkError.InvalidParameter("label taken")
+
+        val result = creation(source).createUsernameTransparent(label)
+
+        val outcome = (result as SdkWriteResult.Broadcast).value
+        assertEquals(ShieldedUsernameNameStatus.NOT_REGISTERED, outcome.nameStatus)
+        // Only the post-create snapshot — nothing was spent on the name.
+        coVerify(exactly = 1) { source.identityCreditBalance(identityIdBase58) }
+    }
+
+    @Test
+    fun `existing-identity DPNS re-drive snapshots around the registration without changing the result`() =
+        runBlocking {
+            val source = happySource()
+            coEvery { source.identityCreditBalance(identityIdBase58) } returnsMany
+                listOf(2_700_000_000L, 2_690_000_000L)
+
+            val result = creation(source).registerDpnsNameForExistingIdentity(identityIdBase58, label)
+
+            assertEquals(SdkWriteResult.Broadcast("$label.dash"), result)
+            coVerify(exactly = 2) { source.identityCreditBalance(identityIdBase58) }
+
+            // Failing reads: identical result.
+            coEvery { source.identityCreditBalance(identityIdBase58) } throws IllegalStateException("boom")
+            assertEquals(
+                SdkWriteResult.Broadcast("$label.dash"),
+                creation(source).registerDpnsNameForExistingIdentity(identityIdBase58, label)
+            )
+        }
 }

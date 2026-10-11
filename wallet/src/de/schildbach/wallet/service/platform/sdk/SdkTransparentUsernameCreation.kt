@@ -209,6 +209,23 @@ interface TransparentUsernameSource {
      * name (e.g. `"alice.dash"`).
      */
     suspend fun registerDpnsName(walletIdHex: String, identityId: ByteArray, label: String): String
+
+    /**
+     * FEE-LEDGER read: the LOCKED amount (Core duffs) of the
+     * IDENTITY_REGISTRATION asset lock the SDK persisted for [identityIndex],
+     * or null when no row is found. Same retaining `asset_locks` Room table as
+     * [registrationAssetLockTxidDisplayHex] — covers a RESUMED lock too, whose
+     * [TrackedAssetLock] carries no amount. Local read; diagnostics only.
+     */
+    suspend fun registrationAssetLockAmountDuffs(walletIdHex: String, identityIndex: Int): Long?
+
+    /**
+     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance,
+     * or null when the identity is not found. One DAPI round trip that may
+     * lag a just-applied transition (see [IdentityFeeLedger]); diagnostics
+     * only — callers bound it and ignore failures.
+     */
+    suspend fun identityCreditBalance(identityIdBase58: String): Long?
 }
 
 /** Production [TransparentUsernameSource]: boots the SDK on demand. */
@@ -329,6 +346,21 @@ internal class DashSdkTransparentUsernameSource(
             label = label,
             signerHandle = manager.signerHandle
         )
+    }
+
+    override suspend fun registrationAssetLockAmountDuffs(walletIdHex: String, identityIndex: Int): Long? =
+        service.databaseOrNull()?.assetLockDao()
+            ?.observeByWalletAndIdentityIndex(walletId(walletIdHex), identityIndex)
+            ?.first()
+            ?.firstOrNull {
+                it.fundingTypeRaw == TrackedAssetLock.FundingType.IDENTITY_REGISTRATION.raw
+            }
+            ?.amountDuffs
+
+    override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
+        service.ensureStarted()
+        val sdk = checkNotNull(service.sdkOrNull()) { "SDK runtime missing after ensureStarted()" }
+        return sdk.identities.fetchBalance(identityIdBase58)
     }
 }
 
@@ -478,6 +510,9 @@ class SdkTransparentUsernameCreation internal constructor(
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
     var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    /** Test seam: per-read budget of the log-only fee-ledger balance reads. */
+    internal var feeLedgerReadTimeoutMs: Long = IdentityFeeLedger.BALANCE_READ_TIMEOUT_MS
 
     private val _submitState =
         MutableStateFlow<ShieldedUsernameSubmitState>(ShieldedUsernameSubmitState.Idle)
@@ -794,19 +829,28 @@ class SdkTransparentUsernameCreation internal constructor(
             log.warn("failed to persist identity/name context before DPNS registration", t)
         }
 
+        // FEE LEDGER (log-only, best-effort): credited vs post-create balance
+        // = the IdentityCreate fee. The post-create balance doubles as the
+        // primary DPNS step's "before" snapshot.
+        val balanceAfterCreate = recordIdentityCreateFee(walletId, identityIndex, identityIdBase58, amountDuffs)
+
         // REQUIRED, state-tracked DPNS registration (primary). Drives the
         // creation state AROUND source.registerDpnsName so the tile shows the
         // processing card while it lands, and GATES the terminal outcome on
         // the name — a failure is surfaced as a RETRYABLE error, never a false
         // success.
-        val (nameStatus, nameFailure) = registerNameTracked(
+        val primary = registerNameTracked(
             walletId,
             identityId,
+            identityIdBase58,
             label,
+            balanceBefore = balanceAfterCreate,
             preorderState = IdentityCreationState.PREORDER_REGISTERING,
             registeringState = IdentityCreationState.USERNAME_REGISTERING,
             registeredState = IdentityCreationState.USERNAME_REGISTERED
         )
+        val nameStatus = primary.status
+        val nameFailure = primary.failureReason
         // Secondary (dual-username flow) is only attempted once the primary
         // CONFIRMED — the secondary's own registering states drive the tile.
         val secondaryResult = if (nameStatus == ShieldedUsernameNameStatus.REGISTERED) {
@@ -814,7 +858,9 @@ class SdkTransparentUsernameCreation internal constructor(
                 registerNameTracked(
                     walletId,
                     identityId,
+                    identityIdBase58,
                     it,
+                    balanceBefore = primary.balanceAfter,
                     preorderState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
                     registeringState = IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
                     registeredState = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
@@ -898,7 +944,7 @@ class SdkTransparentUsernameCreation internal constructor(
                     "(primary={}, secondary={}); a tile retry re-drives ONLY the name step",
                 identityIdBase58.take(8),
                 nameStatus,
-                secondaryResult?.first
+                secondaryResult?.status
             )
         }
 
@@ -910,8 +956,8 @@ class SdkTransparentUsernameCreation internal constructor(
                 identityIdBase58 = identityIdBase58,
                 nameStatus = nameStatus,
                 nameFailureReason = nameFailure,
-                secondaryNameStatus = secondaryResult?.first,
-                secondaryNameFailureReason = secondaryResult?.second
+                secondaryNameStatus = secondaryResult?.status,
+                secondaryNameFailureReason = secondaryResult?.failureReason
             )
         )
     }
@@ -1069,15 +1115,23 @@ class SdkTransparentUsernameCreation internal constructor(
      * against the same existing identity (the restore worker even re-checks the
      * on-chain name before re-registering, so an AMBIGUOUS name that actually
      * landed is not double-registered).
+     *
+     * FEE LEDGER: [balanceBefore] (the previous step's post-write snapshot) and
+     * one best-effort post-registration read give the DPNS step's credit cost
+     * ([IdentityFeeLedger]); the read is skipped for a provably pre-broadcast
+     * NOT_REGISTERED (nothing was spent — [NameRegistration.balanceAfter] is
+     * then [balanceBefore]). Never affects the returned status.
      */
     private suspend fun registerNameTracked(
         walletId: String,
         identityId: ByteArray,
+        identityIdBase58: String,
         label: String,
+        balanceBefore: Long?,
         preorderState: IdentityCreationState,
         registeringState: IdentityCreationState,
         registeredState: IdentityCreationState
-    ): Pair<ShieldedUsernameNameStatus, String?> {
+    ): NameRegistration {
         try {
             driveCreationState(preorderState, null)
             driveCreationState(registeringState, null)
@@ -1085,7 +1139,7 @@ class SdkTransparentUsernameCreation internal constructor(
             if (t is CancellationException) throw t
             log.warn("failed to record DPNS registering state for '{}'", label, t)
         }
-        return try {
+        val (nameStatus, nameReason) = try {
             source.registerDpnsName(walletId, identityId, label)
             try {
                 driveCreationState(registeredState, null)
@@ -1127,6 +1181,107 @@ class SdkTransparentUsernameCreation internal constructor(
             }
             status to reason
         }
+        val balanceAfter = if (nameStatus == ShieldedUsernameNameStatus.NOT_REGISTERED) {
+            balanceBefore
+        } else {
+            recordDpnsFee(identityIdBase58, label, nameStatus.name, balanceBefore)
+        }
+        return NameRegistration(nameStatus, nameReason, balanceAfter)
+    }
+
+    /**
+     * Result of [registerNameTracked]: the name [status] + [failureReason], and
+     * the identity's post-step credit balance ([balanceAfter], null when
+     * unread) — the next step's fee-ledger "before" snapshot.
+     */
+    private data class NameRegistration(
+        val status: ShieldedUsernameNameStatus,
+        val failureReason: String?,
+        val balanceAfter: Long?
+    )
+
+    /**
+     * FEE LEDGER — IdentityCreate step. Credited = the asset lock's LOCKED
+     * amount × 1000 (read from the SDK's retaining `asset_locks` row, which
+     * also covers a resumed lock; falls back to [requestedDuffs] — this
+     * attempt's funding amount — when the row is unreadable, and says so in
+     * the line). Returns the post-create balance (null when unread). Strictly
+     * best-effort: never throws (bar cancellation), never affects the flow.
+     */
+    private suspend fun recordIdentityCreateFee(
+        walletId: String,
+        identityIndex: Int,
+        identityIdBase58: String,
+        requestedDuffs: Long
+    ): Long? {
+        val lockedDuffs = try {
+            source.registrationAssetLockAmountDuffs(walletId, identityIndex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("identity fee ledger: asset-lock amount read failed at index {}", identityIndex, t)
+            null
+        }
+        val balanceAfter = IdentityFeeLedger.readBalanceOrNull(
+            IdentityFeeStep.IDENTITY_CREATE,
+            identityIdBase58,
+            feeLedgerReadTimeoutMs
+        ) {
+            source.identityCreditBalance(identityIdBase58)
+        }
+        val credited = try {
+            IdentityFeeLedger.creditedCredits(lockedDuffs ?: requestedDuffs)
+        } catch (e: ArithmeticException) {
+            null
+        }
+        IdentityFeeLedger.record(
+            step = IdentityFeeStep.IDENTITY_CREATE,
+            identityIdBase58 = identityIdBase58,
+            start = credited,
+            after = balanceAfter,
+            startSource = if (lockedDuffs != null) "assetLock" else "requested"
+        )
+        return balanceAfter
+    }
+
+    /**
+     * FEE LEDGER — one DPNS registration: reads the post-step balance and logs
+     * [balanceBefore] − it. `registerDpnsName` runs preorder + domain in ONE
+     * SDK call with no fee info returned, so the figure is the COMBINED cost;
+     * for a contested label it also includes the prefunded voting balance Drive
+     * moves out of the identity. Returns the post-step balance (null when unread).
+     */
+    private suspend fun recordDpnsFee(
+        identityIdBase58: String,
+        label: String,
+        status: String,
+        balanceBefore: Long?
+    ): Long? {
+        val balanceAfter = IdentityFeeLedger.readBalanceOrNull(
+            IdentityFeeStep.DPNS,
+            identityIdBase58,
+            feeLedgerReadTimeoutMs
+        ) {
+            source.identityCreditBalance(identityIdBase58)
+        }
+        val contested = try {
+            Names.isUsernameContestable(label)
+        } catch (e: Exception) {
+            false
+        }
+        IdentityFeeLedger.record(
+            step = IdentityFeeStep.DPNS,
+            identityIdBase58 = identityIdBase58,
+            start = balanceBefore,
+            after = balanceAfter,
+            label = label,
+            status = status,
+            note = if (contested) {
+                "preorder+domain combined, includes contested prefunded voting balance"
+            } else {
+                "preorder+domain combined"
+            }
+        )
+        return balanceAfter
     }
 
     /**
@@ -1158,13 +1313,29 @@ class SdkTransparentUsernameCreation internal constructor(
             if (t is CancellationException) throw t
             return SdkWriteResult.NotBroadcast("malformed identity id", t)
         }
-        return try {
+        // FEE LEDGER (log-only, best-effort): one snapshot before the
+        // registration, one after (skipped when provably nothing was spent).
+        val balanceBefore = IdentityFeeLedger.readBalanceOrNull(
+            IdentityFeeStep.DPNS,
+            identityIdBase58,
+            feeLedgerReadTimeoutMs
+        ) {
+            source.identityCreditBalance(identityIdBase58)
+        }
+        val result = try {
             val fullName = source.registerDpnsName(walletId, identityId, label)
             SdkWriteResult.Broadcast(fullName)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             classifyBroadcastFailure(t)
         }
+        val status = when (result) {
+            is SdkWriteResult.Broadcast -> ShieldedUsernameNameStatus.REGISTERED
+            is SdkWriteResult.NotBroadcast -> null
+            is SdkWriteResult.Ambiguous -> ShieldedUsernameNameStatus.AMBIGUOUS
+        }
+        if (status != null) recordDpnsFee(identityIdBase58, label, status.name, balanceBefore)
+        return result
     }
 
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {

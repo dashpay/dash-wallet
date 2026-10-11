@@ -412,6 +412,13 @@ interface SdkDashPayWriteSource {
         avatarBytes: ByteArray?,
         doCreate: Boolean
     )
+
+    /**
+     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance,
+     * or null when the identity is not found. Diagnostics only — callers
+     * bound it and ignore failures (see [IdentityFeeLedger]).
+     */
+    suspend fun identityCreditBalance(identityIdBase58: String): Long?
 }
 
 /** Production [SdkDashPayWriteSource]: boots the SDK on demand. */
@@ -475,6 +482,12 @@ internal class DashSdkDashPayWriteSource(
             doCreate = doCreate,
             signerHandle = manager.signerHandle
         )
+    }
+
+    override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
+        service.ensureStarted()
+        val sdk = checkNotNull(service.sdkOrNull()) { "SDK runtime missing after ensureStarted()" }
+        return sdk.identities.fetchBalance(identityIdBase58)
     }
 }
 
@@ -614,6 +627,7 @@ class SdkDashPayWrites internal constructor(
         return runWrite(
             ownUserId,
             "sendContactRequest",
+            feeStep = IdentityFeeStep.CONTACT_REQUEST,
             extraPreflight = { walletId, ownId -> dashPayEncryptionKeyPreflight(walletId, ownId) }
         ) { walletId, ownId ->
             source.sendContactRequest(walletId, ownId, recipient)
@@ -696,7 +710,7 @@ class SdkDashPayWrites internal constructor(
                 "profile has avatarHash/avatarFingerprint but no raw avatar bytes; SDK path needs them"
             )
         }
-        return runWrite(ownUserId, "createOrUpdateProfile") { walletId, ownId ->
+        return runWrite(ownUserId, "createOrUpdateProfile", feeStep = IdentityFeeStep.PROFILE) { walletId, ownId ->
             source.createOrUpdateProfile(
                 walletId, ownId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
             )
@@ -713,10 +727,16 @@ class SdkDashPayWrites internal constructor(
      * identity). Returning a non-null reason short-circuits to
      * [SdkWriteResult.NotBroadcast] — i.e. the unchanged dashj path — without
      * submitting anything.
+     *
+     * [feeStep] names the write for the log-only [IdentityFeeLedger]: one
+     * bounded best-effort balance read right before the broadcast and one
+     * after it (skipped when the attempt was provably pre-broadcast). The
+     * reads never affect the returned result.
      */
     private suspend fun runWrite(
         ownUserId: String,
         operation: String,
+        feeStep: IdentityFeeStep,
         extraPreflight: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> String? = { _, _ -> null },
         block: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> Unit
     ): SdkWriteResult<Unit> {
@@ -742,8 +762,12 @@ class SdkDashPayWrites internal constructor(
         }
         extraPreflight(walletId, ownId)?.let { return notBroadcast(operation, it, null) }
 
+        val balanceBefore = IdentityFeeLedger.readBalanceOrNull(feeStep, ownUserId) {
+            source.identityCreditBalance(ownUserId)
+        }
+
         // The single broadcast attempt.
-        return try {
+        val result = try {
             block(walletId, ownId)
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
@@ -763,6 +787,19 @@ class SdkDashPayWrites internal constructor(
             }
             classified
         }
+        if (result !is SdkWriteResult.NotBroadcast) {
+            val balanceAfter = IdentityFeeLedger.readBalanceOrNull(feeStep, ownUserId) {
+                source.identityCreditBalance(ownUserId)
+            }
+            IdentityFeeLedger.record(
+                step = feeStep,
+                identityIdBase58 = ownUserId,
+                start = balanceBefore,
+                after = balanceAfter,
+                status = if (result is SdkWriteResult.Broadcast) "BROADCAST" else "AMBIGUOUS"
+            )
+        }
+        return result
     }
 
     private fun notBroadcast(operation: String, reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
