@@ -451,6 +451,8 @@ class DashSdkServiceImpl @Inject constructor(
 
     override fun databaseOrNull(): DashDatabase? = runtime?.database
 
+    override fun walletStorageOrNull(): WalletStorage? = runtime?.walletStorage
+
     override fun walletManagerOrNull(): PlatformWalletManager? = runtime?.walletManager
 
     override fun loadedWalletIds(): Set<String> =

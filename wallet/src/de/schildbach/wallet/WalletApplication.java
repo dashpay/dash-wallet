@@ -354,6 +354,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     L1ShadowSyncService l1ShadowSyncService;
     @Inject
+    de.schildbach.wallet.service.platform.sdk.SdkWalletSecretsEraser sdkWalletSecretsEraser;
+    @Inject
     CutoverCoordinator cutoverCoordinator;
     @Inject
     CutoverEvidenceCollector cutoverEvidenceCollector;
@@ -2361,20 +2363,21 @@ public class WalletApplication extends MultiDexApplication
     static final String SDK_SECRETS_DATASTORE_FILE = "org.dashfoundation.wallet.secrets.preferences_pb";
 
     /**
-     * Datastore files {@link #clearDatastorePrefFiles} must never raw-delete.
+     * Datastore files {@link #clearDatastorePrefFiles} leaves to a later wipe step.
      *
      * <p>{@link #SDK_SECRETS_DATASTORE_FILE} is SDK-owned and a LIVE instance
      * the SDK holds for the whole process, so deleting it out-of-band is
      * exactly the cache/disk split described on {@link #clearDatastorePrefFiles}.
-     * It needs no wipe from here: the wipe's SDK cleanup
-     * ({@code L1ShadowSyncService.clearForWalletWipe} →
-     * {@code DashSdkServiceImpl.removeAppWallet} →
-     * {@code PlatformWalletManager.removeWallet}) deletes the old wallet's
-     * identity private keys, owner index and mnemonic through the SDK's own
-     * API. And it holds the DEVICE-scoped false-locked Keystore defect record
-     * ({@code MASTER_LOCK_DEFECT_KEY}): deleting it made every new wallet on an
+     * It also holds the DEVICE-scoped false-locked Keystore defect record
+     * ({@code MASTER_LOCK_DEFECT_KEY}): dropping it made every new wallet on an
      * affected device (HONOR/MagicOS) re-hit the lock-bound signing refusal on
-     * its first identity registration (MO-1023), so it must survive a reset.
+     * its first identity registration (MO-1023). It is NOT exempt from the
+     * wipe: {@code WalletApplicationExt.destroyWalletData} disposes of it AFTER
+     * the SDK wallet-removal cascade, through
+     * {@link de.schildbach.wallet.service.platform.sdk.SdkWalletSecretsEraser}
+     * — kept only when no wallet secret is verified to remain, otherwise
+     * erased through the live instance, or by
+     * {@link #deleteSdkSecretsDatastoreFile} when no instance can be opened.
      */
     private static final Set<String> DATASTORE_FILES_KEPT_ON_WIPE =
             Collections.singleton(SDK_SECRETS_DATASTORE_FILE);
@@ -2389,9 +2392,9 @@ public class WalletApplication extends MultiDexApplication
      * debug SDK flags never reseeding after a Reset Wallet, and datastore files
      * recreated with a random subset of keys).
      *
-     * <p>Files in {@link #DATASTORE_FILES_KEPT_ON_WIPE} are never touched: they
-     * are owned by a library that keeps its own live instance and clears its
-     * own entries.
+     * <p>Files in {@link #DATASTORE_FILES_KEPT_ON_WIPE} are not touched here:
+     * they are owned by a library that keeps its own live instance, and the
+     * wipe erases them in a dedicated step after that library's own cleanup.
      */
     public void clearDatastorePrefFiles(@NonNull Set<String> apiCleared) {
         final List<String> fileDeleted = new ArrayList<>();
@@ -2416,8 +2419,27 @@ public class WalletApplication extends MultiDexApplication
             }
         }
 
-        log.info("datastore preferences cleared; api-cleared: {}, file-deleted: {}, kept (library-owned): {}",
+        log.info("datastore preferences cleared; api-cleared: {}, file-deleted: {}, deferred (library-owned): {}",
                 apiCleared, fileDeleted, fileKept);
+    }
+
+    /**
+     * Last-resort erase of {@link #SDK_SECRETS_DATASTORE_FILE}, for when no
+     * SDK store instance can be opened (the pre-MO-1023 behaviour).
+     *
+     * @return true only when the file is confirmed absent afterwards.
+     */
+    boolean deleteSdkSecretsDatastoreFile() {
+        final File file = new File(new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY),
+                SDK_SECRETS_DATASTORE_FILE);
+        try {
+            //noinspection ResultOfMethodCallIgnored
+            file.delete();
+            return Files.notExists(file.toPath(), LinkOption.NOFOLLOW_LINKS);
+        } catch (final SecurityException x) {
+            log.warn("could not delete the SDK secrets datastore file", x);
+            return false;
+        }
     }
 
     private void clearWebCookies() {

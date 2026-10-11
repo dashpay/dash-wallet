@@ -20,6 +20,7 @@
 package de.schildbach.wallet
 
 import androidx.work.WorkManager
+import de.schildbach.wallet.service.platform.sdk.SdkSecretsWipeOutcome
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
 import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
 import de.schildbach.wallet.util.WalletWipeSequence
@@ -34,6 +35,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.BaseConfig
 import org.slf4j.LoggerFactory
+import java.io.IOException
 
 object WalletApplicationExt {
     private val log = LoggerFactory.getLogger(WalletApplicationExt::class.java)
@@ -149,9 +151,39 @@ object WalletApplicationExt {
         notifyWalletWipeListeners()
         destroyWalletSecrets()
         clearDatabasesInner(isWalletWipe = true)
+        // AFTER the SDK wallet-removal cascade inside clearDatabasesInner: the
+        // SDK's secrets DataStore (skipped by clearDatastorePrefFiles above)
+        // is kept only if that cascade verifiably left no wallet secret in it.
+        val sdkSecrets = eraseSdkWalletSecrets()
         // Last, so every other step still runs: a surviving primary or key
-        // backup throws here, keeping the wipe marker for the next launch.
-        confirmWalletSourcesDestroyed()
+        // backup, or SDK wallet secrets that could not be erased, throw here,
+        // keeping the wipe marker for the next launch.
+        confirmWipeDestroyed(sdkSecrets) { confirmWalletSourcesDestroyed() }
+    }
+
+    private suspend fun WalletApplication.eraseSdkWalletSecrets(): SdkSecretsWipeOutcome {
+        val outcome = runCatching {
+            sdkWalletSecretsEraser.eraseForWalletWipe { deleteSdkSecretsDatastoreFile() }
+        }.onFailure {
+            rethrowCancellation(it)
+            log.error("SDK secrets erase failed during wipe", it)
+        }.getOrDefault(SdkSecretsWipeOutcome.FAILED)
+        log.info("SDK secrets DataStore after wipe: {}", outcome)
+        return outcome
+    }
+
+    /**
+     * The wipe's completion gate: both persistent dashj wallet sources gone
+     * ([confirmWalletSources] throws otherwise) AND the SDK's wallet secrets
+     * erased. Either failure throws, so [WalletWipeSequence.finish] keeps the
+     * marker and the next launch re-runs the wipe. [confirmWalletSources]
+     * always runs first, so its own deletes are attempted regardless.
+     */
+    internal fun confirmWipeDestroyed(sdkSecrets: SdkSecretsWipeOutcome, confirmWalletSources: () -> Unit) {
+        confirmWalletSources()
+        if (!sdkSecrets.erased) {
+            throw IOException("wipe could not confirm the SDK wallet secrets are erased ($sdkSecrets)")
+        }
     }
 
     /**

@@ -338,6 +338,14 @@ interface DashSdkService {
     fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
 
     /**
+     * The running SDK's `WalletStorage` (its Keystore-encrypted secrets
+     * DataStore), or null if [ensureStarted] has not completed. For Reset
+     * Wallet's post-cascade erase check ([SdkWalletSecretsEraser]) only —
+     * secrets are read and written through the SDK's own APIs.
+     */
+    fun walletStorageOrNull(): org.dashfoundation.dashsdk.security.WalletStorage? = null
+
+    /**
      * Widen the SDK wallet's address-pool gap limits to the Rust-side
      * maximum (1000) on the standard families (BIP44 / BIP32 / CoinJoin,
      * account 0), deriving the addresses the wider windows require.

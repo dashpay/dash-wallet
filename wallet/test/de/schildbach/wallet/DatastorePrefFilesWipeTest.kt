@@ -17,10 +17,12 @@ import java.io.File
 
 /**
  * Reset Wallet's raw datastore sweep ([WalletApplication.clearDatastorePrefFiles])
- * must leave the Kotlin SDK's secrets DataStore alone: it is a live,
- * SDK-owned instance whose wallet entries the SDK's own wallet removal
- * deletes, and it carries the device-scoped false-locked Keystore defect
- * record that has to survive a reset (MO-1023).
+ * must leave the Kotlin SDK's secrets DataStore to the later, post-SDK-cascade
+ * erase step (SdkWalletSecretsWipe): it is a live, SDK-owned instance, and it
+ * carries the device-scoped false-locked Keystore defect record that should
+ * survive a reset when no wallet secret remains (MO-1023). That step's
+ * last-resort raw delete ([WalletApplication.deleteSdkSecretsDatastoreFile])
+ * must report success only once the file is gone.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
@@ -52,8 +54,27 @@ class DatastorePrefFilesWipeTest {
 
         app.clearDatastorePrefFiles(setOf(live.name))
 
-        assertTrue("the SDK-owned secrets DataStore must not be raw-deleted", sdkSecrets.exists())
+        assertTrue("the SDK-owned secrets DataStore is left to the post-cascade erase", sdkSecrets.exists())
         assertFalse("a file with no live instance is still swept", stale.exists())
         assertTrue("an api-cleared live file is left to its API", live.exists())
+    }
+
+    @Test
+    fun `the last-resort raw delete removes the SDK secrets file and confirms it`() {
+        val sdkSecrets = File(folder, WalletApplication.SDK_SECRETS_DATASTORE_FILE).apply { writeText("secrets") }
+
+        assertTrue(app.deleteSdkSecretsDatastoreFile())
+        assertFalse(sdkSecrets.exists())
+        assertTrue("an already-absent file counts as deleted", app.deleteSdkSecretsDatastoreFile())
+    }
+
+    @Test
+    fun `the last-resort raw delete reports failure when the file survives`() {
+        // A non-empty directory under the file's name cannot be deleted.
+        val blocker = File(folder, WalletApplication.SDK_SECRETS_DATASTORE_FILE).apply { mkdirs() }
+        File(blocker, "child").writeText("x")
+
+        assertFalse(app.deleteSdkSecretsDatastoreFile())
+        assertTrue(blocker.exists())
     }
 }
