@@ -1280,6 +1280,21 @@ internal fun planMixingGroupResum(
     return MixingGroupResum(existing.rowId, presentNetSumDuffs, memberCount)
 }
 
+/**
+ * The member nets the "Mixing" group re-sum ([planMixingGroupResum]) may use,
+ * keyed by display hex, from the store's served [records]. An SDK store stub
+ * ([L1TxUiRecord.isStoreStub]) is left OUT, exactly like a txid the store does
+ * not hold: its zero net is a placeholder, not the member's value, so counting
+ * it as present would let a partial sum pass the all-members-present guard
+ * (a cached −300 = −100 + −200 cut to −100 by one real member and one stub).
+ * The group keeps its cached total until the stub becomes a real record.
+ * Pure — host-testable.
+ */
+internal fun mixingMemberNets(records: Collection<L1TxUiRecord>): Map<String, Long> =
+    records.asSequence()
+        .filterNot { it.isStoreStub }
+        .associate { it.txidHex to it.netAmountDuffs }
+
 /** One planned group-row rewrite from [planMixingGroupResum]. */
 internal data class MixingGroupResum(
     val groupId: String,
@@ -1584,7 +1599,9 @@ interface CutoverUiSource {
      * The CURRENT net (duffs) of each of [txidHexes] (display-order hex) as the
      * store serves its record right now — the same reattributed record the
      * change feed and the reconcile walk emit — keyed by display hex. A txid
-     * the store does not hold is absent from the map. Used by the per-day
+     * the store does not hold, or holds only as a TXO-parent stub
+     * ([L1TxUiRecord.isStoreStub], see [mixingMemberNets]), is absent from the
+     * map. Used by the per-day
      * "Mixing" group re-sum ([planMixingGroupResum]) to re-derive a group
      * row's value from its members. Callers pass bounded batches. Default
      * empty: sources without a store (test fixtures) — every group then reads
@@ -1955,9 +1972,7 @@ internal class DashSdkCutoverUiSource(
         val walletId = walletIdFromHex(walletIdHex) ?: return emptyMap()
         val db = database()
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            walker(db, walletId, reportCorrections = false)
-                .recordsFor(txidHexes)
-                .associate { it.txidHex to it.netAmountDuffs }
+            mixingMemberNets(walker(db, walletId, reportCorrections = false).recordsFor(txidHexes))
         }
     }
 

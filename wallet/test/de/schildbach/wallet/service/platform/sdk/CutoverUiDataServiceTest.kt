@@ -1231,6 +1231,13 @@ class CutoverUiDataServiceTest {
         /** The store's CURRENT record nets, for the mixing-group re-sum (absent = not in the store). */
         var storeNets: Map<String, Long> = emptyMap()
 
+        /**
+         * The store's CURRENT served records, for the mixing-group re-sum —
+         * mapped to nets through the production [mixingMemberNets], so a
+         * TXO-parent stub here is treated exactly as the real source treats it.
+         */
+        var storeRecords: List<L1TxUiRecord> = emptyList()
+
         /** [recordNetsFor] invocations — the re-sum's record-read count. */
         var recordNetsCalls = 0
 
@@ -1256,7 +1263,9 @@ class CutoverUiDataServiceTest {
                 val fresh = txidHexes.filterTo(HashSet()) { reportedCorrections.add(it) }
                 if (fresh.isNotEmpty()) corrected.emit(fresh)
             }
-            return storeNets.filterKeys { it in txidHexes }
+            val wanted = txidHexes.toSet()
+            return storeNets.filterKeys { it in wanted } +
+                mixingMemberNets(storeRecords.filter { it.txidHex in wanted })
         }
 
         /** In-place record corrections the store reports (the walker's write-back signal). */
@@ -4799,6 +4808,57 @@ class CutoverUiDataServiceTest {
         runCurrent()
         assertEquals(-250L, store.getValue(partial).valueSatoshis)
         assertEquals(2, store.getValue(partial).transactionAmount)
+    }
+
+    @Test
+    fun mixingResum_memberNets_leaveOutTheStoreStub() {
+        val real = minedRecord(1, -100L, twoYearsAgoSec, direction = 3)
+        val stub = stubRecord(2)
+        // The stub is absent, like a txid the store does not hold — never a zero net.
+        assertEquals(mapOf(real.txidHex to -100L), mixingMemberNets(listOf(real, stub)))
+        assertTrue(mixingMemberNets(listOf(stub)).isEmpty())
+    }
+
+    @Test
+    fun mixingResum_storeStubMember_keepsTheCachedTotal_untilItsRealRecordArrives() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val real = minedRecord(1, -100L, twoYearsAgoSec, direction = 3)
+        val stub = stubRecord(2)
+        // Complete cached total, built while both members were known: −100 + −200.
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = -300L, count = 2))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(
+            listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, listOf(real.txidHex, stub.txidHex)))
+        )
+        // The store holds one real member and only a TXO-parent stub for the other.
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeRecords = listOf(real, stub)
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+        assertTrue("the re-sum read the group's members", source.recordNetsCalls > 0)
+        // The stub's zero net is not the member's value: the cached total stands.
+        assertEquals(-300L, store.getValue(groupId).valueSatoshis)
+        assertEquals(2, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+
+        // The stub is replaced by its real transaction: the group is re-summed
+        // from its complete, current history.
+        source.storeRecords = listOf(real, minedRecord(2, -150L, twoYearsAgoSec, direction = 3))
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(2, source.reconcileWalks)
+        assertEquals(-250L, store.getValue(groupId).valueSatoshis)
+        assertEquals(2, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(groupId, -250L, 2) }
     }
 
     @Test
