@@ -19,8 +19,12 @@ package de.schildbach.wallet.service.platform
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import org.dashj.platform.dpp.contract.DataContract
+import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.client.ClientAppDefinition
+import org.dashj.platform.sdk.platform.Contracts
 import org.dashj.platform.sdk.platform.Platform
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -68,5 +72,64 @@ class DashPayContractLoadedGuardTest {
     fun aThrowingPlatform_isTreatedAsNotLoaded_neverPropagates() {
         val platform = mockk<Platform> { every { apps } throws IllegalStateException("not initialized") }
         assertFalse(PlatformSynchronizationService.isDashPayContractLoaded(platform))
+    }
+
+    // ---- ensureDashPayContractLoaded: the guard used to wait for a load nothing ever made ----
+
+    private val dashpayId = Identifier.from(ByteArray(32) { 7 })
+
+    /** A platform whose contracts.get behaves like the real one: on success it fills apps["dashpay"].contract. */
+    private fun loadingPlatform(onGet: (ClientAppDefinition) -> DataContract?): Pair<Platform, Contracts> {
+        val app = ClientAppDefinition(dashpayId)
+        val appMap = hashMapOf("dashpay" to app)
+        val contracts = mockk<Contracts> {
+            every { get(dashpayId) } answers { onGet(app) }
+        }
+        val platform = mockk<Platform> {
+            every { apps } returns appMap
+            every { this@mockk.contracts } returns contracts
+        }
+        return platform to contracts
+    }
+
+    @Test
+    fun ensureLoaded_fetchesTheContract_soTheGuardPasses() = runBlocking {
+        val (platform, contracts) = loadingPlatform { app ->
+            mockk<DataContract>().also { app.contract = it }
+        }
+        assertFalse(PlatformSynchronizationService.isDashPayContractLoaded(platform))
+
+        assertTrue(PlatformSynchronizationService.ensureDashPayContractLoaded(platform))
+        assertTrue(PlatformSynchronizationService.isDashPayContractLoaded(platform))
+        verify(exactly = 1) { contracts.get(dashpayId) }
+
+        // Already loaded: no second network fetch.
+        assertTrue(PlatformSynchronizationService.ensureDashPayContractLoaded(platform))
+        verify(exactly = 1) { contracts.get(dashpayId) }
+    }
+
+    @Test
+    fun ensureLoaded_aFailedFetch_isNotLoaded_neverThrows() = runBlocking {
+        // Contracts.get NPEs when the proved getDataContract comes back null.
+        val (platform, _) = loadingPlatform { throw NullPointerException() }
+        assertFalse(PlatformSynchronizationService.ensureDashPayContractLoaded(platform))
+        assertFalse(PlatformSynchronizationService.isDashPayContractLoaded(platform))
+    }
+
+    @Test
+    fun ensureLoaded_aHungFetch_isBounded() = runBlocking {
+        val (platform, _) = loadingPlatform {
+            Thread.sleep(2_000)
+            null
+        }
+        val startedAt = System.currentTimeMillis()
+        assertFalse(PlatformSynchronizationService.ensureDashPayContractLoaded(platform, timeoutMs = 100L))
+        assertTrue(System.currentTimeMillis() - startedAt < 1_500L)
+    }
+
+    @Test
+    fun ensureLoaded_withoutADashPayApp_isNotLoaded() = runBlocking {
+        assertFalse(PlatformSynchronizationService.ensureDashPayContractLoaded(platformWith(hashMapOf())))
+        Unit
     }
 }
