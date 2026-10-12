@@ -173,7 +173,13 @@ class SendSignerLockedException(message: String) : IllegalStateException(message
  * "not synced" and never verbatim. Pure — host-testable.
  */
 fun sdkSendNotAttemptedException(reason: String): IllegalStateException =
-    if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
+    if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_PENDING_PAYMENT_UNPROTECTED_REASON)) {
+        // An earlier payment's outcome is unknown and the engine cannot keep its inputs out of
+        // this build. Nothing was built; it lifts once that payment resolves.
+        org.dash.wallet.common.services.PaymentStillConfirmingException(
+            "cutover committed but an earlier payment is still being confirmed ($reason)"
+        )
+    } else if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
         SendEngineNotSyncedException(
             "cutover committed but the SDK engine cannot fund a send yet ($reason)"
         )

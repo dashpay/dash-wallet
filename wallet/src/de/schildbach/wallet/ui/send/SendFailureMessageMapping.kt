@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.send
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 
 /**
  * How [SendCoinsFragment.showFailureDialog] renders a failed send. Pure
@@ -45,6 +46,12 @@ enum class SendFailureKind {
     SIGNER_LOCKED,
 
     /**
+     * An earlier payment's outcome is still unknown and its inputs could not be kept out of this
+     * one. Nothing was sent; the copy says to wait for it, never "payment failed".
+     */
+    PAYMENT_STILL_CONFIRMING,
+
+    /**
      * Any other [IllegalStateException] from the send path: internal
      * machinery — show a generic failure, NEVER the raw exception text.
      */
@@ -61,6 +68,7 @@ fun classifySendFailure(exception: Exception): SendFailureKind = when (exception
     // Before the generic IllegalStateException arm: SendSignerLockedException
     // IS an IllegalStateException and must keep its own honest copy.
     is SendSignerLockedException -> SendFailureKind.SIGNER_LOCKED
+    is PaymentStillConfirmingException -> SendFailureKind.PAYMENT_STILL_CONFIRMING
     is IllegalStateException -> SendFailureKind.GENERIC_INTERNAL
     else -> SendFailureKind.VERBATIM
 }

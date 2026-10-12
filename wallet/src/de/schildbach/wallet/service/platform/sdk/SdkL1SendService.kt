@@ -262,6 +262,13 @@ internal const val L1_FUNDING_GATE_CLOSED_REASON = "L1 funding gate closed"
 internal const val L1_SIGNER_LOCKED_REASON = "L1 signer locked"
 
 /**
+ * An earlier BIP70 payment's outcome is unknown and its inputs are not reserved in the engine
+ * (lost on restart), so SDK coin selection could pick them. Nothing was built. The send UI maps it
+ * to [org.dash.wallet.common.services.PaymentStillConfirmingException]'s copy.
+ */
+internal const val L1_PENDING_PAYMENT_UNPROTECTED_REASON = "pending payment inputs unprotected"
+
+/**
  * The deliver-at-least floor for a send-all: `spendable − reserve`,
  * clamped to 1 (the JNI boundary rejects a non-positive output amount).
  * iOS-validated pattern: this is also the max amount a UI should show for
@@ -1118,7 +1125,15 @@ class SdkL1SendService internal constructor(
      * until the 5c.4 cutover. Contained — a throw here never affects the
      * already-decided [SdkWriteResult.Broadcast].
      */
-    private val bridgeAfterBroadcast: (String) -> Unit = {}
+    private val bridgeAfterBroadcast: (String) -> Unit = {},
+    /**
+     * True while an uncertain BIP70 payment has inputs the engine is not reserving
+     * ([de.schildbach.wallet.payments.PendingDirectPaymentVerifier.hasUnprotectedPendingPayment]).
+     * The FFI has no UTXO-exclusion API, so every SDK-funded build refuses while it holds; the
+     * sweep paths are already refused by the app-lock guard, which sees the restored dashj locks.
+     * Default false: constructions that don't wire the verifier keep their behavior.
+     */
+    private val hasUnprotectedPendingPayment: suspend () -> Boolean = { false }
 ) {
     @Inject
     constructor(
@@ -1127,7 +1142,10 @@ class SdkL1SendService internal constructor(
         l1ShadowSyncService: L1ShadowSyncService,
         bridgedTransactionFactory: SdkBridgedTransactionFactory,
         walletData: de.schildbach.wallet.data.WalletData,
-        seamOutputLockRegistry: SeamOutputLockRegistry
+        seamOutputLockRegistry: SeamOutputLockRegistry,
+        // A Provider: the verifier reaches this service through its engine, so a direct edge
+        // would be a dependency cycle.
+        pendingPaymentVerifier: javax.inject.Provider<de.schildbach.wallet.payments.PendingDirectPaymentVerifier>
     ) : this(
         source = DashSdkL1SendSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1185,8 +1203,26 @@ class SdkL1SendService internal constructor(
             if (BuildConfig.DEBUG) {
                 bridgedTransactionFactory.bridgeInBackground(txidHex)
             }
-        }
+        },
+        hasUnprotectedPendingPayment = { pendingPaymentVerifier.get().hasUnprotectedPendingPayment() }
     )
+
+    /**
+     * Refuses an SDK-funded build while an uncertain payment's inputs are exposed to coin
+     * selection. Fail closed: a check that cannot be made counts as exposed.
+     */
+    private suspend fun pendingPaymentInputsExposed(): Boolean = try {
+        hasUnprotectedPendingPayment()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not check for unprotected pending payments; refusing the SDK build", t)
+        true
+    }
+
+    private fun paymentStillConfirming(operation: String) =
+        org.dash.wallet.common.services.PaymentStillConfirmingException(
+            "$operation: $L1_PENDING_PAYMENT_UNPROTECTED_REASON"
+        )
 
     /**
      * Read-only probe of the L1 send evidence gate — THE SAME predicate
@@ -1243,6 +1279,12 @@ class SdkL1SendService internal constructor(
     ): SdkWriteResult<String> {
         val operation = if (emptyWallet) "l1SendAll" else "l1Send"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
+        // Before any selection: the engine cannot see the dashj locks protecting an uncertain
+        // payment restored after a restart. Pre-cutover the caller falls through to dashj, which
+        // honours those locks; post-cutover it surfaces as PaymentStillConfirmingException.
+        if (pendingPaymentInputsExposed()) {
+            return notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
+        }
         if (emptyWallet && !cutoverCommitted()) {
             // Pre-cutover the dashj emptyWallet path is live and stays the
             // owner of send-all (unchanged soak behavior). Post-cutover the
@@ -1508,6 +1550,7 @@ class SdkL1SendService internal constructor(
      */
     suspend fun buildDeferredPayment(recipients: List<Pair<String, Long>>): SdkDeferredPayment {
         check(recipients.isNotEmpty()) { "BIP70 payment has no outputs" }
+        if (pendingPaymentInputsExposed()) throw paymentStillConfirming("l1DeferredBuild")
         val trimmed = recipients.map { (address, amountDuffs) ->
             check(amountDuffs > 0) { "BIP70 output amount must be positive, got $amountDuffs" }
             val clean = address.trim()
@@ -1654,6 +1697,7 @@ class SdkL1SendService internal constructor(
     ): SdkDeferredPayment {
         // Every build names its own amount now, max included.
         check(vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
+        if (pendingPaymentInputsExposed()) throw paymentStillConfirming("mayaDepositBuild")
         val vault = vaultAddressBase58.trim()
         check(vault.isNotEmpty() && addressValidSafe(vault)) {
             "Maya vault address is malformed or for the wrong network"

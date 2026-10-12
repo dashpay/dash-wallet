@@ -53,6 +53,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.net.InetAddress
@@ -116,6 +117,16 @@ class PendingDirectPaymentVerifierTest {
             pollIntervalMs = 20L
         }
         onWalletWiped = if (wipeListener.isCaptured) wipeListener.captured else ({ })
+    }
+
+    /**
+     * Stops every watch this test started. The verifier's scope outlives the test, and a watch
+     * that never resolves keeps polling mocks that record each call, which grows without bound
+     * across the suite and starves the tests that share the fork.
+     */
+    @After
+    fun tearDown() = runBlocking {
+        onWalletWiped()
     }
 
     /**
@@ -995,5 +1006,44 @@ class PendingDirectPaymentVerifierTest {
         assertEquals(EngineObservation.UNAVAILABLE, classifyEngineObservation(recordFound = null, live = true))
         assertEquals(EngineObservation.UNAVAILABLE, classifyEngineObservation(recordFound = false, live = false))
         assertEquals(EngineObservation.ABSENT, classifyEngineObservation(recordFound = false, live = true))
+    }
+
+    // --- funding gate for restored payments (review 4245734665) -------------------------------
+
+    @Test
+    fun `a payment restored after a restart leaves SDK funding unprotected until it resolves`() = runBlocking {
+        val tx = createTransaction()
+        // what resume() finds on disk: an active payment, and no SDK reservation in this process
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
+
+        assertTrue(verifier.hasUnprotectedPendingPayment())
+
+        // resolved (committed or definitively released): the store no longer holds it
+        coEvery { config.getAllOrThrow() } returns emptyList()
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `a payment quarantined in this process with its reservation held is protected`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
+
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `a released payment does not block SDK funding`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123", abandoned = true))
+
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `an unreadable store blocks SDK funding`() = runBlocking {
+        coEvery { config.getAllOrThrow() } throws IllegalStateException("store unreadable")
+
+        assertTrue(verifier.hasUnprotectedPendingPayment())
     }
 }

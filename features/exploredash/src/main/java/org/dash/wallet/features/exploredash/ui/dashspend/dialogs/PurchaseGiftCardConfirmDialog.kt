@@ -68,6 +68,7 @@ import org.dash.wallet.common.payments.parsers.isPaymentUriParseError
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
@@ -549,6 +550,21 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             // payAndRecordOrder has already recorded the order against this transaction id.
             enterAmountViewModel.clearSavedState()
             showPaymentPending()
+            null
+        } catch (ex: PaymentStillConfirmingException) {
+            // An earlier payment's outcome is still unknown and its inputs could not be kept out
+            // of this one. Nothing was sent; the order rows recorded for it are discarded by
+            // payAndRecordOrder like any other unsent payment.
+            log.warn("purchaseGiftCard refused, an earlier payment is still being confirmed", ex)
+            hideLoading()
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_warning,
+                    getString(R.string.payment_submission_pending_title),
+                    getString(R.string.payment_still_confirming),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
             null
         } catch (ex: DuplicateGiftCardSubmissionException) {
             // A purchase is already submitted or unresolved for this order. Do not start another.

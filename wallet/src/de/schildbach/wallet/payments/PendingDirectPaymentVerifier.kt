@@ -109,6 +109,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val DEFAULT_RECORD_RETENTION_MS = 24 * 60 * 60_000L
         /** How long a payment flow waits for restoration before refusing to proceed. */
         private const val DEFAULT_RESTORE_TIMEOUT_MS = 30_000L
+        /**
+         * How long a reservation held in this process is trusted to keep its inputs out of SDK coin
+         * selection. The engine sweeps reservations after 24 blocks and refuses to broadcast one
+         * older than 20 (about 50 minutes); this stays under both.
+         */
+        private const val RESERVATION_TRUST_MS = 40 * 60_000L
         /** How long a wipe waits for running verifications to stop before going ahead anyway. */
         private const val DRAIN_TIMEOUT_MS = 5_000L
     }
@@ -382,6 +388,36 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     fun isTracked(txId: Sha256Hash): Boolean = jobs[txId]?.isActive == true
+
+    /**
+     * True while a payment whose outcome is unknown has inputs the SDK engine is not keeping out of
+     * coin selection, so that an SDK-funded build could spend them and conflict with the signed
+     * transaction the payee may still broadcast.
+     *
+     * That is any active (not released, not watch-expired) payment of this wallet whose engine
+     * reservation is not held in this process: after a restart the engine has lost it, and the
+     * engine offers no API to reserve an outpoint again, while the dashj-side locks restored by
+     * [resume] are invisible to its coin selection. A reservation older than
+     * [RESERVATION_TRUST_MS] no longer counts either, because the engine's own sweep frees it
+     * after about an hour. A store that cannot be read counts as unprotected.
+     *
+     * Narrow on purpose: it lifts the moment the payment is committed or released.
+     */
+    suspend fun hasUnprotectedPendingPayment(): Boolean {
+        val pending = try {
+            config.getAllOrThrow()
+        } catch (e: Exception) {
+            log.warn("could not read pending payments; treating SDK funding as unprotected", e)
+            return true
+        }
+        val walletId = walletData.wallet?.let { walletIdentity(it) }
+        val now = System.currentTimeMillis()
+        return pending.any { payment ->
+            !payment.abandoned && !payment.watchExpired &&
+                (payment.walletId == null || walletId == null || payment.walletId == walletId) &&
+                (reservations[payment.txId] == null || now - payment.createdAt >= RESERVATION_TRUST_MS)
+        }
+    }
 
     /**
      * Hands the SDK reservation of [txId] back to the caller, which is about to consume it itself

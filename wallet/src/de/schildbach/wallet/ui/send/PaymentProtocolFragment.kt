@@ -39,6 +39,7 @@ import org.dash.wallet.common.payments.bip70.PaymentProtocolException
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -228,6 +229,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         when (resource.exception) {
             is InsufficientMoneyException -> {
                 showInsufficientMoneyDialog()
+            }
+            // An earlier payment is still unresolved and its inputs could not be kept out of
+            // this one: nothing was built, and it lifts once that payment is confirmed.
+            is PaymentStillConfirmingException -> {
+                showErrorDialog(getString(R.string.payment_still_confirming))
             }
             // The SDK build reports a shortfall as a native error whose
             // message carries key-wallet's "Insufficient funds" text

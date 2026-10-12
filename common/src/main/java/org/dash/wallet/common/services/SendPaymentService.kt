@@ -48,6 +48,14 @@ open class PaymentSubmissionPendingException(
 ) : Exception(message, cause)
 
 /**
+ * Thrown instead of building a payment while an earlier payment's outcome is still unknown and its
+ * inputs cannot be kept out of coin selection. Nothing was built, signed or sent. It lifts by
+ * itself once that payment is confirmed on the network or released; the screen should say so
+ * (`R.string.payment_still_confirming`) rather than report a failure.
+ */
+class PaymentStillConfirmingException(message: String) : IllegalStateException(message)
+
+/**
  * Facts a caller wants kept with a payment so one recovered long afterwards looks like the
  * original. Only for payments whose submission result may be unknown; ordinary payments record
  * their metadata directly.

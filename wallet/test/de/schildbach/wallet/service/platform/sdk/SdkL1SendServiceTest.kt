@@ -221,7 +221,8 @@ class SdkL1SendServiceTest {
         utxoCount: suspend (String) -> Int = { 1 },
         // Fresh empty registry by default: no seam locks, drain paths
         // exercisable. Seam-lock refusal is covered by dedicated tests.
-        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry()
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
+        unprotectedPendingPayment: suspend () -> Boolean = { false }
     ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(enabled, cutoverState),
@@ -231,7 +232,8 @@ class SdkL1SendServiceTest {
         spendableUtxoCount = utxoCount,
         seamOutputLockRegistry = seamRegistry,
         onSelfSpendBroadcast = { selfSpendMarks++ },
-        bridgeAfterBroadcast = bridgeAfterBroadcast
+        bridgeAfterBroadcast = bridgeAfterBroadcast,
+        hasUnprotectedPendingPayment = unprotectedPendingPayment
     )
 
     /** A source in the fully-ready state: wallet bound, send succeeds. */
@@ -1416,5 +1418,56 @@ class SdkL1SendServiceTest {
             assertTrue(e.message!!.contains("memoSizeBytes"))
         }
         Unit
+    }
+
+    // ── unprotected pending payment (review 4245734665) ────────────────────
+    //
+    // After a restart an uncertain BIP70 payment's inputs are locked only on the dashj side, and
+    // SDK coin selection cannot see those locks. Every SDK-funded build must refuse while such a
+    // payment is outstanding.
+
+    @Test
+    fun sendToAddress_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { true })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            (result as SdkWriteResult.NotBroadcast).reason.contains(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
+        )
+        assertEquals("nothing may be built while the old inputs are exposed", 0, source.sendCalls)
+    }
+
+    @Test
+    fun sendToAddress_proceedsOnceNoPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { false })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+    }
+
+    @Test
+    fun buildDeferredPayment_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val svc = service(readySource(), unprotectedPendingPayment = { true })
+
+        try {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L))
+            fail("a deferred build went ahead while a pending payment's inputs were exposed")
+        } catch (e: org.dash.wallet.common.services.PaymentStillConfirmingException) {
+            assertTrue(e.message!!.isNotEmpty())
+        }
+        Unit
+    }
+
+    @Test
+    fun aRefusedSendSurfacesAsPaymentStillConfirming() {
+        val e = de.schildbach.wallet.payments.sdkSendNotAttemptedException(
+            "sendToAddress: $L1_PENDING_PAYMENT_UNPROTECTED_REASON"
+        )
+        assertTrue(e is org.dash.wallet.common.services.PaymentStillConfirmingException)
     }
 }

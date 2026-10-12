@@ -62,6 +62,18 @@ class SendFailureClassificationTest {
     }
 
     @Test
+    fun paymentStillConfirming_mapsToItsOwnWaitCopy_notGenericInternal() {
+        // An earlier payment's inputs could not be kept out of this send; nothing failed, it
+        // lifts once that payment resolves (review 4245734665).
+        assertEquals(
+            SendFailureKind.PAYMENT_STILL_CONFIRMING,
+            classifySendFailure(
+                org.dash.wallet.common.services.PaymentStillConfirmingException("pending payment inputs unprotected")
+            )
+        )
+    }
+
+    @Test
     fun anyOtherIllegalState_isGenericInternal_notNotSyncedAndNeverVerbatim() {
         // Internal machinery text must neither be blamed on syncing nor
         // shown verbatim to the user.
