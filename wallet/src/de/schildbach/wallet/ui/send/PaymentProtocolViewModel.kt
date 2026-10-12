@@ -26,6 +26,7 @@ import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
@@ -231,25 +232,40 @@ class PaymentProtocolViewModel @Inject constructor(
                 // record of having sent in a fragment-scoped view model, which is gone after
                 // process death and was never there when the invoice is simply opened again, so
                 // the stored record is the only thing left that remembers.
-                sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!.paymentRequestHash)?.let { txId ->
-                    log.info("not submitting again, {} is still unresolved for this payment request", txId)
-                    sendCoinsTaskRunner.releaseDeferredPayment(prebuilt)
-                    throw PaymentSubmissionPendingException(txId.toString(), null)
-                }
-
-                // Submit the EXACT tx the preview showed. The reservation is consumed (ack →
-                // broadcast), held by the pending-payment watch (outcome unknown, a nack
-                // included) or released (the request never left) inside the runner — this
-                // reference is dead after the call either way.
                 //
-                // NEVER re-arm a fresh reservation after a failure here: only a request that
-                // never left the device is definitively unsent, and the runner already freed
-                // those inputs. Anything else may have reached the payee, and a rebuilt retry may
-                // select DIFFERENT inputs and pay the merchant twice if the server broadcasts
-                // after all. Observed in the field test (2026-08-03): the rebuild produced a
-                // different tx (ed08074b) for an invoice whose original (2c3be7d8) was already
-                // on-chain. The user must restart the payment.
-                val transaction = sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
+                // From the take above until the runner is handed the reservation, this coroutine
+                // is its only owner: deferredPaymentRef no longer holds it, so onCleared() cannot
+                // give it back. Every exit before the hand-off (an outstanding submission, a
+                // failed read of the store, cancellation) releases it here, outside cancellation,
+                // so its inputs and their mirrored wallet locks are not stranded.
+                var handedOff = false
+                val transaction = try {
+                    sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!.paymentRequestHash)?.let { txId ->
+                        log.info("not submitting again, {} is still unresolved for this payment request", txId)
+                        throw PaymentSubmissionPendingException(txId.toString(), null)
+                    }
+
+                    // Submit the EXACT tx the preview showed. The reservation is consumed (ack →
+                    // broadcast), held by the pending-payment watch (outcome unknown, a nack
+                    // included) or released (the request never left) inside the runner — this
+                    // reference is dead after the call either way.
+                    //
+                    // NEVER re-arm a fresh reservation after a failure here: only a request that
+                    // never left the device is definitively unsent, and the runner already freed
+                    // those inputs. Anything else may have reached the payee, and a rebuilt retry may
+                    // select DIFFERENT inputs and pay the merchant twice if the server broadcasts
+                    // after all. Observed in the field test (2026-08-03): the rebuild produced a
+                    // different tx (ed08074b) for an invoice whose original (2c3be7d8) was already
+                    // on-chain. The user must restart the payment.
+                    //
+                    // From here the runner owns the reservation: it consumes, holds or releases it.
+                    handedOff = true
+                    sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
+                } finally {
+                    if (!handedOff) {
+                        withContext(NonCancellable) { sendCoinsTaskRunner.releaseDeferredPayment(prebuilt) }
+                    }
+                }
 
                 directPaymentAckLiveData.postValue(Resource.success(transaction))
             } catch (ex: Exception) {

@@ -170,4 +170,23 @@ class PaymentProtocolDuplicateSubmissionTest {
             coVerify(exactly = 0) { runner.releaseDeferredPayment(any()) }
         }
     }
+
+    @Test
+    fun `the taken reservation is released when the outstanding-submission lookup fails`() {
+        // The preview's reservation has already left deferredPaymentRef when the store is read, so
+        // onCleared() can no longer reach it: this screen is its only owner until the runner takes
+        // it over, and a failed read must give it back rather than strand its locked inputs.
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.findUnresolvedSubmission(any()) } throws IllegalStateException("store unreadable")
+        val viewModel = armedViewModel(runner)
+
+        viewModel.sendPayment()
+        awaitOutcome(viewModel)
+
+        assertEquals(Status.ERROR, viewModel.directPaymentAckLiveData.value?.status)
+        runBlocking {
+            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment) }
+        }
+    }
 }
