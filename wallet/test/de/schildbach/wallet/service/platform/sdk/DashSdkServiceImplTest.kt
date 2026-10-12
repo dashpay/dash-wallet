@@ -58,18 +58,24 @@ class DashSdkServiceImplTest {
     )
 
     @Test
-    fun widenedGapLimit_isDashjLookaheadForStandard_andTheRustMaxForCoinJoin() {
-        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44))
-        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP32))
-        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.COIN_JOIN))
+    fun widenedGapLimit_coversDashjsIssuedFrontier_cappedAtTheRustMax() {
+        // A standard account watches dashj's lookahead past everything dashj issued.
+        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = 0))
+        assertEquals(250, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = 150))
+        assertEquals(112, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP32, dashjIssuedCount = 12))
+        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = 923))
+        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = Int.MAX_VALUE))
+        assertEquals("unknown frontier: the widest window", 1000, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, null))
+        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.COIN_JOIN, dashjIssuedCount = 0))
+    }
 
-        // The backfill reads accounts as stored rows; each must map to the
-        // gap the widening set, or it would persist the wrong window.
-        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(accountType = 0, standardTag = 0))
-        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(accountType = 0, standardTag = 1))
-        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(accountType = 1, standardTag = 0))
-        assertNull("identity registration is not widened", DashSdkServiceImpl.widenedGapLimit(2, 0))
-        assertNull("platform payment is not widened", DashSdkServiceImpl.widenedGapLimit(14, 0))
+    @Test
+    fun widenedFamily_mapsTheStoredAccountRows() {
+        assertEquals(AccountType.BIP44, DashSdkServiceImpl.widenedFamily(accountType = 0, standardTag = 0))
+        assertEquals(AccountType.BIP32, DashSdkServiceImpl.widenedFamily(accountType = 0, standardTag = 1))
+        assertEquals(AccountType.COIN_JOIN, DashSdkServiceImpl.widenedFamily(accountType = 1, standardTag = 0))
+        assertNull("identity registration is not widened", DashSdkServiceImpl.widenedFamily(2, 0))
+        assertNull("platform payment is not widened", DashSdkServiceImpl.widenedFamily(14, 0))
     }
 
     @Test

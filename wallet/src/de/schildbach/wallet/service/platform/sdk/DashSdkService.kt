@@ -163,6 +163,27 @@ data class DashPayContactDrainReport(
 }
 
 /**
+ * How many addresses the app's dashj wallet has issued on each standard
+ * family, the frontier [DashSdkService.widenAddressWindows] must keep
+ * watched past: dashj hands out a fresh address per request whether or not
+ * it is ever paid. Each count is the highest `issuedExternalKeys` /
+ * `issuedInternalKeys` across that family's dashj chains, or null when it
+ * could not be read.
+ */
+data class DashjIssuedAddresses(val bip44: Int?, val bip32: Int?) {
+    fun countFor(family: org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType): Int? = when (family) {
+        org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP44 -> bip44
+        org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP32 -> bip32
+        else -> null
+    }
+
+    companion object {
+        /** Nothing known: the widening falls back to its widest windows. */
+        val UNKNOWN = DashjIssuedAddresses(bip44 = null, bip32 = null)
+    }
+}
+
+/**
  * Outcome of [DashSdkService.backfillAddressPoolHoles] for one wallet.
  */
 data class AddressPoolBackfillResult(
@@ -363,9 +384,11 @@ interface DashSdkService {
 
     /**
      * Widen the SDK wallet's address-pool gap limits on account 0 of the
-     * standard families — 100 for BIP44 and BIP32 (dashj's lookahead), 1000
-     * for CoinJoin (the Rust-side maximum) — deriving the addresses the
-     * wider windows require.
+     * standard families, deriving the addresses the wider windows require.
+     * BIP44 and BIP32 get 100 (dashj's lookahead) past the count dashj has
+     * issued on that family ([issued]), so every address dashj could have
+     * handed out stays watched, capped at 1000 (the Rust-side maximum) and
+     * 1000 when the count is unknown. CoinJoin gets 1000.
      *
      * The migration heal for a wallet whose usage frontier advanced
      * OUTSIDE the SDK's watched window: dashj (or any same-seed client)
@@ -384,7 +407,10 @@ interface DashSdkService {
      * wallet simply doesn't have is skipped, not a failure); false when
      * the wallet isn't loaded or any present account failed.
      */
-    suspend fun widenAddressWindows(walletIdHex: String): Boolean
+    suspend fun widenAddressWindows(
+        walletIdHex: String,
+        issued: DashjIssuedAddresses = DashjIssuedAddresses.UNKNOWN
+    ): Boolean
 
     /**
      * Persist the address-pool rows that [widenAddressWindows] leaves in
@@ -400,12 +426,22 @@ interface DashSdkService {
      * never changes or removes an existing row.
      *
      * Call it after a successful [widenAddressWindows]. The inserts reach the
-     * engine on the NEXT load, so when [AddressPoolBackfillResult.holesFilled]
-     * is nonzero the caller owes a rescan once the wallet has been reloaded.
-     * Null when the wallet or its database is not available, or the repair
-     * failed; it is safe to retry on the next bind.
+     * engine on the NEXT load, so filling holes owes a rescan once the wallet
+     * has been reloaded. That obligation must be durable BEFORE any hole is
+     * filled: once filled, a hole can never be found again to rebuild it.
+     * So when the plan has holes, [beforeFillingHoles] runs with their count
+     * before anything is written; it records the obligation and returns
+     * true, or returns false to leave every hole unfilled. All rows are then
+     * written in one transaction.
+     *
+     * Null when the wallet or its database is not available, the obligation
+     * could not be recorded, or the repair failed; it is safe to retry on the
+     * next bind.
      */
-    suspend fun backfillAddressPoolHoles(walletIdHex: String): AddressPoolBackfillResult? = null
+    suspend fun backfillAddressPoolHoles(
+        walletIdHex: String,
+        beforeFillingHoles: suspend (holes: Int) -> Boolean = { true }
+    ): AddressPoolBackfillResult? = null
 
     /**
      * Rewind the SDK wallet's SPV filter watermark to the wallet's birth

@@ -591,6 +591,15 @@ class SdkWalletBinder internal constructor(
             // The re-created wallet has no in-memory rewind: an owed one is armed again.
             owedRescanArmedInProcess = null
         }
+        // The old wallet's filled holes went with its rows, and the re-created
+        // wallet scans from birth anyway: their owed rescan would only repeat it.
+        try {
+            dashPayConfig.remove(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("could not clear the pool-hole rescan token on wallet re-creation", t)
+        }
     }
 
     /**
@@ -1529,7 +1538,7 @@ class SdkWalletBinder internal constructor(
     private suspend fun maybeWidenAddressWindowsLocked(walletIdHex: String) {
         var widened = false
         try {
-            widened = sdkService.widenAddressWindows(walletIdHex)
+            widened = sdkService.widenAddressWindows(walletIdHex, dashjIssuedAddresses())
             if (!widened) {
                 log.warn(
                     "address-window widening did not complete; this session scans at the default " +
@@ -1609,6 +1618,32 @@ class SdkWalletBinder internal constructor(
     }
 
     /**
+     * How far the app's dashj wallet has issued addresses on each standard
+     * family ([DashjIssuedAddresses]), for [DashSdkService.widenAddressWindows].
+     * BIP44 chains are those under `m/44'`, the BIP32 chain is `m/0'`; each
+     * count is the higher of a chain's issued external and internal keys.
+     * [DashjIssuedAddresses.UNKNOWN] when the wallet cannot be read, so the
+     * widening keeps its widest windows. Never throws.
+     */
+    private fun dashjIssuedAddresses(): DashjIssuedAddresses = try {
+        val chains = walletData.wallet?.activeKeyChains
+        if (chains == null) {
+            DashjIssuedAddresses.UNKNOWN
+        } else {
+            fun issued(match: (List<org.bitcoinj.crypto.ChildNumber>) -> Boolean): Int? =
+                chains.filter { match(it.accountPath) }
+                    .maxOfOrNull { maxOf(it.issuedExternalKeys, it.issuedInternalKeys) }
+            DashjIssuedAddresses(
+                bip44 = issued { it.firstOrNull() == BIP44_PURPOSE } ?: 0,
+                bip32 = issued { it.size == 1 && it[0] == org.bitcoinj.crypto.ChildNumber.ZERO_HARDENED } ?: 0
+            )
+        }
+    } catch (t: Throwable) {
+        log.warn("could not read dashj's issued address counts; widening to the maximum", t)
+        DashjIssuedAddresses.UNKNOWN
+    }
+
+    /**
      * After a successful widening: persist the rows the widening derived in
      * memory only ([DashSdkService.backfillAddressPoolHoles]), and owe the
      * rescan that recovers payments to the holes those rows fill.
@@ -1644,7 +1679,20 @@ class SdkWalletBinder internal constructor(
      * [wideningMutex]. Never throws except cancellation.
      */
     private suspend fun backfillAddressPoolOnce(walletIdHex: String): AddressPoolBackfillResult? = try {
-        val result = sdkService.backfillAddressPoolHoles(walletIdHex)
+        val result = sdkService.backfillAddressPoolHoles(walletIdHex) { holes ->
+            // Durable before the first hole is filled: a filled hole can never
+            // be found again, so an obligation lost after the commit (process
+            // death, a failed write) would be lost for good.
+            try {
+                dashPayConfig.set(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING, processToken)
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                log.warn("address-pool backfill: could not owe the rescan for {} holes; leaving them unfilled", holes, t)
+                false
+            }
+        }
         if (result != null) owePoolHolesRescan(walletIdHex, result)
         result
     } catch (e: CancellationException) {
@@ -1656,7 +1704,7 @@ class SdkWalletBinder internal constructor(
 
     private suspend fun owePoolHolesRescan(walletIdHex: String, result: AddressPoolBackfillResult) {
         if (result.holesFilled > 0) {
-            dashPayConfig.set(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING, processToken)
+            // The token was recorded before the rows were written.
             log.warn(
                 "address-pool backfill on {}…: {} rows inserted, {} of them holes the engine loaded " +
                     "without; a rescan is owed once the wallet reloads",
@@ -1793,7 +1841,7 @@ class SdkWalletBinder internal constructor(
             return@withLock repayBeforeScan(walletIdHex, widened = false)
         }
         val widened = try {
-            sdkService.widenAddressWindows(walletIdHex)
+            sdkService.widenAddressWindows(walletIdHex, dashjIssuedAddresses())
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
@@ -2326,6 +2374,9 @@ class SdkWalletBinder internal constructor(
          * never run (v1 shipped only in local QA 11.10.78).
          */
         internal const val GAP_WIDEN_HEAL_VERSION = 2
+
+        /** The `m/44'` purpose level that marks a dashj BIP44 chain. */
+        private val BIP44_PURPOSE = org.bitcoinj.crypto.ChildNumber(44, true)
 
         /** Unique per process; see [DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING]. */
         private val PROCESS_TOKEN: String = java.util.UUID.randomUUID().toString()

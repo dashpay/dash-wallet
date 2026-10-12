@@ -93,8 +93,10 @@ class SdkWalletBinderTest {
         /** Address-window heal hooks — default success. NOT in [totalCalls]. */
         var onWiden: suspend (String) -> Boolean = { true }
         var widenCalls = 0
-        override suspend fun widenAddressWindows(walletIdHex: String): Boolean {
+        var lastIssued: DashjIssuedAddresses? = null
+        override suspend fun widenAddressWindows(walletIdHex: String, issued: DashjIssuedAddresses): Boolean {
             widenCalls++
+            lastIssued = issued
             return onWiden(walletIdHex)
         }
 
@@ -103,9 +105,19 @@ class SdkWalletBinderTest {
             AddressPoolBackfillResult(inserted = 0, holesFilled = 0, poolsRefused = 0)
         }
         var backfillCalls = 0
-        override suspend fun backfillAddressPoolHoles(walletIdHex: String): AddressPoolBackfillResult? {
+
+        /** Runs after the pre-commit hook, before the result returns: a failure here is one after the rows committed. */
+        var afterCommit: () -> Unit = {}
+        override suspend fun backfillAddressPoolHoles(
+            walletIdHex: String,
+            beforeFillingHoles: suspend (holes: Int) -> Boolean
+        ): AddressPoolBackfillResult? {
             backfillCalls++
-            return onBackfill(walletIdHex)
+            val result = onBackfill(walletIdHex) ?: return null
+            // Like the real service: the obligation is recorded before any hole is filled.
+            if (result.holesFilled > 0 && !beforeFillingHoles(result.holesFilled)) return null
+            afterCommit()
+            return result
         }
         var onArmRescan: suspend (String, Long?) -> Boolean = { _, _ -> true }
         var armRescanCalls = 0
@@ -2135,6 +2147,101 @@ class SdkWalletBinderTest {
         assertEquals(1, sdk.backfillCalls)
         assertEquals("first", poolHolesRescanPending)
         assertEquals(0, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun backfill_failureAfterTheRowsCommitted_keepsTheRescanOwed() = runBlocking {
+        // Review finding: the token used to be written only after the rows
+        // were committed. A failure in between left the holes filled with no
+        // rescan owed, and a filled hole can never be found again.
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { holes(85) }
+        sdk.afterCommit = { throw IllegalStateException("process died after the commit") }
+        binder(sdk, config = config, processToken = "first", scope = this).bindIfEnabled(unlock)
+        assertEquals("owed before the rows were written", "first", poolHolesRescanPending)
+
+        // The next process finds no holes left, and still pays the rescan.
+        sdk.afterCommit = {}
+        sdk.onBackfill = { holes(0) }
+        binder(sdk, config = config, processToken = "second", scope = this).bindIfEnabled(unlock)
+        assertEquals(1, sdk.armRescanCalls)
+        assertNull(poolHolesRescanPending)
+    }
+
+    @Test
+    fun backfill_obligationCannotBeRecorded_leavesTheHolesUnfilled() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        coEvery { config.set(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING, any()) } throws
+            java.io.IOException("datastore write failed")
+        var committed = false
+        sdk.afterCommit = { committed = true }
+        sdk.onBackfill = { holes(85) }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+
+        assertFalse("no hole is filled without its rescan owed", committed)
+        assertNull(poolHolesRescanPending)
+        assertEquals(0, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun backfill_walletRecreation_dropsTheOldWalletsRescanToken() = runBlocking {
+        // Review finding: the token outlived a wallet re-creation in the same
+        // process, and the next process rewound the fresh wallet to birth a
+        // second time.
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { holes(85) }
+        val binder = binder(sdk, config = config, processToken = "first", scope = this)
+        binder.bindIfEnabled(unlock)
+        assertEquals("first", poolHolesRescanPending)
+
+        binder.resetForWalletRecreation()
+        assertNull(poolHolesRescanPending)
+
+        sdk.onBackfill = { holes(0) }
+        binder(sdk, config = config, processToken = "second", scope = this).bindIfEnabled(unlock)
+        assertEquals(0, sdk.armRescanCalls)
+    }
+
+    @Test
+    fun widening_passesDashjsIssuedFrontier() = runBlocking {
+        // Review finding: dashj issues a fresh address per request, paid or
+        // not, so its unpaid run can outgrow the 100 standard gap. The
+        // widening is told how far dashj has issued on each family.
+        fun chain(path: List<org.bitcoinj.crypto.ChildNumber>, external: Int, internal: Int) =
+            mockk<org.bitcoinj.wallet.DeterministicKeyChain> {
+                every { accountPath } returns com.google.common.collect.ImmutableList.copyOf(path)
+                every { issuedExternalKeys } returns external
+                every { issuedInternalKeys } returns internal
+            }
+        val hardened = { i: Int -> org.bitcoinj.crypto.ChildNumber(i, true) }
+        val dashjWallet: Wallet = mockk(relaxed = true) {
+            every { activeKeyChains } returns listOf(
+                chain(listOf(hardened(44), hardened(5), hardened(0)), external = 150, internal = 923),
+                chain(listOf(hardened(0)), external = 12, internal = 3)
+            )
+        }
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        binder(sdk, config = config, walletData = mockk { every { wallet } returns dashjWallet }, scope = this)
+            .bindIfEnabled(unlock)
+
+        assertEquals(DashjIssuedAddresses(bip44 = 923, bip32 = 12), sdk.lastIssued)
+    }
+
+    @Test
+    fun widening_unreadableDashjWallet_widensToTheMaximum() = runBlocking {
+        val dashjWallet: Wallet = mockk(relaxed = true) {
+            every { activeKeyChains } throws IllegalStateException("wallet not loaded")
+        }
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        binder(sdk, config = config, walletData = mockk { every { wallet } returns dashjWallet }, scope = this)
+            .bindIfEnabled(unlock)
+
+        assertEquals(DashjIssuedAddresses.UNKNOWN, sdk.lastIssued)
     }
 
     /** Polls until [condition] holds; the backfill retry runs on the binder's scope. */
