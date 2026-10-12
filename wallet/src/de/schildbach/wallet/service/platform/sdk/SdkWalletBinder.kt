@@ -1364,7 +1364,7 @@ class SdkWalletBinder internal constructor(
         pruneOrphanSdkWallets(walletId)
 
         // 4c. One-shot migration heal: widen the SDK's address-pool windows
-        // (100 standard, 1000 CoinJoin) and invalidate the recorded backfill coverage so
+        // to the Rust max (1000) and invalidate the recorded backfill coverage so
         // the next gate pass REWINDS and re-matches history against the
         // widened script set. Heals the migrated-wallet frontier gap:
         // dashj (or any same-seed client) spending past the SDK's derived
@@ -1497,8 +1497,8 @@ class SdkWalletBinder internal constructor(
      * migration heal on top of it.
      *
      * The widening ([DashSdkService.widenAddressWindows]) raises the SDK
-     * wallet's standard-family gap limits (100 for BIP44 and BIP32, 1000 for
-     * CoinJoin). It is applied on
+     * wallet's standard-family gap limits (BIP44, BIP32, CoinJoin) to the Rust
+     * max (1000). It is applied on
      * every bind because the Rust side keeps `gap_limit` in memory only —
      * no changeset, no persistence — so every fresh process, and every
      * re-created SDK wallet, comes up at the defaults (30 for BIP44, 100 for

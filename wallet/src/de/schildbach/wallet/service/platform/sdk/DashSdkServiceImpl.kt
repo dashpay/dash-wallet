@@ -887,7 +887,7 @@ class DashSdkServiceImpl @Inject constructor(
                     }
                 }
             }
-            appliedGapLimits[walletIdHex] = applied
+            recordAppliedGapLimits(walletIdHex, applied)
             allPresentWidened
         }
     } catch (e: kotlinx.coroutines.CancellationException) {
@@ -904,6 +904,12 @@ class DashSdkServiceImpl @Inject constructor(
      */
     private val appliedGapLimits =
         java.util.concurrent.ConcurrentHashMap<String, Map<CoreTransactionBuilder.AccountType, Int>>()
+
+    /** What [widenAddressWindows] set on [walletIdHex]; tests stand in for a widening with it. */
+    @androidx.annotation.VisibleForTesting
+    internal fun recordAppliedGapLimits(walletIdHex: String, applied: Map<CoreTransactionBuilder.AccountType, Int>) {
+        appliedGapLimits[walletIdHex] = applied
+    }
 
     override suspend fun backfillAddressPoolHoles(
         walletIdHex: String,
@@ -951,7 +957,7 @@ class DashSdkServiceImpl @Inject constructor(
         "$accountType/$standardTag/$poolTypeTag"
 
     /** One pool's rows to insert, derived and verified by [planAddressPoolBackfill]. */
-    private class PoolWrite(
+    internal class PoolWrite(
         val accountId: Long,
         val poolTypeTag: Int,
         val rows: List<SdkAddressPoolBackfill.DerivedRow>,
@@ -961,7 +967,7 @@ class DashSdkServiceImpl @Inject constructor(
     )
 
     /** What [planAddressPoolBackfill] found, before anything is written. */
-    private class AddressPoolBackfillPlan(
+    internal class AddressPoolBackfillPlan(
         val writes: List<PoolWrite>,
         val poolsRefused: Int,
         val poolsPending: Int
@@ -976,7 +982,8 @@ class DashSdkServiceImpl @Inject constructor(
      * to insert. Writes nothing, so the caller can owe the rescan for the
      * holes before any of them is filled.
      */
-    private fun planAddressPoolBackfill(
+    @androidx.annotation.VisibleForTesting
+    internal fun planAddressPoolBackfill(
         database: DashDatabase,
         walletId: ByteArray,
         walletIdHex: String
@@ -1047,8 +1054,12 @@ class DashSdkServiceImpl @Inject constructor(
 
         // Widened pools with no rows yet: the SDK has not written the new
         // wallet's accounts or their initial addresses, so there is nothing
-        // to verify a key against or extend. The caller retries.
+        // to verify a key against or extend. The caller retries. Only the
+        // families the widening actually widened count: one the wallet does
+        // not have is skipped there and would otherwise stay pending forever.
         val poolsPending = WIDENED_ACCOUNTS.sumOf { (accountType, standardTag) ->
+            val family = widenedFamily(accountType, standardTag)
+            if (family == null || family !in applied) return@sumOf 0
             val account = accounts.firstOrNull { it.accountType == accountType && it.standardTag == standardTag }
             val pools = account?.let { poolRows[it] }
             STANDARD_POOLS.count { poolTypeTag -> pools?.get(poolTypeTag).isNullOrEmpty() }
@@ -1114,7 +1125,8 @@ class DashSdkServiceImpl @Inject constructor(
      * writes concurrently (with its real `isUsed`) always wins over ours.
      * Returns the rows inserted.
      */
-    private fun commitAddressPoolBackfill(
+    @androidx.annotation.VisibleForTesting
+    internal fun commitAddressPoolBackfill(
         database: DashDatabase,
         plan: AddressPoolBackfillPlan,
         walletIdHex: String
