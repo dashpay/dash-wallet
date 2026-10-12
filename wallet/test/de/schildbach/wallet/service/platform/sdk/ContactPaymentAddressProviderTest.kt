@@ -413,6 +413,103 @@ class ContactPaymentAddressProviderTest {
         assertEquals(sdkPool[2], after.provider.nextAddress(target)?.address)
     }
 
+    /**
+     * A dashj SENDING chain as the provider sees it: [current] is served until
+     * a mark of it advances to the next key (FriendChainAccess.markSendingAddressUsed
+     * issuing a fresh current key). [advances] false: marks change nothing.
+     */
+    private class FakeDashjChain(
+        val keys: List<Address>,
+        var current: Int,
+        val markResult: FriendChainAccess.MarkResult? = FriendChainAccess.MarkResult.MARKED,
+        val advances: Boolean = true
+    ) {
+        val marks = mutableListOf<Address>()
+
+        fun next(): Address? = keys.getOrNull(current)
+
+        fun mark(address: Address): FriendChainAccess.MarkResult? {
+            marks += address
+            if (markResult == FriendChainAccess.MarkResult.MARKED && advances && keys.indexOf(address) == current) {
+                current++
+            }
+            return markResult
+        }
+    }
+
+    /** A process restart: a fresh provider over [paidFile] and an un-advanced dashj [chain]. */
+    private fun restartedProvider(
+        chain: FakeDashjChain,
+        paidFile: File,
+        sdkAccount: SdkContactSendingAccount?
+    ) = ContactPaymentAddressProvider(
+        cutoverCommitted = { true },
+        sdkAccountReader = { _, _ -> sdkAccount },
+        dashjNextAddress = { _, _ -> chain.next() },
+        dashjMarkUsed = { _, _, address -> chain.mark(address) },
+        params = params,
+        paidAddresses = PaidContactAddressStore(paidFile)
+    )
+
+    private fun paidFileWith(vararg addresses: Address): File {
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(file)
+        addresses.forEach { store.record(it.toBase58()) }
+        return file
+    }
+
+    @Test
+    fun restart_dashjNotSaved_brokenSdkChannel_advancesDashjPastThePaidAddress() = runBlocking {
+        // Process 1 paid dashj's key 0 through the dashj fallback and recorded it;
+        // it died before dashj's saveLater, so dashj restarts at key 0 again.
+        val keys = List(3) { newAddress() }
+        val file = paidFileWith(keys[0])
+        val chain = FakeDashjChain(keys, current = 0)
+        val provider = restartedProvider(chain, file, account(paymentChannelBroken = true))
+
+        val result = provider.nextAddress(target)
+
+        assertEquals(ContactAddressSource.DASHJ, result?.source)
+        assertEquals(keys[1], result?.address)
+        assertEquals(listOf(keys[0]), chain.marks)
+    }
+
+    @Test
+    fun restart_dashjNotSaved_severalPaid_advancesPastEachOne() = runBlocking {
+        val keys = List(4) { newAddress() }
+        val file = paidFileWith(keys[0], keys[1])
+        val chain = FakeDashjChain(keys, current = 0)
+        val provider = restartedProvider(chain, file, sdkAccount = null)
+
+        assertEquals(keys[2], provider.nextAddress(target)?.address)
+        assertEquals(listOf(keys[0], keys[1]), chain.marks)
+    }
+
+    @Test
+    fun restart_dashjServesAPaidAddress_andCannotAdvance_noAddress() = runBlocking {
+        val keys = List(3) { newAddress() }
+        val file = paidFileWith(keys[0])
+
+        // the mark is refused (e.g. no dashj identity / chain)
+        val refused = FakeDashjChain(keys, current = 0, markResult = null)
+        assertNull(restartedProvider(refused, file, sdkAccount = null).nextAddress(target))
+
+        // the mark reports success but dashj keeps serving the paid key: bounded
+        val stuck = FakeDashjChain(keys, current = 0, advances = false)
+        assertNull(restartedProvider(stuck, file, account(paymentChannelBroken = true)).nextAddress(target))
+        assertEquals(1, stuck.marks.size) // bounded by the one paid record
+    }
+
+    @Test
+    fun dashjServesAnUnpaidAddress_isNotMarkedAhead() = runBlocking {
+        val keys = List(2) { newAddress() }
+        val file = paidFileWith(newAddress()) // another contact's payment
+        val chain = FakeDashjChain(keys, current = 0)
+
+        assertEquals(keys[0], restartedProvider(chain, file, sdkAccount = null).nextAddress(target)?.address)
+        assertTrue(chain.marks.isEmpty())
+    }
+
     @Test
     fun restart_dashjCursorPastTheSdkPool_fallsBackToDashj() = runBlocking {
         val h = harness(dashjCursor = 3)

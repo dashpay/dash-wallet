@@ -282,8 +282,21 @@ class ContactPaymentAddressProvider internal constructor(
         }
     }
 
+    /**
+     * dashj's current sending address for [target], never one recorded paid.
+     *
+     * dashj can serve a paid address after a restart: marking it used
+     * ([dashjMarkUsed]) only schedules a wallet save, so if the process died
+     * before that save dashj comes back at the old current key. [paidAddresses]
+     * was written at broadcast time, so such an address is detected here and
+     * dashj is advanced past it (the same mark, which issues a fresh current
+     * key) and asked again — at most [MAX_DASHJ_PAID_SKIPS] times and never
+     * more often than there are paid records. If dashj cannot be advanced to
+     * an unpaid address, null: the send screen reports no address rather than
+     * paying a used one. Blocking (dashj lock); runs on [ioDispatcher].
+     */
     private fun dashjAddress(target: ContactPaymentTarget, why: String): ContactPaymentAddress? {
-        val address = dashjNextAddress(target.contactUserId, target.accountReference)
+        var address = dashjNextAddress(target.contactUserId, target.accountReference)
         if (address == null) {
             log.warn(
                 "contact payment address for {} (accountReference {}): dashj has none — {}",
@@ -291,12 +304,52 @@ class ContactPaymentAddressProvider internal constructor(
             )
             return null
         }
-        if (address.toBase58() in paidAddresses.paid()) {
-            // Not fatal: the payment still reaches the contact. It means the
-            // post-send mark below could not advance dashj's chain.
+        val paid = paidAddresses.paid()
+        val maxSkips = minOf(MAX_DASHJ_PAID_SKIPS, paid.size)
+        var skipped = 0
+        while (address != null && address.toBase58() in paid) {
+            if (skipped >= maxSkips) {
+                log.warn(
+                    "contact payment address for {} (accountReference {}): dashj still serves a paid " +
+                        "address after advancing {} time(s) — no address",
+                    target.contactUserId, target.accountReference, skipped
+                )
+                return null
+            }
+            val outcome = try {
+                dashjMarkUsed(target.contactUserId, target.accountReference, address)
+            } catch (e: Exception) {
+                log.warn(
+                    "contact payment address for {}: dashj served a paid address and advancing past it " +
+                        "failed — no address",
+                    target.contactUserId, e
+                )
+                return null
+            }
+            if (outcome != FriendChainAccess.MarkResult.MARKED) {
+                log.warn(
+                    "contact payment address for {} (accountReference {}): dashj served a paid address " +
+                        "and could not advance past it ({}) — no address",
+                    target.contactUserId, target.accountReference, outcome ?: "no dashj identity"
+                )
+                return null
+            }
+            skipped++
+            address = dashjNextAddress(target.contactUserId, target.accountReference)
+        }
+        if (address == null) {
             log.warn(
-                "contact payment address for {}: dashj served an address already recorded paid",
-                target.contactUserId
+                "contact payment address for {} (accountReference {}): dashj has none after advancing " +
+                    "past {} paid address(es) — {}",
+                target.contactUserId, target.accountReference, skipped, why
+            )
+            return null
+        }
+        if (skipped > 0) {
+            log.info(
+                "contact payment address for {} (accountReference {}): dashj served {} address(es) " +
+                    "already recorded paid (wallet not saved before a restart?) — advanced past them",
+                target.contactUserId, target.accountReference, skipped
             )
         }
         log.info(
@@ -372,6 +425,13 @@ class ContactPaymentAddressProvider internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(ContactPaymentAddressProvider::class.java)
+
+        /**
+         * Bound on how many paid addresses [dashjAddress] advances dashj past in
+         * one request. Each is a payment whose dashj save was lost; more than a
+         * handful means something else is wrong, and no address is safer.
+         */
+        internal const val MAX_DASHJ_PAID_SKIPS = 10
     }
 }
 
