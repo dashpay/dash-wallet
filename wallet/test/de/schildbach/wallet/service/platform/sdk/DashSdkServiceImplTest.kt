@@ -53,7 +53,8 @@ class DashSdkServiceImplTest {
 
     private fun newService() = DashSdkServiceImpl(
         context = mockk<Context>(relaxed = true),
-        mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true))
+        mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+        secretWriteFence = WalletSecretWriteFence()
     )
 
     @Test

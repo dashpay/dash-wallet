@@ -25,6 +25,7 @@ import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -468,7 +469,14 @@ class SdkTransparentUsernameCreation internal constructor(
     /** Scope for [submit]; null (tests' default path) makes submit inert. */
     private val executorScope: CoroutineScope? = null,
     /** Back-off between false-locked auto-resume attempts; injectable for tests. */
-    private val pause: suspend (delayMs: Long) -> Unit = { delay(it) }
+    private val pause: suspend (delayMs: Long) -> Unit = { delay(it) },
+    /**
+     * Reset Wallet's fence over old-wallet secret writes: the key persist and
+     * the funding/resume calls run under its permit, and [submit]'s job is
+     * registered so the wipe can cancel and join it. A fresh (lowered) fence
+     * by default keeps the host-JVM tests unaffected.
+     */
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
 ) {
     @Inject
     constructor(
@@ -477,7 +485,8 @@ class SdkTransparentUsernameCreation internal constructor(
         walletApplication: WalletApplication,
         blockchainIdentityConfig: BlockchainIdentityConfig,
         assetLockKindResolver: AssetLockKindResolver,
-        applicationScope: CoroutineScope
+        applicationScope: CoroutineScope,
+        secretWriteFence: WalletSecretWriteFence
     ) : this(
         source = DashSdkTransparentUsernameSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
@@ -505,7 +514,8 @@ class SdkTransparentUsernameCreation internal constructor(
             }
             blockchainIdentityConfig.set(BlockchainIdentityConfig.RESTORING, restoring)
         },
-        executorScope = applicationScope
+        executorScope = applicationScope,
+        secretWriteFence = secretWriteFence
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -538,12 +548,18 @@ class SdkTransparentUsernameCreation internal constructor(
      * Start the creation on the application scope. Returns false — and
      * submits NOTHING — unless the current state is Idle or the
      * provably-pre-broadcast NotSent (retry-safe). The Idle→Proving
-     * transition is atomic under [this].
+     * transition is atomic under [this]. Also refused while Reset Wallet holds
+     * the [secretWriteFence]; the job is registered with that fence, which
+     * cancels and joins it when a wipe starts.
      */
     fun submit(username: String, secondaryUsername: String? = null): Boolean {
         val scope = executorScope
         if (scope == null) {
             log.warn("transparent username creation submit refused: no executor scope")
+            return false
+        }
+        if (secretWriteFence.isRaised) {
+            log.warn("transparent username creation submit refused: wallet wipe in progress")
             return false
         }
         synchronized(this) {
@@ -556,7 +572,8 @@ class SdkTransparentUsernameCreation internal constructor(
             }
             _submitState.value = ShieldedUsernameSubmitState.Proving
         }
-        scope.launch {
+        // LAZY + tracked before start: the job can never run unfenced.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             val result = withContext(ioDispatcher) {
                 createUsernameTransparent(username, secondaryUsername)
             }
@@ -569,7 +586,25 @@ class SdkTransparentUsernameCreation internal constructor(
                 _submitState.value = outcome
             }
         }
+        job.invokeOnCompletion { cause -> if (cause is CancellationException) onCancelled() }
+        secretWriteFence.track(job)
+        job.start()
         return true
+    }
+
+    /**
+     * The wipe cancelled the run (the only canceller). In-memory only: the
+     * single-flight slot is released so the NEXT wallet can submit in this
+     * process; nothing persisted is touched (the wipe clears the identity
+     * config, and the SDK still tracks any lock the run built).
+     */
+    private fun onCancelled() {
+        synchronized(this) {
+            if (_submitState.value == ShieldedUsernameSubmitState.Proving) {
+                log.warn("transparent username creation cancelled (wallet wipe) — released the submit slot")
+                _submitState.value = ShieldedUsernameSubmitState.Idle
+            }
+        }
     }
 
     /**
@@ -609,6 +644,7 @@ class SdkTransparentUsernameCreation internal constructor(
             return notBroadcast("cutover state read failed", t)
         }
         if (!committed) return SdkWriteResult.NotBroadcast("cutover not committed")
+        if (secretWriteFence.isRaised) return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
 
         val label = username.trim()
         if (label.isEmpty()) {
@@ -703,74 +739,93 @@ class SdkTransparentUsernameCreation internal constructor(
         // signer resolves them by the same lookup as every other row.
         // Zero the in-memory scalar right after — storePrivateKey has already
         // encrypted it into the same keystore the signer reads.
-        try {
-            keys.forEach { key ->
-                source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
-                key.privateKey.fill(0)
-            }
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            // Nothing was spent — a persist failure is provably pre-broadcast
-            // and retry-safe (the resume gate re-consumes any lock a retry finds).
-            return notBroadcast("registration key persist failed", t)
+        //
+        // WIPE FENCE: the persist AND the funding (whose SDK commit persists
+        // keys too) run under one permit, so a Reset Wallet either refuses
+        // them up front or waits for them before it verifies/erases the SDK
+        // secrets store — no old-wallet key can land after that erase.
+        if (!secretWriteFence.tryAcquire("transparent identity key persist + funding")) {
+            keys.forEach { it.privateKey.fill(0) }
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
         }
-
-        // THE funding spend — one attempt (resume or fresh build), plus the
-        // bounded false-locked auto-resume below. [fundingLock] is the lock the
-        // identity was finally funded from (null = the fresh build's own).
+        // [fundingLock] is the lock the identity was finally funded from
+        // (null = the fresh build's own).
         var fundingLock = existingLock
         val identityId = try {
-            if (existingLock != null) {
-                log.info(
-                    "resuming transparent identity funding at index {} from tracked asset lock (status={})",
-                    identityIndex,
-                    existingLock.status
-                )
-                source.resumeRegistrationFromAssetLock(walletId, existingLock, identityIndex, keys)
-            } else {
-                source.registerWithWalletFunding(
-                    walletIdHex = walletId,
-                    amountDuffs = amountDuffs,
-                    accountIndex = ACCOUNT_INDEX,
-                    identityIndex = identityIndex,
-                    keys = keys
-                )
-            }
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            // A Keystore SIGNING refusal is pre-broadcast for the Platform
-            // transition, but the SDK builds AND BROADCASTS the L1 asset lock
-            // BEFORE it signs IdentityCreate — so "nothing spent" is only true
-            // when no lock is tracked. MO-1023: on a false-locked device the
-            // lock was on chain (instant-locked) while this reported NotSent and
-            // retracted the tile; a manual retry then always resumed it.
-            val recovered = if (isKeystoreSigningRefusal(t)) {
-                recoverFromKeystoreRefusal(walletId, identityIndex, t)
-            } else {
-                null
-            }
-            when (recovered) {
-                is KeystoreRefusalRecovery.Resumed -> {
-                    fundingLock = recovered.lock
-                    recovered.identityId
+            try {
+                keys.forEach { key ->
+                    source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
+                    key.privateKey.fill(0)
                 }
-                is KeystoreRefusalRecovery.Failed -> return recovered.result
-                null -> return when (val classified = classifyBroadcastFailure(t)) {
-                    is SdkWriteResult.NotBroadcast -> {
-                        log.warn("transparent identity funding rejected pre-broadcast", t)
-                        classified
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                // Nothing was spent — a persist failure is provably pre-broadcast
+                // and retry-safe (the resume gate re-consumes any lock a retry finds).
+                return notBroadcast("registration key persist failed", t)
+            }
+
+            // A wipe raised the fence while the keys were persisted: spend
+            // nothing for a wallet that is being destroyed.
+            if (secretWriteFence.isRaised) return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+
+            // THE funding spend — one attempt (resume or fresh build), plus the
+            // bounded false-locked auto-resume below.
+            try {
+                if (existingLock != null) {
+                    log.info(
+                        "resuming transparent identity funding at index {} from tracked asset lock (status={})",
+                        identityIndex,
+                        existingLock.status
+                    )
+                    source.resumeRegistrationFromAssetLock(walletId, existingLock, identityIndex, keys)
+                } else {
+                    source.registerWithWalletFunding(
+                        walletIdHex = walletId,
+                        amountDuffs = amountDuffs,
+                        accountIndex = ACCOUNT_INDEX,
+                        identityIndex = identityIndex,
+                        keys = keys
+                    )
+                }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                // A Keystore SIGNING refusal is pre-broadcast for the Platform
+                // transition, but the SDK builds AND BROADCASTS the L1 asset lock
+                // BEFORE it signs IdentityCreate — so "nothing spent" is only true
+                // when no lock is tracked. MO-1023: on a false-locked device the
+                // lock was on chain (instant-locked) while this reported NotSent and
+                // retracted the tile; a manual retry then always resumed it.
+                val recovered = if (isKeystoreSigningRefusal(t)) {
+                    recoverFromKeystoreRefusal(walletId, identityIndex, t)
+                } else {
+                    null
+                }
+                when (recovered) {
+                    is KeystoreRefusalRecovery.Resumed -> {
+                        fundingLock = recovered.lock
+                        recovered.identityId
                     }
-                    else -> {
-                        log.error(
-                            "transparent identity funding outcome unconfirmed — the asset lock MAY be on " +
-                                "chain; it stays durably tracked and the resume gate re-consumes it. Do NOT retry",
-                            t
-                        )
-                        SdkWriteResult.Ambiguous(t)
+                    is KeystoreRefusalRecovery.Failed -> return recovered.result
+                    null -> return when (val classified = classifyBroadcastFailure(t)) {
+                        is SdkWriteResult.NotBroadcast -> {
+                            log.warn("transparent identity funding rejected pre-broadcast", t)
+                            classified
+                        }
+                        else -> {
+                            log.error(
+                                "transparent identity funding outcome unconfirmed — the asset lock MAY be on " +
+                                    "chain; it stays durably tracked and the resume gate re-consumes it. Do NOT retry",
+                                t
+                            )
+                            SdkWriteResult.Ambiguous(t)
+                        }
                     }
                 }
             }
+        } finally {
+            secretWriteFence.release()
         }
+
         val identityIdBase58 = Identifier.from(identityId).toString()
         log.info(
             "transparent-funded identity created at index {} ({}…) — {} duffs, contested={}",
@@ -1043,6 +1098,10 @@ class SdkTransparentUsernameCreation internal constructor(
         var lastFailure = failure
         for ((attempt, delayMs) in AUTO_RESUME_DELAYS_MS.withIndex()) {
             pause(delayMs)
+            // The lock is already built (maybe broadcast): a wipe that started
+            // during the back-off just stops the resume — no key re-persist,
+            // no resume call — and the lock stays tracked by the SDK.
+            stopResumeForWipe(attempt, identityIndex)?.let { return it }
             log.info(
                 "auto-resume {}/{} of transparent identity funding at index {} from tracked asset lock (status={})",
                 attempt + 1,
@@ -1066,6 +1125,7 @@ class SdkTransparentUsernameCreation internal constructor(
                 log.warn("auto-resume {} at index {}: key re-persist failed; stopping", attempt + 1, identityIndex, t)
                 return KeystoreRefusalRecovery.Failed(lockedResumable(t))
             }
+            stopResumeForWipe(attempt, identityIndex)?.let { return it }
             try {
                 val identityId = source.resumeRegistrationFromAssetLock(walletId, lock, identityIndex, keys)
                 log.info("auto-resume {} at index {} succeeded", attempt + 1, identityIndex)
@@ -1097,6 +1157,16 @@ class SdkTransparentUsernameCreation internal constructor(
             lock.status
         )
         return KeystoreRefusalRecovery.Failed(lockedResumable(lastFailure))
+    }
+
+    private fun stopResumeForWipe(attempt: Int, identityIndex: Int): KeystoreRefusalRecovery.Failed? {
+        if (!secretWriteFence.isRaised) return null
+        log.warn(
+            "auto-resume {} at index {} stopped: wallet wipe in progress; the asset lock stays tracked",
+            attempt + 1,
+            identityIndex
+        )
+        return KeystoreRefusalRecovery.Failed(lockedResumable(WalletWipeInProgressException("identity funding resume")))
     }
 
     private fun lockedResumable(cause: Throwable) =

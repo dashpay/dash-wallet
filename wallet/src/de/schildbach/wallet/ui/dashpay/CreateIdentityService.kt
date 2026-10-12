@@ -348,6 +348,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var sdkL1InviteCreation: SdkL1InviteCreation
     @Inject lateinit var shieldedInviteOverageTopUp: ShieldedInviteOverageTopUp
     @Inject lateinit var dashPayConfig: DashPayConfig
+    @Inject lateinit var secretWriteFence: de.schildbach.wallet.service.platform.sdk.WalletSecretWriteFence
     private lateinit var securityGuard: SecurityGuard
 
     /**
@@ -432,6 +433,12 @@ class CreateIdentityService : LifecycleService() {
         
         // Add wallet wipe listener to stop service when wallet is wiped
         walletDataProvider.attachOnWalletWipedListener(walletWipeListener)
+        // stopSelf() alone neither cancels nor waits for the invite claims
+        // running on serviceScope, which persist identity keys into the SDK
+        // store: register the scope's job so Reset Wallet cancels AND joins
+        // it before it verifies/erases that store (cancelled at once if a
+        // wipe is already running).
+        secretWriteFence.track(serviceJob)
         
         createIdentityNotification.startServiceForeground()
         wakeLock.acquire(TimeUnit.MINUTES.toMillis(10))

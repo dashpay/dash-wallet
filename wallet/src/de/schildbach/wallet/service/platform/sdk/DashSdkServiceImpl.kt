@@ -387,7 +387,12 @@ internal fun computeDashPayReceivalCoverage(
 @Singleton
 class DashSdkServiceImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    @Suppress("unused") private val mnemonicProvider: PlatformMnemonicProvider
+    @Suppress("unused") private val mnemonicProvider: PlatformMnemonicProvider,
+    /**
+     * Reset Wallet's fence over every secret this service persists into
+     * [WalletStorage] (wallet create / mnemonic re-store, identity keys).
+     */
+    private val secretWriteFence: WalletSecretWriteFence
 ) : DashSdkService {
 
     /** Everything with a native or persistence footprint lives here. */
@@ -500,6 +505,9 @@ class DashSdkServiceImpl @Inject constructor(
      * logged and no reference outlives this call.
      */
     override suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String {
+        // A wipe in progress may just have stopped the SDK and removed this
+        // wallet: neither restart it nor re-create the wallet's secrets.
+        secretWriteFence.checkOpen("SDK wallet bind")
         val mnemonic = joinMnemonicWords(seedWords)
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
@@ -536,12 +544,15 @@ class DashSdkServiceImpl @Inject constructor(
                 ).resolve(time)
             }
             val managed = try {
-                current.walletManager.createWallet(
-                    mnemonic = mnemonic,
-                    name = APP_WALLET_NAME,
-                    createDefaultAccounts = true,
-                    birthHeight = birthHeight
-                )
+                // createWallet persists the phrase into WalletStorage.
+                secretWriteFence.withSecretWritePermit("SDK wallet create") {
+                    current.walletManager.createWallet(
+                        mnemonic = mnemonic,
+                        name = APP_WALLET_NAME,
+                        createDefaultAccounts = true,
+                        birthHeight = birthHeight
+                    )
+                }
             } catch (t: Throwable) {
                 if (t is kotlinx.coroutines.CancellationException) throw t
                 // Live bug: a transient Keystore failure makes the dedup
@@ -569,7 +580,9 @@ class DashSdkServiceImpl @Inject constructor(
                             mnemonic = mnemonic,
                             hasMnemonic = { current.walletStorage.hasMnemonic(it) },
                             storeMnemonic = { id, phrase ->
-                                current.walletStorage.storeMnemonic(id, phrase)
+                                secretWriteFence.withSecretWritePermit("SDK mnemonic re-store") {
+                                    current.walletStorage.storeMnemonic(id, phrase)
+                                }
                             }
                         )
                     } catch (storeFailure: Throwable) {
@@ -660,6 +673,10 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     override suspend fun discoverIdentities(walletIdHex: String, startIndex: Int): List<ByteArray> {
+        // Discovery folds identities into the SDK's stores, whose key
+        // auto-persist can write private keys: a wipe must wait for (and
+        // then refuse) it like any other secret write.
+        secretWriteFence.checkOpen("identity discovery")
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
         val manager = current.walletManager
@@ -670,11 +687,13 @@ class DashSdkServiceImpl @Inject constructor(
         // and never consults the resolver — the handle is passed for
         // signature completeness only. Discovered identities are folded
         // into Rust's IdentityManager and persisted via the Room bridge.
-        val found = manager.identityRegistration.discoverIdentities(
-            walletHandle = wallet.handle,
-            mnemonicResolverHandle = manager.mnemonicResolverHandle,
-            startIndex = startIndex
-        )
+        val found = secretWriteFence.withSecretWritePermit("identity discovery") {
+            manager.identityRegistration.discoverIdentities(
+                walletHandle = wallet.handle,
+                mnemonicResolverHandle = manager.mnemonicResolverHandle,
+                startIndex = startIndex
+            )
+        }
         log.info(
             "identity discovery on SDK wallet {}… (startIndex={}): {} newly-discovered identity(ies)",
             walletIdHex.take(8), startIndex, found.size
@@ -699,6 +718,7 @@ class DashSdkServiceImpl @Inject constructor(
         walletIdHex: String,
         identityId: ByteArray
     ): IdentityKeyHealReport {
+        secretWriteFence.checkOpen("identity key heal")
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
         val manager = current.walletManager
@@ -730,7 +750,9 @@ class DashSdkServiceImpl @Inject constructor(
                 manager.deriveIdentityKeyPair(walletId, identityIndex, keyIndex)
             },
             storePrivateKey = { pubkeyHex, privateKey ->
-                current.walletStorage.storePrivateKey(pubkeyHex, privateKey)
+                secretWriteFence.withSecretWritePermit("identity key heal") {
+                    current.walletStorage.storePrivateKey(pubkeyHex, privateKey)
+                }
             },
             onKeyOutcome = { keyId, outcome ->
                 log.info(
@@ -764,9 +786,13 @@ class DashSdkServiceImpl @Inject constructor(
         privateKey: ByteArray,
         walletId: ByteArray
     ) {
+        // Refuse before ensureStarted(): a wipe may just have stopped the SDK.
+        secretWriteFence.checkOpen("identity private key store")
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
-        current.walletStorage.storePrivateKey(pubkeyHex, privateKey, walletId)
+        secretWriteFence.withSecretWritePermit("identity private key store") {
+            current.walletStorage.storePrivateKey(pubkeyHex, privateKey, walletId)
+        }
     }
 
     /**

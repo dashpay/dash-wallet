@@ -19,9 +19,17 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.WalletApplicationExt
 import de.schildbach.wallet.util.WalletWipeSequence
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -266,5 +274,146 @@ class SdkWalletSecretsWipeTest {
         } catch (expected: IOException) {
             assertEquals("wallet file survives", expected.message)
         }
+    }
+
+    // ── Wipe fence: old-wallet secret producers vs the erase ─────────────
+
+    /** The new-key entry an outstanding old-wallet producer tries to write. */
+    private val lateKey = "privkey.02" + "ef".repeat(32)
+
+    /**
+     * Reset Wallet's SDK-secrets step with the removal cascade FAILING (the
+     * old wallet stays loaded, no tombstone): only the fenced deleteAll path
+     * can erase. Returns whether the marker was cleared.
+     */
+    private suspend fun fencedWipeWithFailedCascade(
+        fence: WalletSecretWriteFence,
+        store: FakeStore,
+        quiesceTimeoutMs: Long = 5_000L,
+        outcomes: MutableList<SdkSecretsWipeOutcome> = mutableListOf()
+    ): Boolean {
+        var markedComplete = false
+        try {
+            WalletWipeSequence.finish(
+                pending = { true },
+                detachWallet = { },
+                destroy = {
+                    val outcome = fencedSdkSecretsWipe(
+                        fence = fence,
+                        quiesceTimeoutMs = quiesceTimeoutMs,
+                        teardown = { clearForWalletWipe { throw IllegalStateException("removeWallet failed") } },
+                        erase = { SdkWalletSecretsWipe.erase({ store }, RawFile()::delete) }
+                    )
+                    outcomes += outcome
+                    WalletApplicationExt.confirmWipeDestroyed(outcome) { }
+                },
+                markComplete = { markedComplete = true }
+            )
+        } catch (expected: IOException) {
+            // marker retained
+        }
+        return markedComplete
+    }
+
+    @Test
+    fun `an untracked old-wallet key write released after the erase is refused and the store stays empty`() =
+        runBlocking {
+            val fence = WalletSecretWriteFence()
+            val store = oldWalletStore()
+            val reachedWrite = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            // E.g. a creation suspended in its preview / auto-resume back-off,
+            // not registered with the fence: it holds no permit yet.
+            val producer = async(Dispatchers.Default) {
+                reachedWrite.complete(Unit)
+                release.await()
+                runCatching {
+                    fence.withSecretWritePermit("identity private key store") { store.entries[lateKey] = "ciphertext" }
+                }
+            }
+            reachedWrite.await()
+            val outcomes = mutableListOf<SdkSecretsWipeOutcome>()
+
+            val markerCleared = fencedWipeWithFailedCascade(fence, store, outcomes = outcomes)
+            release.complete(Unit)
+            val write = producer.await()
+
+            assertEquals(listOf(SdkSecretsWipeOutcome.DELETED_ALL), outcomes)
+            assertTrue("the fence held, so the wipe may complete", markerCleared)
+            assertTrue(
+                "the late write must be refused by the fence, got $write",
+                write.exceptionOrNull() is WalletWipeInProgressException
+            )
+            assertTrue("no old-wallet secret may land after the erase", store.entries.isEmpty())
+        }
+
+    @Test
+    fun `a tracked old-wallet producer is cancelled and joined before the erase`() = runBlocking {
+        val fence = WalletSecretWriteFence()
+        val store = oldWalletStore()
+        val release = CompletableDeferred<Unit>()
+        val started = CompletableDeferred<Unit>()
+        val producer = launch(Dispatchers.Default) {
+            started.complete(Unit)
+            release.await() // e.g. the auto-resume back-off
+            fence.withSecretWritePermit("identity private key store") { store.entries[lateKey] = "ciphertext" }
+        }
+        fence.track(producer)
+        started.await()
+
+        val markerCleared = fencedWipeWithFailedCascade(fence, store)
+        release.complete(Unit)
+        producer.join()
+
+        assertTrue(producer.isCancelled)
+        assertTrue(markerCleared)
+        assertTrue(store.entries.isEmpty())
+    }
+
+    @Test
+    fun `a key write already in flight when the wipe starts finishes before the erase`() = runBlocking {
+        val fence = WalletSecretWriteFence()
+        val store = oldWalletStore()
+        val holdingPermit = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val producer = async(Dispatchers.Default) {
+            fence.withSecretWritePermit("identity private key store") {
+                holdingPermit.complete(Unit)
+                // A native write that does not observe cancellation.
+                withContext(NonCancellable) { release.await() }
+                store.entries[lateKey] = "ciphertext"
+            }
+        }
+        holdingPermit.await()
+
+        val wipe = async(Dispatchers.Default) { fencedWipeWithFailedCascade(fence, store) }
+        // The wipe waits on the held permit rather than erasing under it.
+        assertNull(withTimeoutOrNull(200) { wipe.await() })
+        release.complete(Unit)
+        producer.await()
+
+        assertTrue(wipe.await())
+        assertTrue("the in-flight write landed BEFORE the erase, so it is gone", store.entries.isEmpty())
+    }
+
+    @Test
+    fun `a producer that ignores cancellation past the budget keeps the wipe marker`() = runBlocking {
+        val fence = WalletSecretWriteFence()
+        val store = oldWalletStore()
+        val release = CompletableDeferred<Unit>()
+        val stubborn = launch(Dispatchers.Default) {
+            withContext(NonCancellable) { release.await() }
+        }
+        fence.track(stubborn)
+        val outcomes = mutableListOf<SdkSecretsWipeOutcome>()
+
+        val markerCleared = fencedWipeWithFailedCascade(fence, store, quiesceTimeoutMs = 100L, outcomes = outcomes)
+
+        assertEquals("an unfenced erase counts as not erased", listOf(SdkSecretsWipeOutcome.FAILED), outcomes)
+        assertFalse("the wipe marker must be retained", markerCleared)
+        assertTrue("the erase still ran", store.deleteAllCalls == 1 && store.entries.isEmpty())
+        assertTrue("the fence stays raised", fence.isRaised)
+        release.complete(Unit)
+        stubborn.join()
     }
 }

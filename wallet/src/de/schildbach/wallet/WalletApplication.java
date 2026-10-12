@@ -356,6 +356,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     de.schildbach.wallet.service.platform.sdk.SdkWalletSecretsEraser sdkWalletSecretsEraser;
     @Inject
+    de.schildbach.wallet.service.platform.sdk.WalletSecretWriteFence walletSecretWriteFence;
+    @Inject
     CutoverCoordinator cutoverCoordinator;
     @Inject
     CutoverEvidenceCollector cutoverEvidenceCollector;

@@ -24,7 +24,13 @@ import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -116,13 +122,20 @@ class SdkTransparentUsernameCreationTest {
         coEvery { registerDpnsName(walletIdHex, identityId, label) } returns "$label.dash"
     }
 
-    private fun creation(source: TransparentUsernameSource) = SdkTransparentUsernameCreation(
+    private fun creation(
+        source: TransparentUsernameSource,
+        fence: WalletSecretWriteFence = WalletSecretWriteFence(),
+        executorScope: CoroutineScope? = null,
+        pause: suspend (Long) -> Unit = { pauses += it }
+    ) = SdkTransparentUsernameCreation(
         source = source,
         cutoverCommitted = { true },
         feeDuffs = { feeDuffs },
         handOffToLegacy = {},
         driveCreationState = { state, _ -> creationStates += state },
-        pause = { pauses += it }
+        executorScope = executorScope,
+        pause = pause,
+        secretWriteFence = fence
     )
 
     @Test
@@ -453,4 +466,90 @@ class SdkTransparentUsernameCreationTest {
                 creation(source).registerDpnsNameForExistingIdentity(identityIdBase58, label)
             )
         }
+
+    // ── Reset Wallet fence ───────────────────────────────────────────────
+
+    private fun assertWipeRefusal(result: SdkWriteResult<*>) {
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals(REASON_WALLET_WIPE_IN_PROGRESS, (result as SdkWriteResult.NotBroadcast).reason)
+    }
+
+    @Test
+    fun `a raised fence refuses before any key is persisted or funded`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val fence = WalletSecretWriteFence()
+        // The wipe starts while the key set is being derived.
+        coEvery { source.previewRegistrationKeySet(walletIdHex, 0, true) } answers {
+            fence.raise()
+            keys(6)
+        }
+
+        val result = creation(source, fence).createUsernameTransparent(label)
+
+        assertWipeRefusal(result)
+        coVerify(exactly = 0) { source.storeIdentityPrivateKey(any(), any(), any()) }
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a fence raised during the key persist stops before the funding call`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val fence = WalletSecretWriteFence()
+        coEvery { source.storeIdentityPrivateKey(walletIdHex, any(), any()) } answers { fence.raise() }
+
+        val result = creation(source, fence).createUsernameTransparent(label)
+
+        assertWipeRefusal(result)
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a fence raised during the auto-resume back-off stops the resume and leaves the lock tracked`() = runTest {
+        val source = source(lockAfterFailure = lock)
+        val fence = WalletSecretWriteFence()
+
+        val result = creation(source, fence, pause = { fence.raise() }).createUsernameTransparent(label)
+
+        // The lock is built: the result is the existing "resumable" one, not a
+        // claim that nothing was spent.
+        assertEquals(
+            SdkTransparentUsernameCreation.REASON_FUNDS_LOCKED_RESUMABLE,
+            (result as SdkWriteResult.NotBroadcast).reason
+        )
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.previewRegistrationKeySet(walletIdHex, 0, false) }
+        // Only the original six-key persist — no re-persist for the resume.
+        coVerify(exactly = 6) { source.storeIdentityPrivateKey(walletIdHex, any(), any()) }
+    }
+
+    @Test
+    fun `a wipe cancels and joins a submit suspended in the auto-resume back-off`() = runBlocking {
+        val source = source(lockAfterFailure = lock)
+        val fence = WalletSecretWriteFence()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val inBackOff = CompletableDeferred<Unit>()
+        val creation = creation(source, fence, executorScope = scope, pause = {
+            inBackOff.complete(Unit)
+            awaitCancellation()
+        }).also { it.ioDispatcher = Dispatchers.Default }
+
+        assertTrue(creation.submit(label))
+        inBackOff.await()
+
+        assertTrue("the fence must hold", fence.raiseAndQuiesce(5_000L))
+
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+        coVerify(exactly = 6) { source.storeIdentityPrivateKey(walletIdHex, any(), any()) }
+        // The single-flight slot is released (in memory) for the next wallet…
+        assertEquals(
+            ShieldedUsernameSubmitState.Idle,
+            creation.submitState.first { it == ShieldedUsernameSubmitState.Idle }
+        )
+        // …but nothing new can start until the wipe completes.
+        assertFalse(creation.submit(label))
+        fence.lower()
+        scope.cancel()
+    }
 }
