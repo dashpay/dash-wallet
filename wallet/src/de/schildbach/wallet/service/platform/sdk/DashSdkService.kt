@@ -163,27 +163,6 @@ data class DashPayContactDrainReport(
 }
 
 /**
- * How many addresses the app's dashj wallet has issued on each standard
- * family, the frontier [DashSdkService.widenAddressWindows] must keep
- * watched past: dashj hands out a fresh address per request whether or not
- * it is ever paid. Each count is the highest `issuedExternalKeys` /
- * `issuedInternalKeys` across that family's dashj chains, or null when it
- * could not be read.
- */
-data class DashjIssuedAddresses(val bip44: Int?, val bip32: Int?) {
-    fun countFor(family: org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType): Int? = when (family) {
-        org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP44 -> bip44
-        org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP32 -> bip32
-        else -> null
-    }
-
-    companion object {
-        /** Nothing known: the widening falls back to its widest windows. */
-        val UNKNOWN = DashjIssuedAddresses(bip44 = null, bip32 = null)
-    }
-}
-
-/**
  * Outcome of [DashSdkService.backfillAddressPoolHoles] for one wallet.
  */
 data class AddressPoolBackfillResult(
@@ -383,12 +362,9 @@ interface DashSdkService {
     fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
 
     /**
-     * Widen the SDK wallet's address-pool gap limits on account 0 of the
-     * standard families, deriving the addresses the wider windows require.
-     * BIP44 and BIP32 get 100 (dashj's lookahead) past the count dashj has
-     * issued on that family ([issued]), so every address dashj could have
-     * handed out stays watched, capped at 1000 (the Rust-side maximum) and
-     * 1000 when the count is unknown. CoinJoin gets 1000.
+     * Widen the SDK wallet's address-pool gap limits to the Rust-side
+     * maximum (1000) on the standard families (BIP44 / BIP32 / CoinJoin,
+     * account 0), deriving the addresses the wider windows require.
      *
      * The migration heal for a wallet whose usage frontier advanced
      * OUTSIDE the SDK's watched window: dashj (or any same-seed client)
@@ -396,7 +372,7 @@ interface DashSdkService {
      * compact-filter scan never matched it, and every descendant
      * transaction was invisible (observed in the field as "synced but
      * wrong balance / history stops at a date"). Widening alone covers
-     * frontiers up to the gap limit past the SDK's own used-index; deeper
+     * frontiers up to 1000 past the SDK's own used-index; deeper
      * frontiers are swept by the follow-up rescan, whose found
      * transactions mark indices used and roll the window forward ahead
      * of the scan. Callers pair this with a backfill-coverage
@@ -407,10 +383,7 @@ interface DashSdkService {
      * wallet simply doesn't have is skipped, not a failure); false when
      * the wallet isn't loaded or any present account failed.
      */
-    suspend fun widenAddressWindows(
-        walletIdHex: String,
-        issued: DashjIssuedAddresses = DashjIssuedAddresses.UNKNOWN
-    ): Boolean
+    suspend fun widenAddressWindows(walletIdHex: String): Boolean
 
     /**
      * Persist the address-pool rows that [widenAddressWindows] leaves in

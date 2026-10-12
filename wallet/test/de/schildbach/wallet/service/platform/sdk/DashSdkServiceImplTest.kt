@@ -58,15 +58,8 @@ class DashSdkServiceImplTest {
     )
 
     @Test
-    fun widenedGapLimit_coversDashjsIssuedFrontier_cappedAtTheRustMax() {
-        // A standard account watches dashj's lookahead past everything dashj issued.
-        assertEquals(100, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = 0))
-        assertEquals(250, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = 150))
-        assertEquals(112, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP32, dashjIssuedCount = 12))
-        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = 923))
-        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, dashjIssuedCount = Int.MAX_VALUE))
-        assertEquals("unknown frontier: the widest window", 1000, DashSdkServiceImpl.widenedGapLimit(AccountType.BIP44, null))
-        assertEquals(1000, DashSdkServiceImpl.widenedGapLimit(AccountType.COIN_JOIN, dashjIssuedCount = 0))
+    fun widenedGapLimit_isTheRustMax() {
+        assertEquals(1000, DashSdkServiceImpl.WIDENED_GAP_LIMIT)
     }
 
     @Test

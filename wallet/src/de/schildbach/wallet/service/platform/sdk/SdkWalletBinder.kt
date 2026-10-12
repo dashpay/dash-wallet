@@ -1538,7 +1538,7 @@ class SdkWalletBinder internal constructor(
     private suspend fun maybeWidenAddressWindowsLocked(walletIdHex: String) {
         var widened = false
         try {
-            widened = sdkService.widenAddressWindows(walletIdHex, dashjIssuedAddresses())
+            widened = sdkService.widenAddressWindows(walletIdHex)
             if (!widened) {
                 log.warn(
                     "address-window widening did not complete; this session scans at the default " +
@@ -1615,32 +1615,6 @@ class SdkWalletBinder internal constructor(
      */
     private suspend fun noteWideningFailed(walletIdHex: String) {
         if (recordWidenRescanOwed()) debtRecordedWalletIdHex = walletIdHex
-    }
-
-    /**
-     * How far the app's dashj wallet has issued addresses on each standard
-     * family ([DashjIssuedAddresses]), for [DashSdkService.widenAddressWindows].
-     * BIP44 chains are those under `m/44'`, the BIP32 chain is `m/0'`; each
-     * count is the higher of a chain's issued external and internal keys.
-     * [DashjIssuedAddresses.UNKNOWN] when the wallet cannot be read, so the
-     * widening keeps its widest windows. Never throws.
-     */
-    private fun dashjIssuedAddresses(): DashjIssuedAddresses = try {
-        val chains = walletData.wallet?.activeKeyChains
-        if (chains == null) {
-            DashjIssuedAddresses.UNKNOWN
-        } else {
-            fun issued(match: (List<org.bitcoinj.crypto.ChildNumber>) -> Boolean): Int? =
-                chains.filter { match(it.accountPath) }
-                    .maxOfOrNull { maxOf(it.issuedExternalKeys, it.issuedInternalKeys) }
-            DashjIssuedAddresses(
-                bip44 = issued { it.firstOrNull() == BIP44_PURPOSE } ?: 0,
-                bip32 = issued { it.size == 1 && it[0] == org.bitcoinj.crypto.ChildNumber.ZERO_HARDENED } ?: 0
-            )
-        }
-    } catch (t: Throwable) {
-        log.warn("could not read dashj's issued address counts; widening to the maximum", t)
-        DashjIssuedAddresses.UNKNOWN
     }
 
     /**
@@ -1841,7 +1815,7 @@ class SdkWalletBinder internal constructor(
             return@withLock repayBeforeScan(walletIdHex, widened = false)
         }
         val widened = try {
-            sdkService.widenAddressWindows(walletIdHex, dashjIssuedAddresses())
+            sdkService.widenAddressWindows(walletIdHex)
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
@@ -2374,9 +2348,6 @@ class SdkWalletBinder internal constructor(
          * never run (v1 shipped only in local QA 11.10.78).
          */
         internal const val GAP_WIDEN_HEAL_VERSION = 2
-
-        /** The `m/44'` purpose level that marks a dashj BIP44 chain. */
-        private val BIP44_PURPOSE = org.bitcoinj.crypto.ChildNumber(44, true)
 
         /** Unique per process; see [DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING]. */
         private val PROCESS_TOKEN: String = java.util.UUID.randomUUID().toString()

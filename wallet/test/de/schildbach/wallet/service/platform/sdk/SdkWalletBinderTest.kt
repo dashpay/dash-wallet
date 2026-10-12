@@ -93,10 +93,8 @@ class SdkWalletBinderTest {
         /** Address-window heal hooks — default success. NOT in [totalCalls]. */
         var onWiden: suspend (String) -> Boolean = { true }
         var widenCalls = 0
-        var lastIssued: DashjIssuedAddresses? = null
-        override suspend fun widenAddressWindows(walletIdHex: String, issued: DashjIssuedAddresses): Boolean {
+        override suspend fun widenAddressWindows(walletIdHex: String): Boolean {
             widenCalls++
-            lastIssued = issued
             return onWiden(walletIdHex)
         }
 
@@ -2203,45 +2201,6 @@ class SdkWalletBinderTest {
         sdk.onBackfill = { holes(0) }
         binder(sdk, config = config, processToken = "second", scope = this).bindIfEnabled(unlock)
         assertEquals(0, sdk.armRescanCalls)
-    }
-
-    @Test
-    fun widening_passesDashjsIssuedFrontier() = runBlocking {
-        // Review finding: dashj issues a fresh address per request, paid or
-        // not, so its unpaid run can outgrow the 100 standard gap. The
-        // widening is told how far dashj has issued on each family.
-        fun chain(path: List<org.bitcoinj.crypto.ChildNumber>, external: Int, internal: Int) =
-            mockk<org.bitcoinj.wallet.DeterministicKeyChain> {
-                every { accountPath } returns com.google.common.collect.ImmutableList.copyOf(path)
-                every { issuedExternalKeys } returns external
-                every { issuedInternalKeys } returns internal
-            }
-        val hardened = { i: Int -> org.bitcoinj.crypto.ChildNumber(i, true) }
-        val dashjWallet: Wallet = mockk(relaxed = true) {
-            every { activeKeyChains } returns listOf(
-                chain(listOf(hardened(44), hardened(5), hardened(0)), external = 150, internal = 923),
-                chain(listOf(hardened(0)), external = 12, internal = 3)
-            )
-        }
-        val sdk = readySdk()
-        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
-        binder(sdk, config = config, walletData = mockk { every { wallet } returns dashjWallet }, scope = this)
-            .bindIfEnabled(unlock)
-
-        assertEquals(DashjIssuedAddresses(bip44 = 923, bip32 = 12), sdk.lastIssued)
-    }
-
-    @Test
-    fun widening_unreadableDashjWallet_widensToTheMaximum() = runBlocking {
-        val dashjWallet: Wallet = mockk(relaxed = true) {
-            every { activeKeyChains } throws IllegalStateException("wallet not loaded")
-        }
-        val sdk = readySdk()
-        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
-        binder(sdk, config = config, walletData = mockk { every { wallet } returns dashjWallet }, scope = this)
-            .bindIfEnabled(unlock)
-
-        assertEquals(DashjIssuedAddresses.UNKNOWN, sdk.lastIssued)
     }
 
     /** Polls until [condition] holds; the backfill retry runs on the binder's scope. */

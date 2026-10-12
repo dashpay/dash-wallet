@@ -849,7 +849,7 @@ class DashSdkServiceImpl @Inject constructor(
         return drainContactCryptoQueue(managed, walletId, walletIdHex)
     }
 
-    override suspend fun widenAddressWindows(walletIdHex: String, issued: DashjIssuedAddresses): Boolean = try {
+    override suspend fun widenAddressWindows(walletIdHex: String): Boolean = try {
         ensureStarted()
         val manager = runtime?.walletManager
         val managed = manager?.wallets?.value?.get(walletIdHex)
@@ -865,13 +865,12 @@ class DashSdkServiceImpl @Inject constructor(
                     CoreTransactionBuilder.AccountType.BIP32,
                     CoreTransactionBuilder.AccountType.COIN_JOIN,
                 )) {
-                    val gapLimit = widenedGapLimit(family, issued.countFor(family))
                     try {
-                        core.setGapLimit(family, 0, gapLimit)
-                        applied[family] = gapLimit
+                        core.setGapLimit(family, 0, WIDENED_GAP_LIMIT)
+                        applied[family] = WIDENED_GAP_LIMIT
                         log.info(
-                            "widenAddressWindows: {} account 0 gap -> {} on {}… (dashj issued: {})",
-                            family, gapLimit, walletIdHex.take(8), issued.countFor(family) ?: "unknown"
+                            "widenAddressWindows: {} account 0 gap -> {} on {}…",
+                            family, WIDENED_GAP_LIMIT, walletIdHex.take(8)
                         )
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
@@ -1005,7 +1004,7 @@ class DashSdkServiceImpl @Inject constructor(
                 val family = widenedFamily(accountType, standardTag) ?: continue
                 // The window the widening set this process; the widest if it
                 // has not run, since persisting extra rows costs nothing.
-                val gapLimit = applied[family] ?: MAX_WIDENED_GAP_LIMIT
+                val gapLimit = applied[family] ?: WIDENED_GAP_LIMIT
                 accounts.add(
                     Account(c.getLong(0), accountType, standardTag, gapLimit, if (c.isNull(3)) null else c.getBlob(3))
                 )
@@ -1539,45 +1538,14 @@ class DashSdkServiceImpl @Inject constructor(
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
 
         /**
-         * The smallest gap the widening gives a standard account (BIP44,
-         * BIP32): dashj's own lookahead (`DeterministicKeyChain`
-         * DEFAULT_LOOKAHEAD_SIZE), which is also all a dashj restore of the
-         * same seed would look ahead of its last used address.
+         * Gap limit the widening gives each standard account (BIP44, BIP32,
+         * CoinJoin) — the Rust-side MAX_GAP_LIMIT. Restored wallets hold
+         * runs of unused addresses far past dashj's 100 lookahead (a testnet
+         * wallet's change chain has an unused run of 373), and the widening
+         * cannot know them in advance, so it takes the widest window. See
+         * [DashSdkService.widenAddressWindows].
          */
-        internal const val STANDARD_GAP_LIMIT = 100
-
-        /**
-         * The Rust-side MAX_GAP_LIMIT: the widest window [widenAddressWindows]
-         * can set.
-         */
-        internal const val MAX_WIDENED_GAP_LIMIT = 1000
-
-        /**
-         * Gap limit the widening gives the CoinJoin account — the maximum.
-         * Mixing sessions consume CoinJoin addresses that may stay empty, in
-         * runs far longer than a standard account's.
-         */
-        internal const val COINJOIN_GAP_LIMIT = MAX_WIDENED_GAP_LIMIT
-
-        /**
-         * The gap limit [widenAddressWindows] gives [family], account 0.
-         *
-         * dashj looks ahead of the addresses it has ISSUED, not of those that
-         * were paid, and it issues a fresh receive address for every request,
-         * so a migrated wallet can hold a run of unpaid issued addresses
-         * longer than [STANDARD_GAP_LIMIT]; a later payment to the end of
-         * that run must still be watched. A standard account therefore gets
-         * [STANDARD_GAP_LIMIT] past dashj's issued count
-         * ([dashjIssuedCount]), capped at [MAX_WIDENED_GAP_LIMIT], and the
-         * maximum when that count is unknown.
-         */
-        internal fun widenedGapLimit(family: CoreTransactionBuilder.AccountType, dashjIssuedCount: Int?): Int =
-            when {
-                family == CoreTransactionBuilder.AccountType.COIN_JOIN -> COINJOIN_GAP_LIMIT
-                dashjIssuedCount == null -> MAX_WIDENED_GAP_LIMIT
-                else -> (dashjIssuedCount.toLong() + STANDARD_GAP_LIMIT)
-                    .coerceIn(STANDARD_GAP_LIMIT.toLong(), MAX_WIDENED_GAP_LIMIT.toLong()).toInt()
-            }
+        internal const val WIDENED_GAP_LIMIT = 1000
 
         /** `accounts.accountType` / `standardTag` of the accounts [widenAddressWindows] widens. */
         private val WIDENED_ACCOUNTS = listOf(0 to 0, 0 to 1, 1 to 0)
