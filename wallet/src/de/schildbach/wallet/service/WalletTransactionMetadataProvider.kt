@@ -96,6 +96,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
+    /**
+     * Creates the metadata row for [txId] and returns it. The row comes from the
+     * dashj wallet's Transaction when it holds the tx, else from the SDK store
+     * ([insertSdkTransactionMetadata]); either way the fetched platform metadata
+     * documents fill memo, rate, service, tax category and sent time. Null when
+     * neither holds the tx. [isSyncingPlatform] keeps a platform sync from
+     * queueing values for upload back to platform.
+     */
     private suspend fun insertTransactionMetadata(txId: TxId, isSyncingPlatform: Boolean): TransactionMetadata? {
         val walletTx = walletData.wallet!!.getTransaction(txId.toSha256Hash())
         Context.propagate(walletData.wallet!!.context)
@@ -263,6 +271,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return shouldSaveToCache
     }
 
+    /**
+     * Runs [update] on the metadata row for [txId], creating the row first when
+     * there is none: from the dashj wallet or the SDK store, else from
+     * [fallbackMetadata]. When none of those yields a row the change is dropped
+     * and logged as DROPPED.
+     */
     private suspend fun updateAndInsertIfNotExist(
         txId: TxId,
         isSyncingPlatform: Boolean,

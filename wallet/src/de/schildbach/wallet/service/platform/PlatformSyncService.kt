@@ -100,6 +100,7 @@ import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.wallet.IdentityVerify
 import org.dashj.platform.wallet.TxMetadataItem
+import org.dash.wallet.common.data.TxId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MarkerFactory
@@ -200,6 +201,32 @@ interface PlatformSyncService {
     suspend fun clearDatabases()
     suspend fun getUnsavedTransactions(): Pair<List<org.dash.wallet.common.transactions.TxInfo>, Long>
     suspend fun hasPendingTxMetadataToSave(): Boolean
+}
+
+/**
+ * The txids a TxMetadata fetch will import, for the batch prefetch around the
+ * import loop: the non-empty items of documents not yet held ([isHeld]).
+ *
+ * The fetch window overlaps the previous one by 10 minutes, so some documents are
+ * already held; the import loop skips those, so they are left out here too. An
+ * item whose txid is not 32 bytes is left out rather than converted:
+ * `Sha256Hash.wrapReversed` throws on it, and that must not abort the whole fetch
+ * before any document is processed.
+ */
+internal suspend fun <D> importableTxIds(
+    items: Map<D, List<TxMetadataItem>>,
+    isHeld: suspend (D) -> Boolean
+): List<TxId> {
+    val out = ArrayList<TxId>()
+    for ((doc, list) in items) {
+        if (isHeld(doc)) continue
+        for (item in list) {
+            if (item.isNotEmpty() && item.txId.size == Sha256Hash.LENGTH) {
+                out += Sha256Hash.wrapReversed(item.txId).toTxId()
+            }
+        }
+    }
+    return out
 }
 
 class PlatformSynchronizationService @Inject constructor(
@@ -1688,6 +1715,12 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
+    /**
+     * Fetches TxMetadata documents newer than the stored watermark (minus a
+     * 10-minute overlap), decrypts them with [myEncryptionKey], and imports each
+     * new document's items into the metadata table. Transactions only the SDK
+     * store holds are resolved in one batch ([TransactionMetadataProvider.withBatchedImport]).
+     */
     private suspend fun updateTransactionMetadata(myEncryptionKey: KeyParameter?) {
         val watch = Stopwatch.createStarted()
 
@@ -1737,9 +1770,7 @@ class PlatformSynchronizationService @Inject constructor(
         var docsAlreadyHeld = 0
         // Every txid this fetch can import, so a transaction only the SDK store holds
         // is resolved in one batch instead of one wallet-wide walker pass per txid.
-        val fetchedTxIds = items.values.flatten()
-            .filter { it.isNotEmpty() }
-            .map { Sha256Hash.wrapReversed(it.txId).toTxId() }
+        val fetchedTxIds = importableTxIds(items) { doc -> transactionMetadataDocumentDao.count(doc.id) != 0 }
         transactionMetadataProvider.withBatchedImport(fetchedTxIds) {
             items.forEach { (doc, list) ->
                 if (transactionMetadataDocumentDao.count(doc.id) == 0) {

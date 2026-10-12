@@ -128,6 +128,7 @@ internal fun L1TxUiRecord.toDefaultMetadata(): TransactionMetadata = defaultSdkT
     isSent = netAmountDuffs < 0 || direction != L1TxUiDirection.INCOMING
 )
 
+/** The default row both [toDefaultMetadata] forms build: no memo, no user-set category. */
 private fun defaultSdkTxMetadata(
     txIdDisplayHex: String,
     netAmountDuffs: Long,
@@ -424,7 +425,7 @@ class SdkTxDetailProvider internal constructor(
         // NULL — Σin−Σout from the wallet's input TXOs, which the walker also uses
         // (persisted, or in memory for a pending send). See [correctedRecord].
         val record = correctedRecord(
-            entity,
+            storeRecordOf(entity),
             walletRecord = walletRecordFor(db, txIdDisplayHex.lowercase()),
             cacheEntry = cacheEntryFor(txIdDisplayHex),
             derivedFee = derivedFeeDuffs(decoded, inputTxos.map { it?.amount })
@@ -445,20 +446,34 @@ class SdkTxDetailProvider internal constructor(
         )
     }
 
+    /**
+     * The neutral record of the SDK store row [entity], without its serialized
+     * transaction. Its fee is the stored one, which may be null.
+     */
+    private fun storeRecordOf(entity: TransactionEntity): L1TxUiRecord = l1TxUiRecord(
+        txidWireBytes = entity.txid,
+        netAmountDuffs = entity.netAmount,
+        feeDuffs = entity.fee,
+        contextCode = entity.context,
+        directionCode = entity.direction,
+        firstSeenSec = entity.firstSeen,
+        blockTimestampSec = entity.blockTimestamp
+    )
+
     /** The tx_display_cache row for [txIdDisplayHex], keyed by lowercase display hex. */
     private suspend fun cacheEntryFor(txIdDisplayHex: String): TxDisplayCacheEntry? =
         txDisplayCacheDao.getEntriesByIds(listOf(txIdDisplayHex.lowercase())).firstOrNull()
 
     /**
-     * The record the history list was built from for [entity]: the bound wallet's
-     * [walletRecord] when there is one, else the store row, with the
-     * tx_display_cache [cacheEntry] correction applied. [derivedFee] is the Σin−Σout
-     * fee when the caller decoded the transaction, else null. Pure: the caller
-     * fetches the inputs, one at a time for the detail sheet or once per batch for
-     * a metadata import.
+     * The record the history list was built from: the bound wallet's [walletRecord]
+     * when there is one, else [storeRecord] (the store row, see [storeRecordOf]),
+     * with the tx_display_cache [cacheEntry] correction applied. [derivedFee] is the
+     * Σin−Σout fee when the caller decoded the transaction, else null. Pure: the
+     * caller fetches the inputs, one at a time for the detail sheet or once per
+     * batch for a metadata import.
      */
     private fun correctedRecord(
-        entity: TransactionEntity,
+        storeRecord: L1TxUiRecord,
         walletRecord: L1TxUiRecord?,
         cacheEntry: TxDisplayCacheEntry?,
         derivedFee: Long?
@@ -474,18 +489,8 @@ class SdkTxDetailProvider internal constructor(
         // or in memory for a pending send. Reading it here keeps the sheet and the
         // list on the same net and fee (D-M-01). The raw store row is the fallback
         // when no wallet is bound.
-        val effectiveFee = walletRecord?.feeDuffs ?: entity.fee ?: derivedFee
-        val baseRecord = (
-            walletRecord ?: l1TxUiRecord(
-                txidWireBytes = entity.txid,
-                netAmountDuffs = entity.netAmount,
-                feeDuffs = entity.fee,
-                contextCode = entity.context,
-                directionCode = entity.direction,
-                firstSeenSec = entity.firstSeen,
-                blockTimestampSec = entity.blockTimestamp
-            )
-            ).copy(feeDuffs = effectiveFee)
+        val effectiveFee = walletRecord?.feeDuffs ?: storeRecord.feeDuffs ?: derivedFee
+        val baseRecord = (walletRecord ?: storeRecord).copy(feeDuffs = effectiveFee)
 
         // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
         // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
@@ -545,7 +550,7 @@ class SdkTxDetailProvider internal constructor(
             val db = sdkService.databaseOrNull() ?: return null
             val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
             correctedRecord(
-                entity,
+                storeRecordOf(entity),
                 walletRecord = walletRecordFor(db, txIdDisplayHex),
                 cacheEntry = cacheEntryFor(txIdDisplayHex),
                 derivedFee = null
@@ -570,22 +575,24 @@ class SdkTxDetailProvider internal constructor(
         return try {
             val db = sdkService.databaseOrNull() ?: return emptyMap()
             val txDao = db.transactionDao()
-            val entities = LinkedHashMap<String, Pair<TxId, TransactionEntity>>()
+            // Only the payload-free record is kept per txid: an entity carries the
+            // serialized transaction, and a restore's re-merge can batch thousands.
+            val storeRecords = LinkedHashMap<String, Pair<TxId, L1TxUiRecord>>()
             for (txId in txIds) {
                 val hex = txId.toString().lowercase()
                 val wire = displayTxIdToWireBytes(hex) ?: continue
-                txDao.getByTxid(wire)?.let { entities[hex] = txId to it }
+                txDao.getByTxid(wire)?.let { storeRecords[hex] = txId to storeRecordOf(it) }
             }
-            if (entities.isEmpty()) return emptyMap()
+            if (storeRecords.isEmpty()) return emptyMap()
 
-            val walletRecords = walletRecordsFor(db, entities.keys)
-            val cacheEntries = entities.keys.chunked(CACHE_READ_CHUNK)
+            val walletRecords = walletRecordsFor(db, storeRecords.keys)
+            val cacheEntries = storeRecords.keys.chunked(CACHE_READ_CHUNK)
                 .flatMap { txDisplayCacheDao.getEntriesByIds(it) }
                 .associateBy { it.rowId.lowercase() }
-            entities.entries.associate { (hex, txIdAndEntity) ->
-                val (txId, entity) = txIdAndEntity
+            storeRecords.entries.associate { (hex, txIdAndRecord) ->
+                val (txId, storeRecord) = txIdAndRecord
                 txId to correctedRecord(
-                    entity,
+                    storeRecord,
                     walletRecord = walletRecords[hex],
                     cacheEntry = cacheEntries[hex],
                     derivedFee = null
