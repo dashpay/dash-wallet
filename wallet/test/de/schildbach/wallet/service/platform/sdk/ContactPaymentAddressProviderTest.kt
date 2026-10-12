@@ -458,6 +458,26 @@ class ContactPaymentAddressProviderTest {
     }
 
     @Test
+    fun unknownOutcomeSignalled_thenTheSendThrows_isStillMarked() = runBlocking {
+        // The post-cutover SDK Ambiguous path: no txid, then the cause is rethrown.
+        val h = harness()
+        val payment = h.provider.nextAddress(target)
+
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking {
+                h.provider.sendThenMarkUsed(payment) { onBroadcast ->
+                    onBroadcast(null)
+                    throw IllegalStateException("broadcast outcome unknown")
+                }
+            }
+        }
+
+        assertEquals(listOf(Triple(contactUserId, selectedReference, sdkPool[1])), h.marks)
+        // the possibly-paid address is never offered again
+        assertEquals(sdkPool[2], h.provider.nextAddress(target)?.address)
+    }
+
+    @Test
     fun broadcastSignalled_thenCancelled_isStillMarked() = runBlocking {
         val h = harness()
         val payment = h.provider.nextAddress(target)

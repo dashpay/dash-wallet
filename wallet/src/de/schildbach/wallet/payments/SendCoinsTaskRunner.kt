@@ -427,15 +427,19 @@ class SendCoinsTaskRunner @Inject constructor(
      *
      * [onBroadcast] is told the txid as soon as the SDK reports
      * [SdkWriteResult.Broadcast], BEFORE bridging — so a caller that must act
-     * on a proven payment (marking a contact address paid) still does when the
-     * bridge then fails. Never called for NotBroadcast / Ambiguous.
+     * on a payment that went out (marking a contact address paid) still does
+     * when the bridge then fails. It is ALSO called, with a null txid (the
+     * result carries none), for [SdkWriteResult.Ambiguous] just before the
+     * rethrow: the payment may have gone out, and treating a contact address
+     * as used costs at most one skipped address while not doing so risks
+     * reusing it. Never called for NotBroadcast (nothing left the wallet).
      */
     private suspend fun sendViaSdkBridged(
         address: Address,
         amount: Coin,
         beforeSending: Consumer<Transaction>?,
         emptyWallet: Boolean = false,
-        onBroadcast: ((txid: String) -> Unit)? = null
+        onBroadcast: ((txid: String?) -> Unit)? = null
     ): Transaction {
         val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet)
         return when (result) {
@@ -453,19 +457,28 @@ class SendCoinsTaskRunner @Inject constructor(
                     )
                 }
             }
-            is SdkWriteResult.Ambiguous ->
+            is SdkWriteResult.Ambiguous -> {
+                // Outcome unknown: the payment may be on the network. Signal it
+                // (no txid known) so a contact address is not reused, then
+                // rethrow as before — never retried (double-pay risk).
+                notifyBroadcast(onBroadcast, txid = null)
                 throw (result.cause as? Exception ?: RuntimeException(result.cause))
+            }
             is SdkWriteResult.NotBroadcast -> throw sdkSendNotAttemptedException(result.reason)
         }
     }
 
-    /** Runs a caller's broadcast callback; its failure never turns a sent payment into a failed one. */
-    private fun notifyBroadcast(onBroadcast: ((txid: String) -> Unit)?, txid: String) {
+    /**
+     * Runs a caller's broadcast callback; its failure never turns a sent payment
+     * into a failed one. [txid] null: the send's outcome is unknown
+     * ([SdkWriteResult.Ambiguous]) — it may have been broadcast.
+     */
+    private fun notifyBroadcast(onBroadcast: ((txid: String?) -> Unit)?, txid: String?) {
         if (onBroadcast == null) return
         try {
             onBroadcast(txid)
         } catch (e: Exception) {
-            log.warn("broadcast callback failed for tx {}", txid, e)
+            log.warn("broadcast callback failed for tx {}", txid ?: "(outcome unknown)", e)
         }
     }
 
@@ -1159,7 +1172,7 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
         intendedRecipient: Address? = null,
-        onBroadcast: ((txid: String) -> Unit)? = null
+        onBroadcast: ((txid: String?) -> Unit)? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)

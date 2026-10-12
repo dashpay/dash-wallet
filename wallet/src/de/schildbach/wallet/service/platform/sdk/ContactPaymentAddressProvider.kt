@@ -308,27 +308,40 @@ class ContactPaymentAddressProvider internal constructor(
 
     /**
      * Runs [send] and records [payment]'s address as paid ([paidAddresses] and
-     * dashj's sending chain) as soon as the payment is known to be broadcast:
+     * dashj's sending chain) as soon as the payment may have gone out:
      * - when [send] calls the `onBroadcast` it is handed — the send path signals
      *   it the moment the network has the transaction, before any later step
      *   that can still throw (post-cutover: bridging the transaction into the
      *   dashj wallet for display, which may fail although the money moved);
+     * - when [send] calls `onBroadcast(null)` — the send's outcome is unknown
+     *   (post-cutover SDK `Ambiguous`) and it is about to throw. Marking then
+     *   costs at most one skipped address; not marking risks reusing an address
+     *   that was in fact paid;
      * - otherwise when [send] returns.
      * A send that throws or is cancelled before signalling marks nothing — that
      * is a genuine pre-broadcast failure. Marking happens at most once and never
-     * throws: a marking failure is logged, the money has already moved.
+     * throws: a marking failure is logged, the money may already have moved.
      * [payment] null (not a contact payment) just runs [send].
      */
     suspend fun <T> sendThenMarkUsed(
         payment: ContactPaymentAddress?,
-        send: suspend (onBroadcast: (txid: String) -> Unit) -> T
+        send: suspend (onBroadcast: (txid: String?) -> Unit) -> T
     ): T {
         if (payment == null) {
             return send { }
         }
         val marked = AtomicBoolean(false)
         val result = send { txid ->
-            if (marked.compareAndSet(false, true)) markPaid(payment, txid)
+            if (marked.compareAndSet(false, true)) {
+                if (txid == null) {
+                    log.info(
+                        "contact payment to {} (address source {}): send outcome unknown, it may have " +
+                            "been broadcast — marking the address used so it is not reused",
+                        payment.target.contactUserId, payment.source
+                    )
+                }
+                markPaid(payment, txid)
+            }
         }
         if (marked.compareAndSet(false, true)) {
             // NonCancellable: the payment went out; a cancellation arriving now

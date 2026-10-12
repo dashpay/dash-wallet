@@ -31,15 +31,18 @@ import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddress
 import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddressProvider
 import de.schildbach.wallet.service.platform.sdk.ContactPaymentTarget
 import de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON
+import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore
 import de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.spyk
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -68,7 +71,8 @@ import org.robolectric.annotation.Config
  * The SendRequest funnel's `onBroadcast` signal — what the send UI uses to mark
  * a DashPay contact's payment address paid (PR #1608). It must fire on a PROVEN
  * broadcast even when a later step throws (post-cutover: the display bridge),
- * and never on a pre-broadcast failure. The last tests run the real
+ * on an UNKNOWN outcome (SDK `Ambiguous`, txid null — the payment may have gone
+ * out), and never on a pre-broadcast failure. The last tests run the real
  * [ContactPaymentAddressProvider.sendThenMarkUsed] around the real funnel.
  */
 @HiltAndroidTest
@@ -144,7 +148,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         coEvery { bridgeFactory.bridge(any(), any(), any(), any()) } returns result
     }
 
-    private suspend fun sendCollecting(signals: MutableList<String>): Transaction =
+    private suspend fun sendCollecting(signals: MutableList<String?>): Transaction =
         runner.sendCoins(
             sendRequest(),
             checkBalanceConditions = false,
@@ -158,7 +162,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     fun postCutover_broadcastThenBridgeFailure_signalsTheBroadcast_andStillThrows() = runTest {
         postCutover(SdkWriteResult.Broadcast(sdkTxid))
         bridgeReturns(BridgedTxResult.NotBridged("bytes never appeared"))
-        val signals = mutableListOf<String>()
+        val signals = mutableListOf<String?>()
 
         try {
             sendCollecting(signals)
@@ -174,7 +178,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     fun postCutover_broadcastAndBridged_signalsOnce() = runTest {
         postCutover(SdkWriteResult.Broadcast(sdkTxid))
         bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
-        val signals = mutableListOf<String>()
+        val signals = mutableListOf<String?>()
 
         sendCollecting(signals)
 
@@ -184,7 +188,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     @Test
     fun postCutover_notBroadcast_neverSignals() = runTest {
         postCutover(SdkWriteResult.NotBroadcast(L1_FUNDING_GATE_CLOSED_REASON))
-        val signals = mutableListOf<String>()
+        val signals = mutableListOf<String?>()
 
         try {
             sendCollecting(signals)
@@ -197,18 +201,22 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
-    fun postCutover_ambiguous_neverSignals() = runTest {
+    fun postCutover_ambiguous_signalsAnUnknownTxid_andStillThrowsTheCause() = runTest {
         postCutover(SdkWriteResult.Ambiguous(IllegalStateException("timeout")))
-        val signals = mutableListOf<String>()
+        val signals = mutableListOf<String?>()
 
         try {
             sendCollecting(signals)
             fail("expected the ambiguous failure")
         } catch (expected: IllegalStateException) {
-            // outcome unknown: not a proven broadcast
+            // the SDK's cause, rethrown (coroutine stack recovery may copy it)
+            assertEquals("timeout", expected.message)
         }
 
-        assertTrue(signals.isEmpty())
+        assertEquals(listOf<String?>(null), signals)
+        // never retried: exactly one SDK send attempt, and dashj never ran
+        coVerify(exactly = 1) { sdkL1SendService.sendToAddress(any(), any(), any(), any()) }
+        verify(exactly = 0) { wallet.sendCoinsOffline(any()) }
     }
 
     @Test
@@ -230,7 +238,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     @Test
     fun preCutover_dashjSend_signalsAfterCommit() = runTest {
         coEvery { sdkL1SendService.cutoverCommitted() } returns false
-        val signals = mutableListOf<String>()
+        val signals = mutableListOf<String?>()
 
         val tx = sendCollecting(signals)
 
@@ -241,7 +249,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     fun preCutover_dashjSendFailure_neverSignals() = runTest {
         coEvery { sdkL1SendService.cutoverCommitted() } returns false
         every { wallet.sendCoinsOffline(any()) } throws InsufficientMoneyException(Coin.COIN)
-        val signals = mutableListOf<String>()
+        val signals = mutableListOf<String?>()
 
         try {
             sendCollecting(signals)
@@ -257,6 +265,8 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
 
     private val marks = mutableListOf<Address>()
 
+    private val paidStore = PaidContactAddressStore(file = null)
+
     private fun provider() = ContactPaymentAddressProvider(
         cutoverCommitted = { true },
         sdkAccountReader = { _, _ -> null },
@@ -265,7 +275,8 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
             marks += address
             FriendChainAccess.MarkResult.MARKED
         },
-        params = networkParams
+        params = networkParams,
+        paidAddresses = paidStore
     )
 
     private val contactPayment = ContactPaymentAddress(
@@ -302,6 +313,29 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
+    fun contactPayment_ambiguousOutcome_isMarkedPaid_andStillThrows() = runTest {
+        postCutover(SdkWriteResult.Ambiguous(IllegalStateException("timeout")))
+        val provider = provider()
+
+        try {
+            provider.sendThenMarkUsed(contactPayment) { onBroadcast ->
+                runner.sendCoins(
+                    sendRequest(),
+                    checkBalanceConditions = false,
+                    intendedRecipient = recipient,
+                    onBroadcast = onBroadcast
+                )
+            }
+            fail("expected the ambiguous failure")
+        } catch (expected: IllegalStateException) {
+            // the UI still reports the failure; the address is not reused
+        }
+
+        assertEquals(listOf(recipient), marks)
+        assertTrue(recipient.toBase58() in paidStore.paid())
+    }
+
+    @Test
     fun contactPayment_preBroadcastFailure_isNotMarked() = runTest {
         postCutover(SdkWriteResult.NotBroadcast(L1_FUNDING_GATE_CLOSED_REASON))
         val provider = provider()
@@ -321,5 +355,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         }
 
         assertTrue(marks.isEmpty())
+        assertTrue(paidStore.paid().isEmpty())
     }
 }
