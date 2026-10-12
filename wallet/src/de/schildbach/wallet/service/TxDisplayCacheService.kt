@@ -783,7 +783,7 @@ class TxDisplayCacheService @Inject constructor(
      * The rescan (not wipe) half of [clearDatabase] — MO-1054.
      *
      * Post-cutover a rescan only rewinds the SDK's scan watermark
-     * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.armSpvRescanForBlockchainReset]);
+     * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForReset]);
      * the SDK keeps every transaction record. Wiping the caches here threw
      * away rows whose source still holds them, and no change-feed delta
      * follows (the records did not change) — so the history sat empty,

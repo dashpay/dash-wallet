@@ -28,19 +28,19 @@ import org.junit.Test
 /**
  * Settings → Rescan Blockchain keeps the dashj blockstore; only the SDK
  * replays. The rescan databases may only be cleared when an SDK replay was
- * armed — nothing else would refill them. A wipe is unaffected by the arm.
+ * owed — nothing else would refill them. A wipe is unaffected by the owe result.
  */
 class BlockchainResetShutdownPolicyTest {
 
-    private fun rescan(armed: Boolean) = BlockchainResetShutdownPolicy.plan(
+    private fun rescan(owed: Boolean) = BlockchainResetShutdownPolicy.plan(
         resetBlockchainOnShutdown = true,
         deleteWalletFileOnShutdown = false,
-        sdkRescanArmedForReset = armed
+        sdkRescanOwedForReset = owed
     )
 
     @Test
-    fun rescan_withArmedReplay_clearsRescanDatabases() {
-        val plan = rescan(armed = true)
+    fun rescan_withOwedReplay_clearsRescanDatabases() {
+        val plan = rescan(owed = true)
         assertTrue(plan.clearRescanDatabases)
         assertFalse(plan.keepRescanDatabases)
         assertFalse(plan.wipeWallet)
@@ -48,8 +48,8 @@ class BlockchainResetShutdownPolicyTest {
     }
 
     @Test
-    fun rescan_withoutArmedReplay_keepsRescanDatabases() {
-        val plan = rescan(armed = false)
+    fun rescan_withoutOwedReplay_keepsRescanDatabases() {
+        val plan = rescan(owed = false)
         assertFalse(plan.clearRescanDatabases)
         assertTrue(plan.keepRescanDatabases)
         assertFalse(plan.wipeWallet)
@@ -57,21 +57,21 @@ class BlockchainResetShutdownPolicyTest {
     }
 
     @Test
-    fun rescan_keepsDashjStores_forBothArmOutcomes() {
-        assertFalse(rescan(armed = true).deleteStores)
-        assertFalse(rescan(armed = false).deleteStores)
+    fun rescan_keepsDashjStores_forBothOweOutcomes() {
+        assertFalse(rescan(owed = true).deleteStores)
+        assertFalse(rescan(owed = false).deleteStores)
     }
 
     @Test
-    fun wipe_deletesStoresAndWipes_regardlessOfArmAndResetFlag() {
+    fun wipe_deletesStoresAndWipes_regardlessOfOweAndResetFlag() {
         for (reset in listOf(false, true)) {
-            for (armed in listOf(false, true)) {
+            for (owed in listOf(false, true)) {
                 val plan = BlockchainResetShutdownPolicy.plan(
                     resetBlockchainOnShutdown = reset,
                     deleteWalletFileOnShutdown = true,
-                    sdkRescanArmedForReset = armed
+                    sdkRescanOwedForReset = owed
                 )
-                val case = "reset=$reset armed=$armed"
+                val case = "reset=$reset owed=$owed"
                 assertTrue(case, plan.deleteStores)
                 assertTrue(case, plan.wipeWallet)
                 assertTrue(case, plan.resetMnListsAndState)
@@ -83,13 +83,13 @@ class BlockchainResetShutdownPolicyTest {
 
     @Test
     fun neitherFlag_doesNothing() {
-        for (armed in listOf(false, true)) {
+        for (owed in listOf(false, true)) {
             assertEquals(
                 BlockchainResetShutdownPolicy.NOTHING,
                 BlockchainResetShutdownPolicy.plan(
                     resetBlockchainOnShutdown = false,
                     deleteWalletFileOnShutdown = false,
-                    sdkRescanArmedForReset = armed
+                    sdkRescanOwedForReset = owed
                 )
             )
         }
@@ -98,49 +98,49 @@ class BlockchainResetShutdownPolicyTest {
         }
     }
 
-    // --- arm-result mapping ---
+    // --- owe-result mapping ---
 
     @Test
-    fun arm_preCutover_isFalse_andDoesNotArm() = runBlocking {
-        var armCalled = false
-        val result = BlockchainResetShutdownPolicy.armSdkRescan(
+    fun owe_preCutover_isFalse_andOwesNothing() = runBlocking {
+        var oweCalled = false
+        val result = BlockchainResetShutdownPolicy.oweSdkRescan(
             sdkOwnsL1 = { false },
-            arm = { armCalled = true; true },
+            owe = { oweCalled = true; true },
             onFailure = { fail("no failure expected") }
         )
         assertFalse(result)
-        assertFalse("pre-cutover must not arm an SDK rescan", armCalled)
+        assertFalse("pre-cutover must not owe an SDK rescan", oweCalled)
     }
 
     @Test
-    fun arm_false_isFalse() = runBlocking {
+    fun owe_false_isFalse() = runBlocking {
         assertFalse(
-            BlockchainResetShutdownPolicy.armSdkRescan(
+            BlockchainResetShutdownPolicy.oweSdkRescan(
                 sdkOwnsL1 = { true },
-                arm = { false },
+                owe = { false },
                 onFailure = { fail("no failure expected") }
             )
         )
     }
 
     @Test
-    fun arm_true_isTrue() = runBlocking {
+    fun owe_true_isTrue() = runBlocking {
         assertTrue(
-            BlockchainResetShutdownPolicy.armSdkRescan(
+            BlockchainResetShutdownPolicy.oweSdkRescan(
                 sdkOwnsL1 = { true },
-                arm = { true },
+                owe = { true },
                 onFailure = { fail("no failure expected") }
             )
         )
     }
 
     @Test
-    fun arm_throwing_isFalse_andReported() = runBlocking {
+    fun owe_throwing_isFalse_andReported() = runBlocking {
         val boom = IllegalStateException("boom")
         var reported: Throwable? = null
-        val result = BlockchainResetShutdownPolicy.armSdkRescan(
+        val result = BlockchainResetShutdownPolicy.oweSdkRescan(
             sdkOwnsL1 = { true },
-            arm = { throw boom },
+            owe = { throw boom },
             onFailure = { reported = it }
         )
         assertFalse(result)
@@ -151,9 +151,9 @@ class BlockchainResetShutdownPolicyTest {
     fun ownershipCheck_throwing_isFalse_andReported() = runBlocking {
         val boom = RuntimeException("store read failed")
         var reported: Throwable? = null
-        val result = BlockchainResetShutdownPolicy.armSdkRescan(
+        val result = BlockchainResetShutdownPolicy.oweSdkRescan(
             sdkOwnsL1 = { throw boom },
-            arm = { fail("must not arm after a failed ownership check"); true },
+            owe = { fail("must not owe after a failed ownership check"); true },
             onFailure = { reported = it }
         )
         assertFalse(result)
@@ -161,12 +161,12 @@ class BlockchainResetShutdownPolicyTest {
     }
 
     @Test
-    fun arm_cancellation_isRethrown_andNotReported() = runBlocking {
+    fun owe_cancellation_isRethrown_andNotReported() = runBlocking {
         val cancel = CancellationException("cancelled")
         try {
-            BlockchainResetShutdownPolicy.armSdkRescan(
+            BlockchainResetShutdownPolicy.oweSdkRescan(
                 sdkOwnsL1 = { true },
-                arm = { throw cancel },
+                owe = { throw cancel },
                 onFailure = { fail("cancellation must not be reported as a failure") }
             )
             fail("CancellationException must be rethrown")

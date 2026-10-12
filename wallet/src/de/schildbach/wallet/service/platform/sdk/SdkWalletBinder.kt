@@ -1700,15 +1700,20 @@ class SdkWalletBinder internal constructor(
     }
 
     /**
-     * The SDK half of a backup-recovered wallet's owed reset. Arming
-     * directly ([armSpvRescanForBlockchainReset]) needs a bound or loaded
-     * wallet, which the blockchain service does not have when it performs
-     * that reset, so the rescan is owed durably
+     * The SDK half of a reset that must rewind the SPV filter watermark to
+     * birth: a backup-recovered wallet's owed reset, and the user-facing
+     * Settings → Rescan Blockchain. [DashSdkService.armSpvRescan] rewinds
+     * only the in-memory checkpoint, and both resets are followed by a
+     * teardown that stops the engines (and, for a rescan, clears databases
+     * only the replay refills), so the rescan is owed durably
      * ([DashPayConfig.SDK_RECOVERY_RESCAN_OWED]): [ensureScanMayAdvance]
      * holds the scan until the rewind to birth is armed, and the bind's
      * widening step repays it too. It clears only once the rewind is durable
      * ([repayOwedRescans]), and any arm made before this call is discarded. When this process
-     * already widened a bound wallet, it is paid at once.
+     * already widened a bound wallet, it is paid at once. Every arm, now or
+     * deferred, starts from [resolveBirthTimeSecs] (so a wallet-creation date
+     * the user picked on the rescan dialog is honoured) and starts the
+     * last-known-balance persist hold ([DashSdkService.spvRescanArmedWithin]).
      *
      * This debt is kept apart from a failed widening's best-effort
      * [DashPayConfig.SDK_GAP_WIDEN_RESCAN_OWED] (review, 2026-10-02, second
@@ -1718,11 +1723,11 @@ class SdkWalletBinder internal constructor(
      * Returns whether the debt is recorded and, when this process already
      * widened the wallet, paid; false when the write failed or the immediate
      * arm failed (review, 2026-10-02). In the latter case the debt stays
-     * recorded, so the caller keeps the reset pending, and
-     * [ensureScanMayAdvance] holds the scan until it is repaid. Never throws
-     * except cancellation.
+     * recorded, so the caller keeps the reset pending (a rescan keeps its
+     * databases), and [ensureScanMayAdvance] holds the scan until it is
+     * repaid. Never throws except cancellation.
      */
-    suspend fun oweSpvRescanForRecoveryReset(): Boolean = wideningMutex.withLock {
+    suspend fun oweSpvRescanForReset(): Boolean = wideningMutex.withLock {
         try {
             dashPayConfig.set(DashPayConfig.SDK_RECOVERY_RESCAN_OWED, true)
             // An arm made before this reset does not pay it.
@@ -1731,7 +1736,7 @@ class SdkWalletBinder internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            log.warn("recovery reset: could not record the owed SDK rescan", t)
+            log.warn("SDK reset: could not record the owed SDK rescan", t)
             return@withLock false
         }
         try {
@@ -1745,7 +1750,7 @@ class SdkWalletBinder internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            log.warn("recovery reset: immediate rescan arm failed; the debt stays owed", t)
+            log.warn("SDK reset: immediate rescan arm failed; the debt stays owed", t)
             false
         }
     }
@@ -2119,48 +2124,6 @@ class SdkWalletBinder internal constructor(
     private fun discoveryRetryDelayMs(attempt: Int): Long =
         (DISCOVERY_RETRY_BASE_DELAY_MS shl (attempt - 1).coerceIn(0, 20))
             .coerceAtMost(DISCOVERY_RETRY_MAX_DELAY_MS)
-
-    /**
-     * The SDK half of the user-facing "Reset/Rescan blockchain" action.
-     *
-     * Post-cutover a reset keeps the dashj SPV block/header stores and the
-     * display history (a reconcile walk is requested in place of the clear),
-     * and the remaining dashj-side reset work does not rewind the SDK: its
-     * engine keeps the `WalletEntity.syncedHeight` watermark and stays
-     * SYNCED unless an SDK rescan is armed, so without this arm the user
-     * sees nothing happen (field 13:10:04Z on the mainnet device).
-     * This arms the SAME SPV filter-watermark rewind the address-window
-     * heal uses ([DashSdkService.armSpvRescan]) so the reset actually
-     * replays SDK history — from the persisted wallet-creation date when
-     * the user picked one on the rescan dialog ([resolveBirthTimeSecs]
-     * reads the store `SettingsFragment` just wrote), else the wallet's
-     * birth. The arm also starts the last-known-balance persist hold
-     * ([DashSdkService.spvRescanArmedWithin]), so a mid-replay partial
-     * figure can never be persisted as the launch seed.
-     *
-     * Uses the binder's bound wallet id when a bind pass latched one this
-     * process, else the single loaded SDK wallet. Returns whether the arm
-     * ran; never throws.
-     */
-    suspend fun armSpvRescanForBlockchainReset(): Boolean = try {
-        val walletIdHex = boundWalletIdHex ?: sdkService.loadedWalletIds().singleOrNull()
-        if (walletIdHex == null) {
-            log.info("blockchain-reset rescan skipped: no SDK wallet bound or loaded")
-            false
-        } else {
-            val armed = sdkService.armSpvRescan(walletIdHex, resolveBirthTimeSecs())
-            log.info(
-                "blockchain-reset rescan arm on {}…: armed={}",
-                walletIdHex.take(8), armed
-            )
-            armed
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (t: Throwable) {
-        log.warn("blockchain-reset rescan arm failed", t)
-        false
-    }
 
     private suspend fun anyFlagEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||

@@ -642,12 +642,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     /**
      * The SDK half of the recovery reset: when the SDK owns L1 its filter
      * watermark must rewind, owed durably to the next bind
-     * ([SdkWalletBinder.oweSpvRescanForRecoveryReset]). True when nothing is
+     * ([SdkWalletBinder.oweSpvRescanForReset]). True when nothing is
      * owed (pre-cutover, dashj's store wipe is the whole reset) or the debt
      * is recorded. A failed ownership read counts as a failure.
      */
     private suspend fun oweSdkRescanIfCutOver(): Boolean = try {
-        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForRecoveryReset()
+        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForReset()
     } catch (e: kotlinx.coroutines.CancellationException) {
         throw e
     } catch (t: Throwable) {
@@ -938,10 +938,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Volatile
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
-    // True only when ACTION_RESET_BLOCKCHAIN armed an SDK replay; gates the
-    // rescan database clear (nothing else repopulates them).
+    // True only when ACTION_RESET_BLOCKCHAIN durably owed an SDK replay; gates
+    // the rescan database clear (nothing else repopulates them).
     @Volatile
-    private var sdkRescanArmedForReset = false
+    private var sdkRescanOwedForReset = false
     // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
     @Volatile
     private var deleteWalletFileOnShutdown = false
@@ -3138,19 +3138,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     /**
      * The SDK half of ACTION_RESET_BLOCKCHAIN: when the SDK owns L1
-     * (cutover committed + SDK L1 engine enabled), arm the SPV filter
-     * rescan ([SdkWalletBinder.armSpvRescanForBlockchainReset]) so the
-     * user-facing reset replays SDK history — pre-cutover it is a no-op (a
-     * shadow-only SDK must not be forced through a full rescan, and the
-     * dashj blockstore is no longer deleted on reset either).
-     * Never throws; returns true only when an SDK replay was armed, so the
-     * caller knows whether clearing the rescan databases is safe.
+     * (cutover committed + SDK L1 engine enabled), owe the SPV filter
+     * rescan durably ([SdkWalletBinder.oweSpvRescanForReset]) so the
+     * user-facing reset replays SDK history even when the engines stop
+     * before the in-memory rewind persists: the scan gate holds the next
+     * scan until the rewind is armed, and the debt clears only once it is
+     * durable. Pre-cutover it is a no-op (a shadow-only SDK must not be
+     * forced through a full rescan, and the dashj blockstore is no longer
+     * deleted on reset either). Never throws; returns true only when the SDK
+     * replay is owed, so the caller knows whether clearing the rescan
+     * databases is safe.
      */
-    private suspend fun armSdkRescanForResetIfCutOver(): Boolean =
-        BlockchainResetShutdownPolicy.armSdkRescan(
+    private suspend fun oweSdkRescanForResetIfCutOver(): Boolean =
+        BlockchainResetShutdownPolicy.oweSdkRescan(
             sdkOwnsL1 = { cutoverCoordinator.sdkOwnsL1Flow().first() },
-            arm = { sdkWalletBinder.armSpvRescanForBlockchainReset() },
-            onFailure = { t -> log.warn("SDK rescan arm for blockchain reset failed", t) }
+            owe = { sdkWalletBinder.oweSpvRescanForReset() },
+            onFailure = { t -> log.warn("SDK rescan for blockchain reset could not be owed", t) }
         )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -3233,15 +3236,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("will reset blockchain state on service shutdown")
                     resetBlockchainOnShutdown = true
                     // The dashj blockstore is kept (no dashj rescan); the
-                    // reset is the SDK filter rescan armed here plus the
+                    // reset is the SDK filter rescan owed here plus the
                     // database/MN-list cleanup on shutdown.
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
-                    // Without an armed replay the databases are kept on
+                    // Without an owed replay the databases are kept on
                     // shutdown, since nothing would repopulate them.
-                    sdkRescanArmedForReset = armSdkRescanForResetIfCutOver()
-                    if (!sdkRescanArmedForReset) {
-                        log.warn("no SDK replay armed for blockchain reset; rescan databases will be kept")
+                    sdkRescanOwedForReset = oweSdkRescanForResetIfCutOver()
+                    if (!sdkRescanOwedForReset) {
+                        log.warn("no SDK replay owed for blockchain reset; rescan databases will be kept")
                     }
                     stopSelf()
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
@@ -3518,7 +3521,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val shutdownPlan = BlockchainResetShutdownPolicy.plan(
                     resetBlockchainOnShutdown = resetBlockchainOnShutdown,
                     deleteWalletFileOnShutdown = deleteWalletFileOnShutdown,
-                    sdkRescanArmedForReset = sdkRescanArmedForReset
+                    sdkRescanOwedForReset = sdkRescanOwedForReset
                 )
                 if (shutdownPlan.resetMnListsAndState) {
                     if (shutdownPlan.deleteStores) {
@@ -3546,9 +3549,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         //Clear the blockchain identity
                         application.clearDatabasesForRescan()
                     } else if (shutdownPlan.keepRescanDatabases) {
-                        // No SDK replay armed and dashj keeps its stores (no
+                        // No SDK replay owed and dashj keeps its stores (no
                         // wallet.reset()), so a clear would never be refilled.
-                        log.warn("no SDK replay armed; keeping rescan databases")
+                        log.warn("no SDK replay owed; keeping rescan databases")
                     }
                     resetBlockchainState()
                 }

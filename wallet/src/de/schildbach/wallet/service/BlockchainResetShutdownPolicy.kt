@@ -25,8 +25,8 @@ import kotlinx.coroutines.CancellationException
  * @property deleteStores delete the dashj SPV block/header store files
  * @property resetMnListsAndState reset the masternode lists and the blockchain state
  * @property wipeWallet stop the SDK engines and finish the wallet wipe
- * @property clearRescanDatabases clear the rescan databases (an SDK replay will refill them)
- * @property keepRescanDatabases a reset with no SDK replay armed: keep the databases, warn
+ * @property clearRescanDatabases clear the rescan databases (an owed SDK replay will refill them)
+ * @property keepRescanDatabases a reset with no SDK replay owed: keep the databases, warn
  */
 internal data class BlockchainResetShutdownPlan(
     val deleteStores: Boolean,
@@ -48,16 +48,16 @@ internal object BlockchainResetShutdownPolicy {
     /**
      * Pure, so every combination is pinned by test.
      *
-     * - A wipe deletes the dashj stores and runs the wipe, whatever the arm result.
+     * - A wipe deletes the dashj stores and runs the wipe, whatever the owe result.
      * - A reset (rescan) always keeps the dashj stores — only the SDK replays.
-     *   The rescan databases are cleared only when an SDK replay was armed;
-     *   otherwise nothing would ever refill them, so they are kept.
+     *   The rescan databases are cleared only when an SDK replay is durably
+     *   owed; otherwise nothing would ever refill them, so they are kept.
      * - Neither flag: nothing.
      */
     fun plan(
         resetBlockchainOnShutdown: Boolean,
         deleteWalletFileOnShutdown: Boolean,
-        sdkRescanArmedForReset: Boolean
+        sdkRescanOwedForReset: Boolean
     ): BlockchainResetShutdownPlan = when {
         deleteWalletFileOnShutdown -> BlockchainResetShutdownPlan(
             deleteStores = true,
@@ -70,24 +70,26 @@ internal object BlockchainResetShutdownPolicy {
             deleteStores = false,
             resetMnListsAndState = true,
             wipeWallet = false,
-            clearRescanDatabases = sdkRescanArmedForReset,
-            keepRescanDatabases = !sdkRescanArmedForReset
+            clearRescanDatabases = sdkRescanOwedForReset,
+            keepRescanDatabases = !sdkRescanOwedForReset
         )
         else -> NOTHING
     }
 
     /**
-     * The arm-result mapping of ACTION_RESET_BLOCKCHAIN: true only when the SDK
-     * owns L1 and [arm] armed a replay. Pre-cutover ([sdkOwnsL1] false), a false
-     * arm, or a failure (reported to [onFailure]) all map to false. Never throws,
-     * except that a [CancellationException] is rethrown.
+     * The owe-result mapping of ACTION_RESET_BLOCKCHAIN: true only when the
+     * SDK owns L1 and [owe] durably recorded the replay, so a process or
+     * engine stop before the rewind persists cannot lose it. Pre-cutover
+     * ([sdkOwnsL1] false, nothing is owed), a false owe, or a failure
+     * (reported to [onFailure]) all map to false. Never throws, except that a
+     * [CancellationException] is rethrown.
      */
-    suspend fun armSdkRescan(
+    suspend fun oweSdkRescan(
         sdkOwnsL1: suspend () -> Boolean,
-        arm: suspend () -> Boolean,
+        owe: suspend () -> Boolean,
         onFailure: (Throwable) -> Unit
     ): Boolean = try {
-        sdkOwnsL1() && arm()
+        sdkOwnsL1() && owe()
     } catch (e: CancellationException) {
         throw e
     } catch (t: Throwable) {
