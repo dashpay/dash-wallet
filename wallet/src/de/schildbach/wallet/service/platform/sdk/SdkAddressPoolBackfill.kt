@@ -67,13 +67,21 @@ internal object SdkAddressPoolBackfill {
         /** Indices to insert, ascending. */
         val missing: List<Int>,
         /**
-         * How many of [missing] lie below the highest stored index. These
-         * are the true holes: the engine loaded the pool without them, so
-         * this process does not watch them. Indices above it are the
-         * widened tail, which the engine derived in memory this session.
+         * How many of [missing] lie below the hole ceiling (see [plan]).
+         * These are the true holes: the engine loaded the pool without them,
+         * so this process does not watch them. Indices at or above it are
+         * the widened tail, which the engine derived in memory this session.
          */
-        val holesBelowStoredMax: Int
+        val holes: Int
     )
+
+    /**
+     * The highest index stored for a pool when the engine loaded it, or -1
+     * for a pool with no rows yet. Captured before this process's backfill
+     * writes anything or its scan persists new rows, it separates the true
+     * holes from rows that are only late to reach the database.
+     */
+    fun holeCeiling(rows: List<StoredRow>): Int = rows.maxOfOrNull { it.addressIndex } ?: -1
 
     /**
      * The serialized account key the SDK stores in
@@ -122,15 +130,21 @@ internal object SdkAddressPoolBackfill {
      * the highest used index plus [gapLimit], whichever is higher.
      * Persisting the widened tail too keeps rows that sync derives later
      * from landing above a new run of missing indices.
+     *
+     * Missing indices below [holeCeiling] count as [PoolPlan.holes]. It
+     * defaults to the current highest stored index; a caller that has
+     * already seen this pool earlier in the process passes the value it
+     * captured then ([holeCeiling]), so rows that sync persisted since
+     * cannot turn the in-memory tail into apparent holes.
      */
-    fun plan(rows: List<StoredRow>, gapLimit: Int): PoolPlan {
+    fun plan(rows: List<StoredRow>, gapLimit: Int, holeCeiling: Int = holeCeiling(rows)): PoolPlan {
         if (rows.isEmpty()) return PoolPlan(emptyList(), 0)
         val present = rows.mapTo(HashSet(rows.size)) { it.addressIndex }
         val storedMax = present.max()
         val highestUsed = rows.filter { it.isUsed }.maxOfOrNull { it.addressIndex } ?: -1
         val upTo = maxOf(storedMax, highestUsed + gapLimit)
         val missing = (0..upTo).filter { it !in present }
-        return PoolPlan(missing, missing.count { it < storedMax })
+        return PoolPlan(missing, missing.count { it < holeCeiling })
     }
 
     /** The address at [addressIndex] on [chain] (0 external, 1 internal) of [account]. */

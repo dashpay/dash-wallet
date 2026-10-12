@@ -123,7 +123,7 @@ class SdkAddressPoolBackfillTest {
         val plan = SdkAddressPoolBackfill.plan(rows, gapLimit = 3)
 
         assertEquals(listOf(3, 4, 6, 7, 9, 10, 11), plan.missing)
-        assertEquals("3, 4, 6, 7 are holes the reload lost", 4, plan.holesBelowStoredMax)
+        assertEquals("3, 4, 6, 7 are holes the reload lost", 4, plan.holes)
     }
 
     @Test
@@ -134,7 +134,7 @@ class SdkAddressPoolBackfillTest {
         val plan = SdkAddressPoolBackfill.plan(rows, gapLimit = 1000)
 
         assertEquals((923..999).toList(), plan.missing)
-        assertEquals(77, plan.holesBelowStoredMax)
+        assertEquals(77, plan.holes)
     }
 
     @Test
@@ -146,11 +146,29 @@ class SdkAddressPoolBackfillTest {
     }
 
     @Test
+    fun plan_holeCeiling_keepsRowsTheScanPersistedLaterFromCountingAsHoles() {
+        // A wallet created in this process: when the first backfill ran its
+        // pool had no rows (ceiling -1). By the retry, the scan has persisted
+        // used rows 0..5 and the window it derived past them (40..105), while
+        // 6..39, derived in memory by the widening, never reached the
+        // database. They are missing but not holes: the engine has them.
+        val rows = (0..5).map { row(it, used = true) } + (40..105).map { row(it) }
+        val late = SdkAddressPoolBackfill.plan(rows, gapLimit = 100, holeCeiling = -1)
+        assertEquals((6..39).toList(), late.missing)
+        assertEquals(0, late.holes)
+
+        // The same rows, seen first on a later load, are holes.
+        assertEquals(34, SdkAddressPoolBackfill.plan(rows, gapLimit = 100).holes)
+        assertEquals(105, SdkAddressPoolBackfill.holeCeiling(rows))
+        assertEquals(-1, SdkAddressPoolBackfill.holeCeiling(emptyList()))
+    }
+
+    @Test
     fun plan_unusedPool_isFilledThroughTheGap() {
         // A BIP32 account nobody used: 30 rows from creation, gap 100.
         val plan = SdkAddressPoolBackfill.plan((0..29).map { row(it) }, gapLimit = 100)
         assertEquals((30..99).toList(), plan.missing)
-        assertEquals(0, plan.holesBelowStoredMax)
+        assertEquals(0, plan.holes)
     }
 
     @Test

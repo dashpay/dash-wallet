@@ -176,7 +176,14 @@ data class AddressPoolBackfillResult(
      */
     val holesFilled: Int,
     /** Pools left untouched because the account key failed to reproduce their stored addresses. */
-    val poolsRefused: Int
+    val poolsRefused: Int,
+    /**
+     * Widened pools with no stored rows yet: on a wallet created in this
+     * process, the SDK may not have written its accounts' initial addresses
+     * when the backfill first runs. Their window is still unpersisted, so
+     * the caller retries until this reaches zero.
+     */
+    val poolsPending: Int = 0
 )
 
 /**

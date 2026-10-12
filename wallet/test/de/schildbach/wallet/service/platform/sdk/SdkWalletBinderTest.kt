@@ -341,6 +341,7 @@ class SdkWalletBinderTest {
         deviceProvablyLocked: () -> Boolean = { false },
         reportNonFatal: (Throwable) -> Unit = {},
         processToken: String = "test-process",
+        backfillRetryDelayMs: Long = 1L,
         scope: CoroutineScope
     ) = SdkWalletBinder(
         sdkService = sdk,
@@ -357,7 +358,8 @@ class SdkWalletBinderTest {
         owedRescanWatchIntervalMs = owedRescanWatchIntervalMs,
         deviceProvablyLocked = deviceProvablyLocked,
         reportNonFatal = reportNonFatal,
-        processToken = processToken
+        processToken = processToken,
+        backfillRetryDelayMs = backfillRetryDelayMs
     )
 
     // ── Phase 1a item 4: no first bind while the device is locked ─────
@@ -2133,6 +2135,63 @@ class SdkWalletBinderTest {
         assertEquals(1, sdk.backfillCalls)
         assertEquals("first", poolHolesRescanPending)
         assertEquals(0, sdk.armRescanCalls)
+    }
+
+    /** Polls until [condition] holds; the backfill retry runs on the binder's scope. */
+    private suspend fun awaitUntil(condition: () -> Boolean) {
+        kotlinx.coroutines.withTimeout(5_000) { while (!condition()) delay(1) }
+    }
+
+    private fun pending(pools: Int) = AddressPoolBackfillResult(
+        inserted = 0, holesFilled = 0, poolsRefused = 0, poolsPending = pools
+    )
+
+    @Test
+    fun backfill_poolsNotStoredYet_retriesInThisProcessUntilTheyAre() = runBlocking {
+        // A wallet created in this process: right after the widening, the SDK
+        // has not yet written its accounts' initial rows, so the backfill has
+        // nothing to extend. Without a retry the window stays unpersisted
+        // until the next launch finds it as holes and owes a needless rescan.
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val passes = ArrayDeque(listOf(pending(6), pending(2)))
+        sdk.onBackfill = {
+            passes.removeFirstOrNull() ?: AddressPoolBackfillResult(inserted = 1170, holesFilled = 0, poolsRefused = 0)
+        }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+
+        awaitUntil { sdk.backfillCalls == 3 }
+        delay(20)
+        assertEquals("stops once every pool is stored", 3, sdk.backfillCalls)
+        assertEquals("rows the engine already holds owe no rescan", 0, sdk.armRescanCalls)
+        assertNull(poolHolesRescanPending)
+    }
+
+    @Test
+    fun backfill_poolsNeverStored_retriesAreBounded() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { pending(6) }
+        binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
+
+        val bound = 1 + SdkWalletBinder.ADDRESS_POOL_BACKFILL_RETRY_ATTEMPTS
+        awaitUntil { sdk.backfillCalls == bound }
+        delay(20)
+        assertEquals(bound, sdk.backfillCalls)
+    }
+
+    @Test
+    fun backfill_retry_stopsWhenTheWalletIsRecreated() = runBlocking {
+        val sdk = readySdk()
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        sdk.onBackfill = { pending(6) }
+        val binder = binder(sdk, config = config, backfillRetryDelayMs = 50L, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.backfillCalls)
+
+        binder.resetForWalletRecreation()
+        delay(200)
+        assertEquals("the retry found the wallet no longer widened and stopped", 1, sdk.backfillCalls)
     }
 
     @Test
