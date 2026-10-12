@@ -290,7 +290,8 @@ class SdkWalletSecretsWipeTest {
         fence: WalletSecretWriteFence,
         store: FakeStore,
         quiesceTimeoutMs: Long = 5_000L,
-        outcomes: MutableList<SdkSecretsWipeOutcome> = mutableListOf()
+        outcomes: MutableList<SdkSecretsWipeOutcome> = mutableListOf(),
+        quiesceSdk: suspend () -> Boolean = { true }
     ): Boolean {
         var markedComplete = false
         try {
@@ -302,6 +303,7 @@ class SdkWalletSecretsWipeTest {
                         fence = fence,
                         quiesceTimeoutMs = quiesceTimeoutMs,
                         teardown = { clearForWalletWipe { throw IllegalStateException("removeWallet failed") } },
+                        quiesceSdk = quiesceSdk,
                         erase = { SdkWalletSecretsWipe.erase({ store }, RawFile()::delete) }
                     )
                     outcomes += outcome
@@ -415,5 +417,162 @@ class SdkWalletSecretsWipeTest {
         assertTrue("the fence stays raised", fence.isRaised)
         release.complete(Unit)
         stubborn.join()
+    }
+
+    // ── SDK quiescence: SDK-owned persistence vs the erase ───────────────
+
+    /**
+     * Stand-in for the SDK runtime: while running with the old wallet loaded,
+     * its persistence deriver can write a key into the store at any time
+     * (outside the app's permits). Mirrors DashSdkServiceImpl.quiesceForWalletWipe.
+     */
+    private class FakeSdkRuntime(
+        var walletLoaded: Boolean,
+        private val stopSucceeds: Boolean = true,
+        private val events: MutableList<String>
+    ) {
+        var running = true
+        var restartsRefused = false
+
+        suspend fun quiesceForWalletWipe(): Boolean {
+            events += "sdk-quiesce"
+            restartsRefused = true
+            if (!running || !walletLoaded) return true
+            if (!stopSucceeds) return false
+            running = false
+            return true
+        }
+
+        /** The persistence deriver firing a changeset-commit key write. */
+        fun deriverWrite(store: FakeStore, key: String): Boolean {
+            if (!running || !walletLoaded) return false
+            store.entries[key] = "ciphertext"
+            return true
+        }
+
+        fun restart(): Boolean {
+            if (restartsRefused) return false
+            running = true
+            return true
+        }
+    }
+
+    private suspend fun fencedWipe(
+        store: FakeStore,
+        runtime: FakeSdkRuntime,
+        events: MutableList<String>,
+        cascadeSucceeds: Boolean,
+        quiesceSdk: suspend () -> Boolean = { runtime.quiesceForWalletWipe() }
+    ): Pair<SdkSecretsWipeOutcome?, Boolean> {
+        var outcome: SdkSecretsWipeOutcome? = null
+        var markedComplete = false
+        try {
+            WalletWipeSequence.finish(
+                pending = { true },
+                detachWallet = { },
+                destroy = {
+                    outcome = fencedSdkSecretsWipe(
+                        fence = WalletSecretWriteFence(),
+                        quiesceTimeoutMs = 5_000L,
+                        teardown = {
+                            events += "teardown"
+                            clearForWalletWipe {
+                                if (!cascadeSucceeds) throw IllegalStateException("removeWallet failed")
+                                store.removeWalletEntries()
+                                runtime.walletLoaded = false
+                            }
+                        },
+                        quiesceSdk = quiesceSdk,
+                        erase = {
+                            events += "erase"
+                            SdkWalletSecretsWipe.erase({ store }, RawFile()::delete)
+                        }
+                    )
+                    WalletApplicationExt.confirmWipeDestroyed(checkNotNull(outcome)) { }
+                },
+                markComplete = { markedComplete = true }
+            )
+        } catch (expected: IOException) {
+            // marker retained
+        }
+        return outcome to markedComplete
+    }
+
+    @Test
+    fun `a failed cascade stops the still-running SDK before the erase so its deriver cannot write after it`() =
+        runBlocking {
+            val events = mutableListOf<String>()
+            val store = oldWalletStore()
+            val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+
+            val (outcome, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = false)
+
+            assertEquals(listOf("teardown", "sdk-quiesce", "erase"), events)
+            assertEquals(SdkSecretsWipeOutcome.DELETED_ALL, outcome)
+            assertTrue(markerCleared)
+            assertFalse("the runtime was stopped", runtime.running)
+            // The deriver fires after the erase: nothing is running to do it,
+            // and nothing can bring the runtime back during the wipe.
+            assertFalse(runtime.deriverWrite(store, lateKey))
+            assertFalse("SDK restarts are refused", runtime.restart())
+            assertFalse(runtime.deriverWrite(store, lateKey))
+            assertTrue("no old-wallet secret may land after the erase", store.entries.isEmpty())
+        }
+
+    @Test
+    fun `an SDK runtime that cannot be stopped keeps the wipe marker`() = runBlocking {
+        val events = mutableListOf<String>()
+        val store = oldWalletStore()
+        val runtime = FakeSdkRuntime(walletLoaded = true, stopSucceeds = false, events = events)
+
+        val (outcome, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = false)
+
+        assertEquals(SdkSecretsWipeOutcome.FAILED, outcome)
+        assertFalse("the wipe marker must be retained", markerCleared)
+        assertTrue("the erase still ran", store.deleteAllCalls == 1)
+    }
+
+    @Test
+    fun `an SDK quiesce that times out or throws keeps the wipe marker`() = runBlocking {
+        for (quiesce in listOf<suspend () -> Boolean>({ false }, { throw IllegalStateException("close failed") })) {
+            val events = mutableListOf<String>()
+            val store = oldWalletStore()
+            val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+
+            val (outcome, markerCleared) =
+                fencedWipe(store, runtime, events, cascadeSucceeds = false, quiesceSdk = quiesce)
+
+            assertEquals(SdkSecretsWipeOutcome.FAILED, outcome)
+            assertFalse(markerCleared)
+        }
+    }
+
+    @Test
+    fun `a clean cascade keeps the store and the defect record without stopping the SDK`() = runBlocking {
+        val events = mutableListOf<String>()
+        val store = oldWalletStore()
+        val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+
+        val (outcome, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = true)
+
+        assertEquals(listOf("teardown", "sdk-quiesce", "erase"), events)
+        assertEquals(SdkSecretsWipeOutcome.VERIFIED_CLEAN_KEPT, outcome)
+        assertTrue(markerCleared)
+        assertTrue("no wallet left to persist for — the runtime is left running", runtime.running)
+        assertEquals(setOf("masterkeylockdefect"), store.entries.keys)
+        assertEquals(0, store.deleteAllCalls)
+    }
+
+    @Test
+    fun `an unproven SDK quiesce also fails a verified-clean outcome`() = runBlocking {
+        val events = mutableListOf<String>()
+        val store = oldWalletStore()
+        val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+
+        val (outcome, markerCleared) =
+            fencedWipe(store, runtime, events, cascadeSucceeds = true, quiesceSdk = { false })
+
+        assertEquals(SdkSecretsWipeOutcome.FAILED, outcome)
+        assertFalse(markerCleared)
     }
 }

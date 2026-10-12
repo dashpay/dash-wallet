@@ -203,6 +203,59 @@ class SdkTransparentUsernameCreationTest {
     }
 
     @Test
+    fun `a throwing tracked-lock recheck after a signing refusal reports funding unresolved, not pre-broadcast`() =
+        runTest {
+            val source = source(lockAfterFailure = null)
+            // Resume gate SUCCEEDS (no lock → fresh build), the fresh build's
+            // signing is refused, then the recovery re-check THROWS.
+            var lookups = 0
+            coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } answers {
+                if (++lookups == 1) null else throw IllegalStateException("asset-lock store unavailable")
+            }
+            coEvery { source.registerWithWalletFunding(walletIdHex, feeDuffs, 0, 0, any()) } throws genuinelyLocked
+            val creation = creation(source)
+
+            val result = creation.createUsernameTransparent(label)
+
+            assertTrue("re-submittable outcome expected, got $result", result is SdkWriteResult.NotBroadcast)
+            val reason = (result as SdkWriteResult.NotBroadcast).reason
+            assertEquals(SdkTransparentUsernameCreation.REASON_FUNDING_UNRESOLVED_RESUMABLE, reason)
+            assertFalse("never the pre-broadcast classifier", reason.contains("considers the device locked"))
+            assertTrue(SdkTransparentUsernameCreation.isFundsPossiblyCommittedReason(reason))
+            coVerify(exactly = 2) { source.unresolvedRegistrationAssetLock(walletIdHex, 0) }
+            coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+            assertTrue("no auto-resume back-off", pauses.isEmpty())
+
+            // The next submit: the resume gate finds the lock the failed
+            // attempt had committed and resumes it — no second fresh payment.
+            coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } returns lock
+            coEvery { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) } returns identityId
+
+            val retry = creation.createUsernameTransparent(label)
+
+            assertTrue("retry must be Broadcast, got $retry", retry is SdkWriteResult.Broadcast)
+            coVerify(exactly = 1) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        }
+
+    @Test
+    fun `a throwing recheck after a refused resume reports the funds locked`() = runTest {
+        val source = source(lockAfterFailure = null)
+        var lookups = 0
+        coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } answers {
+            if (++lookups == 1) lock else throw IllegalStateException("asset-lock store unavailable")
+        }
+        coEvery { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) } throws genuinelyLocked
+
+        val result = creation(source).createUsernameTransparent(label)
+
+        assertEquals(
+            SdkTransparentUsernameCreation.REASON_FUNDS_LOCKED_RESUMABLE,
+            (result as SdkWriteResult.NotBroadcast).reason
+        )
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `a genuinely locked device is not auto-retried`() = runTest {
         val source = source(lockAfterFailure = lock)
         coEvery { source.registerWithWalletFunding(walletIdHex, feeDuffs, 0, 0, any()) } throws genuinelyLocked

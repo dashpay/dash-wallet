@@ -194,6 +194,14 @@ class SdkWalletSecretsEraser @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sdkService: DashSdkService
 ) {
+    /**
+     * Reset Wallet's SDK quiescence step ([DashSdkService.quiesceForWalletWipe]),
+     * run before [eraseForWalletWipe]: true only when no SDK-owned work (a
+     * still-loaded wallet manager's persistence deriver, sync, discovery) can
+     * write a wallet secret after the erase, and no SDK bootstrap can follow.
+     */
+    suspend fun quiesceSdkForWalletWipe(timeoutMs: Long): Boolean = sdkService.quiesceForWalletWipe(timeoutMs)
+
     suspend fun eraseForWalletWipe(rawDeleteFile: () -> Boolean): SdkSecretsWipeOutcome =
         SdkWalletSecretsWipe.erase(
             openStore = {

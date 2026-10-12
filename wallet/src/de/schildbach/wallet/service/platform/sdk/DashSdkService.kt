@@ -326,6 +326,32 @@ interface DashSdkService {
      */
     suspend fun stop()
 
+    /**
+     * Reset Wallet's SDK quiescence step, run after the wallet-removal
+     * cascade and BEFORE the secrets store is verified/erased
+     * ([fencedSdkSecretsWipe]). Returns true only when no SDK-owned work can
+     * write a wallet secret any more:
+     *
+     * - every later bootstrap is refused first
+     *   ([WalletSecretWriteFence.haltSdkRuntime] — [ensureStarted] throws
+     *   [WalletWipeInProgressException] until the wipe completes), so no
+     *   restart path (binder retry, shadow-sync restart, platform sync, …)
+     *   can bring a wallet manager back;
+     * - runtime not started → true (nothing runs, nothing can start);
+     * - runtime up with NO wallet loaded (the cascade removed it) → true, the
+     *   runtime is left running — the removed wallet has no deriver;
+     * - runtime up with a wallet still loaded (cascade failed/skipped) → each
+     *   loaded wallet is tombstoned in the live `WalletStorage` (its key
+     *   stores are rejected from that moment), then the wallet manager is
+     *   closed — its native shutdown quiesces every callback task, including
+     *   the persistence deriver — and the runtime torn down. True only when
+     *   the manager reports closed.
+     *
+     * Bounded by [timeoutMs]; false on timeout or failure, which the wipe
+     * treats as "secrets NOT erased". Default false (fail-closed) for fakes.
+     */
+    suspend fun quiesceForWalletWipe(timeoutMs: Long): Boolean = false
+
     /** The live SDK handle, or null if [ensureStarted] has not completed. */
     fun sdkOrNull(): Sdk?
 

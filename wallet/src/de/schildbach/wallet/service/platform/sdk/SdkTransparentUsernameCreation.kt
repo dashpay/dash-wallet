@@ -796,7 +796,7 @@ class SdkTransparentUsernameCreation internal constructor(
                 // lock was on chain (instant-locked) while this reported NotSent and
                 // retracted the tile; a manual retry then always resumed it.
                 val recovered = if (isKeystoreSigningRefusal(t)) {
-                    recoverFromKeystoreRefusal(walletId, identityIndex, t)
+                    recoverFromKeystoreRefusal(walletId, identityIndex, t, knownLock = existingLock)
                 } else {
                     null
                 }
@@ -1026,11 +1026,35 @@ class SdkTransparentUsernameCreation internal constructor(
         class Failed(val result: SdkWriteResult<Nothing>) : KeystoreRefusalRecovery()
     }
 
+    /** Result of the tracked-lock re-check in [recoverFromKeystoreRefusal]. */
+    private sealed class TrackedLockRecheck {
+        class LockFound(val lock: TrackedAssetLock) : TrackedLockRecheck()
+
+        /** The lookup SUCCEEDED and no lock is tracked — the refusal was provably pre-broadcast. */
+        object NoLock : TrackedLockRecheck()
+
+        /** The lookup THREW — it establishes nothing about whether a lock was broadcast. */
+        class LookupFailed(val error: Throwable) : TrackedLockRecheck()
+    }
+
     /**
      * The funding call ([failure]) was refused by the Android Keystore signer
-     * ([isKeystoreSigningRefusal]). Returns null when NO asset lock is tracked
-     * for [identityIndex] (or the lookup failed) — the refusal truly was
-     * pre-broadcast and the caller keeps today's classification.
+     * ([isKeystoreSigningRefusal]). Returns null only when the tracked-lock
+     * re-check SUCCEEDED and found NO asset lock for [identityIndex] — the
+     * refusal truly was pre-broadcast and the caller keeps today's
+     * classification.
+     *
+     * When the re-check itself FAILS, nothing is proven: the SDK builds and
+     * broadcasts the L1 asset lock before it signs IdentityCreate, so the
+     * funds MAY be committed (the MO-1023 sequence). That is never classified
+     * as a pre-broadcast refusal: if the failing call was a resume of
+     * [knownLock] the funds are known committed ([REASON_FUNDS_LOCKED_RESUMABLE]);
+     * otherwise the result is [SdkWriteResult.NotBroadcast] with
+     * [REASON_FUNDING_UNRESOLVED_RESUMABLE] — re-submittable exactly like the
+     * locked case, because the next submit's resume gate re-checks the
+     * tracked lock (and refuses a fresh build while its lookup fails), so it
+     * either resumes the committed lock or proves none exists — never a
+     * second payment.
      *
      * When a lock IS tracked, the funds are committed on L1 and a retry must
      * RESUME that lock (the resume gate's own contract — never a second fresh
@@ -1056,27 +1080,51 @@ class SdkTransparentUsernameCreation internal constructor(
     private suspend fun recoverFromKeystoreRefusal(
         walletId: String,
         identityIndex: Int,
-        failure: Throwable
+        failure: Throwable,
+        knownLock: TrackedAssetLock?
     ): KeystoreRefusalRecovery? {
-        val lock = try {
+        val recheck = try {
             source.unresolvedRegistrationAssetLock(walletId, identityIndex)
+                ?.let { TrackedLockRecheck.LockFound(it) }
+                ?: TrackedLockRecheck.NoLock
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            log.warn(
-                "Keystore refused the identity signing key at index {}, and the tracked-lock re-check failed; " +
-                    "classifying the refusal as-is",
-                identityIndex,
-                t
-            )
-            return null
+            TrackedLockRecheck.LookupFailed(t)
         }
-        if (lock == null) {
-            log.info(
-                "Keystore refused the identity signing key at index {} and no asset lock is tracked — " +
-                    "the refusal was pre-broadcast",
-                identityIndex
-            )
-            return null
+        val lock = when (recheck) {
+            is TrackedLockRecheck.LockFound -> recheck.lock
+            TrackedLockRecheck.NoLock -> {
+                log.info(
+                    "Keystore refused the identity signing key at index {} and no asset lock is tracked — " +
+                        "the refusal was pre-broadcast",
+                    identityIndex
+                )
+                return null
+            }
+            is TrackedLockRecheck.LookupFailed -> {
+                if (recheck.error !== failure) failure.addSuppressed(recheck.error)
+                if (knownLock != null) {
+                    log.warn(
+                        "Keystore refused the identity signing key at index {} while resuming the tracked asset " +
+                            "lock (status={}), and the tracked-lock re-check failed; the funds are committed and " +
+                            "the next submit resumes it",
+                        identityIndex,
+                        knownLock.status,
+                        recheck.error
+                    )
+                    return KeystoreRefusalRecovery.Failed(lockedResumable(failure))
+                }
+                log.warn(
+                    "Keystore refused the identity signing key at index {}, and the tracked-lock re-check failed — " +
+                        "the asset lock MAY already be broadcast (funding unresolved); the next submit's resume " +
+                        "gate verifies/resumes it",
+                    identityIndex,
+                    recheck.error
+                )
+                return KeystoreRefusalRecovery.Failed(
+                    SdkWriteResult.NotBroadcast(REASON_FUNDING_UNRESOLVED_RESUMABLE, failure)
+                )
+            }
         }
         if (!isKeystoreFalseLockedRefusal(failure)) {
             log.warn(
@@ -1434,5 +1482,28 @@ class SdkTransparentUsernameCreation internal constructor(
         internal const val REASON_FUNDS_LOCKED_RESUMABLE =
             "identity create not signed (Keystore refused the signing key); the funding asset lock is " +
                 "tracked and the next attempt resumes it at no extra cost"
+
+        /**
+         * [SdkWriteResult.NotBroadcast] reason when the Platform transition was
+         * refused by the Keystore signer and the tracked-lock re-check FAILED,
+         * so whether the L1 asset lock was already broadcast is UNKNOWN: the
+         * funds may be committed. Handled exactly like
+         * [REASON_FUNDS_LOCKED_RESUMABLE] (re-submittable): the next submit's
+         * resume gate re-checks and resumes any tracked lock, and refuses a
+         * fresh build while that lookup fails — no second payment.
+         */
+        internal const val REASON_FUNDING_UNRESOLVED_RESUMABLE =
+            "identity create not signed (Keystore refused the signing key) and the funding asset-lock check " +
+                "failed; the funds may be committed — the next attempt verifies and resumes any tracked lock " +
+                "at no extra cost"
+
+        /**
+         * True for the [SdkWriteResult.NotBroadcast] reasons whose funding MAY
+         * be committed on L1 yet stay re-submittable because the next submit
+         * resumes the tracked lock ([REASON_FUNDS_LOCKED_RESUMABLE],
+         * [REASON_FUNDING_UNRESOLVED_RESUMABLE]).
+         */
+        fun isFundsPossiblyCommittedReason(reason: String?): Boolean =
+            reason == REASON_FUNDS_LOCKED_RESUMABLE || reason == REASON_FUNDING_UNRESOLVED_RESUMABLE
     }
 }

@@ -152,6 +152,14 @@ object WalletApplicationExt {
             fence = walletSecretWriteFence,
             quiesceTimeoutMs = WalletSecretWriteFence.WIPE_QUIESCE_TIMEOUT_MS,
             teardown = { tearDownWalletData() },
+            // AFTER the cascade, BEFORE the erase: the SDK's own persistence
+            // deriver (a wallet the cascade failed to remove) writes keys
+            // outside the fence's permits. Stops the runtime when a wallet is
+            // still loaded and refuses every SDK restart until the wipe
+            // completes; unproven quiescence makes the outcome FAILED.
+            quiesceSdk = {
+                sdkWalletSecretsEraser.quiesceSdkForWalletWipe(WalletSecretWriteFence.WIPE_QUIESCE_TIMEOUT_MS)
+            },
             // AFTER the SDK wallet-removal cascade inside the teardown: the
             // SDK's secrets DataStore (skipped by clearDatastorePrefFiles) is
             // kept only if that cascade verifiably left no wallet secret in it.

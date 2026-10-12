@@ -21,9 +21,11 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.DevNetParams
 import org.dashfoundation.dashsdk.Network
@@ -466,9 +468,79 @@ class DashSdkServiceImpl @Inject constructor(
     override suspend fun ensureStarted() {
         lock.withLock {
             if (runtime == null) {
+                // Reset Wallet brought the SDK to rest before erasing its
+                // secrets: a bootstrap now would re-open a wallet manager
+                // whose persistence deriver writes keys outside the permits.
+                if (secretWriteFence.isSdkRuntimeHalted) throw WalletWipeInProgressException("SDK runtime start")
                 runtime = bootstrap()
             }
         }
+    }
+
+    override suspend fun quiesceForWalletWipe(timeoutMs: Long): Boolean {
+        // FIRST, outside the lock: a bootstrap queued behind it is refused.
+        secretWriteFence.haltSdkRuntime()
+        val result = try {
+            withTimeoutOrNull(timeoutMs) { lock.withLock { quiesceForWalletWipeLocked() } }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.error("wallet wipe: SDK runtime quiesce failed", t)
+            false
+        }
+        if (result == null) {
+            log.error("wallet wipe: SDK runtime did not come to rest within {} ms", timeoutMs)
+        }
+        return result ?: false
+    }
+
+    private suspend fun quiesceForWalletWipeLocked(): Boolean {
+        val current = runtime ?: run {
+            log.info("wallet wipe: SDK runtime not started — nothing can persist, and restarts are refused")
+            return true
+        }
+        val loaded = current.walletManager.wallets.value.keys.toList()
+        if (loaded.isEmpty()) {
+            log.info("wallet wipe: no SDK wallet loaded after the removal cascade — runtime quiescent for the wipe")
+            return true
+        }
+        log.warn(
+            "wallet wipe: {} SDK wallet(s) still loaded after the removal cascade — tombstoning and stopping " +
+                "the SDK runtime before the secrets erase",
+            loaded.size
+        )
+        // Tombstone FIRST: rejects the deriver's key stores for these wallets
+        // from now on, including any that fire during the manager close.
+        for (hex in loaded) {
+            val walletId = walletIdFromHex(hex) ?: continue
+            runCatching { current.walletStorage.withPrivateKeyExclusion { tombstoneWallet(walletId) } }
+                .onFailure { log.warn("wallet wipe: tombstoning SDK wallet {}… failed", hex.take(8), it) }
+        }
+        runtime = null
+        // The manager's own suspending close PROPAGATES failure (closeAll
+        // swallows it): native shutdown quiesces every callback task, then
+        // the persistence executor is closed.
+        val managerClosed = try {
+            current.walletManager.closeSuspending()
+            current.walletManager.isClosed
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.error("wallet wipe: SDK wallet manager close failed", t)
+            false
+        }
+        runCatching { current.walletManagerStore.closeAll() }
+            .onFailure { log.warn("failed to close wallet managers", it) }
+        runCatching { current.sdk.close() }
+            .onFailure { log.warn("failed to close SDK handle", it) }
+        runCatching { current.database.close() }
+            .onFailure { log.warn("failed to close SDK database", it) }
+        if (managerClosed) {
+            log.warn("wallet wipe: SDK runtime stopped — no SDK-owned work can write a wallet secret")
+        } else {
+            log.error("wallet wipe: SDK wallet manager could not be confirmed closed — SDK not quiescent")
+        }
+        return managerClosed
     }
 
     override suspend fun stop() {

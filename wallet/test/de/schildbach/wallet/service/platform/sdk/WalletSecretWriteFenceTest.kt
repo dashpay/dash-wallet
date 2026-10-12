@@ -58,6 +58,22 @@ class WalletSecretWriteFenceTest {
     }
 
     @Test
+    fun `halting SDK starts raises the fence and lowering clears both`() {
+        val fence = WalletSecretWriteFence()
+        assertFalse(fence.isSdkRuntimeHalted)
+
+        fence.haltSdkRuntime()
+
+        assertTrue(fence.isSdkRuntimeHalted)
+        assertTrue(fence.isRaised)
+
+        fence.lower()
+
+        assertFalse(fence.isSdkRuntimeHalted)
+        assertFalse(fence.isRaised)
+    }
+
+    @Test
     fun `a producer tracked under a raised fence never runs`() = runBlocking {
         val fence = WalletSecretWriteFence()
         fence.raise()

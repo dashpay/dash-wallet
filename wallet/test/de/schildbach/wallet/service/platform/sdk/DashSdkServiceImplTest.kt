@@ -68,6 +68,25 @@ class DashSdkServiceImplTest {
     }
 
     @Test
+    fun quiesceForWalletWipe_notStarted_isQuiescentAndRefusesRestartsUntilTheFenceIsLowered() {
+        val fence = WalletSecretWriteFence()
+        val service = DashSdkServiceImpl(
+            context = mockk<Context>(relaxed = true),
+            mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+            secretWriteFence = fence
+        )
+
+        assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
+        assertTrue(fence.isSdkRuntimeHalted)
+        // Every restart path goes through ensureStarted: refused before any
+        // bootstrap (no native load is attempted on the JVM).
+        assertThrows(WalletWipeInProgressException::class.java) {
+            runBlocking { service.ensureStarted() }
+        }
+        assertFalse(service.isStarted)
+    }
+
+    @Test
     fun stop_beforeStart_isSafeNoOp() {
         val service = newService()
 

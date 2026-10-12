@@ -74,8 +74,34 @@ class WalletSecretWriteFence @Inject constructor() {
     private val permitCount = MutableStateFlow(0)
     private val producers = LinkedHashSet<Job>()
 
+    /**
+     * Set by the wipe once it has brought the SDK runtime to rest
+     * ([DashSdkService.quiesceForWalletWipe]): from then on no SDK bootstrap
+     * may run ([DashSdkService.ensureStarted] refuses), so nothing can
+     * re-open a wallet manager whose persistence deriver writes keys into
+     * `WalletStorage` outside the permits. Cleared only by [lower].
+     */
+    @Volatile
+    private var sdkRuntimeHalted = false
+
     /** Whether Reset Wallet holds the fence. */
     val isRaised: Boolean get() = raised
+
+    /** Whether SDK runtime (re)starts are refused — see [haltSdkRuntime]. */
+    val isSdkRuntimeHalted: Boolean get() = sdkRuntimeHalted
+
+    /**
+     * Refuse every later SDK runtime bootstrap until [lower]. Idempotent.
+     * Raises the fence too: a halted runtime without fenced permits is not a
+     * state the wipe ever wants.
+     */
+    fun haltSdkRuntime() {
+        synchronized(lock) {
+            raised = true
+            sdkRuntimeHalted = true
+        }
+        log.warn("SDK runtime starts halted: Reset Wallet is erasing the SDK secrets")
+    }
 
     /** Refuse every later permit. Idempotent. */
     fun raise() {
@@ -85,8 +111,11 @@ class WalletSecretWriteFence @Inject constructor() {
 
     /** Re-open for the next wallet. Only for a wipe that completed. */
     fun lower() {
-        synchronized(lock) { raised = false }
-        log.info("wallet secret writes re-opened: Reset Wallet completed")
+        synchronized(lock) {
+            raised = false
+            sdkRuntimeHalted = false
+        }
+        log.info("wallet secret writes (and SDK runtime starts) re-opened: Reset Wallet completed")
     }
 
     /** Throws [WalletWipeInProgressException] while raised. A point check — prefer a permit around the write itself. */
@@ -221,18 +250,30 @@ class WalletSecretWriteFence @Inject constructor() {
 
 /**
  * The SDK-secrets part of Reset Wallet's destroy phase, in its required
- * order: fence the old wallet's secret producers FIRST, then run the
- * [teardown] (wipe listeners, SDK wallet-removal cascade, database clears —
- * every step of which must still run), then the [erase]. When the fence
- * could not be established the erase still runs — it removes what is there
- * now — but its outcome is reported as [SdkSecretsWipeOutcome.FAILED], so the
- * wipe keeps its marker and the next launch (with nothing in flight) erases
- * again.
+ * order:
+ *
+ * 1. fence the old wallet's APP-side secret producers ([WalletSecretWriteFence.raiseAndQuiesce]);
+ * 2. the [teardown] (wipe listeners, SDK wallet-removal cascade, database
+ *    clears — every step of which must still run);
+ * 3. [quiesceSdk] — bring the SDK's OWN work to rest: the persistence
+ *    deriver of a still-loaded wallet manager writes identity keys straight
+ *    into `WalletStorage` during changeset commits / sync discovery, outside
+ *    the app's permits. When the cascade removed the wallet this is a no-op
+ *    beyond refusing later SDK bootstraps; when it did not, the runtime is
+ *    stopped (wallet tombstoned, manager closed) and cannot restart until
+ *    the wipe completes ([DashSdkService.quiesceForWalletWipe]);
+ * 4. only then the [erase] (list / verify / delete the secrets store).
+ *
+ * When either quiesce step could not be established the erase still runs —
+ * it removes what is there now — but its outcome is reported as
+ * [SdkSecretsWipeOutcome.FAILED], so the wipe keeps its marker and the next
+ * launch (with nothing in flight) erases again.
  */
 internal suspend fun fencedSdkSecretsWipe(
     fence: WalletSecretWriteFence,
     quiesceTimeoutMs: Long,
     teardown: suspend () -> Unit,
+    quiesceSdk: suspend () -> Boolean,
     erase: suspend () -> SdkSecretsWipeOutcome
 ): SdkSecretsWipeOutcome {
     val quiesced = try {
@@ -244,12 +285,24 @@ internal suspend fun fencedSdkSecretsWipe(
         false
     }
     teardown()
+    val sdkQuiesced = try {
+        quiesceSdk()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        fencedWipeLog.error("could not bring the SDK runtime to rest", t)
+        false
+    }
     val outcome = erase()
-    if (!quiesced && outcome.erased) {
+    if (outcome.erased && (!quiesced || !sdkQuiesced)) {
         fencedWipeLog.error(
-            "SDK secrets erase reported {}, but old-wallet secret producers were not fenced — " +
-                "treating the secrets as NOT erased; the wipe stays pending",
-            outcome
+            "SDK secrets erase reported {}, but {} — treating the secrets as NOT erased; the wipe stays pending",
+            outcome,
+            if (!quiesced) {
+                "old-wallet secret producers were not fenced"
+            } else {
+                "the SDK runtime could not be proven quiescent (its persistence deriver may still write)"
+            }
         )
         return SdkSecretsWipeOutcome.FAILED
     }

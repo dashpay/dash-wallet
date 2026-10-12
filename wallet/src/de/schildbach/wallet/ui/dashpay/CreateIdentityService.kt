@@ -806,11 +806,22 @@ class CreateIdentityService : LifecycleService() {
                         // the tile through its states to DONE. Leave the seed.
                         log.info("SDK username creation broadcast — restore worker will advance the identity tile")
                     is ShieldedUsernameSubmitState.NotSent -> {
-                        // Provably nothing spent (retry-safe): retract the
-                        // progress tile so the user can re-request. The
-                        // ViewModel's own dialog surfaced the error when the
-                        // request screen was open.
-                        log.info("SDK username creation not sent ({}) — retracting the progress tile", terminal.reason)
+                        // Retry-safe: retract the progress tile so the user
+                        // can re-request. The ViewModel's own dialog surfaced
+                        // the error when the request screen was open. Usually
+                        // nothing was spent; for the "funds possibly
+                        // committed" reasons the L1 asset lock may be on chain,
+                        // but the next submit's resume gate resumes it (no
+                        // second payment), so it is handled identically.
+                        if (SdkTransparentUsernameCreation.isFundsPossiblyCommittedReason(terminal.reason)) {
+                            log.warn(
+                                "SDK username creation not sent ({}) — the asset lock may be committed; the next " +
+                                    "submit resumes it. Retracting the progress tile",
+                                terminal.reason
+                            )
+                        } else {
+                            log.info("SDK username creation not sent ({}) — retracting the progress tile", terminal.reason)
+                        }
                         clearSdkCreationIfUntouched()
                     }
                     ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
