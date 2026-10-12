@@ -284,7 +284,7 @@ private suspend fun boundWalletRecordOrNull(
 }
 
 /**
- * Batch [boundWalletRecordOrNull]: one walker and one [SdkTxStoreWalker.recordsFor]
+ * Batch [boundWalletRecordOrNull]: one walker and one [SdkTxStoreWalker.recordsByHex]
  * pass for all of [displayHexes], keyed by lowercase display hex. Empty when the
  * manager is not up, no single wallet is bound, or the read fails.
  */
@@ -350,7 +350,7 @@ class SdkTxDetailProvider internal constructor(
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val assetLockKindResolver: AssetLockKindResolver,
     // Batch form of [walletRecordFor] for bulk metadata imports: one walker pass
-    // for many txids ([SdkTxStoreWalker.recordsFor]), keyed by lowercase display hex.
+    // for many txids ([SdkTxStoreWalker.recordsByHex]), keyed by lowercase display hex.
     private val walletRecordsFor: suspend (DashDatabase, Collection<String>) -> Map<String, L1TxUiRecord> =
         { db, displayHexes -> boundWalletRecordsOrEmpty(sdkService, db, displayHexes) },
     // The bound wallet's record for a txid as the history list sees it

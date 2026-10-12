@@ -2281,33 +2281,39 @@ class PlatformSynchronizationService @Inject constructor(
         // "Past" upload silently published nothing even when it was reachable.
         val txes = walletSeam.getTransactions().toList()
         var itemsToSave = 0
-        txes.forEachIndexed { i, tx ->
-            if (tx.updateTimeMillis >= alreadySaved) {
-                val txHash = Sha256Hash.wrap(tx.txId)
-                transactionMetadataProvider.getTransactionMetadata(txHash.toTxId())?.let { metadata ->
-                    val giftCard = giftCardDao.getCardForTransaction(txHash.bytes)
+        // One SDK batch for the transactions this upload reads that only the SDK
+        // store holds; see TransactionMetadataProvider.withBatchedImport.
+        val eligibleTxIds = txes.filter { it.updateTimeMillis >= alreadySaved }
+            .map { Sha256Hash.wrap(it.txId).toTxId() }
+        transactionMetadataProvider.withBatchedImport(eligibleTxIds) {
+            txes.forEachIndexed { i, tx ->
+                if (tx.updateTimeMillis >= alreadySaved) {
+                    val txHash = Sha256Hash.wrap(tx.txId)
+                    transactionMetadataProvider.getTransactionMetadata(txHash.toTxId())?.let { metadata ->
+                        val giftCard = giftCardDao.getCardForTransaction(txHash.bytes)
 
-                    // make sure it is not already saved?
+                        // make sure it is not already saved?
 
-                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(txHash.toTxId())
-                    log.info("publish: previously saved: {}", previouslySaved)
+                        val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(txHash.toTxId())
+                        log.info("publish: previously saved: {}", previouslySaved)
 
-                    val saved = mergeTransactionMetadataDocuments(txHash, previouslySaved)
-                    log.info("publish: merged saved: {}", saved)
+                        val saved = mergeTransactionMetadataDocuments(txHash, previouslySaved)
+                        log.info("publish: merged saved: {}", saved)
 
-                    val metadataItem = TransactionMetadataCacheItem(
-                        metadata,
-                        giftCard.firstOrNull()
-                    )
-                    log.info("publish: item: {}", metadataItem)
-                    val diff = metadataItem - saved
-                    log.info("publish: diff: {}", diff)
-                    if (diff.isNotEmpty() && !transactionMetadataChangeCacheDao.has(diff)) {
-                        transactionMetadataChangeCacheDao.insert(diff)
+                        val metadataItem = TransactionMetadataCacheItem(
+                            metadata,
+                            giftCard.firstOrNull()
+                        )
+                        log.info("publish: item: {}", metadataItem)
+                        val diff = metadataItem - saved
+                        log.info("publish: diff: {}", diff)
+                        if (diff.isNotEmpty() && !transactionMetadataChangeCacheDao.has(diff)) {
+                            transactionMetadataChangeCacheDao.insert(diff)
+                        }
+                        itemsToSave++
                     }
-                    itemsToSave++
+                    progressListener.invoke(i * 100 / txes.size.coerceAtLeast(1) / 2)
                 }
-                progressListener.invoke(i * 100 / txes.size.coerceAtLeast(1) / 2)
             }
         }
         // call publishChangeCache
