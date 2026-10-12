@@ -472,17 +472,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun handleBackNavigation() {
-        if (!lockScreenDisplayed && !goBack()) {
-            if (isTaskRoot) {
-                // Back on Home sends the wallet to the background, like the system
-                // default for a root activity since Android 12, instead of destroying
-                // it; reopening is then instant. Auto-logout still applies on resume.
-                moveTaskToBack(true)
-            } else {
-                // Opened inside another app's task (e.g. a dash: link): moving the
-                // task back would background that app, so just close as before.
-                super.handleBackNavigation()
-            }
+        when (homeBackAction(lockScreenDisplayed, supportFragmentManager.backStackEntryCount, isTaskRoot)) {
+            HomeBackAction.IGNORE -> Unit
+            HomeBackAction.POP_FRAGMENT -> goBack()
+            HomeBackAction.MOVE_TASK_TO_BACK -> moveTaskToBack(true)
+            HomeBackAction.FINISH -> super.handleBackNavigation()
         }
     }
 
