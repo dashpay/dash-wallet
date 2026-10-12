@@ -144,20 +144,122 @@ class PaidContactAddressStoreTest {
     }
 
     @Test
-    fun sdkUsedFlag_settlesOnlyWhenDashjHasNoChain() {
+    fun noDashjChain_neverSettles_andIsReappliedOnEveryLookup() {
+        // PR #1608 review, round 5: dashj may build the chain later, at index 0.
         val s = store()
-        s.record("dashjHasIt", target)
         s.record("noChain", target)
-        s.record("unknown", target)
-        s.dashjMarked("dashjHasIt", MarkResult.MARKED)
         s.dashjMarked("noChain", MarkResult.NO_CHAIN)
-
-        s.sdkMarkedUsed(listOf("dashjHasIt", "noChain", "unknown"))
+        walletSave()
+        now += PaidContactAddressStore.RETENTION_MS * 10
 
         val after = store()
-        assertTrue(after.isSettled("noChain") ?: false)
-        assertFalse("dashj still has to save it", after.isSettled("dashjHasIt") ?: true)
-        assertFalse("dashj could still serve it", after.isSettled("unknown") ?: true)
+        assertEquals(false, after.isSettled("noChain"))
+        assertEquals(listOf("noChain"), after.awaitingDashj("contactId", 7))
+        after.dashjMarked("noChain", MarkResult.NO_CHAIN)
+        assertEquals(listOf("noChain"), after.awaitingDashj("contactId", 7))
+    }
+
+    @Test
+    fun keyDashjCannotPlace_isNotRetriedInTheSameProcess_butStaysExcluded() {
+        val s = store()
+        s.record("a", target)
+        s.dashjMarked("a", MarkResult.KEY_NOT_ON_CHAIN)
+
+        assertTrue(s.awaitingDashj("contactId", 7).isEmpty())
+        assertEquals(setOf("a"), s.paid())
+        assertEquals(listOf("a"), store().awaitingDashj("contactId", 7))
+    }
+
+    // ── claims ──────────────────────────────────────────────────────────
+
+    @Test
+    fun claim_isExclusive_andWrittenBeforeReturning() {
+        val s = store()
+
+        assertTrue(s.claim("a", target))
+        assertFalse("a second claim of the same address loses", s.claim("a", target))
+        assertEquals(setOf("a"), store().paid())
+        assertFalse("an address recorded paid cannot be claimed", store().claim("a", target))
+    }
+
+    @Test
+    fun claim_concurrentClaimsOfOneAddress_exactlyOneWins() {
+        val s = store()
+        val winners = java.util.concurrent.atomic.AtomicInteger()
+        val threads = List(8) { Thread { if (s.claim("a", target)) winners.incrementAndGet() } }
+        threads.forEach(Thread::start)
+        threads.forEach(Thread::join)
+
+        assertEquals(1, winners.get())
+    }
+
+    @Test
+    fun release_givesTheAddressBack() {
+        val s = store()
+        s.claim("a", target)
+
+        s.release("a")
+
+        assertTrue(s.paid().isEmpty())
+        assertTrue(store().paid().isEmpty())
+        assertTrue(s.claim("a", target))
+    }
+
+    @Test
+    fun aClaimInFlight_isNotReappliedToDashj_untilSent() {
+        val s = store()
+        s.claim("a", target)
+
+        assertTrue(s.awaitingDashj("contactId", 7).isEmpty())
+        s.sent("a")
+        assertEquals(listOf("a"), s.awaitingDashj("contactId", 7))
+        // a claim found on disk after a restart has an unknown outcome: re-applied
+        val other = store()
+        assertEquals(listOf("a"), other.awaitingDashj("contactId", 7))
+    }
+
+    @Test
+    fun aWrite_neverLeavesItsTempFile() {
+        store().claim("a", target)
+
+        assertTrue(file.isFile)
+        assertFalse(File(file.path + ".tmp").exists())
+    }
+
+    // ── wallet changes ──────────────────────────────────────────────────
+
+    @Test
+    fun walletChange_unsettlesEverything_andTheNewWalletMustSaveItAgain() {
+        val s = store()
+        s.recordSettled("a")
+        s.record("b", target)
+        s.dashjMarked("b", MarkResult.MARKED) // advanced on the old wallet, not yet saved
+
+        saves.walletChanged()
+        walletSave() // the new wallet's first save
+
+        assertEquals(false, s.isSettled("a"))
+        assertEquals(false, s.isSettled("b"))
+        assertEquals(listOf("a", "b"), s.awaitingDashj("contactId", 7))
+        now += PaidContactAddressStore.RETENTION_MS * 2
+        assertEquals("unsettled on disk too", setOf("a", "b"), store().paid())
+
+        // re-applied to the new wallet and saved: settled (and, this old, expired)
+        s.dashjMarked("a", MarkResult.MARKED)
+        walletSave()
+        assertEquals(setOf("b"), store().paid())
+    }
+
+    @Test
+    fun walletChange_beforeTheStoreWasLoaded_stillUnsettlesTheFile() {
+        file.writeText("$now a settled contactId 7\n")
+        val fresh = store() // created, never read
+
+        saves.walletChanged()
+
+        assertEquals(false, fresh.isSettled("a"))
+        now += PaidContactAddressStore.RETENTION_MS * 2
+        assertEquals(setOf("a"), store().paid())
     }
 
     @Test
@@ -213,5 +315,20 @@ class PaidContactAddressStoreTest {
         s.record("a")
 
         assertEquals(setOf("a"), s.paid())
+    }
+
+    @Test
+    fun unreadableFile_isNeverOverwritten() {
+        store().record("a", target)
+        assertTrue(file.setReadable(false))
+        try {
+            val s = store()
+            assertTrue("a read failure starts empty in memory", s.claim("b", target))
+            assertEquals(setOf("b"), s.paid())
+        } finally {
+            file.setReadable(true)
+        }
+
+        assertEquals("the file still holds what it held", setOf("a"), store().paid())
     }
 }

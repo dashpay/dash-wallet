@@ -118,6 +118,7 @@ import de.schildbach.wallet.service.platform.sdk.CutoverDebugReadout;
 import de.schildbach.wallet.service.platform.sdk.CutoverEvidenceCollector;
 import de.schildbach.wallet.service.platform.sdk.L1ShadowDebugReset;
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService;
+import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
@@ -1097,6 +1098,9 @@ public class WalletApplication extends MultiDexApplication
         // committedWallet). Under the backup-write lock, so a write that
         // checked the previous wallet is current finishes first.
         AtomicFileWriter.runExclusive(() -> this.wallet = newWallet);
+        // Outside the lock above (a listener writes through AtomicFileWriter):
+        // what the previous wallet file held durably is not in this one.
+        reportWalletChangedToContactPayments();
         walletStateFlow.setValue(newWallet);
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
@@ -1950,6 +1954,10 @@ public class WalletApplication extends MultiDexApplication
             wallet.addKeyChain(Constants.BIP44_PATH);
 
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+            // The backup is an older state of the wallet: what only the lost
+            // primary held durably (a contact payment's advanced sending key)
+            // must be re-established on this one.
+            reportWalletChangedToContactPayments();
             StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
                     "WALLET_RECOVERED_FROM_BACKUP");
 
@@ -2790,11 +2798,28 @@ public class WalletApplication extends MultiDexApplication
             wallet = null;
             committedWallet = null;
         });
+        // Outside the lock above (a listener writes through AtomicFileWriter).
+        reportWalletChangedToContactPayments();
         walletStateFlow.setValue(null);
         authenticationGroupExtension = null;
         if (walletBalanceObserver != null) {
             walletBalanceObserver.close();
             walletBalanceObserver = null;
+        }
+    }
+
+    /**
+     * The app's wallet was replaced or removed: a contact payment address that
+     * only the previous wallet file recorded as passed must be re-established
+     * on the new one ({@link PaidContactAddressStore#appWalletChanged}). Call
+     * outside any {@link AtomicFileWriter} lock. Never throws — wallet setup,
+     * recovery and wipe must not fail on it.
+     */
+    private void reportWalletChangedToContactPayments() {
+        try {
+            PaidContactAddressStore.appWalletChanged(getFilesDir());
+        } catch (final Exception x) {
+            log.warn("could not report the wallet change to the paid contact addresses", x);
         }
     }
 

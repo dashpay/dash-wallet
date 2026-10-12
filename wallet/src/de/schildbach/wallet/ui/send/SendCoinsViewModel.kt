@@ -180,8 +180,9 @@ class SendCoinsViewModel @Inject constructor(
 
     /**
      * The contact payment that may have been broadcast — the send's broadcast
-     * signal fired (including an unknown outcome) or the send returned — or
-     * whose address was refused as already paid. While set, the resolved
+     * signal fired (including an unknown outcome), the send returned, or it
+     * failed without proof that nothing was broadcast — or whose address was
+     * refused as already paid or claimed by another send. While set, the resolved
      * contact intent is spent and never submitted again: [isPayeePlausible]
      * is false and [signAndSendPayment] refuses until [refreshContactPayment]
      * has resolved a new address (PR #1608 review: a bridge failure after the
@@ -303,6 +304,8 @@ class SendCoinsViewModel @Inject constructor(
         _state.postValue(State.SENDING)
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
 
+        // The contact payment this send pays, once known (inside the try).
+        var contactPayment: ContactPaymentAddress? = null
         val transaction = try {
             // Defence in depth: the UI cannot confirm a spent contact intent
             // (isPayeePlausible), but never pay its address again.
@@ -348,29 +351,40 @@ class SendCoinsViewModel @Inject constructor(
             } else {
                 null
             }
-            // A contact payment: once it is broadcast, mark the address paid so
-            // the next payment to this contact gets a new one (DIP-15) — even if
-            // a later step of the send (the display bridge) then fails. Only when
-            // the request still pays the address resolved for the contact.
-            // Once the broadcast signal fires the intent is spent: whatever
-            // happens next (a bridge failure), it is not submitted again.
-            val contactPayment = contactPaymentAddress?.takeIf { it.address == intendedRecipient }
-            contactPaymentAddressProvider.sendThenMarkUsed(contactPayment) { onBroadcast ->
+            // A contact payment: the provider claims the address before sending
+            // (a second send of it, e.g. from another send screen, is refused)
+            // and marks it paid once it may have gone out, so the next payment
+            // to this contact gets a new one (DIP-15) — even if a later step of
+            // the send (the display bridge) then fails. Only when the request
+            // still pays the address resolved for the contact. Once the
+            // broadcast signal fires the intent is spent: whatever happens next
+            // (a bridge failure), it is not submitted again.
+            val payment = contactPaymentAddress?.takeIf { it.address == intendedRecipient }
+            contactPayment = payment
+            contactPaymentAddressProvider.sendThenMarkUsed(payment) { signals ->
                 sendCoinsTaskRunner.sendCoins(
                     finalSendRequest,
                     checkBalanceConditions = checkBalance,
                     intendedRecipient = intendedRecipient,
                     onBroadcast = { txid ->
-                        if (contactPayment != null) spentContactPayment.set(contactPayment)
-                        onBroadcast(txid)
-                    }
+                        if (payment != null) spentContactPayment.set(payment)
+                        signals.broadcast(txid)
+                    },
+                    onNotBroadcast = signals::notBroadcast
                 )
             }.also {
-                if (contactPayment != null) spentContactPayment.set(contactPayment)
+                if (payment != null) spentContactPayment.set(payment)
             }
         } catch (ex: Exception) {
             if (ex is ContactAddressAlreadyPaidException) {
                 spentContactPayment.set(ex.payment)
+            }
+            // A failed contact payment whose address is still claimed may have
+            // gone out (outcome unknown, cancelled) or is being paid by another
+            // send: spent. Only a proven pre-broadcast failure gives it back.
+            val failedPayment = contactPayment
+            if (failedPayment != null && contactPaymentAddressProvider.isClaimedOrPaid(failedPayment)) {
+                spentContactPayment.set(failedPayment)
             }
             if (spentContactPayment.get() != null) {
                 refreshContactOnReset.set(true)

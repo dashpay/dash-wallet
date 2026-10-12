@@ -167,6 +167,17 @@ class SendSignerLockedException(message: String) : IllegalStateException(message
  * [IllegalStateException] the UI renders as a generic failure, never as
  * "not synced" and never verbatim. Pure — host-testable.
  */
+/**
+ * A failure of dashj's `completeTx` (coin selection, fee, signing). dashj's
+ * `Wallet.sendCoinsOffline` is `completeTx` then `commitTx`, so such a failure
+ * means nothing was committed or broadcast.
+ */
+internal fun isCompleteTxFailure(e: Exception): Boolean =
+    e is InsufficientMoneyException ||
+        e is Wallet.CompletionException ||
+        e is KeyCrypterException ||
+        e is IKey.KeyIsEncryptedException
+
 fun sdkSendNotAttemptedException(reason: String): IllegalStateException =
     if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
         SendEngineNotSyncedException(
@@ -432,14 +443,17 @@ class SendCoinsTaskRunner @Inject constructor(
      * result carries none), for [SdkWriteResult.Ambiguous] just before the
      * rethrow: the payment may have gone out, and treating a contact address
      * as used costs at most one skipped address while not doing so risks
-     * reusing it. Never called for NotBroadcast (nothing left the wallet).
+     * reusing it. Never called for NotBroadcast (nothing left the wallet):
+     * [onNotBroadcast] is, just before the throw — the proof a caller needs
+     * to treat the payment as never sent.
      */
     private suspend fun sendViaSdkBridged(
         address: Address,
         amount: Coin,
         beforeSending: Consumer<Transaction>?,
         emptyWallet: Boolean = false,
-        onBroadcast: ((txid: String?) -> Unit)? = null
+        onBroadcast: ((txid: String?) -> Unit)? = null,
+        onNotBroadcast: (() -> Unit)? = null
     ): Transaction {
         val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet)
         return when (result) {
@@ -464,7 +478,20 @@ class SendCoinsTaskRunner @Inject constructor(
                 notifyBroadcast(onBroadcast, txid = null)
                 throw (result.cause as? Exception ?: RuntimeException(result.cause))
             }
-            is SdkWriteResult.NotBroadcast -> throw sdkSendNotAttemptedException(result.reason)
+            is SdkWriteResult.NotBroadcast -> {
+                notifyNotBroadcast(onNotBroadcast)
+                throw sdkSendNotAttemptedException(result.reason)
+            }
+        }
+    }
+
+    /** Runs a caller's not-broadcast callback; never throws. */
+    private fun notifyNotBroadcast(onNotBroadcast: (() -> Unit)?) {
+        if (onNotBroadcast == null) return
+        try {
+            onNotBroadcast()
+        } catch (e: Exception) {
+            log.warn("not-broadcast callback failed", e)
         }
     }
 
@@ -1172,9 +1199,13 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
         intendedRecipient: Address? = null,
-        onBroadcast: ((txid: String?) -> Unit)? = null
+        onBroadcast: ((txid: String?) -> Unit)? = null,
+        onNotBroadcast: (() -> Unit)? = null
     ): Transaction = withContext(Dispatchers.IO) {
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val wallet = walletData.wallet ?: run {
+            notifyNotBroadcast(onNotBroadcast)
+            throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        }
         Context.propagate(wallet.context)
         // Phase 5d routing for direct-SendRequest callers — the MAIN send UI
         // included (it builds/signs its own request for the fee preview and
@@ -1208,9 +1239,10 @@ class SendCoinsTaskRunner @Inject constructor(
                     if (payment.sendAll) ", send-all" else ""
                 )
                 return@withContext sendViaSdkBridged(
-                    payment.address, payment.amount, beforeSending, payment.sendAll, onBroadcast
+                    payment.address, payment.amount, beforeSending, payment.sendAll, onBroadcast, onNotBroadcast
                 )
             }
+            notifyNotBroadcast(onNotBroadcast)
             throw SendNotSdkRoutableException(
                 "cutover committed: this send is not SDK-routable (multi-recipient, unresolved " +
                     "self-send, or custom selection) and dashj cannot broadcast while held"
@@ -1229,11 +1261,13 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
 
-        if (checkBalanceConditions) {
-            checkBalanceConditions(wallet, sendRequest.tx)
-        }
-
+        // Set right before the wallet commits the transaction: a failure
+        // before it provably sent nothing ([onNotBroadcast]).
+        var committing = false
         try {
+            if (checkBalanceConditions) {
+                checkBalanceConditions(wallet, sendRequest.tx)
+            }
             log.info("sending: {}", sendRequest)
 
             if (txCompleted) {
@@ -1241,6 +1275,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 // a BIP70 merchant (e.g. CTX) may broadcast the tx to the network as soon as it
                 // receives the payment message, so our wallet can pick it up via the P2P peer
                 // group and add it to the pending pool before we reach this commit.
+                committing = true
                 if (!wallet.maybeCommitTx(sendRequest.tx)) {
                     log.info(
                         "tx was already in the wallet (likely received via network broadcast): {}",
@@ -1249,6 +1284,9 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
             } else {
                 signSendRequest(sendRequest)
+                committing = true
+                // completeTx, then commitTx: completeTx's failures (below) are
+                // still before the commit.
                 wallet.sendCoinsOffline(sendRequest)
             }
 
@@ -1283,6 +1321,9 @@ class SendCoinsTaskRunner @Inject constructor(
                 is KeyCrypterException -> log.info("send failed, key crypter exception: {}", ex.message)
                 is Wallet.CouldNotAdjustDownwards -> log.info("send failed, could not adjust downwards: {}", ex.message)
                 is Wallet.CompletionException -> log.info("send failed, cannot complete: {}", ex.message)
+            }
+            if (!committing || isCompleteTxFailure(ex)) {
+                notifyNotBroadcast(onNotBroadcast)
             }
             throw ex
         }

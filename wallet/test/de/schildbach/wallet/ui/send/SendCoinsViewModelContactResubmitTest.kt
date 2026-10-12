@@ -54,7 +54,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
+import kotlin.concurrent.thread
 
 /**
  * PR #1608 review: once a contact payment's broadcast signal fires, the
@@ -97,9 +100,20 @@ class SendCoinsViewModelContactResubmitTest {
     private fun contactRequest(from: String, to: String) =
         DashPayContactRequest(from, to, accountReference, ByteArray(0), 0, 0, 1_000L, null, null)
 
+    /** The real provider, pre-cutover: dashj serves the contact's address. */
+    private fun provider(chain: FakeDashjChain) = ContactPaymentAddressProvider(
+        cutoverCommitted = { false },
+        sdkAccountReader = { _, _ -> null },
+        dashjNextAddress = { _, _ -> chain.next() },
+        dashjMarkUsed = { _, _, address -> chain.mark(address) },
+        params = params,
+        paidAddresses = PaidContactAddressStore(file = null)
+    )
+
     private fun buildViewModel(
         chain: FakeDashjChain,
-        runner: SendCoinsTaskRunner
+        runner: SendCoinsTaskRunner,
+        provider: ContactPaymentAddressProvider = provider(chain)
     ): SendCoinsViewModel {
         val wallet = mockk<Wallet>(relaxed = true) {
             every { currentReceiveAddress() } returns Address.fromKey(params, ECKey())
@@ -128,15 +142,6 @@ class SendCoinsViewModelContactResubmitTest {
         val contactRequestDao = mockk<DashPayContactRequestDao> {
             coEvery { loadToOthers(contactUserId) } returns listOf(fromContact)
         }
-        // The real provider, pre-cutover: dashj serves the contact's address.
-        val provider = ContactPaymentAddressProvider(
-            cutoverCommitted = { false },
-            sdkAccountReader = { _, _ -> null },
-            dashjNextAddress = { _, _ -> chain.next() },
-            dashjMarkUsed = { _, _, address -> chain.mark(address) },
-            params = params,
-            paidAddresses = PaidContactAddressStore(file = null)
-        )
         return SendCoinsViewModel(
             walletData,
             mockk<WalletApplication>(relaxed = true),
@@ -151,6 +156,43 @@ class SendCoinsViewModelContactResubmitTest {
             contactRequestDao,
             provider
         )
+    }
+
+    /**
+     * A send runner whose first send is held inside the send — before any
+     * broadcast signal — until [releaseFirst], then broadcast; later sends
+     * succeed at once.
+     */
+    private fun pausingRunner(sends: Sends, firstInSend: CountDownLatch, releaseFirst: CountDownLatch): SendCoinsTaskRunner {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.isCutoverCommitted() } returns false
+        every { runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>()) } answers { mockk<SendRequest>(relaxed = true) }
+        coEvery {
+            runner.sendCoins(
+                any<SendRequest>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                any<Consumer<Transaction>>(),
+                any<String>(),
+                any<Address>(),
+                any<(String?) -> Unit>(),
+                any<() -> Unit>()
+            )
+        } coAnswers {
+            @Suppress("UNCHECKED_CAST")
+            val onBroadcast = args[6] as ((String?) -> Unit)?
+            val first = synchronized(sends) {
+                sends.recipients += args[5] as Address?
+                sends.recipients.size == 1
+            }
+            if (first) {
+                firstInSend.countDown()
+                check(releaseFirst.await(10, TimeUnit.SECONDS)) { "first send never released" }
+            }
+            onBroadcast?.invoke("bb".repeat(32))
+            mockk<Transaction>(relaxed = true)
+        }
+        return runner
     }
 
     /**
@@ -169,7 +211,8 @@ class SendCoinsViewModelContactResubmitTest {
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
-                any<(String?) -> Unit>()
+                any<(String?) -> Unit>(),
+                any<() -> Unit>()
             )
         } coAnswers {
             @Suppress("UNCHECKED_CAST")
@@ -261,5 +304,48 @@ class SendCoinsViewModelContactResubmitTest {
         }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
         assertTrue(viewModel.resolvedAddress() == keys[0].toBase58())
+    }
+
+    @Test
+    fun twoSendScreens_sameContact_theSecondIsRefusedWhileTheFirstSends_thenPaysANewAddress() {
+        // PR #1608 review, round 5: SendCoinsActivity allows several instances,
+        // each with its own ViewModel; both resolved the same contact address.
+        val chain = FakeDashjChain(keys)
+        val provider = provider(chain)
+        val sends = Sends()
+        val firstInSend = CountDownLatch(1)
+        val releaseFirst = CountDownLatch(1)
+        val runner = pausingRunner(sends, firstInSend, releaseFirst)
+        val screen1 = buildViewModel(chain, runner, provider)
+        val screen2 = buildViewModel(chain, runner, provider)
+        open(screen1)
+        open(screen2)
+        assertEquals(keys[0].toBase58(), screen1.resolvedAddress())
+        assertEquals(keys[0].toBase58(), screen2.resolvedAddress())
+
+        // Screen 1 confirms; its send is held before any broadcast signal.
+        val firstSend = thread { runBlocking { screen1.signAndSendPayment(Coin.COIN, null, true) } }
+        assertTrue(firstInSend.await(10, TimeUnit.SECONDS))
+
+        // Screen 2 confirms the same address: refused, nothing sent.
+        assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking { screen2.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertEquals(listOf<Address?>(keys[0]), sends.recipients)
+        idle()
+        assertFalse(screen2.everythingPlausible())
+
+        // Dismissing the error resolves screen 2 again: a new address.
+        screen2.resetState()
+        awaitCondition("screen 2 resolved a new address") {
+            screen2.resolvedAddress() == keys[1].toBase58() &&
+                screen2.everythingPlausible() &&
+                screen2.dryrunSendRequest != null
+        }
+
+        releaseFirst.countDown()
+        firstSend.join(10_000)
+        runBlocking { screen2.signAndSendPayment(Coin.COIN, null, true) }
+        assertEquals(listOf<Address?>(keys[0], keys[1]), sends.recipients)
     }
 }

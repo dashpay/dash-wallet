@@ -18,6 +18,9 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.util.WalletSaveTracker
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.ECKey
@@ -293,21 +296,43 @@ class ContactPaymentAddressProviderTest {
     }
 
     @Test
-    fun failedSend_marksNothing() = runBlocking {
+    fun provenPreBroadcastFailure_marksNothing_andTheAddressIsOfferedAgain() = runBlocking {
         val h = harness()
         val first = h.provider.nextAddress(target)
 
         assertThrows(IllegalStateException::class.java) {
-            runBlocking { h.provider.sendThenMarkUsed(first) { throw IllegalStateException("not broadcast") } }
+            runBlocking {
+                h.provider.sendThenMarkUsed(first) { signals ->
+                    signals.notBroadcast()
+                    throw IllegalStateException("not broadcast")
+                }
+            }
         }
 
         assertTrue(h.marks.isEmpty())
         // ...and the same address is offered again: nothing was paid.
         assertEquals(sdkPool[1], h.provider.nextAddress(target)?.address)
+        assertFalse(h.provider.isClaimedOrPaid(requireNotNull(first)))
     }
 
     @Test
-    fun cancelledSend_marksNothing() = runBlocking {
+    fun failureWithoutProof_isAnUnknownOutcome_theAddressIsKeptAndMarked() = runBlocking {
+        val h = harness()
+        val first = requireNotNull(h.provider.nextAddress(target))
+
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { h.provider.sendThenMarkUsed(first) { throw IllegalStateException("unexpected") } }
+        }
+
+        assertEquals(listOf(Triple(contactUserId, selectedReference, sdkPool[1])), h.marks)
+        assertTrue(h.provider.isClaimedOrPaid(first))
+        assertEquals(sdkPool[2], h.provider.nextAddress(target)?.address)
+    }
+
+    @Test
+    fun cancelledSend_isAnUnknownOutcome_theAddressIsKeptAndMarked() = runBlocking {
+        // A cancellation can land while the SDK's native send already broadcast
+        // (SdkL1SendService rethrows it): never give the address back.
         val h = harness()
         val first = h.provider.nextAddress(target)
 
@@ -317,7 +342,121 @@ class ContactPaymentAddressProviderTest {
             }
         }
 
+        assertEquals(1, h.marks.size)
+        assertEquals(sdkPool[2], h.provider.nextAddress(target)?.address)
+    }
+
+    @Test
+    fun cancelledAfterAProvenPreBroadcastFailure_marksNothing() = runBlocking {
+        val h = harness()
+        val first = h.provider.nextAddress(target)
+
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) {
+            runBlocking {
+                h.provider.sendThenMarkUsed(first) { signals ->
+                    signals.notBroadcast()
+                    throw kotlinx.coroutines.CancellationException("aborted")
+                }
+            }
+        }
+
         assertTrue(h.marks.isEmpty())
+        assertEquals(sdkPool[1], h.provider.nextAddress(target)?.address)
+    }
+
+    // ── one address, one send: the claim (PR #1608 review, round 5) ─────
+
+    @Test
+    fun concurrentSendOfTheSameAddress_isRefused_untilTheFirstFailsBeforeBroadcast() = runBlocking {
+        // Two send screens resolved the same address. The first send is paused
+        // inside the send, before its broadcast signal.
+        val h = harness()
+        val payment = requireNotNull(h.provider.nextAddress(target))
+        val firstStarted = CompletableDeferred<Unit>()
+        val firstMayFinish = CompletableDeferred<Boolean>()
+        var secondSent = false
+
+        val first = async(Dispatchers.Default) {
+            runCatching {
+                h.provider.sendThenMarkUsed(payment) { signals ->
+                    firstStarted.complete(Unit)
+                    if (!firstMayFinish.await()) {
+                        signals.notBroadcast()
+                        throw IllegalStateException("insufficient funds")
+                    }
+                    "txid"
+                }
+            }
+        }
+        firstStarted.await()
+
+        // The second send of that address is refused before it runs...
+        val refused = assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking { h.provider.sendThenMarkUsed(payment) { secondSent = true } }
+        }
+        assertFalse("the second send never ran", secondSent)
+        assertEquals(payment, refused.payment)
+        assertTrue(h.provider.isClaimedOrPaid(payment))
+        // ...and resolving again gives the second screen another address.
+        assertEquals(sdkPool[2], h.provider.nextAddress(target)?.address)
+
+        // The first send fails provably before broadcasting: the address is free again.
+        firstMayFinish.complete(false)
+        assertTrue(first.await().isFailure)
+        assertTrue(h.marks.isEmpty())
+        assertFalse(h.provider.isClaimedOrPaid(payment))
+        assertEquals("txid", h.provider.sendThenMarkUsed(payment) { "txid" })
+        assertEquals(listOf(Triple(contactUserId, selectedReference, sdkPool[1])), h.marks)
+    }
+
+    @Test
+    fun concurrentSendOfTheSameAddress_isRefused_whenTheFirstIsBroadcast() = runBlocking<Unit> {
+        val h = harness()
+        val payment = requireNotNull(h.provider.nextAddress(target))
+        val firstStarted = CompletableDeferred<Unit>()
+        val firstMayFinish = CompletableDeferred<Unit>()
+
+        val first = async(Dispatchers.Default) {
+            h.provider.sendThenMarkUsed(payment) {
+                firstStarted.complete(Unit)
+                firstMayFinish.await()
+                "txid"
+            }
+        }
+        firstStarted.await()
+        assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking { h.provider.sendThenMarkUsed(payment) { "second" } }
+        }
+        firstMayFinish.complete(Unit)
+
+        assertEquals("txid", first.await())
+        assertEquals(1, h.marks.size)
+        assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking { h.provider.sendThenMarkUsed(payment) { "third" } }
+        }
+    }
+
+    @Test
+    fun processDeathMidSend_theClaimSurvives() = runBlocking {
+        // The process dies inside the send (after the SDK may have broadcast,
+        // before any callback): the claim was written before the send began.
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val before = harness(dashjCursor = 1, paidFile = file)
+        val payment = requireNotNull(before.provider.nextAddress(target))
+        val inSend = CompletableDeferred<Unit>()
+        val dying = async(Dispatchers.Default) {
+            before.provider.sendThenMarkUsed(payment) {
+                inSend.complete(Unit)
+                CompletableDeferred<Unit>().await() // never returns: the process is gone
+            }
+        }
+        inSend.await()
+
+        val after = harness(dashjCursor = 1, paidFile = file)
+        assertEquals(sdkPool[2], after.provider.nextAddress(target)?.address)
+        // dashj is advanced past it on the restarted process's first lookup
+        assertEquals(listOf(Triple(contactUserId, selectedReference, sdkPool[1])), after.marks)
+        dying.cancel()
     }
 
     @Test
@@ -546,8 +685,8 @@ class ContactPaymentAddressProviderTest {
 
         assertThrows(RuntimeException::class.java) {
             runBlocking {
-                h.provider.sendThenMarkUsed(payment) { onBroadcast ->
-                    onBroadcast("txid")
+                h.provider.sendThenMarkUsed(payment) { signals ->
+                    signals.broadcast("txid")
                     throw RuntimeException("sent, but the display bridge failed")
                 }
             }
@@ -565,8 +704,8 @@ class ContactPaymentAddressProviderTest {
 
         assertThrows(IllegalStateException::class.java) {
             runBlocking {
-                h.provider.sendThenMarkUsed(payment) { onBroadcast ->
-                    onBroadcast(null)
+                h.provider.sendThenMarkUsed(payment) { signals ->
+                    signals.broadcast(null)
                     throw IllegalStateException("broadcast outcome unknown")
                 }
             }
@@ -584,8 +723,8 @@ class ContactPaymentAddressProviderTest {
 
         assertThrows(kotlinx.coroutines.CancellationException::class.java) {
             runBlocking {
-                h.provider.sendThenMarkUsed(payment) { onBroadcast ->
-                    onBroadcast("txid")
+                h.provider.sendThenMarkUsed(payment) { signals ->
+                    signals.broadcast("txid")
                     throw kotlinx.coroutines.CancellationException("left the screen")
                 }
             }
@@ -599,9 +738,9 @@ class ContactPaymentAddressProviderTest {
         val h = harness()
         val payment = h.provider.nextAddress(target)
 
-        h.provider.sendThenMarkUsed(payment) { onBroadcast ->
-            onBroadcast("txid")
-            onBroadcast("txid")
+        h.provider.sendThenMarkUsed(payment) { signals ->
+            signals.broadcast("txid")
+            signals.broadcast("txid")
             "txid"
         }
 
@@ -667,28 +806,73 @@ class ContactPaymentAddressProviderTest {
     }
 
     @Test
-    fun noDashjChain_settlesWhenTheSdkMirrorFlagsTheAddressUsed() = runBlocking {
+    fun sdkOnlyPayment_noDashjChain_thenChainBuiltLater_dashjFallbackNeverReturnsThePaidAddress() = runBlocking {
+        // PR #1608 review, round 5: a payment through the SDK while dashj has
+        // no sending chain for the contact; the SDK mirror then flags it used.
+        // Long after (past the retention), dashj builds the chain — starting at
+        // index 0, the paid address — and the SDK can no longer answer.
+        var now = 1_000_000_000_000L
         val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
-        val store = PaidContactAddressStore(file)
-        var sdkAccount = account(addresses = pool(true, false, false))
-        val provider = ContactPaymentAddressProvider(
+        val saves = WalletSaveTracker()
+        var sdkAccount: SdkContactSendingAccount? = account(addresses = pool(false, false, false))
+        var dashjChain: FakeDashjChain? = null // no chain yet
+        fun provider(store: PaidContactAddressStore) = ContactPaymentAddressProvider(
             cutoverCommitted = { true },
             sdkAccountReader = { _, _ -> sdkAccount },
-            dashjNextAddress = { _, _ -> null },
-            dashjMarkUsed = { _, _, _ -> FriendChainAccess.MarkResult.NO_CHAIN },
+            dashjNextAddress = { _, _ -> dashjChain?.next() },
+            dashjMarkUsed = { _, _, address ->
+                dashjChain?.mark(address) ?: FriendChainAccess.MarkResult.NO_CHAIN
+            },
             params = params,
             paidAddresses = store
         )
-        val paid = provider.nextAddress(target)
-        assertEquals(sdkPool[1], paid?.address)
-        provider.sendThenMarkUsed(paid) { "txid" }
-        assertEquals(false, store.isSettled(sdkPool[1].toBase58()))
+        val process1 = provider(PaidContactAddressStore(file, { now }, saves))
+        val paid = process1.nextAddress(target)
+        assertEquals(sdkPool[0], paid?.address)
+        process1.sendThenMarkUsed(paid) { "txid" }
+        // the SDK mirror flags it used; wallet saves land; the SDK keeps working
+        sdkAccount = account(addresses = pool(true, false, false))
+        saves.saveCompleted(saves.saveStarting())
+        assertEquals(sdkPool[1], process1.nextAddress(target)?.address)
+        assertEquals(
+            "no stack has it durably: kept",
+            false,
+            PaidContactAddressStore(file, { now }).isSettled(sdkPool[0].toBase58())
+        )
 
-        // the SDK mirror catches up
-        sdkAccount = account(addresses = pool(true, true, false))
-        assertEquals(sdkPool[2], provider.nextAddress(target)?.address)
+        // Restart past the retention; dashj has built the chain since, at index 0.
+        now += PaidContactAddressStore.RETENTION_MS * 3
+        dashjChain = FakeDashjChain(sdkPool, current = 0)
+        sdkAccount = null // SDK store unavailable: the dashj fallback answers
+        val saves2 = WalletSaveTracker()
+        val store2 = PaidContactAddressStore(file, { now }, saves2)
+        val process2 = provider(store2)
 
-        assertEquals(true, PaidContactAddressStore(file).isSettled(sdkPool[1].toBase58()))
+        val next = process2.nextAddress(target)
+
+        assertEquals(ContactAddressSource.DASHJ, next?.source)
+        assertEquals(sdkPool[1], next?.address)
+        assertEquals(listOf(sdkPool[0]), dashjChain?.marks)
+        // the next wallet save makes dashj's advance durable; only then may it expire
+        saves2.saveCompleted(saves2.saveStarting())
+        assertFalse(sdkPool[0].toBase58() in PaidContactAddressStore(file, { now }).paid())
+    }
+
+    @Test
+    fun dashjFallback_skipsWhatTheSdkMirrorFlagsUsed() = runBlocking {
+        // e.g. a restored wallet: dashj's chain restarted at 0, the SDK mirror
+        // knows index 0 and 1 are used, the paid file does not (expired).
+        val chain = FakeDashjChain(sdkPool, current = 0)
+        val provider = restartedProvider(
+            chain,
+            File(tmp.root, PaidContactAddressStore.FILE_NAME),
+            account(paymentChannelBroken = true, addresses = pool(true, true, false))
+        )
+
+        val next = provider.nextAddress(target)
+
+        assertEquals(sdkPool[2], next?.address)
+        assertEquals(listOf(sdkPool[0], sdkPool[1]), chain.marks)
     }
 
     @Test

@@ -148,13 +148,19 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         coEvery { bridgeFactory.bridge(any(), any(), any(), any()) } returns result
     }
 
+    /** Broadcast signals as their txid; a not-broadcast signal as [NOT_BROADCAST]. */
     private suspend fun sendCollecting(signals: MutableList<String?>): Transaction =
         runner.sendCoins(
             sendRequest(),
             checkBalanceConditions = false,
             intendedRecipient = recipient,
-            onBroadcast = { signals += it }
+            onBroadcast = { signals += it },
+            onNotBroadcast = { signals += NOT_BROADCAST }
         )
+
+    private companion object {
+        const val NOT_BROADCAST = "<not broadcast>"
+    }
 
     // ── the funnel's signal ────────────────────────────────────────────
 
@@ -186,7 +192,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
-    fun postCutover_notBroadcast_neverSignals() = runTest {
+    fun postCutover_notBroadcast_signalsOnlyNotBroadcast() = runTest {
         postCutover(SdkWriteResult.NotBroadcast(L1_FUNDING_GATE_CLOSED_REASON))
         val signals = mutableListOf<String?>()
 
@@ -197,7 +203,28 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
             // pre-broadcast refusal
         }
 
-        assertTrue(signals.isEmpty())
+        assertEquals(listOf<String?>(NOT_BROADCAST), signals)
+    }
+
+    @Test
+    fun postCutover_notSdkRoutable_signalsNotBroadcast() = runTest {
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val signals = mutableListOf<String?>()
+
+        try {
+            runner.sendCoins(
+                SendRequest.to(recipient, Coin.CENT).apply { tx.addOutput(Coin.CENT, recipient) },
+                checkBalanceConditions = false,
+                intendedRecipient = null,
+                onBroadcast = { signals += it },
+                onNotBroadcast = { signals += NOT_BROADCAST }
+            )
+            fail("expected the fail-closed refusal")
+        } catch (expected: SendNotSdkRoutableException) {
+            // nothing built or broadcast
+        }
+
+        assertEquals(listOf<String?>(NOT_BROADCAST), signals)
     }
 
     @Test
@@ -246,7 +273,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
-    fun preCutover_dashjSendFailure_neverSignals() = runTest {
+    fun preCutover_dashjCompleteTxFailure_signalsOnlyNotBroadcast() = runTest {
         coEvery { sdkL1SendService.cutoverCommitted() } returns false
         every { wallet.sendCoinsOffline(any()) } throws InsufficientMoneyException(Coin.COIN)
         val signals = mutableListOf<String?>()
@@ -256,6 +283,24 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
             fail("expected InsufficientMoneyException")
         } catch (expected: InsufficientMoneyException) {
             // never committed
+        }
+
+        assertEquals(listOf<String?>(NOT_BROADCAST), signals)
+    }
+
+    @Test
+    fun preCutover_dashjCommitFailure_isNotProvenUnsent() = runTest {
+        // A failure of the commit itself: the transaction may be in the wallet,
+        // which rebroadcasts pending transactions — no proof nothing went out.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns false
+        every { wallet.sendCoinsOffline(any()) } throws IllegalStateException("commit failed")
+        val signals = mutableListOf<String?>()
+
+        try {
+            sendCollecting(signals)
+            fail("expected the commit failure")
+        } catch (expected: IllegalStateException) {
+            // surfaced as before
         }
 
         assertTrue(signals.isEmpty())
@@ -296,12 +341,13 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         val provider = provider()
 
         try {
-            provider.sendThenMarkUsed(contactPayment) { onBroadcast ->
+            provider.sendThenMarkUsed(contactPayment) { signals ->
                 runner.sendCoins(
                     sendRequest(),
                     checkBalanceConditions = false,
                     intendedRecipient = recipient,
-                    onBroadcast = onBroadcast
+                    onBroadcast = signals::broadcast,
+                    onNotBroadcast = signals::notBroadcast
                 )
             }
             fail("the bridge failure still surfaces")
@@ -318,12 +364,13 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         val provider = provider()
 
         try {
-            provider.sendThenMarkUsed(contactPayment) { onBroadcast ->
+            provider.sendThenMarkUsed(contactPayment) { signals ->
                 runner.sendCoins(
                     sendRequest(),
                     checkBalanceConditions = false,
                     intendedRecipient = recipient,
-                    onBroadcast = onBroadcast
+                    onBroadcast = signals::broadcast,
+                    onNotBroadcast = signals::notBroadcast
                 )
             }
             fail("expected the ambiguous failure")
@@ -341,12 +388,13 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         val provider = provider()
 
         try {
-            provider.sendThenMarkUsed(contactPayment) { onBroadcast ->
+            provider.sendThenMarkUsed(contactPayment) { signals ->
                 runner.sendCoins(
                     sendRequest(),
                     checkBalanceConditions = false,
                     intendedRecipient = recipient,
-                    onBroadcast = onBroadcast
+                    onBroadcast = signals::broadcast,
+                    onNotBroadcast = signals::notBroadcast
                 )
             }
             fail("expected the not-synced failure")

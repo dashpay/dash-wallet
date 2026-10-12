@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong
 class WalletSaveTracker {
     private val started = AtomicLong(0)
     private val listeners = CopyOnWriteArrayList<(Long) -> Unit>()
+    private val walletChangedListeners = CopyOnWriteArrayList<() -> Unit>()
 
     /** The number of the most recently started save; 0 before the first. */
     fun lastStarted(): Long = started.get()
@@ -61,6 +62,28 @@ class WalletSaveTracker {
     /** [listener] is told the number of each completed save, on the saving thread. */
     fun addListener(listener: (Long) -> Unit) {
         listeners += listener
+    }
+
+    /**
+     * The app's wallet was replaced or removed (wipe, restore, recovery from
+     * the key backup). State made durable in the previous wallet file is not
+     * in the next one, and a change made to the previous wallet never reaches
+     * disk through a save of the next one, so listeners drop what they relied
+     * on. Call it outside any lock a listener could wait for. Never throws.
+     */
+    fun walletChanged() {
+        walletChangedListeners.forEach { listener ->
+            try {
+                listener()
+            } catch (e: Exception) {
+                log.warn("wallet change listener failed", e)
+            }
+        }
+    }
+
+    /** [listener] is told of each [walletChanged], on the calling thread. */
+    fun addWalletChangedListener(listener: () -> Unit) {
+        walletChangedListeners += listener
     }
 
     /** Reports each dashj autosave of the wallet ([org.bitcoinj.wallet.Wallet.autosaveToFile]). */
