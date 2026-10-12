@@ -145,6 +145,39 @@ class MixedFundsMigrationViewModel @Inject constructor(
         }
     }
 
+    suspend fun deferMigration() {
+        if (_uiState.value.inProgress || _uiState.value.awaitingResult) return
+        _uiState.value.amount?.let { migrationService.deferMigration(it) }
+    }
+
+    fun retryMigration() {
+        if (_uiState.value.inProgress || _uiState.value.awaitingResult) return
+        if (_uiState.value.attemptedAction == MixedFundsMigrationAction.SHIELD &&
+            (_uiState.value.resultTimedOut || _uiState.value.outcome == MixedFundsMigrationOutcome.UNCONFIRMED)
+        ) {
+            _uiState.value = _uiState.value.copy(inProgress = true, resultTimedOut = false)
+            viewModelScope.launch {
+                val outcome = try {
+                    migrationService.retryShieldMigration()
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.error("pending CoinJoin shield retry failed", t)
+                    MixedFundsMigrationOutcome.UNCONFIRMED
+                }
+                val landed = outcome == MixedFundsMigrationOutcome.STARTED &&
+                    migrationService.inFlightMigration() == null
+                _uiState.value = _uiState.value.copy(
+                    inProgress = false, outcome = outcome, resultLanded = landed,
+                    awaitingResult = outcome == MixedFundsMigrationOutcome.STARTED && !landed
+                )
+            }
+        } else when (_uiState.value.attemptedAction) {
+            MixedFundsMigrationAction.SHIELD -> shieldMixedFunds()
+            MixedFundsMigrationAction.COMBINE -> combineIntoUnmixedBalance()
+            null -> Unit
+        }
+    }
+
     /** OPTION A — shield the mixed funds (keeps them private). */
     fun shieldMixedFunds() = run(MixedFundsMigrationAction.SHIELD) { amount ->
         // This is a conservative UI estimate. The SDK drains the account

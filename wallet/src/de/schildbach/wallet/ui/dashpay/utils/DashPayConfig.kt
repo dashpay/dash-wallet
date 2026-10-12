@@ -226,6 +226,7 @@ open class DashPayConfig @Inject constructor(
          * See [de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService].
          */
         val MIXED_FUNDS_MIGRATION_DONE = booleanPreferencesKey("mixed_funds_migration_done")
+        val MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS = longPreferencesKey("mixed_funds_migration_deferred_duffs")
 
         /**
          * A mixed-funds migration that BROADCAST but whose result is not

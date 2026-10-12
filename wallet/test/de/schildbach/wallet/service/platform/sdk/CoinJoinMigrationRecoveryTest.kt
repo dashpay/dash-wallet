@@ -30,6 +30,7 @@ class CoinJoinMigrationRecoveryTest {
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingWalletShieldLockCount() } returns 1
+        coEvery { shield.resumePendingWalletShields() } returns 1
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val send = mockk<SdkL1SendService>(relaxed = true)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -41,6 +42,8 @@ class CoinJoinMigrationRecoveryTest {
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.shieldMixedFunds(Dash.COIN))
             assertNotNull(service.inFlightMigration())
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.combineIntoUnmixedBalance())
+            assertEquals(MixedFundsMigrationOutcome.STARTED, service.retryShieldMigration())
+            coVerify(exactly = 1) { shield.resumePendingWalletShields() }
             coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any()) }
             coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }
         } finally {

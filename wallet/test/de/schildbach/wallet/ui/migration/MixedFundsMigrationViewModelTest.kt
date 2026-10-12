@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -113,5 +114,45 @@ class MixedFundsMigrationViewModelTest {
         } finally {
             store.clear()
         }
+    }
+
+    @Test
+    fun laterDefersChoiceWithoutStartingASpend() = runBlocking {
+        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.restorePendingShieldMigration() } returns false
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(null)
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            model.deferMigration()
+            coVerify(exactly = 1) { service.deferMigration(Coin.COIN) }
+            coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
+            coVerify(exactly = 0) { service.combineIntoUnmixedBalance() }
+        } finally { store.clear() }
+    }
+
+    @Test
+    fun timedOutShieldRetriesExistingLockOnly() {
+        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.restorePendingShieldMigration() } returns true
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
+            de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
+                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD, 1L, 0L
+            )
+        )
+        coEvery { service.retryShieldMigration() } returns MixedFundsMigrationOutcome.UNCONFIRMED
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.uiState.value.resultTimedOut)
+            model.retryMigration()
+            coVerify(exactly = 1) { service.retryShieldMigration() }
+            coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
+            assertEquals(MixedFundsMigrationOutcome.UNCONFIRMED, model.uiState.value.outcome)
+        } finally { store.clear() }
     }
 }

@@ -455,7 +455,35 @@ class CoinJoinFundsMigrationService @Inject constructor(
             log.debug("mixed-funds prompt suppressed: neither migration path is operable yet")
             return false
         }
-        return mixedFundsToMigrate() != null
+        val amount = mixedFundsToMigrate() ?: return false
+        val deferred = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS)
+        return deferred == null || amount.value > deferred
+    }
+
+    suspend fun deferMigration(amount: Coin) {
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS, amount.value)
+    }
+
+    /** Resume tracked locks only. Never build another lock on a retry. */
+    suspend fun retryShieldMigration(): MixedFundsMigrationOutcome {
+        if (!restorePendingShieldMigration()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        val marker = inFlightMigration() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (marker.action != MixedFundsMigrationAction.SHIELD) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        // A user-requested retry gets a fresh observation window, retaining
+        // the original balance baseline and the SDK's existing lock.
+        dashPayConfig.set(
+            DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
+            formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis()))
+        )
+        inFlightWatcherJob?.cancel()
+        inFlightWatcherJob = null
+        startInFlightWatcherIfNeeded()
+        return if (shieldedBalanceService.resumePendingWalletShields() > 0) {
+            startInFlightWatcherIfNeeded()
+            MixedFundsMigrationOutcome.STARTED
+        } else {
+            MixedFundsMigrationOutcome.UNCONFIRMED
+        }
     }
 
     /**
