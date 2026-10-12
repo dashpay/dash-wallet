@@ -21,6 +21,7 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.util.WalletSaveTracker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +61,18 @@ data class ContactPaymentAddress(
     val address: Address,
     val source: ContactAddressSource
 )
+
+/**
+ * [ContactPaymentAddressProvider.sendThenMarkUsed] refused to pay [payment]:
+ * its address is already recorded paid. Nothing was sent; resolve the
+ * contact's address again ([ContactPaymentAddressProvider.nextAddress]) for a
+ * new one.
+ */
+class ContactAddressAlreadyPaidException(val payment: ContactPaymentAddress) :
+    IllegalStateException(
+        "contact payment address for ${payment.target.contactUserId} was already paid; " +
+            "nothing was sent — resolve the contact's payment address again"
+    )
 
 /** One row of the SDK's persisted address pool for a contact's sending account. */
 data class SdkContactPoolAddress(
@@ -228,7 +241,10 @@ class ContactPaymentAddressProvider internal constructor(
         dashjMarkUsed = identityRepository::markContactAddressUsed,
         params = Constants.NETWORK_PARAMETERS,
         dashjSendingCursor = identityRepository::getContactSendingCursor,
-        paidAddresses = PaidContactAddressStore(File(context.filesDir, PaidContactAddressStore.FILE_NAME))
+        paidAddresses = PaidContactAddressStore(
+            File(context.filesDir, PaidContactAddressStore.FILE_NAME),
+            walletSaves = WalletSaveTracker.APP
+        )
     )
 
     /**
@@ -236,6 +252,7 @@ class ContactPaymentAddressProvider internal constructor(
      * Logs which source was used and, on a post-cutover fallback, why.
      */
     suspend fun nextAddress(target: ContactPaymentTarget): ContactPaymentAddress? = withContext(ioDispatcher) {
+        reapplyDashjMarks(target)
         if (!cutoverCommitted()) {
             dashjAddress(target, "pre-cutover")
         } else {
@@ -254,6 +271,7 @@ class ContactPaymentAddressProvider internal constructor(
                 log.warn("contact payment address: reading dashj's sending cursor failed", e)
                 null
             }
+            settleSdkConfirmed(account, target)
             selectSdkContactAddress(account, target.accountReference, paidAddresses.paid(), cursor)
         } catch (e: CancellationException) {
             throw e
@@ -280,6 +298,53 @@ class ContactPaymentAddressProvider internal constructor(
             is SdkContactAddressSelection.Unavailable ->
                 return dashjAddress(target, "post-cutover fallback (${selection.reason})")
         }
+    }
+
+    /**
+     * Re-applies the dashj mark of each address recorded paid to [target] that
+     * dashj has not been advanced past in this process — the marks of a
+     * process that died before dashj's wallet save. Idempotent on dashj
+     * (an address already behind its current key changes nothing); the
+     * outcome tells [paidAddresses] when the entry can settle. Blocking.
+     */
+    private fun reapplyDashjMarks(target: ContactPaymentTarget) {
+        val awaiting = try {
+            paidAddresses.awaitingDashj(target.contactUserId, target.accountReference)
+        } catch (e: Exception) {
+            log.warn("contact payment address: reading the paid addresses failed", e)
+            return
+        }
+        awaiting.forEach { base58 ->
+            val address = try {
+                Address.fromString(params, base58)
+            } catch (e: Exception) {
+                log.warn("contact payment address: a recorded paid address is unparseable for this network", e)
+                return@forEach
+            }
+            val outcome = try {
+                dashjMarkUsed(target.contactUserId, target.accountReference, address)
+            } catch (e: Exception) {
+                log.warn("contact payment address: re-marking a paid address on dashj failed", e)
+                return@forEach
+            }
+            paidAddresses.dashjMarked(base58, outcome)
+            log.info(
+                "contact payment address for {} (accountReference {}): re-applied a paid address's dashj " +
+                    "mark: {}",
+                target.contactUserId, target.accountReference, outcome ?: "no dashj identity"
+            )
+        }
+    }
+
+    /**
+     * Tells [paidAddresses] which of [target]'s addresses the SDK mirror (Room,
+     * durable) flags used — for an account built from [target]'s own contact
+     * request only, so the addresses are on [target]'s channel.
+     */
+    private fun settleSdkConfirmed(account: SdkContactSendingAccount?, target: ContactPaymentTarget) {
+        if (account?.externalAccountReference != target.accountReference) return
+        val used = account.addresses?.filter { it.isUsed }?.map { it.address } ?: return
+        paidAddresses.sdkMarkedUsed(used)
     }
 
     /**
@@ -334,6 +399,7 @@ class ContactPaymentAddressProvider internal constructor(
                 )
                 return null
             }
+            paidAddresses.dashjMarked(address.toBase58(), outcome)
             skipped++
             address = dashjNextAddress(target.contactUserId, target.accountReference)
         }
@@ -375,6 +441,11 @@ class ContactPaymentAddressProvider internal constructor(
      * is a genuine pre-broadcast failure. Marking happens at most once and never
      * throws: a marking failure is logged, the money may already have moved.
      * [payment] null (not a contact payment) just runs [send].
+     *
+     * Refuses, before [send] runs, an address already recorded paid — a
+     * retained contact payment resubmitted after its broadcast (PR #1608
+     * review): throws [ContactAddressAlreadyPaidException], and the caller
+     * resolves the contact's address again.
      */
     suspend fun <T> sendThenMarkUsed(
         payment: ContactPaymentAddress?,
@@ -382,6 +453,15 @@ class ContactPaymentAddressProvider internal constructor(
     ): T {
         if (payment == null) {
             return send { }
+        }
+        val alreadyPaid = withContext(ioDispatcher) { payment.address.toBase58() in paidAddresses.paid() }
+        if (alreadyPaid) {
+            log.warn(
+                "contact payment to {} (accountReference {}, address source {}) refused: the address was " +
+                    "already paid",
+                payment.target.contactUserId, payment.target.accountReference, payment.source
+            )
+            throw ContactAddressAlreadyPaidException(payment)
         }
         val marked = AtomicBoolean(false)
         val result = send { txid ->
@@ -406,8 +486,9 @@ class ContactPaymentAddressProvider internal constructor(
 
     /** Blocking (file write, dashj lock). Never throws. */
     private fun markPaid(payment: ContactPaymentAddress, txid: String?) {
+        val base58 = payment.address.toBase58()
         try {
-            paidAddresses.record(payment.address.toBase58())
+            paidAddresses.record(base58, payment.target)
         } catch (e: Exception) {
             log.warn("contact payment sent; recording the paid address failed", e)
         }
@@ -416,6 +497,11 @@ class ContactPaymentAddressProvider internal constructor(
         } catch (e: Exception) {
             log.warn("contact payment sent; marking the dashj sending key used failed", e)
             return
+        }
+        try {
+            paidAddresses.dashjMarked(base58, outcome)
+        } catch (e: Exception) {
+            log.warn("contact payment sent; noting the dashj mark failed", e)
         }
         log.info(
             "contact payment to {} sent (tx {}, address source {}); dashj sending key: {}",

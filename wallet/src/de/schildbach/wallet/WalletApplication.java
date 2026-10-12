@@ -189,6 +189,7 @@ import de.schildbach.wallet.util.RecoveryResetState;
 import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
+import de.schildbach.wallet.util.WalletSaveTracker;
 import de.schildbach.wallet.util.WalletLoadBudget;
 import de.schildbach.wallet.util.WalletWipeState;
 import de.schildbach.wallet_test.BuildConfig;
@@ -1387,7 +1388,11 @@ public class WalletApplication extends MultiDexApplication
         if (autosaveDelayMs != Constants.Files.WALLET_AUTOSAVE_DELAY_MS) {
             log.info("wallet autosave debounce raised to {} ms for a {} byte wallet file", autosaveDelayMs, walletFileSize);
         }
-        wallet.autosaveToFile(walletFile, autosaveDelayMs, TimeUnit.MILLISECONDS, null);
+        // The listener numbers each autosave (WalletSaveTracker): state dashj
+        // only makes durable on its next save — a contact payment's advanced
+        // sending key — learns from it when that save has landed.
+        wallet.autosaveToFile(walletFile, autosaveDelayMs, TimeUnit.MILLISECONDS,
+                WalletSaveTracker.APP.autosaveListener());
         final Wallet walletForMaintenance = wallet;
 
         // did blockchain rescan fail
@@ -2111,7 +2116,14 @@ public class WalletApplication extends MultiDexApplication
             armBackupReplacementIfUncommitted(wallet);
         }
         final Stopwatch watch = Stopwatch.createStarted();
+        // Only saves of the loaded wallet are reported to WalletSaveTracker;
+        // a replacement wallet's save says nothing about the loaded one.
+        final boolean trackSave = wallet == this.wallet;
+        final long saveSeq = trackSave ? WalletSaveTracker.APP.saveStarting() : 0L;
         wallet.saveToFile(walletFile);
+        if (trackSave) {
+            WalletSaveTracker.APP.saveCompleted(saveSeq);
+        }
         watch.stop();
         markWalletCommitted(wallet);
 

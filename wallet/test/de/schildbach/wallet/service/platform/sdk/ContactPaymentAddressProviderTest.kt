@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.util.WalletSaveTracker
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.ECKey
@@ -32,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 class ContactPaymentAddressProviderTest {
 
@@ -441,14 +443,15 @@ class ContactPaymentAddressProviderTest {
     private fun restartedProvider(
         chain: FakeDashjChain,
         paidFile: File,
-        sdkAccount: SdkContactSendingAccount?
+        sdkAccount: SdkContactSendingAccount?,
+        store: PaidContactAddressStore = PaidContactAddressStore(paidFile)
     ) = ContactPaymentAddressProvider(
         cutoverCommitted = { true },
         sdkAccountReader = { _, _ -> sdkAccount },
         dashjNextAddress = { _, _ -> chain.next() },
         dashjMarkUsed = { _, _, address -> chain.mark(address) },
         params = params,
-        paidAddresses = PaidContactAddressStore(paidFile)
+        paidAddresses = store
     )
 
     private fun paidFileWith(vararg addresses: Address): File {
@@ -602,6 +605,105 @@ class ContactPaymentAddressProviderTest {
             "txid"
         }
 
+        assertEquals(1, h.marks.size)
+    }
+
+    // ── exclusions are kept until a stack has durably recorded the payment ──
+
+    @Test
+    fun restart_brokenChannel_expiredRecord_unadvancedDashj_neverReturnsThePaidAddress() = runBlocking {
+        // PR #1608 review: process 1 pays dashj's key 0 through the broken-
+        // channel fallback, records it, and dies before dashj's wallet save.
+        // The app stays closed past the retention; dashj reloads at key 0.
+        var now = 1_000_000_000_000L
+        val keys = List(3) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val broken = account(paymentChannelBroken = true)
+
+        val before = FakeDashjChain(keys, current = 0)
+        val process1 = restartedProvider(before, file, broken, PaidContactAddressStore(file, { now }))
+        val paid = process1.nextAddress(target)
+        assertEquals(keys[0], paid?.address)
+        process1.sendThenMarkUsed(paid) { "txid" } // dashj advanced in memory only — never saved
+
+        now += PaidContactAddressStore.RETENTION_MS + TimeUnit.DAYS.toMillis(1)
+        val saves = WalletSaveTracker()
+        val store = PaidContactAddressStore(file, { now }, saves)
+        val after = FakeDashjChain(keys, current = 0) // the un-advanced, persisted chain
+        val process2 = restartedProvider(after, file, broken, store)
+
+        val next = process2.nextAddress(target)
+
+        assertEquals(ContactAddressSource.DASHJ, next?.source)
+        assertEquals(keys[1], next?.address)
+        assertTrue(keys[0].toBase58() in store.paid())
+        // dashj's lost mark was re-applied; the next wallet save makes it durable
+        assertEquals(listOf(keys[0]), after.marks)
+        assertEquals(false, store.isSettled(keys[0].toBase58()))
+        saves.saveCompleted(saves.saveStarting())
+        // settled, and past the retention: now redundant, so it is dropped
+        assertNull(store.isSettled(keys[0].toBase58()))
+        assertFalse(keys[0].toBase58() in PaidContactAddressStore(file, { now }).paid())
+    }
+
+    @Test
+    fun settledRecord_expires_onceDashjsSavedChainIsPastIt() = runBlocking {
+        var now = 1_000_000_000_000L
+        val keys = List(3) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val saves = WalletSaveTracker()
+        val chain = FakeDashjChain(keys, current = 0)
+        val provider = restartedProvider(chain, file, sdkAccount = null, PaidContactAddressStore(file, { now }, saves))
+        val paid = provider.nextAddress(target)
+        provider.sendThenMarkUsed(paid) { "txid" }
+        saves.saveCompleted(saves.saveStarting()) // dashj's advanced chain reached disk
+
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        val store = PaidContactAddressStore(file, { now })
+
+        assertTrue("redundant once settled, so it may expire", store.paid().isEmpty())
+        // ...and dashj, reloaded from that save, is past it anyway
+        assertEquals(keys[1], restartedProvider(chain, file, sdkAccount = null, store).nextAddress(target)?.address)
+    }
+
+    @Test
+    fun noDashjChain_settlesWhenTheSdkMirrorFlagsTheAddressUsed() = runBlocking {
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(file)
+        var sdkAccount = account(addresses = pool(true, false, false))
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ -> sdkAccount },
+            dashjNextAddress = { _, _ -> null },
+            dashjMarkUsed = { _, _, _ -> FriendChainAccess.MarkResult.NO_CHAIN },
+            params = params,
+            paidAddresses = store
+        )
+        val paid = provider.nextAddress(target)
+        assertEquals(sdkPool[1], paid?.address)
+        provider.sendThenMarkUsed(paid) { "txid" }
+        assertEquals(false, store.isSettled(sdkPool[1].toBase58()))
+
+        // the SDK mirror catches up
+        sdkAccount = account(addresses = pool(true, true, false))
+        assertEquals(sdkPool[2], provider.nextAddress(target)?.address)
+
+        assertEquals(true, PaidContactAddressStore(file).isSettled(sdkPool[1].toBase58()))
+    }
+
+    @Test
+    fun sendThenMarkUsed_refusesAnAddressAlreadyRecordedPaid() = runBlocking {
+        val h = harness()
+        val payment = h.provider.nextAddress(target)
+        h.provider.sendThenMarkUsed(payment) { "txid" }
+        var sentAgain = false
+
+        val refused = assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking { h.provider.sendThenMarkUsed(payment) { sentAgain = true } }
+        }
+
+        assertFalse("nothing may be sent to a paid address", sentAgain)
+        assertEquals(payment, refused.payment)
         assertEquals(1, h.marks.size)
     }
 }
