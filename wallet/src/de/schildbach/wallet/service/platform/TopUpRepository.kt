@@ -24,6 +24,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DynamicLink
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.data.InviteShareLink
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TopUpsDao
@@ -604,8 +605,10 @@ class TopUpRepositoryImpl @Inject constructor(
         // in each suspend method that uses the dashj Context
         Context.propagate(walletDataProvider.wallet!!.context)
         val username = dashPayProfile.username
-        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
-        val invitationLinkData = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter)
+        // The link builder percent-encodes every parameter once. Pre-encoding the avatar URL here
+        // produced a double-encoded `avatar-url` that only Android knew how to undo; the iOS wallet
+        // (platform SDK parser) decodes once and showed a broken avatar.
+        val invitationLinkData = InvitationLinkData.create(username, dashPayProfile.displayName, dashPayProfile.avatarUrl, assetLockTx, aesKeyParameter)
 
         return generateInviteOneLink(invitationLinkData, dashPayProfile.nameLabel, dashPayProfile.avatarUrl)
     }
@@ -658,15 +661,22 @@ class TopUpRepositoryImpl @Inject constructor(
             )
             linkGenerator.generateLink(walletApplication, object : ResponseListener {
                 override fun onResponse(link: String?) {
+                    // `link` is AppsFlyer's answer: a short OneLink when the server accepted the
+                    // request, or the SDK's long link when it did not. A short link carries no
+                    // `af_dp`, and the iOS wallet has no AppsFlyer SDK to resolve it, so the link we
+                    // share is always the long one. See InviteShareLink for the host/path fix-ups.
+                    val longLink = linkGenerator.generateLink()
+                    val shareLink = InviteShareLink.from(longLink, BuildConfig.APPSFLYER_BRAND_DOMAIN)
                     log.info("AppsFlyer link generated successfully: {}", link)
-                    log.info("AppsFlyer link generator : {}", linkGenerator.generateLink())
+                    log.info("AppsFlyer link generator : {}", longLink)
+                    log.info("AppsFlyer share link : {}", shareLink)
                     log.info("AppsFlyer af_dp : {}", invitationLinkData.link.toString())
                     log.info("AppsFlyer user parameters {}", linkGenerator.userParams)
 
                     continuation.resume(
                         DynamicLink(
-                            link!!,
-                            linkGenerator.generateLink(),
+                            shareLink,
+                            link ?: longLink,
                             invitationLinkData.link.toString(),
                             DynamicLink.AppsFlyer
                         )

@@ -273,11 +273,12 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, fundingAddress)
 
-//    val dynamicLinkData
-//        get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
-
-    val shortDynamicLinkData
-        get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink
+    /**
+     * The L1 invite's share link, read from the saved invitation row; null until that row has
+     * arrived. The shielded path publishes its link through [shieldedInviteShareLink] instead.
+     */
+    val shareLink: String?
+        get() = _invitation.value?.shortDynamicLink
 
     val walletData
         get() = walletApplication
