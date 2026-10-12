@@ -47,11 +47,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
-import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.InviteHandlerViewModel
+import de.schildbach.wallet.ui.PendingInvitation
 import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.registerLockScreenDeactivated
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
@@ -351,14 +351,14 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 if (!header.isEmpty()) {
                     showTransactionList()
                 }
-                if (inviteHandlerViewModel.isUsingInvite) {
+                inviteHandlerViewModel.pendingInvitation.value?.let { pending ->
                     // Re-drives the invite through validation on every sync-state
                     // change: an invite checked mid-scan gets the provisional
                     // NOT_SYNCED verdict, and this is what converts it to
                     // VALID/ALREADY_CLAIMED once the scan completes — the user
                     // never has to re-tap the link.
                     processInvitation(
-                        inviteHandlerViewModel.invitation.value!!,
+                        pending,
                         isLockScreenActive(),
                         revalidate = isSynced
                     )
@@ -473,13 +473,14 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
-        inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
+        inviteHandlerViewModel.pendingInvitation.observe(viewLifecycleOwner) { pending ->
+            val invitation = pending?.data
             val isSynced = viewModel.syncStatus.value.isSynced
             // No longer gated on isSynced: an invite that arrives mid-scan
             // must still get a verdict (the provisional NOT_SYNCED one) and
             // the accompanying notice, instead of silently doing nothing.
-            if (invitation != null) {
-                processInvitation(invitation, isLockScreenActive())
+            if (pending != null) {
+                processInvitation(pending, isLockScreenActive())
             }
             header.invitation = invitation
             header.isSynced = isSynced
@@ -511,8 +512,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     private fun onLockScreenDeactivated() {
         lifecycleScope.launch {
-            inviteHandlerViewModel.invitation.value?.let {
-                val state = it.validationState
+            inviteHandlerViewModel.pendingInvitation.value?.let {
+                val state = it.data.validationState
                 if (state != null && state != InvitationValidationState.NOT_SYNCED) {
                     // Validated while the lock screen was up: the verdict was
                     // withheld then, and processInvitation() returns early for
@@ -528,7 +529,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private suspend fun processInvitation(
-        invitation: InvitationLinkData,
+        pending: PendingInvitation,
         isLockScreenActive: Boolean,
         /**
          * Re-drive validation for an invite that only ever got the PROVISIONAL
@@ -543,7 +544,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // other state it must not latch, or the invite would sit behind this
         // early return for the rest of the launch (the live bug: nothing was
         // shown at all and the invite never resolved).
-        val state = invitation.validationState
+        val state = pending.data.validationState
         val provisional = state == InvitationValidationState.NOT_SYNCED
         if (state != null && !provisional) return
 
@@ -551,23 +552,24 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // gate and answers NOT_SYNCED while the chain is behind, so calling it
         // mid-sync is safe — and it is what lets the dialog below say
         // something instead of leaving the user with silence.
-        if ((state == null && invitation.expired) || (provisional && revalidate)) {
-            inviteHandlerViewModel.validateInvitation()
-        }
-
-        val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
-        if (currentInvitation.link != invitation.link) {
-            // Replaced by another invite while this one was being validated;
-            // its verdict was discarded and the replacement is processed on
-            // its own emission.
-            return
+        val toShow = if ((state == null && pending.data.expired) || (provisional && revalidate)) {
+            // null: this call's verdict was discarded — the invite was
+            // replaced/cleared meanwhile (the replacement is processed on its
+            // own emission), or an overlapping validation already settled it
+            // (and that call shows the verdict).
+            inviteHandlerViewModel.validateInvitation() ?: return
+        } else {
+            inviteHandlerViewModel.pendingInvitation.value
+                ?.takeIf { it.generation == pending.generation }
+                ?: return
         }
         if (!isLockScreenActive) {
-            showInviteValidationDialog(currentInvitation)
+            showInviteValidationDialog(toShow)
         }
     }
 
-    private suspend fun showInviteValidationDialog(invitation: InvitationLinkData) {
+    private suspend fun showInviteValidationDialog(pending: PendingInvitation) {
+        val invitation = pending.data
         when (invitation.validationState) {
             InvitationValidationState.INVALID -> {
                 InviteHandler(
@@ -575,21 +577,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     viewModel.analytics
                 ).showInvalidInviteDialog(invitation.displayName)
                 // remove invite — only if it was not replaced in the meantime
-                inviteHandlerViewModel.clearInvitation(expected = invitation)
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.ALREADY_HAS_IDENTITY -> {
                 // show dialog
                 InviteHandler(requireActivity(), viewModel.analytics).showUsernameAlreadyDialog()
                 // remove invite — only if it was not replaced in the meantime
-                inviteHandlerViewModel.clearInvitation(expected = invitation)
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME -> {
                 // show dialog
                 InviteHandler(requireActivity(), viewModel.analytics).showContestedUsernameAlreadyDialog()
                 // remove invite — only if it was not replaced in the meantime
-                inviteHandlerViewModel.clearInvitation(expected = invitation)
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.VALID -> {
@@ -599,7 +601,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             InvitationValidationState.ALREADY_CLAIMED -> {
                 InviteHandler(requireActivity(), viewModel.analytics).showInviteAlreadyClaimedDialog(invitation)
                 // remove invite — only if it was not replaced in the meantime
-                inviteHandlerViewModel.clearInvitation(expected = invitation)
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.NONE -> {
@@ -641,7 +643,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun onAcceptInvite() {
-        val invitation = inviteHandlerViewModel.invitation.value ?: return
+        val invitation = inviteHandlerViewModel.pendingInvitation.value?.data ?: return
         val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(
             requireContext(),
             invitation,

@@ -56,6 +56,11 @@ import java.util.concurrent.TimeUnit
  * flight must not let A's late verdict win: a VALID verdict used to restore A
  * in memory, and a terminal one (INVALID / ALREADY_CLAIMED) was shown by the
  * home screen, whose clearInvitation() then deleted B from preferences.
+ *
+ * The invite is identified by its generation, not its link, so the same
+ * holds when A itself is reopened (A -> B -> A); and overlapping validations
+ * of one invite (the home screen runs one per feed) cannot let a provisional
+ * NOT_SYNCED verdict suppress the synced one.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -73,11 +78,18 @@ class InviteReplacedDuringValidationTest {
     /** The persisted INVITATION_LINK preference. */
     private val storedLink = MutableStateFlow<String?>(null)
 
-    /** Released by the test to let the in-flight network validation of A finish. */
+    /** Released by the test to let the in-flight network validation finish. */
     private val releaseValidation = CountDownLatch(1)
 
-    /** Counted down once validation of A has reached the network call. */
+    /** Counted down once a validation has reached the network call. */
     private val validationStarted = CountDownLatch(1)
+
+    private val syncedState = mockk<BlockchainState> { every { isSynced() } returns true }
+    private val unsyncedState = mockk<BlockchainState> { every { isSynced() } returns false }
+
+    /** What the next read of the blockchain state answers (synced by default). */
+    @Volatile
+    private var stateAnswer: () -> BlockchainState = { syncedState }
 
     private fun viewModel(validationOutcome: () -> Boolean): InviteHandlerViewModel {
         val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
@@ -90,9 +102,8 @@ class InviteReplacedDuringValidationTest {
         every { identityConfig.observe() } returns emptyFlow()
         coEvery { identityConfig.load() } returns null
 
-        val syncedState = mockk<BlockchainState> { every { isSynced() } returns true }
         val stateProvider = mockk<BlockchainStateProvider>(relaxed = true)
-        coEvery { stateProvider.getState() } returns syncedState
+        coEvery { stateProvider.getState() } answers { stateAnswer() }
 
         val topUpRepository = mockk<TopUpRepository>(relaxed = true)
         every { topUpRepository.validateInvitation(any()) } answers {
@@ -120,16 +131,19 @@ class InviteReplacedDuringValidationTest {
         Dispatchers.resetMain()
     }
 
+    private val InviteHandlerViewModel.current: PendingInvitation
+        get() = requireNotNull(pendingInvitation.value) { "no pending invite" }
+
     /**
-     * Stores A, starts validating it, stores B while the network check is
-     * blocked, then lets A's check finish. Returns A's validation result.
+     * Stores A, starts validating it, runs [meanwhile] while the network check
+     * is blocked, then lets A's check finish. Returns A's validation result.
      */
-    private fun InviteHandlerViewModel.replaceAWithBDuringValidation(): InvitationValidationState =
+    private fun InviteHandlerViewModel.validateAWhile(meanwhile: suspend () -> Unit): PendingInvitation? =
         runBlocking {
             setInvitationLink(inviteA, false)
             val validation = async(Dispatchers.Default) { validateInvitation() }
             assertTrue(validationStarted.await(10, TimeUnit.SECONDS))
-            setInvitationLink(inviteB, false)
+            meanwhile()
             releaseValidation.countDown()
             validation.await()
         }
@@ -138,12 +152,12 @@ class InviteReplacedDuringValidationTest {
     fun `a late VALID verdict for A does not bring A back over B`() {
         val viewModel = viewModel { true }
 
-        val result = viewModel.replaceAWithBDuringValidation()
+        val result = viewModel.validateAWhile { viewModel.setInvitationLink(inviteB, false) }
 
-        assertEquals(InvitationValidationState.NONE, result)
-        val current = viewModel.invitation.value
-        assertEquals(inviteB.link, current?.link)
-        assertNull("B must still be unvalidated so it gets its own verdict", current?.validationState)
+        assertNull(result)
+        val current = viewModel.current.data
+        assertEquals(inviteB.link, current.link)
+        assertNull("B must still be unvalidated so it gets its own verdict", current.validationState)
         assertEquals(inviteB.link.toString(), storedLink.value)
     }
 
@@ -152,52 +166,137 @@ class InviteReplacedDuringValidationTest {
         // ALREADY_CLAIMED: the network says A's funds are gone
         val viewModel = viewModel { false }
 
-        val result = viewModel.replaceAWithBDuringValidation()
+        val result = viewModel.validateAWhile { viewModel.setInvitationLink(inviteB, false) }
 
-        assertEquals(InvitationValidationState.NONE, result)
-        assertEquals(inviteB.link, viewModel.invitation.value?.link)
-        assertNull(viewModel.invitation.value?.validationState)
+        assertNull(result)
+        assertEquals(inviteB.link, viewModel.current.data.link)
+        assertNull(viewModel.current.data.validationState)
         assertEquals(inviteB.link.toString(), storedLink.value)
+    }
+
+    @Test
+    fun `reopening A while A's first validation is in flight discards the stale verdict`() {
+        val viewModel = viewModel { false }
+
+        val result =
+            viewModel.validateAWhile {
+                viewModel.setInvitationLink(inviteB, false)
+                viewModel.setInvitationLink(inviteA, false)
+            }
+
+        // Same link as the validated snapshot, but a different generation:
+        // the reopened A must get its own validation and its own dialog.
+        assertNull(result)
+        assertEquals(inviteA.link, viewModel.current.data.link)
+        assertNull(viewModel.current.data.validationState)
+        assertEquals(inviteA.link.toString(), storedLink.value)
     }
 
     @Test
     fun `clearing A's terminal verdict after B replaced it leaves B stored`() {
         val viewModel = viewModel { false }
         runBlocking {
-            setUpAValidatedThenReplaced(viewModel)
+            val verdictForA = validateAToCompletion(viewModel)
+            viewModel.setInvitationLink(inviteB, false)
 
             // The dialog for A's verdict clears "its" invite — B must survive.
-            val cleared =
-                viewModel.clearInvitation(
-                    expected = inviteA.validate(InvitationValidationState.ALREADY_CLAIMED)
-                )
-
-            assertFalse(cleared)
+            assertFalse(viewModel.clearInvitation(expectedGeneration = verdictForA.generation))
             assertEquals(inviteB.link.toString(), storedLink.value)
-            assertEquals(inviteB.link, viewModel.invitation.value?.link)
+            assertEquals(inviteB.link, viewModel.current.data.link)
+        }
+    }
+
+    @Test
+    fun `clearing A's terminal verdict after A was reopened leaves the reopened A stored`() {
+        val viewModel = viewModel { false }
+        runBlocking {
+            val verdictForA = validateAToCompletion(viewModel)
+            viewModel.setInvitationLink(inviteB, false)
+            viewModel.setInvitationLink(inviteA, false)
+
+            assertFalse(viewModel.clearInvitation(expectedGeneration = verdictForA.generation))
+            assertEquals(inviteA.link.toString(), storedLink.value)
+            assertEquals(inviteA.link, viewModel.current.data.link)
+            assertNull(viewModel.current.data.validationState)
         }
     }
 
     @Test
     fun `clearing the invite that was validated still clears it`() {
         val viewModel = viewModel { false }
-        releaseValidation.countDown()
         runBlocking {
-            viewModel.setInvitationLink(inviteA, false)
-            assertEquals(InvitationValidationState.ALREADY_CLAIMED, viewModel.validateInvitation())
-            val verdict = requireNotNull(viewModel.invitation.value)
+            val verdict = validateAToCompletion(viewModel)
 
-            assertTrue(viewModel.clearInvitation(expected = verdict))
+            assertTrue(viewModel.clearInvitation(expectedGeneration = verdict.generation))
             assertEquals("", storedLink.value)
-            assertNull(viewModel.invitation.value)
+            assertNull(viewModel.pendingInvitation.value)
         }
     }
 
-    /** A is validated (verdict published), then B is opened before A's dialog clears. */
-    private suspend fun setUpAValidatedThenReplaced(viewModel: InviteHandlerViewModel) {
+    @Test
+    fun `an unsynced verdict landing first does not suppress the synced VALID one`() {
+        val viewModel = viewModel { true }
+
+        // The synced validation blocks on the network; meanwhile an
+        // overlapping call reads the chain as still syncing and publishes
+        // NOT_SYNCED for the same, unreplaced invite.
+        val synced =
+            viewModel.validateAWhile {
+                stateAnswer = { unsyncedState }
+                val provisional = viewModel.validateInvitation()
+                assertEquals(InvitationValidationState.NOT_SYNCED, provisional?.data?.validationState)
+            }
+
+        assertEquals(InvitationValidationState.VALID, synced?.data?.validationState)
+        assertEquals(InvitationValidationState.VALID, viewModel.current.data.validationState)
+    }
+
+    @Test
+    fun `an unsynced verdict landing after the synced VALID one is discarded`() {
+        val viewModel = viewModel { true }
+        releaseValidation.countDown()
+        val unsyncedReadStarted = CountDownLatch(1)
+        val releaseUnsyncedRead = CountDownLatch(1)
+        runBlocking {
+            viewModel.setInvitationLink(inviteA, false)
+            // The first call reads the chain as still syncing, but is slow to
+            // get there; the second sees it synced and settles the invite.
+            stateAnswer = {
+                unsyncedReadStarted.countDown()
+                check(releaseUnsyncedRead.await(10, TimeUnit.SECONDS)) { "state read was never released" }
+                unsyncedState
+            }
+            val unsynced = async(Dispatchers.Default) { viewModel.validateInvitation() }
+            assertTrue(unsyncedReadStarted.await(10, TimeUnit.SECONDS))
+            stateAnswer = { syncedState }
+
+            val synced = viewModel.validateInvitation()
+            assertEquals(InvitationValidationState.VALID, synced?.data?.validationState)
+
+            releaseUnsyncedRead.countDown()
+            assertNull(unsynced.await())
+            assertEquals(InvitationValidationState.VALID, viewModel.current.data.validationState)
+        }
+    }
+
+    @Test
+    fun `a second definitive verdict for the same invite is not published again`() {
+        val viewModel = viewModel { false }
+        runBlocking {
+            val first = validateAToCompletion(viewModel)
+
+            // Only the call that settled the invite shows (and clears) it.
+            assertNull(viewModel.validateInvitation())
+            assertEquals(first, viewModel.current)
+        }
+    }
+
+    /** Validates A to ALREADY_CLAIMED and returns the published verdict. */
+    private suspend fun validateAToCompletion(viewModel: InviteHandlerViewModel): PendingInvitation {
         releaseValidation.countDown()
         viewModel.setInvitationLink(inviteA, false)
-        assertEquals(InvitationValidationState.ALREADY_CLAIMED, viewModel.validateInvitation())
-        viewModel.setInvitationLink(inviteB, false)
+        val verdict = requireNotNull(viewModel.validateInvitation())
+        assertEquals(InvitationValidationState.ALREADY_CLAIMED, verdict.data.validationState)
+        return verdict
     }
 }
