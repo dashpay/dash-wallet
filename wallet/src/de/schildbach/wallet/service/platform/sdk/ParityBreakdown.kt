@@ -715,10 +715,6 @@ internal enum class ParityBreakdownTrigger(val label: String) {
 }
 
 /**
- * Whether the hourly [ParityBreakdownTrigger.PROBE] run is due, given when
- * this process last completed one (null = not yet).
- */
-/**
  * Whether a finished breakdown is one the diagnostic verdict can actually use:
  * computed at or after the moment dashj reached 100 %.
  *
@@ -730,6 +726,10 @@ internal enum class ParityBreakdownTrigger(val label: String) {
 internal fun parityBreakdownIsUsable(computedAtMs: Long, dashjCaughtUpAtMs: Long?): Boolean =
     dashjCaughtUpAtMs != null && computedAtMs >= dashjCaughtUpAtMs
 
+/**
+ * Whether the hourly [ParityBreakdownTrigger.PROBE] run is due, given when
+ * this process last completed one (null = not yet).
+ */
 internal fun parityBreakdownDue(
     nowMs: Long,
     lastRunMs: Long?,

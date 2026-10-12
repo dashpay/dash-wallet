@@ -3970,6 +3970,55 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun dashjFallingBehindAndCatchingUpAgain_releasesTheHourlySlot() = runBlocking {
+        // The other side of D-27TA-01. A good run takes the hour; dashj then
+        // falls behind and catches up again with a NEWER stamp, which makes the
+        // verdict reject those findings — and without releasing the slot no
+        // replacement may run for the rest of the hour, so the readout holds at
+        // "full parity not established" exactly as before the fix.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("the hour is spent", 1, source.breakdownDashjCalls)
+
+        // dashj drops out and comes back later than anything already computed.
+        service.dashjCaughtUp(null)
+        service.dashjCaughtUp(500_000L)
+
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        service.stop()
+    }
+
+    @Test
+    fun aStampThatDoesNotMoveForward_keepsTheHourlySlot() = runBlocking {
+        // The guard on the other side: re-announcing the SAME moment, or an
+        // older one, must not hand out a free run — that would turn every
+        // progress callback into a breakdown.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(500_000L)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+
+        service.dashjCaughtUp(500_000L) // same moment: a no-op
+        service.dashjCaughtUp(400_000L) // older: must not release the slot either
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("no second run", 1, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    @Test
     fun noBreakdown_beforeTheCutoverWithTheDiagnosticOff() = runBlocking {
         val source = breakdownSource()
         // Pre-cutover, diagnostic off: the probe runs, the breakdown does not —

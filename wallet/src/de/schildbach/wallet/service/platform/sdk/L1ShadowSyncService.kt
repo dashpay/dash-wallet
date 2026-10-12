@@ -4088,9 +4088,34 @@ class L1ShadowSyncService internal constructor(
      * moment, so both gates read one fact instead of two.
      */
     fun dashjCaughtUp(atMs: Long?) {
-        if (dashjCaughtUpAtMs == atMs) return
-        dashjCaughtUpAtMs = atMs
-        log.info("ParityBreakdown: dashj caught-up stamp {}", atMs ?: "cleared (dashj is behind)")
+        val released = synchronized(breakdownLock) {
+            val previous = dashjCaughtUpAtMs
+            if (previous == atMs) return
+            dashjCaughtUpAtMs = atMs
+            // A catch-up moment that moved FORWARD invalidates whatever was
+            // computed against the old one — the verdict applies the same test
+            // and will reject it. Without releasing the slot the findings are
+            // rejected and no replacement may run for the rest of the hour,
+            // which is the same defect this change set out to fix, reached from
+            // the other side: dashj falls behind, catches up again, and the
+            // readout holds at "full parity not established".
+            //
+            // Under [breakdownLock] with the completion that assigns the slot,
+            // so the two cannot interleave: a run finishing after this point
+            // sees the new stamp and finds itself unusable, and one that
+            // finished before it has its slot cleared here.
+            if (atMs != null && (previous == null || atMs > previous) && lastBreakdownRunMs != null) {
+                lastBreakdownRunMs = null
+                true
+            } else {
+                false
+            }
+        }
+        log.info(
+            "ParityBreakdown: dashj caught-up stamp {}{}",
+            atMs ?: "cleared (dashj is behind)",
+            if (released) " — hourly slot released, the next probe recomputes" else ""
+        )
     }
 
     /** After a failed or skipped run, no hourly attempt before this (wall clock, [nowMs]). */
