@@ -402,10 +402,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             initialised: Boolean,
             replaying: Boolean,
             deliberateStop: Boolean,
-            bindBlocked: Boolean
+            bindBlocked: Boolean,
+            /**
+             * This instance armed the restart itself just before stopping
+             * (memory pressure, a blockstore stall) and is counting on it to
+             * come back. Its own teardown must leave that alarm standing even
+             * with no replay in progress; a wipe/reset or a blocked bind still
+             * retires it, and the next instance's teardown decides afresh.
+             */
+            recoveryRestartRequested: Boolean = false
         ): ReplayRestartAlarmAction = when {
             !initialised -> ReplayRestartAlarmAction.LEAVE
-            !replaying || deliberateStop || bindBlocked -> ReplayRestartAlarmAction.RETIRE
+            deliberateStop || bindBlocked -> ReplayRestartAlarmAction.RETIRE
+            recoveryRestartRequested -> ReplayRestartAlarmAction.LEAVE
+            !replaying -> ReplayRestartAlarmAction.RETIRE
             else -> ReplayRestartAlarmAction.ARM
         }
 
@@ -1458,7 +1468,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         serviceConfig.set(BLOCKCHAIN_STORE_MEMORY_FAILURE, true)
                         log.warn("BLOCKSTORE_MEMORY_ACCESS timeout detected - forcing shutdown and scheduling restart in 1 minute")
                         analyticsService.logError(Exception("Blockstore memory stalled"))
-                        rescheduleService()
+                        requestRecoveryRestart()
 
                         // Force immediate shutdown
                         withContext(Dispatchers.Main) {
@@ -1554,9 +1564,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val replaying = blockchainState?.replaying == true
             val deliberateStop = deleteWalletFileOnShutdown || resetBlockchainOnShutdown
             val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
-            when (decideOnReplayRestartAlarm(initCompleted, replaying, deliberateStop, bindBlocked)) {
+            when (
+                decideOnReplayRestartAlarm(
+                    initCompleted, replaying, deliberateStop, bindBlocked, recoveryRestartRequested
+                )
+            ) {
                 ReplayRestartAlarmAction.LEAVE ->
-                    log.info("service never finished initialising — leaving the replay restart alarm as it is")
+                    if (recoveryRestartRequested && initCompleted) {
+                        log.info("this instance asked for a recovery restart — leaving the restart alarm armed")
+                    } else {
+                        log.info("service never finished initialising — leaving the replay restart alarm as it is")
+                    }
                 ReplayRestartAlarmAction.RETIRE -> {
                     val why = when {
                         deliberateStop -> "replay interrupted by a deliberate wipe/reset"
@@ -1604,6 +1622,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 "if no matching 'started by alarm' line follows, the background FGS start was refused",
             reason, Date(whenMs), exempt?.toString() ?: "unknown"
         )
+    }
+
+    /**
+     * Set when this instance arms the restart alarm because it is about to
+     * stop itself and wants to come back ([requestRecoveryRestart]), so its
+     * own teardown leaves that alarm alone (see [decideOnReplayRestartAlarm]).
+     */
+    @Volatile
+    private var recoveryRestartRequested = false
+
+    /** Arms the restart for an instance that is about to stop itself and must come back. */
+    private fun requestRecoveryRestart() {
+        recoveryRestartRequested = true
+        rescheduleService()
     }
 
     private fun rescheduleService() {
@@ -2627,7 +2659,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                     // Don't leave the wallet without a service (and without peers for any payment in
                     // progress): come back once the old instance has had time to release its locks.
-                    rescheduleService()
+                    requestRecoveryRestart()
 
                     // Stop the service - we cannot safely initialize with cleanup still running
                     withContext(Dispatchers.Main) {
@@ -3588,7 +3620,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldStopForMemoryPressure(level)) {
             // Stop gracefully so the wallet is saved cleanly, and come back once memory frees up.
             log.warn("memory pressure (onTrimMemory level {}), stopping service and scheduling restart", level)
-            rescheduleService()
+            // requestRecoveryRestart, not a bare reschedule: stopSelf() runs this instance's
+            // teardown, which would otherwise retire the alarm just armed whenever no replay is
+            // in progress.
+            requestRecoveryRestart()
             stopSelf()
         }
     }
