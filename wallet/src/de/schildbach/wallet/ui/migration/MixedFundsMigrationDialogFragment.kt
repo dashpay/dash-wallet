@@ -21,7 +21,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -76,7 +76,9 @@ class MixedFundsMigrationDialogFragment :
     OffsetDialogFragment(R.layout.dialog_mixed_funds_migration) {
 
     private val binding by viewBinding(DialogMixedFundsMigrationBinding::bind)
-    private val viewModel by viewModels<MixedFundsMigrationViewModel>()
+    // Auto-lock dismisses this fragment. Keep the spend and its UI state on
+    // the activity so unlocking can reopen progress without cancelling it.
+    private val viewModel by activityViewModels<MixedFundsMigrationViewModel>()
 
     @Inject
     lateinit var restartService: RestartService

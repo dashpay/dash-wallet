@@ -146,10 +146,8 @@ class MixedFundsMigrationViewModel @Inject constructor(
 
     /** OPTION A — shield the mixed funds (keeps them private). */
     fun shieldMixedFunds() = run(MixedFundsMigrationAction.SHIELD) { amount ->
-        // Leave headroom for the L1 asset-lock fee. The engine's selection
-        // still has to reach every CoinJoin UTXO to cover this, so the
-        // account empties; whatever the fee leaves over returns as BIP44
-        // change rather than being stranded on the mixed keychain.
+        // This is a conservative UI estimate. The SDK drains the account
+        // directly and computes the actual lock value after the L1 fee.
         val lockable = amount.value - CoinJoinFundsMigrationService.L1_FEE_RESERVE_DUFFS
         if (lockable <= 0L) {
             log.warn("mixed-funds balance {} does not cover the L1 fee reserve", amount)
