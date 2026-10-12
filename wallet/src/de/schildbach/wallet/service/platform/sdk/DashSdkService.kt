@@ -338,14 +338,18 @@ interface DashSdkService {
      *   restart path (binder retry, shadow-sync restart, platform sync, …)
      *   can bring a wallet manager back;
      * - runtime not started → true (nothing runs, nothing can start);
-     * - runtime up with NO wallet loaded (the cascade removed it) → true, the
-     *   runtime is left running — the removed wallet has no deriver;
-     * - runtime up with a wallet still loaded (cascade failed/skipped) → each
-     *   loaded wallet is tombstoned in the live `WalletStorage` (its key
-     *   stores are rejected from that moment), then the wallet manager is
-     *   closed — its native shutdown quiesces every callback task, including
-     *   the persistence deriver — and the runtime torn down. True only when
-     *   the manager reports closed.
+     * - runtime up → ALWAYS stopped, whatever the loaded-wallet map says (the
+     *   SDK's `removeWallet` empties that map before its fallible secret
+     *   delete and its own tombstone, and the persistence handler still
+     *   derives for a wallet whose Room row survived, so an empty map proves
+     *   nothing): every loaded wallet AND every wallet id handed to
+     *   [removeAppWallet] during the wipe is tombstoned in the live
+     *   `WalletStorage` (its key stores are rejected from that moment), then
+     *   the wallet manager is closed — its native shutdown quiesces every
+     *   callback task, including the persistence deriver — and the runtime
+     *   torn down. True only when the manager reports closed. The next
+     *   [ensureStarted] after the fence is lowered bootstraps a fresh runtime
+     *   (new manager, new `WalletStorage` without the tombstones).
      *
      * Bounded by [timeoutMs]; false on timeout or failure, which the wipe
      * treats as "secrets NOT erased". Default false (fail-closed) for fakes.

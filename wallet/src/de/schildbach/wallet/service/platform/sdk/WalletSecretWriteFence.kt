@@ -256,12 +256,12 @@ class WalletSecretWriteFence @Inject constructor() {
  * 2. the [teardown] (wipe listeners, SDK wallet-removal cascade, database
  *    clears — every step of which must still run);
  * 3. [quiesceSdk] — bring the SDK's OWN work to rest: the persistence
- *    deriver of a still-loaded wallet manager writes identity keys straight
- *    into `WalletStorage` during changeset commits / sync discovery, outside
- *    the app's permits. When the cascade removed the wallet this is a no-op
- *    beyond refusing later SDK bootstraps; when it did not, the runtime is
- *    stopped (wallet tombstoned, manager closed) and cannot restart until
- *    the wipe completes ([DashSdkService.quiesceForWalletWipe]);
+ *    deriver of a live wallet manager writes identity keys straight into
+ *    `WalletStorage` during changeset commits / sync discovery, outside the
+ *    app's permits — also for a wallet a half-failed removal already dropped
+ *    from the loaded map. A running runtime is therefore always stopped
+ *    (wallets tombstoned, manager closed and drained) and cannot restart
+ *    until the wipe completes ([DashSdkService.quiesceForWalletWipe]);
  * 4. only then the [erase] (list / verify / delete the secrets store).
  *
  * When either quiesce step could not be established the erase still runs —

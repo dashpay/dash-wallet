@@ -87,6 +87,29 @@ class DashSdkServiceImplTest {
     }
 
     @Test
+    fun ensureStarted_afterTheFenceIsLowered_attemptsAFreshBootstrap() {
+        val fence = WalletSecretWriteFence()
+        val service = DashSdkServiceImpl(
+            context = mockk<Context>(relaxed = true),
+            mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+            secretWriteFence = fence
+        )
+        assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
+
+        fence.lower()
+
+        // No runtime is held after the wipe, so the next wallet setup goes
+        // through a full bootstrap — which on the host JVM dies loading the
+        // native library / Android stack, NOT on the wipe halt.
+        val failure = runCatching { runBlocking { service.ensureStarted() } }.exceptionOrNull()
+        assertFalse(
+            "the halt must be lifted once the wipe completed, got $failure",
+            failure is WalletWipeInProgressException
+        )
+        assertFalse(service.isStarted)
+    }
+
+    @Test
     fun stop_beforeStart_isSafeNoOp() {
         val service = newService()
 

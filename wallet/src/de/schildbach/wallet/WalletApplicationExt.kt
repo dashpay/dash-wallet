@@ -153,10 +153,11 @@ object WalletApplicationExt {
             quiesceTimeoutMs = WalletSecretWriteFence.WIPE_QUIESCE_TIMEOUT_MS,
             teardown = { tearDownWalletData() },
             // AFTER the cascade, BEFORE the erase: the SDK's own persistence
-            // deriver (a wallet the cascade failed to remove) writes keys
-            // outside the fence's permits. Stops the runtime when a wallet is
-            // still loaded and refuses every SDK restart until the wipe
-            // completes; unproven quiescence makes the outcome FAILED.
+            // deriver (a wallet the cascade failed to remove, loaded or not)
+            // writes keys outside the fence's permits. Tombstones the wallet
+            // ids, closes and drains a running runtime, and refuses every SDK
+            // restart until the wipe completes; unproven quiescence makes the
+            // outcome FAILED.
             quiesceSdk = {
                 sdkWalletSecretsEraser.quiesceSdkForWalletWipe(WalletSecretWriteFence.WIPE_QUIESCE_TIMEOUT_MS)
             },

@@ -23,8 +23,13 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
@@ -403,9 +408,16 @@ class SdkWalletSecretsWipeTest {
         val fence = WalletSecretWriteFence()
         val store = oldWalletStore()
         val release = CompletableDeferred<Unit>()
+        val started = CompletableDeferred<Unit>()
         val stubborn = launch(Dispatchers.Default) {
-            withContext(NonCancellable) { release.await() }
+            withContext(NonCancellable) {
+                started.complete(Unit)
+                release.await()
+            }
         }
+        // Inside its non-cancellable section before the wipe cancels it: a job
+        // cancelled before it ever ran would complete at once (test race).
+        started.await()
         fence.track(stubborn)
         val outcomes = mutableListOf<SdkSecretsWipeOutcome>()
 
@@ -422,38 +434,120 @@ class SdkWalletSecretsWipeTest {
     // ── SDK quiescence: SDK-owned persistence vs the erase ───────────────
 
     /**
-     * Stand-in for the SDK runtime: while running with the old wallet loaded,
-     * its persistence deriver can write a key into the store at any time
-     * (outside the app's permits). Mirrors DashSdkServiceImpl.quiesceForWalletWipe.
+     * Stand-in for the SDK runtime, stopped through the PRODUCTION
+     * [stopSdkRuntimeForWalletWipe] exactly as DashSdkServiceImpl
+     * .quiesceForWalletWipe drives it.
+     *
+     * Persistence model (int27 `PlatformWalletPersistenceHandler` +
+     * `WalletStorage.storeIfAbsent`): the deriver can persist for a wallet as
+     * long as the manager is open and the wallet id is not tombstoned —
+     * whether or not the wallet is still in the loaded map (removeWallet drops
+     * the map entry BEFORE its fallible secret delete and tombstone). It
+     * derives outside the private-key lock and re-checks the tombstone under
+     * it. Closing the manager drains every in-flight callback (native
+     * shutdown waits for them) and no callback fires afterwards.
      */
     private class FakeSdkRuntime(
-        var walletLoaded: Boolean,
+        walletLoaded: Boolean,
+        private val walletIdHex: String,
+        private val events: MutableList<String>,
         private val stopSucceeds: Boolean = true,
-        private val events: MutableList<String>
+        private val closeThrows: Boolean = false,
+        private val quiesceTimeoutMs: Long = 5_000L
     ) {
+        val loadedWallets = mutableSetOf<String>().apply { if (walletLoaded) add(walletIdHex) }
+        val removalTargets = WalletWipeRemovalTargets()
+        var tombstoned = mutableSetOf<String>()
         var running = true
+        var managerOpen = true
         var restartsRefused = false
+        val closeStarted = CompletableDeferred<Unit>()
+        private val inFlight = MutableStateFlow(0)
+        private val lock = Mutex()
 
+        /** Mirrors DashSdkServiceImpl.quiesceForWalletWipe (+ its locked body). */
         suspend fun quiesceForWalletWipe(): Boolean {
             events += "sdk-quiesce"
             restartsRefused = true
-            if (!running || !walletLoaded) return true
-            if (!stopSucceeds) return false
-            running = false
-            return true
+            return withTimeoutOrNull(quiesceTimeoutMs) {
+                if (!running) return@withTimeoutOrNull true
+                val targets = LinkedHashSet<String>(loadedWallets).apply { addAll(removalTargets.snapshot()) }
+                running = false
+                val closed = stopSdkRuntimeForWalletWipe(
+                    walletIdsHex = targets,
+                    tombstone = { id ->
+                        lock.withLock { tombstoned += id.joinToString("") { "%02x".format(it) } }
+                        events += "tombstone"
+                    },
+                    closeManager = {
+                        events += "close"
+                        closeStarted.complete(Unit)
+                        if (closeThrows) throw IllegalStateException("native destroy failed")
+                        if (!stopSucceeds) return@stopSdkRuntimeForWalletWipe false
+                        inFlight.first { it == 0 } // native shutdown drains the callbacks
+                        managerOpen = false
+                        true
+                    },
+                    closeRest = { }
+                )
+                if (closed) removalTargets.clear()
+                closed
+            } ?: false
         }
 
-        /** The persistence deriver firing a changeset-commit key write. */
-        fun deriverWrite(store: FakeStore, key: String): Boolean {
-            if (!running || !walletLoaded) return false
-            store.entries[key] = "ciphertext"
-            return true
+        /** The SDK cascade (PlatformWalletManager.removeWallet), called through removeAppWallet. */
+        fun removeWallet(store: FakeStore, secretDeleteFails: Boolean) {
+            removalTargets.record(walletIdHex) // removeAppWallet records it before the cascade
+            loadedWallets -= walletIdHex // wrapper map dropped first
+            if (secretDeleteFails) throw IllegalStateException("secret deletion failed")
+            store.entries.keys.removeAll { it != "masterkeylockdefect" } // the removed wallet's secrets
+            tombstoned += walletIdHex
+        }
+
+        /**
+         * The persistence deriver's `storeIfAbsent` for [ownerHex]: false when
+         * refused (manager closed, or the wallet tombstoned before or while
+         * [derive] ran outside the lock).
+         */
+        suspend fun deriverStore(
+            store: FakeStore,
+            key: String,
+            ownerHex: String = walletIdHex,
+            derive: suspend () -> Unit = { }
+        ): Boolean {
+            if (!managerOpen) return false // no callback fires after the native destroy
+            inFlight.update { it + 1 }
+            try {
+                if (lock.withLock { ownerHex in tombstoned }) return false
+                derive()
+                return lock.withLock {
+                    if (ownerHex in tombstoned) {
+                        false
+                    } else {
+                        store.entries[key] = "ciphertext"
+                        true
+                    }
+                }
+            } finally {
+                inFlight.update { it - 1 }
+            }
         }
 
         fun restart(): Boolean {
             if (restartsRefused) return false
-            running = true
+            if (!running) {
+                // A fresh bootstrap: new manager, new WalletStorage (tombstones
+                // are per instance, process-lifetime only).
+                running = true
+                managerOpen = true
+                tombstoned = mutableSetOf()
+            }
             return true
+        }
+
+        /** WalletSecretWriteFence.lower() after a completed wipe. */
+        fun lower() {
+            restartsRefused = false
         }
     }
 
@@ -477,9 +571,7 @@ class SdkWalletSecretsWipeTest {
                         teardown = {
                             events += "teardown"
                             clearForWalletWipe {
-                                if (!cascadeSucceeds) throw IllegalStateException("removeWallet failed")
-                                store.removeWalletEntries()
-                                runtime.walletLoaded = false
+                                runtime.removeWallet(store, secretDeleteFails = !cascadeSucceeds)
                             }
                         },
                         quiesceSdk = quiesceSdk,
@@ -499,37 +591,117 @@ class SdkWalletSecretsWipeTest {
     }
 
     @Test
+    fun `the fake models the hazard - a wallet dropped from the loaded map still persists until tombstoned or closed`() =
+        runBlocking {
+            val store = oldWalletStore()
+            val runtime = FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = mutableListOf())
+
+            runCatching { runtime.removeWallet(store, secretDeleteFails = true) }
+
+            assertTrue("no wallet loaded any more", runtime.loadedWallets.isEmpty())
+            assertTrue(
+                "an unloaded, un-tombstoned wallet's deriver can still persist while the manager is open",
+                runtime.deriverStore(store, lateKey)
+            )
+        }
+
+    @Test
+    fun `a removal that fails after dropping the wallet from the map still tombstones and drains before the erase`() =
+        runBlocking {
+            val events = mutableListOf<String>()
+            val store = oldWalletStore()
+            val runtime = FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = events)
+            // A deriver that acquired its scalar before the wipe and is about to
+            // store it (the delayed storeIfAbsent the review describes).
+            val derived = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val deriver = async(Dispatchers.Default) {
+                runtime.deriverStore(store, lateKey) {
+                    derived.complete(Unit)
+                    release.await()
+                }
+            }
+            derived.await()
+
+            val wipe = async(Dispatchers.Default) { fencedWipe(store, runtime, events, cascadeSucceeds = false) }
+            // The close is draining: the wallet is already tombstoned, so the
+            // deriver's store — released now — is refused, and the close
+            // cannot finish (nor the erase start) before it returned.
+            runtime.closeStarted.await()
+            assertFalse("the erase waits for the drain", "erase" in events)
+            release.complete(Unit)
+            val (outcome, markerCleared) = wipe.await()
+
+            assertFalse("the outstanding deriver's store was refused", deriver.await())
+            assertEquals(listOf("teardown", "sdk-quiesce", "tombstone", "close", "erase"), events)
+            assertEquals(SdkSecretsWipeOutcome.DELETED_ALL, outcome)
+            assertTrue("the close succeeded, so the wipe may complete", markerCleared)
+            assertFalse("the manager was closed", runtime.managerOpen)
+            assertFalse("no SDK callback fires after the close", runtime.deriverStore(store, lateKey))
+            assertFalse("SDK restarts are refused during the wipe", runtime.restart())
+            assertTrue("no old-wallet secret may land after the erase", store.entries.isEmpty())
+        }
+
+    @Test
     fun `a failed cascade stops the still-running SDK before the erase so its deriver cannot write after it`() =
         runBlocking {
             val events = mutableListOf<String>()
             val store = oldWalletStore()
-            val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+            val runtime = FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = events)
 
             val (outcome, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = false)
 
-            assertEquals(listOf("teardown", "sdk-quiesce", "erase"), events)
+            assertEquals(listOf("teardown", "sdk-quiesce", "tombstone", "close", "erase"), events)
             assertEquals(SdkSecretsWipeOutcome.DELETED_ALL, outcome)
             assertTrue(markerCleared)
             assertFalse("the runtime was stopped", runtime.running)
-            // The deriver fires after the erase: nothing is running to do it,
-            // and nothing can bring the runtime back during the wipe.
-            assertFalse(runtime.deriverWrite(store, lateKey))
+            assertFalse(runtime.deriverStore(store, lateKey))
             assertFalse("SDK restarts are refused", runtime.restart())
-            assertFalse(runtime.deriverWrite(store, lateKey))
+            assertFalse(runtime.deriverStore(store, lateKey))
             assertTrue("no old-wallet secret may land after the erase", store.entries.isEmpty())
         }
 
     @Test
     fun `an SDK runtime that cannot be stopped keeps the wipe marker`() = runBlocking {
+        for (runtimeOf in listOf<(MutableList<String>) -> FakeSdkRuntime>(
+            { FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = it, stopSucceeds = false) },
+            { FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = it, closeThrows = true) }
+        )) {
+            val events = mutableListOf<String>()
+            val store = oldWalletStore()
+            val runtime = runtimeOf(events)
+
+            val (outcome, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = false)
+
+            assertEquals(SdkSecretsWipeOutcome.FAILED, outcome)
+            assertFalse("the wipe marker must be retained", markerCleared)
+            assertTrue("the erase still ran", store.deleteAllCalls == 1)
+        }
+    }
+
+    @Test
+    fun `a manager close that cannot drain within the budget keeps the wipe marker`() = runBlocking {
         val events = mutableListOf<String>()
         val store = oldWalletStore()
-        val runtime = FakeSdkRuntime(walletLoaded = true, stopSucceeds = false, events = events)
+        val runtime =
+            FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = events, quiesceTimeoutMs = 200L)
+        val release = CompletableDeferred<Unit>()
+        val derived = CompletableDeferred<Unit>()
+        // A callback stuck in native code: shutdown cannot drain it in time.
+        val stuck = async(Dispatchers.Default) {
+            runtime.deriverStore(store, lateKey) {
+                derived.complete(Unit)
+                release.await()
+            }
+        }
+        derived.await()
 
         val (outcome, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = false)
 
         assertEquals(SdkSecretsWipeOutcome.FAILED, outcome)
-        assertFalse("the wipe marker must be retained", markerCleared)
-        assertTrue("the erase still ran", store.deleteAllCalls == 1)
+        assertFalse(markerCleared)
+        release.complete(Unit)
+        assertFalse("tombstoned before the close, so even the straggler is refused", stuck.await())
     }
 
     @Test
@@ -537,7 +709,7 @@ class SdkWalletSecretsWipeTest {
         for (quiesce in listOf<suspend () -> Boolean>({ false }, { throw IllegalStateException("close failed") })) {
             val events = mutableListOf<String>()
             val store = oldWalletStore()
-            val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+            val runtime = FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = events)
 
             val (outcome, markerCleared) =
                 fencedWipe(store, runtime, events, cascadeSucceeds = false, quiesceSdk = quiesce)
@@ -548,26 +720,86 @@ class SdkWalletSecretsWipeTest {
     }
 
     @Test
-    fun `a clean cascade keeps the store and the defect record without stopping the SDK`() = runBlocking {
+    fun `a clean cascade still closes the SDK and keeps the store and the defect record`() = runBlocking {
         val events = mutableListOf<String>()
         val store = oldWalletStore()
-        val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+        val runtime = FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = events)
 
         val (outcome, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = true)
 
-        assertEquals(listOf("teardown", "sdk-quiesce", "erase"), events)
+        assertEquals(listOf("teardown", "sdk-quiesce", "tombstone", "close", "erase"), events)
         assertEquals(SdkSecretsWipeOutcome.VERIFIED_CLEAN_KEPT, outcome)
         assertTrue(markerCleared)
-        assertTrue("no wallet left to persist for — the runtime is left running", runtime.running)
+        assertFalse("the runtime is always closed during a wipe", runtime.running)
+        assertFalse(runtime.managerOpen)
         assertEquals(setOf("masterkeylockdefect"), store.entries.keys)
         assertEquals(0, store.deleteAllCalls)
     }
 
     @Test
+    fun `after a completed wipe the next wallet setup re-bootstraps a fresh SDK runtime`() = runBlocking {
+        val events = mutableListOf<String>()
+        val store = oldWalletStore()
+        val runtime = FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = events)
+
+        val (_, markerCleared) = fencedWipe(store, runtime, events, cascadeSucceeds = false)
+        assertTrue(markerCleared)
+        assertFalse("halted until the fence is lowered", runtime.restart())
+
+        runtime.lower()
+
+        assertTrue("a fresh runtime is built", runtime.restart())
+        assertTrue(runtime.managerOpen)
+        assertTrue("the removal record was consumed by the successful close", runtime.removalTargets.snapshot().isEmpty())
+        // Restoring the same seed reuses the same deterministic wallet id: the
+        // fresh WalletStorage carries no tombstone for it.
+        assertTrue(runtime.deriverStore(store, lateKey))
+    }
+
+    @Test
+    fun `stopSdkRuntimeForWalletWipe tombstones every distinct id before the close and reports the close`() =
+        runBlocking {
+            val order = mutableListOf<String>()
+            val other = "cd".repeat(32)
+            val closed = stopSdkRuntimeForWalletWipe(
+                walletIdsHex = listOf(walletId, walletId.uppercase(), other, "not-hex"),
+                tombstone = { id ->
+                    val hex = id.joinToString("") { "%02x".format(it) }
+                    if (hex == other) throw IllegalStateException("tombstone failed")
+                    order += "tombstone:$hex"
+                },
+                closeManager = {
+                    order += "close"
+                    true
+                },
+                closeRest = { order += "rest" }
+            )
+
+            assertTrue("a tombstone failure is not fatal — the drained close proves quiescence", closed)
+            assertEquals(listOf("tombstone:$walletId", "close", "rest"), order)
+        }
+
+    @Test
+    fun `stopSdkRuntimeForWalletWipe is false when the close throws or does not confirm, and still closes the rest`() =
+        runBlocking {
+            for (close in listOf<suspend () -> Boolean>({ false }, { throw IllegalStateException("destroy failed") })) {
+                var restClosed = false
+                val closed = stopSdkRuntimeForWalletWipe(
+                    walletIdsHex = listOf(walletId),
+                    tombstone = { },
+                    closeManager = close,
+                    closeRest = { restClosed = true }
+                )
+                assertFalse(closed)
+                assertTrue(restClosed)
+            }
+        }
+
+    @Test
     fun `an unproven SDK quiesce also fails a verified-clean outcome`() = runBlocking {
         val events = mutableListOf<String>()
         val store = oldWalletStore()
-        val runtime = FakeSdkRuntime(walletLoaded = true, events = events)
+        val runtime = FakeSdkRuntime(walletLoaded = true, walletIdHex = walletId, events = events)
 
         val (outcome, markerCleared) =
             fencedWipe(store, runtime, events, cascadeSucceeds = true, quiesceSdk = { false })

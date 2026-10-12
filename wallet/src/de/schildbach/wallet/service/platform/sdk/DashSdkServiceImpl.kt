@@ -346,6 +346,89 @@ internal fun computeDashPayReceivalCoverage(
 }
 
 /**
+ * Wallet ids the wipe's removal cascade was asked to remove — the record
+ * [DashSdkServiceImpl.quiesceForWalletWipe] tombstones from, because the
+ * SDK's loaded-wallet map cannot be trusted once a removal failed halfway.
+ */
+internal class WalletWipeRemovalTargets {
+    private val ids = LinkedHashSet<String>()
+
+    fun record(walletIdHex: String) {
+        synchronized(ids) { ids += walletIdHex.lowercase() }
+    }
+
+    fun snapshot(): Set<String> = synchronized(ids) { ids.toSet() }
+
+    fun clear() {
+        synchronized(ids) { ids.clear() }
+    }
+}
+
+/**
+ * Reset Wallet's SDK stop, ALWAYS run when the runtime is up during a wipe
+ * (no "nothing loaded → leave it running" shortcut: the loaded-wallet map is
+ * emptied by the SDK's removeWallet before its fallible secret delete and
+ * tombstone, so an empty map proves neither removal nor drained persistence):
+ *
+ * 1. tombstone every id in [walletIdsHex] in the live `WalletStorage`
+ *    ([tombstone], under its private-key exclusion) — a deriver that already
+ *    holds its scalar is refused at its store, including one that fires
+ *    during the close;
+ * 2. [closeManager] — native shutdown quiesces every callback task (the
+ *    persistence deriver among them), then the persistence executor closes;
+ *    returns whether the manager reports closed;
+ * 3. [closeRest] (store / SDK handle / database), always, best-effort.
+ *
+ * A tombstone failure is logged, not fatal: the drained close is what proves
+ * quiescence. True only when [closeManager] returned true without throwing.
+ * Pure wiring (collaborators injected) — host-testable.
+ */
+internal suspend fun stopSdkRuntimeForWalletWipe(
+    walletIdsHex: Collection<String>,
+    tombstone: suspend (ByteArray) -> Unit,
+    closeManager: suspend () -> Boolean,
+    closeRest: suspend () -> Unit
+): Boolean {
+    for (hex in walletIdsHex.mapTo(LinkedHashSet()) { it.lowercase() }) {
+        val walletId = walletIdFromHex(hex)
+        if (walletId == null) {
+            sdkWipeLog.warn("wallet wipe: malformed SDK wallet id — cannot tombstone it")
+            continue
+        }
+        try {
+            tombstone(walletId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            sdkWipeLog.warn("wallet wipe: tombstoning SDK wallet {}… failed", hex.take(8), t)
+        }
+    }
+    val managerClosed = try {
+        closeManager()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        sdkWipeLog.error("wallet wipe: SDK wallet manager close failed", t)
+        false
+    }
+    try {
+        closeRest()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        sdkWipeLog.warn("wallet wipe: closing the rest of the SDK runtime failed", t)
+    }
+    if (managerClosed) {
+        sdkWipeLog.warn("wallet wipe: SDK runtime stopped and drained — no SDK-owned work can write a wallet secret")
+    } else {
+        sdkWipeLog.error("wallet wipe: SDK wallet manager could not be confirmed closed — SDK not quiescent")
+    }
+    return managerClosed
+}
+
+private val sdkWipeLog = LoggerFactory.getLogger("de.schildbach.wallet.service.platform.sdk.SdkWalletWipeStop")
+
+/**
  * Default [DashSdkService] implementation — the Phase 3 bootstrap scaffold
  * (`docs/kotlin-sdk-migration-plan.md`).
  *
@@ -410,6 +493,13 @@ class DashSdkServiceImpl @Inject constructor(
 
     /** Serializes [bindAppWallet]'s dedup-then-create critical section. */
     private val bindLock = Mutex()
+
+    /**
+     * Wallet ids handed to [removeAppWallet] while Reset Wallet holds the
+     * fence — tombstoned by [quiesceForWalletWipe] even when they are no
+     * longer in the manager's loaded map.
+     */
+    private val wipeRemovalTargets = WalletWipeRemovalTargets()
 
     @Volatile
     private var runtime: SdkRuntime? = null
@@ -497,50 +587,50 @@ class DashSdkServiceImpl @Inject constructor(
     private suspend fun quiesceForWalletWipeLocked(): Boolean {
         val current = runtime ?: run {
             log.info("wallet wipe: SDK runtime not started — nothing can persist, and restarts are refused")
+            wipeRemovalTargets.clear()
             return true
         }
-        val loaded = current.walletManager.wallets.value.keys.toList()
-        if (loaded.isEmpty()) {
-            log.info("wallet wipe: no SDK wallet loaded after the removal cascade — runtime quiescent for the wipe")
-            return true
+        // Every wallet this runtime may still persist for: the loaded ones AND
+        // the ones the removal cascade was asked to remove. An empty loaded map
+        // proves neither removal nor drained persistence — the SDK's
+        // removeWallet drops its wrapper map BEFORE the fallible secret delete
+        // and its own tombstone, and the persistence handler still derives for
+        // a wallet whose Room row / changeset buffer survived that failure.
+        val loaded = current.walletManager.wallets.value.keys
+        val targets = LinkedHashSet<String>().apply {
+            loaded.forEach { add(it.lowercase()) }
+            addAll(wipeRemovalTargets.snapshot())
         }
         log.warn(
-            "wallet wipe: {} SDK wallet(s) still loaded after the removal cascade — tombstoning and stopping " +
-                "the SDK runtime before the secrets erase",
-            loaded.size
+            "wallet wipe: stopping the SDK runtime before the secrets erase — {} wallet(s) still loaded, " +
+                "{} wallet id(s) tombstoned in the live WalletStorage, then the wallet manager is closed and drained",
+            loaded.size,
+            targets.size
         )
-        // Tombstone FIRST: rejects the deriver's key stores for these wallets
-        // from now on, including any that fire during the manager close.
-        for (hex in loaded) {
-            val walletId = walletIdFromHex(hex) ?: continue
-            runCatching { current.walletStorage.withPrivateKeyExclusion { tombstoneWallet(walletId) } }
-                .onFailure { log.warn("wallet wipe: tombstoning SDK wallet {}… failed", hex.take(8), it) }
-        }
         runtime = null
-        // The manager's own suspending close PROPAGATES failure (closeAll
-        // swallows it): native shutdown quiesces every callback task, then
-        // the persistence executor is closed.
-        val managerClosed = try {
-            current.walletManager.closeSuspending()
-            current.walletManager.isClosed
-        } catch (e: CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            log.error("wallet wipe: SDK wallet manager close failed", t)
-            false
-        }
-        runCatching { current.walletManagerStore.closeAll() }
-            .onFailure { log.warn("failed to close wallet managers", it) }
-        runCatching { current.sdk.close() }
-            .onFailure { log.warn("failed to close SDK handle", it) }
-        runCatching { current.database.close() }
-            .onFailure { log.warn("failed to close SDK database", it) }
-        if (managerClosed) {
-            log.warn("wallet wipe: SDK runtime stopped — no SDK-owned work can write a wallet secret")
-        } else {
-            log.error("wallet wipe: SDK wallet manager could not be confirmed closed — SDK not quiescent")
-        }
-        return managerClosed
+        val closed = stopSdkRuntimeForWalletWipe(
+            walletIdsHex = targets,
+            tombstone = { walletId -> current.walletStorage.withPrivateKeyExclusion { tombstoneWallet(walletId) } },
+            // The manager's own suspending close PROPAGATES failure (closeAll
+            // swallows it): native shutdown quiesces every callback task, then
+            // the persistence executor is closed.
+            closeManager = {
+                current.walletManager.closeSuspending()
+                current.walletManager.isClosed
+            },
+            closeRest = {
+                runCatching { current.walletManagerStore.closeAll() }
+                    .onFailure { log.warn("failed to close wallet managers", it) }
+                runCatching { current.sdk.close() }
+                    .onFailure { log.warn("failed to close SDK handle", it) }
+                runCatching { current.database.close() }
+                    .onFailure { log.warn("failed to close SDK database", it) }
+            }
+        )
+        // The tombstones lived in the closed runtime's WalletStorage; the next
+        // bootstrap builds a fresh one, so nothing is carried over.
+        if (closed) wipeRemovalTargets.clear()
+        return closed
     }
 
     override suspend fun stop() {
@@ -698,9 +788,13 @@ class DashSdkServiceImpl @Inject constructor(
      * wallet — harmless — or runs after and re-creates cleanly).
      */
     override suspend fun removeAppWallet(walletIdHex: String) {
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        // Captured BEFORE the cascade: if the SDK's removeWallet fails after
+        // dropping its wrapper map (but before its own tombstone), only this
+        // record lets the wipe's quiesce still tombstone the wallet.
+        if (secretWriteFence.isRaised) wipeRemovalTargets.record(walletIdHex)
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
-        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         bindLock.withLock {
             if (!current.walletManager.wallets.value.containsKey(walletIdHex)) {
                 log.warn(
