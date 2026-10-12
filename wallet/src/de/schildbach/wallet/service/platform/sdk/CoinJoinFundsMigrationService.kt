@@ -476,12 +476,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /**
      * OPTION A — shield the mixed funds.
      *
-     * Locks [amount] from the CoinJoin account ONLY (SDK `fundingPath`) and
-     * shields it to the wallet's own Orchard address. The caller passes the
-     * balance from [mixedFundsToMigrate] minus [L1_FEE_RESERVE_DUFFS]; the
-     * engine's LargestFirst selection then has to reach for every CoinJoin
-     * UTXO to cover it, and whatever the fee leaves over returns to BIP44 as
-     * change — so the CoinJoin account still ends up empty.
+     * Drains the CoinJoin account directly into a lock for the wallet's own
+     * Orchard address. [amount] is the UI estimate after the fee reserve;
+     * the SDK computes the actual lock value from all CoinJoin inputs minus
+     * the L1 fee, with no intermediate BIP44 transfer or transparent change.
      */
     suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome {
         val path = coinJoinAccountPath(walletData.networkParameters)
