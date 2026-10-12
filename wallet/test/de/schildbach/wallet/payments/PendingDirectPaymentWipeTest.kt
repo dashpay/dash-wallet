@@ -124,7 +124,7 @@ class PendingDirectPaymentWipeTest {
             mockk<PendingPaymentEngine>(relaxed = true) {
                 coEvery { sdkOwnsL1() } returns false
                 coEvery { hasObserved(any()) } returns false
-                coEvery { bridge(any(), any()) } returns null
+                coEvery { bridge(any(), any(), any()) } returns null
             }
         ).apply {
             // the watches must not act during a test; nothing here is ever on the network

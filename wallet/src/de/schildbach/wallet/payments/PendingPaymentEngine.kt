@@ -58,7 +58,7 @@ interface PendingPaymentEngine {
      * self-spend grace marker and the send analytics), returning the wallet's live instance, or
      * null when the bridge could not commit it.
      */
-    suspend fun bridge(txIdHex: String, rawTx: ByteArray): Transaction?
+    suspend fun bridge(txIdHex: String, rawTx: ByteArray, origin: org.bitcoinj.wallet.Wallet): Transaction?
 
     /** Consumes [reservation] by broadcasting its signed transaction. Best effort; never throws. */
     suspend fun broadcast(reservation: SdkDeferredPayment)
@@ -82,8 +82,8 @@ class SdkPendingPaymentEngine @Inject constructor(
     override suspend fun hasObserved(txIdHex: String): Boolean =
         l1SendProbeService.observedTxContext(txIdHex) != null
 
-    override suspend fun bridge(txIdHex: String, rawTx: ByteArray): Transaction? =
-        when (val bridged = bridgedTransactionFactory.bridge(txIdHex, rawTx)) {
+    override suspend fun bridge(txIdHex: String, rawTx: ByteArray, origin: org.bitcoinj.wallet.Wallet): Transaction? =
+        when (val bridged = bridgedTransactionFactory.bridge(txIdHex, rawTx, originWallet = origin)) {
             is BridgedTxResult.Bridged -> bridged.transaction
             is BridgedTxResult.NotBridged -> {
                 log.warn("pending payment {}: the wallet bridge did not commit it ({})", txIdHex, bridged.reason)

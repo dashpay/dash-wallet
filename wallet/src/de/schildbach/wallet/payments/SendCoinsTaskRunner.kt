@@ -997,9 +997,10 @@ class SendCoinsTaskRunner @Inject constructor(
      */
     private fun setReservedOutpointLocks(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
-        locked: Boolean
+        locked: Boolean,
+        wallet: Wallet? = walletData.wallet
     ) {
-        val wallet = walletData.wallet ?: return
+        wallet ?: return
         Context.propagate(wallet.context)
         val tx = Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
         for (input in tx.inputs) {
@@ -1199,9 +1200,19 @@ class SendCoinsTaskRunner @Inject constructor(
         // Acknowledged: the broadcast below consumes the reservation, so take it back from the
         // verifier first and nothing can broadcast or release it a second time.
         pendingPaymentVerifier.detachReservation(tx.txId)
+        // This whole function is NonCancellable, so the answer can arrive after the wallet that
+        // signed was wiped and a replacement installed. The engine and walletData.wallet now
+        // belong to that replacement: broadcasting through one and committing to the other would
+        // import this wallet's payment into a wallet that never made it. The payee has it, and
+        // its own broadcast delivers it; the wipe has already cleared this wallet's records.
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            throw IllegalStateException(
+                "the wallet that signed ${payment.txidHex} was wiped before its acknowledgement; not completing it"
+            )
+        }
         // completeAckedPayment throws Bip70AckedDisplayException when the bridge fails; the
         // quarantine then stays, holding what is needed to commit and attribute it later.
-        val sent = completeAckedPayment(payment)
+        val sent = completeAckedPayment(payment, wallet)
 
         // Committed, so the outcome is certain. Apply the recovery metadata first: the
         // quarantine record is the only durable copy of it, and cancelling first would leave a
@@ -1252,11 +1263,12 @@ class SendCoinsTaskRunner @Inject constructor(
      * record, return the live transaction.
      */
     private suspend fun completeAckedPayment(
-        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        origin: Wallet
     ): Transaction {
         // The reservation is being consumed — the mirrored locks have
         // done their job (the inputs are spent from here on).
-        runCatching { setReservedOutpointLocks(payment, locked = false) }
+        runCatching { setReservedOutpointLocks(payment, locked = false, wallet = origin) }
             .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks post-ack", it) }
 
         // The payment IS made from the merchant's side. Broadcast
@@ -1280,8 +1292,20 @@ class SendCoinsTaskRunner @Inject constructor(
                 )
         }
 
+        // The broadcast suspends, and a wipe can land during it. Past this point nothing may
+        // touch the wallet unless it is still the one that signed; the commit below is bound to
+        // that wallet in any case, never to whatever walletData.wallet reads by then.
+        if (!pendingPaymentVerifier.stillOwnedBy(origin)) {
+            throw IllegalStateException(
+                "the wallet that signed ${payment.txidHex} was wiped during its broadcast; not committing it"
+            )
+        }
         return when (
-            val bridged = bridgedTransactionFactory.bridge(payment.txidHex, payment.rawTxBytes)
+            val bridged = bridgedTransactionFactory.bridge(
+                payment.txidHex,
+                payment.rawTxBytes,
+                originWallet = origin
+            )
         ) {
             is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged ->
                 bridged.transaction

@@ -107,7 +107,7 @@ class PendingDirectPaymentVerifierTest {
         engine = mockk(relaxed = true)
         coEvery { engine.sdkOwnsL1() } returns false
         coEvery { engine.hasObserved(any()) } returns false
-        coEvery { engine.bridge(any(), any()) } returns null
+        coEvery { engine.bridge(any(), any(), any()) } returns null
 
         verifier = PendingDirectPaymentVerifier(
             walletData, walletApplication, blockchainStateProvider, metadataProvider, config, engine
@@ -813,12 +813,12 @@ class PendingDirectPaymentVerifierTest {
     fun `a commit through the SDK bridge is not announced through dashj a second time`() = runBlocking {
         val tx = createTransaction()
         val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
-        coEvery { engine.bridge(tx.txId.toString(), any()) } returns tx
+        coEvery { engine.bridge(tx.txId.toString(), any(), any()) } returns tx
         coEvery { engine.hasObserved(tx.txId.toString()) } returns true
 
         withTimeout(5_000) { result.await() }
 
-        coVerify(exactly = 1) { engine.bridge(tx.txId.toString(), any()) }
+        coVerify(exactly = 1) { engine.bridge(tx.txId.toString(), any(), any()) }
         // the bridge runs the dashj announce itself, as it does after every SDK send
         verify(exactly = 0) { walletApplication.broadcastTransaction(any()) }
     }

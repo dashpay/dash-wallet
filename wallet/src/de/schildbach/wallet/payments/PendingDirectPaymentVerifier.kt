@@ -595,7 +595,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
             // Through the same bridge every SDK send is committed by, so a recovered payment
             // carries the same stamps and arms the same self-spend grace; plain maybeCommitTx,
             // which the bridge wraps, when it cannot.
-            bridged = engine.bridge(tx.txId.toString(), tx.unsafeBitcoinSerialize()) != null
+            bridged = engine.bridge(tx.txId.toString(), tx.unsafeBitcoinSerialize(), wallet) != null
             if (!bridged) {
                 wallet.maybeCommitTx(tx)
             }

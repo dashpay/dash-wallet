@@ -64,6 +64,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -705,7 +706,7 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
-        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes) } returns
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes, any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
                 liveTx, adoptedWalletInstance = false
             )
@@ -859,7 +860,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val payment = deferredPayment()
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
-        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any()) } returns
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
                 mockk(relaxed = true), adoptedWalletInstance = false
             )
@@ -891,7 +892,7 @@ class SendCoinsTaskRunnerBIP70Test {
         every { liveTx.txId } returns deferredTx.txId
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
-        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any()) } returns
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
         mockWebServer.enqueue(
             MockResponse()
@@ -922,7 +923,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val payment = deferredPayment()
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
-        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any()) } returns
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged("wallet unavailable")
         mockWebServer.enqueue(
             MockResponse()
@@ -1011,7 +1012,7 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 0
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
-        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any()) } returns
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
                 liveTx, adoptedWalletInstance = false
             )
@@ -1024,7 +1025,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // Completed as PAID by the pending-payment watch: the reservation was consumed, never
         // released, and the tx was committed through the bridge.
         assertEquals(deferredTx.txId, result.txId)
-        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any()) }
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
     }
@@ -1132,5 +1133,69 @@ class SendCoinsTaskRunnerBIP70Test {
             null, null, null, null, null, null, null
         )
         assertEquals(null, extractBip70Recipients(zeroAmount, network))
+    }
+
+    // ==================== acknowledgement vs a wipe (review 4245734681) ====================
+
+    @Test
+    fun `an acknowledgement that arrives after a wipe is not completed on the replacement wallet`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        // a real wallet: a relaxed mock hands dashj a mock Context and poisons the tests after it
+        val replacement = Wallet.createDeterministic(networkParams, org.bitcoinj.script.Script.ScriptType.P2PKH)
+        // stubbed so a regression fails on the assertions below rather than inside MockK
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged("test")
+        // the wipe finishes and installs a replacement while the payee is answering
+        mockWebServer.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                every { walletDataProvider.wallet } returns replacement
+                return MockResponse()
+                    .setResponseCode(HttpURLConnection.HTTP_OK)
+                    .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                    .setBody(okio.Buffer().write(createPaymentAck()))
+            }
+        }
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent)
+            fail("an acknowledgement for a wiped wallet was completed")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        // nothing may be broadcast through, or committed to, the wallet that replaced the signer
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
+        assertNull(replacement.getTransaction(deferredTx.txId))
+    }
+
+    @Test
+    fun `an acknowledged payment is committed to the wallet that signed it`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        val liveTx = mockk<Transaction>(relaxed = true)
+        every { liveTx.txId } returns deferredTx.txId
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck()))
+        )
+
+        sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent)
+
+        // bound to the captured origin, not to whatever walletData.wallet reads at bridge time
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
     }
 }
