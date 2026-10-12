@@ -3146,17 +3146,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * Never throws; returns true only when an SDK replay was armed, so the
      * caller knows whether clearing the rescan databases is safe.
      */
-    private suspend fun armSdkRescanForResetIfCutOver(): Boolean {
-        return try {
-            if (!cutoverCoordinator.sdkOwnsL1Flow().first()) return false
-            sdkWalletBinder.armSpvRescanForBlockchainReset()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            log.warn("SDK rescan arm for blockchain reset failed", t)
-            false
-        }
-    }
+    private suspend fun armSdkRescanForResetIfCutOver(): Boolean =
+        BlockchainResetShutdownPolicy.armSdkRescan(
+            sdkOwnsL1 = { cutoverCoordinator.sdkOwnsL1Flow().first() },
+            arm = { sdkWalletBinder.armSpvRescanForBlockchainReset() },
+            onFailure = { t -> log.warn("SDK rescan arm for blockchain reset failed", t) }
+        )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info(".onStartCommand($intent)")
@@ -3520,8 +3515,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         lock.release()
                     }
                 }
-                if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
-                    if (deleteWalletFileOnShutdown) {
+                val shutdownPlan = BlockchainResetShutdownPolicy.plan(
+                    resetBlockchainOnShutdown = resetBlockchainOnShutdown,
+                    deleteWalletFileOnShutdown = deleteWalletFileOnShutdown,
+                    sdkRescanArmedForReset = sdkRescanArmedForReset
+                )
+                if (shutdownPlan.resetMnListsAndState) {
+                    if (shutdownPlan.deleteStores) {
                         log.info("removing blockchain")
                         blockChainFile?.delete()
                         headerChainFile?.delete()
@@ -3530,7 +3530,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         log.info("resetting blockchain state (keeping dashj blockstore)")
                     }
                     resetMNLists(false)
-                    if (deleteWalletFileOnShutdown) {
+                    if (shutdownPlan.wipeWallet) {
                         log.info("removing wallet file and app data")
                         // The Kotlin-SDK engines must be provably down before the wipe
                         // deletes app data. platformSyncService.shutdown() above already
@@ -3542,10 +3542,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         // WITHOUT blocking this dispatcher thread, which is
                         // what the old runBlocking clear did.
                         application.finishWalletWipe()
-                    } else if (sdkRescanArmedForReset) {
+                    } else if (shutdownPlan.clearRescanDatabases) {
                         //Clear the blockchain identity
                         application.clearDatabasesForRescan()
-                    } else {
+                    } else if (shutdownPlan.keepRescanDatabases) {
                         // No SDK replay armed and dashj keeps its stores (no
                         // wallet.reset()), so a clear would never be refilled.
                         log.warn("no SDK replay armed; keeping rescan databases")

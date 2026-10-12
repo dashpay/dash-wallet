@@ -2123,9 +2123,11 @@ class SdkWalletBinder internal constructor(
     /**
      * The SDK half of the user-facing "Reset/Rescan blockchain" action.
      *
-     * Post-cutover the reset's dashj work (delete the SPV block/header
-     * stores, clear the display DB) is an SDK NO-OP: the engine keeps its
-     * `WalletEntity.syncedHeight` watermark and stays SYNCED, so the user
+     * Post-cutover a reset keeps the dashj SPV block/header stores and the
+     * display history (a reconcile walk is requested in place of the clear),
+     * and the remaining dashj-side reset work does not rewind the SDK: its
+     * engine keeps the `WalletEntity.syncedHeight` watermark and stays
+     * SYNCED unless an SDK rescan is armed, so without this arm the user
      * sees nothing happen (field 13:10:04Z on the mainnet device).
      * This arms the SAME SPV filter-watermark rewind the address-window
      * heal uses ([DashSdkService.armSpvRescan]) so the reset actually
