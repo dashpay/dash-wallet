@@ -1668,6 +1668,18 @@ class ShieldedBalanceServiceTest {
         assertArrayEquals(source.defaultAddress, source.lastFundRecipient)
     }
 
+    @Test
+    fun mixedFundsShield_existingLockReturnsRecoveryWithoutNewFunding() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = { listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 1, 206751800L)) }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+        assertEquals(0, source.fundCalls)
+        assertEquals(0, source.broadcastCalls)
+    }
+
     /**
      * Regression guard for the bricked-shields bug: the gate must NOT
      * consult ANY dashj comparison. A caught-up engine shields regardless

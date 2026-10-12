@@ -93,6 +93,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            migrationService.restorePendingShieldMigration()
             _uiState.value = _uiState.value.copy(amount = migrationService.mixedFundsToMigrate())
         }
         // The persisted in-flight marker drives the post-broadcast window:
@@ -106,7 +107,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         awaitingResult = false,
                         resultTimedOut = false,
-                        resultLanded = observedInFlight
+                        resultLanded = observedInFlight && !_uiState.value.inProgress
                     )
                 } else {
                     observedInFlight = true
@@ -170,7 +171,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
         action: MixedFundsMigrationAction,
         block: suspend (Coin) -> MixedFundsMigrationOutcome
     ) {
-        if (_uiState.value.inProgress) return
+        if (_uiState.value.inProgress || _uiState.value.awaitingResult || _uiState.value.resultTimedOut) return
         val amount = _uiState.value.amount
         if (amount == null || !amount.isPositive) {
             _uiState.value = _uiState.value.copy(
@@ -191,7 +192,12 @@ class MixedFundsMigrationViewModel @Inject constructor(
                 log.error("mixed-funds migration ({}) threw unexpectedly", action, t)
                 MixedFundsMigrationOutcome.UNCONFIRMED
             }
-            _uiState.value = _uiState.value.copy(inProgress = false, outcome = outcome)
+            _uiState.value = _uiState.value.copy(
+                inProgress = false,
+                outcome = outcome,
+                resultLanded = outcome == MixedFundsMigrationOutcome.STARTED && observedInFlight &&
+                    !_uiState.value.awaitingResult && !_uiState.value.resultTimedOut
+            )
         }
     }
 

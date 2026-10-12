@@ -416,6 +416,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // builds so wallets whose header balance includes CoinJoin-account
         // funds have an in-app way to make those coins spendable again.
         if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
+        if (restorePendingShieldMigration()) return true
         val alreadyHandled = try {
             dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {
@@ -482,10 +483,16 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * the L1 fee, with no intermediate BIP44 transfer or transparent change.
      */
     suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome {
+        if (restorePendingShieldMigration()) return MixedFundsMigrationOutcome.STARTED
+        // Save the recovery presentation before the native call, which may
+        // wait for finality indefinitely or outlive this process.
+        markInFlight(MixedFundsMigrationAction.SHIELD, startWatcher = false)
         val path = coinJoinAccountPath(walletData.networkParameters)
         log.info("mixed-funds migration: shielding {} from {}", amount, path)
         val result = shieldedBalanceService.shieldMixedFundsFromWallet(amount, path)
-        return finish(MixedFundsMigrationAction.SHIELD, result.toOutcome())
+        val outcome = result.toOutcome()
+        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) clearInFlightMigration()
+        return finish(MixedFundsMigrationAction.SHIELD, outcome, markerAlreadyRecorded = true)
     }
 
     /**
@@ -497,6 +504,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * destination address.
      */
     suspend fun combineIntoUnmixedBalance(): MixedFundsMigrationOutcome {
+        if (restorePendingShieldMigration()) return MixedFundsMigrationOutcome.STARTED
         val destination = try {
             // A FRESH address, not the current one: reusing an address the
             // user has already published would link the mixed coins to it.
@@ -522,7 +530,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /** Record the migration as handled unless it provably did nothing. */
     private suspend fun finish(
         action: MixedFundsMigrationAction,
-        outcome: MixedFundsMigrationOutcome
+        outcome: MixedFundsMigrationOutcome,
+        markerAlreadyRecorded: Boolean = false
     ): MixedFundsMigrationOutcome {
         if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
             // Nothing was spent — leave the flag unset so the prompt returns
@@ -541,7 +550,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             // marker failure must not disturb the migration outcome (worst
             // case is the old behavior — no resumed processing sheet).
             try {
-                markInFlight(action)
+                if (!markerAlreadyRecorded && inFlightMigration() == null) markInFlight(action)
+                else startInFlightWatcherIfNeeded()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("failed to persist the in-flight mixed-funds marker", t)
@@ -559,6 +569,21 @@ class CoinJoinFundsMigrationService @Inject constructor(
     }
 
     // ── The in-flight (post-broadcast) window ─────────────────────────
+
+    /** Recover older interrupted shields that predate the early marker write. */
+    suspend fun restorePendingShieldMigration(): Boolean {
+        if (inFlightMigration() != null) {
+            startInFlightWatcherIfNeeded()
+            return true
+        }
+        if (!shieldedBalanceService.ensureShieldedReady()) return false
+        if ((shieldedBalanceService.pendingWalletShieldLockCount() ?: 0) <= 0) return false
+        // A pending wallet shield is enough to block either migration: its
+        // reserved inputs may still appear in the confirmed account balance.
+        markInFlight(MixedFundsMigrationAction.SHIELD)
+        log.info("mixed-funds migration: restored progress for a pending wallet shield")
+        return true
+    }
 
     /**
      * The persisted in-flight migration, or null when none is pending —
@@ -594,7 +619,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
     }
 
-    private suspend fun markInFlight(action: MixedFundsMigrationAction) {
+    private suspend fun markInFlight(action: MixedFundsMigrationAction, startWatcher: Boolean = true) {
         val baseline = if (action == MixedFundsMigrationAction.SHIELD) {
             // The shielded balance the credit must EXCEED to count as
             // landed. Read live (the note store has not credited the shield
@@ -612,7 +637,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val marker = InFlightMixedFundsMigration(action, System.currentTimeMillis(), baseline)
         dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker))
         log.info("mixed-funds migration in flight: {} (baseline {} duffs)", action, baseline)
-        startInFlightWatcherIfNeeded()
+        if (startWatcher) startInFlightWatcherIfNeeded()
     }
 
     /**

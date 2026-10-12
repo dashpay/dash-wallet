@@ -1541,6 +1541,19 @@ class ShieldedBalanceServiceImpl internal constructor(
             return notBroadcast(operation, "shielded address lookup failed", t)
         } ?: return notBroadcast(operation, "wallet has no bound shielded address", null)
 
+        // Do not queue a fresh CoinJoin drain behind a recovery sweep. A
+        // persisted lock already owns those inputs, even if the balance
+        // snapshot still includes them until confirmation.
+        if (fundingPath != null) {
+            val pending = try {
+                source.walletShieldLocks(walletId).any { it.resumable }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast(operation, "cannot read the tracked asset-lock state", t)
+            }
+            if (pending) return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+        }
+
         return walletShieldMutex.withLock {
             // Ensure the SDK's SPV is live immediately before spending: the
             // asset lock is built+broadcast through it, and in this interim
@@ -1567,7 +1580,11 @@ class ShieldedBalanceServiceImpl internal constructor(
             // the attempt. Refuse to spend if it cannot be read — the
             // post-failure classification below depends on it.
             val lockedBefore = try {
-                source.walletShieldLocks(walletId).map { it.outPointHex }.toHashSet()
+                val locks = source.walletShieldLocks(walletId)
+                if (fundingPath != null && locks.any { it.resumable }) {
+                    return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+                }
+                locks.map { it.outPointHex }.toHashSet()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 return notBroadcast(operation, "cannot read the tracked asset-lock state", t)

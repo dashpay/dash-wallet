@@ -31,6 +31,7 @@ class MixedFundsMigrationViewModelTest {
         val service = mockk<CoinJoinFundsMigrationService>()
         val completion = CompletableDeferred<MixedFundsMigrationOutcome>()
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.restorePendingShieldMigration() } returns false
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(null)
         coEvery { service.shieldMixedFunds(any()) } coAnswers { completion.await() }
         val activityStore = ViewModelStore()
@@ -58,6 +59,59 @@ class MixedFundsMigrationViewModelTest {
             assertFalse(reopened.uiState.value.inProgress)
         } finally {
             activityStore.clear()
+        }
+    }
+
+    @Test
+    fun restoredPendingShieldDisablesBothMigrationActions() {
+        val service = mockk<CoinJoinFundsMigrationService>()
+        coEvery { service.restorePendingShieldMigration() } returns true
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
+            de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
+                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD,
+                System.currentTimeMillis(), 0L
+            )
+        )
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.uiState.value.awaitingResult)
+            model.shieldMixedFunds()
+            model.combineIntoUnmixedBalance()
+            coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
+            coVerify(exactly = 0) { service.combineIntoUnmixedBalance() }
+        } finally {
+            store.clear()
+        }
+    }
+
+    @Test
+    fun shieldCreditLandingBeforeFundingReturnsShowsSuccess() = runBlocking {
+        val service = mockk<CoinJoinFundsMigrationService>()
+        val completion = CompletableDeferred<MixedFundsMigrationOutcome>()
+        val markers = MutableStateFlow<de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration?>(null)
+        coEvery { service.restorePendingShieldMigration() } returns false
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.observeInFlightMigration() } returns markers
+        coEvery { service.shieldMixedFunds(any()) } coAnswers { completion.await() }
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            model.shieldMixedFunds()
+            markers.value = de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
+                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD,
+                System.currentTimeMillis(), 0L
+            )
+            assertTrue(model.uiState.value.awaitingResult)
+            markers.value = null
+            completion.complete(MixedFundsMigrationOutcome.STARTED)
+            assertFalse(model.uiState.value.inProgress)
+            assertTrue(model.uiState.value.resultLanded)
+        } finally {
+            store.clear()
         }
     }
 }
