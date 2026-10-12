@@ -41,6 +41,7 @@ import org.dash.wallet.common.services.BlockchainStateProvider
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -285,9 +286,107 @@ class InviteReplacedDuringValidationTest {
         runBlocking {
             val first = validateAToCompletion(viewModel)
 
-            // Only the call that settled the invite shows (and clears) it.
+            // The first definitive verdict is final for its generation.
             assertNull(viewModel.validateInvitation())
             assertEquals(first, viewModel.current)
+        }
+    }
+
+    /** The lock screen, as the home screen sees it. */
+    @Volatile
+    private var locked = false
+
+    /**
+     * What WalletTransactionsFragment.processInvitation() does with an invite:
+     * validate it if it has no verdict yet, then — only if the lock screen is
+     * not up at that point — take the undelivered verdict to show its dialog.
+     * Returns the verdict this caller delivered, if any.
+     */
+    private suspend fun InviteHandlerViewModel.processLikeHomeScreen(
+        lockScreenActive: () -> Boolean = { locked }
+    ): PendingInvitation? {
+        if (pendingInvitation.value?.data?.validationState == null) {
+            validateInvitation()
+        }
+        if (lockScreenActive()) return null
+        return takeUndeliveredVerdict { !lockScreenActive() }
+    }
+
+    @Test
+    fun `a verdict published behind the lock screen is delivered once by the unlock`() {
+        val viewModel = viewModel { false }
+        runBlocking {
+            locked = true
+            viewModel.setInvitationLink(inviteA, false)
+            // The locked caller starts validating; the user unlocks meanwhile,
+            // and the unlock handler finds A still unvalidated and starts its
+            // own validation (blocked on the same network check).
+            val lockedCaller = async(Dispatchers.Default) { viewModel.processLikeHomeScreen() }
+            assertTrue(validationStarted.await(10, TimeUnit.SECONDS))
+            // The locked caller finishes first, while still locked: it
+            // publishes ALREADY_CLAIMED but must not consume the delivery.
+            releaseValidation.countDown()
+            assertNull(lockedCaller.await())
+            assertEquals(InvitationValidationState.ALREADY_CLAIMED, viewModel.current.data.validationState)
+
+            // Unlock: the unlock handler's own validation is rejected (already
+            // settled), yet it still delivers the pending verdict.
+            locked = false
+            assertNull(viewModel.validateInvitation())
+            val delivered = viewModel.takeUndeliveredVerdict { true }
+            assertEquals(InvitationValidationState.ALREADY_CLAIMED, delivered?.data?.validationState)
+            assertTrue(viewModel.clearInvitation(expectedGeneration = requireNotNull(delivered).generation))
+            assertEquals("", storedLink.value)
+        }
+    }
+
+    @Test
+    fun `unlocking during validation delivers the verdict exactly once`() {
+        val viewModel = viewModel { false }
+        runBlocking {
+            locked = true
+            viewModel.setInvitationLink(inviteA, false)
+            val lockedCaller = async(Dispatchers.Default) { viewModel.processLikeHomeScreen() }
+            assertTrue(validationStarted.await(10, TimeUnit.SECONDS))
+            // Unlock while A's network check is in flight: the unlock handler
+            // finds A unvalidated and runs its own validation.
+            locked = false
+            val unlockHandler = async(Dispatchers.Default) { viewModel.processLikeHomeScreen() }
+            releaseValidation.countDown()
+
+            // Whichever finishes first — the locked-at-start caller checks the
+            // lock at delivery time, so it may deliver too — exactly one shows
+            // the dialog.
+            val delivered = listOfNotNull(lockedCaller.await(), unlockHandler.await())
+            assertEquals(1, delivered.size)
+            assertEquals(InvitationValidationState.ALREADY_CLAIMED, delivered.single().data.validationState)
+
+            // Later callers (e.g. the invitation feed re-emitting the settled
+            // invite) find it already delivered.
+            assertNull(viewModel.processLikeHomeScreen())
+        }
+    }
+
+    @Test
+    fun `a verdict is not delivered while the lock screen is up`() {
+        val viewModel = viewModel { false }
+        runBlocking {
+            validateAToCompletion(viewModel)
+
+            assertNull(viewModel.takeUndeliveredVerdict { false })
+            assertNotNull(viewModel.takeUndeliveredVerdict { true })
+        }
+    }
+
+    @Test
+    fun `an undelivered verdict for a replaced invite is never delivered`() {
+        val viewModel = viewModel { false }
+        runBlocking {
+            validateAToCompletion(viewModel)
+            viewModel.setInvitationLink(inviteB, false)
+
+            // B is unvalidated: nothing to deliver, and A's verdict is gone.
+            assertNull(viewModel.takeUndeliveredVerdict { true })
         }
     }
 

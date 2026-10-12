@@ -70,10 +70,19 @@ class InviteHandlerViewModel @Inject constructor(
     /**
      * Serialises every change to [_pendingInvitation] (and the persisted link
      * behind it): set, clear, the INVITATION_LINK observer and the publication
-     * of a validation verdict. Guards [generation].
+     * of a validation verdict — and the delivery of that verdict. Guards
+     * [generation] and [deliveredGeneration].
      */
     private val storeMutex = Mutex()
     private var generation = 0L
+
+    /**
+     * The generation whose definitive verdict has been handed to the UI by
+     * [takeUndeliveredVerdict] (0: none; generations start at 1). Publication
+     * and delivery are separate: a verdict published while the lock screen is
+     * up stays undelivered until a caller that can show it takes it.
+     */
+    private var deliveredGeneration = 0L
 
     val isUsingInvite: Boolean
         get() = _pendingInvitation.value != null
@@ -213,11 +222,14 @@ class InviteHandlerViewModel @Inject constructor(
      *  - no definitive verdict has been published for that generation yet:
      *    the provisional [InvitationValidationState.NOT_SYNCED] can be
      *    replaced by a definitive verdict, never the other way round, and the
-     *    first definitive verdict is final (so its dialog is shown once).
+     *    first definitive verdict is final.
      *
-     * @return the published invite, for the caller to show its verdict; null
-     * if this call's verdict was discarded (the invite it validated was
-     * superseded, or another validation already settled it).
+     * Publishing is not delivering: the UI shows a definitive verdict via
+     * [takeUndeliveredVerdict], which hands it out exactly once.
+     *
+     * @return the published invite; null if this call's verdict was discarded
+     * (the invite it validated was superseded, or another validation already
+     * settled it).
      */
     suspend fun validateInvitation(): PendingInvitation? = withContext(Dispatchers.IO) {
         val snapshot = _pendingInvitation.value ?: return@withContext null
@@ -299,6 +311,29 @@ class InviteHandlerViewModel @Inject constructor(
                     null
                 }
                 else -> PendingInvitation(forGeneration, verdict).also { _pendingInvitation.value = it }
+            }
+        }
+
+    /**
+     * Hands out the current invite's definitive verdict (anything but
+     * unvalidated or the provisional NOT_SYNCED) if it has not been delivered
+     * yet, marking it delivered — so whichever caller gets here first shows
+     * the verdict (and runs its clear) exactly once, regardless of which
+     * validation published it.
+     *
+     * [canDeliver] is evaluated under the lock, just before marking: a caller
+     * that cannot show UI right now (lock screen up) gets null and leaves the
+     * verdict undelivered for a later caller (e.g. the unlock).
+     */
+    suspend fun takeUndeliveredVerdict(canDeliver: () -> Boolean = { true }): PendingInvitation? =
+        storeMutex.withLock {
+            val current = _pendingInvitation.value ?: return@withLock null
+            val state = current.data.validationState
+            when {
+                state == null || state == InvitationValidationState.NOT_SYNCED -> null
+                deliveredGeneration == current.generation -> null
+                !canDeliver() -> null
+                else -> current.also { deliveredGeneration = it.generation }
             }
         }
 }
