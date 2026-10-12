@@ -18,16 +18,60 @@
 package de.schildbach.wallet.payments
 
 import de.schildbach.wallet.service.platform.sdk.BridgedTxResult
-import de.schildbach.wallet.service.platform.sdk.L1SendProbeService
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
 import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.wireTxidBytesOrNull
 import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Transaction
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** What the SDK engine can say about one transaction. */
+enum class EngineObservation {
+    /** The engine holds a record of it, so it reached the network. */
+    OBSERVED,
+
+    /** No record, read from a running engine whose scan is caught up: real negative evidence. */
+    ABSENT,
+
+    /**
+     * Nothing can be concluded: the store could not be read, or the engine is not running or not
+     * caught up, so the lack of a record proves nothing. Must never count as [ABSENT].
+     */
+    UNAVAILABLE
+}
+
+/**
+ * Pure classification behind [PendingPaymentEngine.observation]. A record found is evidence
+ * whatever the engine's state; the absence of one only counts when [live].
+ *
+ * @param recordFound whether the store holds a row for the transaction, or null when the store
+ *   could not be read
+ */
+internal fun classifyEngineObservation(recordFound: Boolean?, live: Boolean): EngineObservation = when {
+    recordFound == true -> EngineObservation.OBSERVED
+    recordFound == null -> EngineObservation.UNAVAILABLE
+    !live -> EngineObservation.UNAVAILABLE
+    else -> EngineObservation.ABSENT
+}
+
+/**
+ * Whether the SDK engine is observing the network right now: running, past connecting, not in
+ * error, and with its compact-filter scan caught up to the tip. Pure.
+ */
+internal fun isEngineObservationLive(engineRunning: Boolean, progress: ShadowSyncProgress): Boolean =
+    engineRunning &&
+        progress.phase != ShadowSyncPhase.IDLE &&
+        progress.phase != ShadowSyncPhase.CONNECTING &&
+        progress.phase != ShadowSyncPhase.ERROR &&
+        progress.scanCaughtUpToTip
 
 /**
  * What [PendingDirectPaymentVerifier] needs from the Kotlin SDK engine.
@@ -46,11 +90,19 @@ interface PendingPaymentEngine {
     suspend fun sdkOwnsL1(): Boolean
 
     /**
-     * True when the SDK engine holds a record of [txIdHex]. The engine only records a transaction
-     * it has observed on the network, and a payment the wallet has not broadcast itself can only
-     * be there because the payee broadcast it.
+     * Whether the SDK engine holds a record of [txIdHex]. The engine only records a transaction it
+     * has observed on the network, and a payment the wallet has not broadcast itself can only be
+     * there because the payee broadcast it. [EngineObservation.UNAVAILABLE] when that cannot be
+     * told: an unreadable store, or an engine that is not live (see [isObservationLive]).
      */
-    suspend fun hasObserved(txIdHex: String): Boolean
+    suspend fun observation(txIdHex: String): EngineObservation
+
+    /**
+     * True while the engine is running and caught up, so that a transaction it has not recorded
+     * is genuinely unseen. While false, no silence may be read as evidence that a payment was
+     * never sent.
+     */
+    fun isObservationLive(): Boolean
 
     /**
      * Commits [rawTx] to the dashj wallet of record the way every SDK send is committed (the
@@ -70,7 +122,8 @@ interface PendingPaymentEngine {
 @Singleton
 class SdkPendingPaymentEngine @Inject constructor(
     private val sdkL1SendService: SdkL1SendService,
-    private val l1SendProbeService: L1SendProbeService,
+    private val sdkService: DashSdkService,
+    private val l1ShadowSyncService: L1ShadowSyncService,
     private val bridgedTransactionFactory: SdkBridgedTransactionFactory
 ) : PendingPaymentEngine {
     companion object {
@@ -79,8 +132,30 @@ class SdkPendingPaymentEngine @Inject constructor(
 
     override suspend fun sdkOwnsL1(): Boolean = sdkL1SendService.cutoverCommitted()
 
-    override suspend fun hasObserved(txIdHex: String): Boolean =
-        l1SendProbeService.observedTxContext(txIdHex) != null
+    override fun isObservationLive(): Boolean = try {
+        isEngineObservationLive(l1ShadowSyncService.isEngineRunning(), l1ShadowSyncService.progress.value)
+    } catch (e: Exception) {
+        log.warn("could not read the SDK engine state; treating its observation as unavailable", e)
+        false
+    }
+
+    /**
+     * A strict read of the SDK store. Unlike L1SendProbeService.observedTxContext, which folds an
+     * unreadable store into "no row", a failure here is reported as UNAVAILABLE. Never boots the
+     * SDK: a store that is not open is simply unavailable.
+     */
+    override suspend fun observation(txIdHex: String): EngineObservation {
+        val recordFound: Boolean? = try {
+            val wire = wireTxidBytesOrNull(txIdHex)
+            val db = sdkService.databaseOrNull()
+            if (wire == null || db == null) null else db.transactionDao().getByTxid(wire) != null
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            log.warn("could not read the SDK store for {}", txIdHex, e)
+            null
+        }
+        return classifyEngineObservation(recordFound, isObservationLive())
+    }
 
     override suspend fun bridge(txIdHex: String, rawTx: ByteArray, origin: org.bitcoinj.wallet.Wallet): Transaction? =
         when (val bridged = bridgedTransactionFactory.bridge(txIdHex, rawTx, originWallet = origin)) {

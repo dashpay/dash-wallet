@@ -106,7 +106,8 @@ class PendingDirectPaymentVerifierTest {
         // bridge declines, so commits take the plain maybeCommitTx path.
         engine = mockk(relaxed = true)
         coEvery { engine.sdkOwnsL1() } returns false
-        coEvery { engine.hasObserved(any()) } returns false
+        coEvery { engine.observation(any()) } returns EngineObservation.ABSENT
+        every { engine.isObservationLive() } returns true
         coEvery { engine.bridge(any(), any(), any()) } returns null
 
         verifier = PendingDirectPaymentVerifier(
@@ -798,7 +799,7 @@ class PendingDirectPaymentVerifierTest {
         val result = verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservation)
 
         // post-cutover the dashj wallet sees nothing; the engine recording the tx is the evidence
-        coEvery { engine.hasObserved(tx.txId.toString()) } returns true
+        coEvery { engine.observation(tx.txId.toString()) } returns EngineObservation.OBSERVED
 
         val committed = withTimeout(5_000) { result.await() }
 
@@ -814,7 +815,7 @@ class PendingDirectPaymentVerifierTest {
         val tx = createTransaction()
         val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
         coEvery { engine.bridge(tx.txId.toString(), any(), any()) } returns tx
-        coEvery { engine.hasObserved(tx.txId.toString()) } returns true
+        coEvery { engine.observation(tx.txId.toString()) } returns EngineObservation.OBSERVED
 
         withTimeout(5_000) { result.await() }
 
@@ -881,7 +882,9 @@ class PendingDirectPaymentVerifierTest {
         val tx = createTransaction()
         // the first network check misses it, the one taken right before discarding sees it
         var asked = 0
-        coEvery { engine.hasObserved(tx.txId.toString()) } answers { ++asked > 3 }
+        coEvery { engine.observation(tx.txId.toString()) } answers {
+            if (++asked > 3) EngineObservation.OBSERVED else EngineObservation.ABSENT
+        }
 
         val result = verifier.quarantine(tx, paymentUrl, "SomeService")
         val committed = withTimeout(5_000) { result.await() }
@@ -907,5 +910,90 @@ class PendingDirectPaymentVerifierTest {
         assertFalse("must not declare a payment dead without live network evidence", result.isCompleted)
         coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
         tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
+    }
+
+    // --- evidence the SDK engine cannot give (review 4245734669 / 4245734673) --------------------
+
+    @Test
+    fun `an unavailable observation never lets the release grace run out`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        // the store cannot be read: nothing says the payee did not broadcast it
+        coEvery { engine.observation(any()) } returns EngineObservation.UNAVAILABLE
+        val tx = createTransaction()
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(500)
+
+        assertFalse(result.isCompleted)
+        coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+        tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
+    }
+
+    @Test
+    fun `a synced row without a live SDK engine does not advance the release grace`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        coEvery { engine.sdkOwnsL1() } returns true
+        // the service tore the engine down; the persisted row still reads synced and recent
+        every { engine.isObservationLive() } returns false
+        val tx = createTransaction()
+
+        verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(500)
+
+        coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+        tx.inputs.forEach { assertTrue(wallet.isLockedOutput(it.outpoint)) }
+    }
+
+    @Test
+    fun `the release grace restarts whenever the engine becomes unavailable`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 300L
+        goOnlineAndSynced()
+        coEvery { engine.sdkOwnsL1() } returns true
+        // live for ~200 ms at a time, never the full 300 ms grace in one stretch
+        val start = System.currentTimeMillis()
+        every { engine.isObservationLive() } answers { (System.currentTimeMillis() - start) % 250 < 200 }
+        val tx = createTransaction()
+
+        verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(1_200)
+
+        coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+    }
+
+    @Test
+    fun `an unavailable observation keeps an abandoned payment's records`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 50L
+        // long enough that the release happens first and the retention cleanup comes due only
+        // once the store has become unreadable
+        verifier.recordRetentionMs = 300L
+        goOnlineAndSynced()
+        val tx = createTransaction()
+        // live and absent long enough to release, then the store becomes unreadable before the
+        // retention cleanup: it must not delete the records of what may be a real payment
+        var asked = 0
+        coEvery { engine.observation(tx.txId.toString()) } answers {
+            if (++asked <= 6) EngineObservation.ABSENT else EngineObservation.UNAVAILABLE
+        }
+
+        verifier.quarantine(tx, paymentUrl, "SomeService")
+        delay(800)
+
+        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        coVerify(exactly = 0) { config.remove(tx.txId) }
+    }
+
+    @Test
+    fun `engine observation classification`() {
+        assertEquals(EngineObservation.OBSERVED, classifyEngineObservation(recordFound = true, live = false))
+        assertEquals(EngineObservation.UNAVAILABLE, classifyEngineObservation(recordFound = null, live = true))
+        assertEquals(EngineObservation.UNAVAILABLE, classifyEngineObservation(recordFound = false, live = false))
+        assertEquals(EngineObservation.ABSENT, classifyEngineObservation(recordFound = false, live = true))
     }
 }

@@ -171,13 +171,30 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { pendingPaymentConfig.getAllOrThrow() } returns emptyList()
         every { walletDataProvider.attachOnWalletWipedListener(any()) } answers { wipeListeners.add(firstArg()) }
         coEvery { sdkL1SendService.cutoverCommitted() } returns false
+        // The real engine for broadcast/release/bridge, so those reach the mocked SDK services the
+        // tests verify; observation answers from the mocked probe, with the engine treated as live.
+        val sdkEngine = SdkPendingPaymentEngine(
+            sdkL1SendService,
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            bridgedTransactionFactory
+        )
+        val pendingPaymentEngine = object : PendingPaymentEngine by sdkEngine {
+            override fun isObservationLive(): Boolean = true
+            override suspend fun observation(txIdHex: String): EngineObservation =
+                if (l1SendProbeService.observedTxContext(txIdHex) != null) {
+                    EngineObservation.OBSERVED
+                } else {
+                    EngineObservation.ABSENT
+                }
+        }
         pendingPaymentVerifier = PendingDirectPaymentVerifier(
             walletDataProvider,
             walletApplication,
             blockchainStateProvider,
             metadataProvider,
             pendingPaymentConfig,
-            SdkPendingPaymentEngine(sdkL1SendService, l1SendProbeService, bridgedTransactionFactory)
+            pendingPaymentEngine
         ).apply { pollIntervalMs = 20L }
 
         // Create SendCoinsTaskRunner

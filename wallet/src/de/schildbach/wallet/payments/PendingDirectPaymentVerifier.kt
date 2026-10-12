@@ -344,7 +344,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                             // transaction, attribute it and let the record go; otherwise leave it
                             // untouched for the next start to look again.
                             val arrived = wallet.getTransaction(tx.txId)
-                                ?: tx.takeIf { engineObservation(tx.txId) == true }
+                                ?: tx.takeIf { engineObservation(tx.txId) == EngineObservation.OBSERVED }
                             arrived?.let {
                                 log.info("transaction {} arrived after its watch expired", tx.txId)
                                 commit(it, payment, wallet)
@@ -440,7 +440,16 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * SDK engine has observed it. The dashj signals need connected dashj peers, which there are
      * none of once the SDK owns L1; the engine's observation is what remains then.
      */
-    suspend fun isTransactionOnNetwork(tx: Transaction): Boolean {
+    suspend fun isTransactionOnNetwork(tx: Transaction): Boolean =
+        networkEvidence(tx) == EngineObservation.OBSERVED
+
+    /**
+     * What is known about [tx] reaching the network. [EngineObservation.UNAVAILABLE] when the
+     * dashj wallet has not seen it and the SDK engine cannot say either way (unreadable store, or
+     * an engine that is not running and caught up): that is not evidence the payment was never
+     * sent, and nothing may be released or discarded on the strength of it.
+     */
+    private suspend fun networkEvidence(tx: Transaction): EngineObservation {
         val seenByDashj = try {
             walletData.wallet?.let { wallet ->
                 val inWalletTx = wallet.getTransaction(tx.txId)
@@ -457,16 +466,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
             false
         }
         if (seenByDashj) {
-            return true
+            return EngineObservation.OBSERVED
         }
-        return try {
-            engine.hasObserved(tx.txId.toString())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.debug("Error asking the SDK engine about {}: {}", tx.txId, e.message)
-            false
-        }
+        return engineObservation(tx.txId)
     }
 
     private suspend fun track(
@@ -514,7 +516,8 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     return null
                 }
 
-                if (isTransactionOnNetwork(tx)) {
+                val evidence = networkEvidence(tx)
+                if (evidence == EngineObservation.OBSERVED) {
                     // Also the late-broadcast case: a released payment is still watched, so a
                     // payee that held the transaction back cannot leave us with a paid order
                     // whose records were thrown away.
@@ -522,6 +525,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 }
 
                 val now = System.currentTimeMillis()
+                if (evidence == EngineObservation.UNAVAILABLE) {
+                    // Nothing can be concluded this round. The grace period measures continuous
+                    // silence from a live engine, so it starts over, and neither the release nor
+                    // the retention cleanup may act on a round that saw nothing.
+                    syncedSince = 0L
+                    delay(pollIntervalMs)
+                    continue
+                }
                 syncedSince = if (isConnectedAndSynced()) {
                     if (syncedSince == 0L) now else syncedSince
                 } else {
@@ -551,6 +562,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     private suspend fun isConnectedAndSynced(): Boolean {
+        // The SDK engine must be running and caught up before silence counts at all: BIP70
+        // payments are built by it, and the engine is where a payee's broadcast shows up once the
+        // SDK owns L1. A torn-down engine publishes IDLE while the persisted row below keeps its
+        // last percentage and replay flag, so without this a recently synced row would let the
+        // grace run out with nothing watching the network.
+        if (!engine.isObservationLive()) {
+            return false
+        }
         // Both of the checks below describe the dashj peer group. Once the SDK owns L1 that peer
         // group is held: it never connects, so the status never reaches CONNECTED and the peer
         // count stays 0, and the engine exposes neither of its own. What stands for them then is
@@ -685,18 +704,18 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // the dashj wallet whether it is real.
         if (stillOwnedBy(origin)) {
             when (engineObservation(payment.txId)) {
-                true -> {
+                EngineObservation.OBSERVED -> {
                     log.info("abandoned payment {} was observed by the SDK engine after all, committing it", payment.txId)
                     commit(Transaction(origin.params, payment.txBytes), payment, origin)
                     return
                 }
-                null -> {
+                EngineObservation.UNAVAILABLE -> {
                     // Unknown is not absent. Keep everything; the next resume() asks again.
                     log.warn("could not ask the SDK engine about {}, keeping its records for now", payment.txId)
                     jobs.remove(payment.txId)
                     return
                 }
-                false -> Unit
+                EngineObservation.ABSENT -> Unit
             }
         }
 
@@ -739,14 +758,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
     }
 
-    /** Whether the SDK engine has observed [txId], or null when it could not be asked. */
-    private suspend fun engineObservation(txId: Sha256Hash): Boolean? = try {
-        engine.hasObserved(txId.toString())
+    /** What the SDK engine can say about [txId]; a failure to ask is [EngineObservation.UNAVAILABLE]. */
+    private suspend fun engineObservation(txId: Sha256Hash): EngineObservation = try {
+        engine.observation(txId.toString())
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         log.warn("could not ask the SDK engine about {}", txId, e)
-        null
+        EngineObservation.UNAVAILABLE
     }
 
     private suspend fun finish(payment: PendingDirectPayment) {
