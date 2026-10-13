@@ -30,8 +30,13 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.platform.sdk.SEND_ALL_FEE_RESERVE_DUFFS
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.ContactAddressAlreadyPaidException
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddress
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddressProvider
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentTarget
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -61,6 +66,8 @@ import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import de.schildbach.wallet.util.format
 import de.schildbach.wallet.util.setAmount
@@ -86,7 +93,8 @@ class SendCoinsViewModel @Inject constructor(
     private val notificationService: NotificationService,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
-    private val dashPayContactRequestDao: DashPayContactRequestDao
+    private val dashPayContactRequestDao: DashPayContactRequestDao,
+    private val contactPaymentAddressProvider: ContactPaymentAddressProvider
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
@@ -156,6 +164,38 @@ class SendCoinsViewModel @Inject constructor(
     val contactData: LiveData<UsernameSearchResult>
         get() = _contactData
 
+    /**
+     * The contact payment address [handleDashIdentity] resolved, so the send can
+     * mark it paid once it succeeds. Null for non-contact payments.
+     */
+    @Volatile
+    private var contactPaymentAddress: ContactPaymentAddress? = null
+
+    /**
+     * The intent the screen was opened with when it resolved to a contact
+     * payment address — what [refreshContactPayment] resolves again.
+     */
+    @Volatile
+    private var contactSourceIntent: PaymentIntent? = null
+
+    /**
+     * The contact payment that may have been broadcast — the send's broadcast
+     * signal fired (including an unknown outcome), the send returned, or it
+     * failed without proof that nothing was broadcast — or whose address was
+     * refused as already paid or claimed by another send. While set, the resolved
+     * contact intent is spent and never submitted again: [isPayeePlausible]
+     * is false and [signAndSendPayment] refuses until [refreshContactPayment]
+     * has resolved a new address (PR #1608 review: a bridge failure after the
+     * broadcast left the intent usable, and the next confirmation paid the
+     * same address). Non-contact payments never set it.
+     */
+    private val spentContactPayment = AtomicReference<ContactPaymentAddress?>(null)
+
+    /** A failed send spent the contact intent; [resetState] resolves it again. */
+    private val refreshContactOnReset = AtomicBoolean(false)
+
+    private var contactRefreshJob: Job? = null
+
 
     init {
         blockchainStateDao.observeState()
@@ -219,6 +259,9 @@ class SendCoinsViewModel @Inject constructor(
 
         log.info("proceeding with {}", finalIntent)
         super.initPaymentIntent(finalIntent)
+        // A freshly resolved contact address: payable again.
+        contactSourceIntent = if (contactPaymentAddress != null) paymentIntent else null
+        spentContactPayment.set(null)
         withContext(Dispatchers.Main.immediate) {
             _state.value = State.INPUT
         }
@@ -261,7 +304,12 @@ class SendCoinsViewModel @Inject constructor(
         _state.postValue(State.SENDING)
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
 
+        // The contact payment this send pays, once known (inside the try).
+        var contactPayment: ContactPaymentAddress? = null
         val transaction = try {
+            // Defence in depth: the UI cannot confirm a spent contact intent
+            // (isPayeePlausible), but never pay its address again.
+            spentContactPayment.get()?.let { throw ContactAddressAlreadyPaidException(it) }
             val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
@@ -303,12 +351,44 @@ class SendCoinsViewModel @Inject constructor(
             } else {
                 null
             }
-            sendCoinsTaskRunner.sendCoins(
-                finalSendRequest,
-                checkBalanceConditions = checkBalance,
-                intendedRecipient = intendedRecipient
-            )
+            // A contact payment: the provider claims the address before sending
+            // (a second send of it, e.g. from another send screen, is refused)
+            // and marks it paid once it may have gone out, so the next payment
+            // to this contact gets a new one (DIP-15) — even if a later step of
+            // the send (the display bridge) then fails. Only when the request
+            // still pays the address resolved for the contact. Once the
+            // broadcast signal fires the intent is spent: whatever happens next
+            // (a bridge failure), it is not submitted again.
+            val payment = contactPaymentAddress?.takeIf { it.address == intendedRecipient }
+            contactPayment = payment
+            contactPaymentAddressProvider.sendThenMarkUsed(payment) { signals ->
+                sendCoinsTaskRunner.sendCoins(
+                    finalSendRequest,
+                    checkBalanceConditions = checkBalance,
+                    intendedRecipient = intendedRecipient,
+                    onBroadcast = { txid ->
+                        if (payment != null) spentContactPayment.set(payment)
+                        signals.broadcast(txid)
+                    },
+                    onNotBroadcast = signals::notBroadcast
+                )
+            }.also {
+                if (payment != null) spentContactPayment.set(payment)
+            }
         } catch (ex: Exception) {
+            if (ex is ContactAddressAlreadyPaidException) {
+                spentContactPayment.set(ex.payment)
+            }
+            // A failed contact payment whose address is still claimed may have
+            // gone out (outcome unknown, cancelled) or is being paid by another
+            // send: spent. Only a proven pre-broadcast failure gives it back.
+            val failedPayment = contactPayment
+            if (failedPayment != null && contactPaymentAddressProvider.isClaimedOrPaid(failedPayment)) {
+                spentContactPayment.set(failedPayment)
+            }
+            if (spentContactPayment.get() != null) {
+                refreshContactOnReset.set(true)
+            }
             _state.postValue(State.FAILED)
             throw ex
         }
@@ -349,8 +429,39 @@ class SendCoinsViewModel @Inject constructor(
         return if (adjusted.isNegative) Coin.ZERO else adjusted
     }
 
+    /**
+     * Back to INPUT after a send (the screen calls it once the result or error
+     * is shown). After a failed send that spent a contact intent, resolves the
+     * contact's address again ([refreshContactPayment]); until that completes
+     * nothing can be confirmed.
+     */
     fun resetState() {
         _state.postValue(State.INPUT)
+        if (refreshContactOnReset.getAndSet(false)) {
+            refreshContactPayment()
+        }
+    }
+
+    /**
+     * Re-runs the contact address lookup for the intent the screen was opened
+     * with ([initPaymentIntent] → [checkIdentity] →
+     * [ContactPaymentAddressProvider.nextAddress]), which never returns an
+     * address recorded paid. On failure the spent intent stays blocked: no
+     * address is better than a reused one.
+     */
+    private fun refreshContactPayment() {
+        val source = contactSourceIntent ?: return
+        if (contactRefreshJob?.isActive == true) return
+        contactRefreshJob = viewModelScope.launch {
+            try {
+                log.info("contact payment was sent; resolving the contact's payment address again")
+                initPaymentIntent(source)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("could not resolve the contact's payment address again; sending stays blocked", e)
+            }
+        }
     }
 
     fun logSendSuccess(dashToFiat: Boolean, source: String) {
@@ -400,7 +511,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private fun isPayeePlausible(): Boolean {
-        return isInitialized && basePaymentIntent.hasOutputs()
+        return isInitialized && basePaymentIntent.hasOutputs() && spentContactPayment.get() == null
     }
 
     /** creates a send request using the payment intent */
@@ -557,6 +668,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private suspend fun checkIdentity(paymentIntent: PaymentIntent): PaymentIntent {
+        contactPaymentAddress = null
         var isDashUserOrNotMe = identityRepository.hasIdentity()
 
         // make sure that this payment intent is not to me
@@ -627,10 +739,17 @@ class SendCoinsViewModel @Inject constructor(
             .maxByOrNull { it.timestamp }
             ?: receivedFromContact
 
-        val address = identityRepository.getNextContactAddress(
-            dashPayProfile.userId,
-            contactRequest.accountReference
+        // Post-cutover from the SDK's sending account for this contact and
+        // channel, else dashj — see ContactPaymentAddressProvider.
+        val contactAddress = contactPaymentAddressProvider.nextAddress(
+            ContactPaymentTarget(
+                ourUserId = ourUserId,
+                contactUserId = dashPayProfile.userId,
+                accountReference = contactRequest.accountReference
+            )
         )
+        contactPaymentAddress = contactAddress
+        val address = contactAddress?.address
         return if (address != null) {
             PaymentIntent.fromAddressWithIdentity(
                 address.toBase58(),
