@@ -25,6 +25,7 @@ import org.bitcoinj.params.OuzoDevNetParams
 import org.bitcoinj.params.RegTestParams
 import org.bitcoinj.params.TestNet3Params
 import org.dashfoundation.dashsdk.Network
+import org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -55,6 +56,20 @@ class DashSdkServiceImplTest {
         context = mockk<Context>(relaxed = true),
         mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true))
     )
+
+    @Test
+    fun widenedGapLimit_isTheRustMax() {
+        assertEquals(1000, DashSdkServiceImpl.WIDENED_GAP_LIMIT)
+    }
+
+    @Test
+    fun widenedFamily_mapsTheStoredAccountRows() {
+        assertEquals(AccountType.BIP44, DashSdkServiceImpl.widenedFamily(accountType = 0, standardTag = 0))
+        assertEquals(AccountType.BIP32, DashSdkServiceImpl.widenedFamily(accountType = 0, standardTag = 1))
+        assertEquals(AccountType.COIN_JOIN, DashSdkServiceImpl.widenedFamily(accountType = 1, standardTag = 0))
+        assertNull("identity registration is not widened", DashSdkServiceImpl.widenedFamily(2, 0))
+        assertNull("platform payment is not widened", DashSdkServiceImpl.widenedFamily(14, 0))
+    }
 
     @Test
     fun construction_isJvmSafe_andDoesNotStartSdk() {

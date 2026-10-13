@@ -316,7 +316,12 @@ class SdkWalletBinder internal constructor(
     private val deviceProvablyLocked: () -> Boolean = { false },
     // Where an owed rescan that keeps going unconfirmed is reported as a
     // non-fatal (see [reportUnconfirmedOwedRescan]). Never throws.
-    private val reportNonFatal: (Throwable) -> Unit = {}
+    private val reportNonFatal: (Throwable) -> Unit = {},
+    // Identifies this process to [healAddressPoolHoles]. Injectable so a test
+    // can stand in for a later process with a fresh binder.
+    private val processToken: String = PROCESS_TOKEN,
+    // Spacing of [retryAddressPoolBackfill]; injectable for the host JVM.
+    private val backfillRetryDelayMs: Long = ADDRESS_POOL_BACKFILL_RETRY_DELAY_MS
 ) {
     @Inject
     constructor(
@@ -585,6 +590,15 @@ class SdkWalletBinder internal constructor(
             debtRecordedWalletIdHex = null
             // The re-created wallet has no in-memory rewind: an owed one is armed again.
             owedRescanArmedInProcess = null
+        }
+        // The old wallet's filled holes went with its rows, and the re-created
+        // wallet scans from birth anyway: their owed rescan would only repeat it.
+        try {
+            dashPayConfig.remove(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("could not clear the pool-hole rescan token on wallet re-creation", t)
         }
     }
 
@@ -1350,7 +1364,7 @@ class SdkWalletBinder internal constructor(
         pruneOrphanSdkWallets(walletId)
 
         // 4c. One-shot migration heal: widen the SDK's address-pool windows
-        // to the Rust max and invalidate the recorded backfill coverage so
+        // to the Rust max (1000) and invalidate the recorded backfill coverage so
         // the next gate pass REWINDS and re-matches history against the
         // widened script set. Heals the migrated-wallet frontier gap:
         // dashj (or any same-seed client) spending past the SDK's derived
@@ -1483,7 +1497,8 @@ class SdkWalletBinder internal constructor(
      * migration heal on top of it.
      *
      * The widening ([DashSdkService.widenAddressWindows]) raises the SDK
-     * wallet's standard-family gap limits to the Rust max. It is applied on
+     * wallet's standard-family gap limits (BIP44, BIP32, CoinJoin) to the Rust
+     * max (1000). It is applied on
      * every bind because the Rust side keeps `gap_limit` in memory only —
      * no changeset, no persistence — so every fresh process, and every
      * re-created SDK wallet, comes up at the defaults (30 for BIP44, 100 for
@@ -1537,6 +1552,7 @@ class SdkWalletBinder internal constructor(
             }
             // Wide windows: nothing this session scans can be missed.
             widenedWalletIdHex = walletIdHex
+            healAddressPoolHoles(walletIdHex)
             val done = dashPayConfig.get(DashPayConfig.SDK_GAP_WIDENED_VERSION) ?: 0
             if (done >= GAP_WIDEN_HEAL_VERSION) {
                 // Windows re-applied; the heal already ran. Pay a rescan an
@@ -1599,6 +1615,134 @@ class SdkWalletBinder internal constructor(
      */
     private suspend fun noteWideningFailed(walletIdHex: String) {
         if (recordWidenRescanOwed()) debtRecordedWalletIdHex = walletIdHex
+    }
+
+    /**
+     * After a successful widening: persist the rows the widening derived in
+     * memory only ([DashSdkService.backfillAddressPoolHoles]), and owe the
+     * rescan that recovers payments to the holes those rows fill.
+     *
+     * The rows reach the engine only on its next load, so a rescan armed in
+     * the process that filled them would scan with the same holed pool. The
+     * process that fills holes records its token
+     * ([DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING]); the first bind in a
+     * later process finds no holes left, and turns the token into a widening
+     * debt ([recordWidenRescanOwed]), which the caller's next repay arms as a
+     * rewind to birth at the wide windows before the scan advances. Holes
+     * found again re-record the token, so the rescan never runs against a
+     * pool still missing rows.
+     *
+     * On a wallet created in this process, the SDK may not yet have written
+     * its accounts' initial rows when this runs right after the widening:
+     * the backfill finds no pool to extend
+     * ([AddressPoolBackfillResult.poolsPending]), and the window would stay
+     * unpersisted until the next launch found it as holes and owed a full
+     * rescan for nothing. So a pending pool schedules
+     * [retryAddressPoolBackfill] in this process. Caller holds
+     * [wideningMutex]. Never throws except cancellation: a failed repair
+     * retries on the next bind.
+     */
+    private suspend fun healAddressPoolHoles(walletIdHex: String) {
+        val result = backfillAddressPoolOnce(walletIdHex) ?: return
+        if (result.poolsPending > 0) retryAddressPoolBackfill(walletIdHex)
+    }
+
+    /**
+     * One backfill pass and its rescan bookkeeping (see
+     * [healAddressPoolHoles]). Null when the pass failed. Caller holds
+     * [wideningMutex]. Never throws except cancellation.
+     */
+    private suspend fun backfillAddressPoolOnce(walletIdHex: String): AddressPoolBackfillResult? = try {
+        val result = sdkService.backfillAddressPoolHoles(walletIdHex) { holes ->
+            // Durable before the first hole is filled: a filled hole can never
+            // be found again, so an obligation lost after the commit (process
+            // death, a failed write) would be lost for good.
+            try {
+                dashPayConfig.set(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING, processToken)
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                log.warn("address-pool backfill: could not owe the rescan for {} holes; leaving them unfilled", holes, t)
+                false
+            }
+        }
+        if (result != null) owePoolHolesRescan(walletIdHex, result)
+        result
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("address-pool backfill failed; will retry next bind", t)
+        null
+    }
+
+    private suspend fun owePoolHolesRescan(walletIdHex: String, result: AddressPoolBackfillResult) {
+        if (result.holesFilled > 0) {
+            // The token was recorded before the rows were written.
+            log.warn(
+                "address-pool backfill on {}…: {} rows inserted, {} of them holes the engine loaded " +
+                    "without; a rescan is owed once the wallet reloads",
+                walletIdHex.take(8), result.inserted, result.holesFilled
+            )
+            return
+        }
+        if (result.inserted > 0) {
+            log.info(
+                "address-pool backfill on {}…: persisted {} rows of the widened window",
+                walletIdHex.take(8), result.inserted
+            )
+        }
+        val pending = dashPayConfig.get(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING) ?: return
+        if (pending == processToken) return
+        if (!recordWidenRescanOwed()) {
+            log.warn("address-pool backfill: could not owe the rescan for the filled holes; will retry next bind")
+            return
+        }
+        dashPayConfig.remove(DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING)
+        log.info(
+            "address-pool backfill on {}…: the healed pool is loaded; rescan to birth owed to recover " +
+                "payments to the filled holes",
+            walletIdHex.take(8)
+        )
+    }
+
+    /** The in-process retry [healAddressPoolHoles] schedules; one at a time. */
+    @Volatile
+    private var addressPoolBackfillRetry: Job? = null
+
+    /**
+     * Re-run the backfill every [backfillRetryDelayMs] until no widened pool
+     * is pending, at most [ADDRESS_POOL_BACKFILL_RETRY_ATTEMPTS] times. It
+     * stops early when the wallet it widened is no longer this process's
+     * widened wallet (re-created or replaced). A pass that comes after the
+     * scan has persisted rows above the window cannot owe a needless
+     * rescan: the backfill counts holes only below the pool as the wallet
+     * loaded it, which for a pool that had no rows is nothing.
+     */
+    private fun retryAddressPoolBackfill(walletIdHex: String) {
+        if (addressPoolBackfillRetry?.isActive == true) return
+        log.info("address-pool backfill on {}…: widened pools not stored yet; retrying", walletIdHex.take(8))
+        addressPoolBackfillRetry = scope.launch {
+            repeat(ADDRESS_POOL_BACKFILL_RETRY_ATTEMPTS) {
+                delay(backfillRetryDelayMs)
+                val result = wideningMutex.withLock {
+                    if (widenedWalletIdHex != walletIdHex) {
+                        log.info("address-pool backfill retry on {}…: wallet no longer widened; stopping", walletIdHex.take(8))
+                        return@launch
+                    }
+                    backfillAddressPoolOnce(walletIdHex)
+                }
+                if (result != null && result.poolsPending == 0) {
+                    log.info("address-pool backfill retry on {}…: every widened pool stored", walletIdHex.take(8))
+                    return@launch
+                }
+            }
+            log.warn(
+                "address-pool backfill on {}…: widened pools still not stored after {} retries; the next " +
+                    "bind backfills them",
+                walletIdHex.take(8), ADDRESS_POOL_BACKFILL_RETRY_ATTEMPTS
+            )
+        }
     }
 
     /** Persist the owed-rescan flag; false (logged) when the write failed. Never throws except cancellation. */
@@ -1681,6 +1825,7 @@ class SdkWalletBinder internal constructor(
         if (widened) {
             widenedWalletIdHex = walletIdHex
             log.info("scan gate: address windows widened on {}… before the SPV start", walletIdHex.take(8))
+            healAddressPoolHoles(walletIdHex)
             return@withLock repayBeforeScan(walletIdHex, widened = true)
         }
         if (recordWidenRescanOwed()) {
@@ -2203,6 +2348,17 @@ class SdkWalletBinder internal constructor(
          * never run (v1 shipped only in local QA 11.10.78).
          */
         internal const val GAP_WIDEN_HEAL_VERSION = 2
+
+        /** Unique per process; see [DashPayConfig.SDK_POOL_HOLES_RESCAN_PENDING]. */
+        private val PROCESS_TOKEN: String = java.util.UUID.randomUUID().toString()
+
+        /**
+         * Bounds for [retryAddressPoolBackfill]: a new wallet's initial rows
+         * are written within moments of its creation, so a minute of retries
+         * covers it; past that the next bind backfills.
+         */
+        internal const val ADDRESS_POOL_BACKFILL_RETRY_DELAY_MS = 2_000L
+        internal const val ADDRESS_POOL_BACKFILL_RETRY_ATTEMPTS = 30
 
         /**
          * Bounds for [maybeRetryIdentityDiscovery]. Eight attempts on a

@@ -163,6 +163,30 @@ data class DashPayContactDrainReport(
 }
 
 /**
+ * Outcome of [DashSdkService.backfillAddressPoolHoles] for one wallet.
+ */
+data class AddressPoolBackfillResult(
+    /** Rows inserted across every repaired pool. */
+    val inserted: Int,
+    /**
+     * Inserted rows that lay below a pool's highest stored index: the true
+     * holes, which the engine loaded the pool without. Payments to them were
+     * missed, so a nonzero count owes a rescan once the wallet is reloaded.
+     * The rest of [inserted] is the widened tail the engine already holds.
+     */
+    val holesFilled: Int,
+    /** Pools left untouched because the account key failed to reproduce their stored addresses. */
+    val poolsRefused: Int,
+    /**
+     * Widened pools with no stored rows yet: on a wallet created in this
+     * process, the SDK may not have written its accounts' initial addresses
+     * when the backfill first runs. Their window is still unpersisted, so
+     * the caller retries until this reaches zero.
+     */
+    val poolsPending: Int = 0
+)
+
+/**
  * How completely the bound SDK wallet's DIP-15 receival accounts cover its
  * established (RECEIVED-request) DashPay contacts — the drain-time
  * diagnostic that names the DARK contacts: an established contact with NO
@@ -360,6 +384,37 @@ interface DashSdkService {
      * the wallet isn't loaded or any present account failed.
      */
     suspend fun widenAddressWindows(walletIdHex: String): Boolean
+
+    /**
+     * Persist the address-pool rows that [widenAddressWindows] leaves in
+     * Rust memory only, so the next load rebuilds a contiguous pool.
+     *
+     * The widening derives its window without emitting the addresses to the
+     * persister, while addresses derived later during sync are persisted, so
+     * the stored pool loses every unused index of the widened window below
+     * rows that do exist. A reload then never re-derives them, and outputs
+     * paid to them stay invisible through any rescan (field case: change iOS
+     * sent to internal index 637). This inserts each missing row of the
+     * widened families, deriving it from the account key the SDK stored; it
+     * never changes or removes an existing row.
+     *
+     * Call it after a successful [widenAddressWindows]. The inserts reach the
+     * engine on the NEXT load, so filling holes owes a rescan once the wallet
+     * has been reloaded. That obligation must be durable BEFORE any hole is
+     * filled: once filled, a hole can never be found again to rebuild it.
+     * So when the plan has holes, [beforeFillingHoles] runs with their count
+     * before anything is written; it records the obligation and returns
+     * true, or returns false to leave every hole unfilled. All rows are then
+     * written in one transaction.
+     *
+     * Null when the wallet or its database is not available, the obligation
+     * could not be recorded, or the repair failed; it is safe to retry on the
+     * next bind.
+     */
+    suspend fun backfillAddressPoolHoles(
+        walletIdHex: String,
+        beforeFillingHoles: suspend (holes: Int) -> Boolean = { true }
+    ): AddressPoolBackfillResult? = null
 
     /**
      * Rewind the SDK wallet's SPV filter watermark to the wallet's birth

@@ -21,9 +21,11 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.DevNetParams
 import org.dashfoundation.dashsdk.Network
@@ -32,6 +34,7 @@ import org.dashfoundation.dashsdk.config.SdkConfig
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashfoundation.dashsdk.security.KeySecurityPolicy
 import org.dashfoundation.dashsdk.security.WalletStorage
+import org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashfoundation.dashsdk.wallet.WalletManagerStore
 import org.slf4j.LoggerFactory
@@ -632,6 +635,9 @@ class DashSdkServiceImpl @Inject constructor(
             current.walletManager.removeWallet(walletId)
             // The re-created wallet (same deterministic id) has drained nothing yet.
             accountBuildDrains.forget(walletIdHex)
+            // Nor been loaded from stored pools: its derivation is all in memory.
+            poolHoleCeilings.remove(walletIdHex)
+            appliedGapLimits.remove(walletIdHex)
             log.info("SDK wallet {}… removed", walletIdHex.take(8))
         }
     }
@@ -852,17 +858,19 @@ class DashSdkServiceImpl @Inject constructor(
             false
         } else {
             var allPresentWidened = true
+            val applied = HashMap<CoreTransactionBuilder.AccountType, Int>()
             managed.coreWallet().use { core ->
                 for (family in listOf(
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP44,
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP32,
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.COIN_JOIN,
+                    CoreTransactionBuilder.AccountType.BIP44,
+                    CoreTransactionBuilder.AccountType.BIP32,
+                    CoreTransactionBuilder.AccountType.COIN_JOIN,
                 )) {
                     try {
-                        core.setGapLimit(family, 0, MIGRATION_GAP_LIMIT)
+                        core.setGapLimit(family, 0, WIDENED_GAP_LIMIT)
+                        applied[family] = WIDENED_GAP_LIMIT
                         log.info(
                             "widenAddressWindows: {} account 0 gap -> {} on {}…",
-                            family, MIGRATION_GAP_LIMIT, walletIdHex.take(8)
+                            family, WIDENED_GAP_LIMIT, walletIdHex.take(8)
                         )
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
@@ -879,6 +887,7 @@ class DashSdkServiceImpl @Inject constructor(
                     }
                 }
             }
+            recordAppliedGapLimits(walletIdHex, applied)
             allPresentWidened
         }
     } catch (e: kotlinx.coroutines.CancellationException) {
@@ -886,6 +895,281 @@ class DashSdkServiceImpl @Inject constructor(
     } catch (e: Exception) {
         log.warn("widenAddressWindows failed: {}", e.message)
         false
+    }
+
+    /**
+     * Per wallet, the gap limit [widenAddressWindows] last set on each family
+     * in this process, so the backfill persists exactly the window the
+     * engine derived.
+     */
+    private val appliedGapLimits =
+        java.util.concurrent.ConcurrentHashMap<String, Map<CoreTransactionBuilder.AccountType, Int>>()
+
+    /** What [widenAddressWindows] set on [walletIdHex]; tests stand in for a widening with it. */
+    @androidx.annotation.VisibleForTesting
+    internal fun recordAppliedGapLimits(walletIdHex: String, applied: Map<CoreTransactionBuilder.AccountType, Int>) {
+        appliedGapLimits[walletIdHex] = applied
+    }
+
+    override suspend fun backfillAddressPoolHoles(
+        walletIdHex: String,
+        beforeFillingHoles: suspend (holes: Int) -> Boolean
+    ): AddressPoolBackfillResult? = try {
+        ensureStarted()
+        val database = runtime?.database
+        val walletId = walletIdFromHex(walletIdHex)
+        if (database == null || walletId == null) {
+            log.warn("backfillAddressPoolHoles: SDK database or wallet id {}… unavailable", walletIdHex.take(8))
+            null
+        } else {
+            val plan = withContext(Dispatchers.IO) { planAddressPoolBackfill(database, walletId, walletIdHex) }
+            if (plan.holes > 0 && !beforeFillingHoles(plan.holes)) {
+                log.warn(
+                    "backfillAddressPoolHoles on {}…: {} holes left unfilled — their rescan could not be owed",
+                    walletIdHex.take(8), plan.holes
+                )
+                null
+            } else {
+                val inserted = withContext(Dispatchers.IO) { commitAddressPoolBackfill(database, plan, walletIdHex) }
+                AddressPoolBackfillResult(inserted, plan.holes, plan.poolsRefused, plan.poolsPending)
+            }
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("backfillAddressPoolHoles failed on {}…", walletIdHex.take(8), e)
+        null
+    }
+
+    /**
+     * Per wallet, the highest index each widened pool had stored when this
+     * process first backfilled it ([SdkAddressPoolBackfill.holeCeiling]),
+     * keyed by [poolKey]. The first backfill runs right after the widening,
+     * before the scan persists anything, so this is the pool the engine
+     * loaded: only indices missing below it are holes the engine lacks. A
+     * pool with no rows then (a wallet created in this process, whose
+     * initial rows were not yet written) has no entry and so no holes; its
+     * rows are all in memory and only late to reach the database.
+     */
+    private val poolHoleCeilings = java.util.concurrent.ConcurrentHashMap<String, Map<String, Int>>()
+
+    private fun poolKey(accountType: Int, standardTag: Int, poolTypeTag: Int) =
+        "$accountType/$standardTag/$poolTypeTag"
+
+    /** One pool's rows to insert, derived and verified by [planAddressPoolBackfill]. */
+    internal class PoolWrite(
+        val accountId: Long,
+        val poolTypeTag: Int,
+        val rows: List<SdkAddressPoolBackfill.DerivedRow>,
+        val missing: Int,
+        val holes: Int,
+        val ceiling: Int
+    )
+
+    /** What [planAddressPoolBackfill] found, before anything is written. */
+    internal class AddressPoolBackfillPlan(
+        val writes: List<PoolWrite>,
+        val poolsRefused: Int,
+        val poolsPending: Int
+    ) {
+        val holes: Int get() = writes.sumOf { it.holes }
+    }
+
+    /**
+     * The read half of [backfillAddressPoolHoles]: for each widened account,
+     * plan each pool's missing rows ([SdkAddressPoolBackfill.plan]), prove the
+     * stored account key reproduces rows already there, and derive the rows
+     * to insert. Writes nothing, so the caller can owe the rescan for the
+     * holes before any of them is filled.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun planAddressPoolBackfill(
+        database: DashDatabase,
+        walletId: ByteArray,
+        walletIdHex: String
+    ): AddressPoolBackfillPlan {
+        val db = database.openHelper.writableDatabase
+        val params = Constants.NETWORK_PARAMETERS
+        val applied = appliedGapLimits[walletIdHex].orEmpty()
+        data class Account(
+            val id: Long,
+            val accountType: Int,
+            val standardTag: Int,
+            val gapLimit: Int,
+            val xpub: ByteArray?
+        )
+
+        val accounts = ArrayList<Account>()
+        db.query(
+            "SELECT id, accountType, standardTag, accountExtendedPubKeyBytes FROM accounts " +
+                "WHERE walletId = ? AND accountIndex = 0",
+            arrayOf<Any?>(walletId)
+        ).use { c ->
+            while (c.moveToNext()) {
+                val accountType = c.getInt(1)
+                val standardTag = c.getInt(2)
+                val family = widenedFamily(accountType, standardTag) ?: continue
+                // The window the widening set this process; the widest if it
+                // has not run, since persisting extra rows costs nothing.
+                val gapLimit = applied[family] ?: WIDENED_GAP_LIMIT
+                accounts.add(
+                    Account(c.getLong(0), accountType, standardTag, gapLimit, if (c.isNull(3)) null else c.getBlob(3))
+                )
+            }
+        }
+
+        val poolRows = accounts.associateWith { account ->
+            val pools = HashMap<Int, MutableList<SdkAddressPoolBackfill.StoredRow>>()
+            db.query(
+                "SELECT poolTypeTag, addressIndex, address, isUsed, derivationPath FROM core_addresses " +
+                    "WHERE accountId = ?",
+                arrayOf<Any?>(account.id)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    pools.getOrPut(c.getInt(0)) { ArrayList() }.add(
+                        SdkAddressPoolBackfill.StoredRow(
+                            addressIndex = c.getInt(1),
+                            address = c.getString(2),
+                            isUsed = c.getInt(3) != 0,
+                            derivationPath = c.getString(4)
+                        )
+                    )
+                }
+            }
+            pools
+        }
+
+        val ceilings = poolHoleCeilings.getOrPut(walletIdHex) {
+            buildMap {
+                for ((account, pools) in poolRows) {
+                    for ((poolTypeTag, rows) in pools) {
+                        put(
+                            poolKey(account.accountType, account.standardTag, poolTypeTag),
+                            SdkAddressPoolBackfill.holeCeiling(rows)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Widened pools with no rows yet: the SDK has not written the new
+        // wallet's accounts or their initial addresses, so there is nothing
+        // to verify a key against or extend. The caller retries. Only the
+        // families the widening actually widened count: one the wallet does
+        // not have is skipped there and would otherwise stay pending forever.
+        val poolsPending = WIDENED_ACCOUNTS.sumOf { (accountType, standardTag) ->
+            val family = widenedFamily(accountType, standardTag)
+            if (family == null || family !in applied) return@sumOf 0
+            val account = accounts.firstOrNull { it.accountType == accountType && it.standardTag == standardTag }
+            val pools = account?.let { poolRows[it] }
+            STANDARD_POOLS.count { poolTypeTag -> pools?.get(poolTypeTag).isNullOrEmpty() }
+        }
+        if (poolsPending > 0) {
+            log.info(
+                "backfillAddressPoolHoles on {}…: {} widened pools have no stored rows yet",
+                walletIdHex.take(8), poolsPending
+            )
+        }
+
+        val writes = ArrayList<PoolWrite>()
+        var poolsRefused = 0
+        for ((account, pools) in poolRows) {
+            for ((poolTypeTag, rows) in pools) {
+                // Only the two chains of a funds account derive by index
+                // under the account key; anything else is not ours to fill.
+                if (poolTypeTag !in STANDARD_POOLS) continue
+                val ceiling = ceilings[poolKey(account.accountType, account.standardTag, poolTypeTag)] ?: -1
+                val plan = SdkAddressPoolBackfill.plan(rows, account.gapLimit, ceiling)
+                if (plan.missing.isEmpty()) continue
+
+                val accountKey = SdkAddressPoolBackfill.accountKey(account.xpub)
+                val samples = SdkAddressPoolBackfill.verificationSamples(rows)
+                val prefix = samples.firstOrNull()?.let(SdkAddressPoolBackfill::pathPrefix)
+                val chainKey = accountKey?.let {
+                    org.bitcoinj.crypto.HDKeyDerivation.deriveChildKey(
+                        it,
+                        org.bitcoinj.crypto.ChildNumber(poolTypeTag, false)
+                    )
+                }
+                if (prefix == null || chainKey == null ||
+                    samples.any { SdkAddressPoolBackfill.pathPrefix(it) != prefix } ||
+                    !SdkAddressPoolBackfill.matchesStoredRows(chainKey, samples, prefix, params)
+                ) {
+                    poolsRefused++
+                    log.error(
+                        "backfillAddressPoolHoles: account {} pool {} on {}… REFUSED — the stored account " +
+                            "key does not reproduce its stored addresses; {} missing rows left as they are",
+                        account.id, poolTypeTag, walletIdHex.take(8), plan.missing.size
+                    )
+                    continue
+                }
+                writes.add(
+                    PoolWrite(
+                        accountId = account.id,
+                        poolTypeTag = poolTypeTag,
+                        rows = plan.missing.map { SdkAddressPoolBackfill.derive(chainKey, it, prefix, params) },
+                        missing = plan.missing.size,
+                        holes = plan.holes,
+                        ceiling = ceiling
+                    )
+                )
+            }
+        }
+        return AddressPoolBackfillPlan(writes, poolsRefused, poolsPending)
+    }
+
+    /**
+     * The write half of [backfillAddressPoolHoles]: `INSERT OR IGNORE` every
+     * planned row in ONE transaction, so a failure fills no pool rather than
+     * some. Raw SQL rather than the DAO's upsert, so a row the SDK persister
+     * writes concurrently (with its real `isUsed`) always wins over ours.
+     * Returns the rows inserted.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun commitAddressPoolBackfill(
+        database: DashDatabase,
+        plan: AddressPoolBackfillPlan,
+        walletIdHex: String
+    ): Int {
+        if (plan.writes.isEmpty()) return 0
+        val db = database.openHelper.writableDatabase
+        val now = System.currentTimeMillis()
+        val insertedPerPool = IntArray(plan.writes.size)
+        db.beginTransaction()
+        try {
+            db.compileStatement(
+                "INSERT OR IGNORE INTO core_addresses (address, publicKey, poolTypeTag, addressIndex, " +
+                    "derivationPath, isUsed, firstSeenHeight, lastSeenHeight, balance, createdAt, " +
+                    "lastUpdated, accountId) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?, ?)"
+            ).use { insert ->
+                plan.writes.forEachIndexed { i, write ->
+                    for (row in write.rows) {
+                        insert.clearBindings()
+                        insert.bindString(1, row.address)
+                        insert.bindBlob(2, row.publicKey)
+                        insert.bindLong(3, write.poolTypeTag.toLong())
+                        insert.bindLong(4, row.addressIndex.toLong())
+                        insert.bindString(5, row.derivationPath)
+                        insert.bindLong(6, now)
+                        insert.bindLong(7, now)
+                        insert.bindLong(8, write.accountId)
+                        if (insert.executeInsert() != -1L) insertedPerPool[i]++
+                    }
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        plan.writes.forEachIndexed { i, write ->
+            log.info(
+                "backfillAddressPoolHoles: account {} pool {} on {}…: {} rows missing ({} of them holes " +
+                    "below index {}, stored when the wallet loaded), {} inserted",
+                write.accountId, write.poolTypeTag, walletIdHex.take(8), write.missing,
+                write.holes, write.ceiling, insertedPerPool[i]
+            )
+        }
+        return insertedPerPool.sum()
     }
 
     /**
@@ -1266,13 +1550,33 @@ class DashSdkServiceImpl @Inject constructor(
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
 
         /**
-         * Gap limit the migration heal widens each standard account to —
-         * the Rust-side MAX_GAP_LIMIT. See
-         * [DashSdkService.widenAddressWindows] for why 1000 covers
-         * arbitrarily deep frontiers once the rescan's mark-used roll
-         * kicks in.
+         * Gap limit the widening gives each standard account (BIP44, BIP32,
+         * CoinJoin) — the Rust-side MAX_GAP_LIMIT. Restored wallets hold
+         * runs of unused addresses far past dashj's 100 lookahead (a testnet
+         * wallet's change chain has an unused run of 373), and the widening
+         * cannot know them in advance, so it takes the widest window. See
+         * [DashSdkService.widenAddressWindows].
          */
-        internal const val MIGRATION_GAP_LIMIT = 1000
+        internal const val WIDENED_GAP_LIMIT = 1000
+
+        /** `accounts.accountType` / `standardTag` of the accounts [widenAddressWindows] widens. */
+        private val WIDENED_ACCOUNTS = listOf(0 to 0, 0 to 1, 1 to 0)
+
+        /** The external (0) and internal (1) pools of a funds account. */
+        private val STANDARD_POOLS = setOf(0, 1)
+
+        /**
+         * The family [widenAddressWindows] widens for the account stored as
+         * `accounts.accountType` / `standardTag` (account 0), or null for an
+         * account it does not widen: BIP44 (type 0, tag 0), BIP32 (type 0,
+         * tag 1) and CoinJoin (type 1).
+         */
+        internal fun widenedFamily(accountType: Int, standardTag: Int): CoreTransactionBuilder.AccountType? = when {
+            accountType == 0 && standardTag == 0 -> CoreTransactionBuilder.AccountType.BIP44
+            accountType == 0 && standardTag == 1 -> CoreTransactionBuilder.AccountType.BIP32
+            accountType == 1 -> CoreTransactionBuilder.AccountType.COIN_JOIN
+            else -> null
+        }
 
         /**
          * Room-row display name stamped on the one SDK wallet bound from
