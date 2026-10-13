@@ -48,12 +48,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.Utils
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.funding.ShieldedProver
 import org.dashfoundation.dashsdk.persistence.entities.ShieldedActivityEntity
 import org.dashfoundation.dashsdk.persistence.entities.ShieldedNoteEntity
+import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.charset.CodingErrorAction
@@ -305,7 +308,14 @@ internal fun mapShieldedSyncStatus(
 data class PendingWalletShieldLock(
     val outPointHex: String,
     val statusRaw: Int,
-    val amountDuffs: Long
+    val amountDuffs: Long,
+    /**
+     * Whether the lock transaction spends DIP-9 CoinJoin account-0 outputs
+     * (the mixed-funds drain) — see [classifyCoinJoinFunding]. Null when
+     * that cannot be determined; callers guarding the CoinJoin drain must
+     * treat null as CoinJoin-funded (fail closed), never as BIP44.
+     */
+    val coinJoinFunded: Boolean? = null
 ) {
     /**
      * Resumable = not yet consumed. Includes `Built` (0): a persisted
@@ -316,6 +326,41 @@ data class PendingWalletShieldLock(
      * spend rather than creating a new one.
      */
     val resumable: Boolean get() = statusRaw in 0..3
+
+    /**
+     * A resumable lock that holds (or may hold) CoinJoin inputs — the only
+     * kind that blocks a fresh CoinJoin drain. Ordinary BIP44 "transfer to
+     * shielded" locks own their own inputs and do not.
+     */
+    val pendingCoinJoinDrain: Boolean get() = resumable && coinJoinFunded != false
+}
+
+/**
+ * Classify a lock's funding source from its [inputOutpoints] (36-byte
+ * wire-order outpoints parsed from the lock transaction) and the wallet's
+ * TXO rows for them ([inputRows]): true when ANY input is a CoinJoin
+ * account-0 output (by account id or a CoinJoin pool address), false when
+ * every input resolved and none is, null when an input row is missing
+ * (not yet persisted) — unknown, NOT "BIP44".
+ */
+internal fun classifyCoinJoinFunding(
+    inputOutpoints: List<ByteArray>,
+    inputRows: List<TxoEntity>,
+    coinJoinAccountId: Long,
+    coinJoinAddresses: Set<String>
+): Boolean? {
+    if (inputOutpoints.isEmpty()) return null
+    val rows = inputRows.associateBy { Utils.HEX.encode(it.outpoint) }
+    var allResolved = true
+    for (outpoint in inputOutpoints) {
+        val row = rows[Utils.HEX.encode(outpoint)]
+        if (row == null) {
+            allResolved = false
+            continue
+        }
+        if (row.accountId == coinJoinAccountId || row.address in coinJoinAddresses) return true
+    }
+    return if (allResolved) false else null
 }
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -580,11 +625,37 @@ internal class DashSdkShieldedSource(
         recipientRaw43 = recipientRaw43
     )
 
-    override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> =
-        database().assetLockDao()
+    override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
+        val db = database()
+        val rows = db.assetLockDao()
             .observeByWalletAndFundingType(walletId, SHIELDED_TOPUP_FUNDING_TYPE)
             .first()
-            .map { PendingWalletShieldLock(it.outPointHex, it.statusRaw, it.amountDuffs) }
+        val locks = rows.map { PendingWalletShieldLock(it.outPointHex, it.statusRaw, it.amountDuffs) }
+        if (locks.none { it.resumable }) return locks
+        // Only resumable locks matter to the CoinJoin drain guard; classify
+        // them by whether their transaction spends CoinJoin account-0 TXOs.
+        // Best-effort: any failure leaves the funding source unknown (null).
+        val coinJoin = try {
+            db.accountDao().getByKey(walletId, ACCOUNT_TYPE_TAG_COIN_JOIN, 0).singleOrNull()?.let { account ->
+                account.id to db.coreAddressDao().observeByAccount(account.id).first().map { it.address }.toSet()
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            null
+        } ?: return locks
+        return rows.zip(locks) { row, lock ->
+            if (!lock.resumable) return@zip lock
+            val funded = try {
+                val inputs = Transaction(Constants.NETWORK_PARAMETERS, row.transactionBytes)
+                    .inputs.map { it.outpoint.bitcoinSerialize() }
+                classifyCoinJoinFunding(inputs, db.txoDao().getByOutpoints(inputs), coinJoin.first, coinJoin.second)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                null
+            }
+            lock.copy(coinJoinFunded = funded)
+        }
+    }
 
     override suspend fun estimateShieldFeeCredits(): Long =
         // v42int5: fee estimation moved from the ShieldedProver companion to the
@@ -1542,11 +1613,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         } ?: return notBroadcast(operation, "wallet has no bound shielded address", null)
 
         // Do not queue a fresh CoinJoin drain behind a recovery sweep. A
-        // persisted lock already owns those inputs, even if the balance
-        // snapshot still includes them until confirmation.
+        // persisted CoinJoin-funded lock already owns those inputs, even if
+        // the balance snapshot still includes them until confirmation. An
+        // unrelated BIP44 shield lock holds its own inputs and does not block.
         if (fundingPath != null) {
             val pending = try {
-                source.walletShieldLocks(walletId).any { it.resumable }
+                source.walletShieldLocks(walletId).any { it.pendingCoinJoinDrain }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 return notBroadcast(operation, "cannot read the tracked asset-lock state", t)
@@ -1581,7 +1653,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             // post-failure classification below depends on it.
             val lockedBefore = try {
                 val locks = source.walletShieldLocks(walletId)
-                if (fundingPath != null && locks.any { it.resumable }) {
+                if (fundingPath != null && locks.any { it.pendingCoinJoinDrain }) {
                     return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
                 }
                 locks.map { it.outPointHex }.toHashSet()
@@ -1898,6 +1970,17 @@ class ShieldedBalanceServiceImpl internal constructor(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("pending-lock count unavailable; cutover evidence stays UNKNOWN", t)
+            null
+        }
+    }
+
+    override suspend fun pendingCoinJoinShieldLockCount(): Int? {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            source.walletShieldLocks(walletId).count { it.pendingCoinJoinDrain }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("pending CoinJoin-lock count unavailable; treating it as UNKNOWN", t)
             null
         }
     }
