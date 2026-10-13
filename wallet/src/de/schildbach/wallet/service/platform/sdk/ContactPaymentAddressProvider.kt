@@ -58,6 +58,8 @@ data class ContactPaymentTarget(
  * the address's derivation index on the channel when known (always for an SDK
  * pick; for dashj when its cursor could be read) — recorded with the claim so
  * the channel's frontier survives the record's expiry ([PaidContactAddressStore]).
+ * Null is only usable on a channel without a folded frontier: once one exists
+ * the provider never returns an unindexed address and the claim refuses one.
  */
 data class ContactPaymentAddress(
     val target: ContactPaymentTarget,
@@ -461,9 +463,11 @@ class ContactPaymentAddressProvider internal constructor(
      * most [MAX_DASHJ_PAID_SKIPS] times, never more often than there are such
      * addresses, and never when the mark does not move dashj on. If dashj cannot
      * be advanced to a usable address, null: the send screen reports no address
-     * rather than paying a used one. Likewise null when the served address's
-     * index is at or below the channel's folded frontier (dashj could not be
-     * advanced past it by [reapplyFoldedFrontier]). Blocking (dashj lock);
+     * rather than paying a used one. Likewise null when the channel has a
+     * folded frontier and the served address's index is at or below it (dashj
+     * could not be advanced past it by [reapplyFoldedFrontier]) or unknown
+     * ([dashjServedIndex] null: the frontier keeps only its highest address,
+     * so an earlier paid one would pass [paidAddresses]). Blocking (dashj lock);
      * runs on [ioDispatcher].
      */
     private fun dashjAddress(
@@ -532,11 +536,14 @@ class ContactPaymentAddressProvider internal constructor(
         }
         val index = dashjServedIndex(target, address)
         val folded = paidAddresses.foldedFrontier(target.contactUserId, target.accountReference)
-        if (folded != null && index != null && index <= folded.index) {
+        // With a folded frontier, an address whose index is unknown cannot be
+        // shown to lie above it: the frontier keeps only its highest address,
+        // so an earlier paid one is no longer in [excluded].
+        if (folded != null && (index == null || index <= folded.index)) {
             log.warn(
-                "contact payment address for {} (accountReference {}): dashj serves index {}, at or below the " +
-                    "paid frontier {} it could not be advanced past — no address",
-                target.contactUserId, target.accountReference, index, folded.index
+                "contact payment address for {} (accountReference {}): dashj serves index {}, not provably " +
+                    "above the paid frontier {} it could not be advanced past — no address",
+                target.contactUserId, target.accountReference, index ?: "unknown", folded.index
             )
             return null
         }

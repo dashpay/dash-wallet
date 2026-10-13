@@ -32,6 +32,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -914,6 +915,8 @@ class ContactPaymentAddressProviderTest {
         PaidContactAddressStore(file).record(newAddress().toBase58(), target, 0)
         val h = harness(paidFile = file)
         assertTrue(file.setReadable(false))
+        // Root reads it anyway (container CI): the case cannot be set up there.
+        assumeFalse(file.canRead())
         try {
             val payment = requireNotNull(h.provider.nextAddress(target))
             var sent = false
@@ -1015,6 +1018,63 @@ class ContactPaymentAddressProviderTest {
         val stuck = FakeDashjChain(keys, current = 0, markResult = FriendChainAccess.MarkResult.KEY_NOT_ON_CHAIN)
 
         assertNull(restartedProvider(stuck, file, sdkAccount = null).nextAddress(target))
+    }
+
+    @Test
+    fun frontierDashjCannotBeAdvancedPast_indexUnknown_noAddress_andTheClaimIsRefused() = runBlocking {
+        // PR #1608 review: keys 0..2 were paid and folded into the frontier
+        // (only keys[2] is listed). A restored dashj chain is back at key 0,
+        // the frontier is beyond its forward scan (the mark cannot advance
+        // it), dashj's cursor cannot be read and the SDK is unavailable.
+        // keys[0] passes the explicit exclusions; it must still never be paid.
+        val keys = List(5) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        file.writeText("frontier $contactUserId $selectedReference 2 ${keys[2].toBase58()}\n")
+        val restored = FakeDashjChain(keys, current = 0, markResult = FriendChainAccess.MarkResult.KEY_NOT_ON_CHAIN)
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ -> null },
+            dashjNextAddress = { _, _ -> restored.next() },
+            dashjMarkUsed = { _, _, address -> restored.mark(address) },
+            params = params,
+            dashjSendingCursor = { _, _ -> null },
+            paidAddresses = PaidContactAddressStore(file)
+        )
+
+        assertNull(provider.nextAddress(target))
+
+        // ...and a payment to it built with no index (e.g. resolved before the
+        // records were folded) is refused at the claim: nothing is sent.
+        val stale = ContactPaymentAddress(target, keys[0], ContactAddressSource.DASHJ, index = null)
+        var sent = false
+        assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking { provider.sendThenMarkUsed(stale) { sent = true } }
+        }
+        assertFalse("the send callback never ran", sent)
+        assertFalse("nothing claimed", provider.isClaimedOrPaid(stale))
+        assertEquals(0, restored.current)
+    }
+
+    @Test
+    fun frontier_dashjAddressMovesBetweenTheIndexReads_noAddress() = runBlocking {
+        // dashj's cursor is readable but its current key moves between the two
+        // reads of [dashjServedIndex]: the served index is unknown, so with a
+        // frontier the address is not used.
+        val keys = List(5) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        file.writeText("frontier $contactUserId $selectedReference 2 ${keys[2].toBase58()}\n")
+        var reads = 0
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ -> null },
+            dashjNextAddress = { _, _ -> keys[minOf(3 + reads++, keys.lastIndex)] },
+            dashjMarkUsed = { _, _, _ -> FriendChainAccess.MarkResult.ALREADY_BEHIND_CURRENT },
+            params = params,
+            dashjSendingCursor = { _, _ -> 3 },
+            paidAddresses = PaidContactAddressStore(file)
+        )
+
+        assertNull(provider.nextAddress(target))
     }
 
     @Test

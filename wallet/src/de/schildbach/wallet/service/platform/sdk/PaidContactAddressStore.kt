@@ -120,7 +120,11 @@ class PaidContactAddressStore(
         /** Recorded and on disk: the send may run. */
         CLAIMED,
 
-        /** Already paid or claimed by another send: nothing may be sent to it. */
+        /**
+         * Already paid or claimed by another send, or not provably above the
+         * channel's paid frontier (index unknown or at/below it): nothing may
+         * be sent to it; resolve the contact's address again.
+         */
         ALREADY_PAID,
 
         /**
@@ -215,7 +219,11 @@ class PaidContactAddressStore(
      * (unsettled, in flight) and writes the store; [ClaimResult.CLAIMED] only
      * once the claim is on disk (or the store is memory-only). Check and record
      * are one atomic step, so of two concurrent claims of one address exactly
-     * one wins. Nothing changes unless it returns [ClaimResult.CLAIMED].
+     * one wins. On a channel with a folded frontier ([foldedFrontier]) the
+     * claim needs an [index] above it: at or below it, or null (unknown — the
+     * frontier no longer lists the earlier paid addresses), it is
+     * [ClaimResult.ALREADY_PAID]. Nothing changes unless it returns
+     * [ClaimResult.CLAIMED].
      */
     fun claim(address: String, target: ContactPaymentTarget, index: Int? = null): ClaimResult =
         synchronized(lock) {
@@ -229,7 +237,14 @@ class PaidContactAddressStore(
             }
             val channel = Channel(target.contactUserId, target.accountReference)
             val frontier = folded[channel]
-            if (index != null && frontier != null && index <= frontier.index) {
+            // The frontier keeps only the channel's highest paid address: an
+            // address whose index is unknown cannot be shown to lie above it,
+            // so it may be an earlier paid one — refused like a paid address.
+            if (frontier != null && (index == null || index <= frontier.index)) {
+                log.warn(
+                    "contact payment refused: index {} is not provably above the channel's paid frontier {}",
+                    index ?: "unknown", frontier.index
+                )
                 return ClaimResult.ALREADY_PAID
             }
             prune(map)

@@ -25,6 +25,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -164,6 +165,27 @@ class PaidContactAddressStoreTest {
         assertEquals(ClaimResult.ALREADY_PAID, after.claim("lower", target, 3))
         assertEquals(ClaimResult.CLAIMED, after.claim("higher", target, 5))
         assertEquals(ClaimResult.CLAIMED, after.claim("otherChannel", target.copy(accountReference = 8), 0))
+    }
+
+    @Test
+    fun frontier_refusesAClaimWithoutAnIndex_onItsChannelOnly() {
+        // PR #1608 review: the frontier keeps only the channel's highest paid
+        // address, so an earlier paid one is no longer listed; a claim whose
+        // index is unknown cannot be shown to lie above it.
+        val s = store()
+        s.recordSettled("a", index = 4)
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        s.record("trigger", target.copy(contactUserId = "other"))
+
+        val after = store()
+        assertEquals(Frontier(4, "a"), after.foldedFrontier("contactId", 7))
+        assertEquals(ClaimResult.ALREADY_PAID, after.claim("earlierPaid", target, null))
+        assertFalse("nothing recorded", after.contains("earlierPaid"))
+        assertEquals(
+            "a channel without a frontier still takes an unindexed claim",
+            ClaimResult.CLAIMED,
+            after.claim("otherChannel", target.copy(accountReference = 8), null)
+        )
     }
 
     @Test
@@ -439,6 +461,8 @@ class PaidContactAddressStoreTest {
         // an address it already holds could be claimed — so nothing is claimed.
         store().record("a", target)
         assertTrue(file.setReadable(false))
+        // Root reads it anyway (container CI): the case cannot be set up there.
+        assumeFalse(file.canRead())
         try {
             val s = store()
             assertEquals(ClaimResult.STORE_UNAVAILABLE, s.claim("a", target))
