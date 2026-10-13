@@ -126,7 +126,9 @@ class SettingsFragment : Fragment() {
                             }
                         }
                     },
-                    onBatteryOptimizationClick = { batteryOptimization() }
+                    onBatteryOptimizationClick = { batteryOptimization() },
+                    onAnalyticsToggle = { setAnalyticsEnabled(it) },
+                    onAnalyticsInfoClick = { showAnalyticsInfo() }
                 )
                 }
             }
@@ -235,6 +237,39 @@ class SettingsFragment : Fragment() {
             val balance = walletApplication.getWalletBalance()
             WalletBalanceWidgetProvider.updateWidgets(requireContext(), balance)
         }
+    }
+
+    private fun setAnalyticsEnabled(enabled: Boolean) {
+        if (viewModel.setAnalyticsEnabled(enabled)) {
+            return
+        }
+
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.settings_analytics_save_failed_title),
+            getString(
+                if (enabled) {
+                    R.string.settings_analytics_save_failed_opt_in
+                } else {
+                    R.string.settings_analytics_save_failed_opt_out
+                }
+            ),
+            getString(R.string.close),
+            getString(org.dash.wallet.common.R.string.try_again)
+        ).show(requireActivity()) { retry ->
+            if (retry == true) {
+                setAnalyticsEnabled(enabled)
+            }
+        }
+    }
+
+    private fun showAnalyticsInfo() {
+        AdaptiveDialog.create(
+            R.drawable.ic_info_blue,
+            getString(R.string.settings_analytics_info_title),
+            getString(R.string.settings_analytics_info_message),
+            getString(R.string.button_okay)
+        ).show(requireActivity())
     }
 
     private fun batteryOptimization() {
