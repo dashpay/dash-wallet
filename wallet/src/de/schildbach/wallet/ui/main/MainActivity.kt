@@ -472,8 +472,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun handleBackNavigation() {
-        if (!lockScreenDisplayed && !goBack()) {
-            super.handleBackNavigation()
+        when (homeBackAction(lockScreenDisplayed, supportFragmentManager.backStackEntryCount, isTaskRoot)) {
+            HomeBackAction.IGNORE -> Unit
+            HomeBackAction.POP_FRAGMENT -> goBack()
+            HomeBackAction.MOVE_TASK_TO_BACK -> moveTaskToBack(true)
+            HomeBackAction.FINISH -> super.handleBackNavigation()
         }
     }
 
