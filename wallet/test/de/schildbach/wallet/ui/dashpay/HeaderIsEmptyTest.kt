@@ -120,6 +120,14 @@ class HeaderIsEmptyTest {
     }
 
     @Test
+    fun `a stored invitation is never offered to a wallet that already has an identity`() {
+        assertFalse(
+            acceptInvitationEligible(hasInvitation = true, creationInProgress = false, identityCreated = true)
+        )
+        assertTrue(isEmpty(record(IdentityCreationState.DONE_AND_DISMISS), hasInvitation = true))
+    }
+
+    @Test
     fun `sync completing fills the header via the join tile`() {
         // Already covered by the sync observer's re-take (commit 660156560);
         // asserted here so the set of flipping inputs stays complete.

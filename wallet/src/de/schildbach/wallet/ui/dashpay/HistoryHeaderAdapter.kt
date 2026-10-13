@@ -116,8 +116,18 @@ internal fun joinDashPayEligible(
  */
 internal fun acceptInvitationEligible(
     hasInvitation: Boolean,
-    creationInProgress: Boolean?
-): Boolean = hasInvitation && creationInProgress == false
+    creationInProgress: Boolean?,
+    /**
+     * The wallet already has an identity (creation reached VOTING or later).
+     * Such a wallet cannot use an invite, so a stored one must never be
+     * offered — it used to linger as a "Join DashPay" row with a disabled
+     * Create button until the invite was discarded.
+     */
+    identityCreated: Boolean = false
+): Boolean = hasInvitation && creationInProgress == false && !identityCreated
+
+private fun BlockchainIdentityBaseData?.hasCreatedIdentity(): Boolean =
+    this != null && creationState >= IdentityCreationState.VOTING
 
 /**
  * Whether the home header would render NOTHING — pure, so the callers that
@@ -136,7 +146,11 @@ internal fun headerIsEmpty(
     isSynced: Boolean,
     hideJoinDashPayCard: Boolean,
     votingDualDismissed: Boolean
-): Boolean = !acceptInvitationEligible(hasInvitation, identity?.creationInProgress) &&
+): Boolean = !acceptInvitationEligible(
+    hasInvitation,
+    identity?.creationInProgress,
+    identityCreated = identity.hasCreatedIdentity()
+) &&
     !joinDashPayEligible(identity?.creationState, canJoinDashPay, isSynced, hideJoinDashPayCard) &&
     (identity == null || !helloCardEligible(identity, votingDualDismissed))
 
@@ -369,7 +383,13 @@ class HistoryHeaderAdapter(
                 binding.identityCreation.retryIcon.visibility = View.GONE
                 binding.identityCreation.forwardArrow.visibility = View.VISIBLE
             } else {
-                binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_error_title)
+                binding.identityCreation.title.text = binding.root.context.getString(
+                    if (blockchainIdentityData.usingInvite) {
+                        R.string.processing_error_title_from_invite
+                    } else {
+                        R.string.processing_error_title
+                    }
+                )
                 binding.identityCreation.subtitle.visibility = View.GONE
                 binding.identityCreation.icon.setImageResource(R.drawable.ic_error)
                 binding.identityCreation.retryIcon.visibility = View.VISIBLE
@@ -517,7 +537,11 @@ class HistoryHeaderAdapter(
     }
 
     private fun shouldShowAcceptInvitation(invitation: InvitationLinkData?, isSynced: Boolean): Boolean {
-        return acceptInvitationEligible(invitation != null, blockchainIdentityData?.creationInProgress)
+        return acceptInvitationEligible(
+            invitation != null,
+            blockchainIdentityData?.creationInProgress,
+            identityCreated = blockchainIdentityData.hasCreatedIdentity()
+        )
     }
 
     fun isEmpty(): Boolean = headerIsEmpty(

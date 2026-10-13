@@ -342,7 +342,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         val invite: InvitationLinkData? = intent?.getParcelableExtra(EXTRA_INVITE)
-        if (invite != null && inviteHandlerViewModel.invitation.value != null) {
+        if (invite != null && inviteHandlerViewModel.pendingInvitation.value != null) {
             // TODO: wrong message
             log.info("handling invite: already processing invite")
             InviteHandler(this, viewModel.analytics).showInviteWhileOnboardingInProgressDialog()
