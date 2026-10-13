@@ -20,6 +20,9 @@
 package de.schildbach.wallet
 
 import androidx.work.WorkManager
+import de.schildbach.wallet.service.platform.sdk.SdkSecretsWipeOutcome
+import de.schildbach.wallet.service.platform.sdk.WalletSecretWriteFence
+import de.schildbach.wallet.service.platform.sdk.fencedSdkSecretsWipe
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
 import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
 import de.schildbach.wallet.util.WalletWipeSequence
@@ -34,6 +37,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.BaseConfig
 import org.slf4j.LoggerFactory
+import java.io.IOException
 
 object WalletApplicationExt {
     private val log = LoggerFactory.getLogger(WalletApplicationExt::class.java)
@@ -105,9 +109,14 @@ object WalletApplicationExt {
             // threw; a launch that finds the marker still there re-runs the
             // wipe from the top.
             withContext(NonCancellable) {
-                resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, wipeFinished) {
+                val wipeComplete = resumeMetadataSavesIfWipeComplete(transactionMetadataSaveQueue, wipeFinished) {
                     WalletWipeState.pendingOrNull(filesDir, noBackupFilesDir)
                 }
+                // Same proof as the metadata saves: only a completed wipe lets
+                // the NEXT wallet persist SDK secrets again. An unfinished one
+                // keeps the old wallet's producers fenced for the rest of this
+                // (degraded) process.
+                if (wipeComplete) walletSecretWriteFence.lower()
                 // Before the flag drops: onboarding re-routes on it, and an
                 // unfinished wipe must route to the degraded screen, not to
                 // create/restore.
@@ -125,10 +134,45 @@ object WalletApplicationExt {
     fun WalletApplication.resumeInterruptedWipe() {
         log.warn("a previous Reset Wallet did not finish — completing it now; this launch does not load a wallet")
         setWipeInProgress(true)
+        // Fence before the coroutine is even scheduled: nothing in this
+        // process may persist a secret of the half-destroyed wallet.
+        walletSecretWriteFence.raise()
         wipeScope.launch { finishWalletWipe() }
     }
 
     private suspend fun WalletApplication.destroyWalletData() {
+        // FIRST: fence the old wallet's SDK secret producers (raise, cancel +
+        // join the app-scoped creation/provisioning jobs, drain in-flight
+        // writes). A username creation suspended in its preview or auto-resume
+        // back-off would otherwise persist old-wallet key ciphertext AFTER the
+        // erase below — the SDK's removal cascade cannot be relied on to have
+        // tombstoned the wallet. If the fence cannot be established within its
+        // budget the erase outcome counts as FAILED and the marker stays.
+        val sdkSecrets = fencedSdkSecretsWipe(
+            fence = walletSecretWriteFence,
+            quiesceTimeoutMs = WalletSecretWriteFence.WIPE_QUIESCE_TIMEOUT_MS,
+            teardown = { tearDownWalletData() },
+            // AFTER the cascade, BEFORE the erase: the SDK's own persistence
+            // deriver (a wallet the cascade failed to remove, loaded or not)
+            // writes keys outside the fence's permits. Tombstones the wallet
+            // ids, closes and drains a running runtime, and refuses every SDK
+            // restart until the wipe completes; unproven quiescence makes the
+            // outcome FAILED.
+            quiesceSdk = {
+                sdkWalletSecretsEraser.quiesceSdkForWalletWipe(WalletSecretWriteFence.WIPE_QUIESCE_TIMEOUT_MS)
+            },
+            // AFTER the SDK wallet-removal cascade inside the teardown: the
+            // SDK's secrets DataStore (skipped by clearDatastorePrefFiles) is
+            // kept only if that cascade verifiably left no wallet secret in it.
+            erase = { eraseSdkWalletSecrets() }
+        )
+        // Last, so every other step still runs: a surviving primary or key
+        // backup, or SDK wallet secrets that could not be erased, throw here,
+        // keeping the wipe marker for the next launch.
+        confirmWipeDestroyed(sdkSecrets) { confirmWalletSourcesDestroyed() }
+    }
+
+    private suspend fun WalletApplication.tearDownWalletData() {
         // A queued transaction-metadata save holds this wallet's consent and
         // field choices. Left to run after the clears below it would write
         // them into the next wallet and enqueue a publish, so stop it and wait.
@@ -149,9 +193,31 @@ object WalletApplicationExt {
         notifyWalletWipeListeners()
         destroyWalletSecrets()
         clearDatabasesInner(isWalletWipe = true)
-        // Last, so every other step still runs: a surviving primary or key
-        // backup throws here, keeping the wipe marker for the next launch.
-        confirmWalletSourcesDestroyed()
+    }
+
+    private suspend fun WalletApplication.eraseSdkWalletSecrets(): SdkSecretsWipeOutcome {
+        val outcome = runCatching {
+            sdkWalletSecretsEraser.eraseForWalletWipe { deleteSdkSecretsDatastoreFile() }
+        }.onFailure {
+            rethrowCancellation(it)
+            log.error("SDK secrets erase failed during wipe", it)
+        }.getOrDefault(SdkSecretsWipeOutcome.FAILED)
+        log.info("SDK secrets DataStore after wipe: {}", outcome)
+        return outcome
+    }
+
+    /**
+     * The wipe's completion gate: both persistent dashj wallet sources gone
+     * ([confirmWalletSources] throws otherwise) AND the SDK's wallet secrets
+     * erased. Either failure throws, so [WalletWipeSequence.finish] keeps the
+     * marker and the next launch re-runs the wipe. [confirmWalletSources]
+     * always runs first, so its own deletes are attempted regardless.
+     */
+    internal fun confirmWipeDestroyed(sdkSecrets: SdkSecretsWipeOutcome, confirmWalletSources: () -> Unit) {
+        confirmWalletSources()
+        if (!sdkSecrets.erased) {
+            throw IOException("wipe could not confirm the SDK wallet secrets are erased ($sdkSecrets)")
+        }
     }
 
     /**
@@ -283,18 +349,20 @@ object WalletApplicationExt {
      *
      * @param wipeFinished what WalletWipeSequence.finish() returned; false if it threw.
      * @param markerPending true/false when the marker could be read, null when not.
+     * @return true when the wipe is proven complete (the saves were resumed).
      */
     internal fun resumeMetadataSavesIfWipeComplete(
         queue: TransactionMetadataSaveQueue,
         wipeFinished: Boolean,
         markerPending: () -> Boolean?
-    ) {
+    ): Boolean {
         val markerCleared = wipeFinished && runCatching { markerPending() }.getOrNull() == false
         if (markerCleared) {
             queue.resume()
         } else {
             log.warn("Reset Wallet did not finish — transaction metadata saves stay paused")
         }
+        return markerCleared
     }
 
     private fun rethrowCancellation(t: Throwable) {
