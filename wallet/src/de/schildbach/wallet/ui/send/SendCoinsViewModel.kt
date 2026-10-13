@@ -119,19 +119,87 @@ class SendCoinsViewModel @Inject constructor(
         get() = _maxOutputAmount
 
     private val _currentAmount = MutableStateFlow(Coin.ZERO)
-    var currentAmount: Coin = Coin.ZERO
-        private set
+
+    /** The amount the screen shows — what the next dry run checks. */
+    val currentAmount: Coin
+        get() = _currentAmount.value
 
     /**
-     * The last successful dry run's request; null while a dry run is running
-     * ([executeDryrun] clears it first) or after one failed. Written on IO and
-     * read on main and IO: readers take ONE snapshot of it.
+     * A successful dry run: what it checked, for the confirmation dialog and
+     * the send. Immutable; only ever handed out by [currentDryRun] — i.e. while
+     * it was built for the screen's current payee and amount.
+     *
+     * @property amount the amount it checked.
+     * @property request the UNSIGNED request it built (never broadcast).
+     * @property emptyWallet whether it is a send-all ("Max") request — taken
+     *  from [request] when it was published, never from a later edit.
+     * @property feeEstimate Phase 5d: a DISPLAY-only, deterministic fee for the
+     *  confirm dialog when the post-cutover dry run does NOT complete the tx
+     *  (so `request.tx.fee` is null — no inputs are attached). Null on the
+     *  pre-cutover path, where `completeTx` sets the real dashj fee. The SDK
+     *  computes and applies the actual (typically much smaller) fee at send.
+     */
+    class DryRunResult(
+        val amount: Coin,
+        val request: SendRequest,
+        val emptyWallet: Boolean,
+        val feeEstimate: Coin?
+    )
+
+    /**
+     * What one [executeDryrun] concluded and the inputs it concluded it FOR —
+     * published as one immutable value, so a reader never pairs one dry run's
+     * request with another's inputs (PR #1608 review: after a "Max" amount was
+     * edited down, the Max dry run's request stayed readable until the next
+     * dry run started, and the send then carried its send-all flag — draining
+     * the wallet for the smaller amount).
+     *
+     * @property payee the [ResolvedPayee] it checked, compared by identity:
+     *  every resolution publishes a new one, even for the same address.
+     * @property sendAllBalance for a post-cutover send-all, the SDK-overlaid
+     *  balance it equalled — the send-all decision holds only while the
+     *  balance is still that; null otherwise (pre-cutover, dashj decides
+     *  send-all from its own balance at send time).
+     * @property cutoverCommitted whether it took the post-cutover path.
+     */
+    private class DryRunOutcome(
+        val payee: ResolvedPayee,
+        val amount: Coin,
+        val sendAllBalance: Coin?,
+        val cutoverCommitted: Boolean,
+        val result: DryRunResult?,
+        val exception: Exception?
+    )
+
+    /**
+     * The latest dry run's outcome; null while one is running ([executeDryrun]
+     * clears it first) or when there is nothing to check. Written under
+     * [dryRunLock], read anywhere: readers take ONE snapshot of it, and use it
+     * only if it [matches][isFor] what they are about to show or send.
      */
     @Volatile
-    var dryrunSendRequest: SendRequest? = null
-        private set
-    var dryRunException: Exception? = null
-        private set
+    private var dryRunOutcome: DryRunOutcome? = null
+
+    /** Guards [dryRunGeneration] and the writes of [dryRunOutcome]. */
+    private val dryRunLock = Any()
+
+    /**
+     * Numbers dry runs in the order they start; only the latest one may
+     * publish its outcome, so a slow dry run for an earlier amount or payee
+     * never replaces a later one's.
+     */
+    private var dryRunGeneration = 0L
+
+    /** The last value posted to [dryRunSuccessful]; guarded by [dryRunLock]. */
+    private var dryRunPostedSuccess = false
+
+    /** The request of [currentDryRun], if any. */
+    val dryrunSendRequest: SendRequest?
+        get() = currentDryRun()?.request
+
+    /** The last dry run's failure, for display; null while one runs or after a success. */
+    val dryRunException: Exception?
+        get() = dryRunOutcome?.exception
 
     /**
      * Whether the last dry run failed for lack of funds, as a plain boolean so
@@ -140,16 +208,6 @@ class SendCoinsViewModel @Inject constructor(
      */
     val isInsufficientFunds: Boolean
         get() = dryRunException is InsufficientMoneyException
-
-    /**
-     * Phase 5d: a DISPLAY-only, deterministic fee estimate for the confirm
-     * dialog when the post-cutover dry-run does NOT complete the tx (so
-     * `dryrunSendRequest.tx.fee` is null — no inputs are attached). Null on the
-     * pre-cutover path, where `completeTx` sets the real dashj fee. The SDK
-     * computes and applies the actual (typically much smaller) fee at send.
-     */
-    var dryRunFeeEstimate: Coin? = null
-        private set
 
     private val _dryRunSuccessful = MutableLiveData(false)
     val dryRunSuccessful: LiveData<Boolean>
@@ -249,7 +307,18 @@ class SendCoinsViewModel @Inject constructor(
         // selection is unaffected — SendCoinsTaskRunner owns that separately.
         walletDataProvider.observeMaxOutputBalance()
             .distinctUntilChanged()
-            .onEach(_maxOutputAmount::postValue)
+            .onEach { balance ->
+                // Set (not posted): a dry run started from here reads it.
+                _maxOutputAmount.value = balance
+                // A post-cutover send-all was decided against the previous
+                // balance: it no longer holds (an amount equal to the old
+                // balance is now a plain send). Check the payment again.
+                val sendAllBalance = dryRunOutcome?.sendAllBalance
+                if (sendAllBalance != null && sendAllBalance != balance) {
+                    invalidateDryRunForUi()
+                    scheduleDryRun()
+                }
+            }
             .launchIn(viewModelScope)
 
         _currentAmount
@@ -260,10 +329,6 @@ class SendCoinsViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
-
-        _currentAmount.onEach { amount ->
-            currentAmount = amount
-        }.launchIn(viewModelScope)
 
         walletApplication.startBlockchainService(false)
     }
@@ -280,6 +345,11 @@ class SendCoinsViewModel @Inject constructor(
         // resolved intent and its contact metadata are published together.
         val generation = payeeGeneration.incrementAndGet()
         payee.set(null)
+        // The previous payee's dry run is not this payee's: drop it, and any
+        // dry run still running for it (it would publish a stale outcome).
+        // This resolution runs its own dry run once it has published.
+        clearDryRun()
+        invalidateDryRunForUi()
         log.info("got {}", paymentIntent)
         val resolved = withContext(Dispatchers.IO) {
             checkIdentity(paymentIntent)
@@ -357,30 +427,48 @@ class SendCoinsViewModel @Inject constructor(
             // Defence in depth: the UI cannot confirm a spent contact intent
             // (isPayeePlausible), but never pay its address again.
             spentContactPayment.get()?.let { throw ContactAddressAlreadyPaidException(it) }
-            // One snapshot of the dry run: a dry run started meanwhile (an
-            // amount change, or resetState resolving the contact again) clears
-            // the field before setting its own result, so reading it twice
-            // could see null — this used to throw a NullPointerException — or
-            // two different dry runs. Without one, nothing is sent.
-            val dryRun = dryrunSendRequest ?: throw DryRunNotReadyException()
+            // One snapshot of the dry run's outcome: a dry run started meanwhile
+            // (an amount change, or resetState resolving the contact again)
+            // clears it before publishing its own, so reading it twice could
+            // see null — this used to throw a NullPointerException — or two
+            // different dry runs. Without a successful one, nothing is sent.
+            val outcome = dryRunOutcome
+            val dryRun = outcome?.result ?: throw DryRunNotReadyException()
+            val cutoverCommitted = sendCoinsTaskRunner.isCutoverCommitted()
+            // Only a dry run of THIS send: this payee, this amount, the same
+            // engine and — for a send-all — the same balance. One for the
+            // previous amount (the debounced dry run of an edit has not run
+            // yet) or the previous payee would hand this send its send-all
+            // flag and minimum-fee rule (PR #1608 review: a "Max" amount
+            // edited down was sent as a send-all). The screen re-checks it.
+            if (!outcome.isFor(resolved, editedAmount) || outcome.cutoverCommitted != cutoverCommitted) {
+                log.info(
+                    "the dry run was for a different payment (amount {}, now {}); nothing was sent",
+                    outcome.amount.toFriendlyString(),
+                    editedAmount.toFriendlyString()
+                )
+                throw DryRunOutdatedException()
+            }
             val intent = resolved.intent
             val finalPaymentIntent = intent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
             val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
                 intent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
-                dryRun.ensureMinRequiredFee
+                dryRun.request.ensureMinRequiredFee
             )
             // Post-cutover, carry the cutover-aware dry-run's send-all decision.
             // createSendRequest derives emptyWallet from the dashj max-output
             // balance, which is held at 0 while the engine is cut over, so it can
             // never flag a real send-max — that would route the Max send as a
             // plain SDK send of the full balance (no fee headroom → the SDK send
-            // fails closed). executeDryrun is the authority on send-all here.
+            // fails closed). executeDryrun is the authority on send-all here —
+            // for exactly this amount and balance (checked above), so a
+            // send-all is never carried onto an edited amount.
             // Pre-cutover both requests compute emptyWallet identically from the
             // same balance/amount, so this override is gated on the committed
             // cutover and the dashj path is otherwise untouched.
-            if (sendCoinsTaskRunner.isCutoverCommitted()) {
+            if (cutoverCommitted) {
                 finalSendRequest.emptyWallet = dryRun.emptyWallet
             }
             finalSendRequest.memo = intent.memo
@@ -477,13 +565,15 @@ class SendCoinsViewModel @Inject constructor(
         // amount is strictly positive. A bad `missing` (e.g. missing >= amount)
         // would otherwise yield a non-positive value that AmountView snaps to
         // "0", blanking the field mid-entry.
-        return dryRunException is InsufficientMoneyException &&
+        // Only a failure of the CURRENT amount: an earlier amount's shortfall
+        // subtracted from the amount now entered would be meaningless.
+        return currentOutcome()?.exception is InsufficientMoneyException &&
             currentAmount.isLessThan(maxOutputAmount.value ?: Coin.ZERO) &&
             getAdjustedAmount().isGreaterThan(Coin.ZERO)
     }
 
     fun getAdjustedAmount(): Coin {
-        val missing = (dryRunException as? InsufficientMoneyException)?.missing ?: Coin.ZERO
+        val missing = (currentOutcome()?.exception as? InsufficientMoneyException)?.missing ?: Coin.ZERO
         val adjusted = currentAmount.subtract(missing)
         // Never return a negative amount — the caller feeds this straight into
         // AmountView.setAmount, and a negative snaps to "0" (clearing the field).
@@ -494,12 +584,16 @@ class SendCoinsViewModel @Inject constructor(
      * Back to INPUT after a send (the screen calls it once the result or error
      * is shown). After a failed send that spent a contact intent, resolves the
      * contact's address again ([refreshContactPayment]); until that completes
-     * nothing can be confirmed.
+     * nothing can be confirmed. Otherwise, when there is no dry run of the
+     * current payment (a send refused as outdated, or a dry run skipped while
+     * sending), checks it again so the screen can confirm it.
      */
     fun resetState() {
         _state.postValue(State.INPUT)
         if (refreshContactOnReset.getAndSet(false)) {
             refreshContactPayment()
+        } else if (currentDryRun() == null) {
+            scheduleDryRun()
         }
     }
 
@@ -594,17 +688,105 @@ class SendCoinsViewModel @Inject constructor(
 
     fun setAmount(amount: Coin) {
         _currentAmount.value = amount
+        // The debounced dry run of this amount starts later: until it is done
+        // the screen cannot continue with the previous amount's dry run.
+        invalidateDryRunForUi()
+    }
+
+    /**
+     * The successful dry run of the payment the screen shows now — its
+     * resolved payee and [currentAmount] (and, for a post-cutover send-all,
+     * the balance it was decided on) — or null while that is not checked yet:
+     * a dry run is pending (the amount or payee just changed) or failed. The
+     * screen continues and confirms only with it; [signAndSendPayment] checks
+     * the same against the amount it sends.
+     */
+    fun currentDryRun(): DryRunResult? = currentOutcome()?.result
+
+    private fun currentOutcome(): DryRunOutcome? =
+        dryRunOutcome?.takeIf { it.isFor(payee.get(), currentAmount) }
+
+    /** Whether this outcome was concluded for paying [amount] to [resolved]. */
+    private fun DryRunOutcome.isFor(resolved: ResolvedPayee?, amount: Coin): Boolean =
+        resolved != null &&
+            payee === resolved &&
+            this.amount == amount &&
+            (sendAllBalance == null || sendAllBalance == maxOutputAmount.value)
+
+    /**
+     * Tells the screen (via [dryRunSuccessful]) that it cannot continue when
+     * the dry run it last saw succeed is no longer for the current payment;
+     * the screen re-reads [currentDryRun].
+     */
+    private fun invalidateDryRunForUi() = synchronized(dryRunLock) {
+        if (dryRunPostedSuccess && currentDryRun() == null) {
+            postDryRunSuccessful(false)
+        }
+    }
+
+    /**
+     * Posts [dryRunSuccessful]; called under [dryRunLock], so the posts are in
+     * the order of the outcomes they describe (postValue keeps the last one).
+     */
+    private fun postDryRunSuccessful(success: Boolean) {
+        dryRunPostedSuccess = success
+        _dryRunSuccessful.postValue(success)
+    }
+
+    /**
+     * Runs a dry run of the current payment. Dispatched on main, so it runs
+     * after a state change [resetState] has just posted (the dry run is only
+     * done in [State.INPUT]).
+     */
+    private fun scheduleDryRun() {
+        viewModelScope.launch(Dispatchers.Main) {
+            withContext(Dispatchers.IO) {
+                executeDryrun(currentAmount)
+            }
+        }
+    }
+
+    /** Clears the outcome and supersedes any running dry run; returns the new generation. */
+    private fun clearDryRun(): Long = synchronized(dryRunLock) {
+        dryRunOutcome = null
+        ++dryRunGeneration
+    }
+
+    /**
+     * Publishes [outcome] (null: nothing to check) and tells the screen,
+     * unless a later dry run started — its outcome is the one that counts.
+     */
+    private fun publishDryRun(generation: Long, outcome: DryRunOutcome?) {
+        synchronized(dryRunLock) {
+            if (generation != dryRunGeneration) {
+                log.info("dry run superseded by a later one; its outcome is dropped")
+                return
+            }
+            dryRunOutcome = outcome
+            postDryRunSuccessful(outcome?.result != null)
+        }
     }
 
     private suspend fun executeDryrun(amount: Coin) {
-        dryrunSendRequest = null
-        dryRunException = null
-        dryRunFeeEstimate = null
+        val generation = clearDryRun()
+        // The payee this dry run checks — read after clearing: a resolution
+        // that publishes later clears again and runs its own dry run.
+        val resolved = payee.get()
 
-        if (state.value != State.INPUT || amount == Coin.ZERO) {
-            _dryRunSuccessful.postValue(false)
+        if (state.value != State.INPUT || amount == Coin.ZERO || resolved == null) {
+            publishDryRun(generation, null)
             return
         }
+        // The resolved payee's intent (what super.initPaymentIntent set as
+        // basePaymentIntent when it was published).
+        val basePaymentIntent = resolved.intent
+        fun outcome(
+            result: DryRunResult?,
+            exception: Exception?,
+            cutoverCommitted: Boolean,
+            sendAllBalance: Coin? = null
+        ) = DryRunOutcome(resolved, amount, sendAllBalance, cutoverCommitted, result, exception)
+        var cutoverCommitted = false
         log.info("executeDryRun started")
         val currentThread = Thread.currentThread()
         val monitorJob = viewModelScope.launch(Dispatchers.Default) {
@@ -643,7 +825,8 @@ class SendCoinsViewModel @Inject constructor(
             // and any true shortfall there still fails closed (NotBroadcast,
             // pre-broadcast, no double-pay). Pre-cutover this branch is skipped
             // and the dashj completeTx path below is byte-identical to before.
-            if (sendCoinsTaskRunner.isCutoverCommitted()) {
+            cutoverCommitted = sendCoinsTaskRunner.isCutoverCommitted()
+            if (cutoverCommitted) {
                 val maxOutput = maxOutputAmount.value ?: Coin.ZERO
                 // Reserve = the SDK's own send-all fee reserve
                 // (SEND_ALL_FEE_RESERVE_DUFFS, SdkL1SendService.kt) — ~40x a
@@ -681,11 +864,19 @@ class SendCoinsViewModel @Inject constructor(
                     // through the SDK drain. Still non-committing: no completeTx /
                     // signSendRequest / broadcast happens here.
                     sendRequest.emptyWallet = true
-                    dryRunFeeEstimate = feeReserve // display-only floor; the drain pays the smaller real fee
-                    dryrunSendRequest = sendRequest
                     log.info("executeDryRun finished (cutover-aware: SDK send-all / drain)")
                     monitorJob.cancel()
-                    _dryRunSuccessful.postValue(true)
+                    publishDryRun(
+                        generation,
+                        outcome(
+                            // feeEstimate: display-only floor; the drain pays the smaller real fee
+                            DryRunResult(amount, sendRequest, emptyWallet = true, feeEstimate = feeReserve),
+                            exception = null,
+                            cutoverCommitted = true,
+                            // The send-all holds only while the balance is still this.
+                            sendAllBalance = maxOutput
+                        )
+                    )
                     return
                 }
 
@@ -695,25 +886,36 @@ class SendCoinsViewModel @Inject constructor(
                     // behave identically.
                     throw InsufficientMoneyException(amount.add(feeReserve).subtract(maxOutput))
                 }
-                dryRunFeeEstimate = feeReserve
-                dryrunSendRequest = sendRequest // UNSIGNED, not completed — never broadcast
                 log.info("executeDryRun finished (cutover-aware: SDK-overlaid affordability)")
                 monitorJob.cancel()
-                _dryRunSuccessful.postValue(true)
+                publishDryRun(
+                    generation,
+                    outcome(
+                        // UNSIGNED, not completed — never broadcast
+                        DryRunResult(amount, sendRequest, sendRequest.emptyWallet, feeEstimate = feeReserve),
+                        exception = null,
+                        cutoverCommitted = true
+                    )
+                )
                 return
             }
 
             log.info("  start completeTx")
             wallet.completeTx(sendRequest)
 
-            dryrunSendRequest = sendRequest
             log.info("executeDryRun finished")
             monitorJob.cancel()
-            _dryRunSuccessful.postValue(true)
+            publishDryRun(
+                generation,
+                outcome(
+                    DryRunResult(amount, sendRequest, sendRequest.emptyWallet, feeEstimate = null),
+                    exception = null,
+                    cutoverCommitted = false
+                )
+            )
         } catch (ex: Exception) {
-            dryRunException = ex
             monitorJob.cancel()
-            _dryRunSuccessful.postValue(false)
+            publishDryRun(generation, outcome(result = null, exception = ex, cutoverCommitted = cutoverCommitted))
         }
     }
 
@@ -840,3 +1042,13 @@ class PayeeNotResolvedException :
  */
 class DryRunNotReadyException :
     IllegalStateException("the payment has not been checked yet; nothing was sent")
+
+/**
+ * [SendCoinsViewModel.signAndSendPayment] was called with a dry run that was
+ * not for this send — a different amount (an edit whose dry run has not run
+ * yet, e.g. a "Max" amount edited down), payee, engine, or a send-all whose
+ * balance changed. Using it would carry its send-all flag and fee rule onto
+ * this send. Nothing was sent; the screen checks the payment again.
+ */
+class DryRunOutdatedException :
+    IllegalStateException("the payment was checked for a different amount or recipient; nothing was sent")

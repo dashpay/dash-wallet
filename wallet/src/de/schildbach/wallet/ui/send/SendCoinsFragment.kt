@@ -200,6 +200,10 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
             !viewModel.everythingPlausible() ||
             viewModel.dryRunSuccessful.value != true ||
+            // Only with a dry run of the payment shown now: after an amount or
+            // payee change the previous one stays published until the next
+            // dry run (debounced) starts.
+            viewModel.currentDryRun() == null ||
             viewModel.isBlockchainReplaying.value ?: false
 
         log.info("enterAmountViewModel.blockContinue = {}, viewModel.dryRunSuccessful.value = {}", enterAmountViewModel.blockContinue, viewModel.dryRunSuccessful.value)
@@ -233,7 +237,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             userAuthorizedDuring = true
         }
 
-        if (viewModel.everythingPlausible() && viewModel.dryrunSendRequest != null) {
+        if (viewModel.everythingPlausible() && viewModel.currentDryRun() != null) {
             showPaymentConfirmation()
         }
 
@@ -241,8 +245,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     private suspend fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
-        if (viewModel.dryrunSendRequest == null) {
-            log.error("illegal state dryrunSendRequest == null")
+        if (viewModel.currentDryRun() == null) {
+            log.error("illegal state: no dry run of the current payment")
             return
         }
 
@@ -286,22 +290,25 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     protected open suspend fun showPaymentConfirmation() {
-        val dryRunRequest = viewModel.dryrunSendRequest ?: return
+        // One snapshot of the dry run of the payment shown now: its fee, its
+        // send-all decision and the amount it checked, never mixed with
+        // another dry run's.
+        val dryRun = viewModel.currentDryRun() ?: return
         val address = viewModel.basePaymentIntent.getAddress(Constants.ADDRESS_NETWORK) ?: return
 
         // Post-cutover the dry-run does not complete the tx (no inputs attached),
         // so tx.fee is null; fall back to the deterministic display-only estimate.
         // Pre-cutover tx.fee is set by completeTx and the fallback is never used.
-        val txFee = dryRunRequest.tx.fee ?: viewModel.dryRunFeeEstimate
+        val txFee = dryRun.request.tx.fee ?: dryRun.feeEstimate
         val amount: Coin?
         val total: String?
 
-        if (dryRunRequest.emptyWallet) {
-            amount = enterAmountViewModel.amount.value?.toDashjCoin()?.minus(txFee)
-            total = enterAmountViewModel.amount.value?.toPlainString()
+        if (dryRun.emptyWallet) {
+            amount = txFee?.let { dryRun.amount.minus(it) } ?: dryRun.amount
+            total = dryRun.amount.toPlainString()
         } else {
-            amount = enterAmountViewModel.amount.value?.toDashjCoin()
-            total = amount?.add(txFee ?: Coin.ZERO)?.toPlainString()
+            amount = dryRun.amount
+            total = amount.add(txFee ?: Coin.ZERO).toPlainString()
         }
 
         val rate = enterAmountViewModel.selectedExchangeRate.value
