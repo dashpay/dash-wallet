@@ -31,6 +31,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogMixedFundsMigrationBinding
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
@@ -50,6 +51,7 @@ import org.dash.wallet.common.ui.viewBinding
  * Mirrors the iOS destination sheet: Later defers the startup offer while
  * Tools remains reachable, failures retry without restarting, and success
  * stays visible until Done. A pending shield retries its existing lock.
+ * Each move — and Restart — asks for confirmation first; Later never does.
  *
  * AFTER a choice broadcast (STARTED), the sheet swaps to a PROCESSING
  * presentation (spinner + "your funds are on the way") that must stay
@@ -75,16 +77,28 @@ class MixedFundsMigrationDialogFragment :
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.shieldButton.setOnClickListener { viewModel.shieldMixedFunds() }
-        binding.combineButton.setOnClickListener { viewModel.combineIntoUnmixedBalance() }
+        // Every button that spends asks first: these broadcast real, irreversible
+        // transactions, so a stray tap (MO-1099) must not be enough. Later does not.
+        binding.shieldButton.setOnClickListener {
+            confirmThen(MixedFundsMigrationAction.SHIELD) { viewModel.shieldMixedFunds() }
+        }
+        binding.combineButton.setOnClickListener {
+            confirmThen(MixedFundsMigrationAction.COMBINE) { viewModel.combineIntoUnmixedBalance() }
+        }
 
         // Definitive failures can retry; pending shields resume their lock.
         binding.restartButton.setOnClickListener {
-            viewModel.retryMigration()
+            val state = viewModel.uiState.value
+            // A timed-out/unconfirmed transfer resumes the existing transaction;
+            // a failed one runs its move again, so it asks that move's question.
+            val resumesExisting = state.resultTimedOut || state.outcome == MixedFundsMigrationOutcome.UNCONFIRMED
+            confirmThen(if (resumesExisting) null else state.attemptedAction) { viewModel.retryMigration() }
         }
         // The fallback offered when SHIELDING failed: run the existing
         // combine ("keep it spendable") migration instead.
-        binding.transferUnmixedButton.setOnClickListener { viewModel.combineIntoUnmixedBalance() }
+        binding.transferUnmixedButton.setOnClickListener {
+            confirmThen(MixedFundsMigrationAction.COMBINE) { viewModel.combineIntoUnmixedBalance() }
+        }
         binding.closeButton.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
                 val state = viewModel.uiState.value
@@ -188,6 +202,42 @@ class MixedFundsMigrationDialogFragment :
                     binding.errorText.text = message ?: ""
 
                 }
+            }
+        }
+    }
+
+    /** True while a confirmation is up, so a second tap cannot stack another. */
+    private var confirming = false
+
+    /**
+     * Ask before running [action]: [move] picks the shield or combine wording,
+     * null the generic restart wording. Runs [action] only on Confirm. If the
+     * sheet is torn down while asking (e.g. auto-lock), the coroutine is
+     * cancelled and nothing runs.
+     */
+    private fun confirmThen(move: MixedFundsMigrationAction?, action: () -> Unit) {
+        if (confirming) return
+        confirming = true
+        val (title, message) = when (move) {
+            MixedFundsMigrationAction.SHIELD ->
+                R.string.mixed_funds_migration_confirm_shield_title to R.string.mixed_funds_migration_confirm_shield_message
+            MixedFundsMigrationAction.COMBINE ->
+                R.string.mixed_funds_migration_confirm_combine_title to R.string.mixed_funds_migration_confirm_combine_message
+            null ->
+                R.string.mixed_funds_migration_confirm_restart_title to R.string.mixed_funds_migration_confirm_restart_message
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val confirmed = AdaptiveDialog.create(
+                    R.drawable.ic_warning_yellow_circle,
+                    getString(title),
+                    getString(message),
+                    getString(R.string.button_cancel),
+                    getString(R.string.button_confirm)
+                ).showAsync(requireActivity())
+                if (confirmed == true) action()
+            } finally {
+                confirming = false
             }
         }
     }

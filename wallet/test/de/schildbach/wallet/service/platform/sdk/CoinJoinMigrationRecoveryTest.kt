@@ -30,7 +30,7 @@ class CoinJoinMigrationRecoveryTest {
         }
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true
-        coEvery { shield.pendingWalletShieldLockCount() } returns 1
+        coEvery { shield.pendingCoinJoinShieldLockCount() } returns 1
         coEvery { shield.resumePendingWalletShields() } returns 1
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val send = mockk<SdkL1SendService>(relaxed = true)
@@ -63,7 +63,7 @@ class CoinJoinMigrationRecoveryTest {
         }
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true
-        coEvery { shield.pendingWalletShieldLockCount() } returns 0
+        coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val wallet = mockk<WalletData>(relaxed = true)
         coEvery { wallet.networkParameters } returns TestNet3Params.get()

@@ -800,6 +800,15 @@
     <string name="mixed_funds_migration_tools_action">Move CoinJoin funds</string>
     <string name="mixed_funds_migration_shield_success">Your mixed coins were moved to your Shielded balance. For best privacy, wait at least 2 hours before using these funds.</string>
     <string name="mixed_funds_migration_wallet_success">Your mixed coins were moved to your Dash Wallet balance.</string>
+    <!-- Confirmation shown before either move (or a Restart of one) runs:
+         the sheet's buttons broadcast real transactions, so a stray tap must
+         not be enough. Later never asks. -->
+    <string name="mixed_funds_migration_confirm_shield_title">Move to Shielded balance?</string>
+    <string name="mixed_funds_migration_confirm_shield_message">Your mixed coins will be moved to your shielded balance. Network and privacy fees apply. This can’t be undone.</string>
+    <string name="mixed_funds_migration_confirm_combine_title">Move to Dash Wallet balance?</string>
+    <string name="mixed_funds_migration_confirm_combine_message">Your mixed coins will be added back to your regular balance. This undoes the mixing, so these funds will no longer be private. This can’t be undone.</string>
+    <string name="mixed_funds_migration_confirm_restart_title">Restart the transfer?</string>
+    <string name="mixed_funds_migration_confirm_restart_message">The wallet will try again to move your mixed coins. Network fees may apply.</string>
 
     <!-- SAFETY-NET message for the narrow race where an invitation is checked
          just as the sync state flips (the invite tile's own join_dashpay_wait

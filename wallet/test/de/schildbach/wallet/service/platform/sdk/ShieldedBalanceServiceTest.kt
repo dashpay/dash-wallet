@@ -271,6 +271,21 @@ class ShieldedBalanceServiceTest {
             onFund()
         }
 
+        var accountFundCalls = 0
+
+        override suspend fun fundFromAssetLockFromAccount(
+            walletId: ByteArray,
+            recipientRaw43: ByteArray,
+            amountDuffs: Long,
+            fundingPath: String
+        ) {
+            accountFundCalls++
+            broadcastCalls++
+            lastFundRecipient = recipientRaw43
+            lastFundAmountDuffs = amountDuffs
+            onFund()
+        }
+
         override suspend fun resumeFundFromAssetLock(
             walletId: ByteArray,
             outPointTxid: ByteArray,
@@ -1678,6 +1693,42 @@ class ShieldedBalanceServiceTest {
         assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
         assertEquals(0, source.fundCalls)
         assertEquals(0, source.broadcastCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_coinJoinFundedLockBlocksANewDrain() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = {
+                listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 2, 206751800L, coinJoinFunded = true))
+            }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+        assertEquals(0, source.accountFundCalls)
+        assertEquals(1, service.pendingCoinJoinShieldLockCount())
+    }
+
+    @Test
+    fun mixedFundsShield_unrelatedBip44LockDoesNotBlockTheDrain() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = {
+                listOf(
+                    PendingWalletShieldLock("${"ab".repeat(32)}:0", 1, 5_000_000L, coinJoinFunded = false),
+                    // A consumed CoinJoin lock is history, not pending work.
+                    PendingWalletShieldLock("${"cd".repeat(32)}:0", 4, 5_000_000L, coinJoinFunded = true)
+                )
+            }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        assertEquals(0, service.pendingCoinJoinShieldLockCount())
+        assertEquals(1, service.pendingWalletShieldLockCount())
+        assertEquals(1, source.accountFundCalls)
+        assertEquals(0, source.fundCalls)
     }
 
     /**

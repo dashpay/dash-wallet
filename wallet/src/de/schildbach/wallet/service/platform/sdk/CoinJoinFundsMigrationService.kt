@@ -218,7 +218,8 @@ enum class MixedFundsMigrationAction {
  * death; the marker — not the sheet — is what carries the state.
  *
  * @param baselineShieldedDuffs the shielded balance at broadcast time; the
- *   SHIELD completion signal is the balance exceeding it. 0 for COMBINE.
+ *   SHIELD completion signal is the balance exceeding it once the CoinJoin
+ *   account has been drained. 0 for COMBINE.
  */
 data class InFlightMixedFundsMigration(
     val action: MixedFundsMigrationAction,
@@ -471,7 +472,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /** Continue the persisted consolidation stage, or resume the existing asset lock. */
     suspend fun retryPendingMigration(): MixedFundsMigrationOutcome {
-        if (!restorePendingShieldMigration()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (!resumeOrAdoptPendingMigration()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         val marker = inFlightMigration() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         val hasConsolidation = !dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()
         if (marker.action != MixedFundsMigrationAction.SHIELD && !hasConsolidation) {
@@ -521,7 +522,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * the SDK computes the actual lock value after fees.
      */
     suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome = migrationMutex.withLock {
-        if (restorePendingShieldMigration()) return MixedFundsMigrationOutcome.STARTED
+        if (resumeOrAdoptPendingMigration()) return MixedFundsMigrationOutcome.STARTED
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -555,7 +556,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * destination address.
      */
     suspend fun combineIntoUnmixedBalance(): MixedFundsMigrationOutcome = migrationMutex.withLock {
-        if (restorePendingShieldMigration()) return MixedFundsMigrationOutcome.STARTED
+        if (resumeOrAdoptPendingMigration()) return MixedFundsMigrationOutcome.STARTED
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -639,7 +640,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     // ── The in-flight (post-broadcast) window ─────────────────────────
 
-    /** Recover older interrupted shields that predate the early marker write. */
+    /**
+     * Resume a migration THIS FLOW recorded: the in-flight marker, or a saved
+     * consolidation stage. Both are written only after the user chose a move,
+     * so this is safe on the automatic paths (startup prompt, resume after
+     * unlock, Tools) — it never starts a migration the user did not choose.
+     * A pending CoinJoin-funded lock with no record is NOT adopted here
+     * (MO-1099: a restored wallet's lock showed up as "moving your coins"
+     * with no tap); see [adoptPendingCoinJoinShield].
+     */
     suspend fun restorePendingShieldMigration(): Boolean {
         if (inFlightMigration() != null) {
             startInFlightWatcherIfNeeded()
@@ -650,14 +659,27 @@ class CoinJoinFundsMigrationService @Inject constructor(
             markInFlight(CoinJoinConsolidationState.decode(consolidation).action)
             return true
         }
+        return false
+    }
+
+    /**
+     * USER-ACTION paths only (shield, combine, Restart). Recovers older
+     * interrupted shields that predate the early marker write: a pending
+     * CoinJoin-funded shield is enough to block either migration, since its
+     * reserved inputs may still appear in the confirmed account balance, so
+     * the user's move adopts it as its progress instead of spending again.
+     * Unrelated BIP44 shield locks are not migration progress.
+     */
+    private suspend fun adoptPendingCoinJoinShield(): Boolean {
         if (!shieldedBalanceService.ensureShieldedReady()) return false
-        if ((shieldedBalanceService.pendingWalletShieldLockCount() ?: 0) <= 0) return false
-        // A pending wallet shield is enough to block either migration: its
-        // reserved inputs may still appear in the confirmed account balance.
+        if ((shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: 0) <= 0) return false
         markInFlight(MixedFundsMigrationAction.SHIELD)
-        log.info("mixed-funds migration: restored progress for a pending wallet shield")
+        log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
         return true
     }
+
+    private suspend fun resumeOrAdoptPendingMigration(): Boolean =
+        restorePendingShieldMigration() || adoptPendingCoinJoinShield()
 
     /**
      * The persisted in-flight migration, or null when none is pending —
@@ -719,10 +741,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * Start (idempotently) the watcher that clears the in-flight marker once
      * the migration's RESULT is user-visible:
      *
-     * - SHIELD — the shielded balance credit lands:
+     * - SHIELD — the CoinJoin funds moved AND the shielded credit lands: the
+     *   CoinJoin account reads affirmatively EMPTY (as for COMBINE), no
+     *   CoinJoin-funded lock is still pending
+     *   ([ShieldedBalanceService.pendingCoinJoinShieldLockCount] == 0), and
      *   [ShieldedBalanceService.observeShieldedBalance] emits a balance above
      *   the marker's baseline (the flow emits `Dash.ZERO`/the pre-credit
-     *   figure until then, so a runtime rebind can never fake a completion);
+     *   figure until then, so a runtime rebind can never fake a completion).
+     *   The balance alone is not enough — an unrelated BIP44 shield landing
+     *   would raise it while the CoinJoin coins stay put;
      * - COMBINE — the CoinJoin account reads EMPTY in the SDK's own
      *   `accountBalances` snapshot ([parseCoinJoinConfirmedDuffs] == 0,
      *   affirmatively): the drain consumed the account and its coins are now
@@ -763,9 +790,20 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val landed = withTimeoutOrNull(remainingMs) {
             if (!continueConsolidation()) return@withTimeoutOrNull false
             when (marker.action) {
-                MixedFundsMigrationAction.SHIELD ->
+                MixedFundsMigrationAction.SHIELD -> {
+                    // The CoinJoin funds must have actually moved: the account
+                    // reads empty and no CoinJoin-funded lock is still pending.
+                    // A rising shielded balance alone could be an unrelated
+                    // BIP44 shield landing.
+                    while (sdkCoinJoinConfirmedDuffs() != 0L ||
+                        !shieldedBalanceService.ensureShieldedReady() ||
+                        shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
+                    ) {
+                        delay(IN_FLIGHT_POLL_MS)
+                    }
                     shieldedBalanceService.observeShieldedBalance()
                         .first { it.duffs > marker.baselineShieldedDuffs }
+                }
                 MixedFundsMigrationAction.COMBINE ->
                     while (sdkCoinJoinConfirmedDuffs() != 0L) {
                         delay(IN_FLIGHT_POLL_MS)
@@ -799,9 +837,26 @@ class CoinJoinFundsMigrationService @Inject constructor(
             val activeWallet = dashSdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()
             if (activeWallet != state.walletId) return false
             if (state.phase == CoinJoinConsolidationState.SHIELDING) {
-                shieldedBalanceService.ensureShieldedReady()
-                shieldedBalanceService.resumePendingWalletShields()
-                return true
+                if (!shieldedBalanceService.ensureShieldedReady()) {
+                    delay(IN_FLIGHT_POLL_MS)
+                    continue
+                }
+                val pending = shieldedBalanceService.pendingCoinJoinShieldLockCount()
+                if (pending == null) { delay(IN_FLIGHT_POLL_MS); continue }
+                if (pending > 0) {
+                    shieldedBalanceService.resumePendingWalletShields()
+                    return true
+                }
+                // No CoinJoin-funded lock: either the drain landed (account
+                // empty or its coins already claimed) or it never started —
+                // interrupted before the native call, or an earlier build
+                // mistook an unrelated BIP44 lock for it. Drain again only
+                // from a clean, settled snapshot.
+                val snapshot = coinJoinConsolidationSnapshot(dashSdkService)
+                if (snapshot == null || snapshot.coins.isEmpty()) return true
+                state = state.copy(phase = CoinJoinConsolidationState.READY)
+                saveConsolidation(state)
+                continue
             }
             if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
                 delay(IN_FLIGHT_POLL_MS)
@@ -842,7 +897,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     delay(IN_FLIGHT_POLL_MS)
                     continue
                 }
-                val pending = shieldedBalanceService.pendingWalletShieldLockCount()
+                // Only a CoinJoin-funded lock is this migration's pending work;
+                // an unrelated BIP44 shield lock is left to the regular sweep
+                // and must not stand in for the drain.
+                val pending = shieldedBalanceService.pendingCoinJoinShieldLockCount()
                 if (pending == null) { delay(IN_FLIGHT_POLL_MS); continue }
                 state = state.copy(phase = CoinJoinConsolidationState.SHIELDING)
                 saveConsolidation(state)

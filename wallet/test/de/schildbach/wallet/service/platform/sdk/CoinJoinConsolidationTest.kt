@@ -88,6 +88,8 @@ class CoinJoinConsolidationTest {
         val addresses = MutableStateFlow(listOf(address()))
         var engineBalance = coins.value.sumOf { it.amount }
         var storedTx: TransactionEntity? = null
+        val shieldedBalance = MutableStateFlow(Dash.ZERO)
+        var coinJoinLocks = 0
         val service: CoinJoinFundsMigrationService
         init {
             coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
@@ -108,8 +110,8 @@ class CoinJoinConsolidationTest {
             coEvery { blockchain.getState() } returns chainState
             every { chainState.isSynced() } returns true
             coEvery { shield.ensureShieldedReady() } returns true
-            coEvery { shield.pendingWalletShieldLockCount() } returns 0
-            every { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
+            coEvery { shield.pendingCoinJoinShieldLockCount() } answers { coinJoinLocks }
+            every { shield.observeShieldedBalance() } returns shieldedBalance
             coEvery { shield.shieldMixedFundsFromWallet(any(), any()) } returns SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
             every { wallet.networkParameters } returns params
             service = CoinJoinFundsMigrationService(wallet, shield, send, blockchain, config, sdk, scope.backgroundScope)
@@ -286,5 +288,95 @@ class CoinJoinConsolidationTest {
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
         runCurrent()
         coVerify(exactly = 1) { f.send.consolidateCoinJoin(regular, 1L, true, any()) }
+    }
+
+    @Test fun unrelatedBip44LockNeitherSkipsTheDrainNorCompletesTheMigration() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        // An ordinary "transfer to shielded" lock is pending; it is not CoinJoin-funded.
+        coEvery { f.shield.pendingWalletShieldLockCount() } returns 1
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any()) } returns
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params)) }
+        coVerify(exactly = 0) { f.shield.resumePendingWalletShields() }
+
+        // The unrelated shield lands first: the balance rises, but the CoinJoin coins have not moved.
+        f.shieldedBalance.value = Dash.COIN
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+
+        // The drain is confirmed: the CoinJoin account is empty.
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+    }
+
+    @Test fun persistedShieldStageDrainsDespiteAnUnrelatedPendingLock() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        coEvery { f.shield.pendingWalletShieldLockCount() } returns 1
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params)) }
+        coVerify(exactly = 0) { f.shield.resumePendingWalletShields() }
+        assertEquals(CoinJoinConsolidationState.SHIELDING, CoinJoinConsolidationState.decode(f.consolidation).phase)
+    }
+
+    @Test fun shieldingStageWithoutACoinJoinLockDrainsTheRemainingCoinsOnce() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        // E.g. an earlier build saved SHIELDING after mistaking an unrelated lock for the drain.
+        f.consolidation = CoinJoinConsolidationState(walletId, destination, CoinJoinConsolidationState.SHIELDING).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        advanceTimeBy(60_000); runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params)) }
+        assertNotNull(f.service.inFlightMigration())
+    }
+
+    @Test fun pendingCoinJoinLockIsResumedWithoutASecondDrain() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        f.coinJoinLocks = 1
+        f.consolidation = CoinJoinConsolidationState(walletId, destination, CoinJoinConsolidationState.SHIELDING).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        coVerify(exactly = 1) { f.shield.resumePendingWalletShields() }
+        // The shielded balance rising is not enough while the CoinJoin lock is unresolved.
+        f.shieldedBalance.value = Dash.COIN
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        f.coinJoinLocks = 0
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
+    }
+
+    @Test fun pendingCoinJoinLockIsAdoptedOnlyByAUserActionAndAnUnrelatedOneNever() = runTest {
+        val f = Fixture(this)
+        coEvery { f.shield.pendingWalletShieldLockCount() } returns 1
+        assertFalse(f.service.restorePendingShieldMigration())
+        assertNull(f.service.inFlightMigration())
+        // MO-1099: the automatic path (startup, resume after unlock, Tools) must
+        // not turn an unrecorded CoinJoin lock into a migration nobody chose.
+        f.coinJoinLocks = 1
+        assertFalse(f.service.restorePendingShieldMigration())
+        assertNull(f.service.inFlightMigration())
+        // The user's (confirmed) move adopts it instead of spending again.
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        assertEquals(MixedFundsMigrationAction.SHIELD, f.service.inFlightMigration()?.action)
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
     }
 }

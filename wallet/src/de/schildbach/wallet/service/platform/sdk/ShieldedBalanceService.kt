@@ -199,6 +199,15 @@ interface ShieldedBalanceService {
     suspend fun pendingWalletShieldLockCount(): Int?
 
     /**
+     * Like [pendingWalletShieldLockCount], but only the resumable locks that
+     * are (or may be) funded from the CoinJoin account — the mixed-funds
+     * migration's own drain. Unrelated BIP44 shield locks are excluded; a
+     * lock whose funding source cannot be determined is counted. Null when
+     * the runtime isn't ready or the locks cannot be read (UNKNOWN).
+     */
+    suspend fun pendingCoinJoinShieldLockCount(): Int?
+
+    /**
      * Live unspent shielded balance, credits summed from the SDK's note
      * store and floored to [Dash]. Emits [Dash.ZERO] until
      * [ensureShieldedReady] succeeds.
