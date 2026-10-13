@@ -242,6 +242,7 @@ open class DashPayConfig @Inject constructor(
          * left an unexplained near-zero balance behind the lock screen.
          */
         val MIXED_FUNDS_MIGRATION_IN_FLIGHT = stringPreferencesKey("mixed_funds_migration_in_flight")
+        val MIXED_FUNDS_CONSOLIDATION = stringPreferencesKey("mixed_funds_consolidation")
 
         /**
          * Phase 3c of the dashj → Kotlin SDK migration

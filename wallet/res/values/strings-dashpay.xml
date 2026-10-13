@@ -783,7 +783,7 @@
     <string name="mixed_funds_migration_coinjoin_removed">The CoinJoin feature has been removed from the app.</string>
     <string name="mixed_funds_migration_message">This wallet currently holds %s mixed DASH. Choose where you would like to keep it.</string>
     <string name="mixed_funds_migration_shield_action">Shielded balance</string>
-    <string name="mixed_funds_migration_shield_note">Keep these coins private. Network and privacy fees apply.</string>
+    <string name="mixed_funds_migration_shield_note">Move to your shielded balance. Consolidation, when needed, publicly links the coins being moved. Network and privacy fees apply.</string>
     <string name="mixed_funds_migration_combine_action">Dash Wallet balance</string>
     <string name="mixed_funds_migration_combine_note">Adds these funds back to your regular balance. This undoes the mixing, so these funds will no longer be private.</string>
     <string name="mixed_funds_migration_in_progress">Moving your funds. Please keep the app open.</string>

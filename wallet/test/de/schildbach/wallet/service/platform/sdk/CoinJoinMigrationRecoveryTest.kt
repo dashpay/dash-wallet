@@ -22,6 +22,7 @@ class CoinJoinMigrationRecoveryTest {
     @Test
     fun pendingLockRestoresMarkerAndBlocksBothNewSpends() = runBlocking {
         val config = mockk<DashPayConfig>(relaxed = true)
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } returns ""
         var marker = ""
         coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
         coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, any()) } answers {
@@ -52,8 +53,9 @@ class CoinJoinMigrationRecoveryTest {
     }
 
     @Test
-    fun markerExistsBeforeFundingAndClearsOnlyOnDefinitiveRejection() = runBlocking {
+    fun unavailableSyncedSnapshotPreventsFunding() = runBlocking {
         val config = mockk<DashPayConfig>(relaxed = true)
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } returns ""
         var marker = ""
         coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
         coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, any()) } answers {
@@ -63,10 +65,6 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingWalletShieldLockCount() } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
-        coEvery { shield.shieldMixedFundsFromWallet(any(), any()) } coAnswers {
-            assertNotNull(parseInFlightMigration(marker))
-            SdkWriteResult.NotBroadcast("definitive rejection")
-        }
         val wallet = mockk<WalletData>(relaxed = true)
         coEvery { wallet.networkParameters } returns TestNet3Params.get()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -77,6 +75,7 @@ class CoinJoinMigrationRecoveryTest {
         try {
             assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.shieldMixedFunds(Dash.COIN))
             assertNull(service.inFlightMigration())
+            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any()) }
         } finally {
             scope.cancel()
         }
