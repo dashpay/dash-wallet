@@ -22,6 +22,7 @@ import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.toTxId
 import io.mockk.coEvery
@@ -118,7 +119,14 @@ class WalletTransactionMetadataProviderObserveTest {
             swapOrderDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = mockk<TransactionMetadataChangeCacheDao>(relaxed = true),
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
-            dashPayConfig = mockk<DashPayConfig>(relaxed = true)
+            dashPayConfig = mockk<DashPayConfig>(relaxed = true),
+            // The SDK store holds none of these transactions either.
+            sdkTxMetadataSource = object : SdkTxMetadataSource {
+                override suspend fun defaultMetadataFor(txId: org.dash.wallet.common.data.TxId): TransactionMetadata? = null
+                override suspend fun defaultMetadataFor(
+                    txIds: Collection<org.dash.wallet.common.data.TxId>
+                ): Map<org.dash.wallet.common.data.TxId, TransactionMetadata> = emptyMap()
+            }
         )
     }
 

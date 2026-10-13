@@ -30,6 +30,8 @@ import de.schildbach.wallet.data.WalletDataAdapter
 import org.dash.wallet.common.WalletDataProvider
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.WalletTransactionMetadataProvider
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.service.BlockchainStateDataProvider
 import de.schildbach.wallet.service.ExchangeIntegrationListProvider
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
@@ -64,6 +66,11 @@ abstract class DataProviderModule {
     abstract fun bindTransactionMetadata(
         transactionMetadataService: WalletTransactionMetadataProvider
     ): TransactionMetadataProvider
+
+    @Binds
+    abstract fun bindSdkTxMetadataSource(
+        sdkTxDetailProvider: SdkTxDetailProvider
+    ): SdkTxMetadataSource
 
     @Singleton
     @Binds
