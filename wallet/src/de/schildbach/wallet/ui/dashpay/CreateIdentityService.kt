@@ -13,6 +13,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.dao.UsernameRequestDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
@@ -452,10 +453,22 @@ class CreateIdentityService : LifecycleService() {
             val blockchainIdentityData = runBlocking {
                 identityRepository.loadBlockchainIdentityBaseData()
             }
-            if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
-                handleCreateIdentityAction(null, null)
+            when (restartResumeAction(blockchainIdentityData)) {
+                RestartResumeAction.INVITE -> handleCreateIdentityFromInvitationAction(null, null, null)
+                RestartResumeAction.IDENTITY -> handleCreateIdentityAction(null, null)
+                RestartResumeAction.NONE -> {
+                    // Nothing to resume (no record, finished, restoring, or an
+                    // invite claim already at VOTING/DONE_AND_DISMISS). onCreate()
+                    // has already gone foreground and taken a wake lock, and no
+                    // handler will run to release them, so stop now rather than
+                    // idle with a "processing" notification.
+                    log.info(
+                        "restarted by the system with nothing to resume " +
+                            "(${blockchainIdentityData.creationState}); stopping"
+                    )
+                    stopSelf()
+                }
             }
-
         } else if (!workInProgress) {
 
             when (intent.action) {
@@ -471,8 +484,13 @@ class CreateIdentityService : LifecycleService() {
                     val username = intent.getStringExtra(EXTRA_USERNAME)
                     val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
                     val invitation = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
+                    // Without this flag a retry-with-new-username hit the
+                    // "existing record, different username" arm of
+                    // createIdentityFromInvitation and failed with a bare
+                    // IllegalStateException ("IllegalStateException: null").
+                    val retryWithNewUserName = intent.action == ACTION_RETRY_INVITE_WITH_NEW_USERNAME
 
-                    handleCreateIdentityFromInvitationAction(username, usernameSecondary, invitation)
+                    handleCreateIdentityFromInvitationAction(username, usernameSecondary, invitation, retryWithNewUserName)
                 }
                 ACTION_RETRY_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
@@ -744,11 +762,16 @@ class CreateIdentityService : LifecycleService() {
         timerEntireProcess.logTiming()
     }
 
-    private fun handleCreateIdentityFromInvitationAction(username: String?, usernameSecondary: String?, invite: InvitationLinkData?) {
+    private fun handleCreateIdentityFromInvitationAction(
+        username: String?,
+        usernameSecondary: String?,
+        invite: InvitationLinkData?,
+        retryWithNewUserName: Boolean = false
+    ) {
         workInProgress = true
         identityCreationStatus.clear() // fresh run — drop any stale hint
         serviceScope.launch(createIdentityExceptionHandler) {
-            createIdentityFromInvitation(username, usernameSecondary, invite)
+            createIdentityFromInvitation(username, usernameSecondary, invite, retryWithNewUserName)
             workInProgress = false
             stopSelf()
         }
@@ -1010,7 +1033,7 @@ class CreateIdentityService : LifecycleService() {
      */
     private suspend fun claimL1Invitation(invite: InvitationLinkData, username: String) {
         when (val result = sdkL1InviteCreation.claimL1Invite(
-            uri = invite.link.toString(),
+            uri = invite.sdkClaimUri,
             label = username
         )) {
             is SdkWriteResult.Broadcast -> {
@@ -1022,7 +1045,14 @@ class CreateIdentityService : LifecycleService() {
             is SdkWriteResult.NotBroadcast ->
                 throw IllegalStateException("L1 invite claim failed: ${result.reason}", result.cause)
             is SdkWriteResult.Ambiguous ->
-                throw IllegalStateException("L1 invite claim outcome unconfirmed", result.cause)
+                // Carry the cause's message: this string is what gets stored
+                // as creationStateErrorMessage, and without it the reason
+                // (stale IS lock and no ChainLock yet, a Platform rejection,
+                // a DAPI failure) survived only in the logged stack trace.
+                throw IllegalStateException(
+                    "L1 invite claim outcome unconfirmed" + (result.cause.message?.let { ": $it" } ?: ""),
+                    result.cause
+                )
         }
     }
 
@@ -1035,8 +1065,26 @@ class CreateIdentityService : LifecycleService() {
         when {
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
-                if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
-                    throw IllegalStateException()
+                if (username != null && blockchainIdentityData.username != username) {
+                    throw IllegalStateException(
+                        "invite claim already in progress for a different username"
+                    )
+                }
+            }
+            // Retry-with-new-username before the invite was claimed (no
+            // identity yet): keep the record — it holds the invite link the
+            // claim needs, which the retry intent does not carry — and only
+            // swap in the newly requested names.
+            (blockchainIdentityDataTmp != null && retryWithNewUserName && blockchainIdentityDataTmp.userId == null) -> {
+                blockchainIdentityData = blockchainIdentityDataTmp
+                if (username != null) {
+                    log.info(
+                        "unclaimed-invite retry: requested primary '{}' -> '{}'",
+                        blockchainIdentityData.username,
+                        username
+                    )
+                    blockchainIdentityData.username = username
+                    blockchainIdentityData.usernameSecondary = usernameSecondary
                 }
             }
             // Retry-with-new-username on a CLAIMED invite (identity already on
@@ -2045,3 +2093,24 @@ internal fun requestedContestedCandidates(
     usernameStatusKeys = emptySet(),
     requestedLabel = requestedSecondary
 )
+
+internal enum class RestartResumeAction { NONE, IDENTITY, INVITE }
+
+/**
+ * What a START_STICKY null-intent restart of [CreateIdentityService] should
+ * resume for the stored identity record. An invite claim must resume on the
+ * invite path: createIdentity() refuses invite records (checkState "use
+ * createIdentityFromInvite instead"), so a system restart mid-claim used to
+ * stamp that error on the home tile ("Error Upgrading"). Only a claim that has
+ * not reached VOTING is resumed. [RestartResumeAction.NONE] means the service
+ * has no work and must stop itself.
+ */
+internal fun restartResumeAction(identity: BlockchainIdentityBaseData?): RestartResumeAction =
+    when {
+        identity == null ||
+            identity.creationState == IdentityCreationState.DONE ||
+            identity.restoring -> RestartResumeAction.NONE
+        !identity.usingInvite -> RestartResumeAction.IDENTITY
+        identity.creationState < IdentityCreationState.VOTING -> RestartResumeAction.INVITE
+        else -> RestartResumeAction.NONE
+    }

@@ -27,6 +27,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResult
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 /**
@@ -84,32 +85,35 @@ class UsernamePaymentDialogFragment : OffsetDialogFragment(R.layout.dialog_usern
         (view as ComposeView).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                when (prompt) {
-                    UsernamePaymentPrompt.SELECT_PAYMENT_OPTION -> {
-                        val state by paymentViewModel.uiState.collectAsState()
-                        SelectPaymentOptionSheet(
-                            selectedSource = state.selectedSource,
-                            onSelect = paymentViewModel::selectSource,
-                            onContinue = {
-                                state.selectedSource?.let { deliver(ACTION_CONTINUE, it) }
-                            },
-                            onClose = ::dismiss
-                        )
-                    }
-                    else -> {
-                        val state by paymentViewModel.uiState.collectAsState()
-                        MakeUsernamePrivateSheet(
-                            // SHIELD-guidance amount (pool denomination padded
-                            // for the Shield fee), not the pool bar itself.
-                            minShieldAmount = de.schildbach.wallet.Constants
-                                .SHIELDED_USERNAME_FUND_MIN.toPlainString(),
-                            canShieldMinimum = state.canShieldMinimum,
-                            onShieldFirst = { deliver(ACTION_SHIELD_FIRST) },
-                            onContinueWithoutPrivacy = {
-                                deliver(ACTION_CONTINUE, UsernamePaymentSource.DASH_BALANCE)
-                            },
-                            onClose = ::dismiss
-                        )
+                // Night-aware LocalDashColors for the sheets (MO-974).
+                DashWalletTheme {
+                    when (prompt) {
+                        UsernamePaymentPrompt.SELECT_PAYMENT_OPTION -> {
+                            val state by paymentViewModel.uiState.collectAsState()
+                            SelectPaymentOptionSheet(
+                                selectedSource = state.selectedSource,
+                                onSelect = paymentViewModel::selectSource,
+                                onContinue = {
+                                    state.selectedSource?.let { deliver(ACTION_CONTINUE, it) }
+                                },
+                                onClose = ::dismiss
+                            )
+                        }
+                        else -> {
+                            val state by paymentViewModel.uiState.collectAsState()
+                            MakeUsernamePrivateSheet(
+                                // SHIELD-guidance amount (pool denomination padded
+                                // for the Shield fee), not the pool bar itself.
+                                minShieldAmount = de.schildbach.wallet.Constants
+                                    .SHIELDED_USERNAME_FUND_MIN.toPlainString(),
+                                canShieldMinimum = state.canShieldMinimum,
+                                onShieldFirst = { deliver(ACTION_SHIELD_FIRST) },
+                                onContinueWithoutPrivacy = {
+                                    deliver(ACTION_CONTINUE, UsernamePaymentSource.DASH_BALANCE)
+                                },
+                                onClose = ::dismiss
+                            )
+                        }
                     }
                 }
             }
