@@ -188,4 +188,14 @@ class SettingsViewModelTest {
 
         assertFalse("an unsaved opt-in stays off", viewModel.uiState.value.analyticsEnabled)
     }
+
+    @Test
+    fun setAnalyticsEnabled_failedOptOut_showsTheSavedValueSoTogglingRetries() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = true, available = true, saves = false)
+        val viewModel = viewModel(analytics)
+
+        assertFalse(viewModel.setAnalyticsEnabled(false))
+
+        assertTrue("the switch shows the still-saved on", viewModel.uiState.value.analyticsEnabled)
+    }
 }

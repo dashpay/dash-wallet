@@ -25,6 +25,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -240,26 +241,13 @@ class SettingsFragment : Fragment() {
     }
 
     private fun setAnalyticsEnabled(enabled: Boolean) {
-        if (viewModel.setAnalyticsEnabled(enabled)) {
-            return
-        }
-
-        AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.settings_analytics_save_failed_title),
-            getString(
-                if (enabled) {
-                    R.string.settings_analytics_save_failed_opt_in
-                } else {
-                    R.string.settings_analytics_save_failed_opt_out
-                }
-            ),
-            getString(R.string.close),
-            getString(org.dash.wallet.common.R.string.try_again)
-        ).show(requireActivity()) { retry ->
-            if (retry == true) {
-                setAnalyticsEnabled(enabled)
-            }
+        if (!viewModel.setAnalyticsEnabled(enabled)) {
+            // The switch is back on the saved value, so toggling it again retries.
+            Toast.makeText(
+                requireContext(),
+                if (enabled) R.string.settings_analytics_save_failed_on else R.string.settings_analytics_save_failed_off,
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
