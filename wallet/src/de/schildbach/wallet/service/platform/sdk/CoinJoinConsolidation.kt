@@ -10,7 +10,7 @@ import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.json.JSONObject
 
 internal const val COIN_JOIN_ASSET_LOCK_INPUT_LIMIT = 100
-internal const val COIN_JOIN_CONSOLIDATION_INPUT_LIMIT = 400
+internal const val COIN_JOIN_CONSOLIDATION_INPUT_LIMIT = 500
 
 internal data class CoinJoinConsolidationState(
     val walletId: String,

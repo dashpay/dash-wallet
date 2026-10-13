@@ -54,14 +54,14 @@ class CoinJoinConsolidationTest {
         val snapshot = CoinJoinConsolidationSnapshot(walletId, (0 until 2000).map(::coin), destination)
         assertTrue(snapshot.needsConsolidation)
         assertFalse(snapshot.drain)
-        assertEquals(399_871_800L, snapshot.batchAmount())
+        assertEquals(499_839_800L, snapshot.batchAmount())
         assertFalse(snapshot.copy(coins = snapshot.coins.take(100)).needsConsolidation)
-        assertTrue(snapshot.copy(coins = snapshot.coins.take(400)).drain)
+        assertTrue(snapshot.copy(coins = snapshot.coins.take(500)).drain)
     }
 
     @Test fun signedBatchRejectsExcessInputsAndForeignOutputs() {
-        val snapshot = CoinJoinConsolidationSnapshot(walletId, (0 until 401).map(::coin), destination)
-        val tx = transaction(snapshot.coins.take(400))
+        val snapshot = CoinJoinConsolidationSnapshot(walletId, (0 until 501).map(::coin), destination)
+        val tx = transaction(snapshot.coins.take(500))
         assertEquals(tx.txId.toString(), validateCoinJoinConsolidation(tx.bitcoinSerialize(), snapshot, destination, params))
         assertThrows(IllegalArgumentException::class.java) {
             validateCoinJoinConsolidation(transaction(snapshot.coins).bitcoinSerialize(), snapshot, destination, params)
@@ -190,7 +190,7 @@ class CoinJoinConsolidationTest {
         f.engineBalance = f.coins.value.sumOf { it.amount }
         var batches = 0
         coEvery { f.send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
-            val selected = f.coins.value.sortedByDescending { it.amount }.take(400)
+            val selected = f.coins.value.sortedByDescending { it.amount }.take(500)
             val tx = transaction(selected)
             arg<suspend (ByteArray) -> Unit>(3)(tx.bitcoinSerialize())
             batches++
@@ -205,8 +205,8 @@ class CoinJoinConsolidationTest {
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
         runCurrent()
         advanceTimeBy(90_000); runCurrent()
-        assertEquals(5, batches)
-        assertEquals(5, f.coins.value.size)
+        assertEquals(4, batches)
+        assertEquals(4, f.coins.value.size)
         coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
     }
 }
