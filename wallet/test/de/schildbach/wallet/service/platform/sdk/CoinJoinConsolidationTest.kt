@@ -363,13 +363,20 @@ class CoinJoinConsolidationTest {
         assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
     }
 
-    @Test fun pendingCoinJoinLockAloneRestoresTheMigrationButAnUnrelatedOneDoesNot() = runTest {
+    @Test fun pendingCoinJoinLockIsAdoptedOnlyByAUserActionAndAnUnrelatedOneNever() = runTest {
         val f = Fixture(this)
         coEvery { f.shield.pendingWalletShieldLockCount() } returns 1
         assertFalse(f.service.restorePendingShieldMigration())
         assertNull(f.service.inFlightMigration())
+        // MO-1099: the automatic path (startup, resume after unlock, Tools) must
+        // not turn an unrecorded CoinJoin lock into a migration nobody chose.
         f.coinJoinLocks = 1
-        assertTrue(f.service.restorePendingShieldMigration())
+        assertFalse(f.service.restorePendingShieldMigration())
+        assertNull(f.service.inFlightMigration())
+        // The user's (confirmed) move adopts it instead of spending again.
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
         assertEquals(MixedFundsMigrationAction.SHIELD, f.service.inFlightMigration()?.action)
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
     }
 }

@@ -472,7 +472,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /** Continue the persisted consolidation stage, or resume the existing asset lock. */
     suspend fun retryPendingMigration(): MixedFundsMigrationOutcome {
-        if (!restorePendingShieldMigration()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (!resumeOrAdoptPendingMigration()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         val marker = inFlightMigration() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         val hasConsolidation = !dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()
         if (marker.action != MixedFundsMigrationAction.SHIELD && !hasConsolidation) {
@@ -522,7 +522,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * the SDK computes the actual lock value after fees.
      */
     suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome = migrationMutex.withLock {
-        if (restorePendingShieldMigration()) return MixedFundsMigrationOutcome.STARTED
+        if (resumeOrAdoptPendingMigration()) return MixedFundsMigrationOutcome.STARTED
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -556,7 +556,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * destination address.
      */
     suspend fun combineIntoUnmixedBalance(): MixedFundsMigrationOutcome = migrationMutex.withLock {
-        if (restorePendingShieldMigration()) return MixedFundsMigrationOutcome.STARTED
+        if (resumeOrAdoptPendingMigration()) return MixedFundsMigrationOutcome.STARTED
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -631,7 +631,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     // ── The in-flight (post-broadcast) window ─────────────────────────
 
-    /** Recover older interrupted shields that predate the early marker write. */
+    /**
+     * Resume a migration THIS FLOW recorded: the in-flight marker, or a saved
+     * consolidation stage. Both are written only after the user chose a move,
+     * so this is safe on the automatic paths (startup prompt, resume after
+     * unlock, Tools) — it never starts a migration the user did not choose.
+     * A pending CoinJoin-funded lock with no record is NOT adopted here
+     * (MO-1099: a restored wallet's lock showed up as "moving your coins"
+     * with no tap); see [adoptPendingCoinJoinShield].
+     */
     suspend fun restorePendingShieldMigration(): Boolean {
         if (inFlightMigration() != null) {
             startInFlightWatcherIfNeeded()
@@ -642,15 +650,27 @@ class CoinJoinFundsMigrationService @Inject constructor(
             markInFlight(CoinJoinConsolidationState.decode(consolidation).action)
             return true
         }
+        return false
+    }
+
+    /**
+     * USER-ACTION paths only (shield, combine, Restart). Recovers older
+     * interrupted shields that predate the early marker write: a pending
+     * CoinJoin-funded shield is enough to block either migration, since its
+     * reserved inputs may still appear in the confirmed account balance, so
+     * the user's move adopts it as its progress instead of spending again.
+     * Unrelated BIP44 shield locks are not migration progress.
+     */
+    private suspend fun adoptPendingCoinJoinShield(): Boolean {
         if (!shieldedBalanceService.ensureShieldedReady()) return false
         if ((shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: 0) <= 0) return false
-        // A pending CoinJoin-funded shield is enough to block either migration:
-        // its reserved inputs may still appear in the confirmed account
-        // balance. Unrelated BIP44 shield locks are not migration progress.
         markInFlight(MixedFundsMigrationAction.SHIELD)
-        log.info("mixed-funds migration: restored progress for a pending wallet shield")
+        log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
         return true
     }
+
+    private suspend fun resumeOrAdoptPendingMigration(): Boolean =
+        restorePendingShieldMigration() || adoptPendingCoinJoinShield()
 
     /**
      * The persisted in-flight migration, or null when none is pending —
