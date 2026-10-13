@@ -487,6 +487,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             SendFailureKind.NOT_SYNCED -> getString(R.string.send_coins_fragment_hint_replaying)
             SendFailureKind.NOT_SUPPORTED -> getString(R.string.send_coins_error_not_supported)
             SendFailureKind.SIGNER_LOCKED -> getString(R.string.send_coins_error_signer_locked)
+            SendFailureKind.CONTACT_PAYMENT_NOT_RECORDED ->
+                getString(R.string.send_coins_error_contact_payment_not_recorded)
             SendFailureKind.GENERIC_INTERNAL -> getString(R.string.send_coins_error_generic)
             SendFailureKind.VERBATIM -> exception.toString()
         }

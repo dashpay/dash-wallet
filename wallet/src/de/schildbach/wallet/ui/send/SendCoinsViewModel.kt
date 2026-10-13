@@ -40,6 +40,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -67,6 +69,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import de.schildbach.wallet.util.format
@@ -165,11 +168,26 @@ class SendCoinsViewModel @Inject constructor(
         get() = _contactData
 
     /**
-     * The contact payment address [handleDashIdentity] resolved, so the send can
-     * mark it paid once it succeeds. Null for non-contact payments.
+     * What [initPaymentIntent] resolved: the intent the screen pays and, for a
+     * contact payment, the contact payment address it pays ([handleDashIdentity])
+     * — always published together, so a contact intent never reaches
+     * [signAndSendPayment] without the address the provider must claim.
      */
-    @Volatile
-    private var contactPaymentAddress: ContactPaymentAddress? = null
+    private class ResolvedPayee(val intent: PaymentIntent, val contactPayment: ContactPaymentAddress?)
+
+    /**
+     * The payee the screen may confirm and send to; null until a resolution
+     * completes and from the moment a new one starts (PR #1608 review, round 6:
+     * the screen re-runs [initPaymentIntent] on every view creation, including
+     * a configuration change with this retained ViewModel, and the previous
+     * intent stayed sendable while the contact metadata was already cleared).
+     * While null, [isPayeePlausible] is false and [signAndSendPayment] refuses.
+     */
+    private val payee = AtomicReference<ResolvedPayee?>(null)
+
+    /** Numbers [initPaymentIntent] runs: only the latest one publishes [payee]. */
+    private val payeeGeneration = AtomicLong(0)
+    private val publishPayee = Mutex()
 
     /**
      * The intent the screen was opened with when it resolved to a contact
@@ -252,16 +270,32 @@ class SendCoinsViewModel @Inject constructor(
             )
         }
 
+        // Resolution pending: nothing can be confirmed or sent until the
+        // resolved intent and its contact metadata are published together.
+        val generation = payeeGeneration.incrementAndGet()
+        payee.set(null)
         log.info("got {}", paymentIntent)
-        val finalIntent = withContext(Dispatchers.IO) {
+        val resolved = withContext(Dispatchers.IO) {
             checkIdentity(paymentIntent)
         }
 
-        log.info("proceeding with {}", finalIntent)
-        super.initPaymentIntent(finalIntent)
-        // A freshly resolved contact address: payable again.
-        contactSourceIntent = if (contactPaymentAddress != null) paymentIntent else null
-        spentContactPayment.set(null)
+        val published = publishPayee.withLock {
+            if (payeeGeneration.get() != generation) {
+                false // a later initPaymentIntent started: it publishes
+            } else {
+                log.info("proceeding with {}", resolved.intent)
+                super.initPaymentIntent(resolved.intent)
+                // A freshly resolved contact address: payable again.
+                contactSourceIntent = if (resolved.contactPayment != null) paymentIntent else null
+                spentContactPayment.set(null)
+                payee.set(resolved)
+                true
+            }
+        }
+        if (!published) {
+            log.info("payment intent resolution superseded by a later one")
+            return
+        }
         withContext(Dispatchers.Main.immediate) {
             _state.value = State.INPUT
         }
@@ -302,16 +336,25 @@ class SendCoinsViewModel @Inject constructor(
     ): Transaction = withContext(Dispatchers.IO) {
         Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
-        val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
+        // One consistent snapshot of what was resolved: its intent and its
+        // contact payment address, never one without the other.
+        val resolved = payee.get()
 
         // The contact payment this send pays, once known (inside the try).
         var contactPayment: ContactPaymentAddress? = null
         val transaction = try {
+            // A resolution is pending (or failed): the UI cannot confirm
+            // (isPayeePlausible), and nothing is sent.
+            if (resolved == null) {
+                throw PayeeNotResolvedException()
+            }
             // Defence in depth: the UI cannot confirm a spent contact intent
             // (isPayeePlausible), but never pay its address again.
             spentContactPayment.get()?.let { throw ContactAddressAlreadyPaidException(it) }
+            val intent = resolved.intent
+            val finalPaymentIntent = intent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
             val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
-                basePaymentIntent.mayEditAmount(),
+                intent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
                 dryrunSendRequest!!.ensureMinRequiredFee
@@ -328,7 +371,7 @@ class SendCoinsViewModel @Inject constructor(
             if (sendCoinsTaskRunner.isCutoverCommitted()) {
                 finalSendRequest.emptyWallet = dryrunSendRequest!!.emptyWallet
             }
-            finalSendRequest.memo = basePaymentIntent.memo
+            finalSendRequest.memo = intent.memo
             finalSendRequest.exchangeRate = exchangeRate
             Context.propagate(wallet.context)
             // Thread the payment intent's address — WHO the user is paying —
@@ -352,14 +395,20 @@ class SendCoinsViewModel @Inject constructor(
                 null
             }
             // A contact payment: the provider claims the address before sending
-            // (a second send of it, e.g. from another send screen, is refused)
-            // and marks it paid once it may have gone out, so the next payment
-            // to this contact gets a new one (DIP-15) — even if a later step of
-            // the send (the display bridge) then fails. Only when the request
-            // still pays the address resolved for the contact. Once the
-            // broadcast signal fires the intent is spent: whatever happens next
-            // (a bridge failure), it is not submitted again.
-            val payment = contactPaymentAddress?.takeIf { it.address == intendedRecipient }
+            // (a second send of it, e.g. from another send screen, is refused;
+            // a claim that cannot be made durable refuses too) and marks it
+            // paid once it may have gone out, so the next payment to this
+            // contact gets a new one (DIP-15) — even if a later step of the
+            // send (the display bridge) then fails. Once the broadcast signal
+            // fires the intent is spent: whatever happens next (a bridge
+            // failure), it is not submitted again.
+            val payment = resolved.contactPayment
+            if (payment != null && payment.address != intendedRecipient) {
+                // Never pay a contact intent without claiming its address.
+                throw IllegalStateException(
+                    "the contact payment's request does not pay its resolved address; nothing was sent"
+                )
+            }
             contactPayment = payment
             contactPaymentAddressProvider.sendThenMarkUsed(payment) { signals ->
                 sendCoinsTaskRunner.sendCoins(
@@ -511,7 +560,8 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private fun isPayeePlausible(): Boolean {
-        return isInitialized && basePaymentIntent.hasOutputs() && spentContactPayment.get() == null
+        val resolved = payee.get() ?: return false
+        return isInitialized && resolved.intent.hasOutputs() && spentContactPayment.get() == null
     }
 
     /** creates a send request using the payment intent */
@@ -667,8 +717,7 @@ class SendCoinsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun checkIdentity(paymentIntent: PaymentIntent): PaymentIntent {
-        contactPaymentAddress = null
+    private suspend fun checkIdentity(paymentIntent: PaymentIntent): ResolvedPayee {
         var isDashUserOrNotMe = identityRepository.hasIdentity()
 
         // make sure that this payment intent is not to me
@@ -704,18 +753,18 @@ class SendCoinsViewModel @Inject constructor(
                 throw IllegalStateException("not identity payment request")
             }
         } else {
-            return paymentIntent
+            return ResolvedPayee(paymentIntent, contactPayment = null)
         }
     }
 
     private suspend fun handleDashIdentity(
         userData: UsernameSearchResult,
         paymentIntent: PaymentIntent
-    ): PaymentIntent {
+    ): ResolvedPayee {
         _contactData.postValue(userData)
 
         if (!userData.requestReceived) {
-            return paymentIntent
+            return ResolvedPayee(paymentIntent, contactPayment = null)
         }
 
         val dashPayProfile = userData.dashPayProfile
@@ -748,13 +797,14 @@ class SendCoinsViewModel @Inject constructor(
                 accountReference = contactRequest.accountReference
             )
         )
-        contactPaymentAddress = contactAddress
-        val address = contactAddress?.address
-        return if (address != null) {
-            PaymentIntent.fromAddressWithIdentity(
-                address.toBase58(),
-                dashPayProfile.userId,
-                paymentIntent.amount
+        return if (contactAddress != null) {
+            ResolvedPayee(
+                PaymentIntent.fromAddressWithIdentity(
+                    contactAddress.address.toBase58(),
+                    dashPayProfile.userId,
+                    paymentIntent.amount
+                ),
+                contactAddress
             )
         } else {
             throw SendException("Failed to get contact address for ${dashPayProfile.userId}")
@@ -762,3 +812,11 @@ class SendCoinsViewModel @Inject constructor(
     }
 
 }
+
+/**
+ * [SendCoinsViewModel.signAndSendPayment] was called while the payee was not
+ * resolved — a resolution is pending (e.g. the screen re-initializing after a
+ * configuration change) or failed. Nothing was sent.
+ */
+class PayeeNotResolvedException :
+    IllegalStateException("the payee is not resolved yet; nothing was sent")

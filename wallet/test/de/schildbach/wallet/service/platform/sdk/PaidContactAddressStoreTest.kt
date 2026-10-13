@@ -17,10 +17,13 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore.ClaimResult
+import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore.Frontier
 import de.schildbach.wallet.util.WalletSaveTracker
 import org.bitcoinj.wallet.FriendChainAccess.MarkResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -42,9 +45,14 @@ class PaidContactAddressStoreTest {
     /** One completed wallet save, started now. */
     private fun walletSave() = saves.saveCompleted(saves.saveStarting())
 
-    /** Records [address] and settles it: dashj advanced past it, then a wallet save landed. */
-    private fun PaidContactAddressStore.recordSettled(address: String) {
-        record(address, target)
+    private var nextIndex = 0
+
+    /**
+     * Records [address] at the channel's next index and settles it: dashj
+     * advanced past it, then a wallet save landed.
+     */
+    private fun PaidContactAddressStore.recordSettled(address: String, index: Int = nextIndex++) {
+        record(address, target, index)
         dashjMarked(address, MarkResult.MARKED)
         walletSave()
     }
@@ -75,31 +83,100 @@ class PaidContactAddressStoreTest {
     }
 
     @Test
-    fun settledEntries_expireAfterTheRetention() {
+    fun settledEntries_expireAfterTheRetention_intoTheChannelFrontier() {
         val s = store()
         s.recordSettled("old")
         now += PaidContactAddressStore.RETENTION_MS / 2
         s.recordSettled("recent")
-        s.record("pending", target)
+        s.record("pending", target, index = 2)
         now += PaidContactAddressStore.RETENTION_MS / 2 + 1
+        s.record("trigger", target.copy(contactUserId = "other")) // a write expires what is due
 
-        assertEquals(setOf("recent", "pending"), store().paid())
+        val after = store()
+        assertNull("the expired entry is gone", after.isSettled("old"))
+        assertEquals(true, after.isSettled("recent"))
+        assertEquals(false, after.isSettled("pending"))
+        // ...but what it protected is kept: the channel's frontier holds it
+        assertEquals(Frontier(0, "old"), after.foldedFrontier("contactId", 7))
+        assertEquals(setOf("old", "recent", "pending", "trigger"), after.paid())
+        assertEquals("the live entries count too", 2, after.paidFrontier("contactId", 7))
     }
 
     @Test
-    fun keepsOnlyTheNewestSettledEntries() {
+    fun loadingExpiresNothing_onlyAWriteDoes() {
+        val s = store()
+        s.recordSettled("old")
+        now += PaidContactAddressStore.RETENTION_MS * 2
+
+        val loaded = store()
+        assertEquals(true, loaded.isSettled("old"))
+        assertNull(loaded.foldedFrontier("contactId", 7))
+    }
+
+    @Test
+    fun keepsOnlyTheNewestSettledEntries_foldingTheRest() {
         val s = store()
         s.record("pending", target)
         repeat(PaidContactAddressStore.MAX_ENTRIES + 3) {
             now++
             s.recordSettled("addr$it")
         }
+        s.record("trigger", target.copy(contactUserId = "other"))
 
-        val paid = store().paid()
-        assertEquals(PaidContactAddressStore.MAX_ENTRIES + 1, paid.size)
-        assertTrue("pending" in paid)
-        assertTrue("addr0" !in paid)
-        assertTrue("addr${PaidContactAddressStore.MAX_ENTRIES + 2}" in paid)
+        val after = store()
+        assertNull(after.isSettled("addr0"))
+        assertNull(after.isSettled("addr2"))
+        assertEquals(true, after.isSettled("addr3"))
+        assertEquals(false, after.isSettled("pending"))
+        assertEquals(Frontier(2, "addr2"), after.foldedFrontier("contactId", 7))
+    }
+
+    @Test
+    fun settledEntriesWithoutAnIndex_neverExpire() {
+        // Without an index nothing could keep what it protected.
+        val s = store()
+        s.record("noIndex", target)
+        s.dashjMarked("noIndex", MarkResult.MARKED)
+        walletSave()
+        s.record("legacy")
+        now += PaidContactAddressStore.RETENTION_MS * 10
+        repeat(PaidContactAddressStore.MAX_ENTRIES + 3) {
+            now++
+            s.recordSettled("addr$it")
+        }
+
+        val after = store()
+        assertEquals(true, after.isSettled("noIndex"))
+        assertEquals(false, after.isSettled("legacy"))
+    }
+
+    @Test
+    fun frontier_survivesARestart_andRefusesClaimsAtOrBelowIt() {
+        val s = store()
+        s.recordSettled("a", index = 4)
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        s.record("trigger", target.copy(contactUserId = "other"))
+
+        val after = store()
+        assertEquals(Frontier(4, "a"), after.foldedFrontier("contactId", 7))
+        assertNull("another channel has none", after.foldedFrontier("contactId", 8))
+        assertEquals(ClaimResult.ALREADY_PAID, after.claim("a", target, 9))
+        assertEquals(ClaimResult.ALREADY_PAID, after.claim("lower", target, 3))
+        assertEquals(ClaimResult.CLAIMED, after.claim("higher", target, 5))
+        assertEquals(ClaimResult.CLAIMED, after.claim("otherChannel", target.copy(accountReference = 8), 0))
+    }
+
+    @Test
+    fun paidFrontier_includesClaimsInFlight_andARelease_lowersItAgain() {
+        val s = store()
+        s.recordSettled("a", index = 0)
+        assertEquals(ClaimResult.CLAIMED, s.claim("b", target, 1))
+        assertEquals(1, s.paidFrontier("contactId", 7))
+
+        s.release("b")
+
+        assertEquals(0, s.paidFrontier("contactId", 7))
+        assertNull(s.paidFrontier("contactId", 8))
     }
 
     @Test
@@ -176,17 +253,21 @@ class PaidContactAddressStoreTest {
     fun claim_isExclusive_andWrittenBeforeReturning() {
         val s = store()
 
-        assertTrue(s.claim("a", target))
-        assertFalse("a second claim of the same address loses", s.claim("a", target))
+        assertEquals(ClaimResult.CLAIMED, s.claim("a", target))
+        assertEquals("a second claim of the same address loses", ClaimResult.ALREADY_PAID, s.claim("a", target))
         assertEquals(setOf("a"), store().paid())
-        assertFalse("an address recorded paid cannot be claimed", store().claim("a", target))
+        assertEquals(
+            "an address recorded paid cannot be claimed",
+            ClaimResult.ALREADY_PAID,
+            store().claim("a", target)
+        )
     }
 
     @Test
     fun claim_concurrentClaimsOfOneAddress_exactlyOneWins() {
         val s = store()
         val winners = java.util.concurrent.atomic.AtomicInteger()
-        val threads = List(8) { Thread { if (s.claim("a", target)) winners.incrementAndGet() } }
+        val threads = List(8) { Thread { if (s.claim("a", target) == ClaimResult.CLAIMED) winners.incrementAndGet() } }
         threads.forEach(Thread::start)
         threads.forEach(Thread::join)
 
@@ -202,7 +283,7 @@ class PaidContactAddressStoreTest {
 
         assertTrue(s.paid().isEmpty())
         assertTrue(store().paid().isEmpty())
-        assertTrue(s.claim("a", target))
+        assertEquals(ClaimResult.CLAIMED, s.claim("a", target))
     }
 
     @Test
@@ -244,10 +325,31 @@ class PaidContactAddressStoreTest {
         now += PaidContactAddressStore.RETENTION_MS * 2
         assertEquals("unsettled on disk too", setOf("a", "b"), store().paid())
 
-        // re-applied to the new wallet and saved: settled (and, this old, expired)
+        // re-applied to the new wallet and saved: settled (and, this old,
+        // folded into the frontier)
         s.dashjMarked("a", MarkResult.MARKED)
         walletSave()
-        assertEquals(setOf("b"), store().paid())
+        assertNull(store().isSettled("a"))
+        assertEquals(Frontier(0, "a"), store().foldedFrontier("contactId", 7))
+        assertEquals(false, store().isSettled("b"))
+    }
+
+    @Test
+    fun walletChange_coldStore_expiredSettledEntry_isUnsettledBeforeAnythingExpires() {
+        // PR #1608 review, round 6: recovery from the key backup creates the
+        // app's store and reports the wallet change before any lookup. An
+        // entry settled on the lost wallet long ago must not be expired by
+        // that load — it is unsettled first, for the recovered wallet's dashj.
+        val paidAt = now - PaidContactAddressStore.RETENTION_MS * 3
+        file.writeText("$paidAt a settled contactId 7 0\n")
+        val cold = store() // created, never read
+
+        saves.walletChanged()
+
+        assertEquals(false, cold.isSettled("a"))
+        assertEquals(listOf("a"), cold.awaitingDashj("contactId", 7))
+        assertNull("not folded either: it waits for the new wallet", cold.foldedFrontier("contactId", 7))
+        assertEquals("unsettled on disk too", false, store().isSettled("a"))
     }
 
     @Test
@@ -306,6 +408,20 @@ class PaidContactAddressStoreTest {
     }
 
     @Test
+    fun unwritableFile_refusesTheClaim_andChangesNothing() {
+        // PR #1608 review, round 6: a claim held only in memory does not
+        // survive a process death — the send must not run.
+        val dir = File(tmp.root, "blocked").apply { mkdirs() }
+        File(dir, "x").writeText("")
+        val s = PaidContactAddressStore(dir, nowMs = { now })
+
+        assertEquals(ClaimResult.STORE_UNAVAILABLE, s.claim("a", target, 0))
+
+        assertTrue(s.paid().isEmpty())
+        assertNull(s.paidFrontier("contactId", 7))
+    }
+
+    @Test
     fun unwritableFile_keepsTheEntryInMemory() {
         // A directory where the file should be: every write fails.
         val dir = File(tmp.root, "blocked").apply { mkdirs() }
@@ -318,17 +434,40 @@ class PaidContactAddressStoreTest {
     }
 
     @Test
-    fun unreadableFile_isNeverOverwritten() {
+    fun unreadableFile_refusesEveryClaim_andIsNeverOverwritten() {
+        // PR #1608 review, round 6: the exclusions it holds are unknown — even
+        // an address it already holds could be claimed — so nothing is claimed.
         store().record("a", target)
         assertTrue(file.setReadable(false))
         try {
             val s = store()
-            assertTrue("a read failure starts empty in memory", s.claim("b", target))
-            assertEquals(setOf("b"), s.paid())
+            assertEquals(ClaimResult.STORE_UNAVAILABLE, s.claim("a", target))
+            assertEquals(ClaimResult.STORE_UNAVAILABLE, s.claim("b", target))
+            assertTrue(s.paid().isEmpty())
         } finally {
             file.setReadable(true)
         }
 
         assertEquals("the file still holds what it held", setOf("a"), store().paid())
+    }
+
+    @Test
+    fun frontierAndIndexedLines_roundTrip_andMalformedOnesAreIgnored() {
+        file.writeText(
+            "frontier contactId 7 3 yF\n" +
+                "frontier contactId 7 x yBad\n" +
+                "frontier contactId 7 -1 yNeg\n" +
+                "$now yA pending contactId 7 4\n" +
+                "$now yB pending contactId 7 nope\n"
+        )
+
+        val s = store()
+        assertEquals(Frontier(3, "yF"), s.foldedFrontier("contactId", 7))
+        assertEquals(setOf("yF", "yA"), s.paid())
+        assertEquals(4, s.paidFrontier("contactId", 7))
+        s.record("yC", target, 5)
+        val after = store()
+        assertEquals(Frontier(3, "yF"), after.foldedFrontier("contactId", 7))
+        assertEquals(5, after.paidFrontier("contactId", 7))
     }
 }

@@ -563,7 +563,9 @@ class ContactPaymentAddressProviderTest {
         val keys: List<Address>,
         var current: Int,
         val markResult: FriendChainAccess.MarkResult? = FriendChainAccess.MarkResult.MARKED,
-        val advances: Boolean = true
+        val advances: Boolean = true,
+        /** A mark of a key AHEAD of the current one moves past it too (FriendChainAccess does). */
+        val jumps: Boolean = false
     ) {
         val marks = mutableListOf<Address>()
 
@@ -571,8 +573,11 @@ class ContactPaymentAddressProviderTest {
 
         fun mark(address: Address): FriendChainAccess.MarkResult? {
             marks += address
-            if (markResult == FriendChainAccess.MarkResult.MARKED && advances && keys.indexOf(address) == current) {
-                current++
+            val index = keys.indexOf(address)
+            if (markResult == FriendChainAccess.MarkResult.MARKED && advances &&
+                (index == current || (jumps && index > current))
+            ) {
+                current = index + 1
             }
             return markResult
         }
@@ -590,6 +595,7 @@ class ContactPaymentAddressProviderTest {
         dashjNextAddress = { _, _ -> chain.next() },
         dashjMarkUsed = { _, _, address -> chain.mark(address) },
         params = params,
+        dashjSendingCursor = { _, _ -> chain.current },
         paidAddresses = store
     )
 
@@ -780,9 +786,13 @@ class ContactPaymentAddressProviderTest {
         assertEquals(listOf(keys[0]), after.marks)
         assertEquals(false, store.isSettled(keys[0].toBase58()))
         saves.saveCompleted(saves.saveStarting())
-        // settled, and past the retention: now redundant, so it is dropped
+        // settled, and past the retention: the entry is folded into the
+        // channel's frontier, which keeps index 0 excluded for any wallet
         assertNull(store.isSettled(keys[0].toBase58()))
-        assertFalse(keys[0].toBase58() in PaidContactAddressStore(file, { now }).paid())
+        assertEquals(
+            PaidContactAddressStore.Frontier(0, keys[0].toBase58()),
+            PaidContactAddressStore(file, { now }).foldedFrontier(contactUserId, selectedReference)
+        )
     }
 
     @Test
@@ -798,9 +808,11 @@ class ContactPaymentAddressProviderTest {
         saves.saveCompleted(saves.saveStarting()) // dashj's advanced chain reached disk
 
         now += PaidContactAddressStore.RETENTION_MS + 1
+        PaidContactAddressStore(file, { now }).record(newAddress().toBase58()) // a write expires what is due
         val store = PaidContactAddressStore(file, { now })
 
-        assertTrue("redundant once settled, so it may expire", store.paid().isEmpty())
+        assertNull("redundant once settled, so it may expire", store.isSettled(keys[0].toBase58()))
+        assertEquals(0, store.foldedFrontier(contactUserId, selectedReference)?.index)
         // ...and dashj, reloaded from that save, is past it anyway
         assertEquals(keys[1], restartedProvider(chain, file, sdkAccount = null, store).nextAddress(target)?.address)
     }
@@ -853,9 +865,12 @@ class ContactPaymentAddressProviderTest {
         assertEquals(ContactAddressSource.DASHJ, next?.source)
         assertEquals(sdkPool[1], next?.address)
         assertEquals(listOf(sdkPool[0]), dashjChain?.marks)
-        // the next wallet save makes dashj's advance durable; only then may it expire
+        // the next wallet save makes dashj's advance durable; only then may it
+        // expire — into the channel's frontier
         saves2.saveCompleted(saves2.saveStarting())
-        assertFalse(sdkPool[0].toBase58() in PaidContactAddressStore(file, { now }).paid())
+        val after = PaidContactAddressStore(file, { now })
+        assertNull(after.isSettled(sdkPool[0].toBase58()))
+        assertEquals(0, after.foldedFrontier(contactUserId, selectedReference)?.index)
     }
 
     @Test
@@ -889,5 +904,137 @@ class ContactPaymentAddressProviderTest {
         assertFalse("nothing may be sent to a paid address", sentAgain)
         assertEquals(payment, refused.payment)
         assertEquals(1, h.marks.size)
+    }
+
+    // ── a claim that cannot be made durable refuses the send (round 6) ──
+
+    @Test
+    fun unreadablePaidAddressFile_theSendNeverRuns() = runBlocking {
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(file).record(newAddress().toBase58(), target, 0)
+        val h = harness(paidFile = file)
+        assertTrue(file.setReadable(false))
+        try {
+            val payment = requireNotNull(h.provider.nextAddress(target))
+            var sent = false
+
+            val refused = assertThrows(ContactPaymentNotRecordableException::class.java) {
+                runBlocking { h.provider.sendThenMarkUsed(payment) { sent = true } }
+            }
+
+            assertFalse("the send callback never ran", sent)
+            assertEquals(payment, refused.payment)
+            assertTrue(h.marks.isEmpty())
+        } finally {
+            file.setReadable(true)
+        }
+    }
+
+    @Test
+    fun unwritablePaidAddressFile_theSendNeverRuns() = runBlocking {
+        // A directory where the file should be: the claim's write fails.
+        val blocked = File(tmp.root, "blocked").apply { mkdirs() }
+        File(blocked, "x").writeText("")
+        val h = harness(paidFile = blocked)
+        val payment = requireNotNull(h.provider.nextAddress(target))
+        var sent = false
+
+        assertThrows(ContactPaymentNotRecordableException::class.java) {
+            runBlocking { h.provider.sendThenMarkUsed(payment) { sent = true } }
+        }
+
+        assertFalse("the send callback never ran", sent)
+        assertTrue(h.marks.isEmpty())
+        assertFalse("nothing claimed", h.provider.isClaimedOrPaid(payment))
+    }
+
+    // ── recovery after the records expired: the channel frontier (round 6) ──
+
+    @Test
+    fun coldRecovery_expiredSettledRecord_olderDashjChain_neverReturnsThePaidAddress() = runBlocking {
+        // PR #1608 review, round 6: address 0 was paid and SETTLED on the lost
+        // primary wallet more than the retention ago; its record is still in
+        // the file. Recovery from the older key backup creates the app's store
+        // and reports the wallet change before any lookup; the backup's chain
+        // is back at key 0, and the SDK cannot answer.
+        val now = 1_000_000_000_000L
+        val keys = List(3) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val paidAt = now - PaidContactAddressStore.RETENTION_MS * 3
+        file.writeText("$paidAt ${keys[0].toBase58()} settled $contactUserId $selectedReference 0\n")
+        val saves = WalletSaveTracker()
+        val store = PaidContactAddressStore(file, { now }, saves) // created cold, never read
+
+        saves.walletChanged() // restoreWalletFromBackup
+
+        val recovered = FakeDashjChain(keys, current = 0)
+        val next = restartedProvider(recovered, file, sdkAccount = null, store).nextAddress(target)
+
+        assertEquals(keys[1], next?.address)
+        assertEquals(listOf(keys[0]), recovered.marks)
+        assertEquals(1, next?.index)
+    }
+
+    @Test
+    fun recordAlreadyFolded_rebuiltDashjChain_isAdvancedPastTheFrontier() = runBlocking {
+        // The records of indices 0..2 expired long ago (folded into the
+        // frontier); then the wallet is replaced by one whose chain is back at
+        // key 0 — nothing but the frontier remembers those payments.
+        val keys = List(5) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        file.writeText("frontier $contactUserId $selectedReference 2 ${keys[2].toBase58()}\n")
+        val rebuilt = FakeDashjChain(keys, current = 0, jumps = true)
+
+        val next = restartedProvider(rebuilt, file, sdkAccount = null).nextAddress(target)
+
+        assertEquals(keys[3], next?.address)
+        assertEquals(listOf(keys[2]), rebuilt.marks)
+    }
+
+    @Test
+    fun recordAlreadyFolded_sdkPick_isAboveTheFrontier_evenWithoutADashjChain() = runBlocking {
+        // The SDK mirror lost its used flags (pool unused), dashj has no chain:
+        // only the frontier knows index 0 and 1 were paid.
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        file.writeText("frontier $contactUserId $selectedReference 1 ${sdkPool[1].toBase58()}\n")
+        val h = harness(sdkAccount = account(addresses = pool(false, false, false, false)), paidFile = file)
+
+        val next = h.provider.nextAddress(target)
+
+        assertEquals(ContactAddressSource.SDK, next?.source)
+        assertEquals(sdkPool[2], next?.address)
+        assertEquals(2, next?.index)
+    }
+
+    @Test
+    fun frontierDashjCannotBeAdvancedPast_noAddress() = runBlocking {
+        // e.g. the frontier is beyond dashj's forward scan: never serve below it.
+        val keys = List(5) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        file.writeText("frontier $contactUserId $selectedReference 2 ${keys[2].toBase58()}\n")
+        val stuck = FakeDashjChain(keys, current = 0, markResult = FriendChainAccess.MarkResult.KEY_NOT_ON_CHAIN)
+
+        assertNull(restartedProvider(stuck, file, sdkAccount = null).nextAddress(target))
+    }
+
+    @Test
+    fun claimsRecordTheIndex_soTheFrontierOutlivesTheRecord() = runBlocking {
+        var now = 1_000_000_000_000L
+        val keys = List(4) { newAddress() }
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val saves = WalletSaveTracker()
+        val chain = FakeDashjChain(keys, current = 0)
+        val provider = restartedProvider(chain, file, sdkAccount = null, PaidContactAddressStore(file, { now }, saves))
+        provider.sendThenMarkUsed(provider.nextAddress(target)) { "txid" }
+        provider.sendThenMarkUsed(provider.nextAddress(target)) { "txid" }
+        saves.saveCompleted(saves.saveStarting())
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        PaidContactAddressStore(file, { now }).record(newAddress().toBase58()) // a write expires what is due
+
+        val store = PaidContactAddressStore(file, { now })
+        assertEquals(PaidContactAddressStore.Frontier(1, keys[1].toBase58()), store.foldedFrontier(contactUserId, selectedReference))
+        // a wallet at key 0 again (an older backup): advanced past both payments
+        val older = FakeDashjChain(keys, current = 0, jumps = true)
+        assertEquals(keys[2], restartedProvider(older, file, sdkAccount = null, store).nextAddress(target)?.address)
     }
 }

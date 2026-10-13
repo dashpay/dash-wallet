@@ -53,11 +53,17 @@ data class ContactPaymentTarget(
     val accountReference: Int
 )
 
-/** A payment address for [target] and the stack that supplied it. */
+/**
+ * A payment address for [target] and the stack that supplied it. [index] is
+ * the address's derivation index on the channel when known (always for an SDK
+ * pick; for dashj when its cursor could be read) — recorded with the claim so
+ * the channel's frontier survives the record's expiry ([PaidContactAddressStore]).
+ */
 data class ContactPaymentAddress(
     val target: ContactPaymentTarget,
     val address: Address,
-    val source: ContactAddressSource
+    val source: ContactAddressSource,
+    val index: Int? = null
 )
 
 /**
@@ -70,6 +76,19 @@ class ContactAddressAlreadyPaidException(val payment: ContactPaymentAddress) :
     IllegalStateException(
         "contact payment address for ${payment.target.contactUserId} was already paid or is being paid; " +
             "nothing was sent — resolve the contact's payment address again"
+    )
+
+/**
+ * [ContactPaymentAddressProvider.sendThenMarkUsed] refused to pay [payment]
+ * because its address could not be claimed durably: the paid-address store
+ * could not be read (its exclusions are unknown) or the claim could not be
+ * written to disk (it would not survive a process death). Nothing was sent.
+ * Resolving the address again does not help; the user can try again later.
+ */
+class ContactPaymentNotRecordableException(val payment: ContactPaymentAddress) :
+    IllegalStateException(
+        "contact payment to ${payment.target.contactUserId} refused: its address could not be recorded " +
+            "durably before sending; nothing was sent"
     )
 
 /**
@@ -155,13 +174,18 @@ sealed interface SdkContactAddressSelection {
  *   SDK derive this chain from the same contact xpub, so index i is the same
  *   address on both, and every index below dashj's cursor has been paid;
  * - [alreadyPaid], the addresses recorded paid ([PaidContactAddressStore]),
- *   which covers the time until dashj's advanced cursor reaches disk.
+ *   which covers the time until dashj's advanced cursor reaches disk;
+ * - every index at or below [paidFrontier], the highest index recorded paid
+ *   or claimed on this channel ([PaidContactAddressStore.paidFrontier]) —
+ *   which survives the expiry of the records and a wallet whose dashj chain
+ *   is behind (an older key backup, a restore).
  */
 internal fun selectSdkContactAddress(
     account: SdkContactSendingAccount?,
     expectedAccountReference: Int,
     alreadyPaid: Set<String>,
-    dashjCursor: Int? = null
+    dashjCursor: Int? = null,
+    paidFrontier: Int? = null
 ): SdkContactAddressSelection {
     fun unavailable(reason: String) = SdkContactAddressSelection.Unavailable(reason)
     if (account == null) return unavailable("SDK store not available")
@@ -180,13 +204,14 @@ internal fun selectSdkContactAddress(
     if (addresses.map { it.poolTypeTag }.distinct().size > 1) {
         return unavailable("SDK sending account has more than one address pool")
     }
-    val floor = dashjCursor ?: 0
+    val floor = maxOf(dashjCursor ?: 0, paidFrontier?.let { it + 1 } ?: 0)
     val next = addresses
         .filter { !it.isUsed && it.address !in alreadyPaid && it.index >= floor }
         .minByOrNull { it.index }
         ?: return unavailable(
-            if (dashjCursor != null) {
-                "SDK sending account has no unused address persisted at or above dashj's cursor $dashjCursor"
+            if (floor > 0) {
+                "SDK sending account has no unused address persisted at or above index $floor " +
+                    "(dashj's cursor $dashjCursor, paid frontier $paidFrontier)"
             } else {
                 "SDK sending account has no unused address persisted"
             }
@@ -222,10 +247,12 @@ internal fun selectSdkContactAddress(
  *   wallet, advanced by every [sendThenMarkUsed]) — the state that already
  *   exists, so no SDK address below it is offered;
  * - [paidAddresses], a small file written BEFORE each payment is sent (the
- *   address is claimed there, so two sends can never use one address). dashj's
- *   cursor reaches disk only on the next wallet autosave (up to a minute on a
- *   large wallet), and dashj cannot always advance it (no chain yet, key not
- *   found); the file covers both until dashj has.
+ *   address is claimed there, so two sends can never use one address; a claim
+ *   that cannot be read or written refuses the send). dashj's cursor reaches
+ *   disk only on the next wallet autosave (up to a minute on a large wallet),
+ *   and dashj cannot always advance it (no chain yet, key not found); the file
+ *   covers both until dashj has, and keeps each channel's paid frontier after
+ *   that, for a later wallet whose chain is behind.
  */
 @Singleton
 class ContactPaymentAddressProvider internal constructor(
@@ -278,6 +305,7 @@ class ContactPaymentAddressProvider internal constructor(
      */
     suspend fun nextAddress(target: ContactPaymentTarget): ContactPaymentAddress? = withContext(ioDispatcher) {
         reapplyDashjMarks(target)
+        reapplyFoldedFrontier(target)
         if (!cutoverCommitted()) {
             dashjAddress(target, "pre-cutover")
         } else {
@@ -297,7 +325,13 @@ class ContactPaymentAddressProvider internal constructor(
                 log.warn("contact payment address: reading dashj's sending cursor failed", e)
                 null
             }
-            selectSdkContactAddress(account, target.accountReference, paidAddresses.paid(), cursor)
+            selectSdkContactAddress(
+                account,
+                target.accountReference,
+                paidAddresses.paid(),
+                cursor,
+                paidAddresses.paidFrontier(target.contactUserId, target.accountReference)
+            )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -325,7 +359,7 @@ class ContactPaymentAddressProvider internal constructor(
                         "contact payment address for {} (accountReference {}): source=SDK, index {}",
                         target.contactUserId, target.accountReference, selection.index
                     )
-                    return ContactPaymentAddress(target, address, ContactAddressSource.SDK)
+                    return ContactPaymentAddress(target, address, ContactAddressSource.SDK, selection.index)
                 }
                 return dashjAddress(target, "post-cutover fallback (SDK address unparseable)", sdkUsed)
             }
@@ -371,6 +405,49 @@ class ContactPaymentAddressProvider internal constructor(
     }
 
     /**
+     * Advances dashj's sending chain for [target] past the channel's folded
+     * frontier ([PaidContactAddressStore.foldedFrontier]) when its cursor is
+     * at or below it — a wallet whose chain is behind what was paid (an older
+     * key backup, a restore) after the records of those payments expired.
+     * Marking the frontier address moves dashj past every earlier key. Runs on
+     * every lookup and is cheap when dashj is already past it. Blocking.
+     */
+    private fun reapplyFoldedFrontier(target: ContactPaymentTarget) {
+        try {
+            val frontier = paidAddresses.foldedFrontier(target.contactUserId, target.accountReference) ?: return
+            val cursor = dashjSendingCursor(target.contactUserId, target.accountReference) ?: return
+            if (cursor > frontier.index) return
+            val address = Address.fromString(params, frontier.address)
+            val outcome = dashjMarkUsed(target.contactUserId, target.accountReference, address)
+            log.info(
+                "contact payment address for {} (accountReference {}): dashj's cursor {} is at or below the " +
+                    "paid frontier {} — advanced past it: {}",
+                target.contactUserId, target.accountReference, cursor, frontier.index, outcome ?: "no dashj identity"
+            )
+        } catch (e: Exception) {
+            log.warn("contact payment address: re-applying the paid frontier on dashj failed", e)
+        }
+    }
+
+    /**
+     * The index of [served], the address dashj just served for [target]:
+     * dashj's cursor, read between [served] and a second request that returns
+     * the same address (so dashj's current key did not move in between). Null
+     * when unknown. Blocking.
+     */
+    private fun dashjServedIndex(target: ContactPaymentTarget, served: Address): Int? = try {
+        val cursor = dashjSendingCursor(target.contactUserId, target.accountReference)
+        if (cursor != null && dashjNextAddress(target.contactUserId, target.accountReference) == served) {
+            cursor
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        log.warn("contact payment address: reading dashj's sending cursor failed", e)
+        null
+    }
+
+    /**
      * dashj's current sending address for [target], never one recorded paid
      * or claimed ([paidAddresses]) and never one in [sdkUsed] (flagged used by
      * the SDK mirror).
@@ -384,7 +461,10 @@ class ContactPaymentAddressProvider internal constructor(
      * most [MAX_DASHJ_PAID_SKIPS] times, never more often than there are such
      * addresses, and never when the mark does not move dashj on. If dashj cannot
      * be advanced to a usable address, null: the send screen reports no address
-     * rather than paying a used one. Blocking (dashj lock); runs on [ioDispatcher].
+     * rather than paying a used one. Likewise null when the served address's
+     * index is at or below the channel's folded frontier (dashj could not be
+     * advanced past it by [reapplyFoldedFrontier]). Blocking (dashj lock);
+     * runs on [ioDispatcher].
      */
     private fun dashjAddress(
         target: ContactPaymentTarget,
@@ -450,6 +530,16 @@ class ContactPaymentAddressProvider internal constructor(
             )
             return null
         }
+        val index = dashjServedIndex(target, address)
+        val folded = paidAddresses.foldedFrontier(target.contactUserId, target.accountReference)
+        if (folded != null && index != null && index <= folded.index) {
+            log.warn(
+                "contact payment address for {} (accountReference {}): dashj serves index {}, at or below the " +
+                    "paid frontier {} it could not be advanced past — no address",
+                target.contactUserId, target.accountReference, index, folded.index
+            )
+            return null
+        }
         if (skipped > 0) {
             log.info(
                 "contact payment address for {} (accountReference {}): dashj served {} address(es) " +
@@ -462,7 +552,7 @@ class ContactPaymentAddressProvider internal constructor(
             "contact payment address for {} (accountReference {}): source=DASHJ — {}",
             target.contactUserId, target.accountReference, why
         )
-        return ContactPaymentAddress(target, address, ContactAddressSource.DASHJ)
+        return ContactPaymentAddress(target, address, ContactAddressSource.DASHJ, index)
     }
 
     /**
@@ -475,6 +565,9 @@ class ContactPaymentAddressProvider internal constructor(
      *    resolves the contact's address again): a retained payment resubmitted
      *    after its broadcast, or a second send screen paying the same contact
      *    while the first send runs. A claim survives a process death mid-send.
+     *    A claim that cannot be made durable — the store could not be read, or
+     *    the claim could not be written — refuses the payment with
+     *    [ContactPaymentNotRecordableException]: [send] never runs.
      * 2. Marks the key used on dashj's sending chain as soon as the payment may
      *    have gone out — when [send] signals [ContactSendSignals.broadcast]
      *    (before any later step that can still throw, e.g. post-cutover the
@@ -497,14 +590,25 @@ class ContactPaymentAddressProvider internal constructor(
             return send(ContactSendSignals { })
         }
         val base58 = payment.address.toBase58()
-        val claimed = withContext(ioDispatcher) { paidAddresses.claim(base58, payment.target) }
-        if (!claimed) {
-            log.warn(
-                "contact payment to {} (accountReference {}, address source {}) refused: the address was " +
-                    "already paid or another send is paying it",
-                payment.target.contactUserId, payment.target.accountReference, payment.source
-            )
-            throw ContactAddressAlreadyPaidException(payment)
+        val claim = withContext(ioDispatcher) { paidAddresses.claim(base58, payment.target, payment.index) }
+        when (claim) {
+            PaidContactAddressStore.ClaimResult.CLAIMED -> Unit
+            PaidContactAddressStore.ClaimResult.ALREADY_PAID -> {
+                log.warn(
+                    "contact payment to {} (accountReference {}, address source {}) refused: the address was " +
+                        "already paid or another send is paying it",
+                    payment.target.contactUserId, payment.target.accountReference, payment.source
+                )
+                throw ContactAddressAlreadyPaidException(payment)
+            }
+            PaidContactAddressStore.ClaimResult.STORE_UNAVAILABLE -> {
+                log.warn(
+                    "contact payment to {} (accountReference {}, address source {}) refused: its address could " +
+                        "not be recorded durably — nothing sent",
+                    payment.target.contactUserId, payment.target.accountReference, payment.source
+                )
+                throw ContactPaymentNotRecordableException(payment)
+            }
         }
         val marked = AtomicBoolean(false)
         val signals = ContactSendSignals { txid ->

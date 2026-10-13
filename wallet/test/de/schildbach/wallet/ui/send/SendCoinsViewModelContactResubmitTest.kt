@@ -30,6 +30,7 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.sdk.ContactAddressAlreadyPaidException
 import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddressProvider
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentNotRecordableException
 import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.coEvery
@@ -101,19 +102,41 @@ class SendCoinsViewModelContactResubmitTest {
         DashPayContactRequest(from, to, accountReference, ByteArray(0), 0, 0, 1_000L, null, null)
 
     /** The real provider, pre-cutover: dashj serves the contact's address. */
-    private fun provider(chain: FakeDashjChain) = ContactPaymentAddressProvider(
+    private fun provider(
+        chain: FakeDashjChain,
+        store: PaidContactAddressStore = PaidContactAddressStore(file = null)
+    ) = ContactPaymentAddressProvider(
         cutoverCommitted = { false },
         sdkAccountReader = { _, _ -> null },
         dashjNextAddress = { _, _ -> chain.next() },
         dashjMarkUsed = { _, _, address -> chain.mark(address) },
         params = params,
-        paidAddresses = PaidContactAddressStore(file = null)
+        dashjSendingCursor = { _, _ -> chain.current },
+        paidAddresses = store
     )
+
+    /**
+     * Holds the contact lookup of [initPaymentIntent] while [closed]:
+     * [entered] counts down when a lookup is held, [open] releases it.
+     */
+    private class LookupGate {
+        @Volatile var closed = false
+        val entered = CountDownLatch(1)
+        val open = CountDownLatch(1)
+
+        fun pass() {
+            if (closed) {
+                entered.countDown()
+                check(open.await(10, TimeUnit.SECONDS)) { "lookup never released" }
+            }
+        }
+    }
 
     private fun buildViewModel(
         chain: FakeDashjChain,
         runner: SendCoinsTaskRunner,
-        provider: ContactPaymentAddressProvider = provider(chain)
+        provider: ContactPaymentAddressProvider = provider(chain),
+        gate: LookupGate = LookupGate()
     ): SendCoinsViewModel {
         val wallet = mockk<Wallet>(relaxed = true) {
             every { currentReceiveAddress() } returns Address.fromKey(params, ECKey())
@@ -132,12 +155,16 @@ class SendCoinsViewModelContactResubmitTest {
         }
         val fromContact = contactRequest(contactUserId, ourUserId)
         val platformRepo = mockk<PlatformRepo>(relaxed = true) {
-            coEvery { getLocalUserDataByUserId(contactUserId) } returns UsernameSearchResult(
-                "contact",
-                DashPayProfile(contactUserId, "contact"),
-                toContactRequest = contactRequest(ourUserId, contactUserId),
-                fromContactRequest = fromContact
-            )
+            coEvery { getLocalUserDataByUserId(any()) } returns null
+            coEvery { getLocalUserDataByUserId(contactUserId) } coAnswers {
+                gate.pass()
+                UsernameSearchResult(
+                    "contact",
+                    DashPayProfile(contactUserId, "contact"),
+                    toContactRequest = contactRequest(ourUserId, contactUserId),
+                    fromContactRequest = fromContact
+                )
+            }
         }
         val contactRequestDao = mockk<DashPayContactRequestDao> {
             coEvery { loadToOthers(contactUserId) } returns listOf(fromContact)
@@ -190,6 +217,32 @@ class SendCoinsViewModelContactResubmitTest {
                 check(releaseFirst.await(10, TimeUnit.SECONDS)) { "first send never released" }
             }
             onBroadcast?.invoke("bb".repeat(32))
+            mockk<Transaction>(relaxed = true)
+        }
+        return runner
+    }
+
+    /** A send runner whose sends all broadcast and succeed. */
+    private fun succeedingRunner(sends: Sends): SendCoinsTaskRunner {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.isCutoverCommitted() } returns false
+        every { runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>()) } answers { mockk<SendRequest>(relaxed = true) }
+        coEvery {
+            runner.sendCoins(
+                any<SendRequest>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                any<Consumer<Transaction>>(),
+                any<String>(),
+                any<Address>(),
+                any<(String?) -> Unit>(),
+                any<() -> Unit>()
+            )
+        } coAnswers {
+            @Suppress("UNCHECKED_CAST")
+            val onBroadcast = args[6] as ((String?) -> Unit)?
+            synchronized(sends) { sends.recipients += args[5] as Address? }
+            onBroadcast?.invoke("cc".repeat(32))
             mockk<Transaction>(relaxed = true)
         }
         return runner
@@ -298,8 +351,9 @@ class SendCoinsViewModelContactResubmitTest {
         idle()
         assertFalse(viewModel.everythingPlausible())
 
-        // A confirmation that gets through anyway is refused before sending.
-        assertThrows(ContactAddressAlreadyPaidException::class.java) {
+        // A confirmation that gets through anyway is refused before sending:
+        // the failed re-resolution left no payee to send to.
+        assertThrows(PayeeNotResolvedException::class.java) {
             runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
         }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
@@ -347,5 +401,105 @@ class SendCoinsViewModelContactResubmitTest {
         firstSend.join(10_000)
         runBlocking { screen2.signAndSendPayment(Coin.COIN, null, true) }
         assertEquals(listOf<Address?>(keys[0], keys[1]), sends.recipients)
+    }
+
+    @Test
+    fun reinitPending_afterAnotherScreenPaidTheAddress_nothingIsSent_untilTheNewAddressIsResolved() {
+        // PR #1608 review, round 6: SendCoinsFragment re-runs initPaymentIntent
+        // on every view creation — a configuration change with this retained
+        // ViewModel. While that resolution is pending, the screen's previous
+        // intent (address A) must not be sendable without its contact
+        // metadata: another screen has already paid A.
+        val chain = FakeDashjChain(keys)
+        val provider = provider(chain)
+        val sends = Sends()
+        val runner = succeedingRunner(sends)
+        val gate = LookupGate()
+        val screen1 = buildViewModel(chain, runner, provider, gate)
+        val screen2 = buildViewModel(chain, runner, provider)
+        open(screen1)
+        open(screen2)
+        assertEquals(keys[0].toBase58(), screen1.resolvedAddress())
+
+        // Screen 2 pays A.
+        runBlocking { screen2.signAndSendPayment(Coin.COIN, null, true) }
+        assertEquals(listOf<Address?>(keys[0]), sends.recipients)
+
+        // Screen 1 is recreated: its re-initialization is held in the lookup.
+        gate.closed = true
+        val reinit = thread { runBlocking { screen1.initPaymentIntent(PaymentIntent.fromUserId(contactUserId)) } }
+        assertTrue(gate.entered.await(10, TimeUnit.SECONDS))
+        idle()
+
+        assertFalse("nothing can be confirmed while resolving", screen1.everythingPlausible())
+        assertThrows(PayeeNotResolvedException::class.java) {
+            runBlocking { screen1.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertEquals("no send occurred", listOf<Address?>(keys[0]), sends.recipients)
+
+        // The fragment dismisses the error; the resolution then completes with
+        // a new address, which is payable.
+        screen1.resetState()
+        idle()
+        gate.closed = false
+        gate.open.countDown()
+        awaitCondition("screen 1 resolved a new address") {
+            !reinit.isAlive &&
+                screen1.resolvedAddress() == keys[1].toBase58() &&
+                screen1.everythingPlausible() &&
+                screen1.dryrunSendRequest != null
+        }
+        runBlocking { screen1.signAndSendPayment(Coin.COIN, null, true) }
+        assertEquals(listOf<Address?>(keys[0], keys[1]), sends.recipients)
+    }
+
+    @Test
+    fun failedReinit_leavesNothingSendable() {
+        // A re-initialization whose contact lookup fails must not leave the
+        // previous intent sendable without its contact metadata.
+        val chain = FakeDashjChain(keys)
+        val sends = Sends()
+        val viewModel = buildViewModel(chain, succeedingRunner(sends))
+        open(viewModel)
+
+        assertThrows(SendException::class.java) {
+            // An unknown username: the lookup fails.
+            runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromUserId("unknownUserId")) }
+        }
+
+        assertFalse(viewModel.everythingPlausible())
+        assertThrows(PayeeNotResolvedException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertTrue(sends.recipients.isEmpty())
+    }
+
+    @Test
+    fun claimNotWritable_refusesTheSend_withoutSpendingTheIntentOrResolvingAgain() {
+        // PR #1608 review, round 6: the claim cannot reach disk — nothing is
+        // sent, and re-resolving would not help, so none is started.
+        val blocked = java.io.File(
+            java.nio.file.Files.createTempDirectory("paid-store").toFile(),
+            "blocked"
+        ).apply { mkdirs() }
+        java.io.File(blocked, "x").writeText("")
+        val chain = FakeDashjChain(keys)
+        val sends = Sends()
+        val viewModel = buildViewModel(
+            chain,
+            succeedingRunner(sends),
+            provider(chain, PaidContactAddressStore(blocked))
+        )
+        open(viewModel)
+
+        assertThrows(ContactPaymentNotRecordableException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertTrue(sends.recipients.isEmpty())
+        assertTrue(chain.marks.isEmpty())
+
+        viewModel.resetState()
+        awaitCondition("back to input") { viewModel.everythingPlausible() }
+        assertEquals("not re-resolved", keys[0].toBase58(), viewModel.resolvedAddress())
     }
 }

@@ -29,14 +29,21 @@ import java.util.concurrent.TimeUnit
  * Contact payment addresses (base58) that are paid, or claimed by a payment
  * that is being sent, written to disk BEFORE the payment is sent, so
  * [ContactPaymentAddressProvider] never hands one out twice — across
- * concurrent sends, restarts and process deaths at any step.
+ * concurrent sends, restarts, process deaths at any step, and wallet
+ * replacement (wipe, restore, recovery from the key backup).
  *
  * One entry per address. It is created by [claim], atomically with the check
- * that no entry exists, before the send starts: a second send of the same
- * address (another send screen) is refused, and a process that dies mid-send
- * comes back with the address excluded. A send that fails provably before
- * anything was broadcast gives the address back ([release]); every other
- * outcome keeps it.
+ * that no entry exists, and is on disk before [claim] reports
+ * [ClaimResult.CLAIMED]: a second send of the same address (another send
+ * screen) is refused, and a process that dies mid-send comes back with the
+ * address excluded. A claim fails closed ([ClaimResult.STORE_UNAVAILABLE]) when
+ * the file could not be read (its exclusions are unknown) or the claim could
+ * not be written (it would not survive a process death): nothing may be sent
+ * then. A send that fails provably before anything was broadcast gives the
+ * address back ([release]); every other outcome keeps it. Bookkeeping after
+ * the claim ([sent], settlement, [release]) is fail-soft: a failed write keeps
+ * the state in memory and is retried by the next change — the claim it builds
+ * on is already on disk.
  *
  * An entry is kept until the stack that could serve the address again has
  * recorded the payment durably: dashj.
@@ -45,9 +52,7 @@ import java.util.concurrent.TimeUnit
  * wallet), so a process that dies first comes back at the paid key. An entry is
  * SETTLED once dashj has been advanced past it ([dashjMarked]) and a wallet
  * save that started after that has completed ([WalletSaveTracker]) — dashj's
- * persisted chain is then past it, and the SDK's pick never goes below dashj's
- * persisted cursor. Only settled entries expire ([RETENTION_MS], at most
- * [MAX_ENTRIES] of them, oldest first).
+ * persisted chain is then past it.
  *
  * Nothing else settles an entry — in particular not the SDK's Room mirror
  * flagging the address used while dashj has no chain for the contact (PR #1608
@@ -60,43 +65,98 @@ import java.util.concurrent.TimeUnit
  * before it existed.
  *
  * Settlement is about ONE dashj wallet file: when the app's wallet is replaced
- * or removed (wipe, restore, recovery from the key backup — reported through
- * [WalletSaveTracker.walletChanged]; the app's store is created for it if
- * need be, see [appWalletChanged]) every entry becomes unsettled again, and is re-applied to the new
- * wallet's chains and settled by its saves like a new one.
+ * or removed (reported through [WalletSaveTracker.walletChanged]; the app's
+ * store is created for it if need be, see [appWalletChanged]) every entry
+ * becomes unsettled again — before anything is expired — and is re-applied to
+ * the new wallet's chains and settled by its saves like a new one.
+ *
+ * ## The channel frontier: what survives an expired entry (PR #1608 review, round 6)
+ *
+ * A settled entry is redundant only while the dashj wallet that settled it is
+ * the one in use. A later wallet — an older key backup, a restore — can have
+ * that contact's sending chain at an earlier key, so expiring an entry must not
+ * forget what it protected. Each entry therefore also records the address's
+ * derivation INDEX on its channel (contact + accountReference, i.e. the
+ * contact's xpub for us) when it is known, and an expiring entry is FOLDED into
+ * that channel's frontier: one line per channel holding the highest paid index
+ * and its address, never expired, independent of any wallet. Every index at or
+ * below it has been paid on that channel (payments take the lowest index above
+ * what was paid; skipping an unpaid one is harmless). The provider uses it on
+ * every lookup ([foldedFrontier], [paidFrontier]): the SDK pick is taken above
+ * it, and a dashj chain at or below it is advanced past it (marking the
+ * frontier address moves dashj past every earlier key) or not used. An entry
+ * whose index is not known (rare: dashj's cursor could not be read when it
+ * served the address) is never expired — it cannot be folded.
  *
  * Why the file stays small: an entry settles with the first wallet save after
- * its payment (normally within a minute while the app is open). One that misses
- * that is retried on the contact's next address lookup. What stays unsettled is
- * a payment dashj cannot place — no chain yet for the contact, the key not on
- * its chain, or no dashj identity — at most one line per such payment.
+ * its payment (normally within a minute while the app is open) and is folded
+ * after [RETENTION_MS] or beyond [MAX_ENTRIES]; the frontier is one line per
+ * channel. What stays unsettled is a payment dashj cannot place — no chain yet
+ * for the contact, the key not on its chain, or no dashj identity — at most one
+ * line per such payment.
  *
  * Scoping: a contact payment address is derived from the xpub that contact
- * gave THIS identity for ONE contact request (accountReference), so an address
- * names its wallet and channel. The contact and accountReference are stored
- * only to re-apply the dashj mark.
+ * gave THIS identity for ONE contact request (accountReference, which is
+ * derived from that xpub), so an address and a channel name its wallet and
+ * contact. The contact and accountReference are stored to re-apply the dashj
+ * mark and to key the frontier.
  *
- * File format: one line per address,
- * `<paidAtMillis> <base58> <pending|settled> [<contactUserId> <accountReference>]`,
- * replaced atomically (write and fsync a temp file, rename). A line of just
- * `<paidAtMillis> <base58>` (earlier builds) reads as pending with no contact.
- * [file] null keeps the set in memory only. Never throws: a failed read starts
- * empty in memory and leaves the file untouched for the next process; a failed
- * write keeps the entries in memory, logs, and is retried by the next change.
+ * File format: one line per channel frontier,
+ * `frontier <contactUserId> <accountReference> <index> <base58>`, then one line
+ * per address, `<paidAtMillis> <base58> <pending|settled> [<contactUserId>
+ * <accountReference> [<index>]]`, replaced atomically (write and fsync a temp
+ * file, rename). A line of just `<paidAtMillis> <base58>` (earlier builds) reads
+ * as pending with no contact. [file] null keeps the set in memory only (claims
+ * then succeed in memory). A failed read leaves the file untouched and refuses
+ * claims for the rest of the process.
  */
 class PaidContactAddressStore(
     private val file: File?,
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val walletSaves: WalletSaveTracker = WalletSaveTracker()
 ) {
+    /** What [claim] decided. */
+    enum class ClaimResult {
+        /** Recorded and on disk: the send may run. */
+        CLAIMED,
+
+        /** Already paid or claimed by another send: nothing may be sent to it. */
+        ALREADY_PAID,
+
+        /**
+         * The store could not be read (its exclusions are unknown) or the claim
+         * could not be written: nothing may be sent. Resolving the address
+         * again does not help.
+         */
+        STORE_UNAVAILABLE
+    }
+
+    /** The highest paid derivation [index] on a channel and its [address]. */
+    data class Frontier(val index: Int, val address: String)
+
+    private data class Channel(val contactUserId: String, val accountReference: Int)
+
     private val lock = Any()
 
     private class Entry(
         val paidAt: Long,
         val contactUserId: String?,
         val accountReference: Int?,
+        /** The address's derivation index on its channel; null when unknown. */
+        val index: Int?,
         var settled: Boolean
     ) {
+        val channel: Channel?
+            get() = if (contactUserId != null && accountReference != null) {
+                Channel(contactUserId, accountReference)
+            } else {
+                null
+            }
+
+        /** Whether expiring it keeps its protection: it has a channel and an index. */
+        val foldable: Boolean
+            get() = channel != null && index != null
+
         /**
          * [WalletSaveTracker.lastStarted] read after dashj was advanced past the
          * address in THIS process; a completed save numbered higher settles it.
@@ -118,13 +178,16 @@ class PaidContactAddressStore(
     /** address → entry, oldest first; loaded on first use. */
     private var entries: LinkedHashMap<String, Entry>? = null
 
+    /** channel → the highest index folded from expired entries; loaded with [entries]. */
+    private val folded = HashMap<Channel, Frontier>()
+
     /** The last write failed: the next change, or [sent], writes again. */
     private var unwritten = false
 
     /**
      * The file exists but could not be read: this process keeps its entries
-     * in memory only and never overwrites the file, so the exclusions it holds
-     * are there again for the next process.
+     * in memory only, never overwrites the file (the exclusions it holds are
+     * there again for the next process) and refuses every [claim].
      */
     private var readFailed = false
 
@@ -133,33 +196,52 @@ class PaidContactAddressStore(
         walletSaves.addWalletChangedListener(::onWalletChanged)
     }
 
-    /** Every address recorded paid or claimed by a send, and not yet expired. */
+    /**
+     * Every address recorded paid or claimed by a send, including each
+     * channel's frontier address.
+     */
     fun paid(): Set<String> = synchronized(lock) {
-        loaded().keys.toSet()
+        loaded().keys + folded.values.map { it.address }
     }
 
-    /** Whether [address] is recorded paid or claimed by a send. */
+    /** Whether [address] is recorded paid or claimed by a send (see [paid]). */
     fun contains(address: String): Boolean = synchronized(lock) {
-        address in loaded()
+        address in loaded() || folded.values.any { it.address == address }
     }
 
     /**
-     * Claims [address] for a payment to [target] about to be sent: if nothing
-     * is recorded for it, records it (unsettled, in flight) and writes the
-     * store before returning true. False — nothing changed — when it is
-     * already paid or claimed by another send. Check and record are one atomic
-     * step, so of two concurrent claims of one address exactly one wins.
+     * Claims [address], index [index] on [target]'s channel when known, for a
+     * payment about to be sent: if nothing is recorded for it, records it
+     * (unsettled, in flight) and writes the store; [ClaimResult.CLAIMED] only
+     * once the claim is on disk (or the store is memory-only). Check and record
+     * are one atomic step, so of two concurrent claims of one address exactly
+     * one wins. Nothing changes unless it returns [ClaimResult.CLAIMED].
      */
-    fun claim(address: String, target: ContactPaymentTarget): Boolean = synchronized(lock) {
-        val map = loaded()
-        if (address in map) return false
-        map[address] = Entry(nowMs(), target.contactUserId, target.accountReference, settled = false).apply {
-            inFlight = true
+    fun claim(address: String, target: ContactPaymentTarget, index: Int? = null): ClaimResult =
+        synchronized(lock) {
+            val map = loaded()
+            if (readFailed) {
+                log.warn("contact payment refused: {} could not be read, its paid addresses are unknown", file)
+                return ClaimResult.STORE_UNAVAILABLE
+            }
+            if (address in map || folded.values.any { it.address == address }) {
+                return ClaimResult.ALREADY_PAID
+            }
+            val channel = Channel(target.contactUserId, target.accountReference)
+            val frontier = folded[channel]
+            if (index != null && frontier != null && index <= frontier.index) {
+                return ClaimResult.ALREADY_PAID
+            }
+            prune(map)
+            map[address] = Entry(nowMs(), target.contactUserId, target.accountReference, index, settled = false)
+                .apply { inFlight = true }
+            if (!write(map)) {
+                map.remove(address)
+                log.warn("contact payment refused: its address could not be recorded in {}", file)
+                return ClaimResult.STORE_UNAVAILABLE
+            }
+            ClaimResult.CLAIMED
         }
-        prune(map)
-        write(map)
-        true
-    }
 
     /**
      * The send that claimed [address] may have broadcast it (or its outcome is
@@ -178,7 +260,8 @@ class PaidContactAddressStore(
     /**
      * The send that claimed [address] failed provably before anything was
      * broadcast: the address was never paid and may be offered again. Only for
-     * the claim's own send — and never for an entry dashj has settled.
+     * the claim's own send — and never for an entry dashj has settled. A failed
+     * write leaves the claim on disk: the address stays excluded (fail-safe).
      */
     fun release(address: String) {
         synchronized(lock) {
@@ -194,21 +277,44 @@ class PaidContactAddressStore(
     }
 
     /**
-     * Records [address] as paid now, to [target] when known, and writes the
-     * store before returning. The entry starts unsettled. An address already
-     * recorded is left as it is. Production code claims instead ([claim]).
+     * Records [address] as paid now, to [target] at [index] when known, and
+     * writes the store before returning (a failed write keeps it in memory).
+     * The entry starts unsettled. An address already recorded is left as it
+     * is. Production code claims instead ([claim]).
      */
-    internal fun record(address: String, target: ContactPaymentTarget? = null) {
+    internal fun record(address: String, target: ContactPaymentTarget? = null, index: Int? = null) {
         synchronized(lock) {
             val map = loaded()
             if (address in map) {
                 if (unwritten) write(map)
                 return
             }
-            map[address] = Entry(nowMs(), target?.contactUserId, target?.accountReference, settled = false)
             prune(map)
+            map[address] = Entry(nowMs(), target?.contactUserId, target?.accountReference, index, settled = false)
             write(map)
         }
+    }
+
+    /**
+     * The highest derivation index recorded paid or claimed on the channel —
+     * the folded frontier and every live entry with a known index, claims in
+     * flight included — or null when none is known. An address at or below it
+     * must not be picked.
+     */
+    fun paidFrontier(contactUserId: String, accountReference: Int): Int? = synchronized(lock) {
+        val channel = Channel(contactUserId, accountReference)
+        val live = loaded().values.filter { it.channel == channel }.mapNotNull { it.index }.maxOrNull()
+        listOfNotNull(folded[channel]?.index, live).maxOrNull()
+    }
+
+    /**
+     * The channel's folded frontier: the highest paid address whose entry has
+     * expired. Independent of the wallet — the provider advances any dashj
+     * chain at or below it past it on every lookup. Null when nothing expired.
+     */
+    fun foldedFrontier(contactUserId: String, accountReference: Int): Frontier? = synchronized(lock) {
+        loaded()
+        folded[Channel(contactUserId, accountReference)]
     }
 
     /**
@@ -272,8 +378,10 @@ class PaidContactAddressStore(
      * The app's wallet was replaced or removed ([WalletSaveTracker.walletChanged]):
      * what dashj recorded durably was in the previous wallet file, and its
      * advances in this process were made on the previous wallet. Every entry
-     * is unsettled, written, and re-applied to the new wallet's chains on the
-     * next lookup. Loads the store if need be.
+     * is unsettled — loaded WITHOUT expiring anything first, so a settled entry
+     * past the retention is kept too — written, and re-applied to the new
+     * wallet's chains on the next lookup. The folded frontiers need nothing:
+     * they are re-applied to whatever wallet is current on every lookup.
      */
     internal fun onWalletChanged() {
         synchronized(lock) {
@@ -290,19 +398,21 @@ class PaidContactAddressStore(
         }
     }
 
-    /** Whether [address] is recorded and settled; for tests and logs. */
+    /** Whether [address] has an entry and it is settled; null without an entry. For tests and logs. */
     internal fun isSettled(address: String): Boolean? = synchronized(lock) {
         loaded()[address]?.settled
     }
 
+    /** Loads the file once. Never expires anything: that happens only on a write ([prune]). */
     private fun loaded(): LinkedHashMap<String, Entry> {
         val current = entries
         if (current != null) {
             return current
         }
         val map = LinkedHashMap<String, Entry>()
-        read().sortedBy { it.second.paidAt }.forEach { (address, entry) -> map[address] = entry }
-        prune(map)
+        val content = read()
+        content.entries.sortedBy { it.second.paidAt }.forEach { (address, entry) -> map[address] = entry }
+        content.frontiers.forEach { (channel, frontier) -> foldInto(channel, frontier) }
         val pending = map.values.count { !it.settled }
         if (pending > PENDING_WARN) {
             log.warn("{} paid contact addresses are not yet confirmed by dashj", pending)
@@ -311,45 +421,90 @@ class PaidContactAddressStore(
         return map
     }
 
-    /** Expires SETTLED entries only: by age, then the oldest beyond [MAX_ENTRIES]. */
+    private fun foldInto(channel: Channel, frontier: Frontier) {
+        val current = folded[channel]
+        if (current == null || frontier.index > current.index) {
+            folded[channel] = frontier
+        }
+    }
+
+    /**
+     * Expires SETTLED entries that can be folded into their channel's frontier
+     * — by age, then the oldest beyond [MAX_ENTRIES] — folding each one. Never
+     * an unsettled entry, and never one without a channel and index.
+     */
     private fun prune(map: LinkedHashMap<String, Entry>) {
         val cutoff = nowMs() - RETENTION_MS
-        map.entries.removeAll { it.value.settled && it.value.paidAt < cutoff }
-        var excess = map.values.count { it.settled } - MAX_ENTRIES
+        fun expire(address: String, entry: Entry) {
+            val channel = checkNotNull(entry.channel) { "only foldable entries expire" }
+            val index = checkNotNull(entry.index) { "only foldable entries expire" }
+            foldInto(channel, Frontier(index, address))
+        }
+        val iterator = map.entries.iterator()
+        while (iterator.hasNext()) {
+            val (address, entry) = iterator.next()
+            if (entry.settled && entry.foldable && entry.paidAt < cutoff) {
+                expire(address, entry)
+                iterator.remove()
+            }
+        }
+        var excess = map.values.count { it.settled && it.foldable } - MAX_ENTRIES
         if (excess > 0) {
-            val iterator = map.entries.iterator()
-            while (excess > 0 && iterator.hasNext()) {
-                if (iterator.next().value.settled) {
-                    iterator.remove()
+            val oldest = map.entries.iterator()
+            while (excess > 0 && oldest.hasNext()) {
+                val (address, entry) = oldest.next()
+                if (entry.settled && entry.foldable) {
+                    expire(address, entry)
+                    oldest.remove()
                     excess--
                 }
             }
         }
     }
 
-    private fun read(): List<Pair<String, Entry>> {
-        val f = file ?: return emptyList()
+    private class Content(
+        val entries: List<Pair<String, Entry>>,
+        val frontiers: List<Pair<Channel, Frontier>>
+    )
+
+    private fun read(): Content {
+        val empty = Content(emptyList(), emptyList())
+        val f = file ?: return empty
         return try {
             if (!f.isFile) {
-                emptyList()
+                empty
             } else {
-                f.readLines().mapNotNull(::parse)
+                val lines = f.readLines()
+                Content(
+                    entries = lines.mapNotNull(::parseEntry),
+                    frontiers = lines.mapNotNull(::parseFrontier)
+                )
             }
         } catch (e: Exception) {
-            log.warn("could not read {}; starting empty in memory, the file is left as it is", f, e)
+            log.warn("could not read {}; contact payments are refused, the file is left as it is", f, e)
             readFailed = true
-            emptyList()
+            empty
         }
     }
 
-    private fun parse(line: String): Pair<String, Entry>? {
+    private fun parseFrontier(line: String): Pair<Channel, Frontier>? {
+        val parts = line.trim().split(' ')
+        if (parts.size != 5 || parts[0] != FRONTIER) return null
+        val contact = parts[1].takeIf { it.isNotEmpty() } ?: return null
+        val reference = parts[2].toIntOrNull() ?: return null
+        val index = parts[3].toIntOrNull()?.takeIf { it >= 0 } ?: return null
+        val address = parts[4].takeIf { it.isNotEmpty() } ?: return null
+        return Channel(contact, reference) to Frontier(index, address)
+    }
+
+    private fun parseEntry(line: String): Pair<String, Entry>? {
         val parts = line.trim().split(' ')
         val at = parts.getOrNull(0)?.toLongOrNull() ?: return null
         val address = parts.getOrNull(1)?.takeIf { it.isNotEmpty() } ?: return null
         return when (parts.size) {
             // earlier builds: no state, no contact
-            2 -> address to Entry(at, null, null, settled = false)
-            3, 5 -> {
+            2 -> address to Entry(at, null, null, null, settled = false)
+            3, 5, 6 -> {
                 val settled = when (parts[2]) {
                     SETTLED -> true
                     PENDING -> false
@@ -357,8 +512,13 @@ class PaidContactAddressStore(
                 }
                 val contact = parts.getOrNull(3)?.takeIf { it.isNotEmpty() }
                 val reference = parts.getOrNull(4)?.toIntOrNull()
-                if (parts.size == 5 && (contact == null || reference == null)) return null
-                address to Entry(at, contact, reference, settled)
+                if (parts.size >= 5 && (contact == null || reference == null)) return null
+                val index = if (parts.size == 6) {
+                    parts[5].toIntOrNull()?.takeIf { it >= 0 } ?: return null
+                } else {
+                    null
+                }
+                address to Entry(at, contact, reference, index, settled)
             }
             else -> null
         }
@@ -371,14 +531,21 @@ class PaidContactAddressStore(
      * launch sweep of abandoned `*.tmp` files (WalletApplication.cleanupFiles)
      * cannot delete the temp mid-write. The file itself is never deleted: a
      * failed rename keeps the previous content on disk.
+     *
+     * True when the content is on disk (or the store is memory-only); false
+     * when the write failed or the file could not be read (and so is never
+     * written).
      */
-    private fun write(map: Map<String, Entry>) {
-        val f = file ?: return
-        if (readFailed) return
-        val body = map.entries.joinToString(separator = "") { (address, e) ->
+    private fun write(map: Map<String, Entry>): Boolean {
+        val f = file ?: return true
+        if (readFailed) return false
+        val frontierLines = folded.entries.joinToString(separator = "") { (channel, frontier) ->
+            "$FRONTIER ${channel.contactUserId} ${channel.accountReference} ${frontier.index} ${frontier.address}\n"
+        }
+        val entryLines = map.entries.joinToString(separator = "") { (address, e) ->
             val state = if (e.settled) SETTLED else PENDING
             val channel = if (e.contactUserId != null && e.accountReference != null) {
-                " ${e.contactUserId} ${e.accountReference}"
+                " ${e.contactUserId} ${e.accountReference}" + (e.index?.let { " $it" } ?: "")
             } else {
                 ""
             }
@@ -390,7 +557,7 @@ class PaidContactAddressStore(
                 f.parentFile?.mkdirs()
                 val tmp = File(f.path + AtomicFileWriter.TEMP_SUFFIX)
                 FileOutputStream(tmp).use { out ->
-                    out.write(body.toByteArray(Charsets.UTF_8))
+                    out.write((frontierLines + entryLines).toByteArray(Charsets.UTF_8))
                     out.flush()
                     out.fd.sync()
                 }
@@ -404,15 +571,19 @@ class PaidContactAddressStore(
         } catch (e: Exception) {
             log.warn("could not write {}; the paid addresses are remembered in memory only", f, e)
         }
+        return !unwritten
     }
 
     companion object {
         private val log = LoggerFactory.getLogger(PaidContactAddressStore::class.java)
 
-        /** How long a SETTLED entry is kept as a margin; unsettled ones never expire. */
+        /**
+         * How long a SETTLED entry is kept before it is folded into its
+         * channel's frontier; unsettled ones are never folded.
+         */
         val RETENTION_MS: Long = TimeUnit.DAYS.toMillis(7)
 
-        /** A bound on SETTLED entries; unsettled ones are never dropped. */
+        /** A bound on SETTLED foldable entries; the oldest beyond it are folded. */
         const val MAX_ENTRIES = 500
 
         /** More unsettled entries than this is unexpected; logged on load. */
@@ -420,6 +591,7 @@ class PaidContactAddressStore(
 
         private const val SETTLED = "settled"
         private const val PENDING = "pending"
+        private const val FRONTIER = "frontier"
 
         const val FILE_NAME = "contact_paid_addresses.txt"
 
