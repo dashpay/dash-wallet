@@ -151,7 +151,7 @@ class RefusedWalletInitializationTest {
             service.packageInfoProvider = mockk(relaxed = true)
             every { service.getDir("blockstore", any()) } returns directory
             every { coordinator.sdkOwnsL1Flow() } answers { kotlinx.coroutines.flow.flowOf(sdkOwnsL1) }
-            coEvery { binder.oweSpvRescanForRecoveryReset() } answers { sdkDebtRecorded }
+            coEvery { binder.oweSpvRescanForReset() } answers { sdkDebtRecorded }
             every { application.recordRecoveryResetFailure() } answers { ++failures }
             every { application.markRecoveryResetComplete() } answers { markerDeleted }
             coEvery { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } } answers {
@@ -184,7 +184,7 @@ class RefusedWalletInitializationTest {
             assertTrue(service.performRecoveryReset())
             assertFalse(blockChain.exists())
             assertFalse(headers.exists())
-            coVerify(exactly = 1) { binder.oweSpvRescanForRecoveryReset() }
+            coVerify(exactly = 1) { binder.oweSpvRescanForReset() }
             verify(exactly = 1) { application.markRecoveryResetComplete() }
             verify(exactly = 0) { application.recordRecoveryResetFailure() }
             // Done inline, never by teardown, so it needs no stopSelf().
@@ -220,7 +220,7 @@ class RefusedWalletInitializationTest {
     fun `recovery reset owes no SDK rescan before the cutover`() = withRecoveryReset {
         sdkOwnsL1 = false
         assertTrue(service.performRecoveryReset())
-        coVerify(exactly = 0) { binder.oweSpvRescanForRecoveryReset() }
+        coVerify(exactly = 0) { binder.oweSpvRescanForReset() }
         verify(exactly = 1) { application.markRecoveryResetComplete() }
     }
 
