@@ -54,7 +54,8 @@ class DashSdkServiceImplTest {
 
     private fun newService() = DashSdkServiceImpl(
         context = mockk<Context>(relaxed = true),
-        mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true))
+        mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+        secretWriteFence = WalletSecretWriteFence()
     )
 
     @Test
@@ -79,6 +80,48 @@ class DashSdkServiceImplTest {
         assertFalse(service.isStarted)
         assertNull(service.sdkOrNull())
         assertNull(service.walletManagerOrNull())
+    }
+
+    @Test
+    fun quiesceForWalletWipe_notStarted_isQuiescentAndRefusesRestartsUntilTheFenceIsLowered() {
+        val fence = WalletSecretWriteFence()
+        val service = DashSdkServiceImpl(
+            context = mockk<Context>(relaxed = true),
+            mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+            secretWriteFence = fence
+        )
+
+        assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
+        assertTrue(fence.isSdkRuntimeHalted)
+        // Every restart path goes through ensureStarted: refused before any
+        // bootstrap (no native load is attempted on the JVM).
+        assertThrows(WalletWipeInProgressException::class.java) {
+            runBlocking { service.ensureStarted() }
+        }
+        assertFalse(service.isStarted)
+    }
+
+    @Test
+    fun ensureStarted_afterTheFenceIsLowered_attemptsAFreshBootstrap() {
+        val fence = WalletSecretWriteFence()
+        val service = DashSdkServiceImpl(
+            context = mockk<Context>(relaxed = true),
+            mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+            secretWriteFence = fence
+        )
+        assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
+
+        fence.lower()
+
+        // No runtime is held after the wipe, so the next wallet setup goes
+        // through a full bootstrap — which on the host JVM dies loading the
+        // native library / Android stack, NOT on the wipe halt.
+        val failure = runCatching { runBlocking { service.ensureStarted() } }.exceptionOrNull()
+        assertFalse(
+            "the halt must be lifted once the wipe completed, got $failure",
+            failure is WalletWipeInProgressException
+        )
+        assertFalse(service.isStarted)
     }
 
     @Test
