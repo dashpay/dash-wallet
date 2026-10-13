@@ -122,6 +122,12 @@ class SendCoinsViewModel @Inject constructor(
     var currentAmount: Coin = Coin.ZERO
         private set
 
+    /**
+     * The last successful dry run's request; null while a dry run is running
+     * ([executeDryrun] clears it first) or after one failed. Written on IO and
+     * read on main and IO: readers take ONE snapshot of it.
+     */
+    @Volatile
     var dryrunSendRequest: SendRequest? = null
         private set
     var dryRunException: Exception? = null
@@ -351,13 +357,19 @@ class SendCoinsViewModel @Inject constructor(
             // Defence in depth: the UI cannot confirm a spent contact intent
             // (isPayeePlausible), but never pay its address again.
             spentContactPayment.get()?.let { throw ContactAddressAlreadyPaidException(it) }
+            // One snapshot of the dry run: a dry run started meanwhile (an
+            // amount change, or resetState resolving the contact again) clears
+            // the field before setting its own result, so reading it twice
+            // could see null — this used to throw a NullPointerException — or
+            // two different dry runs. Without one, nothing is sent.
+            val dryRun = dryrunSendRequest ?: throw DryRunNotReadyException()
             val intent = resolved.intent
             val finalPaymentIntent = intent.mergeWithEditedValues(editedAmount.toNeutralCoin(), null)
             val finalSendRequest = sendCoinsTaskRunner.createSendRequest(
                 intent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
-                dryrunSendRequest!!.ensureMinRequiredFee
+                dryRun.ensureMinRequiredFee
             )
             // Post-cutover, carry the cutover-aware dry-run's send-all decision.
             // createSendRequest derives emptyWallet from the dashj max-output
@@ -369,7 +381,7 @@ class SendCoinsViewModel @Inject constructor(
             // same balance/amount, so this override is gated on the committed
             // cutover and the dashj path is otherwise untouched.
             if (sendCoinsTaskRunner.isCutoverCommitted()) {
-                finalSendRequest.emptyWallet = dryrunSendRequest!!.emptyWallet
+                finalSendRequest.emptyWallet = dryRun.emptyWallet
             }
             finalSendRequest.memo = intent.memo
             finalSendRequest.exchangeRate = exchangeRate
@@ -820,3 +832,11 @@ class SendCoinsViewModel @Inject constructor(
  */
 class PayeeNotResolvedException :
     IllegalStateException("the payee is not resolved yet; nothing was sent")
+
+/**
+ * [SendCoinsViewModel.signAndSendPayment] was called while no dry run result
+ * was available — one is running (the amount or the payee just changed) or the
+ * last one failed. Nothing was sent.
+ */
+class DryRunNotReadyException :
+    IllegalStateException("the payment has not been checked yet; nothing was sent")

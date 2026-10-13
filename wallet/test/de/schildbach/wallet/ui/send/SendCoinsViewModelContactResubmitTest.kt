@@ -41,6 +41,7 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.FriendChainAccess
 import org.bitcoinj.wallet.SendRequest
@@ -96,6 +97,34 @@ class SendCoinsViewModelContactResubmitTest {
 
     private class Sends {
         val recipients = mutableListOf<Address?>()
+
+        /** Every request a dry run built (signInputs = false), in order; guarded by this. */
+        private val dryRuns = mutableListOf<SendRequest>()
+
+        @Synchronized
+        fun recordDryRun(request: SendRequest) {
+            dryRuns += request
+        }
+
+        @Synchronized
+        fun dryRunCount(): Int = dryRuns.size
+
+        /** Whether [request] was built by a dry run after the first [mark] ones. */
+        @Synchronized
+        fun isDryRunAfter(mark: Int, request: SendRequest?): Boolean =
+            request != null && dryRuns.drop(mark).any { it === request }
+    }
+
+    /** Every runner builds a fresh request per call and records the dry runs' ones. */
+    private fun stubCreateSendRequest(runner: SendCoinsTaskRunner, sends: Sends) {
+        every {
+            runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>())
+        } answers {
+            mockk<SendRequest>(relaxed = true).also { request ->
+                val signInputs = args[2] as Boolean
+                if (!signInputs) sends.recordDryRun(request)
+            }
+        }
     }
 
     private fun contactRequest(from: String, to: String) =
@@ -136,10 +165,14 @@ class SendCoinsViewModelContactResubmitTest {
         chain: FakeDashjChain,
         runner: SendCoinsTaskRunner,
         provider: ContactPaymentAddressProvider = provider(chain),
-        gate: LookupGate = LookupGate()
+        gate: LookupGate = LookupGate(),
+        dryRunFails: Boolean = false
     ): SendCoinsViewModel {
         val wallet = mockk<Wallet>(relaxed = true) {
             every { currentReceiveAddress() } returns Address.fromKey(params, ECKey())
+            if (dryRunFails) {
+                every { completeTx(any()) } throws InsufficientMoneyException(Coin.COIN)
+            }
         }
         val walletData = mockk<WalletData>(relaxed = true) {
             every { this@mockk.wallet } returns wallet
@@ -193,7 +226,7 @@ class SendCoinsViewModelContactResubmitTest {
     private fun pausingRunner(sends: Sends, firstInSend: CountDownLatch, releaseFirst: CountDownLatch): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         coEvery { runner.isCutoverCommitted() } returns false
-        every { runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>()) } answers { mockk<SendRequest>(relaxed = true) }
+        stubCreateSendRequest(runner, sends)
         coEvery {
             runner.sendCoins(
                 any<SendRequest>(),
@@ -226,7 +259,7 @@ class SendCoinsViewModelContactResubmitTest {
     private fun succeedingRunner(sends: Sends): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         coEvery { runner.isCutoverCommitted() } returns false
-        every { runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>()) } answers { mockk<SendRequest>(relaxed = true) }
+        stubCreateSendRequest(runner, sends)
         coEvery {
             runner.sendCoins(
                 any<SendRequest>(),
@@ -255,7 +288,7 @@ class SendCoinsViewModelContactResubmitTest {
     private fun runner(sends: Sends): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         coEvery { runner.isCutoverCommitted() } returns false
-        every { runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>()) } answers { mockk<SendRequest>(relaxed = true) }
+        stubCreateSendRequest(runner, sends)
         coEvery {
             runner.sendCoins(
                 any<SendRequest>(),
@@ -295,6 +328,29 @@ class SendCoinsViewModelContactResubmitTest {
     private fun SendCoinsViewModel.resolvedAddress(): String? =
         basePaymentIntent.getAddress(Constants.ADDRESS_NETWORK)
 
+    /**
+     * Waits until [resetState] has resolved [viewModel]'s contact payment again
+     * ([SendCoinsViewModel.resetState] → refreshContactPayment → initPaymentIntent).
+     * That resolution publishes the new payee first and runs its dry run last,
+     * and the dry run clears dryrunSendRequest before it sets its own request —
+     * so until it is done, dryrunSendRequest can still hold the PREVIOUS payee's
+     * dry run. Waiting on `dryrunSendRequest != null` therefore passed early, and
+     * the send then raced the dry run clearing it. The amount is not changed
+     * after [open], so that dry run is the only one started after [dryRunMark]:
+     * once [viewModel] holds a request built after the mark, it is done.
+     */
+    private fun awaitResolvedAgain(
+        what: String,
+        viewModel: SendCoinsViewModel,
+        sends: Sends,
+        dryRunMark: Int,
+        address: Address
+    ) = awaitCondition(what) {
+        viewModel.resolvedAddress() == address.toBase58() &&
+            viewModel.everythingPlausible() &&
+            sends.isDryRunAfter(dryRunMark, viewModel.dryrunSendRequest)
+    }
+
     /** Opens the send screen for the contact with an amount entered. */
     private fun open(viewModel: SendCoinsViewModel) {
         viewModel.setAmount(Coin.COIN)
@@ -322,12 +378,9 @@ class SendCoinsViewModelContactResubmitTest {
         assertFalse("a spent contact intent cannot be confirmed", viewModel.everythingPlausible())
 
         // The fragment shows the error; dismissing it resets the state.
+        val dryRunMark = sends.dryRunCount()
         viewModel.resetState()
-        awaitCondition("contact address resolved again") {
-            viewModel.resolvedAddress() == keys[1].toBase58() &&
-                viewModel.everythingPlausible() &&
-                viewModel.dryrunSendRequest != null
-        }
+        awaitResolvedAgain("contact address resolved again", viewModel, sends, dryRunMark, keys[1])
 
         // 2nd confirmation pays the new address.
         runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
@@ -390,12 +443,9 @@ class SendCoinsViewModelContactResubmitTest {
         assertFalse(screen2.everythingPlausible())
 
         // Dismissing the error resolves screen 2 again: a new address.
+        val dryRunMark = sends.dryRunCount()
         screen2.resetState()
-        awaitCondition("screen 2 resolved a new address") {
-            screen2.resolvedAddress() == keys[1].toBase58() &&
-                screen2.everythingPlausible() &&
-                screen2.dryrunSendRequest != null
-        }
+        awaitResolvedAgain("screen 2 resolved a new address", screen2, sends, dryRunMark, keys[1])
 
         releaseFirst.countDown()
         firstSend.join(10_000)
@@ -472,6 +522,32 @@ class SendCoinsViewModelContactResubmitTest {
             runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
         }
         assertTrue(sends.recipients.isEmpty())
+    }
+
+    @Test
+    fun noDryRunResult_refusesTheSend_withoutSpendingTheContactIntent() {
+        // A send that finds no dry run result (one is running, or the last one
+        // failed) fails cleanly — it used to throw a NullPointerException — and
+        // before anything is claimed: the contact address stays payable.
+        val chain = FakeDashjChain(keys)
+        val sends = Sends()
+        val viewModel = buildViewModel(chain, succeedingRunner(sends), dryRunFails = true)
+        viewModel.setAmount(Coin.COIN)
+        awaitCondition("amount applied") { viewModel.currentAmount == Coin.COIN }
+        runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromUserId(contactUserId)) }
+        idle()
+        assertTrue(viewModel.everythingPlausible())
+        assertEquals(null, viewModel.dryrunSendRequest)
+
+        assertThrows(DryRunNotReadyException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertTrue(sends.recipients.isEmpty())
+        assertTrue(chain.marks.isEmpty())
+
+        viewModel.resetState()
+        awaitCondition("back to input") { viewModel.everythingPlausible() }
+        assertEquals("not spent, not re-resolved", keys[0].toBase58(), viewModel.resolvedAddress())
     }
 
     @Test
