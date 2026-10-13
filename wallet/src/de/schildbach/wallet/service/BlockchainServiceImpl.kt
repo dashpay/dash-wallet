@@ -642,12 +642,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     /**
      * The SDK half of the recovery reset: when the SDK owns L1 its filter
      * watermark must rewind, owed durably to the next bind
-     * ([SdkWalletBinder.oweSpvRescanForRecoveryReset]). True when nothing is
+     * ([SdkWalletBinder.oweSpvRescanForReset]). True when nothing is
      * owed (pre-cutover, dashj's store wipe is the whole reset) or the debt
      * is recorded. A failed ownership read counts as a failure.
      */
     private suspend fun oweSdkRescanIfCutOver(): Boolean = try {
-        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForRecoveryReset()
+        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForReset()
     } catch (e: kotlinx.coroutines.CancellationException) {
         throw e
     } catch (t: Throwable) {
@@ -938,6 +938,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Volatile
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
+    // True only when ACTION_RESET_BLOCKCHAIN durably owed an SDK replay; gates
+    // the rescan database clear (nothing else repopulates them).
+    @Volatile
+    private var sdkRescanOwedForReset = false
     // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
     @Volatile
     private var deleteWalletFileOnShutdown = false
@@ -3134,23 +3138,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     /**
      * The SDK half of ACTION_RESET_BLOCKCHAIN: when the SDK owns L1
-     * (cutover committed + SDK L1 engine enabled), arm the SPV filter
-     * rescan ([SdkWalletBinder.armSpvRescanForBlockchainReset]) so the
-     * user-facing reset replays SDK history too — pre-cutover behavior is
-     * untouched (dashj's own file wipe + replay is the whole reset there,
-     * and a shadow-only SDK must not be forced through a full rescan).
-     * Never throws; a failed arm only costs the user a retried reset.
+     * (cutover committed + SDK L1 engine enabled), owe the SPV filter
+     * rescan durably ([SdkWalletBinder.oweSpvRescanForReset]) so the
+     * user-facing reset replays SDK history even when the engines stop
+     * before the in-memory rewind persists: the scan gate holds the next
+     * scan until the rewind is armed, and the debt clears only once it is
+     * durable. Pre-cutover it is a no-op (a shadow-only SDK must not be
+     * forced through a full rescan, and the dashj blockstore is no longer
+     * deleted on reset either). Never throws; returns true only when the SDK
+     * replay is owed, so the caller knows whether clearing the rescan
+     * databases is safe.
      */
-    private suspend fun armSdkRescanForResetIfCutOver() {
-        try {
-            if (!cutoverCoordinator.sdkOwnsL1Flow().first()) return
-            sdkWalletBinder.armSpvRescanForBlockchainReset()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            log.warn("SDK rescan arm for blockchain reset failed", t)
-        }
-    }
+    private suspend fun oweSdkRescanForResetIfCutOver(): Boolean =
+        BlockchainResetShutdownPolicy.oweSdkRescan(
+            sdkOwnsL1 = { cutoverCoordinator.sdkOwnsL1Flow().first() },
+            owe = { sdkWalletBinder.oweSpvRescanForReset() },
+            onFailure = { t -> log.warn("SDK rescan for blockchain reset could not be owed", t) }
+        )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         log.info(".onStartCommand($intent)")
@@ -3229,15 +3233,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
                     }
                 } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
-                    log.info("will remove blockchain on service shutdown")
+                    log.info("will reset blockchain state on service shutdown")
                     resetBlockchainOnShutdown = true
-                    // Post-cutover the dashj-store wipe below is an SDK no-op
-                    // (the engine keeps its watermark and stays SYNCED — the
-                    // field reset where "nothing happened"): also arm the SDK
-                    // filter rescan so the reset actually replays SDK history.
+                    // The dashj blockstore is kept (no dashj rescan); the
+                    // reset is the SDK filter rescan owed here plus the
+                    // database/MN-list cleanup on shutdown.
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
-                    armSdkRescanForResetIfCutOver()
+                    // Without an owed replay the databases are kept on
+                    // shutdown, since nothing would repopulate them.
+                    sdkRescanOwedForReset = oweSdkRescanForResetIfCutOver()
+                    if (!sdkRescanOwedForReset) {
+                        log.warn("no SDK replay owed for blockchain reset; rescan databases will be kept")
+                    }
                     stopSelf()
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
@@ -3510,12 +3518,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         lock.release()
                     }
                 }
-                if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
-                    log.info("removing blockchain")
-                    blockChainFile?.delete()
-                    headerChainFile?.delete()
+                val shutdownPlan = BlockchainResetShutdownPolicy.plan(
+                    resetBlockchainOnShutdown = resetBlockchainOnShutdown,
+                    deleteWalletFileOnShutdown = deleteWalletFileOnShutdown,
+                    sdkRescanOwedForReset = sdkRescanOwedForReset
+                )
+                if (shutdownPlan.resetMnListsAndState) {
+                    if (shutdownPlan.deleteStores) {
+                        log.info("removing blockchain")
+                        blockChainFile?.delete()
+                        headerChainFile?.delete()
+                    } else {
+                        // Rescan keeps the dashj blockstore; only the SDK replays.
+                        log.info("resetting blockchain state (keeping dashj blockstore)")
+                    }
                     resetMNLists(false)
-                    if (deleteWalletFileOnShutdown) {
+                    if (shutdownPlan.wipeWallet) {
                         log.info("removing wallet file and app data")
                         // The Kotlin-SDK engines must be provably down before the wipe
                         // deletes app data. platformSyncService.shutdown() above already
@@ -3527,9 +3545,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         // WITHOUT blocking this dispatcher thread, which is
                         // what the old runBlocking clear did.
                         application.finishWalletWipe()
-                    } else {
+                    } else if (shutdownPlan.clearRescanDatabases) {
                         //Clear the blockchain identity
                         application.clearDatabasesForRescan()
+                    } else if (shutdownPlan.keepRescanDatabases) {
+                        // No SDK replay owed and dashj keeps its stores (no
+                        // wallet.reset()), so a clear would never be refilled.
+                        log.warn("no SDK replay owed; keeping rescan databases")
                     }
                     resetBlockchainState()
                 }
