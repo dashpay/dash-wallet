@@ -52,8 +52,11 @@ class SdkDashPayWritesTest {
         var identityManaged: (String, ByteArray) -> Boolean = { _, _ -> false },
         var onSendContactRequest: (String, ByteArray, ByteArray) -> Unit = { _, _, _ -> },
         var onCreateOrUpdateProfile: (String, ByteArray, String?, String?, String?, ByteArray?, Boolean) -> Unit =
-            { _, _, _, _, _, _, _ -> }
+            { _, _, _, _, _, _, _ -> },
+        /** Fee-ledger balance read; throws by default — the writes must not care. */
+        var onIdentityCreditBalance: suspend (String) -> Long? = { error("balance read unavailable") }
     ) : SdkDashPayWriteSource {
+        var balanceCalls = 0
         var boundCalls = 0
         var managedCalls = 0
         var broadcastCalls = 0
@@ -101,6 +104,11 @@ class SdkDashPayWritesTest {
             onCreateOrUpdateProfile(
                 walletIdHex, identityId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
             )
+        }
+
+        override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
+            balanceCalls++
+            return onIdentityCreditBalance(identityIdBase58)
         }
     }
 
@@ -664,6 +672,49 @@ class SdkDashPayWritesTest {
         assertNull(publicMessage)
         assertEquals("https://a/b.png", avatarUrl)
         assertEquals(true, doCreate)
+    }
+
+    // ── Fee ledger (log-only credit snapshots) ───────────────────────────
+
+    @Test
+    fun feeLedger_snapshotsAroundABroadcastWrite() = runBlocking {
+        val balances = ArrayDeque(listOf(2_693_390_540L, 2_683_390_540L))
+        val source = readySource().apply { onIdentityCreditBalance = { balances.removeFirst() } }
+
+        val result = writes(source).sendContactRequest(ownUserId, toUserId)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(2, source.balanceCalls)
+    }
+
+    @Test
+    fun feeLedger_skipsThePostReadWhenProvablyNothingWasSubmitted() = runBlocking {
+        val source = readySource().apply {
+            onIdentityCreditBalance = { 1_000L }
+            onSendContactRequest = { _, _, _ -> throw DashSdkError.InvalidParameter("bad recipient") }
+        }
+
+        val result = writes(source).sendContactRequest(ownUserId, toUserId)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(1, source.balanceCalls)
+    }
+
+    @Test
+    fun feeLedger_readFailuresNeverChangeTheResult() = runBlocking {
+        // readySource()'s default balance read throws.
+        val source = readySource().apply {
+            onCreateOrUpdateProfile = { _, _, _, _, _, _, _ -> throw DashSdkError.NetworkError("dropped") }
+        }
+
+        val result = writes(source).createOrUpdateProfile(
+            ownUserId, "Alice", null, null,
+            avatarBytes = null, hasAvatarDigest = false, doCreate = false
+        )
+
+        assertTrue(result is SdkWriteResult.Ambiguous)
+        assertEquals(1, source.broadcastCalls)
+        assertEquals(2, source.balanceCalls)
     }
 
     // ── Accept direction (Phase 3g) ───────────────────────────────────────

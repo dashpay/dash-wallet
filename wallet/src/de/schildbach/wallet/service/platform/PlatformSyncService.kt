@@ -101,6 +101,7 @@ import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.wallet.IdentityVerify
 import org.dashj.platform.wallet.TxMetadataItem
+import org.dash.wallet.common.data.TxId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MarkerFactory
@@ -201,6 +202,32 @@ interface PlatformSyncService {
     suspend fun clearDatabases()
     suspend fun getUnsavedTransactions(): Pair<List<org.dash.wallet.common.transactions.TxInfo>, Long>
     suspend fun hasPendingTxMetadataToSave(): Boolean
+}
+
+/**
+ * The txids a TxMetadata fetch will import, for the batch prefetch around the
+ * import loop: the non-empty items of documents not yet held ([isHeld]).
+ *
+ * The fetch window overlaps the previous one by 10 minutes, so some documents are
+ * already held; the import loop skips those, so they are left out here too. An
+ * item whose txid is not 32 bytes is left out rather than converted:
+ * `Sha256Hash.wrapReversed` throws on it, and that must not abort the whole fetch
+ * before any document is processed.
+ */
+internal suspend fun <D> importableTxIds(
+    items: Map<D, List<TxMetadataItem>>,
+    isHeld: suspend (D) -> Boolean
+): List<TxId> {
+    val out = ArrayList<TxId>()
+    for ((doc, list) in items) {
+        if (isHeld(doc)) continue
+        for (item in list) {
+            if (item.isNotEmpty() && item.txId.size == Sha256Hash.LENGTH) {
+                out += Sha256Hash.wrapReversed(item.txId).toTxId()
+            }
+        }
+    }
+    return out
 }
 
 class PlatformSynchronizationService @Inject constructor(
@@ -1787,6 +1814,12 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
+    /**
+     * Fetches TxMetadata documents newer than the stored watermark (minus a
+     * 10-minute overlap), decrypts them with [myEncryptionKey], and imports each
+     * new document's items into the metadata table. Transactions only the SDK
+     * store holds are resolved in one batch ([TransactionMetadataProvider.withBatchedImport]).
+     */
     private suspend fun updateTransactionMetadata(myEncryptionKey: KeyParameter?) {
         val watch = Stopwatch.createStarted()
 
@@ -1834,270 +1867,275 @@ class PlatformSynchronizationService @Inject constructor(
 
         var docsNew = 0
         var docsAlreadyHeld = 0
-        items.forEach { (doc, list) ->
-            if (transactionMetadataDocumentDao.count(doc.id) == 0) {
-                docsNew++
-                val timestamp = doc.updatedAt!!
-                log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
-                list.forEach { metadata ->
-                    if (metadata.isNotEmpty()) {
-                        val txIdAsHash = Sha256Hash.wrapReversed(metadata.txId)
-                        val cachedItems = transactionMetadataChangeCacheDao.findAfter(
-                            txIdAsHash.toTxId(), // tx hash is stored in LE
-                            timestamp
-                        )
-                        log.info(
-                            "processing TxMetadata: found ${cachedItems.size} related items in this document"
-                        )
-
-                        // what if the updates from platform are older
-
-                        // if not change the main table
-
-                        // we need to find a new way -- how can we know that we should change something?
-                        // should we save to the DB table?
-                        val metadataDocumentRecord = TransactionMetadataDocument(
-                            doc.id,
-                            doc.updatedAt!!,
-                            txIdAsHash.toTxId()
-                        )
-                        val updatedMetadata = TransactionMetadata(txIdAsHash.toTxId(), 0, org.dash.wallet.common.money.Coin.ZERO, TransactionCategory.Invalid)
-                        var iconUrl: String? = null
-                        val giftCard = GiftCard(txIdAsHash.toTxId())
-
-                        metadata.timestamp?.let { timestamp ->
-                            metadataDocumentRecord.sentTimestamp = timestamp
-                            log.info("processing TxMetadata: sent time stamp")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.sentTimestamp != null && it.sentTimestamp != timestamp
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: service change: changing timestamp")
-                                updatedMetadata.timestamp = timestamp
-                            }
-                        }
-                        metadata.service?.let { service ->
-                            metadataDocumentRecord.service = service
-                            log.info("processing TxMetadata: service change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.service != null && it.service != service
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: service change: changing service")
-                                updatedMetadata.service = service
-                            }
-                        }
-                        metadata.memo?.let { memo ->
-                            metadataDocumentRecord.memo = memo
-                            log.info(
-                                "processing TxMetadata: memo change: {}",
-                                cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.memo != null && it.memo != memo
-                                }
+        // Every txid this fetch can import, so a transaction only the SDK store holds
+        // is resolved in one batch instead of one wallet-wide walker pass per txid.
+        val fetchedTxIds = importableTxIds(items) { doc -> transactionMetadataDocumentDao.count(doc.id) != 0 }
+        transactionMetadataProvider.withBatchedImport(fetchedTxIds) {
+            items.forEach { (doc, list) ->
+                if (transactionMetadataDocumentDao.count(doc.id) == 0) {
+                    docsNew++
+                    val timestamp = doc.updatedAt!!
+                    log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
+                    list.forEach { metadata ->
+                        if (metadata.isNotEmpty()) {
+                            val txIdAsHash = Sha256Hash.wrapReversed(metadata.txId)
+                            val cachedItems = transactionMetadataChangeCacheDao.findAfter(
+                                txIdAsHash.toTxId(), // tx hash is stored in LE
+                                timestamp
                             )
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.memo != null && it.memo != memo
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: memo change: changing memo")
-                                updatedMetadata.memo = memo
-                            }
-                        }
-                        metadata.taxCategory?.let { taxCategoryAsString ->
-                            TaxCategory.fromValue(taxCategoryAsString)?.let { taxCategory ->
-                                metadataDocumentRecord.taxCategory = taxCategory
-                                log.info("processing TxMetadata: tax category change")
+                            log.info(
+                                "processing TxMetadata: found ${cachedItems.size} related items in this document"
+                            )
+
+                            // what if the updates from platform are older
+
+                            // if not change the main table
+
+                            // we need to find a new way -- how can we know that we should change something?
+                            // should we save to the DB table?
+                            val metadataDocumentRecord = TransactionMetadataDocument(
+                                doc.id,
+                                doc.updatedAt!!,
+                                txIdAsHash.toTxId()
+                            )
+                            val updatedMetadata = TransactionMetadata(txIdAsHash.toTxId(), 0, org.dash.wallet.common.money.Coin.ZERO, TransactionCategory.Invalid)
+                            var iconUrl: String? = null
+                            val giftCard = GiftCard(txIdAsHash.toTxId())
+
+                            metadata.timestamp?.let { timestamp ->
+                                metadataDocumentRecord.sentTimestamp = timestamp
+                                log.info("processing TxMetadata: sent time stamp")
                                 if (cachedItems.find {
                                         it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                            it.taxCategory != null && it.taxCategory?.name != taxCategoryAsString
+                                            it.sentTimestamp != null && it.sentTimestamp != timestamp
                                     } == null
                                 ) {
-                                    log.info("processing TxMetadata: tax category change: changing category")
-                                    updatedMetadata.taxCategory = taxCategory
+                                    log.info("processing TxMetadata: service change: changing timestamp")
+                                    updatedMetadata.timestamp = timestamp
                                 }
                             }
-                        }
-                        if (metadata.exchangeRate != null && metadata.currencyCode != null) {
-                            metadataDocumentRecord.rate = metadata.exchangeRate
-                            metadataDocumentRecord.currencyCode = metadata.currencyCode
-
-                            val prevItem = cachedItems.find {
-                                it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                    it.currencyCode != null && it.rate != null &&
-                                    (
-                                        it.currencyCode != metadata.currencyCode ||
-                                            it.rate != metadata.exchangeRate.toString()
-                                        )
+                            metadata.service?.let { service ->
+                                metadataDocumentRecord.service = service
+                                log.info("processing TxMetadata: service change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.service != null && it.service != service
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: service change: changing service")
+                                    updatedMetadata.service = service
+                                }
                             }
-                            log.info("processing TxMetadata: exchange rate change change: $prevItem")
-                            if (cachedItems.find {
+                            metadata.memo?.let { memo ->
+                                metadataDocumentRecord.memo = memo
+                                log.info(
+                                    "processing TxMetadata: memo change: {}",
+                                    cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.memo != null && it.memo != memo
+                                    }
+                                )
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.memo != null && it.memo != memo
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: memo change: changing memo")
+                                    updatedMetadata.memo = memo
+                                }
+                            }
+                            metadata.taxCategory?.let { taxCategoryAsString ->
+                                TaxCategory.fromValue(taxCategoryAsString)?.let { taxCategory ->
+                                    metadataDocumentRecord.taxCategory = taxCategory
+                                    log.info("processing TxMetadata: tax category change")
+                                    if (cachedItems.find {
+                                            it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                                it.taxCategory != null && it.taxCategory?.name != taxCategoryAsString
+                                        } == null
+                                    ) {
+                                        log.info("processing TxMetadata: tax category change: changing category")
+                                        updatedMetadata.taxCategory = taxCategory
+                                    }
+                                }
+                            }
+                            if (metadata.exchangeRate != null && metadata.currencyCode != null) {
+                                metadataDocumentRecord.rate = metadata.exchangeRate
+                                metadataDocumentRecord.currencyCode = metadata.currencyCode
+
+                                val prevItem = cachedItems.find {
                                     it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
                                         it.currencyCode != null && it.rate != null &&
                                         (
                                             it.currencyCode != metadata.currencyCode ||
                                                 it.rate != metadata.exchangeRate.toString()
                                             )
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: exchange rate change change: setting rate")
-                                updatedMetadata.currencyCode = metadata.currencyCode
-                                updatedMetadata.rate = metadata.exchangeRate.toString()
-                            }
-                        }
-                        metadata.customIconUrl?.let { url ->
-                            metadataDocumentRecord.customIconUrl = url
-                            log.info("processing TxMetadata: custom icon url change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.customIconUrl != null && it.customIconUrl != url
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: custom icon url change: changing icon")
-                                iconUrl = url
-                            }
-                        }
-                        metadata.giftCardNumber?.let { number ->
-                            metadataDocumentRecord.giftCardNumber = number
-                            log.info("processing TxMetadata: gift card number change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.giftCardNumber != null && it.giftCardNumber != number
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: gift card number change: changing number")
-                                giftCard.number = number
-                            }
-                        }
-                        metadata.giftCardPin?.let { pin ->
-                            metadataDocumentRecord.giftCardPin = pin
-                            log.info("processing TxMetadata: gift card pin change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.giftCardPin != null && it.giftCardPin != pin
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: gift card pin change: changing pin")
-                                giftCard.pin = pin
-                            }
-                        }
-                        metadata.merchantName?.let { name ->
-                            metadataDocumentRecord.merchantName = name
-                            log.info("processing TxMetadata: merchant name change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.merchantName != null && it.merchantName != name
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: merchant name change: changing name")
-                                giftCard.merchantName = name
-                            }
-                        }
-                        metadata.originalPrice?.let { price ->
-                            metadataDocumentRecord.originalPrice = price
-                            log.info("processing TxMetadata: gift card price change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
-                                        it.originalPrice != null && it.originalPrice != price
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: gift card price change: changing price")
-                                giftCard.price = price
-                            }
-                        }
-                        metadata.barcodeValue?.let { barcodeValue ->
-                            metadataDocumentRecord.barcodeValue = barcodeValue
-                            log.info("processing TxMetadata: barcode value change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.barcodeValue != null && it.barcodeValue != barcodeValue
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: barcode value change: changing value")
-                                giftCard.barcodeValue = barcodeValue
-                            }
-                        }
-                        metadata.barcodeFormat?.let { barcodeFormat ->
-                            metadataDocumentRecord.barcodeFormat = barcodeFormat
-                            log.info("processing TxMetadata: barcode format change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.barcodeFormat != null && it.barcodeFormat != barcodeFormat
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: barcode value change: changing value")
-                                try {
-                                    giftCard.barcodeFormat = BarcodeFormat.valueOf(barcodeFormat)
-                                } catch (e: IllegalArgumentException) {
-                                    log.warn("Invalid barcode format: {}", barcodeFormat, e)
+                                }
+                                log.info("processing TxMetadata: exchange rate change change: $prevItem")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.currencyCode != null && it.rate != null &&
+                                            (
+                                                it.currencyCode != metadata.currencyCode ||
+                                                    it.rate != metadata.exchangeRate.toString()
+                                                )
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: exchange rate change change: setting rate")
+                                    updatedMetadata.currencyCode = metadata.currencyCode
+                                    updatedMetadata.rate = metadata.exchangeRate.toString()
                                 }
                             }
-                        }
-                        metadata.merchantUrl?.let { url ->
-                            metadataDocumentRecord.merchantUrl = url
-                            log.info("processing TxMetadata: merchant url change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.merchantUrl != null && it.merchantUrl != url
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: merchant url change: changing url")
-                                giftCard.merchantUrl = url
+                            metadata.customIconUrl?.let { url ->
+                                metadataDocumentRecord.customIconUrl = url
+                                log.info("processing TxMetadata: custom icon url change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.customIconUrl != null && it.customIconUrl != url
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: custom icon url change: changing icon")
+                                    iconUrl = url
+                                }
                             }
-                        }
-                        metadata.order?.let { order ->
-                            metadataDocumentRecord.order = order
-                            log.info("processing TxMetadata: order change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.order != null && it.order != order
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: order change: changing order")
-                                giftCard.note = order
+                            metadata.giftCardNumber?.let { number ->
+                                metadataDocumentRecord.giftCardNumber = number
+                                log.info("processing TxMetadata: gift card number change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.giftCardNumber != null && it.giftCardNumber != number
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: gift card number change: changing number")
+                                    giftCard.number = number
+                                }
                             }
-                        }
-                        metadata.giftCardChallenge?.let { challenge ->
-                            metadataDocumentRecord.giftCardChallenge = challenge
-                            log.info("processing TxMetadata: gift card challenge change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.giftCardChallenge != null && it.giftCardChallenge != challenge
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: gift card challenge change: changing challenge")
-                                giftCard.redeemUrlChallenge = challenge
+                            metadata.giftCardPin?.let { pin ->
+                                metadataDocumentRecord.giftCardPin = pin
+                                log.info("processing TxMetadata: gift card pin change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.giftCardPin != null && it.giftCardPin != pin
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: gift card pin change: changing pin")
+                                    giftCard.pin = pin
+                                }
                             }
-                        }
-                        metadata.index?.let { index ->
-                            metadataDocumentRecord.index = index
-                            log.info("processing TxMetadata: gift card index change")
-                            if (cachedItems.find {
-                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
-                                        it.index != null && it.index != index
-                                } == null
-                            ) {
-                                log.info("processing TxMetadata: gift card index change: changing index")
-                                giftCard.index = index
+                            metadata.merchantName?.let { name ->
+                                metadataDocumentRecord.merchantName = name
+                                log.info("processing TxMetadata: merchant name change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.merchantName != null && it.merchantName != name
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: merchant name change: changing name")
+                                    giftCard.merchantName = name
+                                }
                             }
-                        }
+                            metadata.originalPrice?.let { price ->
+                                metadataDocumentRecord.originalPrice = price
+                                log.info("processing TxMetadata: gift card price change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.createdAt!! &&
+                                            it.originalPrice != null && it.originalPrice != price
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: gift card price change: changing price")
+                                    giftCard.price = price
+                                }
+                            }
+                            metadata.barcodeValue?.let { barcodeValue ->
+                                metadataDocumentRecord.barcodeValue = barcodeValue
+                                log.info("processing TxMetadata: barcode value change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.barcodeValue != null && it.barcodeValue != barcodeValue
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: barcode value change: changing value")
+                                    giftCard.barcodeValue = barcodeValue
+                                }
+                            }
+                            metadata.barcodeFormat?.let { barcodeFormat ->
+                                metadataDocumentRecord.barcodeFormat = barcodeFormat
+                                log.info("processing TxMetadata: barcode format change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.barcodeFormat != null && it.barcodeFormat != barcodeFormat
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: barcode value change: changing value")
+                                    try {
+                                        giftCard.barcodeFormat = BarcodeFormat.valueOf(barcodeFormat)
+                                    } catch (e: IllegalArgumentException) {
+                                        log.warn("Invalid barcode format: {}", barcodeFormat, e)
+                                    }
+                                }
+                            }
+                            metadata.merchantUrl?.let { url ->
+                                metadataDocumentRecord.merchantUrl = url
+                                log.info("processing TxMetadata: merchant url change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.merchantUrl != null && it.merchantUrl != url
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: merchant url change: changing url")
+                                    giftCard.merchantUrl = url
+                                }
+                            }
+                            metadata.order?.let { order ->
+                                metadataDocumentRecord.order = order
+                                log.info("processing TxMetadata: order change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.order != null && it.order != order
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: order change: changing order")
+                                    giftCard.note = order
+                                }
+                            }
+                            metadata.giftCardChallenge?.let { challenge ->
+                                metadataDocumentRecord.giftCardChallenge = challenge
+                                log.info("processing TxMetadata: gift card challenge change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.giftCardChallenge != null && it.giftCardChallenge != challenge
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: gift card challenge change: changing challenge")
+                                    giftCard.redeemUrlChallenge = challenge
+                                }
+                            }
+                            metadata.index?.let { index ->
+                                metadataDocumentRecord.index = index
+                                log.info("processing TxMetadata: gift card index change")
+                                if (cachedItems.find {
+                                        it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                            it.index != null && it.index != index
+                                    } == null
+                                ) {
+                                    log.info("processing TxMetadata: gift card index change: changing index")
+                                    giftCard.index = index
+                                }
+                            }
 
-                        log.info("syncing metadata with platform updates: $updatedMetadata")
-                        transactionMetadataProvider.syncPlatformMetadata(txIdAsHash.toTxId(), updatedMetadata, giftCard, iconUrl)
-                        log.info("adding TxMetadataItem: {}", metadata)
-                        transactionMetadataDocumentDao.insert(metadataDocumentRecord)
-                    } else {
-                        log.info("not adding TxMetadataItem: {} since it is empty", metadata)
+                            log.info("syncing metadata with platform updates: $updatedMetadata")
+                            transactionMetadataProvider.syncPlatformMetadata(txIdAsHash.toTxId(), updatedMetadata, giftCard, iconUrl)
+                            log.info("adding TxMetadataItem: {}", metadata)
+                            transactionMetadataDocumentDao.insert(metadataDocumentRecord)
+                        } else {
+                            log.info("not adding TxMetadataItem: {} since it is empty", metadata)
+                        }
                     }
-                }
 
-                // configuration.txMetadataUpdateTime = doc.createdAt!!
-            } else {
-                docsAlreadyHeld++
-                log.info("TxMetadataDocument:  this item already exists ${doc.id}")
+                    // configuration.txMetadataUpdateTime = doc.createdAt!!
+                } else {
+                    docsAlreadyHeld++
+                    log.info("TxMetadataDocument:  this item already exists ${doc.id}")
+                }
             }
         }
 
@@ -2228,26 +2266,29 @@ class PlatformSynchronizationService @Inject constructor(
                 docs.size, byTx.size
             )
             var merged = 0
-            for ((txId, rows) in byTx) {
-                try {
-                    val item = mergeTransactionMetadataDocuments(txId.toSha256Hash(), rows)
-                    val metadata = TransactionMetadata(
-                        txId,
-                        item.sentTimestamp ?: 0,
-                        org.dash.wallet.common.money.Coin.ZERO,
-                        TransactionCategory.Invalid,
-                        item.taxCategory,
-                        item.currencyCode,
-                        item.rate,
-                        item.memo ?: "",
-                        service = item.service
-                    )
-                    transactionMetadataProvider.syncPlatformMetadata(txId, metadata, null, null)
-                    merged++
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    log.info("TxMetadata re-merge: skipped {} ({})", txId, e.message)
+            // One SDK batch for the transactions only the SDK store holds; see withBatchedImport.
+            transactionMetadataProvider.withBatchedImport(byTx.keys) {
+                for ((txId, rows) in byTx) {
+                    try {
+                        val item = mergeTransactionMetadataDocuments(txId.toSha256Hash(), rows)
+                        val metadata = TransactionMetadata(
+                            txId,
+                            item.sentTimestamp ?: 0,
+                            org.dash.wallet.common.money.Coin.ZERO,
+                            TransactionCategory.Invalid,
+                            item.taxCategory,
+                            item.currencyCode,
+                            item.rate,
+                            item.memo ?: "",
+                            service = item.service
+                        )
+                        transactionMetadataProvider.syncPlatformMetadata(txId, metadata, null, null)
+                        merged++
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.info("TxMetadata re-merge: skipped {} ({})", txId, e.message)
+                    }
                 }
             }
             dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_REMERGE_DONE, true)
@@ -2339,33 +2380,39 @@ class PlatformSynchronizationService @Inject constructor(
         // "Past" upload silently published nothing even when it was reachable.
         val txes = walletSeam.getTransactions().toList()
         var itemsToSave = 0
-        txes.forEachIndexed { i, tx ->
-            if (tx.updateTimeMillis >= alreadySaved) {
-                val txHash = Sha256Hash.wrap(tx.txId)
-                transactionMetadataProvider.getTransactionMetadata(txHash.toTxId())?.let { metadata ->
-                    val giftCard = giftCardDao.getCardForTransaction(txHash.bytes)
+        // One SDK batch for the transactions this upload reads that only the SDK
+        // store holds; see TransactionMetadataProvider.withBatchedImport.
+        val eligibleTxIds = txes.filter { it.updateTimeMillis >= alreadySaved }
+            .map { Sha256Hash.wrap(it.txId).toTxId() }
+        transactionMetadataProvider.withBatchedImport(eligibleTxIds) {
+            txes.forEachIndexed { i, tx ->
+                if (tx.updateTimeMillis >= alreadySaved) {
+                    val txHash = Sha256Hash.wrap(tx.txId)
+                    transactionMetadataProvider.getTransactionMetadata(txHash.toTxId())?.let { metadata ->
+                        val giftCard = giftCardDao.getCardForTransaction(txHash.bytes)
 
-                    // make sure it is not already saved?
+                        // make sure it is not already saved?
 
-                    val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(txHash.toTxId())
-                    log.info("publish: previously saved: {}", previouslySaved)
+                        val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(txHash.toTxId())
+                        log.info("publish: previously saved: {}", previouslySaved)
 
-                    val saved = mergeTransactionMetadataDocuments(txHash, previouslySaved)
-                    log.info("publish: merged saved: {}", saved)
+                        val saved = mergeTransactionMetadataDocuments(txHash, previouslySaved)
+                        log.info("publish: merged saved: {}", saved)
 
-                    val metadataItem = TransactionMetadataCacheItem(
-                        metadata,
-                        giftCard.firstOrNull()
-                    )
-                    log.info("publish: item: {}", metadataItem)
-                    val diff = metadataItem - saved
-                    log.info("publish: diff: {}", diff)
-                    if (diff.isNotEmpty() && !transactionMetadataChangeCacheDao.has(diff)) {
-                        transactionMetadataChangeCacheDao.insert(diff)
+                        val metadataItem = TransactionMetadataCacheItem(
+                            metadata,
+                            giftCard.firstOrNull()
+                        )
+                        log.info("publish: item: {}", metadataItem)
+                        val diff = metadataItem - saved
+                        log.info("publish: diff: {}", diff)
+                        if (diff.isNotEmpty() && !transactionMetadataChangeCacheDao.has(diff)) {
+                            transactionMetadataChangeCacheDao.insert(diff)
+                        }
+                        itemsToSave++
                     }
-                    itemsToSave++
+                    progressListener.invoke(i * 100 / txes.size.coerceAtLeast(1) / 2)
                 }
-                progressListener.invoke(i * 100 / txes.size.coerceAtLeast(1) / 2)
             }
         }
         // call publishChangeCache

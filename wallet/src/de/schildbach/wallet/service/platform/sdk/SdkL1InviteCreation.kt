@@ -366,7 +366,13 @@ class SdkL1InviteCreation internal constructor(
      * false-locked claim retry so a device that really is locked is never
      * spun on. Unlocked by default (host-JVM tests).
      */
-    private val deviceLockedNow: () -> Boolean = { false }
+    private val deviceLockedNow: () -> Boolean = { false },
+    /**
+     * Reset Wallet's fence over old-wallet secret writes: the claim's key
+     * persist and both funding calls are refused/awaited by it. A fresh
+     * (lowered) fence by default keeps the host-JVM tests unaffected.
+     */
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
 ) {
     @Inject
     constructor(
@@ -376,7 +382,8 @@ class SdkL1InviteCreation internal constructor(
         sdkL1SendService: SdkL1SendService,
         invitationsDao: InvitationsDao,
         topUpRepository: TopUpRepository,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        secretWriteFence: WalletSecretWriteFence
     ) : this(
         source = DashSdkL1InviteSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -403,7 +410,8 @@ class SdkL1InviteCreation internal constructor(
                 // unlocked (that is what made the refusal false-locked).
                 false
             }
-        }
+        },
+        secretWriteFence = secretWriteFence
     )
 
     /**
@@ -470,7 +478,10 @@ class SdkL1InviteCreation internal constructor(
                 }
         }?.takeIf { it.size == 32 }
 
-        // THE funding transfer — one attempt.
+        // THE funding transfer — one attempt, under the wipe fence's permit.
+        if (!secretWriteFence.tryAcquire("L1 invite funding")) {
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+        }
         val created = try {
             source.createInvitation(
                 walletIdHex = walletId,
@@ -495,6 +506,8 @@ class SdkL1InviteCreation internal constructor(
                     SdkWriteResult.Ambiguous(t)
                 }
             }
+        } finally {
+            secretWriteFence.release()
         }
 
         // Seed the funding asset-lock kind in-memory FIRST (synchronous, same
@@ -583,6 +596,10 @@ class SdkL1InviteCreation internal constructor(
         // signer resolves identity keys by LOOKUP, not derivation — same as the
         // transparent register path). Nothing is spent yet, so a persist
         // failure is provably pre-broadcast and retry-safe.
+        if (secretWriteFence.isRaised) {
+            keys.forEach { it.privateKey.fill(0) }
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+        }
         try {
             keys.forEach { key ->
                 source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
@@ -594,7 +611,11 @@ class SdkL1InviteCreation internal constructor(
         }
 
         // THE claim spend (imports + spends the voucher) — one attempt, plus
-        // the bounded false-locked retry below.
+        // the bounded false-locked retry below (which re-stores the keys), all
+        // under the wipe fence's permit.
+        if (!secretWriteFence.tryAcquire("L1 invite claim")) {
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+        }
         val identityId = try {
             source.claimInvitation(walletId, uri, identityIndex, keys, nowUnixSeconds())
         } catch (t: Throwable) {
@@ -610,6 +631,8 @@ class SdkL1InviteCreation internal constructor(
                 is SdkWriteResult.NotBroadcast -> return retried
                 is SdkWriteResult.Ambiguous -> return retried
             }
+        } finally {
+            secretWriteFence.release()
         }
         val identityIdBase58 = Identifier.from(identityId).toString()
         log.info("L1 invite claimed at index {} — identity {}… on chain", identityIndex, identityIdBase58.take(8))
