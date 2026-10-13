@@ -142,8 +142,7 @@ class MixedFundsMigrationDialogFragment :
                     binding.combineNote.isVisible = choiceMode
                     binding.shieldButton.isEnabled = actionable
                     binding.combineButton.isEnabled = actionable
-                    binding.restartButton.isVisible = failed ||
-                        (state.resultTimedOut && state.attemptedAction == MixedFundsMigrationAction.SHIELD)
+                    binding.restartButton.isVisible = failed || state.resultTimedOut
                     binding.transferUnmixedButton.isVisible = false
                     isCancelable = !processingAny && !choiceMode
                     binding.closeButton.isVisible = !processingAny

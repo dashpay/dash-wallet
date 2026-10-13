@@ -35,12 +35,12 @@ class CoinJoinConsolidationTest {
             destination, isConfirmed = true, walletId = Utils.HEX.decode(walletId),
             txid = hash.reversedBytes, accountId = 7L)
     }
-    private fun transaction(coins: List<TxoEntity>): Transaction = Transaction(params).apply {
+    private fun transaction(coins: List<TxoEntity>, to: String = destination): Transaction = Transaction(params).apply {
         coins.forEach {
             addInput(TransactionInput(params, this, byteArrayOf(),
                 TransactionOutPoint(params, 0, Sha256Hash.wrapReversed(it.txid!!))))
         }
-        addOutput(Coin.valueOf(coins.sumOf { it.amount } - 100_000), Address.fromBase58(params, destination))
+        addOutput(Coin.valueOf(coins.sumOf { it.amount } - 100_000), Address.fromBase58(params, to))
     }
 
     @Test fun addressSelectionExcludesUsedInternalAndForeignAccountRows() {
@@ -83,6 +83,7 @@ class CoinJoinConsolidationTest {
         val manager = mockk<PlatformWalletManager>(relaxed = true)
         val blockchain = mockk<BlockchainStateProvider>(relaxed = true)
         val chainState = mockk<org.dash.wallet.common.data.entity.BlockchainState>(relaxed = true)
+        val wallet = mockk<WalletData>(relaxed = true)
         val coins = MutableStateFlow((0 until 101).map(::coin))
         val addresses = MutableStateFlow(listOf(address()))
         var engineBalance = coins.value.sumOf { it.amount }
@@ -110,7 +111,6 @@ class CoinJoinConsolidationTest {
             coEvery { shield.pendingWalletShieldLockCount() } returns 0
             every { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
             coEvery { shield.shieldMixedFundsFromWallet(any(), any()) } returns SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
-            val wallet = mockk<WalletData>(relaxed = true)
             every { wallet.networkParameters } returns params
             service = CoinJoinFundsMigrationService(wallet, shield, send, blockchain, config, sdk, scope.backgroundScope)
         }
@@ -208,5 +208,83 @@ class CoinJoinConsolidationTest {
         assertEquals(4, batches)
         assertEquals(4, f.coins.value.size)
         coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
+    }
+
+    @Test fun regularTransferBatchesLargeAccountThenDrainsToBip44() = runTest {
+        val f = Fixture(this)
+        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
+        coEvery { f.wallet.freshReceiveAddressString() } returns regular
+        f.coins.value = (0 until 2000).map(::coin)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        val batchSizes = mutableListOf<Int>()
+        val destinations = mutableListOf<String>()
+        coEvery { f.send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
+            val to = arg<String>(0)
+            val selected = f.coins.value.sortedByDescending { it.amount }.take(500)
+            val tx = transaction(selected, to)
+            arg<suspend (ByteArray) -> Unit>(3)(tx.bitcoinSerialize())
+            batchSizes += selected.size
+            destinations += to
+            f.storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 2)
+            val output = coin(10_000 + batchSizes.size).copy(
+                outpoint = TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize(),
+                txid = tx.txId.reversedBytes, amount = tx.outputs[0].value.value)
+            f.coins.value = f.coins.value.filter { it !in selected } +
+                if (to == regular) emptyList() else listOf(output)
+            f.engineBalance = f.coins.value.sumOf { it.amount }
+            SdkWriteResult.Broadcast(tx.txId.toString())
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        assertEquals(MixedFundsMigrationAction.COMBINE, f.service.inFlightMigration()?.action)
+        advanceTimeBy(90_000); runCurrent()
+        assertEquals(listOf(500, 500, 500, 500, 4), batchSizes)
+        assertEquals(List(4) { destination } + regular, destinations)
+        assertNull(f.service.inFlightMigration())
+        assertEquals("", f.consolidation)
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
+        coVerify(exactly = 0) { f.send.drainCoinJoinAccountTo(any()) }
+    }
+
+    @Test fun interruptedRegularTransferKeepsDestinationAndWaitsForFinality() = runTest {
+        val f = Fixture(this)
+        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
+        val tx = transaction(f.coins.value, regular)
+        f.consolidation = CoinJoinConsolidationState(walletId, destination,
+            CoinJoinConsolidationState.TRANSFERRING, tx.txId.toString(), regular).encode()
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        f.storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 0)
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        assertEquals(MixedFundsMigrationAction.COMBINE, f.service.inFlightMigration()?.action)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.retryPendingMigration())
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+        f.storedTx = f.storedTx!!.copy(context = 1)
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        coVerify(exactly = 0) { f.wallet.freshReceiveAddressString() }
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
+    }
+
+    @Test fun singleInputRegularTransferIsAllowedAndTracked() = runTest {
+        val f = Fixture(this)
+        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
+        coEvery { f.wallet.freshReceiveAddressString() } returns regular
+        f.coins.value = listOf(coin(0))
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        coEvery { f.send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
+            val tx = transaction(f.coins.value, regular)
+            arg<suspend (ByteArray) -> Unit>(3)(tx.bitcoinSerialize())
+            assertEquals(CoinJoinConsolidationState.TRANSFERRING,
+                CoinJoinConsolidationState.decode(f.consolidation).phase)
+            SdkWriteResult.Broadcast(tx.txId.toString())
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(regular, 1L, true, any()) }
     }
 }

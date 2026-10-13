@@ -143,16 +143,39 @@ class MixedFundsMigrationViewModelTest {
                 de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD, 1L, 0L
             )
         )
-        coEvery { service.retryShieldMigration() } returns MixedFundsMigrationOutcome.UNCONFIRMED
+        coEvery { service.retryPendingMigration() } returns MixedFundsMigrationOutcome.UNCONFIRMED
         val store = ViewModelStore()
         val model = MixedFundsMigrationViewModel(service)
         store.put("migration", model)
         try {
             assertTrue(model.uiState.value.resultTimedOut)
             model.retryMigration()
-            coVerify(exactly = 1) { service.retryShieldMigration() }
+            coVerify(exactly = 1) { service.retryPendingMigration() }
             coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
             assertEquals(MixedFundsMigrationOutcome.UNCONFIRMED, model.uiState.value.outcome)
+        } finally { store.clear() }
+    }
+
+    @Test
+    fun timedOutRegularTransferResumesSavedMigrationOnly() {
+        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.restorePendingShieldMigration() } returns true
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
+            de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
+                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.COMBINE, 1L, 0L
+            )
+        )
+        coEvery { service.retryPendingMigration() } returns MixedFundsMigrationOutcome.UNCONFIRMED
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.uiState.value.resultTimedOut)
+            model.retryMigration()
+            coVerify(exactly = 1) { service.retryPendingMigration() }
+            coVerify(exactly = 0) { service.combineIntoUnmixedBalance() }
+            coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
         } finally { store.clear() }
     }
 }

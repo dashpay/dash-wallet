@@ -16,19 +16,23 @@ internal data class CoinJoinConsolidationState(
     val walletId: String,
     val destination: String,
     val phase: String = READY,
-    val txid: String = ""
+    val txid: String = "",
+    val regularDestination: String = ""
 ) {
+    val action: MixedFundsMigrationAction get() = if (regularDestination.isEmpty())
+        MixedFundsMigrationAction.SHIELD else MixedFundsMigrationAction.COMBINE
     fun encode(): String = JSONObject().put("walletId", walletId).put("destination", destination)
-        .put("phase", phase).put("txid", txid).toString()
+        .put("phase", phase).put("txid", txid).put("regularDestination", regularDestination).toString()
 
     companion object {
         const val READY = "ready"
         const val WAITING = "waiting"
         const val SHIELDING = "shielding"
+        const val TRANSFERRING = "transferring"
         fun decode(raw: String): CoinJoinConsolidationState {
             val json = JSONObject(raw)
             return CoinJoinConsolidationState(json.getString("walletId"), json.getString("destination"),
-                json.getString("phase"), json.getString("txid"))
+                json.getString("phase"), json.getString("txid"), json.optString("regularDestination", ""))
         }
     }
 }
@@ -71,10 +75,11 @@ internal suspend fun coinJoinConsolidationSnapshot(service: DashSdkService): Coi
 }
 
 internal fun validateCoinJoinConsolidation(
-    raw: ByteArray, snapshot: CoinJoinConsolidationSnapshot, destination: String, params: NetworkParameters
+    raw: ByteArray, snapshot: CoinJoinConsolidationSnapshot, destination: String, params: NetworkParameters,
+    minimumInputs: Int = 2
 ): String {
     val tx = Transaction(params, raw)
-    require(tx.inputs.size in 2..COIN_JOIN_CONSOLIDATION_INPUT_LIMIT) { "Unexpected consolidation input count" }
+    require(tx.inputs.size in minimumInputs..COIN_JOIN_CONSOLIDATION_INPUT_LIMIT) { "Unexpected consolidation input count" }
     val owned = snapshot.coins.map { Utils.HEX.encode(it.outpoint) }.toSet()
     require(tx.inputs.all { Utils.HEX.encode(it.outpoint.bitcoinSerialize()) in owned }) { "Unexpected consolidation input" }
     val script = org.bitcoinj.script.ScriptBuilder.createOutputScript(Address.fromBase58(params, destination)).program

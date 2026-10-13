@@ -43,7 +43,7 @@ class CoinJoinMigrationRecoveryTest {
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.shieldMixedFunds(Dash.COIN))
             assertNotNull(service.inFlightMigration())
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.combineIntoUnmixedBalance())
-            assertEquals(MixedFundsMigrationOutcome.STARTED, service.retryShieldMigration())
+            assertEquals(MixedFundsMigrationOutcome.STARTED, service.retryPendingMigration())
             coVerify(exactly = 1) { shield.resumePendingWalletShields() }
             coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any()) }
             coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }

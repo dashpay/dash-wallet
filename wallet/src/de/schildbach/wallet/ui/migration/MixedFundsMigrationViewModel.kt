@@ -152,13 +152,11 @@ class MixedFundsMigrationViewModel @Inject constructor(
 
     fun retryMigration() {
         if (_uiState.value.inProgress || _uiState.value.awaitingResult) return
-        if (_uiState.value.attemptedAction == MixedFundsMigrationAction.SHIELD &&
-            (_uiState.value.resultTimedOut || _uiState.value.outcome == MixedFundsMigrationOutcome.UNCONFIRMED)
-        ) {
+        if (_uiState.value.resultTimedOut || _uiState.value.outcome == MixedFundsMigrationOutcome.UNCONFIRMED) {
             _uiState.value = _uiState.value.copy(inProgress = true, resultTimedOut = false)
             viewModelScope.launch {
                 val outcome = try {
-                    migrationService.retryShieldMigration()
+                    migrationService.retryPendingMigration()
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
                     log.error("pending CoinJoin shield retry failed", t)
