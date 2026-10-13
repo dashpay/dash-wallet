@@ -93,6 +93,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            migrationService.restorePendingShieldMigration()
             _uiState.value = _uiState.value.copy(amount = migrationService.mixedFundsToMigrate())
         }
         // The persisted in-flight marker drives the post-broadcast window:
@@ -106,7 +107,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         awaitingResult = false,
                         resultTimedOut = false,
-                        resultLanded = observedInFlight
+                        resultLanded = observedInFlight && !_uiState.value.inProgress
                     )
                 } else {
                     observedInFlight = true
@@ -144,12 +145,41 @@ class MixedFundsMigrationViewModel @Inject constructor(
         }
     }
 
+    suspend fun deferMigration() {
+        if (_uiState.value.inProgress || _uiState.value.awaitingResult) return
+        _uiState.value.amount?.let { migrationService.deferMigration(it) }
+    }
+
+    fun retryMigration() {
+        if (_uiState.value.inProgress || _uiState.value.awaitingResult) return
+        if (_uiState.value.resultTimedOut || _uiState.value.outcome == MixedFundsMigrationOutcome.UNCONFIRMED) {
+            _uiState.value = _uiState.value.copy(inProgress = true, resultTimedOut = false)
+            viewModelScope.launch {
+                val outcome = try {
+                    migrationService.retryPendingMigration()
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.error("pending CoinJoin shield retry failed", t)
+                    MixedFundsMigrationOutcome.UNCONFIRMED
+                }
+                val landed = outcome == MixedFundsMigrationOutcome.STARTED &&
+                    migrationService.inFlightMigration() == null
+                _uiState.value = _uiState.value.copy(
+                    inProgress = false, outcome = outcome, resultLanded = landed,
+                    awaitingResult = outcome == MixedFundsMigrationOutcome.STARTED && !landed
+                )
+            }
+        } else when (_uiState.value.attemptedAction) {
+            MixedFundsMigrationAction.SHIELD -> shieldMixedFunds()
+            MixedFundsMigrationAction.COMBINE -> combineIntoUnmixedBalance()
+            null -> Unit
+        }
+    }
+
     /** OPTION A — shield the mixed funds (keeps them private). */
     fun shieldMixedFunds() = run(MixedFundsMigrationAction.SHIELD) { amount ->
-        // Leave headroom for the L1 asset-lock fee. The engine's selection
-        // still has to reach every CoinJoin UTXO to cover this, so the
-        // account empties; whatever the fee leaves over returns as BIP44
-        // change rather than being stranded on the mixed keychain.
+        // This is a conservative UI estimate. The SDK drains the account
+        // directly and computes the actual lock value after the L1 fee.
         val lockable = amount.value - CoinJoinFundsMigrationService.L1_FEE_RESERVE_DUFFS
         if (lockable <= 0L) {
             log.warn("mixed-funds balance {} does not cover the L1 fee reserve", amount)
@@ -172,7 +202,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
         action: MixedFundsMigrationAction,
         block: suspend (Coin) -> MixedFundsMigrationOutcome
     ) {
-        if (_uiState.value.inProgress) return
+        if (_uiState.value.inProgress || _uiState.value.awaitingResult || _uiState.value.resultTimedOut) return
         val amount = _uiState.value.amount
         if (amount == null || !amount.isPositive) {
             _uiState.value = _uiState.value.copy(
@@ -193,7 +223,12 @@ class MixedFundsMigrationViewModel @Inject constructor(
                 log.error("mixed-funds migration ({}) threw unexpectedly", action, t)
                 MixedFundsMigrationOutcome.UNCONFIRMED
             }
-            _uiState.value = _uiState.value.copy(inProgress = false, outcome = outcome)
+            _uiState.value = _uiState.value.copy(
+                inProgress = false,
+                outcome = outcome,
+                resultLanded = outcome == MixedFundsMigrationOutcome.STARTED && observedInFlight &&
+                    !_uiState.value.awaitingResult && !_uiState.value.resultTimedOut
+            )
         }
     }
 

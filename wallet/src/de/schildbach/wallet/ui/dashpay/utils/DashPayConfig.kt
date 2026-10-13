@@ -270,6 +270,7 @@ open class DashPayConfig @Inject constructor(
          * See [de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService].
          */
         val MIXED_FUNDS_MIGRATION_DONE = booleanPreferencesKey("mixed_funds_migration_done")
+        val MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS = longPreferencesKey("mixed_funds_migration_deferred_duffs")
 
         /**
          * A mixed-funds migration that BROADCAST but whose result is not
@@ -285,6 +286,7 @@ open class DashPayConfig @Inject constructor(
          * left an unexplained near-zero balance behind the lock screen.
          */
         val MIXED_FUNDS_MIGRATION_IN_FLIGHT = stringPreferencesKey("mixed_funds_migration_in_flight")
+        val MIXED_FUNDS_CONSOLIDATION = stringPreferencesKey("mixed_funds_consolidation")
 
         /**
          * Phase 3c of the dashj → Kotlin SDK migration

@@ -151,7 +151,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginHorizontal="15dp"
-        android:text="@string/mixed_funds_migration_restart_action"
+        android:text="@string/mixed_funds_migration_retry_action"
         android:visibility="gone"
         tools:visibility="visible" />
 
@@ -169,4 +169,13 @@
     <Space
         android:layout_width="match_parent"
         android:layout_height="15dp" />
+
+    <Button
+        android:id="@+id/close_button"
+        style="@style/Button.Primary.Large.Grey"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="15dp"
+        android:text="@string/mixed_funds_migration_later_action" />
 </LinearLayout>

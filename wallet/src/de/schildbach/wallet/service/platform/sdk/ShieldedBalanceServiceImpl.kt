@@ -412,15 +412,11 @@ interface ShieldedSource {
     suspend fun fundFromAssetLock(walletId: ByteArray, recipientRaw43: ByteArray, amountDuffs: Long)
 
     /**
-     * [fundFromAssetLock], but funded strictly from the ONE funds account
-     * whose account-level derivation path equals [fundingPath] (the DIP-9
-     * CoinJoin account) — SDK `PlatformWalletManager.shieldedFundFromAssetLock`'s
-     * optional `fundingPath` argument (dashpay/platform#4184).
-     *
-     * Single-account selection: no union across accounts, so CoinJoin coins
-     * are never co-spent with BIP44 coins. Change (only) lands on BIP44
-     * account 0 — a non-Standard account cannot derive change Rust-side.
-     * A path that matches no signable funds account fails pre-broadcast.
+     * Drain the DIP-9 CoinJoin account named by [fundingPath] directly into
+     * a shielded asset lock. [amountDuffs] is the UI estimate; the SDK computes
+     * the actual lock value from all account inputs minus the L1 fee. No BIP44
+     * inputs or transparent change are used. Unsupported paths fail before
+     * starting the SDK operation.
      *
      * Default throws: only the production source (and fakes that exercise
      * the mixed-funds migration) need it.
@@ -559,21 +555,16 @@ internal class DashSdkShieldedSource(
         amountDuffs: Long,
         fundingPath: String
     ): Unit {
-        // The v4.2-dev SDK selects the funding account by index only; the
-        // path-based `fundingPath` argument (dashpay/platform#4184) is gone.
-        // Account 0 (BIP44) is always provisioned and is the reachable case
-        // (the plain shield). The ONLY non-null-fundingPath caller is the
-        // CoinJoin-source mixed-funds shield, gated behind the currently-
-        // suppressed mixed-funds prompt — re-enabling it needs a path→funding-
-        // account-index/type mapping against the new API (tracked for the
-        // prompt's re-enable).
-        require(fundingPath.isEmpty() || fundingPath.isNotEmpty()) // param retained for source compat
-        manager().shieldedFundFromAssetLock(
+        require(fundingPath == "m/9'/5'/4'/0'" || fundingPath == "m/9'/1'/4'/0'") {
+            "unsupported CoinJoin funding path: $fundingPath"
+        }
+        require(amountDuffs > 0) { "CoinJoin shield estimate must be positive" }
+        // The ordinary asset-lock API selects BIP44 only. Use the dedicated
+        // drain so CoinJoin UTXOs fund the lock without transparent change.
+        manager().shieldedFundFromCoinJoinDrain(
             walletId = walletId,
             recipientRaw43 = recipientRaw43,
-            amountDuffs = amountDuffs,
-            fundingAccountIndex = 0,
-            surplusOutput = null
+            coinJoinAccountIndex = 0
         )
     }
 
@@ -1550,6 +1541,19 @@ class ShieldedBalanceServiceImpl internal constructor(
             return notBroadcast(operation, "shielded address lookup failed", t)
         } ?: return notBroadcast(operation, "wallet has no bound shielded address", null)
 
+        // Do not queue a fresh CoinJoin drain behind a recovery sweep. A
+        // persisted lock already owns those inputs, even if the balance
+        // snapshot still includes them until confirmation.
+        if (fundingPath != null) {
+            val pending = try {
+                source.walletShieldLocks(walletId).any { it.resumable }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast(operation, "cannot read the tracked asset-lock state", t)
+            }
+            if (pending) return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+        }
+
         return walletShieldMutex.withLock {
             // Ensure the SDK's SPV is live immediately before spending: the
             // asset lock is built+broadcast through it, and in this interim
@@ -1576,7 +1580,11 @@ class ShieldedBalanceServiceImpl internal constructor(
             // the attempt. Refuse to spend if it cannot be read — the
             // post-failure classification below depends on it.
             val lockedBefore = try {
-                source.walletShieldLocks(walletId).map { it.outPointHex }.toHashSet()
+                val locks = source.walletShieldLocks(walletId)
+                if (fundingPath != null && locks.any { it.resumable }) {
+                    return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+                }
+                locks.map { it.outPointHex }.toHashSet()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 return notBroadcast(operation, "cannot read the tracked asset-lock state", t)

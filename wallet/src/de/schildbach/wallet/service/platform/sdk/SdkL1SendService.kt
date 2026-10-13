@@ -657,12 +657,42 @@ interface SdkL1SendSource {
         addressBase58: String,
         floorDuffs: Long
     ): String = throw UnsupportedOperationException("CoinJoin drain not supported by this source")
+
+    suspend fun consolidateCoinJoin(
+        destination: String, amount: Long, drain: Boolean,
+        prepared: suspend (ByteArray) -> Unit
+    ): String = throw UnsupportedOperationException("CoinJoin consolidation not supported")
 }
 
 /** Production [SdkL1SendSource]: boots the SDK on demand. */
 internal class DashSdkL1SendSource(
     private val service: DashSdkService
 ) : SdkL1SendSource {
+
+    override suspend fun consolidateCoinJoin(
+        destination: String, amount: Long, drain: Boolean,
+        prepared: suspend (ByteArray) -> Unit
+    ): String = withContext(Dispatchers.IO) {
+        val manager = manager()
+        val wallet = manager.wallets.value.values.single()
+        val finalized = mapNativeErrors {
+            CoreSendAllNative.buildCoinJoinConsolidation(
+                wallet, toSdkNetwork(Constants.NETWORK_PARAMETERS), destination, amount,
+                drain, manager.mnemonicResolverHandle
+            )
+        }
+        finalized.use {
+            wallet.coreWallet().use { core ->
+                try {
+                    prepared(finalized.serializedData())
+                } catch (t: Throwable) {
+                    core.abandonTransaction(finalized)
+                    throw t
+                }
+                core.broadcastTransaction(finalized)
+            }
+        }
+    }
 
     /**
      * App-owned serialization lock for the send-all (drain) path. A single
@@ -1491,6 +1521,34 @@ class SdkL1SendService internal constructor(
                     classified
                 }
             }
+        }
+    }
+
+    internal suspend fun consolidateCoinJoin(
+        destination: String, amount: Long, drain: Boolean,
+        prepared: suspend (ByteArray) -> Unit
+    ): SdkWriteResult<String> {
+        if (!isEnabled() || !probeSendGate().allowed) return SdkWriteResult.NotBroadcast("funding gate closed")
+        if (runCatching { hasAppLockedCoinJoinOutputs() }.getOrDefault(true)) {
+            return SdkWriteResult.NotBroadcast("CoinJoin outputs are locked")
+        }
+        val walletId = source.boundWalletIdOrNull() ?: return SdkWriteResult.NotBroadcast("wallet not bound")
+        var preparedForBroadcast = false
+        return try {
+            val txid = source.withCoreSendLock(walletId) {
+                source.consolidateCoinJoin(destination, amount, drain) { bytes ->
+                    prepared(bytes)
+                    runCatching { onSelfSpendBroadcast() }
+                    preparedForBroadcast = true
+                }
+            }
+            runCatching { onSelfSpendBroadcast() }
+            runCatching { bridgeAfterBroadcast(txid) }
+            SdkWriteResult.Broadcast(txid)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            if (!preparedForBroadcast) SdkWriteResult.NotBroadcast("consolidation preparation failed", t)
+            else classifyCoreSendFailure(t)
         }
     }
 
