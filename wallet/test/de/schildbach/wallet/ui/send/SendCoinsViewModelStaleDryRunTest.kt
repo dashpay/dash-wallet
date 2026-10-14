@@ -317,6 +317,84 @@ class SendCoinsViewModelStaleDryRunTest {
         assertEquals(balance.value, sends.finalIntents.single().amount?.value)
     }
 
+    /**
+     * Opens the send screen paying [payee1] with [amount] entered, holding its
+     * dry run after it read the balance; returns the resolution's thread.
+     */
+    private fun openWithHeldDryRun(viewModel: SendCoinsViewModel, gate: DryRunGate, amount: Coin): Thread {
+        idle() // the balance feed reaches maxOutputAmount
+        viewModel.setAmount(amount)
+        gate.armed.set(true)
+        val init = thread {
+            runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromAddress(payee1.toBase58(), null)) }
+        }
+        awaitLatch("the dry run read the balance", gate.entered)
+        return init
+    }
+
+    @Test
+    fun maxDryRunRunning_balanceRises_itsStaleSendAllIsReplaced_andSentAsAPlainSend() {
+        // PR #1608 review: the Max dry run read 5 DASH; 1 DASH arrived while it
+        // was still running, so the balance observer saw no outcome to check
+        // again. The dry run then published a send-all of 5 that the screen
+        // must not use (the balance is 6) — and nothing checked the payment
+        // again: Continue stayed blocked until the user edited the amount.
+        val sends = Sends()
+        val gate = DryRunGate()
+        val maxOutput = MutableStateFlow(balance)
+        val viewModel = buildViewModel(runner(sends, gate, cutover = true), maxOutput)
+        val init = openWithHeldDryRun(viewModel, gate, balance)
+
+        maxOutput.value = balance.add(Coin.COIN)
+        idle() // the balance observer runs while the Max dry run is held
+        assertNull(viewModel.currentDryRun())
+
+        gate.open.countDown()
+        init.join(10_000)
+        assertFalse("the resolution finished", init.isAlive)
+
+        // Its send-all of 5 is stale; a replacement checks 5 of 6 DASH.
+        awaitCondition("the replacement dry run") { viewModel.currentDryRun() != null }
+        assertFalse("5 of 6 DASH is not a send-all", viewModel.currentDryRun()?.emptyWallet ?: true)
+        assertEquals(true, viewModel.dryRunSuccessful.value)
+
+        send(viewModel, balance)
+
+        assertFalse(sends.sent.single().emptyWallet)
+        assertEquals(balance.value, sends.finalIntents.single().amount?.value)
+        assertEquals(listOf<Address?>(payee1), sends.recipients)
+    }
+
+    @Test
+    fun dryRunRunning_balanceRisesToTheAmount_itsStaleFailureIsReplaced_bySendAll() {
+        // The reverse: 6 DASH entered against a 5 DASH balance (unaffordable);
+        // 1 DASH arrives while that dry run runs. 6 DASH is now everything:
+        // the replacement makes it a send-all, without the user editing.
+        val sends = Sends()
+        val gate = DryRunGate()
+        val maxOutput = MutableStateFlow(balance)
+        val viewModel = buildViewModel(runner(sends, gate, cutover = true), maxOutput)
+        val newBalance = balance.add(Coin.COIN)
+        val init = openWithHeldDryRun(viewModel, gate, newBalance)
+
+        maxOutput.value = newBalance
+        idle()
+
+        gate.open.countDown()
+        init.join(10_000)
+        assertFalse("the resolution finished", init.isAlive)
+
+        awaitCondition("the replacement dry run") { viewModel.currentDryRun() != null }
+        assertTrue("6 of 6 DASH is a send-all", viewModel.currentDryRun()?.emptyWallet == true)
+        assertFalse(viewModel.isInsufficientFunds)
+        assertEquals(true, viewModel.dryRunSuccessful.value)
+
+        send(viewModel, newBalance)
+
+        assertTrue(sends.sent.single().emptyWallet)
+        assertEquals(listOf<Address?>(payee1), sends.recipients)
+    }
+
     @Test
     fun payeeChanged_thePreviousPayeesDryRunIsNotUsed() {
         // The screen re-resolves its payee (a contact's re-resolution after a

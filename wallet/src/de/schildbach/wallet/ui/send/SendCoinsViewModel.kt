@@ -160,12 +160,17 @@ class SendCoinsViewModel @Inject constructor(
      *  balance it equalled — the send-all decision holds only while the
      *  balance is still that; null otherwise (pre-cutover, dashj decides
      *  send-all from its own balance at send time).
+     * @property checkedBalance for a post-cutover dry run, the SDK-overlaid
+     *  balance it decided on (send-all or plain, affordable or not); null
+     *  pre-cutover, where the decision does not read it. While it is not the
+     *  current balance the payment is checked again ([isBalanceStale]).
      * @property cutoverCommitted whether it took the post-cutover path.
      */
     private class DryRunOutcome(
         val payee: ResolvedPayee,
         val amount: Coin,
         val sendAllBalance: Coin?,
+        val checkedBalance: Coin?,
         val cutoverCommitted: Boolean,
         val result: DryRunResult?,
         val exception: Exception?
@@ -310,11 +315,13 @@ class SendCoinsViewModel @Inject constructor(
             .onEach { balance ->
                 // Set (not posted): a dry run started from here reads it.
                 _maxOutputAmount.value = balance
-                // A post-cutover send-all was decided against the previous
-                // balance: it no longer holds (an amount equal to the old
-                // balance is now a plain send). Check the payment again.
-                val sendAllBalance = dryRunOutcome?.sendAllBalance
-                if (sendAllBalance != null && sendAllBalance != balance) {
+                // A post-cutover dry run was decided against the previous
+                // balance: it no longer holds (a send-all of the old balance
+                // is now a plain send; an amount equal to the new balance is
+                // a send-all). Check the payment again. A dry run still
+                // running is not seen here (no outcome yet): it checks the
+                // balance itself when it publishes ([publishDryRun]).
+                if (isBalanceStale(dryRunOutcome)) {
                     invalidateDryRunForUi()
                     scheduleDryRun()
                 }
@@ -752,18 +759,43 @@ class SendCoinsViewModel @Inject constructor(
         ++dryRunGeneration
     }
 
+    /** The balance a post-cutover dry run decides on. */
+    private fun currentBalance(): Coin = maxOutputAmount.value ?: Coin.ZERO
+
+    /**
+     * Whether [outcome] was decided on a balance that is no longer the
+     * current one — it must be checked again.
+     */
+    private fun isBalanceStale(outcome: DryRunOutcome?): Boolean {
+        val checked = outcome?.checkedBalance ?: return false
+        return checked != currentBalance()
+    }
+
     /**
      * Publishes [outcome] (null: nothing to check) and tells the screen,
      * unless a later dry run started — its outcome is the one that counts.
+     *
+     * If the balance changed after the dry run read it, its outcome is stale
+     * and a replacement is scheduled (PR #1608 review: the balance observer
+     * only sees a published outcome, so a change while a dry run was running
+     * went unnoticed and a stale send-all blocked Continue until the user
+     * edited the amount). The balance is written before the observer reads
+     * [dryRunOutcome], and [dryRunOutcome] before this reads the balance (both
+     * volatile), so at least one of the two sees the change.
      */
     private fun publishDryRun(generation: Long, outcome: DryRunOutcome?) {
-        synchronized(dryRunLock) {
+        val stale = synchronized(dryRunLock) {
             if (generation != dryRunGeneration) {
                 log.info("dry run superseded by a later one; its outcome is dropped")
                 return
             }
             dryRunOutcome = outcome
             postDryRunSuccessful(outcome?.result != null)
+            isBalanceStale(outcome)
+        }
+        if (stale) {
+            log.info("the balance changed during the dry run; checking the payment again")
+            scheduleDryRun()
         }
     }
 
@@ -780,12 +812,14 @@ class SendCoinsViewModel @Inject constructor(
         // The resolved payee's intent (what super.initPaymentIntent set as
         // basePaymentIntent when it was published).
         val basePaymentIntent = resolved.intent
+        // Post-cutover, the balance this dry run decides on (read once).
+        var checkedBalance: Coin? = null
         fun outcome(
             result: DryRunResult?,
             exception: Exception?,
             cutoverCommitted: Boolean,
             sendAllBalance: Coin? = null
-        ) = DryRunOutcome(resolved, amount, sendAllBalance, cutoverCommitted, result, exception)
+        ) = DryRunOutcome(resolved, amount, sendAllBalance, checkedBalance, cutoverCommitted, result, exception)
         var cutoverCommitted = false
         log.info("executeDryRun started")
         val currentThread = Thread.currentThread()
@@ -804,6 +838,13 @@ class SendCoinsViewModel @Inject constructor(
 
         try {
             Context.propagate(wallet.context)
+            // Phase 5d (Bug 4): see the cutover branch below. Decided — and,
+            // post-cutover, the balance read — before the request is built, so
+            // a balance change from here on is caught when this publishes.
+            cutoverCommitted = sendCoinsTaskRunner.isCutoverCommitted()
+            if (cutoverCommitted) {
+                checkedBalance = currentBalance()
+            }
             // check regular payment
             var sendRequest = createSendRequest(
                 basePaymentIntent.mayEditAmount(),
@@ -825,9 +866,8 @@ class SendCoinsViewModel @Inject constructor(
             // and any true shortfall there still fails closed (NotBroadcast,
             // pre-broadcast, no double-pay). Pre-cutover this branch is skipped
             // and the dashj completeTx path below is byte-identical to before.
-            cutoverCommitted = sendCoinsTaskRunner.isCutoverCommitted()
-            if (cutoverCommitted) {
-                val maxOutput = maxOutputAmount.value ?: Coin.ZERO
+            val maxOutput = checkedBalance
+            if (maxOutput != null) {
                 // Reserve = the SDK's own send-all fee reserve
                 // (SEND_ALL_FEE_RESERVE_DUFFS, SdkL1SendService.kt) — ~40x a
                 // typical 1-in/2-out fee, so the gate is strictly NO LOOSER than
