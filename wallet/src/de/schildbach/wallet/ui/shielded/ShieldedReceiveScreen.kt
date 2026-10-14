@@ -55,6 +55,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -113,7 +114,7 @@ private fun ShieldedReceiveScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopNavBase(
@@ -164,7 +165,7 @@ private fun ReceiveCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+            .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -172,7 +173,7 @@ private fun ReceiveCard(
             Text(
                 text = stringResource(R.string.shielded_address_unavailable),
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = LocalDashColors.current.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(vertical = 40.dp)
             )
@@ -184,7 +185,7 @@ private fun ReceiveCard(
             Image(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
-                colorFilter = ColorFilter.tint(MyTheme.Colors.textPrimary, BlendMode.SrcIn),
+                colorFilter = ColorFilter.tint(LocalDashColors.current.textPrimary, BlendMode.SrcIn),
                 modifier = Modifier
                     .padding(top = 20.dp, bottom = 30.dp)
                     .size(200.dp)
@@ -199,12 +200,12 @@ private fun ReceiveCard(
                 Text(
                     text = stringResource(R.string.shielded_your_address),
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textTertiary
+                    color = LocalDashColors.current.textTertiary
                 )
                 Text(
                     text = address,
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textPrimary,
+                    color = LocalDashColors.current.textPrimary,
                     modifier = Modifier
                         .padding(top = 2.dp)
                         .clickable { onCopyAddress(address) }
@@ -222,7 +223,7 @@ private fun ReceiveCard(
                 Icon(
                     painter = painterResource(org.dash.wallet.common.R.drawable.ic_copy),
                     contentDescription = stringResource(R.string.shielded_copy_address),
-                    tint = MyTheme.Colors.textPrimary,
+                    tint = LocalDashColors.current.textPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
