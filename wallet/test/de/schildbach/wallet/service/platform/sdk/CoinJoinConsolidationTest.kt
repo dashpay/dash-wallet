@@ -215,7 +215,7 @@ class CoinJoinConsolidationTest {
     @Test fun regularTransferBatchesLargeAccountThenDrainsToBip44() = runTest {
         val f = Fixture(this)
         val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
-        coEvery { f.wallet.freshReceiveAddressString() } returns regular
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
         f.coins.value = (0 until 2000).map(::coin)
         f.engineBalance = f.coins.value.sumOf { it.amount }
         val batchSizes = mutableListOf<Int>()
@@ -268,14 +268,14 @@ class CoinJoinConsolidationTest {
         f.storedTx = f.storedTx!!.copy(context = 1)
         advanceTimeBy(15_000); runCurrent()
         assertNull(f.service.inFlightMigration())
-        coVerify(exactly = 0) { f.wallet.freshReceiveAddressString() }
+        verify(exactly = 0) { f.wallet.unadvertisedDestinationLive() }
         coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
     }
 
     @Test fun singleInputRegularTransferIsAllowedAndTracked() = runTest {
         val f = Fixture(this)
         val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
-        coEvery { f.wallet.freshReceiveAddressString() } returns regular
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
         f.coins.value = listOf(coin(0))
         f.engineBalance = f.coins.value.sumOf { it.amount }
         coEvery { f.send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
