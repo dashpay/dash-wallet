@@ -14,8 +14,10 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoinJoinMigrationRecoveryTest {
@@ -76,6 +78,45 @@ class CoinJoinMigrationRecoveryTest {
             assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.shieldMixedFunds(Dash.COIN))
             assertNull(service.inFlightMigration())
             coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any()) }
+        } finally {
+            scope.cancel()
+        }
+    }
+    @Test
+    fun preCutover_noFreshPrompt_butInFlightMigrationStillPresented() = runBlocking {
+        val config = mockk<DashPayConfig>(relaxed = true)
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } returns ""
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) } returns false
+        var marker = ""
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
+        val shield = mockk<ShieldedBalanceService>(relaxed = true)
+        // Shielding available would make anyOptionOperable() true pre-cutover.
+        coEvery { shield.isWalletShieldingAvailable() } returns true
+        coEvery { shield.ensureShieldedReady() } returns true
+        coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
+        coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
+        val send = mockk<SdkL1SendService>(relaxed = true)
+        coEvery { send.cutoverCommitted() } returns false
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val service = CoinJoinFundsMigrationService(
+            mockk(relaxed = true), shield, send, mockk(relaxed = true), config,
+            mockk(relaxed = true), scope
+        )
+        try {
+            // Fresh path: nothing in flight, pre-cutover -> no prompt, and the
+            // gate short-circuits before the rest of the fresh-prompt checks.
+            assertFalse(service.shouldPrompt())
+            coVerify(exactly = 0) { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) }
+
+            // In-flight path: an existing migration is still presented pre-cutover.
+            marker = formatInFlightMigration(
+                InFlightMixedFundsMigration(
+                    MixedFundsMigrationAction.SHIELD,
+                    System.currentTimeMillis(),
+                    0L
+                )
+            )
+            assertTrue(service.shouldPrompt())
         } finally {
             scope.cancel()
         }

@@ -445,6 +445,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // funds have an in-app way to make those coins spendable again.
         if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
         if (restorePendingShieldMigration()) return true
+        // A FRESH prompt is post-cutover recovery only: pre-cutover dashj
+        // still owns L1 and can spend the CoinJoin account itself. An
+        // in-flight migration (above) is still presented regardless.
+        // cutoverCommitted() fails closed (false) on a read error.
+        if (!sdkL1SendService.cutoverCommitted()) return false
         val alreadyHandled = try {
             dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {
