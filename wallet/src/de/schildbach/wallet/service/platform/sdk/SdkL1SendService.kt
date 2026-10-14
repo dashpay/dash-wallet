@@ -1532,7 +1532,12 @@ class SdkL1SendService internal constructor(
         if (runCatching { hasAppLockedCoinJoinOutputs() }.getOrDefault(true)) {
             return SdkWriteResult.NotBroadcast("CoinJoin outputs are locked")
         }
-        val walletId = source.boundWalletIdOrNull() ?: return SdkWriteResult.NotBroadcast("wallet not bound")
+        val walletId = try {
+            source.boundWalletIdOrNull() ?: return SdkWriteResult.NotBroadcast("wallet not bound")
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return SdkWriteResult.NotBroadcast("SDK bootstrap/bind lookup failed", t)
+        }
         var preparedForBroadcast = false
         return try {
             val txid = source.withCoreSendLock(walletId) {

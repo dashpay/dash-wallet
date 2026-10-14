@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -176,6 +177,56 @@ class MixedFundsMigrationViewModelTest {
             coVerify(exactly = 1) { service.retryPendingMigration() }
             coVerify(exactly = 0) { service.combineIntoUnmixedBalance() }
             coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
+        } finally { store.clear() }
+    }
+
+    /**
+     * The activity-scoped ViewModel's first read runs at MainActivity
+     * creation, usually pre-sync (null). The sheet raised later by the
+     * post-sync prompt gate refreshes it, so the offered amount comes from
+     * the same post-sync read as the prompt decision (field bug: amount null,
+     * both choices disabled).
+     */
+    @Test
+    fun refreshAmountReplacesThePreSyncNullRead() {
+        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        var available: Coin? = null
+        coEvery { service.restorePendingShieldMigration() } returns false
+        coEvery { service.mixedFundsToMigrate() } answers { available }
+        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(null)
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertNull(model.uiState.value.amount)
+            assertTrue(model.uiState.value.amountChecked)
+
+            available = Coin.COIN
+            model.refreshAmount()
+            assertEquals(Coin.COIN, model.uiState.value.amount)
+            assertTrue(model.uiState.value.amountChecked)
+            assertFalse(model.uiState.value.migrationPending)
+
+            // The funds moved elsewhere: the sheet must see "nothing to offer".
+            available = null
+            model.refreshAmount()
+            assertNull(model.uiState.value.amount)
+            assertTrue(model.uiState.value.amountChecked)
+        } finally { store.clear() }
+    }
+
+    @Test
+    fun refreshAmountFlagsAPendingMigrationSoTheSheetStaysUp() {
+        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.restorePendingShieldMigration() } returns true
+        coEvery { service.mixedFundsToMigrate() } returns null
+        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(null)
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.uiState.value.amountChecked)
+            assertTrue(model.uiState.value.migrationPending)
         } finally { store.clear() }
     }
 }

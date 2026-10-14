@@ -124,9 +124,9 @@ const val MIXED_FUNDS_PROMPT_HARD_SUPPRESSED = false
  * The SDK engine's CONFIRMED balance of the DIP-9 CoinJoin account 0 from
  * the `accountBalances` JSON snapshot, in duffs — or null when it cannot be
  * affirmatively read (null/empty/malformed input, or no CoinJoin index-0 row
- * in the snapshot). Null means "unknown", NOT "none" — the caller merges it
- * with the dashj read and only a source that affirmatively reports a
- * positive balance may trigger the prompt.
+ * in the snapshot). Null means "unknown", NOT "none" — see
+ * [mixedFundsDuffs]: post-cutover it is the only source (null → no prompt);
+ * pre-cutover it is merged with the dashj read.
  *
  * Index 0 ONLY, deliberately: both migrations can move only that account's
  * coins (the shield's `fundingPath` is [coinJoinAccountPath] — account 0 —
@@ -154,21 +154,31 @@ internal fun parseCoinJoinConfirmedDuffs(accountBalancesJson: String?): Long? {
 }
 
 /**
- * Merge the two detector sources into the mixed-funds figure, in duffs —
- * or null when NEITHER source could be read (both unknown → nothing to
- * trust, fail closed). When at least one source answered, the result is the
- * MAX of the two (an unreadable source counts as 0): dashj is authoritative
- * pre-cutover and reads 0/unknown on a post-cutover restore (the held
- * engine never syncs), while the SDK is authoritative post-cutover and
- * unstarted (null) pre-cutover — the max is therefore always the live
- * engine's view, and a positive figure always comes from a source that
- * affirmatively reported it.
+ * The mixed-funds figure to offer, in duffs, from the two detector sources —
+ * or null when nothing trustworthy could be read (fail closed: no prompt).
+ *
+ * POST-CUTOVER ([cutoverCommitted] = true) the SDK engine is the ONLY
+ * authority and [dashjDuffs] is ignored outright. The held dashj engine is
+ * frozen at its pre-cutover snapshot and never syncs again, so its CoinJoin
+ * balance is stale the moment those coins move: an UPGRADED wallet keeps
+ * reporting its pre-cutover mixed balance forever, even after the coins were
+ * shielded/spent from another device or by the SDK itself (field bug: SDK
+ * coinjoin=0 but dashj 57 DASH → a "Move your mixed coins" sheet that could
+ * never be acted on). A RESTORED wallet's held dashj reads 0 instead — also
+ * not information. An unreadable SDK balance (null) therefore yields null,
+ * never a dashj fallback.
+ *
+ * PRE-CUTOVER the historical merge is kept: when at least one source
+ * answered, the MAX of the two (an unreadable source counts as 0); dashj is
+ * the live L1 engine there and the SDK is passive (usually unstarted/null),
+ * so the max is the live engine's view and a positive figure always comes
+ * from a source that affirmatively reported it. Null when NEITHER answered.
  */
-internal fun mergedMixedFundsDuffs(sdkConfirmedDuffs: Long?, dashjDuffs: Long?): Long? =
-    if (sdkConfirmedDuffs == null && dashjDuffs == null) {
-        null
-    } else {
-        maxOf(sdkConfirmedDuffs ?: 0L, dashjDuffs ?: 0L)
+internal fun mixedFundsDuffs(cutoverCommitted: Boolean, sdkConfirmedDuffs: Long?, dashjDuffs: Long?): Long? =
+    when {
+        cutoverCommitted -> sdkConfirmedDuffs
+        sdkConfirmedDuffs == null && dashjDuffs == null -> null
+        else -> maxOf(sdkConfirmedDuffs ?: 0L, dashjDuffs ?: 0L)
     }
 
 /**
@@ -355,14 +365,18 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * nothing to do — no readable source, a zero balance, or an L1 view too
      * stale to trust.
      *
-     * TWO detector sources, merged by [mergedMixedFundsDuffs] (max):
-     * - the SDK engine's CoinJoin account 0 confirmed balance
-     *   ([sdkCoinJoinConfirmedDuffs]) — the AUTHORITATIVE view post-cutover,
-     *   where the held dashj wallet never syncs and therefore reads an empty
-     *   `m/9'` UTXO set on any freshly restored wallet (the live bug this
-     *   dual-source detector fixes: restore-with-mixed-funds never prompted);
-     * - the held dashj wallet's CoinJoin keychain ([coinJoinBalanceOrNull]) —
-     *   correct pre-cutover, harmless 0/unknown after it.
+     * Source selection by [mixedFundsDuffs]:
+     * - POST-CUTOVER: the SDK engine's CoinJoin account 0 confirmed balance
+     *   ([sdkCoinJoinConfirmedDuffs]) ALONE. The held dashj wallet is frozen
+     *   at its pre-cutover snapshot — stale on an upgraded wallet whose coins
+     *   moved since (e.g. shielded from another device), empty on a restored
+     *   one — so it is not even read. SDK unreadable → null (no prompt).
+     * - PRE-CUTOVER: max of the SDK read (normally unknown — the engine is
+     *   passive) and the live dashj CoinJoin keychain ([coinJoinBalanceOrNull]).
+     *
+     * This is the single source for the prompt gate ([shouldPrompt]), the
+     * sheet's offered amount (MixedFundsMigrationViewModel) and the Tools
+     * entry, so a prompt is never raised over an amount the sheet cannot show.
      *
      * Never throws: any failure reads as "nothing to migrate", so a broken
      * probe can only under-prompt, never mis-prompt.
@@ -374,16 +388,29 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 log.debug("mixed-funds probe skipped: L1 view not current enough to trust")
                 return@withContext null
             }
+            // cutoverCommitted() fails closed (false) on a read error, which
+            // selects the pre-cutover merge — the conservative pre-cutover
+            // gate in shouldPrompt() then refuses a fresh prompt anyway.
+            val cutoverCommitted = sdkL1SendService.cutoverCommitted()
             val sdkDuffs = sdkCoinJoinConfirmedDuffs()
-            @Suppress("DEPRECATION")
-            val dashjDuffs = walletData.wallet?.let { coinJoinBalanceOrNull(it) }?.value
-            val duffs = mergedMixedFundsDuffs(sdkDuffs, dashjDuffs) ?: return@withContext null
+            val dashjDuffs = if (cutoverCommitted) {
+                null // frozen pre-cutover snapshot — never authoritative here
+            } else {
+                @Suppress("DEPRECATION")
+                walletData.wallet?.let { coinJoinBalanceOrNull(it) }?.value
+            }
+            val duffs = mixedFundsDuffs(cutoverCommitted, sdkDuffs, dashjDuffs)
+            if (duffs == null) {
+                log.debug("mixed-funds probe: no readable source (cutoverCommitted={})", cutoverCommitted)
+                return@withContext null
+            }
             if (duffs > 0L) {
                 log.info(
-                    "mixed funds detected by {}: sdk={} duffs, dashj={} duffs",
+                    "mixed funds detected by {}: sdk={} duffs, dashj={} duffs, cutoverCommitted={}",
                     if ((sdkDuffs ?: 0L) >= duffs) "the SDK engine" else "the dashj wallet",
                     sdkDuffs,
-                    dashjDuffs
+                    dashjDuffs,
+                    cutoverCommitted
                 )
             }
             Coin.valueOf(duffs).takeIf { it.isPositive }
@@ -445,6 +472,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // funds have an in-app way to make those coins spendable again.
         if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
         if (restorePendingShieldMigration()) return true
+        // A FRESH prompt is post-cutover recovery only: pre-cutover dashj
+        // still owns L1 and can spend the CoinJoin account itself. An
+        // in-flight migration (above) is still presented regardless.
+        // cutoverCommitted() fails closed (false) on a read error.
+        if (!sdkL1SendService.cutoverCommitted()) return false
         val alreadyHandled = try {
             dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {

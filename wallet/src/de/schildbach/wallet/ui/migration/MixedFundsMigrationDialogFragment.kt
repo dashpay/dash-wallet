@@ -113,6 +113,11 @@ class MixedFundsMigrationDialogFragment :
         isCancelable = false
         dialog?.setCanceledOnTouchOutside(false)
 
+        // Re-read the offered amount on every showing: the ViewModel is
+        // activity-scoped and its first read usually ran pre-sync (null), so
+        // a stale value would leave a prompt with nothing to act on.
+        viewModel.refreshAmount()
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
@@ -149,7 +154,18 @@ class MixedFundsMigrationDialogFragment :
                     binding.subtitle.isVisible = choiceMode || failed
                     binding.coinjoinRemoved.isVisible = choiceMode || failed
 
-                    val actionable = amount != null && choiceMode
+                    // Nothing to offer: the fresh read found no mixed funds
+                    // (moved elsewhere, or the post-cutover SDK view cannot
+                    // be read). Never leave a choice sheet up whose choices
+                    // are all disabled — close without recording a deferral.
+                    if (choiceMode && state.outcome == null && state.amountChecked && amount == null &&
+                        !state.migrationPending
+                    ) {
+                        dismissAllowingStateLoss()
+                        return@collect
+                    }
+
+                    val actionable = amount != null && state.amountChecked && choiceMode
                     binding.shieldButton.isVisible = choiceMode
                     binding.shieldNote.isVisible = choiceMode
                     binding.combineButton.isVisible = choiceMode

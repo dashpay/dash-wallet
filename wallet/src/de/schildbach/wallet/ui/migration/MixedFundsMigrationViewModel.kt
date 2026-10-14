@@ -38,8 +38,17 @@ import javax.inject.Inject
 /**
  * Single UI state of the post-upgrade mixed-funds sheet.
  *
- * @param amount the CoinJoin-keychain balance being offered, or null while it
- *   is still being read.
+ * @param amount the mixed-funds balance being offered
+ *   ([CoinJoinFundsMigrationService.mixedFundsToMigrate] — the same source
+ *   the prompt gate uses), or null while it is being read or when there is
+ *   nothing to migrate.
+ * @param amountChecked the latest [amount] read has completed. With a null
+ *   [amount] in choice mode the sheet has nothing to offer and closes itself
+ *   instead of showing disabled buttons.
+ * @param migrationPending the latest read found an in-flight/persisted
+ *   migration — the sheet presents its progress (via the marker observer)
+ *   and must not close for lack of an amount, even before that observer's
+ *   first emission lands.
  * @param inProgress an option is running (pre-broadcast); both actions are
  *   disabled.
  * @param outcome the finished result, or null while nothing has run.
@@ -60,6 +69,8 @@ import javax.inject.Inject
  */
 data class MixedFundsMigrationUIState(
     val amount: Coin? = null,
+    val amountChecked: Boolean = false,
+    val migrationPending: Boolean = false,
     val inProgress: Boolean = false,
     val outcome: MixedFundsMigrationOutcome? = null,
     val attemptedAction: MixedFundsMigrationAction? = null,
@@ -91,11 +102,11 @@ class MixedFundsMigrationViewModel @Inject constructor(
     /** Re-evaluates [MixedFundsMigrationUIState.resultTimedOut] when the honesty window lapses while the sheet is up. */
     private var expiryJob: Job? = null
 
+    /** The in-progress [refreshAmount] read; a newer refresh supersedes it. */
+    private var amountJob: Job? = null
+
     init {
-        viewModelScope.launch {
-            migrationService.restorePendingShieldMigration()
-            _uiState.value = _uiState.value.copy(amount = migrationService.mixedFundsToMigrate())
-        }
+        refreshAmount()
         // The persisted in-flight marker drives the post-broadcast window:
         // set (this session's broadcast or a resumed one) → processing
         // presentation; expired → the "could not confirm" guidance; cleared
@@ -131,6 +142,26 @@ class MixedFundsMigrationViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Re-read the offered amount. This ViewModel is ACTIVITY-scoped (it must
+     * outlive the sheet across auto-lock), so its init runs when MainActivity
+     * is created — typically long before the L1 view is synced, when
+     * [CoinJoinFundsMigrationService.mixedFundsToMigrate] still answers null.
+     * Reading only then left a sheet raised later by the (post-sync) prompt
+     * gate with no amount and both choices disabled; the sheet therefore
+     * calls this every time it is shown, so the offered amount and the
+     * prompt decision come from the same source at the same time.
+     */
+    fun refreshAmount() {
+        amountJob?.cancel()
+        _uiState.value = _uiState.value.copy(amountChecked = false)
+        amountJob = viewModelScope.launch {
+            val pending = migrationService.restorePendingShieldMigration()
+            val amount = migrationService.mixedFundsToMigrate()
+            _uiState.value = _uiState.value.copy(amount = amount, amountChecked = true, migrationPending = pending)
         }
     }
 
