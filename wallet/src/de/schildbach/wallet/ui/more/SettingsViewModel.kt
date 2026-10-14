@@ -128,12 +128,11 @@ class SettingsViewModel @Inject constructor(
 
     /**
      * @return false when the choice could not be saved; see [AnalyticsService.setEnabled].
-     * The switch then shows the saved value again, so toggling it retries (a failed
-     * opt-out still keeps collection off for this session).
+     * The switch shows the saved value either way, so toggling it again retries.
      */
     fun setAnalyticsEnabled(enabled: Boolean): Boolean {
         val saved = analytics.setEnabled(enabled)
-        _uiState.update { it.copy(analyticsEnabled = if (saved) analytics.isEnabled else !enabled) }
+        _uiState.update { it.copy(analyticsEnabled = analytics.isEnabled) }
         return saved
     }
 

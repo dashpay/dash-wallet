@@ -69,6 +69,7 @@ class FirebaseAnalyticsServiceImplTest {
     private val store = mutableMapOf<String, Any?>()
     private val disk = mutableMapOf<String, Any?>()
     private var commitSucceeds = true
+    private var session = AnalyticsSessionState()
     private lateinit var configuration: Configuration
     private lateinit var editor: SharedPreferences.Editor
 
@@ -104,22 +105,26 @@ class FirebaseAnalyticsServiceImplTest {
     private fun restart() {
         store.clear()
         store.putAll(disk)
+        session = AnalyticsSessionState()
     }
+
+    /** A new instance in the same process, e.g. a reopened Settings screen. */
+    private fun service() = FirebaseAnalyticsServiceImpl(configuration, session)
 
     @Test
     fun analyticsIsOnByDefault() {
-        assertTrue(FirebaseAnalyticsServiceImpl(configuration).isEnabled)
+        assertTrue(service().isEnabled)
     }
 
     @Test
     fun turningOff_persistsTheChoice_andStopsFirebaseCollection() {
-        val service = FirebaseAnalyticsServiceImpl(configuration)
+        val service = service()
 
         service.setEnabled(false)
 
         assertEquals(false, store[Configuration.PREFS_KEY_ANALYTICS_ENABLED])
         assertFalse(configuration.analyticsEnabled)
-        assertFalse("a new instance must see the persisted choice", FirebaseAnalyticsServiceImpl(configuration).isEnabled)
+        assertFalse("a new instance must see the persisted choice", service().isEnabled)
         verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
         verify(exactly = 0) { firebaseAnalytics.setAnalyticsCollectionEnabled(true) }
     }
@@ -127,7 +132,7 @@ class FirebaseAnalyticsServiceImplTest {
     @Test
     fun turningBackOn_resumesFirebaseCollection() {
         configuration.setAnalyticsEnabled(false)
-        val service = FirebaseAnalyticsServiceImpl(configuration)
+        val service = service()
 
         service.setEnabled(true)
 
@@ -139,7 +144,7 @@ class FirebaseAnalyticsServiceImplTest {
     @Test
     fun whenOff_logEventNeverReachesFirebase() {
         configuration.setAnalyticsEnabled(false)
-        val service = FirebaseAnalyticsServiceImpl(configuration)
+        val service = service()
 
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
         service.logEvent(
@@ -152,7 +157,7 @@ class FirebaseAnalyticsServiceImplTest {
 
     @Test
     fun releaseBuild_whenOn_logEventReachesFirebase() {
-        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+        val service = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
 
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
 
@@ -162,7 +167,7 @@ class FirebaseAnalyticsServiceImplTest {
     @Test
     fun releaseBuild_whenOff_logEventNeverReachesFirebase() {
         configuration.setAnalyticsEnabled(false)
-        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+        val service = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
 
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
 
@@ -171,7 +176,7 @@ class FirebaseAnalyticsServiceImplTest {
 
     @Test
     fun releaseBuild_turningOffAfterLogging_stopsForwarding() {
-        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+        val service = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
 
         service.setEnabled(false)
@@ -182,13 +187,13 @@ class FirebaseAnalyticsServiceImplTest {
 
     @Test
     fun configuredFirebaseApp_isAvailable() {
-        assertTrue(FirebaseAnalyticsServiceImpl(configuration).isAvailable)
+        assertTrue(service().isAvailable)
     }
 
     @Test
     fun placeholderFirebaseApp_isNotAvailable_andNeverReachesFirebase() {
         every { firebaseOptions.projectId } returns AnalyticsService.PLACEHOLDER_FIREBASE_PROJECT_ID
-        val service = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
+        val service = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
 
         assertFalse(service.isAvailable)
         service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
@@ -199,7 +204,7 @@ class FirebaseAnalyticsServiceImplTest {
     fun uninitializedFirebaseApp_isNotAvailable() {
         every { FirebaseApp.getInstance() } throws IllegalStateException("Default FirebaseApp is not initialized")
         try {
-            assertFalse(FirebaseAnalyticsServiceImpl(configuration).isAvailable)
+            assertFalse(service().isAvailable)
         } finally {
             every { FirebaseApp.getInstance() } returns firebaseApp
         }
@@ -226,8 +231,8 @@ class FirebaseAnalyticsServiceImplTest {
     @Test
     fun resolvingFirebase_doesNotTouchTheCollectionSetting() {
         // A late-resolving instance must not overwrite a newer opt-out made through another one.
-        val background = FirebaseAnalyticsServiceImpl(configuration, isDebug = false)
-        FirebaseAnalyticsServiceImpl(configuration).setEnabled(false)
+        val background = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
+        service().setEnabled(false)
         clearMocks(firebaseAnalytics, answers = false)
         every { firebaseOptions.projectId } returns "dash-wallet-real-project"
 
@@ -237,31 +242,49 @@ class FirebaseAnalyticsServiceImplTest {
     }
 
     @Test
-    fun optOut_whoseWriteFails_isReported_stopsCollectionThisSession_andCanBeRetried() {
+    fun optOut_whoseWriteFails_keepsTheSavedValue_butStopsCollectionThisProcess() {
         commitSucceeds = false
-        val service = FirebaseAnalyticsServiceImpl(configuration)
+        val service = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
 
         assertFalse("the failure must be reported", service.setEnabled(false))
-        assertFalse(service.isEnabled)
-        verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
 
-        // Retrying the same value must write again, not short-circuit on the in-memory value.
+        assertTrue("isEnabled reports what is saved", service.isEnabled)
+        assertTrue("memory agrees with disk", configuration.analyticsEnabled)
+        verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
+        service.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+        verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
+    }
+
+    @Test
+    fun failedOptOut_survivesAReopenedScreen_andItsRetrySurvivesARestart() {
+        commitSucceeds = false
+        service().setEnabled(false)
+
+        // Settings closed and reopened: a new instance, same process.
+        clearMocks(firebaseAnalytics, answers = false)
+        val reopened = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
+        assertTrue("the switch shows the saved on, so toggling it is a retry", reopened.isEnabled)
+        reopened.applyStoredSetting()
+        verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
+        reopened.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+        verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
+
         commitSucceeds = true
-        assertTrue(service.setEnabled(false))
-        verify(exactly = 2) { editor.commit() }
+        assertTrue(reopened.setEnabled(false))
+        assertFalse(session.unsavedOptOut)
 
         restart()
-        assertFalse("a saved retry survives a restart", FirebaseAnalyticsServiceImpl(configuration).isEnabled)
+        assertFalse("a saved retry survives a restart", service().isEnabled)
     }
 
     @Test
     fun optOut_whoseWriteFailsAndIsNeverRetried_isLostOnRestart() {
-        // The limitation the failure dialog warns about: only a saved opt-out is durable.
+        // The limitation the "Couldn't turn off" toast warns about.
         commitSucceeds = false
-        FirebaseAnalyticsServiceImpl(configuration).setEnabled(false)
+        service().setEnabled(false)
 
         restart()
-        val afterRestart = FirebaseAnalyticsServiceImpl(configuration)
+        val afterRestart = service()
         assertTrue(afterRestart.isEnabled)
         afterRestart.applyStoredSetting()
         verify { firebaseAnalytics.setAnalyticsCollectionEnabled(true) }
@@ -271,7 +294,7 @@ class FirebaseAnalyticsServiceImplTest {
     fun optIn_whoseWriteFails_isReported_andReadsBackAsOff() {
         configuration.setAnalyticsEnabled(false)
         commitSucceeds = false
-        val service = FirebaseAnalyticsServiceImpl(configuration)
+        val service = service()
 
         assertFalse(service.setEnabled(true))
 
@@ -285,7 +308,7 @@ class FirebaseAnalyticsServiceImplTest {
         configuration.setAnalyticsEnabled(false)
         clearMocks(editor, answers = false)
 
-        FirebaseAnalyticsServiceImpl(configuration).applyStoredSetting()
+        service().applyStoredSetting()
 
         verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
         verify(exactly = 0) { editor.commit() }

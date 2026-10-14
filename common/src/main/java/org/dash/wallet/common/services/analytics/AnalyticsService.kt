@@ -27,22 +27,27 @@ import com.google.firebase.ktx.Firebase
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
 import javax.inject.Inject
+import javax.inject.Singleton
 
 interface AnalyticsService {
     /**
-     * Whether the user allows analytics event collection (Settings, MO-1065;
-     * on by default). While false, [logEvent] drops every event and the
-     * analytics SDK's own automatic events are switched off too.
+     * The user's saved choice to allow analytics event collection (Settings,
+     * MO-1065; on by default). While collection is off, [logEvent] drops every
+     * event and the analytics SDK's own automatic events are switched off too.
      * [logError] (crash reporting) is not affected. Change it with [setEnabled].
+     *
+     * Always the saved value: a choice that failed to save never shows here,
+     * so a switch bound to it stays honest and toggling it retries the save.
      */
     val isEnabled: Boolean
 
     /**
      * Persists the user's choice and applies it to the analytics SDK.
      *
-     * @return false when the choice could not be saved. An opt-out still stops
-     * collection for this session (it may resume after a restart); an opt-in
-     * leaves collection off. Calling again retries the write.
+     * @return false when the choice could not be saved; [isEnabled] keeps the
+     * saved value. A failed opt-out still stops collection for the rest of this
+     * process (it resumes after a restart unless a retry saves it); a failed
+     * opt-in leaves collection off. Calling again retries the write.
      */
     fun setEnabled(enabled: Boolean): Boolean
 
@@ -73,13 +78,30 @@ interface AnalyticsService {
     }
 }
 
+/**
+ * Process-wide analytics state that is never persisted. Shared by every
+ * [FirebaseAnalyticsServiceImpl] (they are unscoped), so it outlives any one
+ * screen, e.g. a Settings ViewModel that is closed and reopened.
+ */
+@Singleton
+class AnalyticsSessionState @Inject constructor() {
+    /**
+     * The user opted out this process but the choice could not be saved:
+     * collection stays off until a save succeeds or the process ends.
+     */
+    @Volatile
+    var unsavedOptOut: Boolean = false
+}
+
 class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
     private val configuration: Configuration,
+    private val session: AnalyticsSessionState,
     // Debug builds log events and errors to logcat instead of Firebase.
     // Injectable only so tests can reach the forwarding path.
     private val isDebug: Boolean
 ) : AnalyticsService {
-    @Inject constructor(configuration: Configuration) : this(configuration, BuildConfig.DEBUG)
+    @Inject constructor(configuration: Configuration, session: AnalyticsSessionState) :
+        this(configuration, session, BuildConfig.DEBUG)
 
     // Firebase is only configured when the build included google-services.json
     // (see gradle/google-services.gradle). Builds without it must not crash —
@@ -115,25 +137,30 @@ class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
     override val isEnabled: Boolean
         get() = configuration.analyticsEnabled
 
+    /** The saved choice, overridden by an opt-out this process could not save. */
+    private val isCollecting: Boolean
+        get() = isEnabled && !session.unsavedOptOut
+
     override fun setEnabled(enabled: Boolean): Boolean {
-        // Always write, even when the value looks unchanged: after a failed write the
-        // in-memory value already matches, and a retry must still reach disk.
+        val saved = configuration.analyticsEnabled
+        // Always write, even when the value looks unchanged, so a retry reaches disk.
         val persisted = configuration.setAnalyticsEnabled(enabled)
-        if (!persisted) {
+        if (persisted) {
+            session.unsavedOptOut = false
+        } else {
             Log.w("FIREBASE", "failed to persist analytics setting: $enabled")
-            if (enabled) {
-                // commit() updates memory even when the disk write fails; an unsaved
-                // opt-in must not read back as on.
-                configuration.setAnalyticsEnabled(false)
+            // commit() updates memory even when the disk write fails; put the saved
+            // value back so memory and disk agree and every reader sees what's saved.
+            configuration.setAnalyticsEnabled(saved)
+            if (!enabled) {
+                session.unsavedOptOut = true
             }
         }
-        // An opt-out applies for this session even if the write failed; an opt-in
-        // only once it is saved, so collection never outruns the saved choice.
-        applyCollection(enabled && persisted)
+        applyCollection(isCollecting)
         return persisted
     }
 
-    override fun applyStoredSetting() = applyCollection(isEnabled)
+    override fun applyStoredSetting() = applyCollection(isCollecting)
 
     private fun applyCollection(enabled: Boolean) {
         try {
@@ -147,7 +174,7 @@ class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
         get() = firebaseAnalytics != null
 
     override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {
-        if (!isEnabled) {
+        if (!isCollecting) {
             return
         }
 

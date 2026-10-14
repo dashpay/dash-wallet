@@ -126,8 +126,8 @@ class SettingsViewModelTest {
         return mockk(relaxed = true) {
             every { isEnabled } answers { stored }
             every { setEnabled(any()) } answers {
-                // Mirrors the service: a failed opt-out still applies, a failed opt-in doesn't.
-                if (saves || !firstArg<Boolean>()) stored = firstArg()
+                // Mirrors the service: a failed save leaves the saved value in place.
+                if (saves) stored = firstArg()
                 saves
             }
             every { isAvailable } returns available
@@ -197,5 +197,9 @@ class SettingsViewModelTest {
         assertFalse(viewModel.setAnalyticsEnabled(false))
 
         assertTrue("the switch shows the still-saved on", viewModel.uiState.value.analyticsEnabled)
+        assertTrue(
+            "a reopened Settings screen shows the same saved value",
+            viewModel(analytics).uiState.value.analyticsEnabled
+        )
     }
 }
