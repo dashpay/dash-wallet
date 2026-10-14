@@ -174,7 +174,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // whose message names the alias and the KeyguardManager state at throw
     // time — so it no longer contains "User not authenticated" and would fall
     // through to the generic arms without this.
-    t.message?.contains("as device-locked") == true ->
+    t.message?.contains(KEYSTORE_DEVICE_LOCKED_MARKER) == true ->
         SdkWriteResult.NotBroadcast(
             "signing failure (pre-broadcast): Keystore refused the signing key because " +
                 "it considers the device locked — ${t.message}",
@@ -194,7 +194,7 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // opposite ("no auth window"): a bare "User not authenticated" does not
     // say which gate or alias refused, and on the legacy alias it really is
     // the auth window.
-    t.message?.contains("User not authenticated") == true ->
+    t.message?.contains(KEYSTORE_UNAUTHENTICATED_MARKER) == true ->
         SdkWriteResult.NotBroadcast(
             "signing failure (pre-broadcast): Keystore refused the signing key as " +
                 "unauthenticated (the device's Keystore authentication or lock gate " +
@@ -307,6 +307,56 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
 }
 
 /**
+ * Message markers of the Android Keystore SIGNING REFUSALS that
+ * [classifyBroadcastFailure] reads as pre-broadcast (see its two Keystore
+ * arms). Shared with [isKeystoreSigningRefusal] so the classifier and the
+ * callers that react to a Keystore refusal can never drift apart.
+ *
+ * - [KEYSTORE_DEVICE_LOCKED_MARKER]: the SDK's `KeystoreDeviceLockedException`
+ *   (dashpay/platform#4643) — "Keystore denied '<op>' on lock-bound alias
+ *   '<alias>' as device-locked; KeyguardManager at throw time:
+ *   isDeviceLocked=<bool> …", surfaced through the FFI as a Generic error
+ *   carrying that text.
+ * - [KEYSTORE_UNAUTHENTICATED_MARKER]: Android's raw
+ *   `UserNotAuthenticatedException` on AAR lines older than #4643, or the
+ *   legacy auth-gated alias.
+ */
+internal const val KEYSTORE_DEVICE_LOCKED_MARKER = "as device-locked"
+internal const val KEYSTORE_UNAUTHENTICATED_MARKER = "User not authenticated"
+
+/**
+ * True when [t] is the Android Keystore refusing the identity signing key —
+ * the same two message shapes [classifyBroadcastFailure] maps to a
+ * pre-broadcast signing failure. Signing happens strictly before Platform
+ * submission, but on a FUNDED write (an identity registration built from an
+ * L1 asset lock) the L1 half may already be on chain when the signer refuses,
+ * so callers re-check their tracked funding before trusting "nothing spent".
+ */
+internal fun isKeystoreSigningRefusal(t: Throwable): Boolean =
+    t.message?.let {
+        it.contains(KEYSTORE_DEVICE_LOCKED_MARKER) || it.contains(KEYSTORE_UNAUTHENTICATED_MARKER)
+    } == true
+
+/**
+ * True when [t] is a Keystore signing refusal of the FALSE-LOCKED class: the
+ * Keystore denied a lock-bound key as device-locked while `KeyguardManager`
+ * reported the device UNLOCKED (the Keystore2 defect seen on HONOR/MagicOS,
+ * Google Issue Tracker 506989112). The SDK's `KeystoreDeviceLockedException`
+ * says so in its message (`isDeviceLocked=false` / `FALSE-LOCKED`). Unlike a
+ * genuinely locked device this is retryable immediately: once the SDK has
+ * recorded the defect, re-stored identity keys land under the never-lock-bound
+ * alias and the next signing attempt cannot be denied.
+ *
+ * A bare [KEYSTORE_UNAUTHENTICATED_MARKER] carries no lock-state sample, so it
+ * is never read as false-locked.
+ */
+internal fun isKeystoreFalseLockedRefusal(t: Throwable): Boolean {
+    val message = t.message ?: return false
+    return message.contains(KEYSTORE_DEVICE_LOCKED_MARKER) &&
+        (message.contains("isDeviceLocked=false") || message.contains("FALSE-LOCKED"))
+}
+
+/**
  * Seam over the Kotlin SDK's wallet-bound DashPay write surface
  * ([org.dashfoundation.dashsdk.tokens.Dashpay] +
  * [org.dashfoundation.dashsdk.wallet.PlatformWalletManager]), so the
@@ -362,6 +412,13 @@ interface SdkDashPayWriteSource {
         avatarBytes: ByteArray?,
         doCreate: Boolean
     )
+
+    /**
+     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance,
+     * or null when the identity is not found. Diagnostics only — callers
+     * bound it and ignore failures (see [IdentityFeeLedger]).
+     */
+    suspend fun identityCreditBalance(identityIdBase58: String): Long?
 }
 
 /** Production [SdkDashPayWriteSource]: boots the SDK on demand. */
@@ -425,6 +482,12 @@ internal class DashSdkDashPayWriteSource(
             doCreate = doCreate,
             signerHandle = manager.signerHandle
         )
+    }
+
+    override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
+        service.ensureStarted()
+        val sdk = checkNotNull(service.sdkOrNull()) { "SDK runtime missing after ensureStarted()" }
+        return sdk.identities.fetchBalance(identityIdBase58)
     }
 }
 
@@ -564,6 +627,7 @@ class SdkDashPayWrites internal constructor(
         return runWrite(
             ownUserId,
             "sendContactRequest",
+            feeStep = IdentityFeeStep.CONTACT_REQUEST,
             extraPreflight = { walletId, ownId -> dashPayEncryptionKeyPreflight(walletId, ownId) }
         ) { walletId, ownId ->
             source.sendContactRequest(walletId, ownId, recipient)
@@ -646,7 +710,7 @@ class SdkDashPayWrites internal constructor(
                 "profile has avatarHash/avatarFingerprint but no raw avatar bytes; SDK path needs them"
             )
         }
-        return runWrite(ownUserId, "createOrUpdateProfile") { walletId, ownId ->
+        return runWrite(ownUserId, "createOrUpdateProfile", feeStep = IdentityFeeStep.PROFILE) { walletId, ownId ->
             source.createOrUpdateProfile(
                 walletId, ownId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
             )
@@ -663,10 +727,16 @@ class SdkDashPayWrites internal constructor(
      * identity). Returning a non-null reason short-circuits to
      * [SdkWriteResult.NotBroadcast] — i.e. the unchanged dashj path — without
      * submitting anything.
+     *
+     * [feeStep] names the write for the log-only [IdentityFeeLedger]: one
+     * bounded best-effort balance read right before the broadcast and one
+     * after it (skipped when the attempt was provably pre-broadcast). The
+     * reads never affect the returned result.
      */
     private suspend fun runWrite(
         ownUserId: String,
         operation: String,
+        feeStep: IdentityFeeStep,
         extraPreflight: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> String? = { _, _ -> null },
         block: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> Unit
     ): SdkWriteResult<Unit> {
@@ -692,8 +762,12 @@ class SdkDashPayWrites internal constructor(
         }
         extraPreflight(walletId, ownId)?.let { return notBroadcast(operation, it, null) }
 
+        val balanceBefore = IdentityFeeLedger.readBalanceOrNull(feeStep, ownUserId) {
+            source.identityCreditBalance(ownUserId)
+        }
+
         // The single broadcast attempt.
-        return try {
+        val result = try {
             block(walletId, ownId)
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
@@ -713,6 +787,19 @@ class SdkDashPayWrites internal constructor(
             }
             classified
         }
+        if (result !is SdkWriteResult.NotBroadcast) {
+            val balanceAfter = IdentityFeeLedger.readBalanceOrNull(feeStep, ownUserId) {
+                source.identityCreditBalance(ownUserId)
+            }
+            IdentityFeeLedger.record(
+                step = feeStep,
+                identityIdBase58 = ownUserId,
+                start = balanceBefore,
+                after = balanceAfter,
+                status = if (result is SdkWriteResult.Broadcast) "BROADCAST" else "AMBIGUOUS"
+            )
+        }
+        return result
     }
 
     private fun notBroadcast(operation: String, reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {

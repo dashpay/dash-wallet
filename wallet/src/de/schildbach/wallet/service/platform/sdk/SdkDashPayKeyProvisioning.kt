@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
@@ -352,15 +353,24 @@ internal class DashSdkDashPayKeyProvisionSource(
 class SdkDashPayKeyProvisioning internal constructor(
     private val source: DashPayKeyProvisionSource,
     /** Scope for [requestProvisioning]; null (tests' default) makes it inert. */
-    private val executorScope: CoroutineScope?
+    private val executorScope: CoroutineScope?,
+    /**
+     * Reset Wallet's fence over old-wallet secret writes: the key persist and
+     * the update transition run under its permit, and each run's job is
+     * registered so the wipe can cancel and join it. A fresh (lowered) fence
+     * by default keeps the host-JVM tests unaffected.
+     */
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
 ) {
     @Inject
     constructor(
         sdkService: DashSdkService,
-        applicationScope: CoroutineScope
+        applicationScope: CoroutineScope,
+        secretWriteFence: WalletSecretWriteFence
     ) : this(
         source = DashSdkDashPayKeyProvisionSource(sdkService),
-        executorScope = applicationScope
+        executorScope = applicationScope,
+        secretWriteFence = secretWriteFence
     )
 
     /** Test seam: the update transition blocks on network I/O — keep it off main. */
@@ -416,6 +426,7 @@ class SdkDashPayKeyProvisioning internal constructor(
      */
     suspend fun requestProvisioning(walletIdHex: String, identityId: ByteArray): Boolean {
         val scope = executorScope ?: return false
+        if (secretWriteFence.isRaised) return false
         val key = identityKey(identityId)
         val start = lock.withLock {
             when (outcomes[key]) {
@@ -424,7 +435,8 @@ class SdkDashPayKeyProvisioning internal constructor(
             }
         }
         if (!start) return false
-        scope.launch {
+        // LAZY + tracked before start: the run can never execute unfenced.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 val result = try {
                     withContext(ioDispatcher) { provision(walletIdHex, identityId) }
@@ -441,6 +453,15 @@ class SdkDashPayKeyProvisioning internal constructor(
                 withContext(NonCancellable) { lock.withLock { inFlight.remove(key) } }
             }
         }
+        // A job cancelled before it started never runs its finally: release
+        // the single-flight slot here too (idempotent).
+        job.invokeOnCompletion { cause ->
+            if (cause is CancellationException) {
+                scope.launch(NonCancellable) { lock.withLock { inFlight.remove(key) } }
+            }
+        }
+        secretWriteFence.track(job)
+        job.start()
         return true
     }
 
@@ -551,47 +572,59 @@ class SdkDashPayKeyProvisioning internal constructor(
             // SigningKeyUnavailable the moment anything tries to sign with it.
             // Only the two NEW rows are stored; 0..3 are already in the store
             // (and are healed by `ensureIdentityKeysSignable`, not here).
-            try {
-                dashPayRows.forEach { row ->
-                    val preview = keys[row.keyId]
-                    source.storeIdentityPrivateKey(walletIdHex, preview.publicKeyHex, preview.privateKey)
-                }
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                // Nothing was submitted — provably pre-broadcast, retry-safe.
-                return notBroadcast(idHex, "DashPay key persist failed", t)
+            //
+            // WIPE FENCE: the persist AND the transition run under one permit,
+            // so a Reset Wallet either refuses them or waits for them before
+            // it verifies/erases the SDK secrets store.
+            if (!secretWriteFence.tryAcquire("DashPay key provisioning")) {
+                return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
             }
-
-            // THE state transition. Signed with keyId 0 (MASTER/AUTH) Rust-side
-            // — DPP accepts nothing else for an identity update.
-            return try {
-                source.addIdentityKeys(walletIdHex, identityId, dashPayRows)
-                log.info(
-                    "provisioned DashPay ENCRYPTION/DECRYPTION keys (ids {}) on identity {}… at DIP-9 slot {}",
-                    dashPayRows.map { it.keyId }, idHex.take(8), existing.identityIndex
-                )
-                SdkWriteResult.Broadcast(dashPayRows.size)
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                when (val classified = classifyBroadcastFailure(t)) {
-                    is SdkWriteResult.NotBroadcast -> {
-                        log.warn(
-                            "DashPay key provisioning for {}… rejected pre-broadcast; contact requests " +
-                                "keep using the dashj fallback",
-                            idHex.take(8), t
-                        )
-                        classified
+            try {
+                try {
+                    dashPayRows.forEach { row ->
+                        val preview = keys[row.keyId]
+                        source.storeIdentityPrivateKey(walletIdHex, preview.publicKeyHex, preview.privateKey)
                     }
-                    else -> {
-                        log.error(
-                            "DashPay key provisioning for {}… outcome unconfirmed — the IdentityUpdate MAY " +
-                                "be on chain; NOT re-submitting this process (a duplicate key id would be " +
-                                "rejected after paying the fee)",
-                            idHex.take(8), t
-                        )
-                        SdkWriteResult.Ambiguous(t)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    // Nothing was submitted — provably pre-broadcast, retry-safe.
+                    return notBroadcast(idHex, "DashPay key persist failed", t)
+                }
+                if (secretWriteFence.isRaised) return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+
+                // THE state transition. Signed with keyId 0 (MASTER/AUTH) Rust-side
+                // — DPP accepts nothing else for an identity update.
+                return try {
+                    source.addIdentityKeys(walletIdHex, identityId, dashPayRows)
+                    log.info(
+                        "provisioned DashPay ENCRYPTION/DECRYPTION keys (ids {}) on identity {}… at DIP-9 slot {}",
+                        dashPayRows.map { it.keyId }, idHex.take(8), existing.identityIndex
+                    )
+                    SdkWriteResult.Broadcast(dashPayRows.size)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    when (val classified = classifyBroadcastFailure(t)) {
+                        is SdkWriteResult.NotBroadcast -> {
+                            log.warn(
+                                "DashPay key provisioning for {}… rejected pre-broadcast; contact requests " +
+                                    "keep using the dashj fallback",
+                                idHex.take(8), t
+                            )
+                            classified
+                        }
+                        else -> {
+                            log.error(
+                                "DashPay key provisioning for {}… outcome unconfirmed — the IdentityUpdate MAY " +
+                                    "be on chain; NOT re-submitting this process (a duplicate key id would be " +
+                                    "rejected after paying the fee)",
+                                idHex.take(8), t
+                            )
+                            SdkWriteResult.Ambiguous(t)
+                        }
                     }
                 }
+            } finally {
+                secretWriteFence.release()
             }
         } finally {
             // Every derived scalar — including the four we never stored —

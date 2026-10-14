@@ -326,6 +326,36 @@ interface DashSdkService {
      */
     suspend fun stop()
 
+    /**
+     * Reset Wallet's SDK quiescence step, run after the wallet-removal
+     * cascade and BEFORE the secrets store is verified/erased
+     * ([fencedSdkSecretsWipe]). Returns true only when no SDK-owned work can
+     * write a wallet secret any more:
+     *
+     * - every later bootstrap is refused first
+     *   ([WalletSecretWriteFence.haltSdkRuntime] — [ensureStarted] throws
+     *   [WalletWipeInProgressException] until the wipe completes), so no
+     *   restart path (binder retry, shadow-sync restart, platform sync, …)
+     *   can bring a wallet manager back;
+     * - runtime not started → true (nothing runs, nothing can start);
+     * - runtime up → ALWAYS stopped, whatever the loaded-wallet map says (the
+     *   SDK's `removeWallet` empties that map before its fallible secret
+     *   delete and its own tombstone, and the persistence handler still
+     *   derives for a wallet whose Room row survived, so an empty map proves
+     *   nothing): every loaded wallet AND every wallet id handed to
+     *   [removeAppWallet] during the wipe is tombstoned in the live
+     *   `WalletStorage` (its key stores are rejected from that moment), then
+     *   the wallet manager is closed — its native shutdown quiesces every
+     *   callback task, including the persistence deriver — and the runtime
+     *   torn down. True only when the manager reports closed. The next
+     *   [ensureStarted] after the fence is lowered bootstraps a fresh runtime
+     *   (new manager, new `WalletStorage` without the tombstones).
+     *
+     * Bounded by [timeoutMs]; false on timeout or failure, which the wipe
+     * treats as "secrets NOT erased". Default false (fail-closed) for fakes.
+     */
+    suspend fun quiesceForWalletWipe(timeoutMs: Long): Boolean = false
+
     /** The live SDK handle, or null if [ensureStarted] has not completed. */
     fun sdkOrNull(): Sdk?
 
@@ -336,6 +366,14 @@ interface DashSdkService {
      * persistence bridge.
      */
     fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
+
+    /**
+     * The running SDK's `WalletStorage` (its Keystore-encrypted secrets
+     * DataStore), or null if [ensureStarted] has not completed. For Reset
+     * Wallet's post-cascade erase check ([SdkWalletSecretsEraser]) only —
+     * secrets are read and written through the SDK's own APIs.
+     */
+    fun walletStorageOrNull(): org.dashfoundation.dashsdk.security.WalletStorage? = null
 
     /**
      * Widen the SDK wallet's address-pool gap limits to the Rust-side
