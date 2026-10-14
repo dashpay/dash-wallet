@@ -53,7 +53,9 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         requireView().setOnClickListener { viewModel.triggerHideBalance() }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
-        viewModel.totalBalance.observe(viewLifecycleOwner) { updateBalance() }
+        // Transparent + shielded — the home header is the only screen that
+        // shows the combined figure.
+        viewModel.homeBalance.observe(viewLifecycleOwner) { updateBalance() }
 
         // The blinking "Syncing balance" indicator. Its predicate must stay in
         // lockstep with CutoverUiDataService's balance HOLD — a label over a
@@ -90,7 +92,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
     }
 
     private fun updateBalance() {
-        val balance = viewModel.totalBalance.value ?: Coin.ZERO
+        val balance = viewModel.homeBalance.value ?: Coin.ZERO
         binding.walletBalanceDash.setAmount(balance)
         viewModel.exchangeRate.value?.let { exchangeRate ->
             val rate = org.bitcoinj.utils.ExchangeRate(
