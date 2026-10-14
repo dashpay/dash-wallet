@@ -182,14 +182,22 @@ private fun ReceiveCard(
 
         val qrBitmap = remember(address) { Qr.qrBitmap(address) }
         qrBitmap?.let { bitmap ->
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(LocalDashColors.current.textPrimary, BlendMode.SrcIn),
+            // Always dark modules on a white quiet zone, whatever the app
+            // theme: the bitmap has no margin and many scanners reject an
+            // inverted (light-on-dark) code.
+            Box(
                 modifier = Modifier
                     .padding(top = 20.dp, bottom = 30.dp)
-                    .size(200.dp)
-            )
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .padding(12.dp)
+            ) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+                    modifier = Modifier.size(176.dp)
+                )
+            }
         }
 
         Row(
