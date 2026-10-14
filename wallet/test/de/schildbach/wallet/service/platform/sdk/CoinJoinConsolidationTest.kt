@@ -315,6 +315,68 @@ class CoinJoinConsolidationTest {
         assertNull(f.service.inFlightMigration())
     }
 
+    @Test fun lockedDeviceSigningFailureWaitsAndRetriesInsteadOfExpiring() = runTest {
+        // MO-1099: the drain into the shield asset lock ran while the phone was
+        // locked; the Keystore refused the seed. Nothing was broadcast, so the
+        // migration must keep its processing state and retry the same step,
+        // not expire into "could not confirm".
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        val locked = SdkWriteResult.NotBroadcast(
+            REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING,
+            Exception("Asset lock transaction failed: Asset lock builder failed: Transaction builder error: " +
+                "Signing failed: mnemonic resolver failed with code 3")
+        )
+        var deviceLocked = true
+        var attempts = 0
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any()) } coAnswers {
+            attempts++
+            if (deviceLocked) locked else SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+        }
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        assertEquals(1, attempts)
+        assertEquals(false, f.service.inFlightMigration()?.isExpired())
+        assertEquals(CoinJoinConsolidationState.READY, CoinJoinConsolidationState.decode(f.consolidation).phase)
+
+        // Locked for 45 minutes — well past the 30-minute window: it keeps
+        // retrying every 30 s and never expires.
+        advanceTimeBy(45L * 60_000); runCurrent()
+        assertTrue("retried while locked, got $attempts", attempts >= 80)
+        assertEquals(false, f.service.inFlightMigration()?.isExpired())
+        assertEquals(CoinJoinConsolidationState.READY, CoinJoinConsolidationState.decode(f.consolidation).phase)
+
+        // Unlocked: the next retry signs and moves on to the shield stage.
+        deviceLocked = false
+        advanceTimeBy(30_000); runCurrent()
+        assertEquals(CoinJoinConsolidationState.SHIELDING, CoinJoinConsolidationState.decode(f.consolidation).phase)
+        assertEquals(false, f.service.inFlightMigration()?.isExpired())
+    }
+
+    @Test fun otherPreBroadcastShieldFailureStillEndsTheAttempt() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any()) } returns
+            SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, Exception("coin selection is short"))
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        assertEquals(true, f.service.inFlightMigration()?.isExpired())
+        advanceTimeBy(5L * 60_000); runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any()) }
+    }
+
+    @Test fun signerLockedFailureIsRecognisedOnlyFromTheLockedSeedSignature() {
+        assertTrue(isSignerLockedFailure(SdkWriteResult.NotBroadcast("consolidation preparation failed",
+            RuntimeException("wrapped", Exception("Signing failed: mnemonic resolver failed with code 3")))))
+        assertFalse(isSignerLockedFailure(SdkWriteResult.NotBroadcast("consolidation preparation failed",
+            Exception("Signing failed: mnemonic resolver failed with code 5"))))
+        assertFalse(isSignerLockedFailure(SdkWriteResult.NotBroadcast("funding gate closed")))
+    }
+
     @Test fun persistedShieldStageDrainsDespiteAnUnrelatedPendingLock() = runTest {
         val f = Fixture(this)
         f.coins.value = f.coins.value.take(100)
