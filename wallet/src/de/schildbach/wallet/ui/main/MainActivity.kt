@@ -472,10 +472,17 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun handleBackNavigation() {
-        when (homeBackAction(lockScreenDisplayed, supportFragmentManager.backStackEntryCount, isTaskRoot)) {
-            HomeBackAction.IGNORE -> Unit
+        val navController = findNavController(R.id.nav_host_fragment)
+        val action = homeBackAction(
+            lockScreenDisplayed,
+            supportFragmentManager.backStackEntryCount,
+            navCanPop = navController.previousBackStackEntry != null,
+            isTaskRoot = isTaskRoot
+        )
+        when (action) {
+            HomeBackAction.IGNORE, HomeBackAction.CONSUME -> Unit
             HomeBackAction.POP_FRAGMENT -> goBack()
-            HomeBackAction.MOVE_TASK_TO_BACK -> moveTaskToBack(true)
+            HomeBackAction.POP_NAVIGATION -> navController.popBackStack()
             HomeBackAction.FINISH -> super.handleBackNavigation()
         }
     }
