@@ -78,4 +78,10 @@ class HomeShieldedBalanceTest {
     fun `no shielded context ignores a stale cache left by an identity reset`() {
         assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, cached, false, false))
     }
+
+    @Test
+    fun `no shielded context is zero even if the service still emits the previous wallet's balance`() {
+        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, live, cached, false, false))
+        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, live, cached, false, true))
+    }
 }
