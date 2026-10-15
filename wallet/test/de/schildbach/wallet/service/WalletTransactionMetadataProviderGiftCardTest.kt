@@ -22,6 +22,7 @@ import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.dao.TransactionRecordsDao
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -34,6 +35,7 @@ import de.schildbach.wallet.data.WalletData
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import org.junit.Assert.assertEquals
@@ -57,6 +59,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
     private lateinit var walletData: WalletData
     private lateinit var wallet: Wallet
     private lateinit var provider: WalletTransactionMetadataProvider
+    private val sdkStoreRows = mutableMapOf<org.dash.wallet.common.data.TxId, TransactionMetadata>()
 
     private val txId: org.dash.wallet.common.data.TxId =
         org.dash.wallet.common.data.TxId.wrap("0000000000000000000000000000000000000000000000000000000000000001")
@@ -81,7 +84,15 @@ class WalletTransactionMetadataProviderGiftCardTest {
             swapOrderDao = mockk<SwapOrderDao>(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
-            dashPayConfig = mockk<DashPayConfig>(relaxed = true)
+            dashPayConfig = mockk<DashPayConfig>(relaxed = true),
+            // The SDK store holds none of these transactions either, unless a test says so.
+            sdkTxMetadataSource = object : SdkTxMetadataSource {
+                override suspend fun defaultMetadataFor(txId: org.dash.wallet.common.data.TxId): TransactionMetadata? =
+                    sdkStoreRows[txId]
+                override suspend fun defaultMetadataFor(
+                    txIds: Collection<org.dash.wallet.common.data.TxId>
+                ): Map<org.dash.wallet.common.data.TxId, TransactionMetadata> = emptyMap()
+            }
         )
     }
 
@@ -319,6 +330,18 @@ class WalletTransactionMetadataProviderGiftCardTest {
 
         provider.forgetTransaction(txId)
 
+        coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
+    }
+
+    @Test
+    fun `forgetTransaction refuses to touch a transaction only the SDK store holds`() = runTest {
+        // Since #1603 an SDK-only transaction has real metadata too; the dashj wallet not
+        // holding it is no proof the payment was never sent.
+        sdkStoreRows[txId] = mockk(relaxed = true)
+
+        val settled = provider.forgetTransaction(txId)
+
+        org.junit.Assert.assertTrue("a real transaction settles the cleanup", settled)
         coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
     }
 

@@ -28,6 +28,11 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
+    /**
+     * Creates the metadata row for [txId] if it has none, from the wallet's own
+     * record of the transaction (the dashj wallet, else the SDK store) and the
+     * fetched platform metadata documents. A no-op when the row exists.
+     */
     suspend fun importTransactionMetadata(txId: TxId)
 
     /**
@@ -52,6 +57,12 @@ interface TransactionMetadataProvider {
     )
     suspend fun setTransactionService(txId: TxId, service: String, isSyncingPlatform: Boolean = false)
     suspend fun setTransactionSentTime(txId: TxId, timestamp: Long, isSyncingPlatform: Boolean = false)
+    /**
+     * Merges metadata fetched from platform into the row for [txId], creating the
+     * row first when needed (see [importTransactionMetadata]; [metadata] itself is
+     * the last-resort row). Non-empty platform fields win; txid and value are kept.
+     * Stores [giftCard] and fetches [iconUrl] when given.
+     */
     suspend fun syncPlatformMetadata(
         txId: TxId,
         metadata: TransactionMetadata,
@@ -59,6 +70,19 @@ interface TransactionMetadataProvider {
         iconUrl: String?
     )
 
+    /**
+     * Runs [block], which will import metadata for [txIds] one at a time (for
+     * example a platform metadata sync), with any per-transaction lookup work
+     * for those txids done once for the whole batch. Purely an optimization:
+     * the result is the same as running [block] alone, which is the default.
+     */
+    suspend fun <T> withBatchedImport(txIds: Collection<TxId>, block: suspend () -> T): T = block()
+
+    /**
+     * The metadata row for [txId], creating it first when the wallet holds the
+     * transaction but has no row (see [importTransactionMetadata]). A missing tax
+     * category is filled from address metadata. Null when no row can be made.
+     */
     suspend fun getTransactionMetadata(txId: TxId): TransactionMetadata?
     fun observeTransactionMetadata(txId: TxId): Flow<TransactionMetadata?>
 

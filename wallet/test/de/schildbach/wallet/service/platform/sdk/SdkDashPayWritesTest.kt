@@ -52,8 +52,11 @@ class SdkDashPayWritesTest {
         var identityManaged: (String, ByteArray) -> Boolean = { _, _ -> false },
         var onSendContactRequest: (String, ByteArray, ByteArray) -> Unit = { _, _, _ -> },
         var onCreateOrUpdateProfile: (String, ByteArray, String?, String?, String?, ByteArray?, Boolean) -> Unit =
-            { _, _, _, _, _, _, _ -> }
+            { _, _, _, _, _, _, _ -> },
+        /** Fee-ledger balance read; throws by default — the writes must not care. */
+        var onIdentityCreditBalance: suspend (String) -> Long? = { error("balance read unavailable") }
     ) : SdkDashPayWriteSource {
+        var balanceCalls = 0
         var boundCalls = 0
         var managedCalls = 0
         var broadcastCalls = 0
@@ -101,6 +104,11 @@ class SdkDashPayWritesTest {
             onCreateOrUpdateProfile(
                 walletIdHex, identityId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
             )
+        }
+
+        override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
+            balanceCalls++
+            return onIdentityCreditBalance(identityIdBase58)
         }
     }
 
@@ -288,6 +296,47 @@ class SdkDashPayWritesTest {
             reason.contains("keys.devicebound")
         )
         assertSame(liveShape, result.cause)
+    }
+
+    /**
+     * MO-1023: the transparent username path auto-resumes a tracked asset lock
+     * only on the FALSE-LOCKED class. The predicates must agree with the
+     * classifier's Keystore arms and tell the two lock states apart.
+     */
+    @Test
+    fun keystoreRefusalPredicates_matchTheClassifierAndSplitLockState() {
+        val falseLocked = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=false " +
+                "isKeyguardLocked=false (FALSE-LOCKED: device reports unlocked but " +
+                "Keystore denied — Keystore2 lock-state misreporting; retryable " +
+                "immediately)"
+        )
+        val genuinelyLocked = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=true " +
+                "isKeyguardLocked=true (genuinely locked — retry after unlock)"
+        )
+        val unauthenticated = RuntimeException("Generic Error: User not authenticated")
+        val unrelated = RuntimeException("connection reset")
+
+        for (t in listOf(falseLocked, genuinelyLocked, unauthenticated)) {
+            assertTrue("$t must be a Keystore refusal", isKeystoreSigningRefusal(t))
+            assertTrue(
+                "the classifier must agree it is pre-broadcast: $t",
+                classifyBroadcastFailure(t) is SdkWriteResult.NotBroadcast
+            )
+        }
+        assertFalse(isKeystoreSigningRefusal(unrelated))
+
+        assertTrue(isKeystoreFalseLockedRefusal(falseLocked))
+        assertFalse("a genuinely locked device must not spin", isKeystoreFalseLockedRefusal(genuinelyLocked))
+        assertFalse("no lock-state sample → never false-locked", isKeystoreFalseLockedRefusal(unauthenticated))
+        assertFalse(isKeystoreFalseLockedRefusal(unrelated))
     }
 
     @Test
@@ -623,6 +672,49 @@ class SdkDashPayWritesTest {
         assertNull(publicMessage)
         assertEquals("https://a/b.png", avatarUrl)
         assertEquals(true, doCreate)
+    }
+
+    // ── Fee ledger (log-only credit snapshots) ───────────────────────────
+
+    @Test
+    fun feeLedger_snapshotsAroundABroadcastWrite() = runBlocking {
+        val balances = ArrayDeque(listOf(2_693_390_540L, 2_683_390_540L))
+        val source = readySource().apply { onIdentityCreditBalance = { balances.removeFirst() } }
+
+        val result = writes(source).sendContactRequest(ownUserId, toUserId)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(2, source.balanceCalls)
+    }
+
+    @Test
+    fun feeLedger_skipsThePostReadWhenProvablyNothingWasSubmitted() = runBlocking {
+        val source = readySource().apply {
+            onIdentityCreditBalance = { 1_000L }
+            onSendContactRequest = { _, _, _ -> throw DashSdkError.InvalidParameter("bad recipient") }
+        }
+
+        val result = writes(source).sendContactRequest(ownUserId, toUserId)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(1, source.balanceCalls)
+    }
+
+    @Test
+    fun feeLedger_readFailuresNeverChangeTheResult() = runBlocking {
+        // readySource()'s default balance read throws.
+        val source = readySource().apply {
+            onCreateOrUpdateProfile = { _, _, _, _, _, _, _ -> throw DashSdkError.NetworkError("dropped") }
+        }
+
+        val result = writes(source).createOrUpdateProfile(
+            ownUserId, "Alice", null, null,
+            avatarBytes = null, hasAvatarDigest = false, doCreate = false
+        )
+
+        assertTrue(result is SdkWriteResult.Ambiguous)
+        assertEquals(1, source.broadcastCalls)
+        assertEquals(2, source.balanceCalls)
     }
 
     // ── Accept direction (Phase 3g) ───────────────────────────────────────
