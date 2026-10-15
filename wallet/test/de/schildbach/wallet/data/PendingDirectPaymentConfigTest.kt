@@ -156,6 +156,77 @@ class PendingDirectPaymentConfigTest {
         assertRefusesToRead("an undecodable entry") { runBlocking { config.getAllOrThrow() } }
     }
 
+    // --- a refusal must not carry the stored blob (review 23bcca3c4bfd) ------------------------
+
+    /**
+     * Stands in for what the blob really holds: signed transaction bytes, amounts, payment URLs.
+     * Android's JSON parser quotes its input in syntax errors, so a parser exception kept as a
+     * cause would put it in every log line that prints the throwable.
+     */
+    private val marker = "SECRET-0102030405-amount-123456789-https://merchant.example/pay/leak"
+
+    private val leakyBlobs = listOf(
+        "truncated JSON" to """[{"tx":"$marker""",
+        "a JSON object" to """{"tx":"$marker"}""",
+        "a bare string" to """"$marker"""",
+        "a non-object element" to """["$marker"]""",
+        "an undecodable entry" to """[{"txId":"$marker","tx":"$marker","paymentUrl":"$marker"}]"""
+    )
+
+    private fun assertCarriesNoStoredData(what: String, failure: Throwable) {
+        var current: Throwable? = failure
+        var depth = 0
+        while (current != null && depth < 16) {
+            val texts = listOfNotNull(current.message, current.localizedMessage, current.toString()) +
+                current.suppressed.map { it.toString() }
+            texts.forEach { text ->
+                assertFalse("$what: stored data leaked via ${current?.javaClass?.name}: $text", marker in text)
+            }
+            current = current.cause
+            depth++
+        }
+    }
+
+    private inline fun refusalOf(what: String, block: () -> Unit): IllegalStateException {
+        try {
+            block()
+        } catch (e: IllegalStateException) {
+            return e
+        }
+        fail("$what was accepted; an unreadable store must not read as an empty one")
+        throw AssertionError("unreachable")
+    }
+
+    @Test
+    fun strictReadRefusalsCarryNoStoredData() {
+        for ((what, blob) in leakyBlobs) {
+            seed(blob)
+            assertCarriesNoStoredData(what, refusalOf(what) { runBlocking { config.getAllOrThrow() } })
+        }
+    }
+
+    @Test
+    fun observedReadRefusalsCarryNoStoredData() {
+        for ((what, blob) in leakyBlobs) {
+            seed(blob)
+            assertCarriesNoStoredData(
+                what,
+                refusalOf(what) { runBlocking { config.observeUnresolvedGiftCardPurchase().first() } }
+            )
+        }
+    }
+
+    @Test
+    fun writeRefusalsCarryNoStoredDataAndLeaveTheStoreAsItWas() {
+        // Only the blobs that do not parse as an array refuse a write; the others are carried.
+        for ((what, blob) in leakyBlobs.take(3)) {
+            seed(blob)
+            assertCarriesNoStoredData(what, refusalOf(what) { runBlocking { config.add(payment) } })
+            assertCarriesNoStoredData(what, refusalOf(what) { runBlocking { config.remove(payment.txId) } })
+            assertEquals(what, blob, raw())
+        }
+    }
+
     // --- writes must never erase what they could not read -------------------------------------
 
     @Test

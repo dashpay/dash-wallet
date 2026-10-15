@@ -32,7 +32,6 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.services.UnresolvedPaymentsProvider
 import org.json.JSONArray
-import org.json.JSONException
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -328,8 +327,15 @@ open class PendingDirectPaymentConfig @Inject constructor(
 
         val array = try {
             JSONArray(value)
-        } catch (e: JSONException) {
-            throw IllegalStateException("pending direct payments are not a JSON array", e)
+        } catch (e: Exception) {
+            // Sanitized, and deliberately WITHOUT the parser exception as its cause: Android's
+            // JSON parser quotes its input in the message ("... at character N of <input>"), and
+            // the input is the stored blob of signed transactions, amounts and payment URLs.
+            // Every caller logs this throwable whole. Still a refusal: the read stays fail-closed.
+            throw IllegalStateException(
+                "pending direct payments are not a JSON array " +
+                    "(${value.length} chars, ${e.javaClass.simpleName})"
+            )
         }
 
         val readable = mutableListOf<PendingDirectPayment>()
