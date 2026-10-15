@@ -481,6 +481,13 @@ class SdkDeferredPayment internal constructor(
      * preview can sit open for a long time between the two.
      */
     val reservedAtMs: Long = System.currentTimeMillis(),
+    /**
+     * A LOWER bound on the engine's processed height when the inputs were reserved, or null when
+     * it was not known. The engine ages reservations in blocks from that height (swept after 24,
+     * broadcast refused after 20), so this is what a caller must measure the reservation's
+     * remaining life against; wall-clock time is no bound on how fast blocks arrive.
+     */
+    val reservedAtHeight: Long? = null,
 )
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -1225,6 +1232,24 @@ class SdkL1SendService internal constructor(
         true
     }
 
+    /**
+     * A lower bound on the engine's processed height, read BEFORE a build reserves anything, so
+     * the reservation's own height (the engine's processed height at that moment) is never below
+     * it. The committed wallet cursor when known, else the lower of the two scan cursors; null
+     * when the engine reports none.
+     */
+    private fun reservationHeightLowerBound(): Long? = try {
+        val progress = l1Progress()
+        listOf(progress.walletSyncedHeight, progress.filterHeight, progress.headerHeight)
+            .filter { it > 0 }
+            .minOrNull()
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun SdkDeferredPayment.withReservedAtHeight(height: Long?) =
+        SdkDeferredPayment(txidHex, rawTxBytes, feeDuffs, native, reservedAtMs, height)
+
     private fun paymentStillConfirming(operation: String) =
         org.dash.wallet.common.services.PaymentStillConfirmingException(
             "$operation: $L1_PENDING_PAYMENT_UNPROTECTED_REASON"
@@ -1570,7 +1595,8 @@ class SdkL1SendService internal constructor(
         }
         val gate = probeSendGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
-        val payment = source.buildDeferredPayment(walletIdHex, trimmed)
+        val reservedAtHeight = reservationHeightLowerBound()
+        val payment = source.buildDeferredPayment(walletIdHex, trimmed).withReservedAtHeight(reservedAtHeight)
         log.info(
             "SDK l1DeferredBuild: built {} ({} recipient(s), fee {} duffs), inputs reserved",
             payment.txidHex, trimmed.size, payment.feeDuffs
@@ -1738,7 +1764,9 @@ class SdkL1SendService internal constructor(
                 "wallet has app-locked outputs (CrowdNode); a max swap deposit would spend them"
             }
         }
+        val reservedAtHeight = reservationHeightLowerBound()
         val payment = source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
+            .withReservedAtHeight(reservedAtHeight)
         log.info(
             "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
             payment.txidHex,

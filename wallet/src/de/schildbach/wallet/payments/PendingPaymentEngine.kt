@@ -105,6 +105,13 @@ interface PendingPaymentEngine {
     fun isObservationLive(): Boolean
 
     /**
+     * An UPPER bound on the engine's current processed height, or null when the engine reports
+     * none. Paired with [SdkDeferredPayment.reservedAtHeight] (a lower bound at reservation time)
+     * it over-estimates how many blocks a reservation has aged, never under-estimates.
+     */
+    fun chainHeightUpperBound(): Long?
+
+    /**
      * Commits [rawTx] to the dashj wallet of record the way every SDK send is committed (the
      * bridge: `maybeCommitTx`, the confidence and purpose stamps, the dashj announce, the
      * self-spend grace marker and the send analytics), returning the wallet's live instance, or
@@ -131,6 +138,14 @@ class SdkPendingPaymentEngine @Inject constructor(
     }
 
     override suspend fun sdkOwnsL1(): Boolean = sdkL1SendService.cutoverCommitted()
+
+    override fun chainHeightUpperBound(): Long? = try {
+        val progress = l1ShadowSyncService.progress.value
+        maxOf(progress.headerHeight, progress.filterHeight, progress.walletSyncedHeight).takeIf { it > 0 }
+    } catch (e: Exception) {
+        log.warn("could not read the SDK engine height", e)
+        null
+    }
 
     override fun isObservationLive(): Boolean = try {
         isEngineObservationLive(l1ShadowSyncService.isEngineRunning(), l1ShadowSyncService.progress.value)

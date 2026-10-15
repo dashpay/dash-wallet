@@ -115,6 +115,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
          * older than 20 (about 50 minutes); this stays under both.
          */
         private const val RESERVATION_TRUST_MS = 40 * 60_000L
+
+        /**
+         * How many blocks a reservation is trusted for: a margin of 4 under the engine's 20-block
+         * broadcast limit (and its 24-block sweep).
+         */
+        private const val RESERVATION_TRUST_BLOCKS = 16L
         /** How long a wipe waits for running verifications to stop before going ahead anyway. */
         private const val DRAIN_TIMEOUT_MS = 5_000L
     }
@@ -390,6 +396,22 @@ class PendingDirectPaymentVerifier @Inject constructor(
     fun isTracked(txId: Sha256Hash): Boolean = jobs[txId]?.isActive == true
 
     /**
+     * Whether [held] can still be trusted to keep its inputs out of the engine's coin selection.
+     * The engine ages a reservation in blocks from the height it was made at (broadcast refused
+     * after 20, swept after 24), and blocks can arrive far faster than any wall-clock window, so
+     * the block test decides; the wall-clock limit only caps it. Both heights are bounds that
+     * over-estimate the age, and an unknown one fails closed. The SDK offers no way to ask
+     * whether a reservation is still live.
+     */
+    private fun isReservationStillHeld(held: SdkDeferredPayment?, now: Long, tip: Long?): Boolean {
+        held ?: return false
+        if (now - held.reservedAtMs >= RESERVATION_TRUST_MS) return false
+        val reservedAt = held.reservedAtHeight ?: return false
+        tip ?: return false
+        return tip - reservedAt < RESERVATION_TRUST_BLOCKS
+    }
+
+    /**
      * True while a payment whose outcome is unknown has inputs the SDK engine is not keeping out of
      * coin selection, so that an SDK-funded build could spend them and conflict with the signed
      * transaction the payee may still broadcast.
@@ -413,15 +435,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
         val walletId = walletData.wallet?.let { walletIdentity(it) }
         val now = System.currentTimeMillis()
+        val tip = try {
+            engine.chainHeightUpperBound()
+        } catch (e: Exception) {
+            null
+        }
         return pending.any { payment ->
             !payment.abandoned && !payment.watchExpired &&
                 (payment.walletId == null || walletId == null || payment.walletId == walletId) &&
-                reservations[payment.txId].let { held ->
-                    // The lifetime runs from when the engine reserved the inputs, which for a
-                    // BIP70 preview is when the screen built it, not when the payment was
-                    // submitted and quarantined.
-                    held == null || now - held.reservedAtMs >= RESERVATION_TRUST_MS
-                }
+                !isReservationStillHeld(reservations[payment.txId], now, tip)
         }
     }
 

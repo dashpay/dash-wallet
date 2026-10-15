@@ -1470,4 +1470,30 @@ class SdkL1SendServiceTest {
         )
         assertTrue(e is org.dash.wallet.common.services.PaymentStillConfirmingException)
     }
+
+    @Test
+    fun aDeferredBuildRecordsALowerBoundOfTheHeightItWasReservedAt() = runBlocking {
+        // The pending-payment gate measures the reservation's remaining life in blocks from
+        // here, so it must never be above the engine's processed height (review 2a8b1c7c057e).
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        // within the funding gate's tolerance, with the cursors a little apart
+        val behind = caughtUpProgress().copy(filterHeight = 1_499_999, walletSyncedHeight = 1_499_998)
+        val payment = service(source, progress = { behind })
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+
+        assertEquals("the lowest of the reported cursors", 1_499_998L, payment.reservedAtHeight)
+    }
+
+    @Test
+    fun aDeferredBuildWithNoKnownHeightRecordsNone() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val unknown = caughtUpProgress().copy(headerHeight = 0, filterHeight = 0, walletSyncedHeight = 0)
+        val payment = try {
+            service(source, progress = { unknown }).buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+        } catch (e: IllegalStateException) {
+            // the funding gate may refuse an engine with no heights at all, which is fine too
+            return@runBlocking
+        }
+        assertNull(payment.reservedAtHeight)
+    }
 }

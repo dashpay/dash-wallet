@@ -66,6 +66,9 @@ class PendingDirectPaymentVerifierTest {
         // static: JUnit builds a new test instance per method, so a per-instance counter would
         // restart and hand every test the same txid
         private val txCounter = AtomicInteger(0)
+
+        /** The engine's height when a test reservation was made; also the default current tip. */
+        private const val RESERVED_AT_HEIGHT = 1_000_000L
     }
 
     private val params = TestNet3Params.get()
@@ -109,6 +112,7 @@ class PendingDirectPaymentVerifierTest {
         coEvery { engine.sdkOwnsL1() } returns false
         coEvery { engine.observation(any()) } returns EngineObservation.ABSENT
         every { engine.isObservationLive() } returns true
+        every { engine.chainHeightUpperBound() } returns RESERVED_AT_HEIGHT
         coEvery { engine.bridge(any(), any(), any()) } returns null
 
         verifier = PendingDirectPaymentVerifier(
@@ -796,12 +800,14 @@ class PendingDirectPaymentVerifierTest {
 
     // --- the Kotlin SDK engine (phase-1 port) ------------------------------------------------
 
-    private fun reservationFor(tx: Transaction) = de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
-        txidHex = tx.txId.toString(),
-        rawTxBytes = tx.unsafeBitcoinSerialize(),
-        feeDuffs = 1_000L,
-        native = null
-    )
+    private fun reservationFor(tx: Transaction, reservedAtHeight: Long? = RESERVED_AT_HEIGHT) =
+        de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
+            txidHex = tx.txId.toString(),
+            rawTxBytes = tx.unsafeBitcoinSerialize(),
+            feeDuffs = 1_000L,
+            native = null,
+            reservedAtHeight = reservedAtHeight
+        )
 
     @Test
     fun `commits once the SDK engine has observed the tx and consumes the held reservation`() = runBlocking {
@@ -1064,5 +1070,33 @@ class PendingDirectPaymentVerifierTest {
         coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
 
         assertTrue(verifier.hasUnprotectedPendingPayment())
+    }
+
+    // --- block-based reservation lifetime (review 2a8b1c7c057e) -----------------------------
+
+    private suspend fun protectedWith(reservedAtHeight: Long?, tip: Long?): Boolean {
+        val tx = createTransaction()
+        every { engine.chainHeightUpperBound() } returns tip
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx, reservedAtHeight))
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
+        return !verifier.hasUnprotectedPendingPayment()
+    }
+
+    @Test
+    fun `a reservation is trusted only a safe margin short of the engine's block limit`() = runBlocking {
+        assertTrue("a few blocks old: still reserved", protectedWith(RESERVED_AT_HEIGHT, RESERVED_AT_HEIGHT + 5))
+    }
+
+    @Test
+    fun `a reservation that many blocks have passed is not trusted however recent it is`() = runBlocking {
+        // 20 blocks can arrive well inside the wall-clock window; the engine refuses or sweeps it
+        assertFalse(protectedWith(RESERVED_AT_HEIGHT, RESERVED_AT_HEIGHT + 20))
+        assertFalse(protectedWith(RESERVED_AT_HEIGHT, RESERVED_AT_HEIGHT + 16))
+    }
+
+    @Test
+    fun `an unknown build height or tip fails closed`() = runBlocking {
+        assertFalse("no build height", protectedWith(null, RESERVED_AT_HEIGHT))
+        assertFalse("no current tip", protectedWith(RESERVED_AT_HEIGHT, null))
     }
 }
