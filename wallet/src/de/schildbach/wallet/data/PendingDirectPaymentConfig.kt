@@ -300,7 +300,13 @@ open class PendingDirectPaymentConfig @Inject constructor(
     private fun decode(value: String?): StoredPayments = try {
         parse(value)
     } catch (e: Exception) {
-        log.error("pending direct payments are unreadable, reporting none: {}", value, e)
+        // Never the value or the exception itself: the blob holds the raw signed transactions
+        // (amounts included), and JSON parse errors echo the text they choked on.
+        log.error(
+            "pending direct payments are unreadable ({} chars), reporting none: {}",
+            value?.length,
+            e.javaClass.simpleName
+        )
         StoredPayments(emptyList(), emptyList())
     }
 
@@ -338,7 +344,12 @@ open class PendingDirectPaymentConfig @Inject constructor(
                 // failures, so naming types would let one entry escape and hide every payment
                 // again. getJSONObject also lands here when the element is not an object at all,
                 // which has to count as unreadable rather than be skipped.
-                log.error("could not read pending direct payment at index {}, keeping it as is", i, e)
+                // Type only: the entry holds a raw transaction and JSON errors quote it back.
+                log.error(
+                    "could not read pending direct payment at index {} ({}), keeping it as is",
+                    i,
+                    e.javaClass.simpleName
+                )
                 unreadable.add(array.opt(i) ?: JSONObject.NULL)
             }
         }
