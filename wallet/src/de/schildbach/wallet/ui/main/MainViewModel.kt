@@ -56,6 +56,7 @@ import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.more.hasShieldedContext
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.Dispatchers
@@ -223,6 +224,14 @@ class MainViewModel @Inject constructor(
     private val _homeBalance = MutableLiveData<Coin>()
     val homeBalance: LiveData<Coin>
         get() = _homeBalance
+
+    /**
+     * True while [homeBalance] is missing the shielded part because it is not
+     * known yet (see [homeShieldedBalance]) — the home header keeps its
+     * "Syncing balance" indicator on until it arrives.
+     */
+    private val _homeShieldedPending = MutableStateFlow(false)
+    val homeShieldedPending: StateFlow<Boolean> = _homeShieldedPending.asStateFlow()
 
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
@@ -487,7 +496,8 @@ class MainViewModel @Inject constructor(
         // Home header only: L1 total + shielded balance.
         walletData.observeTotalBalance()
             .combine(observeHomeShieldedBalance()) { transparent, shielded ->
-                transparent.add(Coin.valueOf(shielded.duffs))
+                _homeShieldedPending.value = shielded == null
+                transparent.add(Coin.valueOf((shielded ?: Dash.ZERO).duffs))
             }
             .onEach { _homeBalance.value = it }
             .catch { e -> log.error("home balance flow error", e) }
@@ -589,9 +599,10 @@ class MainViewModel @Inject constructor(
      * The shielded part of [homeBalance]: zero unless the shielded feature is
      * on (`SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`). The runtime is
      * brought up at startup by [PlatformSyncService]; until it is READY the
-     * persisted last-known balance stands in (see [homeShieldedBalance]).
+     * persisted last-known balance stands in (see [homeShieldedBalance]);
+     * null while the amount is unknown.
      */
-    private fun observeHomeShieldedBalance(): Flow<Dash> =
+    private fun observeHomeShieldedBalance(): Flow<Dash?> =
         dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
             .map { Constants.SUPPORTS_PLATFORM && it == true }
             .distinctUntilChanged()
@@ -602,9 +613,10 @@ class MainViewModel @Inject constructor(
                     combine(
                         shieldedBalanceService.observeShieldedBalance(),
                         shieldedBalanceService.shieldedSyncStatus,
-                        dashPayConfig.observe(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)
-                    ) { live, status, cachedDuffs ->
-                        homeShieldedBalance(status, live, cachedDuffs?.let { Dash(it) })
+                        dashPayConfig.observe(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS),
+                        blockchainIdentityDataDao.observeBase().map { hasShieldedContext(it) }
+                    ) { live, status, cachedDuffs, hasShieldedContext ->
+                        homeShieldedBalance(status, live, cachedDuffs?.let { Dash(it) }, hasShieldedContext)
                     }
                 }
             }
@@ -1013,11 +1025,24 @@ class MainViewModel @Inject constructor(
  * The shielded amount the home header adds to the L1 total — pure and
  * host-testable. `observeShieldedBalance()` reads `Dash.ZERO` until the
  * runtime is READY and during a re-scan, so only a READY balance is used
- * live; otherwise the persisted last-known (READY) balance stands in, and
- * with no cache the live value (zero) is used.
+ * live; otherwise the persisted last-known (READY) balance stands in.
+ *
+ * With no cache the amount is unknown (null) — unless the wallet has no
+ * shielded context ([hasShieldedContext]): then the runtime can never come
+ * up and zero is the honest balance (the More card's rule,
+ * `mapShieldedCardDisplay`).
  */
-internal fun homeShieldedBalance(status: ShieldedSyncStatus, live: Dash, cached: Dash?): Dash =
-    if (status == ShieldedSyncStatus.READY) live else cached ?: live
+internal fun homeShieldedBalance(
+    status: ShieldedSyncStatus,
+    live: Dash,
+    cached: Dash?,
+    hasShieldedContext: Boolean
+): Dash? = when {
+    status == ShieldedSyncStatus.READY -> live
+    cached != null -> cached
+    !hasShieldedContext -> live
+    else -> null
+}
 
 /**
  * Pick the DISPLAY form of the requested username, pure and host-testable.

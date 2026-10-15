@@ -20,12 +20,14 @@ package de.schildbach.wallet.ui.main
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
  * The shielded amount the home header adds to the L1 total
  * ([homeShieldedBalance]): never the transient zero the pool reads while it
- * is not READY when a last-known balance exists.
+ * is not READY — the last-known balance when cached, otherwise unknown
+ * (null), except on a wallet with no shielded context where zero is honest.
  */
 class HomeShieldedBalanceTest {
 
@@ -34,23 +36,28 @@ class HomeShieldedBalanceTest {
 
     @Test
     fun `READY uses the live balance even when a cache exists`() {
-        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, cached))
+        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, cached, true))
     }
 
     @Test
     fun `READY with nothing shielded is zero`() {
-        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, Dash.ZERO, cached))
+        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, Dash.ZERO, null, true))
     }
 
     @Test
     fun `not ready uses the last-known balance instead of the transient zero`() {
-        assertEquals(cached, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, cached))
-        assertEquals(cached, homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO, cached))
+        assertEquals(cached, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, cached, true))
+        assertEquals(cached, homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO, cached, true))
     }
 
     @Test
-    fun `not ready with no cache falls back to the live value`() {
-        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, null))
-        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.SYNCING, live, null))
+    fun `not ready with no cache is unknown`() {
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, null, true))
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO, null, true))
+    }
+
+    @Test
+    fun `no shielded context with no cache is an honest zero, not unknown`() {
+        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, null, false))
     }
 }
