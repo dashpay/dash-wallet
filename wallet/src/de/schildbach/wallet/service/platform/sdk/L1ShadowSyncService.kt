@@ -4058,6 +4058,21 @@ class L1ShadowSyncService internal constructor(
     private var txHistoryGeneration = 0L
 
     /**
+     * How many wallet wipes and SDK ledger rebuilds are in progress
+     * ([closeParityBreakdown]); under [breakdownLock]. While above zero no run
+     * is admitted ([startParityBreakdown]).
+     *
+     * The epoch alone is not enough: [discardParityBreakdown] fences the runs
+     * that exist when it is called, but a reset still has to stop SPV before
+     * it deletes the rows, and the shadow still reads as running and caught up
+     * meanwhile. A report or probe in that gap started a run under the NEW
+     * epoch that read the OLD ledger and, finishing after the deletion, passed
+     * every check — clean findings for a ledger that no longer existed, and
+     * the hourly slot spent on them.
+     */
+    private var breakdownClosedBy = 0
+
+    /**
      * The run in flight, if any: at most one at a time, shared by the hourly
      * diagnostic run and a report (a report joins a run already going). Kept
      * until it has COMPLETED, not just while active: it is published before
@@ -4248,6 +4263,29 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
+     * Refuse new runs until the matching [reopenParityBreakdown] — for the
+     * whole of a wipe or ledger rebuild, from before its
+     * [discardParityBreakdown] to after its last destructive step. Not
+     * suspending, so the caller can pair it with a `finally` that is sure to
+     * run: a failed reset must not leave the breakdown closed for good.
+     */
+    private fun closeParityBreakdown() {
+        synchronized(breakdownLock) { breakdownClosedBy++ }
+    }
+
+    /**
+     * Undo one [closeParityBreakdown]. The epoch moves again on the way out,
+     * so nothing that began while closed — a first [breakdownStore] read
+     * included — survives into the rebuilt ledger.
+     */
+    private fun reopenParityBreakdown() {
+        synchronized(breakdownLock) {
+            breakdownClosedBy--
+            breakdownEpoch++
+        }
+    }
+
+    /**
      * The SDK's txid set is complete enough to compare: the same caught-up
      * test the parity streak uses. Not sufficient on its own — that test
      * ignores the block/transaction pipeline, so [runParityBreakdown] also
@@ -4277,12 +4315,21 @@ class L1ShadowSyncService internal constructor(
         startParityBreakdown(walletIdHex, ParityBreakdownTrigger.PROBE)
     }
 
-    /** Start a run, or return the one already in flight (started or not). */
+    /**
+     * Start a run, or return the one already in flight (started or not) — or,
+     * while a wipe or ledger rebuild is in progress ([breakdownClosedBy]), an
+     * already-completed [ParityBreakdownRunResult.Unavailable].
+     */
     private fun startParityBreakdown(
         walletIdHex: String,
         trigger: ParityBreakdownTrigger
     ): Deferred<ParityBreakdownRunResult> {
         val run = synchronized(breakdownLock) {
+            if (breakdownClosedBy > 0) {
+                return kotlinx.coroutines.CompletableDeferred(
+                    ParityBreakdownRunResult.Unavailable(PARITY_BREAKDOWN_LEDGER_REBUILD)
+                )
+            }
             inFlightParityBreakdown(breakdownRun)?.let { return it }
             val epoch = breakdownEpoch
             // Taken before the run reads anything, so a transaction that
@@ -4605,6 +4652,9 @@ class L1ShadowSyncService internal constructor(
      * or a step failed; failures are logged, never thrown).
      */
     suspend fun resetShadowState(hard: Boolean = true): Boolean {
+        // No breakdown may START until the rows are gone: one started in
+        // between would read the old ledger and publish it as the new one's.
+        closeParityBreakdown()
         return try {
             mutex.withLock {
                 val walletIdHex = runningWalletIdHex.value
@@ -4656,6 +4706,8 @@ class L1ShadowSyncService internal constructor(
             if (t is CancellationException) throw t
             log.error("L1 shadow reset failed; the shadow may need a manual restart", t)
             false
+        } finally {
+            reopenParityBreakdown()
         }
     }
 
@@ -4765,6 +4817,10 @@ class L1ShadowSyncService internal constructor(
             log.warn("L1 shadow wallet re-creation skipped: no recreator wired (test construction?)")
             return false
         }
+        // Closed until the wallet is removed: the stop() below cancels a run,
+        // but one started between the discard and that stop would read the
+        // old ledger, and could keep it before the cancel reached it.
+        closeParityBreakdown()
         return try {
             recoveryMutex.withLock {
                 val walletIdHex = runningWalletIdHex.value ?: source.boundWalletIdOrNull()
@@ -4831,6 +4887,8 @@ class L1ShadowSyncService internal constructor(
                 t
             )
             false
+        } finally {
+            reopenParityBreakdown()
         }
     }
 
@@ -4866,6 +4924,17 @@ class L1ShadowSyncService internal constructor(
      * rest (a partial clear is exactly the resurrection bug).
      */
     suspend fun clearForWalletWipe() {
+        // Closed until the SDK wallet is gone, or a run started before the
+        // stop() below could keep this wallet's txids after the discard.
+        closeParityBreakdown()
+        try {
+            clearForWalletWipeWithBreakdownClosed()
+        } finally {
+            reopenParityBreakdown()
+        }
+    }
+
+    private suspend fun clearForWalletWipeWithBreakdownClosed() {
         // First and unconditionally: the stored parity breakdown carries this
         // wallet's txids and amounts, and must never reach the next wallet's
         // support report.

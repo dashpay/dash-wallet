@@ -795,6 +795,9 @@ internal fun <T> inFlightParityBreakdown(run: Deferred<T>?): Deferred<T>? = run?
 /** [ParityBreakdownRunResult.Unavailable] for a run that finished after a wallet wipe. */
 internal const val PARITY_BREAKDOWN_WIPED = "wallet wiped while computing"
 
+/** [ParityBreakdownRunResult.Unavailable] for a run refused while a wipe or ledger rebuild is in progress. */
+internal const val PARITY_BREAKDOWN_LEDGER_REBUILD = "SDK wallet ledger reset in progress"
+
 /** How one breakdown run ended. */
 internal sealed class ParityBreakdownRunResult {
     data class Done(val stored: StoredParityBreakdown) : ParityBreakdownRunResult()

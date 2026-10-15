@@ -3794,6 +3794,81 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun aBreakdownRequestedMidReset_isRefused_andCannotPublishTheDeletedLedger() = runBlocking {
+        // The discard fenced the runs that existed, but the reset still had to
+        // stop SPV before deleting the rows, and the shadow read as running and
+        // caught up meanwhile. A report in that gap started a run under the new
+        // epoch that read the OLD ledger; finishing after the deletion it
+        // passed every check — clean findings for rows that were gone, and the
+        // hourly slot spent on them.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null } // the probe took the hour
+        val runsBefore = source.breakdownDashjCalls
+
+        // The reset parks in stopSpv: past its discard, before the rows go.
+        val inStop = CompletableDeferred<Unit>()
+        val stopGate = CompletableDeferred<Unit>()
+        source.onStop = {
+            inStop.complete(Unit)
+            stopGate.await()
+        }
+        // A run that got in would have read the old ledger; hold it until the rows are gone.
+        val runGate = CompletableDeferred<Unit>()
+        source.onDashjBreakdownFacts = { runGate.await() }
+        val reset = scope.async { service.resetShadowState(hard = true) }
+        withTimeout(5_000) { inStop.await() }
+        assertTrue("the reset is waiting with the old ledger still in place", service.progress.value.synced)
+
+        val report = withTimeout(5_000) { service.parityBreakdownForReport(timeoutMs = 100) }
+
+        stopGate.complete(Unit)
+        assertTrue(withTimeout(5_000) { reset.await() })
+        assertEquals(1, source.clearL1RowsCalls)
+        source.onStop = {}
+        runGate.complete(Unit) // a run admitted mid-reset would finish now, after the deletion
+        delay(100)
+
+        assertNull("nothing may publish the deleted ledger", service.latestBreakdownFindings.value)
+        assertNull("nor store it", ParityBreakdownStore(file).load())
+        assertEquals("no run may start mid-reset", runsBefore, source.breakdownDashjCalls)
+        assertEquals(ReportParityBreakdown(null, PARITY_BREAKDOWN_LEDGER_REBUILD), report)
+
+        // Reopened, with the hour still free: once the restarted sync is caught
+        // up the probe recomputes at once and its findings are published.
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls > runsBefore }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aFailedReset_reopensTheBreakdown() = runBlocking {
+        // The refusal lasts for the reset, not for the process: a reset that
+        // throws partway must not leave every later report "reset in progress".
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        source.onClearRows = { throw IllegalStateException("row delete failed") }
+
+        assertFalse(service.resetShadowState(hard = true))
+
+        source.onClearRows = {}
+        source.driveSyncedEdgesUntil { service.progress.value.synced }
+        val after = service.parityBreakdownForReport()
+        assertNull(after.notRefreshedReason, after.notRefreshedReason)
+        assertNotNull(after.stored)
+        service.stop()
+    }
+
+    @Test
     fun aNewTransaction_expiresTheFindings_butKeepsTheStoredBreakdown() = runBlocking {
         // The findings described a history that did not contain this
         // transaction, so they cannot establish parity for the one that does.
