@@ -1215,4 +1215,91 @@ class SendCoinsTaskRunnerBIP70Test {
         // bound to the captured origin, not to whatever walletData.wallet reads at bridge time
         io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
     }
+
+    // ==================== plain dash: payments after the cutover (review 4250735559) ==========
+
+    @Test
+    fun `a plain dash URI after the cutover records the order and a recovery record before broadcasting`() = runTest {
+        // A PiggyCards-style order pays a bare dash: address. Once the SDK owns L1 the payment must
+        // be built and reserved first, the order and the pending-payment record written, and only
+        // then broadcast: a process death between the broadcast and the order write would
+        // otherwise leave a paid order with nothing to redeem it against.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val payment = deferredPayment()
+        val liveTx = mockk<Transaction>(relaxed = true)
+        every { liveTx.txId } returns deferredTx.txId
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        var callbackRan = false
+        var recordWritten = false
+        coEvery { pendingPaymentConfig.add(any(), any()) } answers { recordWritten = true }
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } answers {
+            assertTrue("the order must be recorded before the broadcast", callbackRan)
+            assertTrue("the recovery record must exist before the broadcast", recordWritten)
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        }
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        // the old one-step SDK send, which broadcasts before the caller can record anything
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+
+        val result = sendCoinsTaskRunner.payWithDashUrlTx(
+            "dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=1.0",
+            "PiggyCards",
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = "https://icon")
+        ) { txId ->
+            assertEquals(deferredTxidHex, txId)
+            callbackRan = true
+        }
+
+        assertEquals(deferredTx.txId, result.txId)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.sendToAddress(any(), any(), any(), any()) }
+        // resolved: attributed, then the record dropped
+        coVerifyOrder {
+            metadataProvider.markGiftCardTransaction(any(), "PiggyCards", "https://icon")
+            pendingPaymentConfig.remove(deferredTx.txId)
+        }
+    }
+
+    @Test
+    fun `a plain dash URI after the cutover that is refused before the network releases and reports it`() = runTest {
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.NotBroadcast("refused pre-network")
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrlTx("dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=1.0", "PiggyCards")
+            fail("a refused broadcast was reported as sent")
+        } catch (e: PaymentSubmissionPendingException) {
+            fail("a definitive refusal is not pending: $e")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        coVerify(exactly = 1) { pendingPaymentConfig.remove(deferredTx.txId) }
+    }
+
+    @Test
+    fun `a plain dash URI after the cutover whose broadcast outcome is unknown stays pending`() = runTest {
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Ambiguous(RuntimeException("timeout"))
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrlTx("dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=1.0", "PiggyCards")
+            fail("an unknown broadcast outcome was reported as definite")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+        coVerify(exactly = 0) { pendingPaymentConfig.remove(any()) }
+        assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
+    }
 }

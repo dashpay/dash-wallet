@@ -857,6 +857,9 @@ class SendCoinsTaskRunner @Inject constructor(
             return directPayViaSdk(paymentIntent, serviceName, recovery, onTransactionCreated)
         } else {
             ensureStillOwned(wallet, "selecting coins")
+            if (sdkL1SendService.cutoverCommitted()) {
+                return payPlainIntentViaSdk(wallet, basePaymentIntent, serviceName, recovery, onTransactionCreated)
+            }
             val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
             val sendRequestForSigning = createSendRequest(
                 false,
@@ -864,16 +867,6 @@ class SendCoinsTaskRunner @Inject constructor(
                 true,
                 sendRequest.ensureMinRequiredFee
             )
-            if (sdkL1SendService.cutoverCommitted()) {
-                // The SDK builds, signs and broadcasts a plain send in one step and selects its
-                // own inputs, so there is no transaction id before the broadcast and a dashj
-                // completeTx here would sign a transaction that is never sent (the held dashj
-                // wallet has no spendable outputs anyway). The caller hears about the
-                // transaction as soon as it exists, which is after it left.
-                val sent = sendCoins(sendRequestForSigning, serviceName = serviceName)
-                reportCreatedAfterBroadcast(sent.txId.toString(), onTransactionCreated)
-                return sent
-            }
             // Pre-cutover: the same ordering as the BIP70 branch. Complete and sign locally so
             // the transaction id is final, let the caller record its order, and only then commit
             // and broadcast. Recording afterwards would mean a failed insert arriving when the
@@ -891,26 +884,6 @@ class SendCoinsTaskRunner @Inject constructor(
             // finish while the order is being recorded. Committing to whatever is installed by
             // then would hand the replacement wallet this one's signed transaction.
             return sendCoins(sendRequestForSigning, txCompleted = true, serviceName = serviceName, originWallet = wallet)
-        }
-    }
-
-    /**
-     * [onTransactionCreated] for a payment that is already on its way: the transaction exists,
-     * so a failure to record it must not read as a failed payment, which would send the caller
-     * into cleanup for an order it has paid for. It is reported as pending instead, which tells
-     * the caller to keep the order and withhold a retry.
-     */
-    private suspend fun reportCreatedAfterBroadcast(
-        txIdHex: String,
-        onTransactionCreated: (suspend (String) -> Unit)?
-    ) {
-        if (onTransactionCreated == null) return
-        try {
-            onTransactionCreated(txIdHex)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            log.error("payment {} was sent but the caller could not record it", txIdHex, e)
-            throw PaymentSubmissionPendingException(txIdHex, e)
         }
     }
 
@@ -952,7 +925,18 @@ class SendCoinsTaskRunner @Inject constructor(
      * SDK builder is address-only. Also runs the same pre-send
      * leftover-balance condition the dashj path enforces at commit time.
      */
-    suspend fun buildDeferredBip70Payment(paymentIntent: PaymentIntent): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
+    suspend fun buildDeferredBip70Payment(paymentIntent: PaymentIntent): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment =
+        buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = true)
+
+    /**
+     * Builds, signs and reserves [paymentIntent]'s outputs through the SDK without broadcasting
+     * (see [buildDeferredBip70Payment]). [requirePaymentUrl] is false for a plain `dash:` payment,
+     * which has no BIP70 endpoint and is broadcast by the wallet itself.
+     */
+    private suspend fun buildDeferredSdkPayment(
+        paymentIntent: PaymentIntent,
+        requirePaymentUrl: Boolean
+    ): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
         // Before the SDK selects and reserves inputs: an uncertain payment's dashj-side locks
         // must be back first (see awaitPaymentReadiness).
         pendingPaymentVerifier.awaitRestored()
@@ -963,7 +947,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 "cutover committed: this payment request has an output the SDK builder cannot " +
                     "express (non-address script or missing amount) — not SDK-routable"
             )
-        if (paymentIntent.paymentUrl == null) {
+        if (requirePaymentUrl && paymentIntent.paymentUrl == null) {
             // Fail fast BEFORE reserving inputs for a payment that could
             // never be submitted.
             throw InvalidPaymentRequestURL("Final payment intent URL is null")
@@ -1045,6 +1029,115 @@ class SendCoinsTaskRunner @Inject constructor(
     ): Transaction {
         val payment = buildDeferredBip70Payment(finalPaymentIntent)
         return sendPrebuiltDirectPayment(payment, finalPaymentIntent, serviceName, recovery, onTransactionCreated)
+    }
+
+    /**
+     * A plain `dash:` payment (no BIP70 request, e.g. a PiggyCards gift card order) once the SDK
+     * owns L1, with the same ordering as a BIP70 submission: the SDK builds, signs and reserves
+     * the transaction first; the caller records its order ([onTransactionCreated]) and the
+     * payment is quarantined with [PendingDirectPaymentVerifier] while nothing has been sent;
+     * only then is it broadcast. A process death after the broadcast therefore leaves both the
+     * order and a recovery record, and the watch commits and attributes the payment once the
+     * engine observes it.
+     *
+     * The one-step SDK send could not do this: it broadcast before any transaction id existed,
+     * so the order could only be written afterwards.
+     *
+     * Outcomes: a broadcast commits through the bridge (bound to [wallet]), attributes and drops
+     * the quarantine; a definitive pre-network refusal releases the reservation and the
+     * quarantine and throws, so the caller discards its order; an unknown outcome keeps both and
+     * throws [PaymentSubmissionPendingException].
+     */
+    private suspend fun payPlainIntentViaSdk(
+        wallet: Wallet,
+        paymentIntent: PaymentIntent,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata?,
+        onTransactionCreated: (suspend (String) -> Unit)?
+    ): Transaction {
+        val payment = buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = false)
+        return withContext(NonCancellable) {
+            val tx = try {
+                Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
+            } catch (e: Exception) {
+                releaseDeferredPayment(payment)
+                throw e
+            }
+            val paymentLabel = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
+                ?.firstOrNull()?.first?.let { "dash:$it" } ?: "dash:"
+
+            try {
+                ensureStillOwned(wallet, "recording the order")
+                serviceName?.let { metadataProvider.setTransactionService(TxId.wrap(payment.txidHex), it) }
+                // Nothing has been sent: the last point at which the caller can record what it
+                // needs to recover the payment.
+                onTransactionCreated?.invoke(payment.txidHex)
+                pendingPaymentVerifier.quarantine(
+                    tx,
+                    paymentLabel,
+                    serviceName,
+                    recovery,
+                    null,
+                    origin = wallet,
+                    reservation = payment
+                )
+                if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                    pendingPaymentVerifier.detachReservation(tx.txId)
+                    throw IllegalStateException("the wallet that signed ${payment.txidHex} has been wiped; not broadcasting")
+                }
+            } catch (e: Exception) {
+                // Nothing has been sent. Free the inputs; the caller discards its order.
+                releaseDeferredPayment(payment)
+                throw e
+            }
+
+            // The broadcast consumes the reservation, so the watch must not hold it any more.
+            pendingPaymentVerifier.detachReservation(tx.txId)
+            runCatching { setReservedOutpointLocks(payment, locked = false, wallet = wallet) }
+                .onFailure { log.warn("failed to clear the mirrored reservation locks", it) }
+            when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
+                is SdkWriteResult.Broadcast -> log.info("plain payment {} broadcast via the SDK", result.value)
+                is SdkWriteResult.NotBroadcast -> {
+                    // Refused before reaching the network: definitively not sent.
+                    pendingPaymentVerifier.cancelQuarantine(tx)
+                    releaseDeferredPayment(payment)
+                    throw sdkSendNotAttemptedException(result.reason)
+                }
+                is SdkWriteResult.Ambiguous -> {
+                    // It may be on the network. Keep the quarantine: the watch commits it once
+                    // the engine observes it, or releases it after the grace period.
+                    log.error("plain payment {} broadcast outcome unknown", payment.txidHex, result.cause)
+                    throw PaymentSubmissionPendingException(payment.txidHex, result.cause)
+                }
+            }
+
+            if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                throw IllegalStateException(
+                    "the wallet that signed ${payment.txidHex} was wiped during its broadcast; not committing it"
+                )
+            }
+            val sent = when (
+                val bridged = bridgedTransactionFactory.bridge(payment.txidHex, payment.rawTxBytes, originWallet = wallet)
+            ) {
+                is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> bridged.transaction
+                // Sent, but not yet in the wallet record: the quarantine stays and the watch
+                // commits and attributes it once the engine observes it.
+                is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged ->
+                    throw PaymentSubmissionPendingException(
+                        payment.txidHex,
+                        null,
+                        "payment ${payment.txidHex} was broadcast but the wallet display bridge failed " +
+                            "(${bridged.reason}); it appears after the next sync"
+                    )
+            }
+            try {
+                applyGiftCardRecoveryMetadata(sent.txId, serviceName, recovery)
+                pendingPaymentVerifier.cancelQuarantine(tx)
+            } catch (e: Exception) {
+                log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
+            }
+            sent
+        }
     }
 
     /**
