@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -305,6 +306,9 @@ open class InvitationFragmentViewModel @Inject constructor(
     }
 
     suspend fun sendInviteTransaction(value: Coin): String {
+        // this view model is activity-scoped: drop any invitation selected on a previous screen so
+        // the created screen cannot offer its link while the new invite is still pending
+        clearInvitationSelection()
         // ensure that the fundingAddress hasn't been used
         withContext(Dispatchers.IO) {
             Context.propagate(walletData.wallet!!.context)
@@ -364,6 +368,7 @@ open class InvitationFragmentViewModel @Inject constructor(
      * off the main thread.
      */
     suspend fun createShieldedInvite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        clearInvitationSelection()
         _inviteCreationInFlight.value = true
         return try {
             withContext(Dispatchers.IO) {
@@ -509,10 +514,17 @@ open class InvitationFragmentViewModel @Inject constructor(
     val invitation: StateFlow<Invitation?>
         get() = _invitation
 
+    /** Forget the selected invitation: cancels its database observation and clears [invitation]. */
+    fun clearInvitationSelection() {
+        identityId.value = null
+        _invitation.value = null
+    }
+
     init {
         identityId
-            .filterNotNull()
-            .flatMapLatest(invitationDao::observeByUserId)
+            .flatMapLatest { userId ->
+                if (userId == null) flowOf(null) else invitationDao.observeByUserId(userId)
+            }
             .onEach { invitation ->
                 _invitation.value = invitation
             }.launchIn(workerScope)
