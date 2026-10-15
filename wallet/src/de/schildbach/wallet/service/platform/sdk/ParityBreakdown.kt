@@ -55,9 +55,16 @@ const val NO_BLOCK = -1
  * collected once per run by [collectDashjBreakdownFacts], never a copy of
  * the transaction.
  *
- * The classification fields ([netDuffs], [coinJoinType], [dashPayContact],
- * [special], [timeMs]) are only filled for transactions the SDK lacks; for
- * shared ones they stay at their defaults and are never read.
+ * The value fields ([netDuffs], [valueKnown]) are filled for every
+ * transaction, shared or not, whenever the read succeeds ([valueKnown] is
+ * false when it threw): for one the SDK lacks they feed the dashj-only
+ * groups, and for a shared one [netDuffs] is compared against the SDK's
+ * stored net. Reading them is cheap — `getValue` walks the transaction, not
+ * the wallet.
+ *
+ * The classification fields ([coinJoinType], [dashPayContact], [special],
+ * [timeMs]) are only filled for transactions the SDK lacks; for shared ones
+ * they stay at their defaults and are never read.
  *
  * @property txid dashj's hash object itself (shared with the wallet, not copied).
  * @property height the block height, or [NO_BLOCK].

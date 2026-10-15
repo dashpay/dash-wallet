@@ -4049,6 +4049,15 @@ class L1ShadowSyncService internal constructor(
     private var breakdownEpoch = 0L
 
     /**
+     * Advanced by every wallet transaction event ([expireParityFindingsForNewTx]);
+     * under [breakdownLock]. A run that began under an older generation read a
+     * history without that transaction: it may still keep its text, but it
+     * must not publish findings or touch the hourly cadence, or a clean sheet
+     * for the old history would come back as the verdict for the new one.
+     */
+    private var txHistoryGeneration = 0L
+
+    /**
      * The run in flight, if any: at most one at a time, shared by the hourly
      * diagnostic run and a report (a report joins a run already going). Kept
      * until it has COMPLETED, not just while active: it is published before
@@ -4150,6 +4159,52 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
+     * A new transaction arrived: the completed findings described a history
+     * that did not contain it, so they can no longer establish parity for the
+     * history that does. Dropping them makes the verdict fall back to "not
+     * established" until a run has compared the new state.
+     *
+     * A run IN FLIGHT is just as stale — it may already have read its inputs —
+     * so the event also advances [txHistoryGeneration]. A run started under an
+     * older generation still keeps its text (it is a true account of the
+     * moment it read), but publishes no findings and leaves the cadence alone
+     * ([keepParityBreakdown], [runParityBreakdown]). That applies to the
+     * first run of the process too: nothing completed is needed for the
+     * generation to move.
+     *
+     * Unlike [discardParityBreakdown] this keeps the stored breakdown text —
+     * it is timestamped and remains a valid account of the moment it was
+     * computed, which is what a support report wants. Only the verdict's
+     * input goes.
+     *
+     * The cadence is reset so the next probe tick can recompute rather than
+     * waiting out the hour, held off by [PARITY_BREAKDOWN_TX_SETTLE_MS] past
+     * the LATEST event, so a burst (one event per CoinJoin record) produces
+     * one run after it ends, not one per transaction.
+     */
+    private fun expireParityFindingsForNewTx() {
+        val expired = synchronized(breakdownLock) {
+            txHistoryGeneration++
+            val hadSomething = _latestBreakdownFindings.value != null ||
+                lastBreakdownRunMs != null ||
+                inFlightParityBreakdown(breakdownRun) != null
+            _latestBreakdownFindings.value = null
+            lastBreakdownRunMs = null
+            breakdownRetryNotBeforeMs = maxOf(
+                breakdownRetryNotBeforeMs,
+                nowMs() + PARITY_BREAKDOWN_TX_SETTLE_MS
+            )
+            hadSomething
+        }
+        // Logged only when something was expired, so a burst normally logs
+        // once: its later events find nothing left (unless a run is still in
+        // flight) and only extend the settle window.
+        if (expired) {
+            log.info("ParityBreakdown: findings expired by a new transaction; recomputing after the settle window")
+        }
+    }
+
+    /**
      * Forget the breakdown (memory and [breakdownStore]) and cancel a run in
      * flight. The epoch bump fences a run that cannot be stopped in time — it
      * finishes without keeping or logging anything.
@@ -4172,35 +4227,6 @@ class L1ShadowSyncService internal constructor(
      * and resetting the cadence lets a fresh breakdown run immediately rather
      * than waiting out the hour.
      */
-    /**
-     * A new transaction arrived: the completed findings described a history
-     * that did not contain it, so they can no longer establish parity for the
-     * history that does. Dropping them makes the verdict fall back to "not
-     * established" until a run has compared the new state.
-     *
-     * Unlike [discardParityBreakdown] this keeps the stored breakdown text —
-     * it is timestamped and remains a valid account of the moment it was
-     * computed, which is what a support report wants. Only the verdict's
-     * input goes.
-     *
-     * The cadence is reset so the next probe tick can recompute rather than
-     * waiting out the hour, held off by [PARITY_BREAKDOWN_TX_SETTLE_MS] so a
-     * burst of events (one per CoinJoin record) produces one run, not one per
-     * transaction.
-     */
-    private fun expireParityFindingsForNewTx() {
-        synchronized(breakdownLock) {
-            if (_latestBreakdownFindings.value == null && lastBreakdownRunMs == null) return
-            _latestBreakdownFindings.value = null
-            lastBreakdownRunMs = null
-            breakdownRetryNotBeforeMs = maxOf(
-                breakdownRetryNotBeforeMs,
-                nowMs() + PARITY_BREAKDOWN_TX_SETTLE_MS
-            )
-        }
-        log.info("ParityBreakdown: findings expired by a new transaction; recomputing after the settle window")
-    }
-
     private suspend fun discardParityBreakdown(why: String) {
         val run = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             synchronized(breakdownLock) {
@@ -4259,12 +4285,15 @@ class L1ShadowSyncService internal constructor(
         val run = synchronized(breakdownLock) {
             inFlightParityBreakdown(breakdownRun)?.let { return it }
             val epoch = breakdownEpoch
+            // Taken before the run reads anything, so a transaction that
+            // arrives at any point during the run makes it stale.
+            val generation = txHistoryGeneration
             // LAZY so the field is set before the body runs (an Unconfined
             // scope would otherwise run it inside this lock). Published
             // unstarted: callers in the gap below see it as in flight
             // ([inFlightParityBreakdown]), not as finished.
             scope.async(start = kotlinx.coroutines.CoroutineStart.LAZY) {
-                runParityBreakdown(walletIdHex, trigger, epoch)
+                runParityBreakdown(walletIdHex, trigger, epoch, generation)
             }.also { breakdownRun = it }
         }
         run.start()
@@ -4335,7 +4364,9 @@ class L1ShadowSyncService internal constructor(
      * dashj's transactions, then the pure [computeParityBreakdown]. Both
      * inputs are dropped when this returns; only the text is kept (in memory
      * and in [breakdownStore]), and only if no wallet wipe happened since
-     * [epoch]. Never throws, except cancellation.
+     * [epoch]. Its findings and its cadence update count only if no
+     * transaction arrived since [generation] ([txHistoryGeneration]). Never
+     * throws, except cancellation.
      *
      * Waits for the SDK's transaction processing, not just its filter scan:
      * a transaction below dashj's comparison height that the SDK has matched
@@ -4346,7 +4377,8 @@ class L1ShadowSyncService internal constructor(
     private suspend fun runParityBreakdown(
         walletIdHex: String,
         trigger: ParityBreakdownTrigger,
-        epoch: Long
+        epoch: Long,
+        generation: Long
     ): ParityBreakdownRunResult {
         val result = try {
             val startedMs = nowMs()
@@ -4378,14 +4410,23 @@ class L1ShadowSyncService internal constructor(
                         val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
                         val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
                         val stored = StoredParityBreakdown(walletIdHex, startedMs, text, findingsOf(breakdown))
-                        if (keepParityBreakdown(stored, epoch)) {
-                            log.info(text)
-                            _latestBreakdownFindings.value =
-                                TimedBreakdownFindings(startedMs, findingsOf(breakdown))
-                            ParityBreakdownRunResult.Done(stored)
-                        } else {
-                            log.info("ParityBreakdown discarded: the wallet was wiped while it ran")
-                            ParityBreakdownRunResult.Unavailable(PARITY_BREAKDOWN_WIPED)
+                        when (keepParityBreakdown(stored, epoch, generation)) {
+                            BreakdownKept.PUBLISHED -> {
+                                log.info(text)
+                                ParityBreakdownRunResult.Done(stored)
+                            }
+                            BreakdownKept.STALE_HISTORY -> {
+                                log.info(text)
+                                log.info(
+                                    "ParityBreakdown: a new transaction arrived while it ran — kept for reports, " +
+                                        "but its findings are not the verdict; recomputing after the settle window"
+                                )
+                                ParityBreakdownRunResult.Done(stored)
+                            }
+                            BreakdownKept.WIPED -> {
+                                log.info("ParityBreakdown discarded: the wallet was wiped while it ran")
+                                ParityBreakdownRunResult.Unavailable(PARITY_BREAKDOWN_WIPED)
+                            }
                         }
                     }
                 }
@@ -4396,7 +4437,11 @@ class L1ShadowSyncService internal constructor(
             ParityBreakdownRunResult.Failed("${t.javaClass.simpleName}: ${t.message}")
         }
         synchronized(breakdownLock) {
-            if (epoch == breakdownEpoch) {
+            // A wipe (epoch) or a new transaction (generation) since the start:
+            // the cadence belongs to whatever replaces this run. A stale run
+            // must neither take the hour nor push the settle window out to the
+            // retry back-off.
+            if (epoch == breakdownEpoch && generation == txHistoryGeneration) {
                 if (result is ParityBreakdownRunResult.Done) {
                     // Spend the hourly slot only on a result the verdict can
                     // accept. The stamp can move WHILE a run is in flight —
@@ -4421,20 +4466,45 @@ class L1ShadowSyncService internal constructor(
         return result
     }
 
+    /** What [keepParityBreakdown] did with a finished run. */
+    private enum class BreakdownKept {
+        /** Kept, and its findings are the verdict's input. */
+        PUBLISHED,
+
+        /** Kept as text for reports; a transaction arrived since it started, so no findings. */
+        STALE_HISTORY,
+
+        /** A wallet wipe or ledger rebuild since it started: nothing kept. */
+        WIPED
+    }
+
     /**
      * Keep [stored] as the latest result (memory and [breakdownStore]) unless
-     * a wallet wipe happened since [epoch]. The check and the write are one
-     * step under [breakdownLock], so a wipe cannot slip in between.
+     * a wallet wipe happened since [epoch], and publish its findings unless a
+     * transaction arrived since [generation]. The checks and the writes are
+     * one step under [breakdownLock], so neither a wipe nor a transaction
+     * event can slip in between the check and the publication.
      */
-    private suspend fun keepParityBreakdown(stored: StoredParityBreakdown, epoch: Long): Boolean =
+    private suspend fun keepParityBreakdown(
+        stored: StoredParityBreakdown,
+        epoch: Long,
+        generation: Long
+    ): BreakdownKept =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             synchronized(breakdownLock) {
                 if (epoch != breakdownEpoch) {
-                    false
+                    BreakdownKept.WIPED
                 } else {
                     latestBreakdown = stored
                     breakdownStore?.save(stored)
-                    true
+                    if (generation == txHistoryGeneration) {
+                        stored.findings?.let {
+                            _latestBreakdownFindings.value = TimedBreakdownFindings(stored.computedAtMs, it)
+                        }
+                        BreakdownKept.PUBLISHED
+                    } else {
+                        BreakdownKept.STALE_HISTORY
+                    }
                 }
             }
         }

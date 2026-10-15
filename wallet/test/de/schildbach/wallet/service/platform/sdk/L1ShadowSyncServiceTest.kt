@@ -3823,6 +3823,146 @@ class L1ShadowSyncServiceTest {
         service.stop()
     }
 
+    /** A non-transaction event: once its emit returns, every event before it has been handled. */
+    private suspend fun FakeSource.awaitEventsHandled() {
+        eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 1000 }")
+    }
+
+    private suspend fun FakeSource.awaitEventTap() {
+        withTimeout(5_000) { while (eventStrings.subscriptionCount.value == 0) delay(10) }
+    }
+
+    @Test
+    fun aTransactionDuringTheFirstRun_publishesNoFindings_andDoesNotTakeTheHour() = runBlocking {
+        // The first run of the process: nothing completed yet, so there was
+        // nothing to expire, and the old early return let the run that had
+        // already read its inputs publish a clean sheet for a history that
+        // never contained the new transaction.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        val source = breakdownSource().apply {
+            onDashjBreakdownFacts = {
+                inside.complete(Unit)
+                gate.await()
+            }
+        }
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { inside.isCompleted } // the first run has read the SDK side
+
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+        gate.complete(Unit)
+
+        withTimeout(5_000) { while (service.latestParityBreakdown(walletIdHex) == null) delay(10) }
+        delay(50) // let the run's completion (cadence update) finish too
+        assertNull("a run that predates the transaction must not publish", service.latestBreakdownFindings.value)
+        assertNotNull("its text is still kept for reports", service.latestParityBreakdown(walletIdHex))
+
+        // It did not take the hour either: once the settle window is over the
+        // probe recomputes, and that run's findings are published.
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aTransactionDuringALaterRun_cannotBringTheCleanSheetBack() = runBlocking {
+        // A completed run took the hour; a second one (for a report) reads its
+        // inputs, a transaction arrives and expires the findings, and then the
+        // second run finishes. It must neither republish findings for the old
+        // history nor re-arm the hourly slot the event released.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        source.onDashjBreakdownFacts = {
+            inside.complete(Unit)
+            gate.await()
+        }
+        val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
+        withTimeout(5_000) { inside.await() }
+
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+        assertNull(service.latestBreakdownFindings.value)
+
+        gate.complete(Unit)
+        val result = withTimeout(5_000) { report.await() }
+        assertNull(result.notRefreshedReason)
+        val stored = checkNotNull(result.stored) { "the report still gets the run's text" }
+        assertSameStored(expected = stored, actual = service.latestParityBreakdown(walletIdHex))
+        delay(50) // let the run's completion (cadence update) finish too
+        assertNull("the stale run must not publish", service.latestBreakdownFindings.value)
+
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 3 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aBurstOfTransactions_extendsTheSettleWindowToTheLastOne() = runBlocking {
+        // One CoinJoin round is a burst of events. Each one moves the window,
+        // so the recompute runs once, after the burst, not partway through it.
+        val t0 = 1_000_000L
+        val clock = java.util.concurrent.atomic.AtomicLong(t0)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        val settle = L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS
+
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+        assertNull(service.latestBreakdownFindings.value)
+
+        // The second event finds nothing left to expire, but still moves the window.
+        clock.set(t0 + settle - 10_000)
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+
+        clock.set(t0 + settle + 10_000) // past the first event's window, inside the second's
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("no recompute while the burst's window is open", 1, source.breakdownDashjCalls)
+
+        clock.set(t0 + 2 * settle) // past the second event's window
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        service.stop()
+    }
+
     @Test
     fun walletRecreation_discardsTheFindingsToo() = runBlocking {
         val file = dataDir.resolve("breakdown.txt")

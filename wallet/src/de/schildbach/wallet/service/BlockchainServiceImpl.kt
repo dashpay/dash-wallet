@@ -2521,9 +2521,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // rebuild cleared the previous one. Without this the verdict would
         // hold at "not established" until some later report happened to
         // change.
+        //
+        // Null is republished too: findings are cleared when a new
+        // transaction expires them or a ledger rebuild discards them, and
+        // the readout must leave MATCH at once rather than at the next
+        // report. publishDashjDiagnostic never reads absent findings as MATCH.
         serviceScope.launch {
-            l1ShadowSyncService.latestBreakdownFindings.collect { findings ->
-                if (findings != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+            l1ShadowSyncService.latestBreakdownFindings.collect {
+                if (dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
                     publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
                 }
             }
