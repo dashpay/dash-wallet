@@ -126,7 +126,8 @@ class SdkTransparentUsernameCreationTest {
         source: TransparentUsernameSource,
         fence: WalletSecretWriteFence = WalletSecretWriteFence(),
         executorScope: CoroutineScope? = null,
-        pause: suspend (Long) -> Unit = { pauses += it }
+        pause: suspend (Long) -> Unit = { pauses += it },
+        freshFundingBlocked: suspend () -> Boolean = { false }
     ) = SdkTransparentUsernameCreation(
         source = source,
         cutoverCommitted = { true },
@@ -135,7 +136,8 @@ class SdkTransparentUsernameCreationTest {
         driveCreationState = { state, _ -> creationStates += state },
         executorScope = executorScope,
         pause = pause,
-        secretWriteFence = fence
+        secretWriteFence = fence,
+        freshFundingBlocked = freshFundingBlocked
     )
 
     @Test
@@ -604,5 +606,30 @@ class SdkTransparentUsernameCreationTest {
         assertFalse(creation.submit(label))
         fence.lower()
         scope.cancel()
+    }
+
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun `a fresh registration is refused while a pending payment is unprotected`() = runTest {
+        val source = source(lockAfterFailure = null)
+
+        val result = creation(source, freshFundingBlocked = { true }).createUsernameTransparent(label)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `resuming a tracked registration lock is not blocked`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } returns lock
+        coEvery { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) } returns identityId
+
+        val result = creation(source, freshFundingBlocked = { true }).createUsernameTransparent(label)
+
+        assertTrue("must be Broadcast, got $result", result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
     }
 }

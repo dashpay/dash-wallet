@@ -186,4 +186,22 @@ class CoinJoinFundsMigrationServiceTest {
         assertEquals(false, marker.isExpired(nowMillis = startedAt + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS))
         assertEquals(true, marker.isExpired(nowMillis = startedAt + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 1))
     }
+
+    // ── Review 1b15e950af15: refused while an earlier payment is still confirming ──
+
+    @Test
+    fun migrationOutcome_pendingPaymentRefusal_isPaymentStillConfirming() {
+        val refused = SdkWriteResult.NotBroadcast("l1DrainCoinJoin: pending payment inputs unprotected")
+
+        assertEquals(MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING, migrationOutcomeOf(refused))
+        assertEquals(
+            MixedFundsMigrationOutcome.NOT_ATTEMPTED,
+            migrationOutcomeOf(SdkWriteResult.NotBroadcast("L1 sync not running"))
+        )
+        assertEquals(MixedFundsMigrationOutcome.STARTED, migrationOutcomeOf(SdkWriteResult.Broadcast(Unit)))
+        assertEquals(
+            MixedFundsMigrationOutcome.UNCONFIRMED,
+            migrationOutcomeOf(SdkWriteResult.Ambiguous(RuntimeException("timeout")))
+        )
+    }
 }

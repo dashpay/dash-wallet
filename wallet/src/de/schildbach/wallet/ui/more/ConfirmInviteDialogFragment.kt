@@ -216,7 +216,10 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
      * confirm/authorize loop.
      */
     private fun onCreateFailed(kind: InviteCreationFailureKind, inviteAmount: Coin) {
-        failedCreateAttempts++
+        // A pending-payment refusal built nothing; it is not an attempt against the retry cap.
+        if (kind != InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING) {
+            failedCreateAttempts++
+        }
         val retryAllowed = inviteRetryAllowed(kind, failedCreateAttempts)
         log.warn(
             "invite creation failed: kind={} attempt={} retryAllowed={}",
@@ -237,6 +240,8 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
                 getString(R.string.invitation_creation_rejected)
             InviteCreationFailureKind.POSSIBLY_CREATED ->
                 getString(R.string.invitation_creation_possibly_created)
+            InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING ->
+                getString(R.string.payment_still_confirming)
             InviteCreationFailureKind.UNREACHABLE ->
                 if (retryAllowed) {
                     getString(R.string.invitation_creation_unreachable)

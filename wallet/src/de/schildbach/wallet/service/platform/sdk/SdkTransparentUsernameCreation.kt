@@ -476,7 +476,14 @@ class SdkTransparentUsernameCreation internal constructor(
      * registered so the wipe can cancel and join it. A fresh (lowered) fence
      * by default keeps the host-JVM tests unaffected.
      */
-    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence(),
+    /**
+     * True while an uncertain BIP70 payment's inputs are exposed to the engine's coin selection
+     * ([de.schildbach.wallet.payments.PendingPaymentFundingGate]); a FRESH registration build is
+     * then refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON]. Resuming a tracked lock re-consumes
+     * that lock's own outputs and is never asked. Default false keeps the host-JVM tests inert.
+     */
+    private val freshFundingBlocked: suspend () -> Boolean = { false }
 ) {
     @Inject
     constructor(
@@ -486,7 +493,8 @@ class SdkTransparentUsernameCreation internal constructor(
         blockchainIdentityConfig: BlockchainIdentityConfig,
         assetLockKindResolver: AssetLockKindResolver,
         applicationScope: CoroutineScope,
-        secretWriteFence: WalletSecretWriteFence
+        secretWriteFence: WalletSecretWriteFence,
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
     ) : this(
         source = DashSdkTransparentUsernameSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
@@ -515,7 +523,8 @@ class SdkTransparentUsernameCreation internal constructor(
             blockchainIdentityConfig.set(BlockchainIdentityConfig.RESTORING, restoring)
         },
         executorScope = applicationScope,
-        secretWriteFence = secretWriteFence
+        secretWriteFence = secretWriteFence,
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() }
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -631,6 +640,15 @@ class SdkTransparentUsernameCreation internal constructor(
      * three-valued contract holds ([SdkWriteResult.Ambiguous] is never
      * retried by anyone).
      */
+    /** [freshFundingBlocked], failing closed. */
+    private suspend fun isFreshFundingBlockedSafe(): Boolean = try {
+        freshFundingBlocked()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not check for unprotected pending payments; refusing the fresh build", t)
+        true
+    }
+
     suspend fun createUsernameTransparent(
         username: String,
         secondaryUsername: String? = null
@@ -705,6 +723,11 @@ class SdkTransparentUsernameCreation internal constructor(
             // the FRESH build rather than risk a double-pay. Retry-safe:
             // nothing was spent.
             return notBroadcast("resume-gate recovery lookup failed", t)
+        }
+        // A fresh build selects new inputs; refuse it (before any key is derived) while an
+        // uncertain payment's inputs are exposed. Nothing is spent, so it is retry-safe.
+        if (existingLock == null && isFreshFundingBlockedSafe()) {
+            return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
         }
         val includeDashPayKeys = existingLock == null
 

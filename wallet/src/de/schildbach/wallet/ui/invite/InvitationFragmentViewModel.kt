@@ -35,6 +35,7 @@ import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CRED
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
@@ -174,7 +175,14 @@ internal enum class InviteCreationFailureKind {
     POSSIBLY_CREATED,
 
     /** Anything transient-looking (network, SDK bootstrap, …) — retryable, bounded. */
-    UNREACHABLE
+    UNREACHABLE,
+
+    /**
+     * Refused before anything was built: an earlier payment's outcome is still being confirmed
+     * and its inputs are not protected from coin selection. Retryable without limit once that
+     * payment resolves — it is not a failed attempt.
+     */
+    PAYMENT_STILL_CONFIRMING
 }
 
 /**
@@ -198,6 +206,9 @@ internal fun classifyInviteCreationFailure(result: SdkWriteResult<*>): InviteCre
         is SdkWriteResult.Broadcast -> throw IllegalArgumentException("not a failure: $result")
         is SdkWriteResult.Ambiguous -> return InviteCreationFailureKind.POSSIBLY_CREATED
         is SdkWriteResult.NotBroadcast -> result
+    }
+    if (isPaymentStillConfirmingReason(notBroadcast.reason)) {
+        return InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING
     }
     val text = buildString {
         append(notBroadcast.reason)
@@ -240,6 +251,7 @@ internal fun inviteRetryAllowed(kind: InviteCreationFailureKind, failedAttempts:
         InviteCreationFailureKind.POSSIBLY_CREATED -> false
         InviteCreationFailureKind.INSUFFICIENT_FUNDS,
         InviteCreationFailureKind.UNREACHABLE -> failedAttempts < MAX_INVITE_CREATE_ATTEMPTS
+        InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING -> true
     }
 
 /** Total create attempts the confirm dialog allows for transient failures. */

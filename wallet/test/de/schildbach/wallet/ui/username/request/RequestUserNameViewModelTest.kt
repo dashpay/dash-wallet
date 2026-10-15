@@ -443,6 +443,25 @@ class RequestUserNameViewModelTest {
         }
 
     @Test
+    fun transparentNotSent_paymentStillConfirming_surfacesThatMessage_notTheRedError() = runVmTest {
+        // Review 1b15e950af15: a fresh registration is refused while an uncertain payment's
+        // inputs are exposed to coin selection. Nothing was spent; the screen says why.
+        val viewModel = viewModel()
+
+        transparentSubmitState.value = ShieldedUsernameSubmitState.Proving
+        transparentSubmitState.value = ShieldedUsernameSubmitState.NotSent(
+            "pending payment inputs unprotected"
+        )
+
+        val state = viewModel.uiState.value
+        assertFalse(state.usernameRequestSubmitting)
+        assertTrue(state.usernameSubmittedPaymentStillConfirming)
+        assertFalse(state.usernameSubmittedError)
+        assertFalse(state.usernameSubmittedPoolSyncing)
+        verify(exactly = 1) { transparentUsernameCreation.acknowledge() }
+    }
+
+    @Test
     fun shieldedNotSent_runtimeNotReady_alsoSurfacesTheCalmSyncingState() = runVmTest {
         val viewModel = viewModel()
 

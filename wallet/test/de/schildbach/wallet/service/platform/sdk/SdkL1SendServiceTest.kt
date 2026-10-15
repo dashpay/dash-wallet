@@ -1496,4 +1496,17 @@ class SdkL1SendServiceTest {
         }
         assertNull(payment.reservedAtHeight)
     }
+
+    @Test
+    fun coinJoinDrain_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        // The drain selects fresh transparent inputs too (review 1b15e950af15). The FakeSource
+        // has no drain; reaching it would throw UnsupportedOperationException, which this
+        // refusal must come before.
+        val svc = service(readySource(), unprotectedPendingPayment = { true })
+
+        val result = svc.drainCoinJoinAccountTo(validAddress)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+    }
 }

@@ -269,6 +269,13 @@ internal const val L1_SIGNER_LOCKED_REASON = "L1 signer locked"
 internal const val L1_PENDING_PAYMENT_UNPROTECTED_REASON = "pending payment inputs unprotected"
 
 /**
+ * True when a NotBroadcast/NotSent reason is the pending-payment refusal: nothing was built, and
+ * the screen should show `R.string.payment_still_confirming`, not a failure.
+ */
+fun isPaymentStillConfirmingReason(reason: String?): Boolean =
+    reason?.contains(L1_PENDING_PAYMENT_UNPROTECTED_REASON) == true
+
+/**
  * The deliver-at-least floor for a send-all: `spendable − reserve`,
  * clamped to 1 (the JNI boundary rejects a non-positive output amount).
  * iOS-validated pattern: this is also the max amount a UI should show for
@@ -1505,6 +1512,11 @@ class SdkL1SendService internal constructor(
     suspend fun drainCoinJoinAccountTo(ownAddressBase58: String): SdkWriteResult<String> {
         val operation = "l1DrainCoinJoin"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
+        // The drain selects fresh transparent inputs (the CoinJoin account's): same rule as every
+        // other SDK-funded build.
+        if (pendingPaymentInputsExposed()) {
+            return notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
+        }
         val address = ownAddressBase58.trim()
         if (address.isEmpty() || !addressValidSafe(address)) {
             return notBroadcast(operation, "malformed or wrong-network address", null)

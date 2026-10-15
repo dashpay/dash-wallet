@@ -45,6 +45,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
@@ -118,6 +119,13 @@ data class RequestUserNameUIState(
      * submit still reaches the SDK.
      */
     val usernameSubmittedPoolSyncing: Boolean = false,
+    /**
+     * A transparent (L1-funded) submit was refused because an earlier payment's outcome is still
+     * being confirmed and its inputs are not protected from coin selection
+     * ([de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason]). Nothing was
+     * spent; the screen shows `R.string.payment_still_confirming`, not the network-error dialog.
+     */
+    val usernameSubmittedPaymentStillConfirming: Boolean = false,
     /**
      * The shielded creation's outcome is UNCONFIRMED (may already be on
      * chain; the spent notes stay reserved) — the UI must NOT offer a
@@ -977,11 +985,17 @@ class RequestUserNameViewModel @Inject constructor(
                 // preparing" message rather than the red "network error"
                 // dialog (Fix A). (Transparent funding never emits these.)
                 val poolNotReady = SdkShieldedUsernameCreation.isPoolNotReadyReason(state.reason)
+                val stillConfirming = isPaymentStillConfirmingReason(state.reason)
                 _uiState.update {
                     if (poolNotReady) {
                         it.copy(
                             usernameRequestSubmitting = false,
                             usernameSubmittedPoolSyncing = true
+                        )
+                    } else if (stillConfirming) {
+                        it.copy(
+                            usernameRequestSubmitting = false,
+                            usernameSubmittedPaymentStillConfirming = true
                         )
                     } else {
                         it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
@@ -1238,6 +1252,7 @@ class RequestUserNameViewModel @Inject constructor(
             it.copy(
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 usernameRequestSubmitted = false,
                 usernameRequestSubmitting = false
             )
@@ -1370,6 +1385,7 @@ class RequestUserNameViewModel @Inject constructor(
                     usernameCheckFailed = false,
                     usernameSubmittedError = false,
                     usernameSubmittedPoolSyncing = false,
+                    usernameSubmittedPaymentStillConfirming = false,
                     usernameContested = usernameContested, usernameExists = usernameExists,
                     usernameBlocked = usernameBlocked,
                     checkedUsername = username,
@@ -1722,6 +1738,7 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,

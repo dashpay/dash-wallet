@@ -16,6 +16,7 @@ import de.schildbach.wallet.ui.more.tools.ConfirmTopUpDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 import de.schildbach.wallet.util.toNeutralCoin
@@ -200,6 +201,12 @@ class BuyCreditsFragment : SendCoinsFragment() {
      * the user is told NOT to retry.
      */
     private suspend fun handleSdkTopUp(amountDuffs: Long, isMaxSpend: Boolean) {
+        // An earlier payment's inputs are still exposed to coin selection: say so here, before
+        // any work is queued. The worker's pipeline re-checks (the state can change in between).
+        if (buyCreditsViewModel.isPaymentStillConfirming()) {
+            showFailureDialog(PaymentStillConfirmingException("top-up refused: a payment is still confirming"))
+            return
+        }
         // PRE-FLIGHT funding eligibility: the asset-lock build only selects
         // FINAL (confirmed/IS-locked) BIP44 coins — refuse HERE, before the
         // spend attempt, when a display balance backed by non-final or
@@ -257,9 +264,15 @@ class BuyCreditsFragment : SendCoinsFragment() {
                     enterAmountFragment?.setContinueLoading(false)
                     val ambiguous = work.outputData.getBoolean(PerformTopUpWorker.KEY_AMBIGUOUS, false)
                     val reason = work.outputData.getString(BaseWorker.KEY_ERROR_MESSAGE) ?: "top-up failed"
+                    val stillConfirming =
+                        work.outputData.getBoolean(PerformTopUpWorker.KEY_PAYMENT_STILL_CONFIRMING, false)
                     log.warn("SDK top-up failed (ambiguous={}): {}", ambiguous, reason)
                     lifecycleScope.launch {
-                        if (ambiguous) showSdkTopUpAmbiguousDialog() else showFailureDialog(Exception(reason))
+                        when {
+                            ambiguous -> showSdkTopUpAmbiguousDialog()
+                            stillConfirming -> showFailureDialog(PaymentStillConfirmingException(reason))
+                            else -> showFailureDialog(Exception(reason))
+                        }
                     }
                 }
                 WorkInfo.State.CANCELLED -> enterAmountFragment?.setContinueLoading(false)

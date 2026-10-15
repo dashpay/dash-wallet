@@ -785,7 +785,15 @@ class ShieldedBalanceServiceImpl internal constructor(
      * bump, before the Kotlin teardown — the pause in which a newer bring-up
      * can publish. No-op in production.
      */
-    private val afterStopFallbackBump: suspend () -> Unit = {}
+    private val afterStopFallbackBump: suspend () -> Unit = {},
+    /**
+     * True while an uncertain BIP70 payment's inputs are exposed to the engine's coin selection
+     * ([de.schildbach.wallet.payments.PendingPaymentFundingGate]); a shield from the wallet (a fresh
+     * asset-lock build) is then refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON].
+     * [resumeFundFromAssetLock] re-consumes a tracked lock and is never asked. Default false keeps
+     * the host-JVM tests inert.
+     */
+    private val freshFundingBlocked: suspend () -> Boolean = { false }
 ) : ShieldedBalanceService {
 
     @Inject
@@ -795,7 +803,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         dashPayConfig: DashPayConfig,
         l1ShadowSyncService: L1ShadowSyncService,
         applicationScope: CoroutineScope,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -812,7 +821,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         sweepScope = applicationScope,
-        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
+        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() }
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -1511,6 +1521,16 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (!amount.isPositive) {
             return notBroadcast(operation, "non-positive amount", null)
         }
+        // A shield from the wallet builds a fresh asset lock: refuse it while an uncertain
+        // payment's inputs are exposed (fails closed). Nothing is spent; retry-safe.
+        val fundingBlocked = try {
+            freshFundingBlocked()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not check for unprotected pending payments; refusing $operation", t)
+            true
+        }
+        if (fundingBlocked) return notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
 
         // Preflights — nothing has been submitted if any of this fails.
         if (!ensureShieldedReadyInner()) {
