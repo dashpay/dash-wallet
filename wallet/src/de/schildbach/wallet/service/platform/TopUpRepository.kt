@@ -665,16 +665,20 @@ class TopUpRepositoryImpl @Inject constructor(
             // one. See InviteShareLink for the host/path fix-ups.
             val longLink = linkGenerator.generateLink()
             val shareLink = InviteShareLink.from(longLink, BuildConfig.APPSFLYER_BRAND_DOMAIN)
-            log.info("AppsFlyer link generator : {}", longLink)
-            log.info("AppsFlyer share link : {}", shareLink)
-            log.info("AppsFlyer af_dp : {}", invitationLinkData.link.toString())
-            log.info("AppsFlyer user parameters {}", linkGenerator.userParams)
+            // The links carry the invitation's bearer key (`pk` / `osk`), so only their shape is
+            // logged: the SDK's host (tells whether the template was resolved) and the length.
+            log.info(
+                "AppsFlyer share link: host {} -> {}, {} chars",
+                longLink.toUri().host,
+                shareLink.toUri().host,
+                shareLink.length
+            )
 
             linkGenerator.generateLink(walletApplication, object : ResponseListener {
                 override fun onResponse(link: String?) {
                     // `link` is AppsFlyer's answer: a short OneLink when the server accepted the
                     // request, or the long link again when it did not.
-                    log.info("AppsFlyer link generated successfully: {}", link)
+                    log.info("AppsFlyer link generated, short link returned: {}", link != null && link != longLink)
                     continuation.resume(
                         DynamicLink(
                             shareLink,

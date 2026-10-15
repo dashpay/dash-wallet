@@ -428,6 +428,7 @@ open class InvitationFragmentViewModel @Inject constructor(
      * funding spend off the main thread.
      */
     suspend fun createL1Invite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        clearInvitationSelection()
         _inviteCreationInFlight.value = true
         return try {
             withContext(Dispatchers.IO) {
@@ -514,10 +515,16 @@ open class InvitationFragmentViewModel @Inject constructor(
     val invitation: StateFlow<Invitation?>
         get() = _invitation
 
-    /** Forget the selected invitation: cancels its database observation and clears [invitation]. */
+    /**
+     * Forget everything a previous invite left in this activity-scoped view model: the selected
+     * row (cancelling its database observation) and the SDK-created link flows, so the created
+     * screen cannot show or share the previous invitation while a new one is pending.
+     */
     fun clearInvitationSelection() {
         identityId.value = null
         _invitation.value = null
+        _shieldedInviteLink.value = null
+        _shieldedInviteShareLink.value = null
     }
 
     init {
