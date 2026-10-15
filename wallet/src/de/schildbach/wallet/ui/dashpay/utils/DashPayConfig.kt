@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -31,7 +32,9 @@ import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -99,7 +102,48 @@ open class DashPayConfig @Inject constructor(
         )
     )
 ) {
+    /**
+     * Store releases always use the SDK. Persisted SDK flags remain QA controls only:
+     * neither an old preference nor a direct file edit may change production routing.
+     * The separate Tools dashj diagnostic remains user-configurable. L1_SEND is the pre-cutover
+     * override; normal SDK sending remains enabled by committed cutover.
+     */
+    private fun <T> productionFlagOverride(key: Preferences.Key<T>): T? {
+        if (!sdkFlagsLocked) return null
+        // By identity, not name or equals() (Preferences.Key compares names only):
+        // only these Boolean key objects match, so T is Boolean and the cast holds.
+        // A same-named key of another type falls through to the store.
+        val value = when {
+            key === USE_KOTLIN_SDK_DPNS_READS ||
+                key === USE_KOTLIN_SDK_DASHPAY_WRITES ||
+                key === USE_KOTLIN_SDK_SHIELDED ||
+                key === USE_KOTLIN_SDK_L1_INVITE ||
+                key === USE_KOTLIN_SDK_L1_SHADOW -> true
+            key === USE_KOTLIN_SDK_L1_SEND -> false
+            else -> return null
+        }
+        @Suppress("UNCHECKED_CAST")
+        return value as T
+    }
+
+    override suspend fun <T> get(key: Preferences.Key<T>): T? =
+        productionFlagOverride(key) ?: super.get(key)
+
+    override fun <T> observe(key: Preferences.Key<T>): Flow<T?> =
+        productionFlagOverride(key)?.let { flowOf(it) } ?: super.observe(key)
+
+    override fun <T> observePreservingErrors(key: Preferences.Key<T>): Flow<T?> =
+        productionFlagOverride(key)?.let { flowOf(it) } ?: super.observePreservingErrors(key)
+
+    override suspend fun <T> set(key: Preferences.Key<T>, value: T) {
+        if (productionFlagOverride(key) != null) return
+        super.set(key, value)
+    }
+
     companion object {
+        val sdkFlagsLocked: Boolean
+            get() = !BuildConfig.DEBUG && BuildConfig.FLAVOR == "prod"
+
         private val log = org.slf4j.LoggerFactory.getLogger(DashPayConfig::class.java)
 
         const val DISABLE_NOTIFICATIONS: Long = -1
@@ -474,6 +518,16 @@ open class DashPayConfig @Inject constructor(
         val SDK_BIND_EVER_SUCCEEDED = booleanPreferencesKey("sdk_bind_ever_succeeded")
 
         /**
+         * Wall-clock ms at which the SDK bind was first found blocked, cleared
+         * when a bind succeeds: how long the wallet has been unable to sync.
+         * Survives process deaths, so a phone that stays locked across many
+         * short-lived background starts is still measured from the first.
+         * Read by SdkBindRetryService to decide when a routine "unlock your
+         * phone to sync" reminder is due.
+         */
+        val SDK_BIND_BLOCKED_SINCE_MS = longPreferencesKey("sdk_bind_blocked_since_ms")
+
+        /**
          * The current [de.schildbach.wallet.service.platform.sdk.SdkBindBlocker]
          * name while the SDK bind is pending, "NONE" once bound. Written by
          * [de.schildbach.wallet.service.platform.sdk.SdkBindRetryService] so the
@@ -511,6 +565,23 @@ open class DashPayConfig @Inject constructor(
          */
         val CUTOVER_UPGRADE_BOUNDARY_CROSSED =
             booleanPreferencesKey("cutover_upgrade_boundary_crossed")
+
+        /**
+         * Set once the post-cutover display-cache completeness check
+         * (`TxDisplayCacheService.rebuildIfCacheIncomplete`) has run — which it
+         * does exactly once, after the SDK's one-time sync first reaches the
+         * tip — and never cleared except by a wallet wipe (which clears every
+         * DashPayConfig key), so a restore gets its own single check.
+         *
+         * Why only once: the check compares SDK records against display rows,
+         * and on a CoinJoin wallet records legitimately fold into per-day group
+         * rows, so it always reads "missing rows". Before this latch it ran on
+         * every sync-complete tick and requested a full reconcile each time
+         * (D-M-01 §4b). Keeping the cache converged after that one check is the
+         * separate 60s reconcile ticker's job, not this check's.
+         */
+        val POST_CUTOVER_COMPLETENESS_CHECKED =
+            booleanPreferencesKey("post_cutover_completeness_checked")
 
         /**
          * DIAGNOSTIC toggle (Tools screen, debug instrumentation): un-hold the
@@ -621,12 +692,49 @@ open class DashPayConfig @Inject constructor(
         /**
          * A bind's address-window widening failed, so that session scanned at
          * the Rust default windows and may have stepped past outputs paid
-         * beyond them. The next SUCCESSFUL widening arms the SPV rescan and
-         * only then clears this; on an already-healed wallet nothing else
+         * beyond them. The next SUCCESSFUL widening arms the SPV rescan, and
+         * this clears once that rewind is durable (see [SDK_OWED_RESCAN_ARMED]);
+         * the address-window heal owes its own rewind here too. On an
+         * already-healed wallet nothing else
          * would ever look at those blocks again. Best-effort flag, written by
          * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] step 4c.
          */
         val SDK_GAP_WIDEN_RESCAN_OWED = booleanPreferencesKey("sdk_gap_widen_rescan_owed")
+
+        /**
+         * The address-pool backfill filled holes the engine loaded its pool
+         * without, so payments to those addresses were missed and a rescan is
+         * owed. The inserted rows only reach the engine on its next load, so
+         * the rescan waits for a later process: this holds the token of the
+         * process that filled them, and a bind in any other process turns it
+         * into [SDK_GAP_WIDEN_RESCAN_OWED] and clears it. Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] step 4c.
+         */
+        val SDK_POOL_HOLES_RESCAN_PENDING = stringPreferencesKey("sdk_pool_holes_rescan_pending")
+
+        /**
+         * A reset owes the SDK SPV rewind to birth: a backup-recovered
+         * wallet's reset, or Settings → Rescan Blockchain (the key keeps its
+         * original name). The wallet must re-scan its history, so its scan may
+         * not resume from the previous watermark. MANDATORY, unlike
+         * [SDK_GAP_WIDEN_RESCAN_OWED]: the scan gate holds the SPV scan until
+         * the rewind is armed (at the default windows if widening fails, in
+         * which case the widening's own debt is kept for a later, wider
+         * rescan). It is cleared only once the armed rewind is durable
+         * (see [SDK_OWED_RESCAN_ARMED]). Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForReset].
+         */
+        val SDK_RECOVERY_RESCAN_OWED = booleanPreferencesKey("sdk_recovery_rescan_owed")
+
+        /**
+         * An owed SPV rewind ([SDK_RECOVERY_RESCAN_OWED], [SDK_GAP_WIDEN_RESCAN_OWED])
+         * that was ARMED but is not yet known to be durable. The SDK arm only
+         * rewinds the in-memory checkpoint, so the debts stay set until the
+         * durable `WalletEntity.syncedHeight` shows the rewind persisted; this
+         * record says what the arm was measured against. Encoded by
+         * [de.schildbach.wallet.service.platform.sdk.ArmedOwedRescan].
+         */
+        val SDK_OWED_RESCAN_ARMED = stringPreferencesKey("sdk_owed_rescan_armed")
 
         /**
          * A provisioning pass ARMED but not yet accounted for: written by
@@ -689,15 +797,14 @@ open class DashPayConfig @Inject constructor(
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
     }
 
-    init {
-        // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
-        // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
-        // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
-        // flag divergence between what is tested and what ships). QA can still toggle them
-        // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
-        CoroutineScope(Dispatchers.IO).launch {
-            seedDebugDefaultsIfUnset()
-        }
+    // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
+    // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
+    // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
+    // flag divergence between what is tested and what ships). QA can still toggle them
+    // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
+    // Kept so a test can let it finish before editing the flags it seeds.
+    internal val initialSeeding: Job = CoroutineScope(Dispatchers.IO).launch {
+        seedDebugDefaultsIfUnset()
     }
 
     /**
@@ -847,14 +954,26 @@ open class DashPayConfig @Inject constructor(
         )
     }
 
+    /**
+     * Persist [settings] — all seven keys in ONE DataStore transaction.
+     *
+     * Seven [set] calls are seven `dataStore.edit`s, and
+     * [observeTransactionMetadataSettings] emits after each one, so observers
+     * would see every half-written combination. The settings screen compares
+     * its draft against each emission: an intermediate state that happens to
+     * equal a reopened screen's draft clears its `modified` flag, and the next
+     * intermediate state then overwrites that draft as if it were unedited.
+     */
     suspend fun setTransactionMetadataSettings(settings: TransactionMetadataSettings) {
-        set(TRANSACTION_METADATA_SAVE_TO_NETWORK, settings.saveToNetwork)
-        set(TRANSACTION_METADATA_SAVE_FREQUENCY, settings.saveFrequency.name)
-        set(TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY, settings.savePaymentCategory)
-        set(TRANSACTION_METADATA_SAVE_TAX_CATEGORY, settings.saveTaxCategory)
-        set(TRANSACTION_METADATA_SAVE_EXCHANGE, settings.saveExchangeRates)
-        set(TRANSACTION_METADATA_SAVE_MEMOS, settings.savePrivateMemos)
-        set(TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO, settings.saveGiftcardInfo)
+        editPreferences { preferences ->
+            preferences[TRANSACTION_METADATA_SAVE_TO_NETWORK] = settings.saveToNetwork
+            preferences[TRANSACTION_METADATA_SAVE_FREQUENCY] = settings.saveFrequency.name
+            preferences[TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY] = settings.savePaymentCategory
+            preferences[TRANSACTION_METADATA_SAVE_TAX_CATEGORY] = settings.saveTaxCategory
+            preferences[TRANSACTION_METADATA_SAVE_EXCHANGE] = settings.saveExchangeRates
+            preferences[TRANSACTION_METADATA_SAVE_MEMOS] = settings.savePrivateMemos
+            preferences[TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO] = settings.saveGiftcardInfo
+        }
     }
 
     suspend fun shouldSaveOnReset(): Boolean = get(TRANSACTION_METADATA_SAVE_ON_RESET) == true

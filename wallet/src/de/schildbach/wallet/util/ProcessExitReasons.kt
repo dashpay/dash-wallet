@@ -110,6 +110,80 @@ object ProcessExitReasons {
     private const val IMPORTANCE_CACHED = 400
     private const val IMPORTANCE_GONE = 1000
 
+    // ── The previous exit, for the start-up crash-loop breaker ───────────
+
+    /** The previous process's exit, reduced to what [StartupBreadcrumbs] needs. */
+    data class PreviousExit(
+        val reason: Int,
+        val importance: Int,
+        val timestampMs: Long,
+        val description: String?
+    ) {
+        /** Short tag for the breadcrumb header, e.g. `ANR/CACHED`. */
+        fun tag(): String = "${reasonName(reason)}/${importanceName(importance)}"
+    }
+
+    /**
+     * The most recent exit of this app's main process, read SYNCHRONOUSLY so
+     * [StartupBreadcrumbs.init] can judge the previous launch before it
+     * decides on safe mode. One binder call; null below API 30 or on any
+     * failure. Never logs: it runs before the log appender exists.
+     */
+    @JvmStatic
+    fun previousExitOrNull(context: Context): PreviousExit? = try {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            null
+        } else {
+            val appContext = context.applicationContext ?: context
+            val activityManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            activityManager
+                ?.getHistoricalProcessExitReasons(appContext.packageName, 0, 1)
+                ?.firstOrNull()
+                ?.let { PreviousExit(it.reason, it.importance, it.timestamp, it.description) }
+        }
+    } catch (t: Throwable) {
+        null
+    }
+
+    /**
+     * Whether the system ended a process for a reason that says nothing about
+     * whether the app can START (review, 2026-09-29, the 12000022 crash
+     * reports): the process was reaped, stopped, updated or killed from
+     * outside, or it was a background start that missed the system's start-up
+     * deadline with nobody waiting on it. A launch that died that way before
+     * its milestone is not a crash, and must not push the next launch into
+     * safe mode.
+     *
+     * Still a crash: CRASH, CRASH_NATIVE, INITIALIZATION_FAILURE, an ANR while
+     * the app was visible (a user sat through it), and anything unknown.
+     */
+    @JvmStatic
+    internal fun isSystemKillNotCrash(reason: Int, importance: Int): Boolean = when (reason) {
+        REASON_LOW_MEMORY,
+        REASON_SIGNALED,
+        REASON_EXIT_SELF,
+        REASON_USER_REQUESTED,
+        REASON_USER_STOPPED,
+        REASON_PERMISSION_CHANGE,
+        REASON_FREEZER,
+        REASON_PACKAGE_STATE_CHANGE,
+        REASON_PACKAGE_UPDATED -> true
+        // Background (service, cached): the ANR was a start-up deadline, not a
+        // hang anyone saw. Visible or foreground importance is a real hang.
+        REASON_ANR -> importance > IMPORTANCE_PERCEPTIBLE
+        else -> false
+    }
+
+    /**
+     * Whether [exit] is the death of the launch whose trail was last written
+     * at [trailLastWriteMs]: a process dies after its last breadcrumb, so an
+     * exit older than that belongs to an earlier process. [slackMs] absorbs
+     * clock and file-timestamp granularity.
+     */
+    @JvmStatic
+    internal fun exitEndsTrail(exitTimestampMs: Long, trailLastWriteMs: Long, slackMs: Long = 2_000L): Boolean =
+        trailLastWriteMs > 0L && exitTimestampMs >= trailLastWriteMs - slackMs
+
     // ── Entry point ───────────────────────────────────────────────────
 
     /**

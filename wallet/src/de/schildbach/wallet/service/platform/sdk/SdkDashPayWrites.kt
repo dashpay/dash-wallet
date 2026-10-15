@@ -154,35 +154,59 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             "pre-broadcast identity data rejected by the FFI — ${t.message}",
             t
         )
-    // Android Keystore auth-window expiry: the SDK keeps identity keys
-    // AUTH_GATED (decryptable only within ~30 s of a biometric/device-credential
-    // unlock), and an expired window surfaces as UserNotAuthenticatedException —
-    // message "User not authenticated" — thrown while DECRYPTING the identity
-    // key to sign the state transition (KeystoreSigner.retrieveKeyWithAuth →
-    // WalletStorage.retrievePrivateKey; only the identity-key alias is
-    // auth-gated, so no other SDK path produces this message). Signing happens
-    // during transition CONSTRUCTION (dpp `sign_external_with_options`, called
-    // from `BatchTransition::new_document_*_transition_from_document` inside
-    // rs-sdk `put_to_platform`), strictly BEFORE `transition.broadcast` — the
-    // signer error propagates out before the broadcast line is reached, and no
+    // Android Keystore refused the key that signs the state transition.
+    // Signing happens during transition CONSTRUCTION (dpp
+    // `sign_external_with_options`, called from
+    // `BatchTransition::new_document_*_transition_from_document` inside rs-sdk
+    // `put_to_platform`), strictly BEFORE `transition.broadcast` — the signer
+    // error propagates out before the broadcast line is reached, and no
     // post-broadcast step invokes the identity-key signer. Nothing was
     // submitted → safe dashj fallback (app-side keys, no Keystore gate).
-    // Message-matched until platform PR #4060 (DEVICE_BOUND key policy)
-    // replaces the auth window and gives this a typed error.
-    t.message?.contains("User not authenticated") == true ->
-        // MO-972: this used to read "Keystore auth window expired", which
-        // ASSERTS a timeout nobody measured. Field log (2026-09-10, testnet
-        // 12000007, HONOR PTP-N49) — biometric at 11:49:16, this at 11:49:17.
-        // One second. The window had not expired; the Keystore simply refused
-        // to treat the auth as satisfying the identity key's gate, which on
-        // that OEM is the same defect family as the false-locked master alias
-        // (dashpay/platform#4643 fixes that one and explicitly does NOT cover
-        // the auth-gated identity alias; #4060's DEVICE_BOUND policy is the
-        // remedy). Report what Keystore said, not a cause we inferred.
+    //
+    // MO-972 taught us there are TWO gates behind this, and Android reports
+    // both with the same `UserNotAuthenticatedException("User not
+    // authenticated")`:
+    //
+    //  - `setUserAuthenticationRequired` — the ~30 s auth window. This app's
+    //    current policy does NOT use it: it runs KeySecurityPolicy.DEVICE_BOUND
+    //    (see DashSdkServiceImpl), whose alias has no auth gate at all. Only
+    //    legacy blobs still under the old auth-gated alias carry it (below).
+    //  - `setUnlockedDeviceRequired` — "the device must be unlocked right
+    //    now", which the SDK stamps on every alias including the DEVICE_BOUND
+    //    one. Some OEM builds deny it while KeyguardManager reports the device
+    //    unlocked (HONOR PTP-N49; Google confirmed the same on Fairphone 5/6,
+    //    Issue Tracker 506989112).
+    //
+    // The first arm is the one that fires today. dashpay/platform#4643
+    // classifies the lock-gate denial SDK-side into KeystoreDeviceLockedException,
+    // whose message names the alias and the KeyguardManager state at throw
+    // time — so it no longer contains "User not authenticated" and would fall
+    // through to the generic arms without this.
+    t.message?.contains(KEYSTORE_DEVICE_LOCKED_MARKER) == true ->
         SdkWriteResult.NotBroadcast(
-            "signing failure (pre-broadcast): Keystore refused the identity key as " +
-                "unauthenticated (auth window may have expired, or the device's " +
-                "auth-bound Keystore gate is defective) — ${t.message}",
+            "signing failure (pre-broadcast): Keystore refused the signing key because " +
+                "it considers the device locked — ${t.message}",
+            t
+        )
+    // The second arm covers AAR lines older than #4643 (denial still
+    // unclassified), and the genuinely auth-gated paths that survive on an
+    // install predating the DEVICE_BOUND switch: identity-key blobs still
+    // wrapped under the legacy auth-gated alias, reached through
+    // WalletStorage.retrievePrivateKey's migration fallback.
+    //
+    // The wording deliberately does not ASSERT a timeout. It used to read
+    // "Keystore auth window expired"; the field log (2026-09-10, testnet
+    // 12000007, HONOR PTP-N49) shows the biometric at 11:49:16 and this at
+    // 11:49:17 — one second, on a policy with no window to expire. Report
+    // what Keystore said, not a cause we inferred. Nor may it assert the
+    // opposite ("no auth window"): a bare "User not authenticated" does not
+    // say which gate or alias refused, and on the legacy alias it really is
+    // the auth window.
+    t.message?.contains(KEYSTORE_UNAUTHENTICATED_MARKER) == true ->
+        SdkWriteResult.NotBroadcast(
+            "signing failure (pre-broadcast): Keystore refused the signing key as " +
+                "unauthenticated (the device's Keystore authentication or lock gate " +
+                "rejected it) — ${t.message}",
             t
         )
     // TYPED funding shortfalls — checked BEFORE the message arms because
@@ -301,6 +325,56 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
 }
 
 /**
+ * Message markers of the Android Keystore SIGNING REFUSALS that
+ * [classifyBroadcastFailure] reads as pre-broadcast (see its two Keystore
+ * arms). Shared with [isKeystoreSigningRefusal] so the classifier and the
+ * callers that react to a Keystore refusal can never drift apart.
+ *
+ * - [KEYSTORE_DEVICE_LOCKED_MARKER]: the SDK's `KeystoreDeviceLockedException`
+ *   (dashpay/platform#4643) — "Keystore denied '<op>' on lock-bound alias
+ *   '<alias>' as device-locked; KeyguardManager at throw time:
+ *   isDeviceLocked=<bool> …", surfaced through the FFI as a Generic error
+ *   carrying that text.
+ * - [KEYSTORE_UNAUTHENTICATED_MARKER]: Android's raw
+ *   `UserNotAuthenticatedException` on AAR lines older than #4643, or the
+ *   legacy auth-gated alias.
+ */
+internal const val KEYSTORE_DEVICE_LOCKED_MARKER = "as device-locked"
+internal const val KEYSTORE_UNAUTHENTICATED_MARKER = "User not authenticated"
+
+/**
+ * True when [t] is the Android Keystore refusing the identity signing key —
+ * the same two message shapes [classifyBroadcastFailure] maps to a
+ * pre-broadcast signing failure. Signing happens strictly before Platform
+ * submission, but on a FUNDED write (an identity registration built from an
+ * L1 asset lock) the L1 half may already be on chain when the signer refuses,
+ * so callers re-check their tracked funding before trusting "nothing spent".
+ */
+internal fun isKeystoreSigningRefusal(t: Throwable): Boolean =
+    t.message?.let {
+        it.contains(KEYSTORE_DEVICE_LOCKED_MARKER) || it.contains(KEYSTORE_UNAUTHENTICATED_MARKER)
+    } == true
+
+/**
+ * True when [t] is a Keystore signing refusal of the FALSE-LOCKED class: the
+ * Keystore denied a lock-bound key as device-locked while `KeyguardManager`
+ * reported the device UNLOCKED (the Keystore2 defect seen on HONOR/MagicOS,
+ * Google Issue Tracker 506989112). The SDK's `KeystoreDeviceLockedException`
+ * says so in its message (`isDeviceLocked=false` / `FALSE-LOCKED`). Unlike a
+ * genuinely locked device this is retryable immediately: once the SDK has
+ * recorded the defect, re-stored identity keys land under the never-lock-bound
+ * alias and the next signing attempt cannot be denied.
+ *
+ * A bare [KEYSTORE_UNAUTHENTICATED_MARKER] carries no lock-state sample, so it
+ * is never read as false-locked.
+ */
+internal fun isKeystoreFalseLockedRefusal(t: Throwable): Boolean {
+    val message = t.message ?: return false
+    return message.contains(KEYSTORE_DEVICE_LOCKED_MARKER) &&
+        (message.contains("isDeviceLocked=false") || message.contains("FALSE-LOCKED"))
+}
+
+/**
  * Seam over the Kotlin SDK's wallet-bound DashPay write surface
  * ([org.dashfoundation.dashsdk.tokens.Dashpay] +
  * [org.dashfoundation.dashsdk.wallet.PlatformWalletManager]), so the
@@ -356,6 +430,13 @@ interface SdkDashPayWriteSource {
         avatarBytes: ByteArray?,
         doCreate: Boolean
     )
+
+    /**
+     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance,
+     * or null when the identity is not found. Diagnostics only — callers
+     * bound it and ignore failures (see [IdentityFeeLedger]).
+     */
+    suspend fun identityCreditBalance(identityIdBase58: String): Long?
 }
 
 /** Production [SdkDashPayWriteSource]: boots the SDK on demand. */
@@ -419,6 +500,12 @@ internal class DashSdkDashPayWriteSource(
             doCreate = doCreate,
             signerHandle = manager.signerHandle
         )
+    }
+
+    override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
+        service.ensureStarted()
+        val sdk = checkNotNull(service.sdkOrNull()) { "SDK runtime missing after ensureStarted()" }
+        return sdk.identities.fetchBalance(identityIdBase58)
     }
 }
 
@@ -558,6 +645,7 @@ class SdkDashPayWrites internal constructor(
         return runWrite(
             ownUserId,
             "sendContactRequest",
+            feeStep = IdentityFeeStep.CONTACT_REQUEST,
             extraPreflight = { walletId, ownId -> dashPayEncryptionKeyPreflight(walletId, ownId) }
         ) { walletId, ownId ->
             source.sendContactRequest(walletId, ownId, recipient)
@@ -640,7 +728,7 @@ class SdkDashPayWrites internal constructor(
                 "profile has avatarHash/avatarFingerprint but no raw avatar bytes; SDK path needs them"
             )
         }
-        return runWrite(ownUserId, "createOrUpdateProfile") { walletId, ownId ->
+        return runWrite(ownUserId, "createOrUpdateProfile", feeStep = IdentityFeeStep.PROFILE) { walletId, ownId ->
             source.createOrUpdateProfile(
                 walletId, ownId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
             )
@@ -657,10 +745,16 @@ class SdkDashPayWrites internal constructor(
      * identity). Returning a non-null reason short-circuits to
      * [SdkWriteResult.NotBroadcast] — i.e. the unchanged dashj path — without
      * submitting anything.
+     *
+     * [feeStep] names the write for the log-only [IdentityFeeLedger]: one
+     * bounded best-effort balance read right before the broadcast and one
+     * after it (skipped when the attempt was provably pre-broadcast). The
+     * reads never affect the returned result.
      */
     private suspend fun runWrite(
         ownUserId: String,
         operation: String,
+        feeStep: IdentityFeeStep,
         extraPreflight: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> String? = { _, _ -> null },
         block: suspend (walletIdHex: String, ownIdentityId: ByteArray) -> Unit
     ): SdkWriteResult<Unit> {
@@ -686,8 +780,12 @@ class SdkDashPayWrites internal constructor(
         }
         extraPreflight(walletId, ownId)?.let { return notBroadcast(operation, it, null) }
 
+        val balanceBefore = IdentityFeeLedger.readBalanceOrNull(feeStep, ownUserId) {
+            source.identityCreditBalance(ownUserId)
+        }
+
         // The single broadcast attempt.
-        return try {
+        val result = try {
             block(walletId, ownId)
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
@@ -707,6 +805,19 @@ class SdkDashPayWrites internal constructor(
             }
             classified
         }
+        if (result !is SdkWriteResult.NotBroadcast) {
+            val balanceAfter = IdentityFeeLedger.readBalanceOrNull(feeStep, ownUserId) {
+                source.identityCreditBalance(ownUserId)
+            }
+            IdentityFeeLedger.record(
+                step = feeStep,
+                identityIdBase58 = ownUserId,
+                start = balanceBefore,
+                after = balanceAfter,
+                status = if (result is SdkWriteResult.Broadcast) "BROADCAST" else "AMBIGUOUS"
+            )
+        }
+        return result
     }
 
     private fun notBroadcast(operation: String, reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {

@@ -27,6 +27,7 @@ import de.schildbach.wallet.ui.AbstractPINDialogFragment
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment
 import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
 import de.schildbach.wallet.ui.SET_PIN_REQUEST_CODE
+import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import org.bitcoinj.wallet.Wallet
 import dagger.hilt.android.AndroidEntryPoint
@@ -69,6 +70,10 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
         viewModel.restoreWallet.observe(this) {
             walletBuffer = it
             viewModel.restoreWallet(wallet, null)
+        }
+        viewModel.walletReplacementRefused.observe(this) {
+            // The wipe guard latched: the degraded screen explains it.
+            redirectDegradedWallet(walletApplication)
         }
         viewModel.retryRequest.observe(this) {
             RestoreWalletDialogFragment.showPick(supportFragmentManager)

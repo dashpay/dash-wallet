@@ -228,7 +228,10 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, recoveryData.pin))
                 } else {
                     // recovery that requires a blockchain rescan
-                    if (viewModel.restoreWalletFromSeed(words)) {
+                    val result = viewModel.restoreWalletFromSeed(words)
+                    if (result == SeedRestoreResult.REFUSED) {
+                        redirectDegradedWallet(walletApplication)
+                    } else if (result == SeedRestoreResult.RESTORED) {
                         startActivityForResult(
                             SetPinActivity.createIntent(
                                 walletApplication,
@@ -247,7 +250,11 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }
         } else {
-            if (viewModel.restoreWalletFromSeed(words)) {
+            val result = viewModel.restoreWalletFromSeed(words)
+            if (result == SeedRestoreResult.REFUSED) {
+                // The wipe guard latched: the degraded screen explains it.
+                redirectDegradedWallet(walletApplication)
+            } else if (result == SeedRestoreResult.RESTORED) {
                 startActivityForResult(
                     SetPinActivity.createIntent(
                         walletApplication,

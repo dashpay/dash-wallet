@@ -187,4 +187,138 @@ class SyncActivityIdleDetectorTest {
         assertEquals(0, sdkActivitySample(before, after, 0).blocksDownloaded)
         assertEquals(0, sdkActivitySample(before, after, -5).transactionsReceived)
     }
+
+    @Test
+    fun engineStart_holdsTheServiceOnlyWhileInFlightAndUnderTheCap() {
+        val began = 1_000_000L
+        assertFalse("no start in flight", engineStartHoldsService(0L, began + 60_000))
+        // The field shape: idle-stopped two minutes into a start that took 14.
+        assertTrue("two minutes in", engineStartHoldsService(began, began + 2 * 60_000))
+        assertTrue("just under the cap", engineStartHoldsService(began, began + ENGINE_START_KEEPALIVE_MS - 1))
+        assertFalse("a hung start stops holding at the cap", engineStartHoldsService(began, began + ENGINE_START_KEEPALIVE_MS))
+        assertFalse("custom cap", engineStartHoldsService(began, began + 5_000, capMs = 5_000))
+    }
+
+    @Test
+    fun durableLag_holdsWhileBehindAndAdvancing() {
+        // The field numbers at the 22:23 stop.
+        assertTrue(durableLagHoldsService(2_421_000, 2_547_694, msSinceDurableAdvanced = 60_000))
+        assertFalse("a persister that stopped no longer holds",
+            durableLagHoldsService(2_421_000, 2_547_694, msSinceDurableAdvanced = DURABLE_LAG_STALL_MS))
+        assertFalse("within the 5,000-block persist steps is normal",
+            durableLagHoldsService(2_540_000, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("caught up", durableLagHoldsService(2_547_694, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("unknown durable", durableLagHoldsService(0, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("unknown committed", durableLagHoldsService(2_421_000, 0, msSinceDurableAdvanced = 0))
+    }
+
+    @Test
+    fun durableHeightTracker_measuresSinceTheLastChange() {
+        val tracker = DurableHeightTracker()
+        assertEquals("first sighting counts as movement", 0L, tracker.observe(2_400_000, 1_000))
+        assertEquals(60_000L, tracker.observe(2_400_000, 61_000))
+        assertEquals(0L, tracker.observe(2_410_000, 90_000))
+        assertEquals(0L, tracker.observe(2_000_000, 95_000)) // a rescan rewind is a change too
+        assertEquals(5_000L, tracker.observe(2_000_000, 100_000))
+    }
+
+    @Test
+    fun foregroundDemotion_waitsForTheHoldAndRunsWhenItEnds() {
+        var hold = false
+        val gate = ForegroundDemotionGate { hold }
+        assertTrue("no hold (pre-cutover): demote as before", gate.mayDemote())
+        assertFalse("nothing pending", gate.onHold(false))
+
+        // The field shape: the scan goes SYNCED while the SDK is still saving it.
+        hold = true
+        assertFalse(gate.onHold(true))
+        assertFalse("synced, but the durable-lag hold is active", gate.mayDemote())
+        assertFalse("hold still active: nothing to re-run", gate.onHold(true))
+        hold = false
+        assertTrue("hold ended with a demotion pending: re-run it", gate.onHold(false))
+        assertFalse("re-run once only", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
+
+    @Test
+    fun foregroundDemotion_beforeTheFirstTick_followsTheLiveHold() {
+        // The SDK path skips its first tick, so a synced state can arrive
+        // before the tick has reported anything while a start is in flight.
+        var hold = true
+        val gate = ForegroundDemotionGate { hold }
+        assertFalse("refused under the live hold, with no tick yet", gate.mayDemote())
+        hold = false
+        assertTrue("the first tick to see the hold over re-runs it", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
+
+    @Test
+    fun foregroundDemotion_holdBeginningBetweenTicks_isRefused() {
+        var hold = false
+        val gate = ForegroundDemotionGate { hold }
+        assertFalse(gate.onHold(false)) // the last tick saw no hold
+        hold = true // the durable lag crosses the margin before the next tick
+        assertFalse(gate.mayDemote())
+        assertFalse("still held at the next tick", gate.onHold(true))
+        hold = false
+        assertTrue(gate.onHold(false))
+    }
+
+    @Test
+    fun durableHeightTracker_readOnlyAccessor_isFreshForUnseenHeightsAndAgesOtherwise() {
+        val tracker = DurableHeightTracker()
+        assertEquals("never observed: a lag seen before the first tick holds", 0L, tracker.msSinceChange(2_400_000, 1_000))
+        assertEquals("the read recorded nothing", 0L, tracker.observe(2_400_000, 5_000))
+        assertEquals("ages while the tick keeps seeing it", 60_000L, tracker.msSinceChange(2_400_000, 65_000))
+        assertEquals("a height the tick has not seen yet is movement", 0L, tracker.msSinceChange(2_410_000, 65_000))
+
+        // A stalled persister: the tick keeps observing the same height, and the
+        // read-only view ages past the stall limit, so the lag stops holding.
+        tracker.observe(2_400_000, 5_000 + DURABLE_LAG_STALL_MS)
+        val age = tracker.msSinceChange(2_400_000, 5_000 + DURABLE_LAG_STALL_MS)
+        assertEquals(DURABLE_LAG_STALL_MS, age)
+        assertFalse(durableLagHoldsService(2_400_000, 2_547_694, age))
+    }
+
+    @Test
+    fun engineStartPending_holdsOnlyBeforeTheStartWithinTheGrace() {
+        val created = 1_000_000L
+        val at = created + 28_000 // the field gap between onCreate and the start
+        assertTrue(engineStartPendingHoldsService(created, at, engineRunning = false, bindBlocked = false))
+        assertFalse("engine already running", engineStartPendingHoldsService(created, at, engineRunning = true, bindBlocked = false))
+        assertFalse("a blocked bind must still idle out", engineStartPendingHoldsService(created, at, engineRunning = false, bindBlocked = true))
+        assertTrue(
+            "just under the grace",
+            engineStartPendingHoldsService(created, created + ENGINE_START_PENDING_GRACE_MS - 1, engineRunning = false, bindBlocked = false)
+        )
+        assertFalse(
+            "a start that never comes stops holding at the grace",
+            engineStartPendingHoldsService(created, created + ENGINE_START_PENDING_GRACE_MS, engineRunning = false, bindBlocked = false)
+        )
+        assertFalse("creation time unknown", engineStartPendingHoldsService(0L, at, engineRunning = false, bindBlocked = false))
+    }
+
+    @Test
+    fun foregroundDemotion_cachedSyncedStateBeforeTheStartMarker_isRefused() {
+        // The observer replays the stored synced state before the kicked start
+        // has set its marker: only the pending-start part of the hold sees it.
+        val created = 1_000_000L
+        var now = created + 5_000
+        var startingSinceMs = 0L
+        var engineRunning = false
+        val gate = ForegroundDemotionGate {
+            engineStartPendingHoldsService(created, now, engineRunning, bindBlocked = false) ||
+                engineStartHoldsService(startingSinceMs, now)
+        }
+        assertFalse("synced state at startup, start marker still 0", gate.mayDemote())
+
+        now = created + 28_000
+        startingSinceMs = now // the start begins
+        assertFalse(gate.onHold(true))
+        now += 60_000
+        engineRunning = true // the start returns and clears its marker
+        startingSinceMs = 0L
+        assertTrue("the hold has ended with a demotion pending: re-run it", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
 }

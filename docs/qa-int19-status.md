@@ -54,11 +54,12 @@ the same window, and successive restarts back off (10 → 20 → 30 min) instead
 
 *Correction.* An earlier revision of this note claimed the SDK logged `wallet-event batch: folded=N`
 **throughout** the stall, and concluded the scan was running while only the watermark WRITE was
-blocked. That was a misreading of the logs: the event stream stopped too, and nothing was blocked —
-the final partial filter batch was holding its own commit because it had matched blocks it never
-received. See [plan §34](upgrade-memory-and-sync-plan.md) for the mechanism. This matters for the
-fix as well as the record: because the event stream *does* go quiet during these stalls, the
-liveness gate would not have suppressed this restart. It remains a sound conservative guard, but
+blocked. That was a misreading of the logs: the event stream stopped too. The matched blocks had
+already been processed; the final partial filter batch's commit was held behind the engine's
+committed-range sweep. See [plan §34](upgrade-memory-and-sync-plan.md) for the settled diagnosis.
+This matters for the fix as well as the record: because the event stream *does* go quiet during
+these stalls, the liveness gate would not have suppressed this restart. It remains a sound
+conservative guard, but
 the **backoff** is what actually limits the damage of a watchdog that cannot cure this class of
 stall.
 

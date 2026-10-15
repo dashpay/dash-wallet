@@ -129,10 +129,14 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             //platformSyncService.updateUsernameRequestsWithVotes()
 
             // update local database
-            analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
-            val arrayOfnames: Array<String> = votingResults.map {
-                ((it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll)?.indexValues?.get(1) ?: "null")
-            }.toSet().toTypedArray()
+            // NB: the VOTE_SUCCESS event is NOT logged here. It used to fire
+            // unconditionally at this point, which predated this branch having any
+            // logical failure path at all — every non-exception outcome was a success.
+            // Now that an empty broadcast or a terminal error returns Result.failure,
+            // firing it here would tell Firebase "success" for a vote the user was shown
+            // an error for. Both events are emitted below, beside the Result they match.
+            // Results without a Vote still need their submitted name and position.
+            val arrayOfnames = normalizedLabels.copyOf()
             val votes = hashMapOf<String, UsernameVote>()
             votingResults.forEach {
                 when (val votePoll = it.second?.resourceVote?.votePoll as? ContestedDocumentResourceVotePoll) {
@@ -151,65 +155,97 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
             votes.forEach { (_, usernameVote) ->
                 updateUsernameVotes(usernameVote)
             }
-            val errorCount = votingResults.count { it.third != null }
-            when (errorCount) {
-                0 -> {
-                    // all were successful
-                    log.info("all votes succeeded: total submitted {}", errorCount, votingResults.size)
-                    Result.success(
-                        workDataOf(
-                            KEY_NORMALIZED_LABELS to if (votingResults.isNotEmpty()) {
-                                arrayOfnames
-                            } else {
-                                listOf("").toTypedArray()
-                            },
-                            KEY_LABELS to labels,
-                            KEY_VOTE_CHOICES to votingResults.map {
-                                it.first.toString()
-                            }.toTypedArray(),
-                            KEY_QUICK_VOTING to isQuickVoting
-                        )
+            // A broadcast error is not automatically a lost vote: "vote is already
+            // present" means this masternode ALREADY voted this poll, so the end state
+            // the user asked for is already true. Only terminal verdicts count against
+            // the broadcast. See [classifyVoteFailure].
+            val verdicts = votingResults.map { result ->
+                result.third?.let { classifyVoteFailure(voteFailureText(it)) }
+            }
+            val errorCount = verdicts.count { it?.isTerminal == true }
+            val successCount = votingResults.count { it.second != null && it.third == null }
+            val terminalError = votingResults.withIndex()
+                .firstOrNull { verdicts[it.index]?.isTerminal == true }?.value?.third
+            val alreadyCastCount = verdicts.count { it == VoteFailureVerdict.ALREADY_CAST }
+            if (alreadyCastCount != 0) {
+                log.info(
+                    "{} of {} votes were already cast by this masternode; reconciling as success",
+                    alreadyCastCount,
+                    votingResults.size
+                )
+            }
+            // `broadcastUsernameVotes` returns one entry per (masternode x name) it
+            // actually attempted, so it hands back an EMPTY list for a non-empty
+            // submission whenever no proTxHash matched the voting key, or its
+            // per-masternode catch swallowed an identity fetch before any entry was
+            // added. Nothing was broadcast and nothing was confirmed already cast, so
+            // that is a failure — not a silent success.
+            //
+            // It only became user-visible with the label fix above: KEY_VOTE_CHOICES
+            // used to be derived from votingResults and so came out empty, and
+            // `UsernameRequestsFragment.showVoteIndicator` returns early on an empty
+            // list. Now it carries the SUBMITTED choices, so the fragment would show
+            // "vote submitted" and drop its observer for a vote that never left the
+            // device.
+            val nothingBroadcast = votingResults.isEmpty() && normalizedLabels.isNotEmpty()
+
+            // Any terminal failure is reported even when other votes in the batch
+            // landed: `errorCount > 0` is exactly `terminalError != null`. The older
+            // `successCount == 0` branch let a batch of one fresh success plus one
+            // vote-limit failure return an unqualified `Result.success` — convertState
+            // mapped that to `Resource.success`, the fragment showed the success
+            // indicator and removed its observer, and the error reached only the log.
+            // Votes that DID land are unaffected either way: `updateUsernameVotes` has
+            // already written them, and the batch's names and choices still ride along.
+            val failureReason: String? = when {
+                nothingBroadcast -> "No masternode was able to broadcast a vote"
+                terminalError != null ->
+                    // Keep SDK metadata from consuming WorkManager's 10 KB output budget.
+                    voteFailureText(terminalError)
+                        .ifBlank { "Unknown error - ${terminalError.javaClass.simpleName}" }
+                        .take(1024)
+                else -> null
+            }
+
+            if (failureReason == null) {
+                // Every vote either landed or was already cast.
+                log.info("all votes succeeded: total submitted {}", votingResults.size)
+                analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_SUCCESS, mapOf())
+                Result.success(
+                    workDataOf(
+                        KEY_NORMALIZED_LABELS to arrayOfnames,
+                        KEY_LABELS to labels,
+                        KEY_VOTE_CHOICES to voteChoices,
+                        KEY_QUICK_VOTING to isQuickVoting
+                    )
+                )
+            } else {
+                if (nothingBroadcast) {
+                    log.error("no vote was broadcast for {} submitted name(s)", normalizedLabels.size)
+                } else {
+                    log.error(
+                        "{} of {} votes succeeded; {} terminal failure(s) reported to observers",
+                        successCount,
+                        votingResults.size,
+                        errorCount
                     )
                 }
-                votingResults.size -> {
-                    // all have failed
-                    log.error("all votes failed: errors: {} vs total submitted {}", errorCount, votingResults.size)
-                    // errors that can be returned
+                // errors that can be returned
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode vote is already present for masternode EbitFAjpGsuf7qKPpsQMZw2ZKZ8rs2S1PdqKvYA8J2Ux voting for ContestedDocumentResourceVotePoll(ContestedDocumentResourceVotePoll { contract_id: GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec, document_type_name: domain, index_name: parentNameAndLabel, index_values: [string dash, string test-1101] })", metadata: MetadataMap { headers: {"drive-error-data-bin": "oW9zZXJpYWxpemVkRXJyb3KYbwIYKxjKDQkQABgqGO0YuRh/GLMDGOkYexgdGLEVGIMYvhhiGLMY2xiLGGEYRxj/GKgYSxiYGDAYnxjOGHEAGOYYaBjGGFkYrxhmGK4Y4RjnGCwYGBhtGN4YexhbGH4KGB0YcRgqCRjEDRhXGCEY9hgiGL8YUxjFGDEYVQYYZBhvGG0YYRhpGG4SGHAYYRhyGGUYbhh0GE4YYRhtGGUYQRhuGGQYTBhhGGIYZRhsAhIEGGQYYRhzGGgSCRh0GGUYcxh0GC0YMRgxGDAYMQ==", "code": "40304", "grpc-accept-encoding": "identity", "grpc-encoding": "identity", "content-type": "application/grpc+proto", "date": "Mon, 28 Oct 2024 22:27:37 GMT", "x-envoy-upstream-service-time": "55", "server": "envoy"} }, source: None }, Address { ban_count: 0, banned_until: None, uri: https://52.89.154.48:1443/ })
                     // Dapi client error: Transport(Status { code: InvalidArgument, message: "Masternode with id: CmbJumQ1ALJXHYFpUdCCnvbfgvXKSajErNXGhv3H4GN1 already voted 5 times and is trying to vote again, they can only vote 5 times"
-                    votingResults.forEach {
-                        it.third?.let { e ->
-                            log.error("error with vote: {}", it.first, e)
-                        }
-                    }
-                    Result.failure(
-                        workDataOf(
-                            KEY_NORMALIZED_LABELS to arrayOfnames,
-                            KEY_LABELS to arrayOfnames.map { labelMap[it] },
-                            KEY_VOTE_CHOICES to votingResults.map {
-                                it.first.toString()
-                            }.toTypedArray(),
-                            KEY_QUICK_VOTING to isQuickVoting
-                        )
+                logVoteFailures(votingResults, verdicts)
+                // Matches the outer catch, so a logical failure and a thrown one are
+                // counted the same way rather than the former passing as a success.
+                analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, mapOf())
+                Result.failure(
+                    workDataOf(
+                        KEY_ERROR_MESSAGE to failureReason,
+                        KEY_NORMALIZED_LABELS to arrayOfnames,
+                        KEY_LABELS to labelsFor(arrayOfnames, labelMap),
+                        KEY_VOTE_CHOICES to voteChoices,
+                        KEY_QUICK_VOTING to isQuickVoting
                     )
-                }
-                else -> {
-                    // some have failed, how can we report this?
-                    log.error("not all votes succeeeded: errors: {} vs total submitted {}", errorCount, votingResults.size)
-                    votingResults.forEach {
-                        it.third?.let { e ->
-                            log.error("error with vote: {}", it.first, e)
-                        }
-                    }
-                    Result.success(
-                        workDataOf(
-                            KEY_NORMALIZED_LABELS to arrayOfnames,
-                            KEY_LABELS to arrayOfnames.map { labelMap[it] },
-                            KEY_VOTE_CHOICES to voteChoices,
-                            KEY_QUICK_VOTING to isQuickVoting
-                        )
-                    )
-                }
+                )
             }
         } catch (ex: Exception) {
             analytics.logEvent(AnalyticsConstants.UsernameVoting.VOTE_ERROR, mapOf())
@@ -218,12 +254,38 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
                 workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast username vote", ex),
                     KEY_NORMALIZED_LABELS to normalizedLabels,
+                    // KEY_LABELS belongs here too: UsernameRequestsFragment reads it for
+                    // EVERY outcome, and its ERROR branch dereferences it. Omitting it
+                    // meant a throw inside the try (bad masternode key, say) produced a
+                    // failure the fragment could not render — it threw on the null and
+                    // logged "error processing vote information", swallowing the real
+                    // reason. That is the same symptom this PR exists to fix, one layer out.
+                    KEY_LABELS to labels,
                     KEY_VOTE_CHOICES to voteChoices,
                     KEY_QUICK_VOTING to isQuickVoting
                 )
             )
         } finally {
             log.info("finished BroadcastUsernameVotesWorker({}, {})", normalizedLabels, voteChoices)
+        }
+    }
+
+    /**
+     * Logs each failed vote at the severity its verdict deserves — an already-cast vote
+     * is an expected reconcile, not an error worth a stack trace.
+     */
+    private fun logVoteFailures(
+        votingResults: List<Triple<ResourceVoteChoice, Vote?, Exception?>>,
+        verdicts: List<VoteFailureVerdict?>
+    ) {
+        votingResults.forEachIndexed { i, result ->
+            result.third?.let { e ->
+                if (verdicts[i] == VoteFailureVerdict.ALREADY_CAST) {
+                    log.info("vote already cast, nothing to do: {}: {}", result.first, e.message)
+                } else {
+                    log.error("error with vote: {}", result.first, e)
+                }
+            }
         }
     }
 
@@ -251,4 +313,99 @@ class BroadcastUsernameVotesWorker @AssistedInject constructor(
         // usernameRequestDao.update(request.copy(votes = request.votes + keyCount, isApproved = true))
         usernameVoteDao.insert(vote)
     }
+}
+
+/**
+ * Display labels for [names], positionally aligned with them.
+ *
+ * `androidx.work.Data` accepts `String[]` and rejects BOTH a `List` and an
+ * `Array<String?>` — passing either throws `IllegalArgumentException: has invalid type`
+ * from `Data.Builder.put`, which is exactly how the worker's failure paths used to blow
+ * up before they could report the real vote error. So this hands back a non-null
+ * `Array<String>`.
+ *
+ * A name with no entry in [labelMap] falls back to the normalized name itself rather
+ * than being filtered out: `UsernameRequestsFragment` reads KEY_LABELS and
+ * KEY_NORMALIZED_LABELS as parallel arrays, so dropping an element would desync them,
+ * and the normalized name is still a truthful thing to show the user.
+ *
+ * Pure — host-testable.
+ */
+internal fun labelsFor(names: Array<String>, labelMap: Map<String, String>): Array<String> =
+    names.map { labelMap[it] ?: it }.toTypedArray()
+
+/**
+ * Literal fragments of the Drive/DAPI vote errors [classifyVoteFailure] keys on.
+ *
+ * These are matched against message TEXT because that is all the engine gives us — the
+ * failure arrives as a plain `java.lang.Exception` with no code to switch on. The full
+ * observed messages are pinned in `VoteFailureClassificationTest`, so an SDK reword
+ * fails that test loudly rather than silently reclassifying an already-cast vote as
+ * fatal (or, worse, a spent vote budget as success).
+ */
+internal const val ALREADY_CAST_MARKER = "vote is already present"
+internal const val VOTE_LIMIT_MARKER = "can only vote"
+
+/**
+ * What a single vote's broadcast failure actually means.
+ */
+internal enum class VoteFailureVerdict(val isTerminal: Boolean) {
+    /**
+     * "Masternode vote is already present for masternode <id> voting for
+     * ContestedDocumentResourceVotePoll(...)".
+     *
+     * This masternode has already voted this poll: the end state the user asked for is
+     * ALREADY TRUE. Reconciles as success — not an error.
+     */
+    ALREADY_CAST(isTerminal = false),
+
+    /**
+     * "Masternode with id: <id> already voted 5 times and is trying to vote again, they
+     * can only vote 5 times".
+     *
+     * The per-masternode vote budget for this poll is spent and this vote will never
+     * land. Genuinely terminal, and deliberately NOT collapsed into [ALREADY_CAST].
+     */
+    VOTE_LIMIT_REACHED(isTerminal = true),
+
+    /** Anything else — treat as a real failure. */
+    FAILED(isTerminal = true)
+}
+
+/**
+ * Verdict for one failed vote, derived from the engine's message text.
+ *
+ * Pure and top-level so it is host-JVM testable without WorkManager or the SDK — the
+ * same shape as `isOwnContestedCandidate` / `contestedNameCandidates` in
+ * `RestoreIdentityWorker`.
+ *
+ * ORDER MATTERS: the vote-limit message also contains the words "already voted", so the
+ * limit marker is tested FIRST. Reversing these two branches would report a spent vote
+ * budget as a successful vote.
+ */
+internal fun classifyVoteFailure(reason: String?): VoteFailureVerdict {
+    val text = reason?.lowercase() ?: return VoteFailureVerdict.FAILED
+    return when {
+        text.contains(VOTE_LIMIT_MARKER) -> VoteFailureVerdict.VOTE_LIMIT_REACHED
+        text.contains(ALREADY_CAST_MARKER) -> VoteFailureVerdict.ALREADY_CAST
+        else -> VoteFailureVerdict.FAILED
+    }
+}
+
+/**
+ * Flattens a throwable's whole cause chain into one string for [classifyVoteFailure].
+ *
+ * The marker text arrives WRAPPED: the field failure was `java.lang.Exception:
+ * Attempted to unwrap a Failure: Protocol error: Masternode vote is already present
+ * ...`, and a future SDK may push it a cause deeper still. Cycle-safe.
+ */
+internal fun voteFailureText(error: Throwable?): String {
+    val seen = mutableSetOf<Throwable>()
+    val parts = mutableListOf<String>()
+    var current = error
+    while (current != null && seen.add(current)) {
+        current.message?.let { parts.add(it) }
+        current = current.cause
+    }
+    return parts.joinToString(" | ")
 }

@@ -102,6 +102,20 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         }
     }
 
+    /**
+     * Stop advertising an address: the address line and the QR code are both
+     * emptied. Used when a receive address that was on screen can no longer be
+     * vouched for — a stale address is worse than none, because the wallet may
+     * already have been paid on it.
+     */
+    fun clearInfo() {
+        if (address != null || amount != null) {
+            address = null
+            amount = null
+            refresh()
+        }
+    }
+
     fun setProfile(username: String?, displayName: String?, avatar: String?, avatarHash: ByteArray?) {
         this.username = username
 

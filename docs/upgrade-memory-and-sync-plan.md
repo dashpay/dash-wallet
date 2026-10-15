@@ -2651,12 +2651,10 @@ the line itself is proven only on the earlier build (13:00 the same day).
   decision in any cycle.
 - **Parity with iOS, including its blind spot.** Both clients now read the §34 stall as synced.
   Neither can tell it from a real wedge without the FFI signal (§35.6).
-- **This treats the symptom.** Andrei's screen reads synced and the log says why. The commit is not
-  `pending_blocks()` ever draining; that is the dash-spv trace in the `rust-dashcore-spvstall`
-  worktree, paused at the `requested` vs `from_storage` fork (`blocks/sync_manager.rs`): the same
-  `requested: 0` is consistent with "never fetched" and with "every match was already on disk",
-  which need opposite fixes, and the rest of that Display line — `from_storage`, `downloaded`,
-  `processed` — has not yet been read off a stalled device.
+- **This treats the symptom.** Andrei's screen reads synced and the log says why. The settled
+  diagnosis in §34 is that the matched blocks had already been processed, but the final commit
+  was held behind the engine's committed-range sweep. The earlier missing-block-fetch hypothesis
+  is superseded; changing the display predicate does not fix the sweep holding that commit.
 
 ### 35.5 Fixture fallout, stated plainly
 

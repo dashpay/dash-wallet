@@ -362,7 +362,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun openCrowdNodeProfile() {
-        val accountUrl = viewModel.getAccountUrl()
+        // Null when address initialisation never completed — see
+        // CrowdNodeViewModel.requireAccountAddress. Opening the browser on a
+        // "null" URL is worse than doing nothing.
+        val accountUrl = viewModel.getAccountUrl() ?: return
         val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(accountUrl))
         startActivity(browserIntent)
     }

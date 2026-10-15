@@ -47,6 +47,9 @@ abstract class AbstractBindServiceActivity : LockScreenActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Never bind (BIND_AUTO_CREATE starts the blockchain service) for an
+        // activity LockScreenActivity finished for want of a wallet.
+        if (finishedForNoWallet) return
 
         doBindService()
     }

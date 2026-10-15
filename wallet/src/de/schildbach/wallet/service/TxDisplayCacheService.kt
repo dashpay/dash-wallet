@@ -116,7 +116,10 @@ class TxDisplayCacheService @Inject constructor(
     // Lazy: this service is constructed on the home screen's critical path,
     // while CutoverUiDataService pulls in the whole SDK graph. Only the
     // completeness check (a background coroutine) ever resolves it.
-    private val cutoverUiDataService: dagger.Lazy<CutoverUiDataService>
+    private val cutoverUiDataService: dagger.Lazy<CutoverUiDataService>,
+    // Lazy for the same reason: it pulls in the SDK sync graph, and only the
+    // post-cutover completeness check reads it.
+    private val l1SyncStatusService: dagger.Lazy<L1SyncStatusService>
 ) {
 
     companion object {
@@ -500,6 +503,14 @@ class TxDisplayCacheService @Inject constructor(
 
         walletData.observeWalletReset()
             .onEach {
+                // A rescan deletes the blockstore, so the next service start
+                // takes the missing-blockstore branch, which resets the held
+                // (empty) dashj wallet — and dashj fires this event even for
+                // an empty wallet. Post-cutover the rows are the SDK's, so the
+                // rescan's keep-the-history policy applies here too (MO-1054).
+                // A wallet wipe does not depend on this listener: it clears
+                // the caches itself (clearDatabase).
+                if (keptHistoryAcrossReset("dashj wallet reset")) return@onEach
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
                 _cachedRows.value = emptyList()
@@ -603,6 +614,15 @@ class TxDisplayCacheService @Inject constructor(
                 val wallet = walletData.wallet
                     ?: walletData.observeWallet().filterNotNull().first()
                 val cutoverCommitted = cutoverCommittedOrUnknown()
+                // An unreadable latch reads "not done": the check then costs one more walk.
+                val postCutoverCheckDone = cutoverCommitted && runCatching {
+                    dashPayConfig.get(DashPayConfig.POST_CUTOVER_COMPLETENESS_CHECKED) == true
+                }.getOrDefault(false)
+                val runPostCutoverCheck = cutoverCommitted && !postCutoverCheckDone
+                // The post-cutover check runs once, when the one-time sync has
+                // finished: measured mid-scan, the SDK count is still climbing
+                // (run 17 logged SDK=0, then 7346, then 7460 across three ticks).
+                if (runPostCutoverCheck) awaitSdkScanCaughtUp()
                 // Post-cutover the SDK owns the transactions, so its record count IS
                 // the measurement — and it only resolves once the cutover tx pipeline
                 // is running, which is after the SDK bind and therefore after this
@@ -611,7 +631,7 @@ class TxDisplayCacheService @Inject constructor(
                 // so answering "unavailable" once meant the check never ran at all
                 // for the whole session. Wait for the pipeline rather than reporting
                 // a permanent unknown.
-                val sdkRecordCount = if (cutoverCommitted) {
+                val sdkRecordCount = if (runPostCutoverCheck) {
                     awaitSdkRecordCount(
                         polls = SDK_RECORD_COUNT_WAIT_POLLS,
                         intervalMs = SDK_RECORD_COUNT_WAIT_INTERVAL_MS,
@@ -636,6 +656,7 @@ class TxDisplayCacheService @Inject constructor(
 
                 val decision = decideCacheRebuild(
                     cutoverCommitted = cutoverCommitted,
+                    postCutoverCheckDone = postCutoverCheckDone,
                     sdkRecordCount = sdkRecordCount,
                     walletTxCount = walletTxCount,
                     cachedTxCount = cachedTxCount,
@@ -661,9 +682,29 @@ class TxDisplayCacheService @Inject constructor(
                         runCatching { cutoverUiDataService.get().requestFullReconcile() }
                             .onFailure { log.warn("could not request an SDK reconcile pass", it) }
                 }
+                // Latch only a check that measured something: an unavailable SDK
+                // count is retried on the next trigger.
+                if (runPostCutoverCheck && sdkRecordCount != null) {
+                    runCatching { dashPayConfig.set(DashPayConfig.POST_CUTOVER_COMPLETENESS_CHECKED, true) }
+                        .onFailure { log.warn("could not latch the post-cutover completeness check", it) }
+                }
             } finally {
                 completenessCheckInFlight.set(false)
             }
+        }
+    }
+
+    /**
+     * Suspend until the SDK's L1 scan has caught up to the tip — the end of
+     * the one-time sync after a cutover or restore. Unbounded on purpose: a
+     * large restore scans for hours, and the single-flight guard keeps every
+     * other trigger out meanwhile.
+     */
+    private suspend fun awaitSdkScanCaughtUp() {
+        val caughtUp = l1SyncStatusService.get().sdkScanCaughtUp
+        if (!caughtUp.first()) {
+            log.info("sync-complete check: waiting for the SDK's one-time sync to reach the tip")
+            caughtUp.first { it }
         }
     }
 
@@ -738,7 +779,47 @@ class TxDisplayCacheService @Inject constructor(
         _cachedRows.value = emptyList()
     }
 
-    /** clear database tables during a wipe wallet or rescan operation */
+    /**
+     * The rescan (not wipe) half of [clearDatabase] — MO-1054.
+     *
+     * Post-cutover a rescan only rewinds the SDK's scan watermark
+     * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForReset]);
+     * the SDK keeps every transaction record. Wiping the caches here threw
+     * away rows whose source still holds them, and no change-feed delta
+     * follows (the records did not change) — so the history sat empty,
+     * under a "synced" header, until the pipeline's next full reconcile walk
+     * (10 s after activation, then every 60 s, plus the walk itself). Keep
+     * the rows and ask for that walk now instead: it is idempotent and
+     * corrects any row in place.
+     *
+     * Pre-cutover dashj really does drop its transactions on a rescan and
+     * re-adds them as the replay proceeds, so the wipe stays.
+     */
+    suspend fun clearDatabaseForRescan() {
+        if (keptHistoryAcrossReset("rescan")) return
+        clearDatabase()
+    }
+
+    /**
+     * The shared post-cutover guard for both rescan-driven clears: the
+     * teardown's [clearDatabaseForRescan] and the dashj wallet-reset event the
+     * next service start raises. Returns true when the rows were kept (a
+     * reconcile walk is requested in their place); false when the caller
+     * should clear as before.
+     */
+    private suspend fun keptHistoryAcrossReset(trigger: String): Boolean {
+        if (rescanMayClearHistoryCache(cutoverCommittedOrUnknown())) return false
+        log.info(
+            "{}: keeping {} display rows / {} group rows — the cutover is committed and the " +
+                "SDK keeps its transactions across a rescan; requesting a reconcile walk instead",
+            trigger, txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
+        )
+        runCatching { cutoverUiDataService.get().requestFullReconcile() }
+            .onFailure { log.warn("could not request an SDK reconcile pass after the {}", trigger, it) }
+        return true
+    }
+
+    /** clear database tables during a wipe wallet or (pre-cutover) rescan operation */
     suspend fun clearDatabase() {
         txDisplayCacheDao.deleteAll()
         txGroupCacheDao.deleteAll()
@@ -1628,6 +1709,20 @@ internal fun dashjRebuildWouldEraseHistory(cutoverCommitted: Boolean, dashjTxCou
     cutoverCommitted && dashjTxCount == 0
 
 /**
+ * Whether a blockchain rescan may wipe the display/group caches — the pure
+ * core of [TxDisplayCacheService.clearDatabaseForRescan] and of the dashj
+ * wallet-reset listener the rescan's next service start triggers (MO-1054).
+ *
+ * Only pre-cutover: there the dashj wallet drops its transactions and the
+ * replay re-adds them. Post-cutover the SDK keeps its records across the
+ * rescan, so a wipe only empties the history until the next reconcile walk.
+ * An unreadable cutover state arrives here as committed (see
+ * `cutoverCommittedOrUnknown`), which keeps the rows — the non-destructive
+ * direction.
+ */
+internal fun rescanMayClearHistoryCache(cutoverCommitted: Boolean): Boolean = !cutoverCommitted
+
+/**
  * Read [read] until it yields a count, up to [polls] retries [intervalMs]
  * apart; null means it stayed unavailable for the whole window.
  *
@@ -1670,6 +1765,15 @@ internal data class CacheRebuildDecision(
  *
  * ## Post-cutover ([cutoverCommitted])
  *
+ * Runs ONCE per wallet, after the SDK's one-time sync first reaches the tip
+ * ([postCutoverCheckDone] latches it). Records collapse into rows on a
+ * CoinJoin wallet (per-day historical-mixing groups — dashj folded 7456
+ * transactions into 434 rows on run 17's Wallet B), so the comparison below
+ * reads "missing rows" on every pass there; run on every sync-complete tick it
+ * requested a full reconcile each time (D-M-01 §4b). One reconcile after the
+ * one-time sync is the useful part, and the 60s ticker keeps the cache
+ * converged after it.
+ *
  * Every row comes from the SDK ([CutoverUiDataService]), so the only source
  * with anything to compare against is the SDK's own wallet-relevant record
  * count. The dashj numbers below cannot express this: dashj is held at zero
@@ -1696,6 +1800,7 @@ internal data class CacheRebuildDecision(
  */
 internal fun decideCacheRebuild(
     cutoverCommitted: Boolean,
+    postCutoverCheckDone: Boolean,
     sdkRecordCount: Int?,
     walletTxCount: Int,
     cachedTxCount: Int,
@@ -1703,6 +1808,12 @@ internal fun decideCacheRebuild(
     displayRowCount: Int
 ): CacheRebuildDecision {
     if (cutoverCommitted) {
+        if (postCutoverCheckDone) {
+            return CacheRebuildDecision(
+                CacheRebuildAction.NONE,
+                "the post-cutover check already ran once, after the one-time sync"
+            )
+        }
         if (sdkRecordCount == null) {
             return CacheRebuildDecision(
                 CacheRebuildAction.NONE,

@@ -70,8 +70,8 @@ class CropImageActivity : LockScreenActivity() {
         intent.getParcelableExtra<RectF>(ZOOMED_RECT)
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
         binding = ActivityCropImageBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

@@ -64,6 +64,99 @@ class CoinbaseBuyDashViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CoinbaseBuyUIState())
     val uiState: StateFlow<CoinbaseBuyUIState> = _uiState.asStateFlow()
 
+    private val confirmLock = Any()
+
+    /**
+     * The confirm attempt that currently OWNS the single-flight, or null.
+     *
+     * The single-flight covers the whole confirm sequence: the destination read,
+     * the fiat deposit, [buyDash]'s `placeBuyOrder`, and the handoff to 2FA. The
+     * confirm button launches a coroutine, and the first thing that coroutine
+     * does — [getTransferDashParams] — can block for seconds: post cutover it
+     * waits for the SDK engine to bind and then takes the engine's wallet-manager
+     * lock. Nothing is on screen for that wait, so repeated taps each started
+     * their own coroutine, and every one that got an address went on to place its
+     * OWN order under a fresh idempotency UUID (and, on the bank path, to repeat
+     * the deposit). Coinbase cannot collapse those: different UUIDs are different
+     * orders by definition, so the user is charged twice.
+     *
+     * This is an attempt id rather than a flag because this view model outlives
+     * the fragment that drives it. Rotate while an attempt is parked in that
+     * blocking read and the attempt is cancelled, but cancellation cannot finish
+     * it until the read returns; meanwhile the recreated fragment can legitimately
+     * start a new one. A plain flag released by whoever finished last would let
+     * the stale attempt's unwinding clear the new attempt's ownership, and the new
+     * attempt — which HAS prepared its destination — would then fail [buyDash]'s
+     * check and show a purchase error. Releases therefore name the attempt they
+     * are releasing and are a no-op for anyone who no longer owns the flight.
+     */
+    private var activeConfirmAttempt: Long? = null
+
+    /**
+     * Set once an attempt has actually placed its order and handed off to 2FA.
+     *
+     * Deliberately NOT the same state as [activeConfirmAttempt]: nothing is
+     * running any more, but the review screen is still attached and still
+     * clickable while the navigation transaction executes, so a queued tap must
+     * not start a second purchase. Only the review screen coming back to the
+     * front — `onResume` with no confirm of its own running — drops this, and
+     * dropping it must never disturb an attempt that IS running.
+     */
+    private var confirmNavigationLatched = false
+
+    private var lastConfirmAttempt = 0L
+
+    /**
+     * Take the confirm single-flight, returning the new attempt's id, or null if
+     * an attempt already owns it or the navigation latch is still set. Call this
+     * on the tap itself, not inside the coroutine it starts: that is the only
+     * point at which two taps are ordered against each other.
+     */
+    fun tryBeginConfirm(): Long? = synchronized(confirmLock) {
+        if (activeConfirmAttempt != null || confirmNavigationLatched) {
+            return null
+        }
+
+        return (++lastConfirmAttempt).also { activeConfirmAttempt = it }
+    }
+
+    /**
+     * Give the single-flight back for [attemptId] — a RETRYABLE failure, one
+     * where nothing was bought, or an attempt abandoned because the fragment that
+     * owned it was destroyed. A no-op unless [attemptId] still owns the flight,
+     * so a cancelled attempt unwinding late cannot release someone else's.
+     */
+    fun endConfirm(attemptId: Long) = synchronized(confirmLock) {
+        if (activeConfirmAttempt == attemptId) {
+            activeConfirmAttempt = null
+        }
+    }
+
+    /**
+     * [attemptId] bought: hand its ownership over to the navigation latch. The
+     * operation is over — so a stale sibling can no longer be confused with it —
+     * while the button stays guarded until the review screen is resumed.
+     */
+    fun latchConfirmForNavigation(attemptId: Long) = synchronized(confirmLock) {
+        if (activeConfirmAttempt == attemptId) {
+            activeConfirmAttempt = null
+            confirmNavigationLatched = true
+        }
+    }
+
+    /**
+     * Drop the completed-navigation latch, and ONLY that: an attempt still
+     * running keeps the flight it owns.
+     */
+    fun releaseConfirmNavigationLatch() = synchronized(confirmLock) {
+        confirmNavigationLatched = false
+    }
+
+    /** Whether anything — a running attempt or the navigation latch — holds the flight. */
+    fun isConfirmBusy(): Boolean = synchronized(confirmLock) {
+        activeConfirmAttempt != null || confirmNavigationLatched
+    }
+
     suspend fun validateBuyDash(amount: Dash, retryWithDeposit: Boolean): CoinbaseErrorType {
         previewBuyOrder(amount)
 
@@ -110,7 +203,16 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         return CoinbaseErrorType.NONE
     }
 
-    suspend fun buyDash() {
+    suspend fun buyDash(attemptId: Long) {
+        // The tripwire for the guard above: this method deposits and places an
+        // order with a fresh UUID, so reaching it twice IS the double purchase.
+        // Failing here turns a wiring mistake into a caught error on the review
+        // screen instead of a second charge. The caller must still OWN the flight,
+        // not merely find somebody holding it.
+        check(synchronized(confirmLock) { activeConfirmAttempt == attemptId }) {
+            "buyDash() outside its own confirm single-flight — a second order under a new " +
+                "idempotency UUID is a second purchase"
+        }
         val amount = uiState.value.order ?: return
 
         analyticsService.logEvent(AnalyticsConstants.Coinbase.QUOTE_CONFIRM, mapOf())

@@ -57,7 +57,12 @@ class ImportSharedImageActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
-        if ((application as WalletApplication).wallet == null) {
+        // Degraded first (see LockScreenActivity.onCreate): during a safe-mode
+        // retry reading the wallet would wait on the main thread for the
+        // retry's parse.
+        val walletApplication = application as WalletApplication
+        if (redirectDegradedWallet(walletApplication)) return
+        if (walletApplication.wallet == null) {
             setResult(RESULT_CANCELED)
             finish()
             return

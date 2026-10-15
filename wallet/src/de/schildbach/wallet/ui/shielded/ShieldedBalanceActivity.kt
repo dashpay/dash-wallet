@@ -129,8 +129,8 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     private var screen = SCREEN_TRANSFER
     private var shieldFirst = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         if (!Constants.SUPPORTS_PLATFORM) {
             finish()
@@ -175,13 +175,14 @@ class ShieldedBalanceActivity : LockScreenActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (finishedForNoWallet) return
         if (screen == SCREEN_TRANSFER) {
             transferExecutor.setTransferUiVisible(this, true)
         }
     }
 
     override fun onPause() {
-        transferExecutor.setTransferUiVisible(this, false)
+        if (!finishedForNoWallet) transferExecutor.setTransferUiVisible(this, false)
         super.onPause()
     }
 
@@ -193,7 +194,7 @@ class ShieldedBalanceActivity : LockScreenActivity() {
      * onResume — can never clear the NEW screen's visibility.
      */
     override fun onDestroy() {
-        transferExecutor.setTransferUiVisible(this, false)
+        if (!finishedForNoWallet) transferExecutor.setTransferUiVisible(this, false)
         super.onDestroy()
     }
 

@@ -23,6 +23,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.main.MainActivity
@@ -52,6 +53,8 @@ class InviteHandlerActivity : AppCompatActivity() {
     @Inject
     lateinit var walletDataProvider: WalletData
     @Inject
+    lateinit var walletApplication: WalletApplication
+    @Inject
     lateinit var configuration: Configuration
 
     private val inviteHandler by lazy {
@@ -77,6 +80,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(intent: Intent?) {
+        if (redirectDegradedWallet(walletApplication)) return
         if (intent != null) {
             lifecycleScope.launch {
                 val invitation = viewModel.handleInvite(intent)
@@ -94,6 +98,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(invite: InvitationLinkData) {
+        if (redirectDegradedWallet(walletApplication)) return
         val mainTask = inviteHandler.getMainTask()
         log.info("mainTask: $mainTask")
         when {
@@ -103,7 +108,11 @@ class InviteHandlerActivity : AppCompatActivity() {
                     finish()
                 }
             }
-            walletDataProvider.wallet != null -> {
+            // Degraded first (see LockScreenActivity.onCreate): during a
+            // safe-mode retry reading the wallet would wait on the main thread
+            // for the retry's parse. Degraded goes to onboarding, which owns
+            // the recovery screen.
+            !walletApplication.isWalletLoadDegraded && walletDataProvider.wallet != null -> {
                 log.info("the invite will be forwarded, starting MainActivity with invite: ${invite.link}, mainTask: {}", mainTask != null)
                 val intent = MainActivity.createIntent(this, invite)
                 mainTask?.startActivity(applicationContext, intent, null)

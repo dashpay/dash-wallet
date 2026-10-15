@@ -66,6 +66,8 @@ class SdkBlockchainStateServiceTest {
         stallThresholdMs: Long = 5_000L
     ) {
         val updates = mutableListOf<SdkBlockchainStateUpdate>()
+        /** When the fake engine last delivered a wallet event; 0 = none. */
+        @Volatile var lastEngineActivityMs = 0L
         val progressSubscriptions = AtomicInteger(0)
         val tipSubscriptions = AtomicInteger(0)
         /** Live cutover state — mutable so tests can roll the cutover back. */
@@ -89,7 +91,8 @@ class SdkBlockchainStateServiceTest {
             clearDerivedState = { clearCalls.incrementAndGet() },
             nowMs = { testScope.testScheduler.currentTime },
             stallThresholdMs = stallThresholdMs,
-            tickIntervalMs = 1_000L
+            tickIntervalMs = 1_000L,
+            lastEngineActivityMs = { lastEngineActivityMs }
         )
     }
 
@@ -207,6 +210,43 @@ class SdkBlockchainStateServiceTest {
         runCurrent()
         assertEquals(3, h.updates.size)
         assertFalse(h.updates.last().networkStalled)
+    }
+
+    @Test
+    fun postCutover_engineEventsKeepAStillSnapshotFromStalling() = runTest {
+        // The field shape: the block-download tail, where the filter height sits
+        // still for minutes while the engine processes blocks and emits events.
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing), stallThresholdMs = 5_000)
+        h.service.start()
+        runCurrent()
+
+        repeat(20) {
+            h.lastEngineActivityMs = testScheduler.currentTime
+            advanceTimeBy(1_000)
+            runCurrent()
+        }
+        // 20 s with the snapshot unchanged, 4x the threshold: never stalled.
+        assertEquals(1, h.updates.size)
+        assertFalse(h.updates.single().networkStalled)
+    }
+
+    @Test
+    fun postCutover_stallRaisesOnceEngineEventsStop() = runTest {
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing), stallThresholdMs = 5_000)
+        h.service.start()
+        runCurrent()
+        advanceTimeBy(3_000)
+        h.lastEngineActivityMs = testScheduler.currentTime
+        runCurrent()
+
+        // Measured from the last event, not the last snapshot change: still
+        // inside the threshold 4 s after it, past it at 6 s.
+        advanceTimeBy(4_000)
+        runCurrent()
+        assertFalse(h.updates.last().networkStalled)
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertTrue(h.updates.last().networkStalled)
     }
 
     @Test

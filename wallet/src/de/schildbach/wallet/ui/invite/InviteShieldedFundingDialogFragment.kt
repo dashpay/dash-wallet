@@ -30,6 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.shielded.ShieldedBalanceActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 /**
@@ -89,39 +90,44 @@ class InviteShieldedFundingDialogFragment :
                     return@setContent
                 }
 
-                InviteShieldedFundingSheet(
-                    // Fix G1: show BOTH costs actually withdrawn — Private
-                    // (v13 shielded exit denomination 0.03/0.25) vs Standard
-                    // (L1 fee 0.03/0.25) — so the user compares before deciding.
-                    nonContestedPrivateCost = state.nonContestedPrivateWithdrawn.toPlainString(),
-                    contestedPrivateCost = state.contestedPrivateWithdrawn.toPlainString(),
-                    nonContestedStandardCost = state.nonContestedFee.toPlainString(),
-                    contestedStandardCost = state.contestedFee.toPlainString(),
-                    canShieldMinimum = state.canShieldMinimum,
-                    canCreatePrivateInvite = state.canCreatePrivateInvite,
-                    // While the shielded balance/sync is still resolving the
-                    // primary renders a single neutral "Preparing shielded
-                    // balance…" button (Fix B — no SHIELD_FIRST → CREATE_PRIVATE
-                    // label flicker).
-                    primaryLoading = state.privateDecisionLoading,
-                    onCreatePrivateInvite = {
-                        // The shielded pool can already fund an invite — go to
-                        // the fee step in SHIELDED mode; the invitation is then
-                        // funded directly from the pool (L2) at confirm.
-                        toFeeDialog(shielded = true)
-                    },
-                    onShieldFirst = {
-                        // Shield funds in the internal-transfer flow; leaving
-                        // the invite flow returns the user to the originating
-                        // screen, from which they can re-start the invitation.
-                        startActivity(
-                            ShieldedBalanceActivity.createIntent(requireContext(), shieldFirst = true)
-                        )
-                        dismiss()
-                    },
-                    onContinueWithoutPrivacy = { toFeeDialog(shielded = false) },
-                    onClose = ::dismiss
-                )
+                // DashWalletTheme provides the night-aware LocalDashColors the
+                // sheet reads; without it every token falls back to the light
+                // scheme and the sheet is unreadable in dark mode (MO-974).
+                DashWalletTheme {
+                    InviteShieldedFundingSheet(
+                        // Fix G1: show BOTH costs actually withdrawn — Private
+                        // (v13 shielded exit denomination 0.03/0.25) vs Standard
+                        // (L1 fee 0.03/0.25) — so the user compares before deciding.
+                        nonContestedPrivateCost = state.nonContestedPrivateWithdrawn.toPlainString(),
+                        contestedPrivateCost = state.contestedPrivateWithdrawn.toPlainString(),
+                        nonContestedStandardCost = state.nonContestedFee.toPlainString(),
+                        contestedStandardCost = state.contestedFee.toPlainString(),
+                        canShieldMinimum = state.canShieldMinimum,
+                        canCreatePrivateInvite = state.canCreatePrivateInvite,
+                        // While the shielded balance/sync is still resolving the
+                        // primary renders a single neutral "Preparing shielded
+                        // balance…" button (Fix B — no SHIELD_FIRST → CREATE_PRIVATE
+                        // label flicker).
+                        primaryLoading = state.privateDecisionLoading,
+                        onCreatePrivateInvite = {
+                            // The shielded pool can already fund an invite — go to
+                            // the fee step in SHIELDED mode; the invitation is then
+                            // funded directly from the pool (L2) at confirm.
+                            toFeeDialog(shielded = true)
+                        },
+                        onShieldFirst = {
+                            // Shield funds in the internal-transfer flow; leaving
+                            // the invite flow returns the user to the originating
+                            // screen, from which they can re-start the invitation.
+                            startActivity(
+                                ShieldedBalanceActivity.createIntent(requireContext(), shieldFirst = true)
+                            )
+                            dismiss()
+                        },
+                        onContinueWithoutPrivacy = { toFeeDialog(shielded = false) },
+                        onClose = ::dismiss
+                    )
+                }
             }
         }
     }

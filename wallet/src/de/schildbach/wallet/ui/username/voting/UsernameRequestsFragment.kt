@@ -178,7 +178,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
                             Status.SUCCESS -> {
                                 log.info("  success: {}", outputData)
-                                showVoteIndicator(votes!!, usernames!!, resource.status, isQuickVoting)
+                                showVoteIndicator(votes.orEmpty(), usernames.orEmpty(), resource.status, isQuickVoting)
                                 if (!isQuickVoting) {
                                     normalizedLabels?.firstOrNull()?.let {
                                         viewModel.updateUsernameRequestWithVotes(it)
@@ -190,7 +190,7 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
 
                             Status.ERROR -> {
                                 log.info("  error: {}", outputData)
-                                showVoteIndicator(votes!!, usernames!!, resource.status, isQuickVoting)
+                                showVoteIndicator(votes.orEmpty(), usernames.orEmpty(), resource.status, isQuickVoting)
                             }
 
                             Status.CANCELED -> {
@@ -400,7 +400,10 @@ class UsernameRequestsFragment : Fragment(R.layout.fragment_username_requests) {
         status: Status,
         isQuickVoting: Boolean
     ) {
-        if (votes.isEmpty()) {
+        // Either list can be absent: the worker's missing-input early returns carry
+        // neither, and `usernames.first()` below would throw on an empty one. Showing
+        // nothing beats crashing the observer and losing the outcome entirely.
+        if (votes.isEmpty() || usernames.isEmpty()) {
             return
         }
         val resourceVoteChoice = ResourceVoteChoice.from(votes.first())

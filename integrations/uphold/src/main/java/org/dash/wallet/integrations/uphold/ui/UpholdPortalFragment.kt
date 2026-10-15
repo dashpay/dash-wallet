@@ -34,12 +34,14 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.setAmount
 import org.dash.wallet.common.ui.setFormat
 import org.dash.wallet.common.ui.setRoundedBackground
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
@@ -108,10 +110,21 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
         }
 
         binding.buyBtn.setOnClickListener {
-            lifecycleScope.launch {
-                val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-                viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
-                requireActivity().openCustomTab(uri)
+            // The VIEW's scope, as in BuyAndSellIntegrationsFragment: this
+            // fragment stays on the back stack behind the screens it navigates
+            // to, so a fragment-scoped coroutine would still be active and
+            // attached when the parked read unwinds and would toast over them.
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+                    viewModel.logEvent(AnalyticsConstants.Topper.ENTER_UPHOLD)
+                    requireActivity().openCustomTab(uri)
+                } catch (ex: ReceiveAddressUnavailableException) {
+                    // See BuyAndSellIntegrationsFragment: no safe deposit address.
+                    // Guarded — the read parks uncancellably, so this can run once
+                    // the fragment is gone and `requireContext()` would throw.
+                    toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
+                }
             }
         }
         binding.transferBtn.setOnClickListener {

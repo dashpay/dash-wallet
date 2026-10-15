@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service
 
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The foreground blockchain service's IDLE detector, extracted from
@@ -109,6 +110,69 @@ fun shouldStopForIdle(history: List<SyncActivitySample>, replaying: Boolean): Bo
     !replaying && isSyncIdle(history)
 
 /**
+ * The longest an in-flight SDK engine start keeps an idle service alive
+ * ([engineStartHoldsService]). A healthy start is the DashPay bring-up
+ * (budgeted at 20 s) plus the SPV client's load of its stored header chain,
+ * which takes minutes on a large chain on a slow phone but not this long; past
+ * it the start is treated as hung, and the idle rule applies again so a wedged
+ * native call cannot pin the foreground service for good.
+ */
+const val ENGINE_START_KEEPALIVE_MS = 15L * 60 * 1000
+
+/**
+ * Whether an SDK engine start that began at [startingSinceMs] (0 = none in
+ * flight; see `L1ShadowSyncService.engineStartingSinceMs`) should keep the
+ * service from stopping for idleness. A start reports no progress at all, so
+ * every counter reads zero and [isSyncIdle] trips about two minutes in —
+ * field report, 2026-09-30: the service stopped two minutes after a restart
+ * with the engine still loading its headers, the process was frozen without
+ * its foreground service, and sync stood still for 14 minutes until the user
+ * reopened the app. Capped at [capMs] so a hung start cannot hold the service
+ * forever. Pure — host-testable.
+ */
+fun engineStartHoldsService(
+    startingSinceMs: Long,
+    nowMs: Long,
+    capMs: Long = ENGINE_START_KEEPALIVE_MS
+): Boolean = startingSinceMs > 0L && nowMs - startingSinceMs < capMs
+
+/**
+ * How long after the service is created the SDK engine start may still be
+ * pending — not yet begun, so [engineStartHoldsService] cannot see it — and
+ * hold the service ([engineStartPendingHoldsService]). Before the start sets
+ * its marker it waits for the SDK bind, reads its enablement and runs the
+ * scan gate (at most 15 s); in the field report the service was created at
+ * 22:23:41 and the start began at 22:24:09, 28 s later. Two minutes covers
+ * that with room for a slow bind and the gate, and is short enough that a
+ * start that never comes (the shadow disabled, or no wallet bound) delays the
+ * service's normal behaviour only briefly.
+ */
+const val ENGINE_START_PENDING_GRACE_MS = 2L * 60 * 1000
+
+/**
+ * Whether the SDK engine start that a new service kicks, but has not begun
+ * yet, should hold the service. The blockchain-state observer is attached
+ * before that start is kicked and replays the stored state at once; a stored
+ * state that reads synced would otherwise take the service out of the
+ * foreground before the start had set its marker, and a background service
+ * cannot reliably promote itself again (Android 12+ refuses
+ * `startForeground()` from the background).
+ *
+ * Holds only while the engine is not running, the SDK bind is not blocked (a
+ * blocked bind cannot start anything, and the service must be free to idle
+ * out), and within [graceMs] of [serviceCreatedAtMs] (0 = unknown, never
+ * holds). Pure — host-testable.
+ */
+fun engineStartPendingHoldsService(
+    serviceCreatedAtMs: Long,
+    nowMs: Long,
+    engineRunning: Boolean,
+    bindBlocked: Boolean,
+    graceMs: Long = ENGINE_START_PENDING_GRACE_MS
+): Boolean = serviceCreatedAtMs > 0L && !engineRunning && !bindBlocked &&
+    nowMs - serviceCreatedAtMs < graceMs
+
+/**
  * One activity sample taken from the KOTLIN SDK L1 engine — the
  * post-cutover replacement for the dashj counters, mapped onto the same
  * four slots so [isSyncIdle] is untouched:
@@ -145,4 +209,114 @@ fun sdkActivitySample(
         headersDownloaded = delta(current.headerHeight, previous.headerHeight),
         mnListDiffsDownloaded = delta(current.mnListHeight, previous.mnListHeight)
     )
+}
+
+/**
+ * How far the SDK's durable synced height may trail the committed scan cursor
+ * before it holds an idle service ([durableLagHoldsService]). The SDK persists
+ * that height in 5,000-block steps, so a lag of a step or two is the normal
+ * resting state; past this it is unpersisted work a stop would throw away.
+ */
+const val DURABLE_LAG_MARGIN_BLOCKS = 10_000L
+
+/**
+ * How long the durable height may stand still before the lag stops holding the
+ * service. In the field report it advanced every couple of minutes while it
+ * caught up, so this is generous for a draining persister and still bounds one
+ * that has stopped.
+ */
+const val DURABLE_LAG_STALL_MS = 10L * 60 * 1000
+
+/**
+ * Whether the SDK's DURABLE synced height ([durableHeight], where a restart
+ * resumes) trailing the committed scan cursor ([committedHeight]) should keep
+ * the service from stopping for idleness. Once the scan reports SYNCED every
+ * idle counter can read zero while the SDK is still persisting what it scanned;
+ * a stop then re-walks everything unpersisted on the next start. Field report,
+ * 2026-09-30: stopped 126,694 blocks behind, catching up at ~10,000 a minute.
+ *
+ * Holds only while the lag exceeds [marginBlocks] AND the durable height has
+ * advanced within [stallMs] ([msSinceDurableAdvanced]), so a persister that has
+ * stopped cannot pin the service. Unknown heights (0) never hold. Pure —
+ * host-testable.
+ */
+fun durableLagHoldsService(
+    durableHeight: Long,
+    committedHeight: Long,
+    msSinceDurableAdvanced: Long,
+    marginBlocks: Long = DURABLE_LAG_MARGIN_BLOCKS,
+    stallMs: Long = DURABLE_LAG_STALL_MS
+): Boolean = durableHeight > 0L && committedHeight > 0L &&
+    committedHeight - durableHeight > marginBlocks &&
+    msSinceDurableAdvanced < stallMs
+
+/**
+ * Tracks when the durable synced height last moved, the input
+ * [durableLagHoldsService] needs. The first observation counts as movement, so
+ * a lag seen for the first time gets the full [DURABLE_LAG_STALL_MS] to prove it
+ * is draining. Any change counts, a decrease included: a rescan rewinds it.
+ * The service's tick is the only writer ([observe]); [msSinceChange] lets
+ * another thread read it without recording anything.
+ */
+class DurableHeightTracker {
+    private var lastHeight = -1L
+    private var lastChangeMs = 0L
+
+    /** Record [height] observed at [nowMs]; returns ms since it last changed. */
+    @Synchronized
+    fun observe(height: Long, nowMs: Long): Long {
+        if (height != lastHeight) {
+            lastHeight = height
+            lastChangeMs = nowMs
+        }
+        return nowMs - lastChangeMs
+    }
+
+    /**
+     * What [observe] would return for [height] at [nowMs], without recording
+     * it. A height the tick has not seen yet (including before its first
+     * observation) counts as fresh movement, so a lag that appears between
+     * ticks holds; a height the tick keeps seeing ages, so a stalled persister
+     * still releases.
+     */
+    @Synchronized
+    fun msSinceChange(height: Long, nowMs: Long): Long =
+        if (height != lastHeight) 0L else nowMs - lastChangeMs
+}
+
+/**
+ * Keeps the sync-complete path from taking the service out of the foreground
+ * while the idle rule is holding it ([engineStartHoldsService],
+ * [durableLagHoldsService]). Those holds only skip `stopSelf()`; the
+ * blockchain-state observer separately calls `stopForeground()` once the chain
+ * reads synced, and the durable-lag hold starts exactly then — the scan has
+ * gone SYNCED while the SDK is still saving it. A background service is
+ * stopped by the system within minutes, so the hold would not have held.
+ *
+ * [mayDemote] evaluates [liveHold] at the moment of the decision rather than
+ * the tick's last verdict: the tick runs once a minute and the SDK path skips
+ * its first one, so a synced state arriving during startup, or a lag that
+ * opened since the last tick, would otherwise demote under an active hold —
+ * and nothing re-promotes. A demotion refused under a hold is remembered;
+ * the tick reports the same predicate through [onHold], which returns true
+ * when the hold has ended with one pending, so the caller re-runs the
+ * sync-complete check then. Thread-safe: the tick and the observer run on
+ * different threads. Pre-cutover [liveHold] is always false, so [mayDemote]
+ * is always true.
+ */
+class ForegroundDemotionGate(private val liveHold: () -> Boolean) {
+    private val pending = AtomicBoolean(false)
+
+    /** Whether the sync-complete path may demote now; if not, remember it. */
+    fun mayDemote(): Boolean {
+        if (liveHold()) {
+            pending.set(true)
+            return false
+        }
+        pending.set(false)
+        return true
+    }
+
+    /** The tick's hold verdict; true when the caller should re-run a refused demotion. */
+    fun onHold(active: Boolean): Boolean = !active && pending.getAndSet(false)
 }

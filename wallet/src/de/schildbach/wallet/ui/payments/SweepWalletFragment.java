@@ -618,7 +618,43 @@ public class SweepWalletFragment extends Fragment {
         // SendCoinsOfflineTask callbacks keep their main-looper affinity).
         backgroundHandler.post(() -> {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
-            final Address receivingAddress = application.getWallet().freshReceiveAddress();
+            // The SELF-TRANSFER destination, not the advertised receive address.
+            // A sweep moves the user's own coins into their own wallet, and
+            // post-cutover freshReceiveAddressLive() returns the very address the
+            // Receive screen is showing — so a counterparty holding an unpaid QR
+            // could watch it and tie the sweep's amount and its paper-wallet
+            // inputs to the person behind that QR. "The funds are already linked
+            // to the paper key" does not answer that: the NEW link is from the
+            // paper key to the QR holder's view of the recipient.
+            //
+            // Post-cutover this THROWS rather than falling back to an advertised
+            // address, so preparation failures are handled here, before anything
+            // is sent.
+            final Address receivingAddress;
+            try {
+                receivingAddress = application.unadvertisedDestinationLive();
+            } catch (final Exception x) {
+                // RETRYABLE, not FAILED: the destination read can fail
+                // transiently (the engine is not bound yet, an FFI read errored),
+                // and State.FAILED disables the sweep button with no error shown,
+                // stranding the user on a dead screen. Return them to the
+                // confirmation step so they can try again — the one thing we must
+                // not do is proceed to an advertised address.
+                log.warn("sweep: could not obtain a self-transfer destination", x);
+                handler.post(() -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    setState(State.CONFIRM_SWEEP);
+                    final androidx.fragment.app.FragmentActivity activity = getActivity();
+                    if (activity != null) {
+                        android.widget.Toast.makeText(activity,
+                                org.dash.wallet.common.R.string.loading_error,
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
+                return;
+            }
             handler.post(() -> {
                 if (!isAdded()) {
                     return;

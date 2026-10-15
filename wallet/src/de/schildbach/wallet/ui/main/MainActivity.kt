@@ -187,15 +187,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // LockScreenActivity finishes the activity when there is no wallet
-        // (e.g. a direct launch on a fresh install); its setContentView
-        // override is a no-op while finishing, so nothing below can run.
-        if (isFinishing) {
-            log.warn("started without a wallet - closing (launch onboarding instead)")
-            return
-        }
+    // Runs only with a usable wallet: LockScreenActivity finishes the activity
+    // otherwise (a direct launch on a fresh install, a degraded launch, a
+    // safe-mode retry still loading), and the callbacks below check
+    // finishedForNoWallet for that case.
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // no-op on API 35+, where edge-to-edge is enforced
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
@@ -281,6 +278,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onStart() {
         super.onStart()
+        if (finishedForNoWallet) return
 
         if (!lockScreenDisplayed && config.showNotificationsExplainer) {
             explainPushNotifications()
@@ -435,6 +433,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onResume() {
         super.onResume()
+        if (finishedForNoWallet) return // viewModel reads the wallet when created
         turnOnAutoLogout()
         checkTimeSkew(viewModel)
         checkLowStorageAlert()
@@ -457,6 +456,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         intent ?: return
+        if (finishedForNoWallet) return
         // Keep getIntent() in step with what is actually being handled: the
         // activity replays getIntent() when it is recreated, so the extras
         // handleIntent consumes must be consumed from that same instance.
@@ -474,8 +474,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun handleBackNavigation() {
-        if (!lockScreenDisplayed && !goBack()) {
-            super.handleBackNavigation()
+        when (homeBackAction(lockScreenDisplayed, supportFragmentManager.backStackEntryCount, isTaskRoot)) {
+            HomeBackAction.IGNORE -> Unit
+            HomeBackAction.POP_FRAGMENT -> goBack()
+            HomeBackAction.MOVE_TASK_TO_BACK -> moveTaskToBack(true)
+            HomeBackAction.FINISH -> super.handleBackNavigation()
         }
     }
 
@@ -495,9 +498,22 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         // TODO: can we remove this?
     }
 
+    /**
+     * Only an identity that is actually being created from an invite blocks a
+     * new one. Any other stored invite is replaced by [invite] and re-validated,
+     * so a wallet that already has a username gets "you already have a
+     * username" (and the invite is discarded) rather than "DashPay is currently
+     * processing an invite" — which a stale stored invite used to trigger on
+     * every link opened afterwards.
+     */
     private fun handleInvite(invite: InvitationLinkData) {
         lifecycleScope.launch {
-            inviteHandlerViewModel.setInvitationLink(invite, false)
+            if (inviteHandlerViewModel.isInviteClaimInProgress()) {
+                log.info("invite opened while an invite-based identity is being created; ignoring it")
+                InviteHandler(this@MainActivity, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
+            } else {
+                inviteHandlerViewModel.setInvitationLink(invite, false)
+            }
         }
     }
 
@@ -545,12 +561,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // change); without this, an invite the user already dealt with
             // is re-armed on each of those and re-runs validation.
             intent.removeExtra(EXTRA_INVITE)
-            if (inviteHandlerViewModel.invitation.value == null) {
-                handleInvite(invite)
-            } else {
-                // TODO: this is not the correct message, we are not onboarding
-                InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
-            }
+            handleInvite(invite)
         }
         if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
             try {

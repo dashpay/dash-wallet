@@ -21,6 +21,7 @@ import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -30,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Sha256Hash
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import org.junit.Assert.assertEquals
@@ -66,7 +68,14 @@ class WalletTransactionMetadataProviderGiftCardTest {
             swapOrderDao = mockk<SwapOrderDao>(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
-            dashPayConfig = mockk<DashPayConfig>(relaxed = true)
+            dashPayConfig = mockk<DashPayConfig>(relaxed = true),
+            // The SDK store holds none of these transactions either.
+            sdkTxMetadataSource = object : SdkTxMetadataSource {
+                override suspend fun defaultMetadataFor(txId: org.dash.wallet.common.data.TxId): TransactionMetadata? = null
+                override suspend fun defaultMetadataFor(
+                    txIds: Collection<org.dash.wallet.common.data.TxId>
+                ): Map<org.dash.wallet.common.data.TxId, TransactionMetadata> = emptyMap()
+            }
         )
     }
 

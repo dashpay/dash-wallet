@@ -44,6 +44,22 @@ interface WalletDataProvider {
     fun freshReceiveAddressString(): String
     fun currentReceiveAddressString(): String
 
+    /**
+     * [freshReceiveAddressString] / [currentReceiveAddressString] answered by a
+     * LIVE read of whichever engine owns the key chain right now.
+     *
+     * Post-cutover the wallet module reads the Kotlin SDK engine's next UNUSED
+     * address over the FFI instead of the dashj key chain, which is HELD post-
+     * cutover and would serve an address the chain has already paid (SR-03 /
+     * D-003). Pre-cutover — and in these defaults — the dashj answers are
+     * unchanged.
+     *
+     * BLOCKING, like the plain accessors: use [freshReceiveAddressStringOffMain]
+     * / [currentReceiveAddressStringOffMain] from feature and integration code.
+     */
+    fun freshReceiveAddressStringLive(): String = freshReceiveAddressString()
+    fun currentReceiveAddressStringLive(): String = currentReceiveAddressString()
+
     /** Estimated wallet balance. */
     fun getWalletBalance(): Dash
 

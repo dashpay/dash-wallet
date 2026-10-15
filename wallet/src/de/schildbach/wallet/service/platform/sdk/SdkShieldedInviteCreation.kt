@@ -31,6 +31,8 @@ import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.wallet.OneTimeOrchardKey
 import org.dashj.platform.dpp.identifier.Identifier
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -292,6 +294,10 @@ class SdkShieldedInviteCreation internal constructor(
      * returns the ready-to-share [InvitationLinkData] and persists a tracking
      * [Invitation] row. Nothing is spent when any preflight fails; the funding
      * transfer is attempted once and classified via [classifyBroadcastFailure].
+     *
+     * Funding through the initial raw-link persistence attempt ignores caller cancellation.
+     * OneLink generation and the subsequent tracking update remain cancellable. This protects
+     * against sheet dismissal, but not process death, ambiguous funding, or database failure.
      */
     suspend fun createShieldedInvite(
         username: String,
@@ -353,72 +359,88 @@ class SdkShieldedInviteCreation internal constructor(
             return notBroadcast("one-time key generation failed", t)
         }
 
-        // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
-        // TWO notes to the same one-time address (see [inviteFundingSplit]).
-        try {
-            source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            return when (val classified = classifyBroadcastFailure(t)) {
-                is SdkWriteResult.NotBroadcast -> {
-                    log.warn("shielded invite funding rejected pre-broadcast", t)
-                    classified
-                }
-                else -> {
-                    log.error(
-                        "shielded invite funding outcome unconfirmed — the note MAY exist; do NOT retry",
-                        t
-                    )
-                    SdkWriteResult.Ambiguous(t)
+        val criticalResult: SdkWriteResult<InvitationLinkData> = withContext(NonCancellable) {
+            // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
+            // TWO notes to the same one-time address (see [inviteFundingSplit]).
+            try {
+                source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return@withContext when (val classified = classifyBroadcastFailure(t)) {
+                    is SdkWriteResult.NotBroadcast -> {
+                        log.warn("shielded invite funding rejected pre-broadcast", t)
+                        classified
+                    }
+                    else -> {
+                        log.error(
+                            "shielded invite funding outcome unconfirmed — the note MAY exist; do NOT retry",
+                            t
+                        )
+                        SdkWriteResult.Ambiguous(t)
+                    }
                 }
             }
-        }
 
-        // Advisory scan hint; a missing height is fine (claim scans without one).
-        val fundingHeight = try {
-            source.currentChainTipHeight()
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("chain-tip height unavailable for the shielded invite hint", t)
-            null
-        }
+            // Advisory scan hint; a missing height is fine (claim scans without one).
+            val fundingHeight = try {
+                source.currentChainTipHeight()
+            } catch (t: Throwable) {
+                log.warn("chain-tip height unavailable for the shielded invite hint", t)
+                null
+            }
 
-        val link = InvitationLinkData.createShielded(
-            username = username,
-            displayName = displayName,
-            avatarUrl = avatarUrl,
-            oneTimeKeyHex = bytes32ToHex(key.spendingKey),
-            fundingHeight = fundingHeight ?: 0,
-            // The note's value — the ONLY way the claimer can learn which
-            // tier this invite paid for. A shielded invite has no on-chain
-            // asset lock to read the amount off, and the claim FFI takes the
-            // denomination as an input rather than reporting the note's, so
-            // without this the claim screen cannot tell a 0.25 contested
-            // invite from a 0.03 non-contested one.
-            fundingCredits = denominationCredits
-        )
+            val rawLink = InvitationLinkData.createShielded(
+                username = username,
+                displayName = displayName,
+                avatarUrl = avatarUrl,
+                oneTimeKeyHex = bytes32ToHex(key.spendingKey),
+                fundingHeight = fundingHeight ?: 0,
+                // The note's value — the ONLY way the claimer can learn which
+                // tier this invite paid for. A shielded invite has no on-chain
+                // asset lock to read the amount off, and the claim FFI takes the
+                // denomination as an input rather than reporting the note's, so
+                // without this the claim screen cannot tell a 0.25 contested
+                // invite from a 0.03 non-contested one.
+                fundingCredits = denominationCredits
+            )
+
+            // SR-02: once the shielded transfer returns, the one-time spending
+            // key must be durable before any cancellable work can run. BACK can
+            // cancel the dialog coroutine in the few-second fund→persist window;
+            // a raw deep link row is enough to recover/share the invite later.
+            try {
+                persistTracking(key.address, rawLink.link.toString())
+            } catch (t: Throwable) {
+                log.warn("shielded invite raw-link tracking persist failed — the invite is still valid", t)
+            }
+            SdkWriteResult.Broadcast(rawLink)
+        }
+        val link = when (criticalResult) {
+            is SdkWriteResult.Broadcast -> criticalResult.value
+            is SdkWriteResult.NotBroadcast -> return criticalResult
+            is SdkWriteResult.Ambiguous -> return criticalResult
+        }
 
         // Wrap the raw deep link in an AppsFlyer OneLink so the shared/copied
         // link matches an L1 invite (preview + install redirect, H1); fall
         // back to the raw deep link if generation is unavailable.
         val shareLink = generateOneLink(link) ?: link.link.toString()
 
-        // Track it in the invite history (best-effort — the note is already
-        // funded, so a persistence failure must not fail the invite). The
-        // Invitation entity assumes a pre-created identity id; a shielded
-        // invite has no claimer identity yet, so we key it by a synthetic
-        // 32-byte id derived from the one-time address (valid + unique, so the
-        // history avatar hash renders) and stash the shareable OneLink.
-        try {
-            persistTracking(key.address, shareLink)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("shielded invite tracking persist failed — the invite is still valid", t)
+        if (shareLink != link.link.toString()) {
+            // Upgrade the durable raw-link row to the nicer OneLink when that
+            // optional wrapping survives cancellation/failure.
+            try {
+                persistTracking(key.address, shareLink)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("shielded invite OneLink tracking update failed — raw link remains saved", t)
+            }
         }
 
         return SdkWriteResult.Broadcast(ShieldedInvite(link, shareLink))
     }
 
+    /** Saves the share link under the stable tracking identifier derived from the one-time address. */
     private suspend fun persistTracking(oneTimeAddress43: ByteArray, shareLink: String) {
         val syntheticUserId = Identifier.from(Sha256Hash.hash(oneTimeAddress43)).toString()
         invitationsDao.insert(
@@ -434,6 +456,7 @@ class SdkShieldedInviteCreation internal constructor(
         )
     }
 
+    /** Logs a preflight failure and reports that no funding transfer was submitted. */
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded invite not created ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)

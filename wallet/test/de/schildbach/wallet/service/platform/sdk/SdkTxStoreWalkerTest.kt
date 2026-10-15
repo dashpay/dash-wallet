@@ -18,6 +18,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import android.app.Application
 import androidx.room.Room
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.runBlocking
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.junit.After
@@ -612,6 +613,109 @@ class SdkTxStoreWalkerTest {
     }
 
     /**
+     * The display pipeline end to end for that healed record: the walker's
+     * OUTGOING asset lock is probed (typed AssetLock), and with its resolved
+     * kind it renders "Upgrade Fee" valued at the burn — not plain "Sent".
+     */
+    @Test
+    fun reattribution_assetLock_healedOutgoing_rendersItsPlatformTitle() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al3", bip44Account)
+        insertCoreAddress("bip44_al3_change", bip44Account)
+        val funding = txid(91)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al3")
+        val assetLock = txid(92)
+        insertTx(
+            assetLock, direction = 2, netAmount = 0, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al3_change")
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 14_886_248, outputCount = 2, inputCount = 1)
+            } else {
+                null
+            }
+        })
+        val records = ArrayList<L1TxUiRecord>()
+        w.walkAll { page -> records += page }
+        val healed = records.single { it.txidHex == displayHexOf(assetLock) }
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals("the copy keeps the type kind", TX_TYPE_KIND_ASSET_LOCK, healed.transactionTypeKind)
+        assertTrue(probesOutgoingAssetLockKind(healed))
+        assertFalse(
+            "the plain funding receive is never probed",
+            probesOutgoingAssetLockKind(records.single { it.txidHex == displayHexOf(funding) })
+        )
+
+        val resolve: (Int) -> String = { id -> "str:$id" }
+        val plan = planL1DisplaySync(
+            listOf(healed), emptyMap(), emptySet(), resolve, nowMs = 1_700_000_100_000L,
+            kindByTxid = mapOf(healed.txidHex to AssetLockKind.UPGRADE)
+        )
+        val row = plan.inserts.single()
+        assertEquals(resolve(R.string.dashpay_upgrade_fee), row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    /**
+     * D-M-01: the store leaves `fee` NULL, so the walker recovers it for the
+     * display. A walk that sees only SOME of a send's spend marks cannot — and
+     * must try again once the rest land, in the same walker (the 60s reconcile
+     * reuses it), then persist the fee durably.
+     */
+    @Test
+    fun feeRecovery_partialSpendMarks_retriesWhenTheRestLand() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_fr_a", bip44Account)
+        insertCoreAddress("bip44_fr_b", bip44Account)
+        insertCoreAddress("bip44_fr_change", bip44Account)
+        val fundingA = txid(61)
+        val fundingB = txid(62)
+        insertTx(fundingA, direction = 0, netAmount = 2_000_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTx(fundingB, direction = 0, netAmount = 1_500_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(fundingA, 0, 2_000_000, "bip44_fr_a")
+        insertTxo(fundingB, 0, 1_500_000, "bip44_fr_b")
+
+        // A two-input credit purchase with the net the engine persists
+        // (−(burn+fee)) and no fee: 3 000 000 burn + 499 759 change, 241 fee.
+        val assetLock = txid(63)
+        insertTx(
+            assetLock, direction = 2, netAmount = -3_000_241, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        insertTxo(assetLock, 1, 499_759, "bip44_fr_change")
+        // Only the first input's spend mark has landed.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingA)
+
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 3_499_759, outputCount = 2, inputCount = 2)
+            } else {
+                null
+            }
+        })
+        fun walkedAssetLock(): L1TxUiRecord {
+            val byHex = HashMap<String, L1TxUiRecord>()
+            runBlocking { w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } } }
+            return requireNotNull(byHex[displayHexOf(assetLock)])
+        }
+
+        assertNull("one of two inputs proves no fee", walkedAssetLock().feeDuffs)
+        assertNull(storedShape(assetLock).third)
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingB)
+
+        val recovered = walkedAssetLock()
+        assertEquals(241L, recovered.feeDuffs)
+        assertEquals(-3_000_241L, recovered.netAmountDuffs) // the net itself is untouched
+        assertEquals(241L, storedShape(assetLock).third)
+    }
+
+    /**
      * An AssetLock whose stored net is already non-zero (the shape the rust
      * store-side fix will persist) is NOT flagged — the heal arm goes inert.
      */
@@ -1169,6 +1273,260 @@ class SdkTxStoreWalkerTest {
         assertEquals(Triple(0, 49_999_774L, null), storedShape(send))
     }
 
+    // ── CoinJoin income-only net (rust-dashcore#979 shape) ────────────
+    //
+    // A restore that processes a mixing round before the transactions that
+    // funded its inputs stores the round "income-only": netAmount = +(our
+    // outputs) where the true net is funded − spent (0 for a pure
+    // denomination round). Without the engine fix the walker must re-net
+    // these rows from the TXO mirror — net only, behind the completeness
+    // guard, durably, and convergently while the spent marks still land.
+
+    private val cjAccount = 120L
+    private val denom = 100_001L
+
+    /** Txids of the [seedCoinJoinRound] shape. */
+    private data class CoinJoinTxids(val f1: ByteArray, val f2: ByteArray, val round: ByteArray)
+
+    /**
+     * One 4-in/4-out mixing round: two of the inputs are ours (denominations
+     * funded by [CoinJoinTxids.f1]/[CoinJoinTxids.f2] on CoinJoin-account
+     * addresses), two belong to other participants; two outputs pay our
+     * CoinJoin addresses, two pay the other participants. True net = 0.
+     *
+     * @param storedNet the round's persisted net (born income-only: +2·denom).
+     * @param linkF2 whether f2's spend of its denomination into the round is
+     *        in the mirror yet (false = the mid-sync partial-evidence shape:
+     *        neither f2's tx row nor its TXO exist yet).
+     * @param mirrorOut2 whether the round's second owned output (vout 2) has
+     *        its `txos` row (false = the incomplete-mirror shape).
+     */
+    private fun seedCoinJoinRound(
+        storedNet: Long = 2 * denom,
+        linkF2: Boolean = true,
+        mirrorOut2: Boolean = true
+    ): CoinJoinTxids {
+        insertAccount(cjAccount, 1)
+        insertCoreAddress("cj_in0", cjAccount)
+        insertCoreAddress("cj_in1", cjAccount)
+        insertCoreAddress("cj_out0", cjAccount)
+        insertCoreAddress("cj_out1", cjAccount)
+        val ids = CoinJoinTxids(f1 = txid(81), f2 = txid(82), round = txid(83))
+        insertTx(ids.f1, direction = 2, netAmount = 0, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTx(
+            ids.round, direction = 3, netAmount = storedNet, payload = byteArrayOf(20),
+            firstSeen = 1_700_000_003, typeKind = TX_TYPE_KIND_COINJOIN
+        )
+        // A stored fee the recompute must leave alone.
+        exec("UPDATE transactions SET fee = 123 WHERE txid = ?", ids.round)
+        insertTxo(ids.f1, 0, denom, "cj_in0", spendingTxid = ids.round)
+        if (linkF2) linkSecondInput(ids)
+        insertTxo(ids.round, 0, denom, "cj_out0")
+        if (mirrorOut2) insertTxo(ids.round, 2, denom, "cj_out1")
+        return ids
+    }
+
+    /** f2 (and its denomination's spend into the round) lands in the store. */
+    private fun linkSecondInput(ids: CoinJoinTxids) {
+        insertTx(ids.f2, direction = 2, netAmount = 0, payload = ByteArray(0), firstSeen = 1_700_000_002)
+        insertTxo(ids.f2, 0, denom, "cj_in1", spendingTxid = ids.round)
+    }
+
+    /** The round's real shape: our outputs at vout 0/2, the other participants' at 1/3. */
+    private val coinJoinFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+        if (payload.firstOrNull()?.toInt() == 20) {
+            TxPayloadFacts(
+                outputsTotalDuffs = 4 * denom,
+                outputCount = 4,
+                inputCount = 4,
+                outputAddresses = listOf("cj_out0", "yParticipantA", "cj_out1", "yParticipantB")
+            )
+        } else {
+            null
+        }
+    }
+
+    private fun walkRecords(w: SdkTxStoreWalker): Map<String, L1TxUiRecord> = runBlocking {
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        byHex
+    }
+
+    @Test
+    fun coinJoin_bornIncomeOnly_correctedToFundedMinusSpent_persistedOnce() {
+        val ids = seedCoinJoinRound()
+
+        queryLog.clear()
+        val served = requireNotNull(walkRecords(walker(payloadFacts = coinJoinFacts))[displayHexOf(ids.round)])
+        // funded (2·denom) − spent (2·denom) = 0; direction and fee stand.
+        assertEquals(0L, served.netAmountDuffs)
+        assertEquals(L1TxUiDirection.COINJOIN, served.direction)
+        assertEquals(123L, served.feeDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertEquals(1, queryLog.count { it.startsWith("UPDATE transactions") })
+
+        // Second pass (fresh walker — "next launch"): the corrected row is
+        // equal to its recompute → no payload fetch, no write.
+        queryLog.clear()
+        val again = walkRecords(walker(payloadFacts = { error("no payload work on a corrected store") }))
+        assertEquals(0L, again[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_alreadyCorrect_untouchedAndNoPayloadFetch() {
+        // The #979 store: the engine already persisted the true net.
+        val ids = seedCoinJoinRound(storedNet = 0L)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = { error("payload parse must not run for a correct row") }))
+        assertEquals(0L, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_with979_correctNetNeverRaisedByIncompleteSpentMarks() {
+        // The #979 store mid-restore: the engine already persisted the true,
+        // fully attributed net (0), but only ONE of our two inputs has its
+        // spent mark in the mirror yet — the recompute reads +denom. It must
+        // be refused (the walker never makes an engine-correct net worse,
+        // and if the second input's row never lands that would be permanent).
+        val ids = seedCoinJoinRound(storedNet = 0L, linkF2 = false)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = { error("no payload work for a refused raise") }))
+        assertEquals(0L, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+
+        // Once the mark lands the recompute agrees — still nothing to do.
+        linkSecondInput(ids)
+        queryLog.clear()
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_incompleteMirror_defersAndPersistsNothing() {
+        // Our second output (vout 2, a wallet-tracked CoinJoin address) has no
+        // txos row: funded would read 1·denom and stamp a born-wrong −denom.
+        val ids = seedCoinJoinRound(mirrorOut2 = false)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(2 * denom, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 2 * denom, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+
+        // Without payload facts the guard cannot run → deferred as well.
+        walkRecords(walker(payloadFacts = { null }))
+        assertEquals(Triple(3, 2 * denom, 123L), storedShape(ids.round))
+
+        // The row lands → corrected on the next pass.
+        insertTxo(ids.round, 2, denom, "cj_out1")
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+    }
+
+    @Test
+    fun coinJoin_midSyncPartialEvidence_convergesOnLaterPass() {
+        // Only ONE of our two inputs is linked in the mirror yet: the
+        // recompute is partial (+denom) — closer than the born +2·denom.
+        val ids = seedCoinJoinRound(linkF2 = false)
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, denom, 123L), storedShape(ids.round))
+
+        // The second input's funding tx and spend mark land: the flag
+        // re-fires structurally and the compare-and-set runs against the
+        // CURRENT stored value (+denom), not the born one.
+        linkSecondInput(ids)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(0L, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertEquals(1, queryLog.count { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_withoutSpentEvidence_orNotCoinJoinDirection_neverRecomputed() {
+        // No owned input linked at all → no spent evidence → not flagged
+        // (a round we merely received into stays as stored).
+        insertAccount(cjAccount, 1)
+        insertCoreAddress("cj_out0", cjAccount)
+        val round = txid(84)
+        insertTx(
+            round, direction = 3, netAmount = denom, payload = byteArrayOf(20),
+            firstSeen = 1_700_000_003, typeKind = TX_TYPE_KIND_COINJOIN
+        )
+        insertTxo(round, 0, denom, "cj_out0")
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, denom, null), storedShape(round))
+    }
+
+    @Test
+    fun coinJoin_correctionSignalled_andRecordsForServesCurrentNets() {
+        // The mixing-group re-sum's two hooks into the walker: the
+        // persisted-corrections signal, and point reads of the served nets.
+        val ids = seedCoinJoinRound()
+        val signalled = mutableListOf<Set<String>>()
+        val w = SdkTxStoreWalker(
+            db = db,
+            walletId = walletId,
+            pageThrottleMs = 0L,
+            payloadFacts = coinJoinFacts,
+            onCorrectionsPersisted = { signalled += it }
+        )
+        val unknown = displayHexOf(txid(99))
+        // A point read corrects (and signals) exactly like a walk; a txid the
+        // store does not hold is simply absent.
+        val served = w.recordsFor(listOf(displayHexOf(ids.round), unknown))
+        assertEquals(listOf(displayHexOf(ids.round)), served.map { it.txidHex })
+        assertEquals(0L, served.single().netAmountDuffs)
+        assertEquals(listOf(setOf(displayHexOf(ids.round))), signalled)
+
+        // Already corrected: nothing persisted, nothing signalled.
+        walkRecords(w)
+        assertEquals(1, signalled.size)
+    }
+
+    @Test
+    fun coinJoin_recordsForWithoutListener_stillPersistsTheCorrection() {
+        // The mixing re-sum reads its members through a walker with NO
+        // corrections listener (the nets it gets back already carry the
+        // correction). The correction must still be persisted, exactly once.
+        val ids = seedCoinJoinRound()
+        val quiet = SdkTxStoreWalker(db = db, walletId = walletId, pageThrottleMs = 0L, payloadFacts = coinJoinFacts)
+        val served = quiet.recordsFor(listOf(displayHexOf(ids.round)))
+        assertEquals(0L, served.single().netAmountDuffs)
+        assertEquals(0L, storedShape(ids.round).second)
+        queryLog.clear()
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(0, queryLog.count { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun recomputeCoinJoinRecordNet_netOnly() {
+        val born = l1TxUiRecord(txid(85), 2 * denom, 50L, 3, 3, 1_700_000_000, 0)
+        val fixed = recomputeCoinJoinRecordNet(born, spentOwnedDuffs = 2 * denom, fundedOwnedDuffs = 2 * denom - 10)
+        assertEquals(-10L, fixed.netAmountDuffs)
+        assertEquals(L1TxUiDirection.COINJOIN, fixed.direction)
+        assertEquals(50L, fixed.feeDuffs)
+        // Already correct → the SAME record (no churn).
+        val correct = born.copy(netAmountDuffs = 0L)
+        assertTrue(correct === recomputeCoinJoinRecordNet(correct, 2 * denom, 2 * denom))
+        // No spent evidence, or not a CoinJoin record → untouched.
+        assertTrue(born === recomputeCoinJoinRecordNet(born, 0L, 2 * denom))
+        val outgoing = born.copy(direction = L1TxUiDirection.OUTGOING)
+        assertTrue(outgoing === recomputeCoinJoinRecordNet(outgoing, 2 * denom, 0L))
+        // MONOTONE: a recompute HIGHER than the stored net (the #979 store
+        // with spent marks still incomplete) is refused — the same record.
+        assertTrue(correct === recomputeCoinJoinRecordNet(correct, spentOwnedDuffs = denom, fundedOwnedDuffs = 2 * denom))
+        // A lower recompute from partial evidence still applies (moves down).
+        assertEquals(denom, recomputeCoinJoinRecordNet(born, denom, 2 * denom).netAmountDuffs)
+    }
+
     // ── reattributeIncomingRecord (pure) ──────────────────────────────
 
     private fun incomingRecord(net: Long) = l1TxUiRecord(
@@ -1299,5 +1657,40 @@ class SdkTxStoreWalkerTest {
         // Garbage never parses to facts.
         assertNull(dashjPayloadFacts(ByteArray(0)))
         assertNull(dashjPayloadFacts(byteArrayOf(1, 2, 3)))
+    }
+
+    // ── Batch point lookup (metadata import) ──────────────────────────
+
+    @Test
+    fun recordsFor_matchesRecordFor_withOnePendingAggregatePerBatch() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_0", bip44Account)
+        insertCoreAddress("chg_0", bip44Account)
+        // A just-broadcast send whose only spent evidence is its pending_inputs
+        // reservation (the case the wallet-wide aggregate exists for)…
+        val receive = txid(21)
+        val send = txid(22)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(4), firstSeen = 1_700_000_002)
+        val receiveOutpoint = insertTxo(receive, 0, 50_000_000, "bip44_0")
+        insertTxo(send, 1, 29_999_774, "chg_0")
+        insertPendingInput(receiveOutpoint, send)
+        // …plus ordinary standard receives, each of which also triggers the aggregate.
+        seedWalletTxs(count = 20, startAt = 100)
+        val notInStore = displayHexOf(txid(9_999))
+        val hexes = listOf(displayHexOf(receive), displayHexOf(send)) + (100 until 120).map { displayHex(it) }
+
+        val single = hexes.associateWith { walker(payloadFacts = pendingSendPayloadFacts).recordFor(it) }
+        queryLog.clear()
+        val batch = walker(payloadFacts = pendingSendPayloadFacts).recordsByHex(hexes + notInStore)
+
+        // Same records as one recordFor per txid, including the pending correction.
+        assertEquals(single.filterValues { it != null }, batch)
+        assertEquals(L1TxUiDirection.OUTGOING, batch.getValue(displayHexOf(send)).direction)
+        assertEquals(-20_000_226L, batch.getValue(displayHexOf(send)).netAmountDuffs)
+        // The wallet-wide pending_inputs aggregate: at most once for reattribution and
+        // once for fee recovery, for the whole batch of 22 — not once per txid.
+        val aggregates = queryLog.count { it.contains("GROUP BY s.spendingTxid") }
+        assertTrue("pending aggregate ran $aggregates times", aggregates in 1..2)
     }
 }

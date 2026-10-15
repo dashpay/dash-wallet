@@ -65,26 +65,43 @@ internal class BindHealL1Starter(
     fun arm() {
         job?.cancel()
         job = scope.launch {
-            bindEstablished.first { it }
-            if (serviceTearingDown()) {
-                log.info(
-                    "SDK bind healed while the blockchain service is tearing down — not starting L1; " +
-                        "the next service start kicks it"
-                )
-                return@launch
-            }
-            val started = try {
-                startL1()
+            // Nothing may escape this job. It is launched on a long-lived
+            // service scope with no exception handler, so a throwable here goes
+            // to the JVM's default handler — invisible in production, and in the
+            // host tests reported against whatever unrelated test happens to
+            // start next. The wait itself can throw: `first` raises
+            // NoSuchElementException if the bind feed ever COMPLETES without a
+            // true (the production feed is a StateFlow, but the seam takes any
+            // Flow, and [SdkBindRetryService] already defaults one to empty).
+            try {
+                awaitHealAndStart()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-                log.warn("SDK L1 engine start after the in-session bind heal failed", t)
-                false
+                log.warn("SDK bind-heal wait ended abnormally; nothing was started", t)
             }
-            log.info(
-                "SDK bind healed in-session — L1 engine start {}",
-                if (started) "succeeded" else "declined"
-            )
         }
+    }
+
+    private suspend fun awaitHealAndStart() {
+        bindEstablished.first { it }
+        if (serviceTearingDown()) {
+            log.info(
+                "SDK bind healed while the blockchain service is tearing down — not starting L1; " +
+                    "the next service start kicks it"
+            )
+            return
+        }
+        val started = try {
+            startL1()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK L1 engine start after the in-session bind heal failed", t)
+            false
+        }
+        log.info(
+            "SDK bind healed in-session — L1 engine start {}",
+            if (started) "succeeded" else "declined"
+        )
     }
 
     /** Stop waiting. Called from the service's shutdown and engine stop. */

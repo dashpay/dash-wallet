@@ -23,7 +23,9 @@ import android.content.Intent
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -39,6 +41,7 @@ import org.dash.wallet.common.observeTotalDashBalance
 import org.dash.wallet.common.payments.parsers.DashUri
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BalanceUIState
@@ -190,9 +193,42 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.SendReport)
     }
 
+    /**
+     * Publish [ex] on the API's error surface, unless this coroutine has
+     * already been cancelled.
+     *
+     * [CrowdNodeApi.apiError] is APP-scoped — a singleton StateFlow that
+     * [StakingActivity] observes for the whole staking flow — while the reads
+     * that raise this are cancelled with the screen yet keep running for up to
+     * five uncancellable seconds afterwards. A `withContext` that throws
+     * delivers the throw rather than the cancellation, so without this check an
+     * abandoned read still latches an error nothing will clear ([clearError]
+     * runs only where a dialog was actually shown), and the NEXT time staking
+     * opens it greets the user with a stale failure before anything has been
+     * read. The condition is transient and every entry point re-runs
+     * initialisation, so dropping it is the honest outcome.
+     */
+    private suspend fun reportAddressFailure(ex: ReceiveAddressUnavailableException) {
+        if (currentCoroutineContext().isActive) {
+            crowdNodeApi.apiError.value = ex
+        }
+    }
+
     suspend fun recheckState() {
         crowdNodeApi.restoreStatus()
-        _accountAddress.value = getOrCreateAccountAddress()
+        // StakingActivity calls this from a bare lifecycleScope.launch while it
+        // builds its navigation graph, so an uncaught failure here crashes on
+        // opening staking. With no persisted address this reaches
+        // freshReceiveAddressStringOffMain, which now fails closed post-cutover.
+        // Report it and stop rather than continuing into screens that assume an
+        // account address exists.
+        val address = try {
+            getOrCreateAccountAddress()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            reportAddressFailure(ex)
+            return
+        }
+        _accountAddress.value = address
         crowdNodeApi.refreshBalance()
     }
 
@@ -200,19 +236,58 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.refreshBalance()
     }
 
+    /**
+     * The account address, INITIALISING it if startup could not, or null with
+     * [CrowdNodeApi.apiError] set.
+     *
+     * [recheckState] contains a `ReceiveAddressUnavailableException` at staking
+     * startup, but `StakingActivity` installs its navigation graph regardless and
+     * `NewAccountFragment` enables its action on accepted terms alone — so the
+     * user can still reach signup and linking with no address. Both used to
+     * force-unwrap, turning the contained startup failure into a crash one tap
+     * later. Report the same `apiError` the startup path does instead; it is the
+     * same transient condition and the same retry.
+     *
+     * Two things this has to do, and an earlier version did neither well enough:
+     *
+     * - RETRY. The underlying failure is transient — the SDK engine had not bound
+     *   yet — so each attempt re-runs initialisation. Latching the outage meant
+     *   repeated taps could never recover once the engine came up.
+     * - REPORT. [StakingActivity] observes [observeCrowdNodeError] for the whole
+     *   staking flow, so setting `apiError` is what puts a dialog in front of the
+     *   user on the new-account screen. Returning silently left signup doing
+     *   nothing after authentication and linking doing nothing at all.
+     */
+    private suspend fun requireAccountAddress(): String? {
+        _accountAddress.value?.let { return it }
+        val address = try {
+            getOrCreateAccountAddress()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            reportAddressFailure(ex)
+            return null
+        }
+        _accountAddress.value = address
+        return address
+    }
+
     fun signUp() {
-        crowdNodeApi.persistentSignUp(_accountAddress.value!!)
+        viewModelScope.launch {
+            val address = requireAccountAddress() ?: return@launch
+            crowdNodeApi.persistentSignUp(address)
+        }
     }
 
     fun linkOnlineAccount() {
-        val address = _accountAddress.value!!
-        val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
-        crowdNodeApi.trackLinkingAccount(address)
-        onlineAccountRequest.postValue(
-            mapOf(
-                URL_ARG to apiLinkUrl
+        viewModelScope.launch {
+            val address = requireAccountAddress() ?: return@launch
+            val apiLinkUrl = CrowdNodeConstants.getApiLinkUrl(address)
+            crowdNodeApi.trackLinkingAccount(address)
+            onlineAccountRequest.postValue(
+                mapOf(
+                    URL_ARG to apiLinkUrl
+                )
             )
-        )
+        }
     }
 
     fun cancelLinkingOnlineAccount() {
@@ -237,8 +312,11 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun retrySignup() {
         viewModelScope.launch {
-            resetAddressAndApi()
-            signUp()
+            // Only on a SUCCESSFUL reset: signUp() must not run on the PREVIOUS
+            // identity when the reset failed to produce a new address.
+            if (resetAddressAndApi()) {
+                signUp()
+            }
         }
     }
 
@@ -349,14 +427,15 @@ class CrowdNodeViewModel @Inject constructor(
         )
     }
 
-    fun getAccountUrl(): String {
-        return CrowdNodeConstants.getFundsOpenUrl(
-            if (signUpStatus == SignUpStatus.LinkedOnline) {
-                primaryDashAddress!!
-            } else {
-                _accountAddress.value!!
-            }
-        )
+    fun getAccountUrl(): String? {
+        // Same missing-address case as [requireAccountAddress]: reachable whenever
+        // initialisation did not complete, and force-unwrapping here crashed too.
+        val address = if (signUpStatus == SignUpStatus.LinkedOnline) {
+            primaryDashAddress
+        } else {
+            _accountAddress.value
+        } ?: return null
+        return CrowdNodeConstants.getFundsOpenUrl(address)
     }
 
     fun finishSignUpToOnlineAccount() {
@@ -407,9 +486,30 @@ class CrowdNodeViewModel @Inject constructor(
         return address
     }
 
-    private suspend fun resetAddressAndApi() {
-        _accountAddress.value = createNewAccountAddress()
+    /**
+     * Reset the account address and the API, returning whether it SUCCEEDED.
+     *
+     * Contained here rather than at each bare `viewModelScope.launch` entry
+     * point, all of which would crash on a throw. A CrowdNode account address
+     * taken from the held dashj chain would be its frozen, already-paid address
+     * (SR-03) and is PERSISTED as the account's identity, so failing to reset is
+     * far better than resetting onto a bad one — the existing `apiError` surface
+     * carries it to the UI.
+     *
+     * The boolean matters: [retrySignup] must not sign up on the previous
+     * identity after a failed reset, and `_accountAddress.value!!` would throw
+     * outright when nothing was ever set.
+     */
+    private suspend fun resetAddressAndApi(): Boolean {
+        val address = try {
+            createNewAccountAddress()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            reportAddressFailure(ex)
+            return false
+        }
+        _accountAddress.value = address
         crowdNodeApi.reset()
+        return true
     }
 
     suspend fun getMasternodeAPY(): Double {

@@ -80,8 +80,8 @@ class NetworkMonitorActivity : AbstractBindServiceActivity() {
             pager.setCurrentItem(if (buttonView === peersCheckBox) 0 else 1, true)
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         setContentView(R.layout.network_monitor_content)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
