@@ -44,11 +44,11 @@ interface AnalyticsService {
     /**
      * Persists the user's choice and applies it to the analytics SDK.
      *
-     * Blocks on a synchronous disk write: never call it on the main thread.
-     * Calls are serialized process-wide (across every instance), so each one
-     * runs to completion before the next starts and the last call to finish
-     * decides what is saved and whether collection runs. Callers that need
-     * their own requests applied in order must queue them themselves.
+     * Expected on the main thread (Settings): blocks briefly on a synchronous
+     * one-key disk write, and main-thread calls are what order the user's
+     * toggles. Calls are also serialized process-wide (across every instance),
+     * so each one runs to completion before the next starts, and readers on
+     * other threads (e.g. [logEvent] on IO) only ever see the saved value.
      *
      * @return false when the choice could not be saved; [isEnabled] keeps the
      * saved value. A failed opt-out still stops collection for the rest of this
@@ -101,7 +101,8 @@ class AnalyticsSessionState @Inject constructor() {
     /**
      * Held for the whole of [FirebaseAnalyticsServiceImpl.setEnabled] (read the saved
      * value, commit, restore on failure, apply collection), so writes from different
-     * instances or threads can never interleave.
+     * instances or threads can never interleave. Settings writes on the main thread,
+     * so it is normally uncontended; it keeps [savedBeforeWrite] correct for any caller.
      */
     val writeLock = Any()
 

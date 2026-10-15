@@ -22,17 +22,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -97,14 +90,6 @@ class SettingsViewModel @Inject constructor(
         ))
     val uiState: StateFlow<SettingsUIState> = _uiState.asStateFlow()
 
-    /** Test seam: [AnalyticsService.setEnabled] blocks on a disk write and must stay off main. */
-    var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-
-    // Mutex is FIFO, so toggles reach the service in the order the user made them.
-    private val analyticsSaveMutex = Mutex()
-    // The newest toggle; only its result may move the switch or report a failure.
-    // Touched on the main thread only (viewModelScope).
-    private var latestAnalyticsRequest = 0L
     private val _analyticsSaveFailures = Channel<AnalyticsSaveFailure>(Channel.BUFFERED)
     val analyticsSaveFailures: Flow<AnalyticsSaveFailure> = _analyticsSaveFailures.receiveAsFlow()
 
@@ -157,35 +142,20 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Saves the choice off the main thread; see [AnalyticsService.setEnabled]. The switch
-     * moves to [enabled] at once and settles on the saved value when the save finishes,
-     * so after a failure it shows the saved value and toggling it again retries. A failed
-     * save is reported through [analyticsSaveFailures].
-     *
-     * Toggles are saved one at a time in the order they were made, so the last one is
-     * also the last to be saved. Only its result updates the switch or reports a failure:
-     * an older toggle finishing while a newer one waits cannot flip the switch back.
+     * Saves the choice; see [AnalyticsService.setEnabled]. The switch then shows the
+     * saved value, so after a failure toggling it again retries. A failed save is
+     * reported through [analyticsSaveFailures].
      */
     fun setAnalyticsEnabled(enabled: Boolean) {
-        val request = ++latestAnalyticsRequest
-        _uiState.update { it.copy(analyticsEnabled = enabled) }
-        viewModelScope.launch {
-            // NonCancellable: a toggle made just before leaving Settings must still be
-            // saved (and stay in order) after the ViewModel is cleared.
-            val (persisted, saved) = withContext(NonCancellable) {
-                analyticsSaveMutex.withLock {
-                    withContext(ioDispatcher) { analytics.setEnabled(enabled) to analytics.isEnabled }
-                }
-            }
-            if (request != latestAnalyticsRequest) {
-                return@launch
-            }
-            _uiState.update { it.copy(analyticsEnabled = saved) }
-            if (!persisted) {
-                _analyticsSaveFailures.trySend(
-                    if (enabled) AnalyticsSaveFailure.TURNING_ON else AnalyticsSaveFailure.TURNING_OFF
-                )
-            }
+        // Saved inline on the main thread on purpose: it orders every toggle across all
+        // Settings instances (closing and reopening Settings included), so the last toggle
+        // is always the last save. A one-key commit() takes milliseconds.
+        val persisted = analytics.setEnabled(enabled)
+        _uiState.update { it.copy(analyticsEnabled = analytics.isEnabled) }
+        if (!persisted) {
+            _analyticsSaveFailures.trySend(
+                if (enabled) AnalyticsSaveFailure.TURNING_ON else AnalyticsSaveFailure.TURNING_OFF
+            )
         }
     }
 
