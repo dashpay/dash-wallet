@@ -108,12 +108,15 @@ import java.util.concurrent.TimeUnit
  * the app's data is cleared, the wallet comes back from its recovery phrase
  * (or a key backup) WITHOUT this file — and without any record of the contact
  * payments made before. The recovery source of truth for those is the
- * blockchain: once the SDK's scan of the restored wallet has reached the tip,
+ * blockchain: once the SDK has processed the restored wallet's transactions
+ * into its store through the chain tip ([ContactChainScanState.processedThroughTip]),
  * every earlier payment is in its transaction store
  * ([ContactPaymentChainView.paysAddress]). The store therefore records
  * whether the paid-address history is KNOWN for a wallet ([paidHistoryKnown]):
- * the id of the SDK wallet whose scan has caught up to the tip at least once
- * since this store began covering it ([markPaidHistoryKnown]). It is unknown
+ * the id of the SDK wallet whose store has been processed through the tip at
+ * least once since this store began covering it ([markPaidHistoryKnown]).
+ * What a lookup finds paid there is recorded like a sent payment
+ * ([recordPaidOnChain]). It is unknown
  * when there is no file (new install, cleared data, new device), when the file
  * predates the marker, after every wallet change ([onWalletChanged]), and for
  * any other SDK wallet. While it is unknown, [ContactPaymentAddressProvider]
@@ -336,6 +339,34 @@ class PaidContactAddressStore(
     }
 
     /**
+     * Records [paid] (address → derivation index on [target]'s channel), which
+     * the chain shows paid but nothing here recorded — payments made before a
+     * recovery, found by [ContactPaymentAddressProvider] in the SDK's
+     * transaction store (PR #1608 review, round 10). Each becomes an entry like
+     * a sent payment's (unsettled, not in flight): it counts toward the
+     * channel's [paidFrontier], so the next lookup resumes above it, and its
+     * dashj mark is applied on the next lookup ([awaitingDashj]) and settles
+     * as usual. Addresses already recorded are left as they are. One write; a
+     * failed write keeps them in memory (fail-soft: without the record the
+     * next lookup finds them on chain again).
+     */
+    fun recordPaidOnChain(target: ContactPaymentTarget, paid: Map<String, Int>) {
+        synchronized(lock) {
+            val map = loaded()
+            val added = paid.filter { (address, index) -> index >= 0 && address !in map }
+            if (added.isEmpty()) {
+                if (unwritten) write(map)
+                return
+            }
+            prune(map)
+            added.forEach { (address, index) ->
+                map[address] = Entry(nowMs(), target.contactUserId, target.accountReference, index, settled = false)
+            }
+            write(map)
+        }
+    }
+
+    /**
      * The highest derivation index recorded paid or claimed on the channel —
      * the folded frontier and every live entry with a known index, claims in
      * flight included — or null when none is known. An address at or below it
@@ -433,7 +464,7 @@ class PaidContactAddressStore(
             }
             // The new wallet may have paid contacts before this store covered
             // it (a recovery phrase used on another device): its history is
-            // unknown until the SDK's scan of it reaches the tip.
+            // unknown until the SDK has processed it through the tip.
             val hadHistory = historyWalletId != null
             historyWalletId = null
             if (map.isNotEmpty() || hadHistory) {
@@ -445,8 +476,8 @@ class PaidContactAddressStore(
 
     /**
      * Whether every contact payment made from SDK wallet [walletId] is known:
-     * recorded here, or in the SDK's transaction store because its scan
-     * reached the tip after this store began covering the wallet
+     * recorded here, or in the SDK's transaction store because the SDK
+     * processed the wallet through the tip after this store began covering it
      * ([markPaidHistoryKnown]). False for a store without that record — no
      * file, a file written before the record existed, or one whose record is
      * for another wallet — and after a wallet change ([onWalletChanged]).
@@ -457,7 +488,16 @@ class PaidContactAddressStore(
     }
 
     /**
-     * The SDK's scan of [walletId] has reached the chain tip: its transaction
+     * Whether the file exists but could not be read: every [claim] is then
+     * [ClaimResult.STORE_UNAVAILABLE] and [paidHistoryKnown] false.
+     */
+    fun unreadable(): Boolean = synchronized(lock) {
+        loaded()
+        readFailed
+    }
+
+    /**
+     * The SDK has processed [walletId] through the chain tip: its transaction
      * store holds every payment made before this store began covering the
      * wallet, so the paid-address history is known from now on (see
      * [paidHistoryKnown]). Written at once; a failed write keeps it in memory

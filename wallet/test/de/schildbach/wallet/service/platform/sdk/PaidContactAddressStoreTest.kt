@@ -566,4 +566,22 @@ class PaidContactAddressStoreTest {
         assertNull(restarted.foldedFrontier("contactId", 7))
         assertTrue(file.readLines().first() == "history w1")
     }
+
+    @Test
+    fun paidOnChain_recordedLikeAPayment_survivesARestart_andRaisesTheFrontier() {
+        val s = store()
+        s.record("yMine", target, 0)
+
+        s.recordPaidOnChain(target, linkedMapOf("yMine" to 9, "yChain1" to 1, "yChain2" to 2))
+
+        val restarted = store()
+        assertEquals(setOf("yMine", "yChain1", "yChain2"), restarted.paid())
+        assertEquals(2, restarted.paidFrontier("contactId", 7))
+        assertEquals(listOf("yMine", "yChain1", "yChain2"), restarted.awaitingDashj("contactId", 7))
+        assertEquals(ClaimResult.ALREADY_PAID, restarted.claim("yChain2", target, 2))
+        // settles like a sent payment's entry
+        restarted.dashjMarked("yChain1", MarkResult.MARKED)
+        saves.saveCompleted(saves.saveStarting())
+        assertEquals(true, restarted.isSettled("yChain1"))
+    }
 }
