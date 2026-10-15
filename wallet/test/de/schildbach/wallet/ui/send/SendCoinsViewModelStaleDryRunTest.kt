@@ -30,6 +30,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -101,9 +102,21 @@ class SendCoinsViewModelStaleDryRunTest {
         }
     }
 
-    private fun runner(sends: Sends, gate: DryRunGate, cutover: Boolean): SendCoinsTaskRunner {
+    private fun runner(
+        sends: Sends,
+        gate: DryRunGate,
+        cutover: Boolean,
+        /** The engine mode, when a test changes it; else fixed at [cutover]. */
+        engine: MutableStateFlow<Boolean>? = null
+    ): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        coEvery { runner.isCutoverCommitted() } returns cutover
+        if (engine != null) {
+            coEvery { runner.isCutoverCommitted() } coAnswers { engine.value }
+            every { runner.observeCutoverCommitted() } returns engine
+        } else {
+            coEvery { runner.isCutoverCommitted() } returns cutover
+            every { runner.observeCutoverCommitted() } returns flowOf(cutover)
+        }
         every {
             runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>())
         } answers {
@@ -426,5 +439,62 @@ class SendCoinsViewModelStaleDryRunTest {
 
         send(viewModel, Coin.COIN)
         assertEquals(listOf<Address?>(payee2), sends.recipients)
+    }
+
+    // ── the engine mode (PR #1608 review, round 9) ──────────────────────
+
+    @Test
+    fun engineModeChanges_afterASuccessfulDryRun_thePaymentIsCheckedAgain_beforeAnySend() {
+        // The cutover commits while the screen holds a pre-cutover dry run: a
+        // send with it is refused, so it must not stay confirmable — the
+        // payment is checked again on the new engine without the user editing.
+        val sends = Sends()
+        val gate = DryRunGate()
+        val engine = MutableStateFlow(false)
+        val viewModel = buildViewModel(runner(sends, gate, cutover = false, engine), MutableStateFlow(balance))
+        open(viewModel, payee1, Coin.COIN)
+        assertNull("a pre-cutover dry run", viewModel.currentDryRun()?.feeEstimate)
+
+        gate.armed.set(true)
+        engine.value = true
+        awaitLatch("the payment checked again on the new engine", gate.entered)
+
+        assertNull(viewModel.currentDryRun())
+        assertEquals(false, viewModel.dryRunSuccessful.value)
+        assertThrows(DryRunNotReadyException::class.java) { send(viewModel, Coin.COIN) }
+        assertTrue(sends.sent.isEmpty())
+
+        gate.open.countDown()
+        awaitCondition("the post-cutover dry run") { viewModel.currentDryRun() != null }
+        assertTrue("a post-cutover dry run", viewModel.currentDryRun()?.feeEstimate != null)
+        assertEquals(true, viewModel.dryRunSuccessful.value)
+
+        send(viewModel, Coin.COIN)
+        assertEquals(listOf<Address?>(payee1), sends.recipients)
+    }
+
+    @Test
+    fun engineModeChanges_whileTheDryRunRuns_itsStaleOutcomeIsReplaced() {
+        // The dry run read the pre-cutover mode; the cutover commits before it
+        // publishes, so the mode observer saw no outcome to check again.
+        val sends = Sends()
+        val gate = DryRunGate()
+        val engine = MutableStateFlow(false)
+        val viewModel = buildViewModel(runner(sends, gate, cutover = false, engine), MutableStateFlow(balance))
+        val init = openWithHeldDryRun(viewModel, gate, Coin.COIN)
+
+        engine.value = true
+        idle() // the mode observer runs while the dry run is held
+        assertNull(viewModel.currentDryRun())
+
+        gate.open.countDown()
+        init.join(10_000)
+        assertFalse("the resolution finished", init.isAlive)
+
+        awaitCondition("the post-cutover replacement") { viewModel.currentDryRun() != null }
+        assertTrue(viewModel.currentDryRun()?.feeEstimate != null)
+        assertEquals(true, viewModel.dryRunSuccessful.value)
+        send(viewModel, Coin.COIN)
+        assertEquals(listOf<Address?>(payee1), sends.recipients)
     }
 }

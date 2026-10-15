@@ -59,6 +59,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -289,6 +290,35 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
+    fun preCutover_dashjSendAllAndDustAdjustmentFailures_signalOnlyNotBroadcast() = runTest {
+        // PR #1608 review, round 9: completeTx's send-all ("could not adjust
+        // downwards") and dust refusals happen before the commit.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns false
+        for (failure in listOf(Wallet.CouldNotAdjustDownwards(), Wallet.DustySendRequested())) {
+            every { wallet.sendCoinsOffline(any()) } throws failure
+            val signals = mutableListOf<String?>()
+
+            try {
+                sendCollecting(signals)
+                fail("expected ${failure.javaClass.simpleName}")
+            } catch (expected: Wallet.CompletionException) {
+                // (coroutines may rethrow a copy: compare the type)
+                assertEquals(failure.javaClass, expected.javaClass)
+            }
+
+            assertEquals(failure.javaClass.simpleName, listOf<String?>(NOT_BROADCAST), signals)
+        }
+    }
+
+    @Test
+    fun completeTxFailures_includeTheSendAllAndDustAdjustments() {
+        assertTrue(isCompleteTxFailure(Wallet.CouldNotAdjustDownwards()))
+        assertTrue(isCompleteTxFailure(Wallet.DustySendRequested()))
+        assertTrue(isCompleteTxFailure(InsufficientMoneyException(Coin.COIN)))
+        assertFalse(isCompleteTxFailure(IllegalStateException("commit failed")))
+    }
+
+    @Test
     fun preCutover_dashjCommitFailure_isNotProvenUnsent() = runTest {
         // A failure of the commit itself: the transaction may be in the wallet,
         // which rebroadcasts pending transactions — no proof nothing went out.
@@ -380,6 +410,36 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
 
         assertEquals(listOf(recipient), marks)
         assertTrue(recipient.toBase58() in paidStore.paid())
+    }
+
+    @Test
+    fun contactPayment_dashjSendAllOrDustAdjustmentFailure_releasesTheClaim() = runTest {
+        // The claim of a contact address whose dashj send failed in completeTx
+        // (send-all adjustment, dust) is given back: nothing was committed.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns false
+        val provider = provider()
+        for (failure in listOf(Wallet.CouldNotAdjustDownwards(), Wallet.DustySendRequested())) {
+            every { wallet.sendCoinsOffline(any()) } throws failure
+
+            try {
+                provider.sendThenMarkUsed(contactPayment) { signals ->
+                    runner.sendCoins(
+                        SendRequest.emptyWallet(recipient),
+                        checkBalanceConditions = false,
+                        intendedRecipient = recipient,
+                        onBroadcast = signals::broadcast,
+                        onNotBroadcast = signals::notBroadcast
+                    )
+                }
+                fail("expected ${failure.javaClass.simpleName}")
+            } catch (expected: Wallet.CompletionException) {
+                // nothing was committed
+            }
+
+            assertTrue(failure.javaClass.simpleName, marks.isEmpty())
+            assertTrue("the claim was released after ${failure.javaClass.simpleName}", paidStore.paid().isEmpty())
+            assertFalse(provider.isClaimedOrPaid(contactPayment))
+        }
     }
 
     @Test

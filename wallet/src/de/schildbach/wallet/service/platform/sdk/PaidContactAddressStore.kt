@@ -101,7 +101,26 @@ import java.util.concurrent.TimeUnit
  * contact. The contact and accountReference are stored to re-apply the dashj
  * mark and to key the frontier.
  *
- * File format: one line per channel frontier,
+ * ## What the store cannot know: payments made before it existed (PR #1608 review, round 9)
+ *
+ * The file is in the app's private files, which Android backup and device
+ * transfer exclude (data_extraction_rules.xml). After the device is lost or
+ * the app's data is cleared, the wallet comes back from its recovery phrase
+ * (or a key backup) WITHOUT this file — and without any record of the contact
+ * payments made before. The recovery source of truth for those is the
+ * blockchain: once the SDK's scan of the restored wallet has reached the tip,
+ * every earlier payment is in its transaction store
+ * ([ContactPaymentChainView.paysAddress]). The store therefore records
+ * whether the paid-address history is KNOWN for a wallet ([paidHistoryKnown]):
+ * the id of the SDK wallet whose scan has caught up to the tip at least once
+ * since this store began covering it ([markPaidHistoryKnown]). It is unknown
+ * when there is no file (new install, cleared data, new device), when the file
+ * predates the marker, after every wallet change ([onWalletChanged]), and for
+ * any other SDK wallet. While it is unknown, [ContactPaymentAddressProvider]
+ * hands out no post-cutover contact address at all.
+ *
+ * File format: optionally `history <sdkWalletId>` ([paidHistoryKnown]), then
+ * one line per channel frontier,
  * `frontier <contactUserId> <accountReference> <index> <base58>`, then one line
  * per address, `<paidAtMillis> <base58> <pending|settled> [<contactUserId>
  * <accountReference> [<index>]]`, replaced atomically (write and fsync a temp
@@ -184,6 +203,12 @@ class PaidContactAddressStore(
 
     /** channel → the highest index folded from expired entries; loaded with [entries]. */
     private val folded = HashMap<Channel, Frontier>()
+
+    /**
+     * The SDK wallet whose paid-address history is known ([paidHistoryKnown]);
+     * null when none is. Loaded with [entries].
+     */
+    private var historyWalletId: String? = null
 
     /** The last write failed: the next change, or [sent], writes again. */
     private var unwritten = false
@@ -406,10 +431,45 @@ class PaidContactAddressStore(
                 entry.dashjAdvancedAfterSave = null
                 entry.dashjCannotPlace = false
             }
-            if (map.isNotEmpty()) {
+            // The new wallet may have paid contacts before this store covered
+            // it (a recovery phrase used on another device): its history is
+            // unknown until the SDK's scan of it reaches the tip.
+            val hadHistory = historyWalletId != null
+            historyWalletId = null
+            if (map.isNotEmpty() || hadHistory) {
                 log.info("the wallet changed; {} paid contact address(es) wait for the new wallet's dashj", map.size)
                 write(map)
             }
+        }
+    }
+
+    /**
+     * Whether every contact payment made from SDK wallet [walletId] is known:
+     * recorded here, or in the SDK's transaction store because its scan
+     * reached the tip after this store began covering the wallet
+     * ([markPaidHistoryKnown]). False for a store without that record — no
+     * file, a file written before the record existed, or one whose record is
+     * for another wallet — and after a wallet change ([onWalletChanged]).
+     */
+    fun paidHistoryKnown(walletId: String): Boolean = synchronized(lock) {
+        loaded()
+        !readFailed && historyWalletId == walletId
+    }
+
+    /**
+     * The SDK's scan of [walletId] has reached the chain tip: its transaction
+     * store holds every payment made before this store began covering the
+     * wallet, so the paid-address history is known from now on (see
+     * [paidHistoryKnown]). Written at once; a failed write keeps it in memory
+     * for this process (the next one waits for the scan again).
+     */
+    fun markPaidHistoryKnown(walletId: String) {
+        require(walletId.isNotEmpty() && walletId.none { it.isWhitespace() }) { "invalid wallet id" }
+        synchronized(lock) {
+            val map = loaded()
+            if (historyWalletId == walletId) return
+            historyWalletId = walletId
+            write(map)
         }
     }
 
@@ -428,6 +488,7 @@ class PaidContactAddressStore(
         val content = read()
         content.entries.sortedBy { it.second.paidAt }.forEach { (address, entry) -> map[address] = entry }
         content.frontiers.forEach { (channel, frontier) -> foldInto(channel, frontier) }
+        historyWalletId = content.historyWalletId
         val pending = map.values.count { !it.settled }
         if (pending > PENDING_WARN) {
             log.warn("{} paid contact addresses are not yet confirmed by dashj", pending)
@@ -479,7 +540,8 @@ class PaidContactAddressStore(
 
     private class Content(
         val entries: List<Pair<String, Entry>>,
-        val frontiers: List<Pair<Channel, Frontier>>
+        val frontiers: List<Pair<Channel, Frontier>>,
+        val historyWalletId: String? = null
     )
 
     private fun read(): Content {
@@ -492,7 +554,8 @@ class PaidContactAddressStore(
                 val lines = f.readLines()
                 Content(
                     entries = lines.mapNotNull(::parseEntry),
-                    frontiers = lines.mapNotNull(::parseFrontier)
+                    frontiers = lines.mapNotNull(::parseFrontier),
+                    historyWalletId = lines.firstNotNullOfOrNull(::parseHistory)
                 )
             }
         } catch (e: Exception) {
@@ -500,6 +563,12 @@ class PaidContactAddressStore(
             readFailed = true
             empty
         }
+    }
+
+    private fun parseHistory(line: String): String? {
+        val parts = line.trim().split(' ')
+        if (parts.size != 2 || parts[0] != HISTORY) return null
+        return parts[1].takeIf { it.isNotEmpty() }
     }
 
     private fun parseFrontier(line: String): Pair<Channel, Frontier>? {
@@ -554,6 +623,7 @@ class PaidContactAddressStore(
     private fun write(map: Map<String, Entry>): Boolean {
         val f = file ?: return true
         if (readFailed) return false
+        val historyLine = historyWalletId?.let { "$HISTORY $it\n" }.orEmpty()
         val frontierLines = folded.entries.joinToString(separator = "") { (channel, frontier) ->
             "$FRONTIER ${channel.contactUserId} ${channel.accountReference} ${frontier.index} ${frontier.address}\n"
         }
@@ -572,7 +642,7 @@ class PaidContactAddressStore(
                 f.parentFile?.mkdirs()
                 val tmp = File(f.path + AtomicFileWriter.TEMP_SUFFIX)
                 FileOutputStream(tmp).use { out ->
-                    out.write((frontierLines + entryLines).toByteArray(Charsets.UTF_8))
+                    out.write((historyLine + frontierLines + entryLines).toByteArray(Charsets.UTF_8))
                     out.flush()
                     out.fd.sync()
                 }
@@ -607,6 +677,7 @@ class PaidContactAddressStore(
         private const val SETTLED = "settled"
         private const val PENDING = "pending"
         private const val FRONTIER = "frontier"
+        private const val HISTORY = "history"
 
         const val FILE_NAME = "contact_paid_addresses.txt"
 

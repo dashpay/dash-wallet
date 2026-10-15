@@ -170,10 +170,15 @@ class SendSignerLockedException(message: String) : IllegalStateException(message
 /**
  * A failure of dashj's `completeTx` (coin selection, fee, signing). dashj's
  * `Wallet.sendCoinsOffline` is `completeTx` then `commitTx`, so such a failure
- * means nothing was committed or broadcast.
+ * means nothing was committed or broadcast. The send-all and dust failures
+ * (`CouldNotAdjustDownwards`, `DustySendRequested`) are named although dashj
+ * declares them as [Wallet.CompletionException]s, so the classification does
+ * not hinge on that hierarchy (PR #1608 review, round 9).
  */
 internal fun isCompleteTxFailure(e: Exception): Boolean =
     e is InsufficientMoneyException ||
+        e is Wallet.CouldNotAdjustDownwards ||
+        e is Wallet.DustySendRequested ||
         e is Wallet.CompletionException ||
         e is KeyCrypterException ||
         e is IKey.KeyIsEncryptedException
@@ -692,6 +697,9 @@ class SendCoinsTaskRunner @Inject constructor(
      * false and the dry-run keeps its unchanged dashj `completeTx` path.
      */
     suspend fun isCutoverCommitted(): Boolean = sdkL1SendService.cutoverCommitted()
+
+    /** [isCutoverCommitted] as it changes: the current value, then each change. */
+    fun observeCutoverCommitted(): kotlinx.coroutines.flow.Flow<Boolean> = sdkL1SendService.cutoverCommittedFlow()
 
     override suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction =
         withContext(Dispatchers.IO) {

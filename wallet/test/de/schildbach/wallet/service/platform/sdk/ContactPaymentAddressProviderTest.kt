@@ -589,7 +589,8 @@ class ContactPaymentAddressProviderTest {
         chain: FakeDashjChain,
         paidFile: File,
         sdkAccount: SdkContactSendingAccount?,
-        store: PaidContactAddressStore = PaidContactAddressStore(paidFile)
+        store: PaidContactAddressStore = PaidContactAddressStore(paidFile),
+        chainView: ContactPaymentChainView = ContactPaymentChainView.NOTHING_PAID
     ) = ContactPaymentAddressProvider(
         cutoverCommitted = { true },
         sdkAccountReader = { _, _ -> sdkAccount },
@@ -597,7 +598,8 @@ class ContactPaymentAddressProviderTest {
         dashjMarkUsed = { _, _, address -> chain.mark(address) },
         params = params,
         dashjSendingCursor = { _, _ -> chain.current },
-        paidAddresses = store
+        paidAddresses = store,
+        chain = chainView
     )
 
     private fun paidFileWith(vararg addresses: Address): File {
@@ -1096,5 +1098,180 @@ class ContactPaymentAddressProviderTest {
         // a wallet at key 0 again (an older backup): advanced past both payments
         val older = FakeDashjChain(keys, current = 0, jumps = true)
         assertEquals(keys[2], restartedProvider(older, file, sdkAccount = null, store).nextAddress(target)?.address)
+    }
+
+    // ── recovery: the chain is the source of truth (PR #1608 review, round 9) ──
+
+    /** What the SDK shows of the chain: [paid] addresses have a transaction paying them. */
+    private class FakeChainView(
+        @Volatile var caughtUp: Boolean = false,
+        @Volatile var walletId: String? = "w1",
+        /** False: the SDK's transaction store cannot be read. */
+        @Volatile var readable: Boolean = true
+    ) : ContactPaymentChainView {
+        val paid: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+        override fun walletId(): String? = walletId
+        override fun scanCaughtUp(): Boolean = caughtUp
+        override suspend fun paysAddress(address: Address): Boolean? =
+            if (readable) address.toBase58() in paid else null
+    }
+
+    @Test
+    fun recoveredWallet_sdkNotCaughtUp_noAddress_thenCaughtUp_theNextAddress() = runBlocking {
+        // A wallet restored from its recovery phrase on a new device: no paid
+        // file. Index 0 was paid from the lost device. dashj's restored chain
+        // is at index 0 and the SDK mirror is absent; the SDK's scan has not
+        // reached the tip, so nothing shows index 0 paid yet.
+        val paidFile = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val dashj = FakeDashjChain(sdkPool, current = 0)
+        val view = FakeChainView(caughtUp = false)
+        var sdkAccount: SdkContactSendingAccount? = null
+        fun provider() = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ -> sdkAccount },
+            dashjNextAddress = { _, _ -> dashj.next() },
+            dashjMarkUsed = { _, _, address -> dashj.mark(address) },
+            params = params,
+            dashjSendingCursor = { _, _ -> dashj.current },
+            paidAddresses = PaidContactAddressStore(paidFile),
+            chain = view
+        )
+        val provider = provider()
+
+        assertNull("not the paid index-0 address from dashj", provider.nextAddress(target))
+        assertTrue(dashj.marks.isEmpty())
+
+        // The mirror appears with index 0 flagged used, but the scan is still
+        // short of the tip: still nothing.
+        sdkAccount = account(addresses = pool(true, false, false))
+        assertNull(provider.nextAddress(target))
+
+        // The scan reaches the tip: index 0 is paid on chain and flagged used.
+        view.caughtUp = true
+        view.paid += sdkPool[0].toBase58()
+        val next = provider.nextAddress(target)
+        assertEquals(ContactAddressSource.SDK, next?.source)
+        assertEquals(sdkPool[1], next?.address)
+        assertEquals(1, next?.index)
+
+        // Known from now on, across a restart, even while the SDK trails the
+        // tip again (a later block not scanned yet).
+        view.caughtUp = false
+        assertEquals(sdkPool[1], provider().nextAddress(target)?.address)
+    }
+
+    @Test
+    fun recoveredWallet_noSdkWalletLoaded_noAddress() = runBlocking {
+        val view = FakeChainView(caughtUp = true, walletId = null)
+        val provider = restartedProvider(
+            FakeDashjChain(sdkPool, current = 0),
+            File(tmp.root, PaidContactAddressStore.FILE_NAME),
+            account(),
+            chainView = view
+        )
+
+        assertNull(provider.nextAddress(target))
+    }
+
+    @Test
+    fun walletChange_historyUnknownAgain_untilTheNewWalletsScanIsCaughtUp() = runBlocking {
+        val saves = WalletSaveTracker()
+        val paidFile = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile, walletSaves = saves)
+        val view = FakeChainView(caughtUp = true)
+        val provider = restartedProvider(
+            FakeDashjChain(sdkPool, current = 0), paidFile, account(), store, view
+        )
+        assertEquals(sdkPool[1], provider.nextAddress(target)?.address)
+
+        // A restore replaces the wallet; the SDK rescans it.
+        saves.walletChanged()
+        view.caughtUp = false
+
+        assertNull(provider.nextAddress(target))
+        view.caughtUp = true
+        assertEquals(sdkPool[1], provider.nextAddress(target)?.address)
+    }
+
+    @Test
+    fun sdkPick_paidOnChainButNotFlaggedUsed_isSkipped() = runBlocking {
+        // The mirror's used flags lag (or the account was built after the
+        // payment was processed): the chain still shows index 1 paid.
+        val view = FakeChainView(caughtUp = true).apply { paid += sdkPool[1].toBase58() }
+        val provider = restartedProvider(
+            FakeDashjChain(sdkPool, current = 0),
+            File(tmp.root, PaidContactAddressStore.FILE_NAME),
+            account(addresses = pool(true, false, false, false)),
+            chainView = view
+        )
+
+        val next = provider.nextAddress(target)
+
+        assertEquals(ContactAddressSource.SDK, next?.source)
+        assertEquals(sdkPool[2], next?.address)
+    }
+
+    @Test
+    fun dashjFallback_recoveredChainAtPaidIndices_isAdvancedPastWhatTheChainShowsPaid() = runBlocking {
+        // A channel the SDK cannot pay on (marked broken): dashj's restored
+        // chain is at index 0; indices 0 and 1 were paid before the recovery.
+        val keys = List(4) { newAddress() }
+        val dashj = FakeDashjChain(keys, current = 0)
+        val view = FakeChainView(caughtUp = true).apply {
+            paid += keys[0].toBase58()
+            paid += keys[1].toBase58()
+        }
+        val provider = restartedProvider(
+            dashj,
+            File(tmp.root, PaidContactAddressStore.FILE_NAME),
+            account(paymentChannelBroken = true),
+            chainView = view
+        )
+
+        val next = provider.nextAddress(target)
+
+        assertEquals(ContactAddressSource.DASHJ, next?.source)
+        assertEquals(keys[2], next?.address)
+        assertEquals(listOf(keys[0], keys[1]), dashj.marks)
+    }
+
+    @Test
+    fun postCutover_transactionStoreUnreadable_noAddress_fromEitherStack() = runBlocking {
+        val view = FakeChainView(caughtUp = true, readable = false)
+        val sdk = restartedProvider(
+            FakeDashjChain(sdkPool, current = 0),
+            File(tmp.root, "sdk.txt"),
+            account(),
+            chainView = view
+        )
+        val dashjFallback = restartedProvider(
+            FakeDashjChain(sdkPool, current = 0),
+            File(tmp.root, "dashj.txt"),
+            account(paymentChannelBroken = true),
+            chainView = view
+        )
+
+        assertNull(sdk.nextAddress(target))
+        assertNull(dashjFallback.nextAddress(target))
+    }
+
+    @Test
+    fun preCutover_dashjAddressPaidOnChain_isSkipped_andAnUnreadableStoreIsNoObstacle() = runBlocking {
+        val keys = List(3) { newAddress() }
+        val dashj = FakeDashjChain(keys, current = 0)
+        val view = FakeChainView(caughtUp = false).apply { paid += keys[0].toBase58() }
+        fun provider() = ContactPaymentAddressProvider(
+            cutoverCommitted = { false },
+            sdkAccountReader = { _, _ -> null },
+            dashjNextAddress = { _, _ -> dashj.next() },
+            dashjMarkUsed = { _, _, address -> dashj.mark(address) },
+            params = params,
+            dashjSendingCursor = { _, _ -> dashj.current },
+            chain = view
+        )
+
+        assertEquals("the scan state does not gate dashj, the live engine", keys[1], provider().nextAddress(target)?.address)
+        view.readable = false
+        assertEquals(keys[1], provider().nextAddress(target)?.address)
     }
 }

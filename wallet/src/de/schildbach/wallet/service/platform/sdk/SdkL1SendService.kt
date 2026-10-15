@@ -22,7 +22,11 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -1831,6 +1835,20 @@ class SdkL1SendService internal constructor(
         log.warn("failed to read the cutover state; treating as not committed", e)
         false
     }
+
+    /**
+     * [cutoverCommitted] as it changes (the persisted cutover state observed):
+     * emits the current value, then each change. A failed read ends the flow
+     * after reading as not committed, like [cutoverCommitted].
+     */
+    fun cutoverCommittedFlow(): Flow<Boolean> =
+        dashPayConfig.observe(DashPayConfig.CUTOVER_STATE)
+            .map { !dashjEngineMayStart(CutoverState.fromStored(it)) }
+            .catch { e ->
+                log.warn("failed to observe the cutover state; treating as not committed", e)
+                emit(false)
+            }
+            .distinctUntilChanged()
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkL1SendService::class.java)

@@ -37,6 +37,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -58,6 +59,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 
@@ -115,13 +117,36 @@ class SendCoinsViewModelContactResubmitTest {
             request != null && dryRuns.drop(mark).any { it === request }
     }
 
+    /**
+     * Holds the next send's final request build — after the send read its
+     * payee and dry run, before it claims — while [armed].
+     */
+    private class SendBuildGate {
+        val armed = AtomicBoolean(false)
+        val entered = CountDownLatch(1)
+        val open = CountDownLatch(1)
+
+        fun pass() {
+            if (armed.getAndSet(false)) {
+                entered.countDown()
+                check(open.await(10, TimeUnit.SECONDS)) { "send never released" }
+            }
+        }
+    }
+
     /** Every runner builds a fresh request per call and records the dry runs' ones. */
-    private fun stubCreateSendRequest(runner: SendCoinsTaskRunner, sends: Sends) {
+    private fun stubCreateSendRequest(
+        runner: SendCoinsTaskRunner,
+        sends: Sends,
+        sendBuildGate: SendBuildGate = SendBuildGate()
+    ) {
+        every { runner.observeCutoverCommitted() } returns flowOf(false)
         every {
             runner.createSendRequest(any<Boolean>(), any<PaymentIntent>(), any<Boolean>(), any<Boolean>())
         } answers {
+            val signInputs = args[2] as Boolean
+            if (signInputs) sendBuildGate.pass()
             mockk<SendRequest>(relaxed = true).also { request ->
-                val signInputs = args[2] as Boolean
                 if (!signInputs) sends.recordDryRun(request)
             }
         }
@@ -256,10 +281,10 @@ class SendCoinsViewModelContactResubmitTest {
     }
 
     /** A send runner whose sends all broadcast and succeed. */
-    private fun succeedingRunner(sends: Sends): SendCoinsTaskRunner {
+    private fun succeedingRunner(sends: Sends, sendBuildGate: SendBuildGate = SendBuildGate()): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         coEvery { runner.isCutoverCommitted() } returns false
-        stubCreateSendRequest(runner, sends)
+        stubCreateSendRequest(runner, sends, sendBuildGate)
         coEvery {
             runner.sendCoins(
                 any<SendRequest>(),
@@ -577,5 +602,99 @@ class SendCoinsViewModelContactResubmitTest {
         viewModel.resetState()
         awaitCondition("back to input") { viewModel.everythingPlausible() }
         assertEquals("not re-resolved", keys[0].toBase58(), viewModel.resolvedAddress())
+    }
+
+    @Test
+    fun reResolutionStartsAfterTheSendReadItsPayee_theSendIsRefused_nothingClaimedOrSent() {
+        // PR #1608 review, round 9 (thread r4249347679): the send read the
+        // payee and its dry run; then a re-resolution (the screen recreated)
+        // cleared both. The send must not go on with its copies.
+        val chain = FakeDashjChain(keys)
+        val store = PaidContactAddressStore(file = null)
+        val sends = Sends()
+        val sendBuildGate = SendBuildGate()
+        val lookupGate = LookupGate()
+        val viewModel = buildViewModel(
+            chain,
+            succeedingRunner(sends, sendBuildGate),
+            provider(chain, store),
+            lookupGate
+        )
+        open(viewModel)
+        assertEquals(keys[0].toBase58(), viewModel.resolvedAddress())
+
+        // The send is held after it read its snapshot, before its claim.
+        sendBuildGate.armed.set(true)
+        var outcome: Result<Transaction>? = null
+        val send = thread {
+            outcome = runCatching { runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) } }
+        }
+        assertTrue(sendBuildGate.entered.await(10, TimeUnit.SECONDS))
+
+        // A re-resolution starts (it is held in its contact lookup, after it
+        // cleared the payee and the dry run).
+        lookupGate.closed = true
+        val reinit = thread { runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromUserId(contactUserId)) } }
+        assertTrue(lookupGate.entered.await(10, TimeUnit.SECONDS))
+
+        sendBuildGate.open.countDown()
+        send.join(10_000)
+        assertFalse(send.isAlive)
+
+        assertTrue(
+            "refused: ${outcome?.exceptionOrNull()}",
+            outcome?.exceptionOrNull() is PayeeNotResolvedException
+        )
+        assertTrue("nothing sent", sends.recipients.isEmpty())
+        assertTrue("nothing claimed", store.paid().isEmpty())
+        assertTrue("nothing marked on dashj", chain.marks.isEmpty())
+
+        // The fragment dismisses the error; the re-resolution completes with
+        // the same, still unpaid address, which is then paid once.
+        viewModel.resetState()
+        idle()
+        lookupGate.closed = false
+        lookupGate.open.countDown()
+        awaitCondition("resolved again") {
+            !reinit.isAlive &&
+                viewModel.resolvedAddress() == keys[0].toBase58() &&
+                viewModel.everythingPlausible() &&
+                viewModel.dryrunSendRequest != null
+        }
+        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        assertEquals(listOf<Address?>(keys[0]), sends.recipients)
+    }
+
+    @Test
+    fun aSendThatClaimedBeforeTheReResolution_goesOut_andTheReResolutionPicksANewAddress() {
+        // The other order: the claim is made before the re-resolution starts —
+        // the send goes on, and the re-resolution sees the address claimed.
+        val chain = FakeDashjChain(keys)
+        val store = PaidContactAddressStore(file = null)
+        val sends = Sends()
+        val firstInSend = CountDownLatch(1)
+        val releaseFirst = CountDownLatch(1)
+        val viewModel = buildViewModel(
+            chain,
+            pausingRunner(sends, firstInSend, releaseFirst),
+            provider(chain, store)
+        )
+        open(viewModel)
+
+        val send = thread { runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) } }
+        assertTrue(firstInSend.await(10, TimeUnit.SECONDS)) // claimed, in the send
+        assertTrue(keys[0].toBase58() in store.paid())
+
+        val dryRunMark = sends.dryRunCount()
+        val reinit = thread { runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromUserId(contactUserId)) } }
+        releaseFirst.countDown()
+        send.join(10_000)
+        assertFalse(send.isAlive)
+        assertEquals(listOf<Address?>(keys[0]), sends.recipients)
+
+        // The fragment shows the result and resets the state.
+        viewModel.resetState()
+        awaitResolvedAgain("a new address", viewModel, sends, dryRunMark, keys[1])
+        awaitCondition("the re-resolution finished") { !reinit.isAlive }
     }
 }

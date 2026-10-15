@@ -494,4 +494,76 @@ class PaidContactAddressStoreTest {
         assertEquals(Frontier(3, "yF"), after.foldedFrontier("contactId", 7))
         assertEquals(5, after.paidFrontier("contactId", 7))
     }
+
+    // ── paid-address history (PR #1608 review, round 9) ─────────────────
+
+    @Test
+    fun paidHistory_unknownWithoutAFile_orInAFileWithoutTheRecord() {
+        // New install, cleared data, a new device: no file at all.
+        assertFalse(store().paidHistoryKnown("w1"))
+        // A file written before the record existed.
+        file.writeText("$now yA pending contactId 7 0\n")
+        assertFalse(store().paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun paidHistory_markedKnown_survivesARestart_forThatWalletOnly() {
+        val s = store()
+        s.record("yA", target, 0)
+
+        s.markPaidHistoryKnown("w1")
+
+        assertTrue(s.paidHistoryKnown("w1"))
+        assertFalse("another SDK wallet's history is not known", s.paidHistoryKnown("w2"))
+        val restarted = store()
+        assertTrue(restarted.paidHistoryKnown("w1"))
+        assertEquals("the entries are kept with it", setOf("yA"), restarted.paid())
+    }
+
+    @Test
+    fun paidHistory_isUnknownAgainAfterAWalletChange_onDiskToo() {
+        val s = store()
+        s.markPaidHistoryKnown("w1")
+
+        saves.walletChanged()
+
+        assertFalse(s.paidHistoryKnown("w1"))
+        assertFalse("written, though the store holds no entry", store().paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun paidHistory_unreadableFile_isNeverKnown() {
+        store().markPaidHistoryKnown("w1")
+        assertTrue(file.setReadable(false))
+        assumeFalse(file.canRead())
+        try {
+            assertFalse(store().paidHistoryKnown("w1"))
+        } finally {
+            file.setReadable(true)
+        }
+    }
+
+    @Test
+    fun paidHistory_unwritableFile_isKnownForThisProcessOnly() {
+        val dir = File(tmp.root, "blocked").apply { mkdirs() }
+        File(dir, "x").writeText("")
+        val s = PaidContactAddressStore(dir, nowMs = { now })
+
+        s.markPaidHistoryKnown("w1")
+
+        assertTrue(s.paidHistoryKnown("w1"))
+        assertFalse(PaidContactAddressStore(dir, nowMs = { now }).paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun paidHistoryLine_isNotReadAsAnEntryOrFrontier() {
+        val s = store()
+        s.markPaidHistoryKnown("w1")
+        s.record("yA", target, 2)
+
+        val restarted = store()
+        assertEquals(setOf("yA"), restarted.paid())
+        assertNull(restarted.foldedFrontier("contactId", 7))
+        assertTrue(file.readLines().first() == "history w1")
+    }
 }

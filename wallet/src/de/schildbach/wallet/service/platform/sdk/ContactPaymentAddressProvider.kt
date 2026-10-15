@@ -18,9 +18,11 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
+import androidx.sqlite.db.SimpleSQLiteQuery
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.sdkL1ScanCaughtUp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.wallet.FriendChainAccess
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashj.platform.dpp.identifier.Identifier
@@ -151,6 +154,94 @@ data class SdkContactSendingAccount(
     val addresses: List<SdkContactPoolAddress>?
 )
 
+/**
+ * What the blockchain shows about contact payment addresses, through the SDK —
+ * the recovery source of truth for payments [PaidContactAddressStore] has no
+ * record of (made before a recovery, on a lost device; PR #1608 review,
+ * round 9).
+ */
+interface ContactPaymentChainView {
+    /** The id of the SDK wallet the app uses, or null when none is loaded (or more than one). */
+    fun walletId(): String?
+
+    /**
+     * Whether the SDK's scan of [walletId] has caught up to the chain tip and
+     * its transactions are processed — the gate the app uses before it
+     * persists the balance (scan caught up, block pipeline drained, no rescan
+     * just armed). Its transaction store then holds every payment made
+     * before.
+     */
+    fun scanCaughtUp(): Boolean
+
+    /**
+     * Whether a transaction in the SDK's store pays [address] (an output to
+     * it); null when the store cannot be read. Blocking.
+     */
+    suspend fun paysAddress(address: Address): Boolean?
+
+    companion object {
+        /** Tests' default: caught up, nothing paid on chain. */
+        internal val NOTHING_PAID = object : ContactPaymentChainView {
+            override fun walletId(): String = "test-wallet"
+            override fun scanCaughtUp(): Boolean = true
+            override suspend fun paysAddress(address: Address): Boolean = false
+        }
+    }
+}
+
+/** [ContactPaymentChainView] over the app's SDK and its L1 sync progress. */
+internal class SdkContactPaymentChainView(
+    private val sdkService: DashSdkService,
+    private val l1ShadowSyncService: L1ShadowSyncService
+) : ContactPaymentChainView {
+    override fun walletId(): String? = sdkService.loadedWalletIds().singleOrNull()
+
+    override fun scanCaughtUp(): Boolean {
+        val progress = l1ShadowSyncService.progress.value
+        return sdkL1ScanCaughtUp(progress) &&
+            !progress.blockPipelineLagging &&
+            !sdkService.spvRescanArmedWithin(CutoverUiDataService.RESCAN_ARM_PERSIST_HOLD_MS)
+    }
+
+    override suspend fun paysAddress(address: Address): Boolean? {
+        val db = sdkService.databaseOrNull() ?: return null
+        return try {
+            sdkStorePaysAddress(db, address)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("contact payment address: reading the SDK's transaction store failed", e)
+            null
+        }
+    }
+
+    private companion object {
+        private val log = LoggerFactory.getLogger(SdkContactPaymentChainView::class.java)
+    }
+}
+
+/**
+ * Whether the SDK store has a transaction paying [address]: a `txos` row for
+ * it (the SDK mirrors outputs to the contact sending accounts it watches), or
+ * — independent of which accounts existed when the transaction was processed
+ * — a stored raw transaction containing its output script. A chance match of
+ * the 25-byte script elsewhere only skips an address (fail-safe). Blocking.
+ */
+internal fun sdkStorePaysAddress(db: DashDatabase, address: Address): Boolean {
+    val readable = db.openHelper.readableDatabase
+    val inTxos = readable.query(
+        SimpleSQLiteQuery("SELECT 1 FROM txos WHERE address = ? LIMIT 1", arrayOf<Any>(address.toBase58()))
+    ).use { it.moveToFirst() }
+    if (inTxos) return true
+    val script = ScriptBuilder.createOutputScript(address).program
+    return readable.query(
+        SimpleSQLiteQuery(
+            "SELECT 1 FROM transactions WHERE length(transactionData) > 0 AND instr(transactionData, ?) > 0 LIMIT 1",
+            arrayOf<Any>(script)
+        )
+    ).use { it.moveToFirst() }
+}
+
 /** Outcome of [selectSdkContactAddress]. */
 sealed interface SdkContactAddressSelection {
     data class Selected(val address: String, val index: Int) : SdkContactAddressSelection
@@ -255,6 +346,14 @@ internal fun selectSdkContactAddress(
  *   and dashj cannot always advance it (no chain yet, key not found); the file
  *   covers both until dashj has, and keeps each channel's paid frontier after
  *   that, for a later wallet whose chain is behind.
+ *
+ * Neither survives a recovery on another device or after the app's data was
+ * cleared: the file is not backed up, and the restored dashj chain starts at
+ * an old cursor. The blockchain is the source of truth then
+ * ([ContactPaymentChainView]): post-cutover no address is handed out until the
+ * SDK's scan of the recovered wallet has reached the tip
+ * ([PaidContactAddressStore.paidHistoryKnown]), and no candidate the SDK's
+ * transaction store shows paid is ever handed out.
  */
 @Singleton
 class ContactPaymentAddressProvider internal constructor(
@@ -276,14 +375,17 @@ class ContactPaymentAddressProvider internal constructor(
     /** Addresses recorded paid; survives a restart when file-backed. */
     private val paidAddresses: PaidContactAddressStore = PaidContactAddressStore(file = null),
     /** Where the blocking dashj and file work runs. */
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /** What the chain shows paid ([ContactPaymentChainView]). */
+    private val chain: ContactPaymentChainView = ContactPaymentChainView.NOTHING_PAID
 ) {
     @Inject
     constructor(
         @ApplicationContext context: Context,
         sdkL1SendService: SdkL1SendService,
         sdkService: DashSdkService,
-        identityRepository: IdentityRepository
+        identityRepository: IdentityRepository,
+        l1ShadowSyncService: L1ShadowSyncService
     ) : this(
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
         sdkAccountReader = { ourId, contactId ->
@@ -298,76 +400,171 @@ class ContactPaymentAddressProvider internal constructor(
         dashjMarkUsed = identityRepository::markContactAddressUsed,
         params = Constants.NETWORK_PARAMETERS,
         dashjSendingCursor = identityRepository::getContactSendingCursor,
-        paidAddresses = PaidContactAddressStore.app(context.filesDir)
+        paidAddresses = PaidContactAddressStore.app(context.filesDir),
+        chain = SdkContactPaymentChainView(sdkService, l1ShadowSyncService)
     )
 
     /**
      * The address to pay [target] on, or null when neither stack can supply one.
      * Logs which source was used and, on a post-cutover fallback, why.
+     *
+     * Post-cutover, nothing is handed out while the paid-address history is
+     * unknown ([paidHistoryKnown]: after a recovery, until the SDK's scan has
+     * reached the tip), and no candidate — SDK pick or dashj fallback — that
+     * the SDK's transaction store shows paid ([ContactPaymentChainView]).
      */
     suspend fun nextAddress(target: ContactPaymentTarget): ContactPaymentAddress? = withContext(ioDispatcher) {
         reapplyDashjMarks(target)
         reapplyFoldedFrontier(target)
         if (!cutoverCommitted()) {
-            dashjAddress(target, "pre-cutover")
+            // dashj is the live engine and sees the chain itself; the SDK's
+            // store is only consulted when it can be read.
+            dashjAddress(target, "pre-cutover", chainRequired = false)
+        } else if (!paidHistoryKnown(target)) {
+            null
         } else {
             postCutoverAddress(target)
         }
     }
 
+    /**
+     * Whether every earlier contact payment of the current wallet is known:
+     * recorded in [paidAddresses] since it covered the wallet, or — once the
+     * SDK's scan has caught up to the tip — in the SDK's transaction store,
+     * which is then recorded for good ([PaidContactAddressStore.markPaidHistoryKnown]).
+     * False after a recovery (no paid-address file, or a wallet change) until
+     * that scan is done: a payment from before the recovery may not be known
+     * anywhere yet, and dashj's restored chain — or the SDK's not yet flagged
+     * pool — would hand its address out again.
+     */
+    private fun paidHistoryKnown(target: ContactPaymentTarget): Boolean {
+        val walletId = chain.walletId()
+        if (walletId == null) {
+            log.warn(
+                "contact payment address for {} (accountReference {}): no SDK wallet loaded, the paid " +
+                    "addresses cannot be checked — no address",
+                target.contactUserId, target.accountReference
+            )
+            return false
+        }
+        if (paidAddresses.paidHistoryKnown(walletId)) return true
+        if (chain.scanCaughtUp() && chain.walletId() == walletId) {
+            log.info("the SDK's scan reached the tip: the wallet's earlier contact payments are known from now on")
+            paidAddresses.markPaidHistoryKnown(walletId)
+            return true
+        }
+        log.warn(
+            "contact payment address for {} (accountReference {}): the wallet's earlier contact payments are " +
+                "not known yet (recovered wallet, the SDK's scan has not reached the tip) — no address",
+            target.contactUserId, target.accountReference
+        )
+        return false
+    }
+
+    /**
+     * Whether the chain shows [address] paid: true or false, or null when
+     * that cannot be checked and [chainRequired] (the candidate must not be
+     * used). With [chainRequired] false an unreadable store reads as false.
+     */
+    private suspend fun paidOnChain(address: Address, chainRequired: Boolean): Boolean? =
+        when (chain.paysAddress(address)) {
+            true -> true
+            false -> false
+            null -> if (chainRequired) null else false
+        }
+
     private suspend fun postCutoverAddress(target: ContactPaymentTarget): ContactPaymentAddress? {
         var account: SdkContactSendingAccount? = null
-        val selection = try {
+        var cursor: Int? = null
+        var frontier: Int? = null
+        var unavailable = "SDK store not available"
+        try {
             val ourId = Identifier.from(target.ourUserId).toBuffer()
             val contactId = Identifier.from(target.contactUserId).toBuffer()
             account = sdkAccountReader(ourId, contactId)
-            val cursor = try {
+            cursor = try {
                 dashjSendingCursor(target.contactUserId, target.accountReference)
             } catch (e: Exception) {
                 log.warn("contact payment address: reading dashj's sending cursor failed", e)
                 null
             }
-            selectSdkContactAddress(
-                account,
-                target.accountReference,
-                paidAddresses.paid(),
-                cursor,
-                paidAddresses.paidFrontier(target.contactUserId, target.accountReference)
-            )
+            frontier = paidAddresses.paidFrontier(target.contactUserId, target.accountReference)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            SdkContactAddressSelection.Unavailable("SDK read failed: $e")
+            account = null
+            unavailable = "SDK read failed: $e"
         }
-        // What the SDK mirror (durable) flags used on this channel: the dashj
-        // fallback never serves those either — a chain dashj built or reloaded
-        // without seeing those payments starts below them.
-        val sdkUsed = account
-            ?.takeIf { it.externalAccountReference == target.accountReference }
-            ?.addresses
-            ?.filter { it.isUsed }
-            ?.mapTo(HashSet()) { it.address }
-            .orEmpty()
-        when (selection) {
-            is SdkContactAddressSelection.Selected -> {
-                val address = try {
-                    Address.fromString(params, selection.address)
-                } catch (e: Exception) {
-                    log.warn("contact payment address: SDK address unparseable for this network", e)
-                    null
-                }
-                if (address != null) {
+        // SDK candidates the chain shows paid (the mirror's used flag lags,
+        // or the account was built after the payment was processed).
+        val paidOnChain = HashSet<String>()
+        var selection: SdkContactAddressSelection
+        while (true) {
+            selection = if (account == null) {
+                SdkContactAddressSelection.Unavailable(unavailable)
+            } else {
+                selectSdkContactAddress(
+                    account,
+                    target.accountReference,
+                    paidAddresses.paid() + paidOnChain,
+                    cursor,
+                    frontier
+                )
+            }
+            if (selection !is SdkContactAddressSelection.Selected) break
+            val address = try {
+                Address.fromString(params, selection.address)
+            } catch (e: Exception) {
+                log.warn("contact payment address: SDK address unparseable for this network", e)
+                selection = SdkContactAddressSelection.Unavailable("SDK address unparseable")
+                break
+            }
+            when (paidOnChain(address, chainRequired = true)) {
+                false -> {
                     log.info(
                         "contact payment address for {} (accountReference {}): source=SDK, index {}",
                         target.contactUserId, target.accountReference, selection.index
                     )
                     return ContactPaymentAddress(target, address, ContactAddressSource.SDK, selection.index)
                 }
-                return dashjAddress(target, "post-cutover fallback (SDK address unparseable)", sdkUsed)
+                true -> {
+                    if (paidOnChain.size >= MAX_DASHJ_PAID_SKIPS) {
+                        log.warn(
+                            "contact payment address for {} (accountReference {}): the SDK pool's next {} " +
+                                "unflagged addresses are paid on chain — no address",
+                            target.contactUserId, target.accountReference, paidOnChain.size + 1
+                        )
+                        return null
+                    }
+                    log.info(
+                        "contact payment address for {} (accountReference {}): SDK index {} is paid on chain " +
+                            "but not flagged used — skipped",
+                        target.contactUserId, target.accountReference, selection.index
+                    )
+                    paidOnChain += address.toBase58()
+                }
+                null -> {
+                    log.warn(
+                        "contact payment address for {} (accountReference {}): the SDK's transaction store " +
+                            "cannot be read to check index {} — no address",
+                        target.contactUserId, target.accountReference, selection.index
+                    )
+                    return null
+                }
             }
-            is SdkContactAddressSelection.Unavailable ->
-                return dashjAddress(target, "post-cutover fallback (${selection.reason})", sdkUsed)
         }
+        // What the SDK mirror (durable) flags used on this channel, and what
+        // the chain showed paid: the dashj fallback never serves those either
+        // — a chain dashj built or reloaded without seeing those payments
+        // starts below them.
+        val sdkUsed = account
+            ?.takeIf { it.externalAccountReference == target.accountReference }
+            ?.addresses
+            ?.filter { it.isUsed }
+            ?.mapTo(HashSet()) { it.address }
+            .orEmpty() + paidOnChain
+        val reason = (selection as? SdkContactAddressSelection.Unavailable)?.reason
+        return dashjAddress(target, "post-cutover fallback ($reason)", chainRequired = true, sdkUsed = sdkUsed)
     }
 
     /**
@@ -451,8 +648,13 @@ class ContactPaymentAddressProvider internal constructor(
 
     /**
      * dashj's current sending address for [target], never one recorded paid
-     * or claimed ([paidAddresses]) and never one in [sdkUsed] (flagged used by
-     * the SDK mirror).
+     * or claimed ([paidAddresses]), never one in [sdkUsed] (flagged used by
+     * the SDK mirror, or shown paid on chain) and never one the SDK's
+     * transaction store shows paid ([ContactPaymentChainView.paysAddress] —
+     * after a recovery dashj's chain starts at the restored cursor, below
+     * every payment made since). When that store cannot be read: no address
+     * if [chainRequired] (post-cutover), else the check is skipped (pre-cutover
+     * dashj is the live engine).
      *
      * dashj can serve such an address: marking it used ([dashjMarkUsed]) only
      * schedules a wallet save, so a process that died before that save comes
@@ -460,19 +662,21 @@ class ContactPaymentAddressProvider internal constructor(
      * restored wallet's) starts below it; and a send in flight has not marked
      * it yet. Such an address is detected here and dashj is advanced past it
      * (the same mark, which issues a fresh current key) and asked again — at
-     * most [MAX_DASHJ_PAID_SKIPS] times, never more often than there are such
-     * addresses, and never when the mark does not move dashj on. If dashj cannot
+     * most [MAX_DASHJ_PAID_SKIPS] times per lookup (the marks stay, so the next
+     * lookup continues from there), and never when the mark does not move
+     * dashj on. If dashj cannot
      * be advanced to a usable address, null: the send screen reports no address
      * rather than paying a used one. Likewise null when the channel has a
      * folded frontier and the served address's index is at or below it (dashj
      * could not be advanced past it by [reapplyFoldedFrontier]) or unknown
      * ([dashjServedIndex] null: the frontier keeps only its highest address,
-     * so an earlier paid one would pass [paidAddresses]). Blocking (dashj lock);
-     * runs on [ioDispatcher].
+     * so an earlier paid one would pass [paidAddresses]). Blocking (dashj lock,
+     * SDK store); runs on [ioDispatcher].
      */
-    private fun dashjAddress(
+    private suspend fun dashjAddress(
         target: ContactPaymentTarget,
         why: String,
+        chainRequired: Boolean,
         sdkUsed: Set<String> = emptySet()
     ): ContactPaymentAddress? {
         var address = dashjNextAddress(target.contactUserId, target.accountReference)
@@ -484,10 +688,22 @@ class ContactPaymentAddressProvider internal constructor(
             return null
         }
         val excluded = paidAddresses.paid() + sdkUsed
-        val maxSkips = minOf(MAX_DASHJ_PAID_SKIPS, excluded.size)
         var skipped = 0
-        while (address != null && address.toBase58() in excluded) {
-            if (skipped >= maxSkips) {
+        while (address != null) {
+            val paid = address.toBase58() in excluded || when (paidOnChain(address, chainRequired)) {
+                true -> true
+                false -> false
+                null -> {
+                    log.warn(
+                        "contact payment address for {} (accountReference {}): the SDK's transaction store " +
+                            "cannot be read to check dashj's address — no address",
+                        target.contactUserId, target.accountReference
+                    )
+                    return null
+                }
+            }
+            if (!paid) break
+            if (skipped >= MAX_DASHJ_PAID_SKIPS) {
                 log.warn(
                     "contact payment address for {} (accountReference {}): dashj still serves a paid " +
                         "address after advancing {} time(s) — no address",
@@ -588,16 +804,28 @@ class ContactPaymentAddressProvider internal constructor(
      * Marking happens at most once and never throws: a marking failure is
      * logged, the money may already have moved. [payment] null (not a contact
      * payment) just runs [send].
+     *
+     * [claimGate] runs the claim (blocking, on [ioDispatcher]): the caller
+     * checks there, under the lock its own invalidation takes, that [payment]
+     * is still the one to send, and runs the claim only then — or throws, and
+     * nothing is claimed or sent (PR #1608 review, round 9: a send that read
+     * the payee before a re-resolution started went on to pay it). It must run
+     * the claim exactly once or throw.
      */
     suspend fun <T> sendThenMarkUsed(
         payment: ContactPaymentAddress?,
+        claimGate: (claim: () -> Unit) -> Unit = { claim -> claim() },
         send: suspend (signals: ContactSendSignals) -> T
     ): T {
         if (payment == null) {
             return send(ContactSendSignals { })
         }
         val base58 = payment.address.toBase58()
-        val claim = withContext(ioDispatcher) { paidAddresses.claim(base58, payment.target, payment.index) }
+        val claim = withContext(ioDispatcher) {
+            var result: PaidContactAddressStore.ClaimResult? = null
+            claimGate { result = paidAddresses.claim(base58, payment.target, payment.index) }
+            checkNotNull(result) { "the claim gate returned without running the claim" }
+        }
         when (claim) {
             PaidContactAddressStore.ClaimResult.CLAIMED -> Unit
             PaidContactAddressStore.ClaimResult.ALREADY_PAID -> {
@@ -719,9 +947,11 @@ class ContactPaymentAddressProvider internal constructor(
         private val log = LoggerFactory.getLogger(ContactPaymentAddressProvider::class.java)
 
         /**
-         * Bound on how many paid addresses [dashjAddress] advances dashj past in
-         * one request. Each is a payment whose dashj save was lost; more than a
-         * handful means something else is wrong, and no address is safer.
+         * Bound on how many paid addresses one lookup skips: dashj advanced past
+         * ([dashjAddress]), or SDK pool addresses the chain shows paid. Each is
+         * a payment whose record was lost (a dashj save, a recovery); more than
+         * a handful in one lookup means something else is wrong, and no
+         * address is safer. dashj's advances stay, so a later lookup goes on.
          */
         internal const val MAX_DASHJ_PAID_SKIPS = 10
     }

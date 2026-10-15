@@ -185,8 +185,31 @@ class SendCoinsViewModel @Inject constructor(
     @Volatile
     private var dryRunOutcome: DryRunOutcome? = null
 
-    /** Guards [dryRunGeneration] and the writes of [dryRunOutcome]. */
+    /**
+     * Guards [dryRunGeneration], the writes of [dryRunOutcome], and the start
+     * of a payee resolution ([initPaymentIntent] clears [payee] and the dry run
+     * under it). A contact payment's pre-send claim runs under it too, after
+     * checking that the payee and dry run it read are still current
+     * ([signAndSendPayment]): a resolution either starts before that check —
+     * and the send is refused — or after the claim.
+     */
     private val dryRunLock = Any()
+
+    /**
+     * The engine mode as last observed ([SendCoinsTaskRunner.observeCutoverCommitted]);
+     * null until the first value. A dry run for the other mode is not for the
+     * payment the screen shows ([isFor]): its send would be refused.
+     */
+    @Volatile
+    private var engineCutoverCommitted: Boolean? = null
+
+    /**
+     * The mode a dry run published for the other mode was last re-run for
+     * ([publishDryRun]): at most one re-run per observed mode, so a mode read
+     * that keeps disagreeing with the observed one cannot loop dry runs.
+     */
+    @Volatile
+    private var engineRerunFor: Boolean? = null
 
     /**
      * Numbers dry runs in the order they start; only the latest one may
@@ -328,6 +351,23 @@ class SendCoinsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
+        // The engine mode changed (the cutover committed, or rolled back): a
+        // dry run for the previous mode no longer holds — its send would be
+        // refused, and nothing else would check the payment again. A dry run
+        // still running is not seen here (no outcome yet): it checks the mode
+        // itself when it publishes ([publishDryRun]).
+        sendCoinsTaskRunner.observeCutoverCommitted()
+            .distinctUntilChanged()
+            .onEach { committed ->
+                engineCutoverCommitted = committed
+                if (isEngineStale(dryRunOutcome)) {
+                    log.info("the engine mode changed (cutover committed: {}); checking the payment again", committed)
+                    invalidateDryRunForUi()
+                    scheduleDryRun()
+                }
+            }
+            .launchIn(viewModelScope)
+
         _currentAmount
             .debounce(150)
             .onEach { amount ->
@@ -350,12 +390,16 @@ class SendCoinsViewModel @Inject constructor(
 
         // Resolution pending: nothing can be confirmed or sent until the
         // resolved intent and its contact metadata are published together.
-        val generation = payeeGeneration.incrementAndGet()
-        payee.set(null)
         // The previous payee's dry run is not this payee's: drop it, and any
         // dry run still running for it (it would publish a stale outcome).
-        // This resolution runs its own dry run once it has published.
-        clearDryRun()
+        // This resolution runs its own dry run once it has published. Under
+        // dryRunLock, as a send's pre-send claim is: a send that read the
+        // previous payee is refused unless it claimed before this point.
+        val generation = synchronized(dryRunLock) {
+            payee.set(null)
+            clearDryRun()
+            payeeGeneration.incrementAndGet()
+        }
         invalidateDryRunForUi()
         log.info("got {}", paymentIntent)
         val resolved = withContext(Dispatchers.IO) {
@@ -516,8 +560,36 @@ class SendCoinsViewModel @Inject constructor(
                     "the contact payment's request does not pay its resolved address; nothing was sent"
                 )
             }
+            // What this send read must still be current when it commits to
+            // sending (PR #1608 review, round 9: a re-resolution that started
+            // after the reads above cleared the payee and the dry run, and the
+            // send went on with its copies and paid the old contact address).
+            // Checked under dryRunLock — the lock a resolution takes to clear
+            // them — and, for a contact payment, together with the claim.
+            fun ensureStillCurrent() {
+                if (payee.get() !== resolved) {
+                    log.info("the payee is being resolved again; nothing was sent")
+                    throw PayeeNotResolvedException()
+                }
+                spentContactPayment.get()?.let { throw ContactAddressAlreadyPaidException(it) }
+                if (dryRunOutcome !== outcome || !outcome.isFor(resolved, editedAmount)) {
+                    log.info("the payment was checked again meanwhile; nothing was sent")
+                    throw DryRunOutdatedException()
+                }
+            }
+            if (payment == null) {
+                synchronized(dryRunLock) { ensureStillCurrent() }
+            }
             contactPayment = payment
-            contactPaymentAddressProvider.sendThenMarkUsed(payment) { signals ->
+            contactPaymentAddressProvider.sendThenMarkUsed(
+                payment,
+                claimGate = { claim ->
+                    synchronized(dryRunLock) {
+                        ensureStillCurrent()
+                        claim()
+                    }
+                }
+            ) { signals ->
                 sendCoinsTaskRunner.sendCoins(
                     finalSendRequest,
                     checkBalanceConditions = checkBalance,
@@ -713,12 +785,22 @@ class SendCoinsViewModel @Inject constructor(
     private fun currentOutcome(): DryRunOutcome? =
         dryRunOutcome?.takeIf { it.isFor(payee.get(), currentAmount) }
 
-    /** Whether this outcome was concluded for paying [amount] to [resolved]. */
+    /**
+     * Whether this outcome was concluded for paying [amount] to [resolved],
+     * on the engine mode last observed (when known).
+     */
     private fun DryRunOutcome.isFor(resolved: ResolvedPayee?, amount: Coin): Boolean =
         resolved != null &&
             payee === resolved &&
             this.amount == amount &&
-            (sendAllBalance == null || sendAllBalance == maxOutputAmount.value)
+            (sendAllBalance == null || sendAllBalance == maxOutputAmount.value) &&
+            !isEngineStale(this)
+
+    /** Whether [outcome] was concluded on the other engine mode than the one last observed. */
+    private fun isEngineStale(outcome: DryRunOutcome?): Boolean {
+        val observed = engineCutoverCommitted ?: return false
+        return outcome != null && outcome.cutoverCommitted != observed
+    }
 
     /**
      * Tells the screen (via [dryRunSuccessful]) that it cannot continue when
@@ -784,17 +866,29 @@ class SendCoinsViewModel @Inject constructor(
      * volatile), so at least one of the two sees the change.
      */
     private fun publishDryRun(generation: Long, outcome: DryRunOutcome?) {
-        val stale = synchronized(dryRunLock) {
+        val (balanceStale, engineStale) = synchronized(dryRunLock) {
             if (generation != dryRunGeneration) {
                 log.info("dry run superseded by a later one; its outcome is dropped")
                 return
             }
             dryRunOutcome = outcome
-            postDryRunSuccessful(outcome?.result != null)
-            isBalanceStale(outcome)
+            val engineStale = isEngineStale(outcome)
+            postDryRunSuccessful(outcome?.result != null && !engineStale)
+            isBalanceStale(outcome) to engineStale
         }
-        if (stale) {
-            log.info("the balance changed during the dry run; checking the payment again")
+        // Likewise for the engine mode, written by its observer before it
+        // reads [dryRunOutcome]. Once per observed mode: a dry run that keeps
+        // reading the other mode is not re-run in a loop.
+        val observed = engineCutoverCommitted
+        val rerunForEngine = engineStale && engineRerunFor != observed
+        if (rerunForEngine) {
+            engineRerunFor = observed
+        }
+        if (balanceStale || rerunForEngine) {
+            log.info(
+                "the {} changed during the dry run; checking the payment again",
+                if (balanceStale) "balance" else "engine mode"
+            )
             scheduleDryRun()
         }
     }
