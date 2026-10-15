@@ -55,7 +55,6 @@ import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet.ui.more.hasShieldedContext
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.Dispatchers
@@ -625,16 +624,9 @@ class MainViewModel @Inject constructor(
                         shieldedBalanceService.observeShieldedBalance(),
                         shieldedBalanceService.shieldedSyncStatus,
                         dashPayConfig.observe(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS),
-                        blockchainIdentityDataDao.observeBase().map { hasShieldedContext(it) },
                         shieldedBalanceService.shieldedBalanceMaybeStale
-                    ) { live, status, cachedDuffs, hasShieldedContext, maybeStale ->
-                        homeShieldedBalance(
-                            status,
-                            live,
-                            cachedDuffs?.let { Dash(it) },
-                            hasShieldedContext,
-                            maybeStale
-                        )
+                    ) { live, status, cachedDuffs, maybeStale ->
+                        homeShieldedBalance(status, live, cachedDuffs?.let { Dash(it) }, maybeStale)
                     }
                 }
             }
@@ -1043,29 +1035,26 @@ class MainViewModel @Inject constructor(
  * The shielded amount the home header adds to the L1 total — pure and
  * host-testable. `observeShieldedBalance()` reads `Dash.ZERO` until the
  * runtime is READY and during a re-scan, so only a READY balance is used
- * live; otherwise the persisted last-known (READY) balance stands in.
- *
- * A wallet with no shielded context ([hasShieldedContext]) can never bring
- * the runtime up, so zero is its honest balance — ahead of everything else.
- * Otherwise, with no cache, the amount is unknown (null).
+ * live; otherwise the persisted last-known (READY) balance stands in, and
+ * with no cache the amount is unknown (null).
  *
  * After a local shielded spend ([balanceMaybeStale]) the amount is unknown
  * until the service clears the flag (the note balance has settled) — even
  * while READY: once the first pass completes the status stays READY through
  * later sync passes, so READY alone does not mean the spend has settled.
+ *
+ * Platform identity is deliberately NOT consulted: with the shielded flag
+ * on, `SdkWalletBinder` binds identity-free wallets too (fund → shield →
+ * create identity), so a wallet without an identity can hold shielded
+ * funds. Ownership comes from the bound runtime itself — the service tears
+ * its READY state down when it stops, and a wallet wipe clears the cache.
  */
 internal fun homeShieldedBalance(
     status: ShieldedSyncStatus,
     live: Dash,
     cached: Dash?,
-    hasShieldedContext: Boolean,
     balanceMaybeStale: Boolean
 ): Dash? = when {
-    // First, and an explicit zero: without a shielded context the runtime
-    // never comes up for this wallet, the cache can outlive an identity reset,
-    // and the service may still be bound to the previous wallet (its live
-    // flow emitting that wallet's balance).
-    !hasShieldedContext -> Dash.ZERO
     balanceMaybeStale -> null
     status == ShieldedSyncStatus.READY -> live
     cached != null -> cached
