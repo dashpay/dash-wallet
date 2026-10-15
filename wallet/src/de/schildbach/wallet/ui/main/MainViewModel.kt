@@ -614,9 +614,16 @@ class MainViewModel @Inject constructor(
                         shieldedBalanceService.observeShieldedBalance(),
                         shieldedBalanceService.shieldedSyncStatus,
                         dashPayConfig.observe(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS),
-                        blockchainIdentityDataDao.observeBase().map { hasShieldedContext(it) }
-                    ) { live, status, cachedDuffs, hasShieldedContext ->
-                        homeShieldedBalance(status, live, cachedDuffs?.let { Dash(it) }, hasShieldedContext)
+                        blockchainIdentityDataDao.observeBase().map { hasShieldedContext(it) },
+                        shieldedBalanceService.shieldedBalanceMaybeStale
+                    ) { live, status, cachedDuffs, hasShieldedContext, maybeStale ->
+                        homeShieldedBalance(
+                            status,
+                            live,
+                            cachedDuffs?.let { Dash(it) },
+                            hasShieldedContext,
+                            maybeStale
+                        )
                     }
                 }
             }
@@ -1029,19 +1036,23 @@ class MainViewModel @Inject constructor(
  *
  * A wallet with no shielded context ([hasShieldedContext]) can never bring
  * the runtime up, so its live zero is the honest balance — ahead of any
- * cache, which can outlive an identity reset. Otherwise, with no cache, the
- * amount is unknown (null).
+ * cache, which can outlive an identity reset. After a local shielded spend
+ * ([balanceMaybeStale]) the cache is known-stale, so — like the More card —
+ * the amount is unknown (null) until the runtime is READY again. Otherwise,
+ * with no cache, the amount is unknown too.
  */
 internal fun homeShieldedBalance(
     status: ShieldedSyncStatus,
     live: Dash,
     cached: Dash?,
-    hasShieldedContext: Boolean
+    hasShieldedContext: Boolean,
+    balanceMaybeStale: Boolean
 ): Dash? = when {
     status == ShieldedSyncStatus.READY -> live
     // Before the cache: it survives identity resets, and without a shielded
     // context the runtime never comes up, so a cached amount would be stale.
     !hasShieldedContext -> live
+    balanceMaybeStale -> null
     cached != null -> cached
     else -> null
 }
