@@ -64,6 +64,7 @@ import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.Grabber
 import org.dash.wallet.common.ui.components.Menu
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -200,7 +201,7 @@ private fun ShieldedTransferScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopNavBase(
@@ -235,7 +236,7 @@ private fun ShieldedTransferScreenContent(
                 Text(
                     text = stringResource(R.string.shielded_internal_transfer),
                     style = MyTheme.Typography.HeadlineMediumBold,
-                    color = MyTheme.Colors.textPrimary,
+                    color = LocalDashColors.current.textPrimary,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 5.dp, bottom = 5.dp)
@@ -479,7 +480,7 @@ private fun DirectionCard(
                 .size(34.dp)
                 .shadow(4.dp, CircleShape)
                 .clip(CircleShape)
-                .background(MyTheme.Colors.backgroundSecondary)
+                .background(LocalDashColors.current.backgroundSecondary)
                 .clickable(onClick = onSwapDirection),
             contentAlignment = Alignment.Center
         ) {
@@ -504,7 +505,7 @@ private fun DirectionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
+            .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(16.dp))
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -518,12 +519,12 @@ private fun DirectionRow(
             Text(
                 text = label,
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.textTertiary
+                color = LocalDashColors.current.textTertiary
             )
             Text(
                 text = name,
                 style = MyTheme.Typography.BodyMediumMedium,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -532,7 +533,7 @@ private fun DirectionRow(
                 Text(
                     text = it,
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textTertiary
+                    color = LocalDashColors.current.textTertiary
                 )
             }
         }
@@ -549,7 +550,7 @@ private fun BalanceWithSymbol(text: String, isCredits: Boolean, big: Boolean = f
         Text(
             text = text,
             style = if (big) MyTheme.Typography.BodyMediumMedium else MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary
+            color = LocalDashColors.current.textPrimary
         )
         if (isCredits) {
             // The design's slanted-C credits glyph, NOT the letter "C"
@@ -560,7 +561,7 @@ private fun BalanceWithSymbol(text: String, isCredits: Boolean, big: Boolean = f
             Icon(
                 painter = painterResource(R.drawable.ic_credits_symbol),
                 contentDescription = stringResource(R.string.shielded_credits_symbol),
-                tint = MyTheme.Colors.textPrimary,
+                tint = LocalDashColors.current.textPrimary,
                 modifier = Modifier.size(width = 10.5.dp, height = 10.dp)
             )
         } else {
@@ -585,7 +586,7 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
                 Text(
                     text = stringResource(R.string.shielded_error_insufficient_funds),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.red,
+                    color = LocalDashColors.current.red,
                     textAlign = TextAlign.Center
                 )
             }
@@ -593,13 +594,13 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
                 Text(
                     text = stringResource(R.string.shielded_transfer_failed),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.red,
+                    color = LocalDashColors.current.red,
                     textAlign = TextAlign.Center
                 )
                 Text(
                     text = stringResource(R.string.shielded_transfer_failed_message),
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textSecondary,
+                    color = LocalDashColors.current.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 2.dp)
                 )
@@ -608,7 +609,7 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
                 Text(
                     text = stringResource(R.string.shielded_you_will_transfer),
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textTertiary,
+                    color = LocalDashColors.current.textTertiary,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -647,7 +648,7 @@ private fun OverlaySheet(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(
-                    MyTheme.Colors.backgroundPrimary,
+                    LocalDashColors.current.backgroundPrimary,
                     RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                 )
                 .clickable(
@@ -680,7 +681,7 @@ private fun ShieldedConfirmSheet(
             Text(
                 text = stringResource(R.string.shielded_confirm),
                 style = MyTheme.Typography.TitleMediumSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
 
@@ -689,7 +690,7 @@ private fun ShieldedConfirmSheet(
                 Text(
                     text = amount.toKeypadString(),
                     style = MyTheme.Typography.HeadlineLargeMedium,
-                    color = MyTheme.Colors.textPrimary
+                    color = LocalDashColors.current.textPrimary
                 )
                 Image(
                     painter = painterResource(R.drawable.ic_dash_d_black),
@@ -704,7 +705,7 @@ private fun ShieldedConfirmSheet(
                 Text(
                     text = "~ $fiat",
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = LocalDashColors.current.textSecondary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -758,7 +759,7 @@ private fun ShieldedConfirmSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .background(MyTheme.Colors.dashBlue5, RoundedCornerShape(16.dp))
+                    .background(LocalDashColors.current.dashBlue5, RoundedCornerShape(16.dp))
                     .padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.Top
@@ -772,12 +773,12 @@ private fun ShieldedConfirmSheet(
                     Text(
                         text = tipTitle,
                         style = MyTheme.Typography.BodyMediumMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = LocalDashColors.current.textPrimary
                     )
                     Text(
                         text = tipMessage,
                         style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.textSecondary
+                        color = LocalDashColors.current.textSecondary
                     )
                 }
             }
@@ -822,13 +823,13 @@ private fun ConfirmRow(label: String, value: String) {
         Text(
             text = label,
             style = MyTheme.Typography.BodyMediumMedium,
-            color = MyTheme.Colors.textTertiary
+            color = LocalDashColors.current.textTertiary
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
             text = value,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary
+            color = LocalDashColors.current.textPrimary
         )
     }
 }
@@ -845,7 +846,7 @@ private fun TransferTimingSheet(onDismiss: () -> Unit) {
             Text(
                 text = stringResource(R.string.shielded_timing_title),
                 style = MyTheme.Typography.HeadlineMediumBold,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -890,12 +891,12 @@ private fun TimingFeatureRow(icon: Int, heading: String, text: String) {
             Text(
                 text = heading,
                 style = MyTheme.Typography.TitleSmallSemibold,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
             Text(
                 text = text,
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary
+                color = LocalDashColors.current.textSecondary
             )
         }
     }
@@ -934,7 +935,7 @@ internal fun ProvingOverlay(
         Column(
             modifier = Modifier
                 .padding(horizontal = 40.dp)
-                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -943,11 +944,11 @@ internal fun ProvingOverlay(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            CircularProgressIndicator(color = MyTheme.Colors.dashBlue)
+            CircularProgressIndicator(color = LocalDashColors.current.dashBlue)
             Text(
                 text = stringResource(R.string.shielded_proving_title),
                 style = MyTheme.Typography.TitleMediumSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 textAlign = TextAlign.Center
             )
             Text(
@@ -959,7 +960,7 @@ internal fun ProvingOverlay(
                     }
                 ),
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = LocalDashColors.current.textSecondary,
                 textAlign = TextAlign.Center
             )
             if (onDismiss != null) {
@@ -1008,7 +1009,7 @@ internal fun AmbiguousOverlay(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 40.dp)
-                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
                 .padding(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1022,13 +1023,13 @@ internal fun AmbiguousOverlay(onClose: () -> Unit) {
             Text(
                 text = stringResource(R.string.shielded_transfer_ambiguous_title),
                 style = MyTheme.Typography.TitleMediumSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = stringResource(R.string.shielded_transfer_ambiguous_message),
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = LocalDashColors.current.textSecondary,
                 textAlign = TextAlign.Center
             )
             DashButton(
@@ -1062,7 +1063,7 @@ internal fun LockedPendingShieldOverlay(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 40.dp)
-                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
                 .padding(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1076,13 +1077,13 @@ internal fun LockedPendingShieldOverlay(onClose: () -> Unit) {
             Text(
                 text = stringResource(R.string.shielded_locked_pending_title),
                 style = MyTheme.Typography.TitleMediumSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = stringResource(R.string.shielded_locked_pending_message),
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = LocalDashColors.current.textSecondary,
                 textAlign = TextAlign.Center
             )
             DashButton(
@@ -1119,7 +1120,7 @@ internal fun StalledOverlay(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 40.dp)
-                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
                 .padding(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1127,17 +1128,17 @@ internal fun StalledOverlay(onClose: () -> Unit) {
             // A live spinner (not a static warning/success icon) so the state
             // reads unambiguously as STILL WORKING — the watchdog notice must
             // never look like a completed transfer (H2).
-            CircularProgressIndicator(color = MyTheme.Colors.dashBlue)
+            CircularProgressIndicator(color = LocalDashColors.current.dashBlue)
             Text(
                 text = stringResource(R.string.shielded_transfer_stalled_title),
                 style = MyTheme.Typography.TitleMediumSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = stringResource(R.string.shielded_transfer_stalled_message),
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = LocalDashColors.current.textSecondary,
                 textAlign = TextAlign.Center
             )
             // "Continue in the background", not "Close": leaving the screen
