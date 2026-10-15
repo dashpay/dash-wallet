@@ -45,6 +45,8 @@ import androidx.fragment.app.Fragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.shielded.ShieldedBalanceActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 
 /**
@@ -74,50 +76,53 @@ class PaymentsInternalFragment : Fragment() {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 15.dp)
-                    .padding(top = 15.dp)
-            ) {
+            // DashWalletTheme provides the night-aware LocalDashColors (dark mode).
+            DashWalletTheme {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
-                        .padding(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                        .fillMaxSize()
+                        .padding(horizontal = 15.dp)
+                        .padding(top = 15.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.shielded_internal_transfer_to_from),
-                        style = MyTheme.Typography.BodySmall,
-                        color = MyTheme.Colors.textSecondary,
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable {
-                                startActivity(
-                                    ShieldedBalanceActivity.createIntent(requireContext())
-                                )
-                            }
-                            .padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(20.dp))
+                            .padding(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_shielded_balance),
-                            contentDescription = null,
-                            modifier = Modifier.size(30.dp)
-                        )
                         Text(
-                            text = stringResource(R.string.shielded_balance_title),
-                            style = MyTheme.Typography.BodyMediumMedium,
-                            color = MyTheme.Colors.textPrimary
+                            text = stringResource(R.string.shielded_internal_transfer_to_from),
+                            style = MyTheme.Typography.BodySmall,
+                            color = LocalDashColors.current.textSecondary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                         )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    startActivity(
+                                        ShieldedBalanceActivity.createIntent(requireContext())
+                                    )
+                                }
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_shielded_balance),
+                                contentDescription = null,
+                                modifier = Modifier.size(30.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.shielded_balance_title),
+                                style = MyTheme.Typography.BodyMediumMedium,
+                                color = LocalDashColors.current.textPrimary
+                            )
+                        }
                     }
                 }
             }
