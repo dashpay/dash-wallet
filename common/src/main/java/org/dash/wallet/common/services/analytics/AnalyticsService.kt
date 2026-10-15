@@ -44,6 +44,12 @@ interface AnalyticsService {
     /**
      * Persists the user's choice and applies it to the analytics SDK.
      *
+     * Blocks on a synchronous disk write: never call it on the main thread.
+     * Calls are serialized process-wide (across every instance), so each one
+     * runs to completion before the next starts and the last call to finish
+     * decides what is saved and whether collection runs. Callers that need
+     * their own requests applied in order must queue them themselves.
+     *
      * @return false when the choice could not be saved; [isEnabled] keeps the
      * saved value. A failed opt-out still stops collection for the rest of this
      * process (it resumes after a restart unless a retry saves it); a failed
@@ -91,6 +97,21 @@ class AnalyticsSessionState @Inject constructor() {
      */
     @Volatile
     var unsavedOptOut: Boolean = false
+
+    /**
+     * Held for the whole of [FirebaseAnalyticsServiceImpl.setEnabled] (read the saved
+     * value, commit, restore on failure, apply collection), so writes from different
+     * instances or threads can never interleave.
+     */
+    val writeLock = Any()
+
+    /**
+     * The value saved before the write in progress, or null when none is running.
+     * commit() puts the new value in memory before it knows whether the disk write
+     * succeeded; readers on other threads see this instead of that unconfirmed value.
+     */
+    @Volatile
+    var savedBeforeWrite: Boolean? = null
 }
 
 class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
@@ -135,32 +156,39 @@ class FirebaseAnalyticsServiceImpl @VisibleForTesting constructor(
     }
 
     override val isEnabled: Boolean
-        get() = configuration.analyticsEnabled
+        get() = session.savedBeforeWrite ?: configuration.analyticsEnabled
 
     /** The saved choice, overridden by an opt-out this process could not save. */
     private val isCollecting: Boolean
         get() = isEnabled && !session.unsavedOptOut
 
-    override fun setEnabled(enabled: Boolean): Boolean {
+    override fun setEnabled(enabled: Boolean): Boolean = synchronized(session.writeLock) {
         val saved = configuration.analyticsEnabled
-        // Always write, even when the value looks unchanged, so a retry reaches disk.
-        val persisted = configuration.setAnalyticsEnabled(enabled)
-        if (persisted) {
-            session.unsavedOptOut = false
-        } else {
-            Log.w("FIREBASE", "failed to persist analytics setting: $enabled")
-            // commit() updates memory even when the disk write fails; put the saved
-            // value back so memory and disk agree and every reader sees what's saved.
-            configuration.setAnalyticsEnabled(saved)
-            if (!enabled) {
-                session.unsavedOptOut = true
+        session.savedBeforeWrite = saved
+        val persisted = try {
+            // Always write, even when the value looks unchanged, so a retry reaches disk.
+            configuration.setAnalyticsEnabled(enabled).also { persisted ->
+                if (persisted) {
+                    session.unsavedOptOut = false
+                } else {
+                    Log.w("FIREBASE", "failed to persist analytics setting: $enabled")
+                    // commit() updates memory even when the disk write fails; put the saved
+                    // value back so memory and disk agree and every reader sees what's saved.
+                    configuration.setAnalyticsEnabled(saved)
+                    if (!enabled) {
+                        session.unsavedOptOut = true
+                    }
+                }
             }
+        } finally {
+            session.savedBeforeWrite = null
         }
         applyCollection(isCollecting)
-        return persisted
+        persisted
     }
 
-    override fun applyStoredSetting() = applyCollection(isCollecting)
+    // Under the write lock so it can never apply a value a concurrent write is replacing.
+    override fun applyStoredSetting() = synchronized(session.writeLock) { applyCollection(isCollecting) }
 
     private fun applyCollection(enabled: Boolean) {
         try {

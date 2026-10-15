@@ -22,7 +22,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -51,6 +61,15 @@ data class SettingsUIState(
     val analyticsAvailable: Boolean = true
 )
 
+/** A Settings analytics choice that could not be saved (one-shot; the fragment shows a Toast). */
+enum class AnalyticsSaveFailure {
+    /** The opt-out did not save: collection is off for this process only. */
+    TURNING_OFF,
+
+    /** The opt-in did not save: collection stays off. */
+    TURNING_ON
+}
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
@@ -77,6 +96,17 @@ class SettingsViewModel @Inject constructor(
             analyticsAvailable = analytics.isAvailable
         ))
     val uiState: StateFlow<SettingsUIState> = _uiState.asStateFlow()
+
+    /** Test seam: [AnalyticsService.setEnabled] blocks on a disk write and must stay off main. */
+    var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    // Mutex is FIFO, so toggles reach the service in the order the user made them.
+    private val analyticsSaveMutex = Mutex()
+    // The newest toggle; only its result may move the switch or report a failure.
+    // Touched on the main thread only (viewModelScope).
+    private var latestAnalyticsRequest = 0L
+    private val _analyticsSaveFailures = Channel<AnalyticsSaveFailure>(Channel.BUFFERED)
+    val analyticsSaveFailures: Flow<AnalyticsSaveFailure> = _analyticsSaveFailures.receiveAsFlow()
 
     init {
         // Initialize with current battery optimization status
@@ -127,13 +157,36 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * @return false when the choice could not be saved; see [AnalyticsService.setEnabled].
-     * The switch shows the saved value either way, so toggling it again retries.
+     * Saves the choice off the main thread; see [AnalyticsService.setEnabled]. The switch
+     * moves to [enabled] at once and settles on the saved value when the save finishes,
+     * so after a failure it shows the saved value and toggling it again retries. A failed
+     * save is reported through [analyticsSaveFailures].
+     *
+     * Toggles are saved one at a time in the order they were made, so the last one is
+     * also the last to be saved. Only its result updates the switch or reports a failure:
+     * an older toggle finishing while a newer one waits cannot flip the switch back.
      */
-    fun setAnalyticsEnabled(enabled: Boolean): Boolean {
-        val saved = analytics.setEnabled(enabled)
-        _uiState.update { it.copy(analyticsEnabled = analytics.isEnabled) }
-        return saved
+    fun setAnalyticsEnabled(enabled: Boolean) {
+        val request = ++latestAnalyticsRequest
+        _uiState.update { it.copy(analyticsEnabled = enabled) }
+        viewModelScope.launch {
+            // NonCancellable: a toggle made just before leaving Settings must still be
+            // saved (and stay in order) after the ViewModel is cleared.
+            val (persisted, saved) = withContext(NonCancellable) {
+                analyticsSaveMutex.withLock {
+                    withContext(ioDispatcher) { analytics.setEnabled(enabled) to analytics.isEnabled }
+                }
+            }
+            if (request != latestAnalyticsRequest) {
+                return@launch
+            }
+            _uiState.update { it.copy(analyticsEnabled = saved) }
+            if (!persisted) {
+                _analyticsSaveFailures.trySend(
+                    if (enabled) AnalyticsSaveFailure.TURNING_ON else AnalyticsSaveFailure.TURNING_OFF
+                )
+            }
+        }
     }
 
     fun updateLastBlockchainResetTime() {

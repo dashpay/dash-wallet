@@ -41,6 +41,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.more.AnalyticsSaveFailure
 import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
 import de.schildbach.wallet.ui.more.SettingsViewModel
@@ -128,7 +129,7 @@ class SettingsFragment : Fragment() {
                         }
                     },
                     onBatteryOptimizationClick = { batteryOptimization() },
-                    onAnalyticsToggle = { setAnalyticsEnabled(it) },
+                    onAnalyticsToggle = { viewModel.setAnalyticsEnabled(it) },
                     onAnalyticsInfoClick = { showAnalyticsInfo() }
                 )
                 }
@@ -240,12 +241,16 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    private fun setAnalyticsEnabled(enabled: Boolean) {
-        if (!viewModel.setAnalyticsEnabled(enabled)) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewModel.analyticsSaveFailures.observe(viewLifecycleOwner) { failure ->
             // The switch is back on the saved value, so toggling it again retries.
             Toast.makeText(
                 requireContext(),
-                if (enabled) R.string.settings_analytics_save_failed_on else R.string.settings_analytics_save_failed_off,
+                when (failure) {
+                    AnalyticsSaveFailure.TURNING_ON -> R.string.settings_analytics_save_failed_on
+                    AnalyticsSaveFailure.TURNING_OFF -> R.string.settings_analytics_save_failed_off
+                },
                 Toast.LENGTH_LONG
             ).show()
         }

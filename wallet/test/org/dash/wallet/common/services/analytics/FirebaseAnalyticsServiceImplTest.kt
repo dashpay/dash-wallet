@@ -27,6 +27,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import io.mockk.verifyOrder
 import io.mockk.verifySequence
 import org.dash.wallet.common.Configuration
 import org.junit.AfterClass
@@ -66,9 +67,11 @@ class FirebaseAnalyticsServiceImplTest {
 
     // SharedPreferences keeps an in-memory map that commit() updates even when the
     // disk write fails; `store` is that memory, `disk` what survives a restart.
-    private val store = mutableMapOf<String, Any?>()
-    private val disk = mutableMapOf<String, Any?>()
-    private var commitSucceeds = true
+    private val store: MutableMap<String, Any?> = java.util.concurrent.ConcurrentHashMap()
+    private val disk: MutableMap<String, Any?> = java.util.concurrent.ConcurrentHashMap()
+    @Volatile private var commitSucceeds = true
+    // Runs inside every commit(), before the outcome is decided (memory already updated).
+    @Volatile private var duringCommit: () -> Unit = {}
     private var session = AnalyticsSessionState()
     private lateinit var configuration: Configuration
     private lateinit var editor: SharedPreferences.Editor
@@ -81,6 +84,7 @@ class FirebaseAnalyticsServiceImplTest {
             editor
         }
         every { editor.commit() } answers {
+            duringCommit()
             if (commitSucceeds) {
                 disk.clear()
                 disk.putAll(store)
@@ -312,5 +316,117 @@ class FirebaseAnalyticsServiceImplTest {
 
         verify { firebaseAnalytics.setAnalyticsCollectionEnabled(false) }
         verify(exactly = 0) { editor.commit() }
+    }
+
+    @Test
+    fun midWrite_isEnabledReportsTheSavedValue_notTheUnconfirmedOne() {
+        // commit() puts the new value in memory before the disk write's outcome is known.
+        // A reader on another thread (logEvent, a reopened screen) must not see it.
+        configuration.setAnalyticsEnabled(false)
+        commitSucceeds = false
+        val writer = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
+        val reader = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
+        var seenMidWrite: Boolean? = null
+        duringCommit = {
+            seenMidWrite = reader.isEnabled
+            reader.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+        }
+
+        assertFalse(writer.setEnabled(true))
+
+        assertEquals("an opt-in still being written is not yet saved", false, seenMidWrite)
+        verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
+        assertFalse(reader.isEnabled)
+    }
+
+    @Test
+    fun concurrentWrites_fromTwoInstances_runOneAtATime_andTheLastToFinishWins() {
+        val first = service()
+        val second = service()
+        val firstInCommit = java.util.concurrent.CountDownLatch(1)
+        val releaseFirst = java.util.concurrent.CountDownLatch(1)
+        val commits = java.util.Collections.synchronizedList(mutableListOf<String>())
+        duringCommit = {
+            val name = Thread.currentThread().name
+            commits += "start $name"
+            if (name == "first") {
+                firstInCommit.countDown()
+                releaseFirst.await()
+            }
+            commits += "end $name"
+        }
+        var firstResult: Boolean? = null
+        var secondResult: Boolean? = null
+        val firstThread = Thread({ firstResult = first.setEnabled(false) }, "first")
+        val secondThread = Thread({ secondResult = second.setEnabled(true) }, "second")
+
+        firstThread.start()
+        firstInCommit.await()
+        secondThread.start()
+        // The second write must wait on the process-wide lock, not reach commit().
+        while (secondThread.state != Thread.State.BLOCKED) {
+            assertTrue("second write finished while the first held the lock", secondThread.isAlive)
+            Thread.yield()
+        }
+        assertEquals(listOf("start first"), commits.toList())
+        releaseFirst.countDown()
+        firstThread.join()
+        secondThread.join()
+
+        assertEquals(listOf("start first", "end first", "start second", "end second"), commits.toList())
+        assertEquals(true, firstResult)
+        assertEquals(true, secondResult)
+        assertTrue("memory", configuration.analyticsEnabled)
+        assertEquals("disk", true, disk[Configuration.PREFS_KEY_ANALYTICS_ENABLED])
+        assertTrue(first.isEnabled)
+        assertTrue(second.isEnabled)
+        assertFalse(session.unsavedOptOut)
+        verifyOrder {
+            firebaseAnalytics.setAnalyticsCollectionEnabled(false)
+            firebaseAnalytics.setAnalyticsCollectionEnabled(true)
+        }
+    }
+
+    @Test
+    fun concurrentWrites_aFailedOptOutFinishingLast_keepsCollectionOff() {
+        val optIn = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
+        val optOut = FirebaseAnalyticsServiceImpl(configuration, session, isDebug = false)
+        configuration.setAnalyticsEnabled(false)
+        val optInInCommit = java.util.concurrent.CountDownLatch(1)
+        val releaseOptIn = java.util.concurrent.CountDownLatch(1)
+        duringCommit = {
+            if (Thread.currentThread().name == "optIn") {
+                optInInCommit.countDown()
+                releaseOptIn.await()
+            } else {
+                commitSucceeds = false
+            }
+        }
+        val optInThread = Thread({ optIn.setEnabled(true) }, "optIn")
+        var optOutResult: Boolean? = null
+        val optOutThread = Thread({ optOutResult = optOut.setEnabled(false) }, "optOut")
+
+        optInThread.start()
+        optInInCommit.await()
+        optOutThread.start()
+        while (optOutThread.state != Thread.State.BLOCKED) {
+            assertTrue(optOutThread.isAlive)
+            Thread.yield()
+        }
+        releaseOptIn.countDown()
+        optInThread.join()
+        optOutThread.join()
+
+        assertEquals(false, optOutResult)
+        // The opt-in saved; the opt-out after it failed: on is what's saved, collection is off.
+        assertTrue("memory", configuration.analyticsEnabled)
+        assertEquals("disk", true, disk[Configuration.PREFS_KEY_ANALYTICS_ENABLED])
+        assertTrue(session.unsavedOptOut)
+        verifyOrder {
+            firebaseAnalytics.setAnalyticsCollectionEnabled(true)
+            firebaseAnalytics.setAnalyticsCollectionEnabled(false)
+        }
+        optIn.logEvent(AnalyticsConstants.Home.NAV_HOME, mapOf())
+        verify(exactly = 0) { firebaseAnalytics.logEvent(any(), any()) }
     }
 }

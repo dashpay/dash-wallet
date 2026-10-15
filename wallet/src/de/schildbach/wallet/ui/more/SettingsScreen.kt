@@ -68,7 +68,7 @@ fun SettingsScreen(
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
-        onAnalyticsToggle = onAnalyticsToggle ?: { viewModel.setAnalyticsEnabled(it); Unit },
+        onAnalyticsToggle = onAnalyticsToggle ?: { viewModel.setAnalyticsEnabled(it) },
         onAnalyticsInfoClick = onAnalyticsInfoClick
     )
 }
