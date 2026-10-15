@@ -1,0 +1,21 @@
+<!--
+  ~ Copyright 2025 Dash Core Group.
+  ~
+  ~ "usage" icon for the Settings "Share usage data" row
+  ~ (Figma file 84tUBQA9DYU1svyQx8tnbk, node 39796:13127).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+    <path
+        android:pathData="M15,2.5C5.77,2.5 2.5,5.77 2.5,15C2.5,24.23 5.77,27.5 15,27.5C24.23,27.5 27.5,24.23 27.5,15C27.5,5.77 24.23,2.5 15,2.5Z"
+        android:fillColor="#008DE4" />
+    <path
+        android:pathData="M10,18.0851L13.45,13.9601L16.55,16.5601L20,12.4351"
+        android:strokeWidth="2"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
