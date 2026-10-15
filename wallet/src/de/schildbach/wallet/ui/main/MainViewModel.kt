@@ -1047,10 +1047,13 @@ class MainViewModel @Inject constructor(
  *
  * A wallet with no shielded context ([hasShieldedContext]) can never bring
  * the runtime up, so its live zero is the honest balance — ahead of any
- * cache, which can outlive an identity reset. After a local shielded spend
- * ([balanceMaybeStale]) the cache is known-stale, so — like the More card —
- * the amount is unknown (null) until the runtime is READY again. Otherwise,
- * with no cache, the amount is unknown too.
+ * cache, which can outlive an identity reset. Otherwise, with no cache, the
+ * amount is unknown (null).
+ *
+ * After a local shielded spend ([balanceMaybeStale]) the amount is unknown
+ * until the service clears the flag (the note balance has settled) — even
+ * while READY: once the first pass completes the status stays READY through
+ * later sync passes, so READY alone does not mean the spend has settled.
  */
 internal fun homeShieldedBalance(
     status: ShieldedSyncStatus,
@@ -1059,11 +1062,11 @@ internal fun homeShieldedBalance(
     hasShieldedContext: Boolean,
     balanceMaybeStale: Boolean
 ): Dash? = when {
+    balanceMaybeStale -> null
     status == ShieldedSyncStatus.READY -> live
     // Before the cache: it survives identity resets, and without a shielded
     // context the runtime never comes up, so a cached amount would be stale.
     !hasShieldedContext -> live
-    balanceMaybeStale -> null
     cached != null -> cached
     else -> null
 }

@@ -46,8 +46,9 @@ class HomeShieldedBalanceTest {
     }
 
     @Test
-    fun `READY wins over the stale flag`() {
-        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, cached, true, true))
+    fun `READY during post-spend reconciliation is unknown`() {
+        // READY persists through later sync passes, so it does not mean the spend has settled
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.READY, live, cached, true, true))
     }
 
     @Test
