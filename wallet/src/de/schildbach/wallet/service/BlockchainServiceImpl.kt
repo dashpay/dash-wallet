@@ -655,11 +655,62 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         false
     }
 
+    /** Tracks the newest delivered start and any owed stop, for [stopSelfIfNoNewerStart]. */
+    private val selfStopGate = SelfStopGate()
+
+    /** Called synchronously at the very top of [onStartCommand]. */
+    internal fun recordStartCommand(startId: Int) {
+        selfStopGate.onStart(startId)
+    }
+
+    /**
+     * The service's own decision to stop. Never a bare `stopSelf()`, which
+     * the system honours even with a `startForegroundService()` start already
+     * queued: tearing the service down then crashes the process with
+     * ForegroundServiceDidNotStartInTimeException (see [SelfStopGate]). When
+     * a newer start is pending the stop is skipped and the service runs that
+     * command: an ordinary stop (idle, memory) is simply re-decided later,
+     * while a [mustStop] one stays owed and that command stops again
+     * ([handleWalletLifecycleCommand]). Safe from any thread.
+     *
+     * @return true when the system accepted the stop.
+     */
+    internal fun stopSelfIfNoNewerStart(reason: String, mustStop: Boolean = false): Boolean {
+        return selfStopGate.requestStop(
+            reason,
+            mustStop,
+            onRefused = { startId ->
+                log.warn(
+                    "stop ({}) with startId {} refused (a newer start is pending, or the service is " +
+                        "already gone){}",
+                    reason,
+                    startId,
+                    if (mustStop) " — the stop stays owed to the next command" else ""
+                )
+            }
+        ) { startId -> stopSelfResult(startId) }
+    }
+
+    /**
+     * The idle detector's stop (once a minute from [tickReceiver]). A refused
+     * stop needs no debt: a later tick stops the service if it is still idle.
+     */
+    internal fun onIdleVerdict() {
+        log.info("idling detected, stopping service")
+        stopSelfIfNoNewerStart("idle")
+    }
+
     /** Called on Main after initialization settles, before ordinary command handling. */
     internal fun handleWalletLifecycleCommand(action: String?): Boolean {
+        // A stop that had to happen was refused because this (newer) command
+        // was pending: stop again now that it is the newest.
+        selfStopGate.owedStopReason?.let { reason ->
+            stopSelfIfNoNewerStart(reason, mustStop = true)
+            return true
+        }
         if (action == BlockchainService.ACTION_WIPE_WALLET) {
             recordWipeRequest(action)
-            stopSelf()
+            stopSelfIfNoNewerStart("wipe wallet", mustStop = true)
             return true
         }
         // Order matters: this runs on Main.
@@ -680,7 +731,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             application.wallet == null ||
             application.isRecoveryResetPending
         ) {
-            stopSelf()
+            // Every later command repeats this check, so a refused stop needs no debt.
+            stopSelfIfNoNewerStart("wallet not initialized")
             return true
         }
         return false
@@ -1457,9 +1509,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         analyticsService.logError(Exception("Blockstore memory stalled"))
                         rescheduleService()
 
-                        // Force immediate shutdown
+                        // Force immediate shutdown. Owed when refused: the
+                        // memory-failure flag above makes this branch one-shot.
                         withContext(Dispatchers.Main) {
-                            stopSelf()
+                            stopSelfIfNoNewerStart("blockstore memory stall", mustStop = true)
                         }
                     }
                 }
@@ -2436,8 +2489,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
             }
             if (shouldStopForIdle(activityHistory, replaying)) {
-                log.info("idling detected, stopping service")
-                stopSelf()
+                onIdleVerdict()
             }
         }
 
@@ -2623,9 +2675,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         )
                     }
 
-                    // Stop the service - we cannot safely initialize with cleanup still running
+                    // Stop the service - we cannot safely initialize with cleanup still running.
+                    // initCompleted stays false, so a refused stop is retried by the next command.
                     withContext(Dispatchers.Main) {
-                        stopSelf()
+                        stopSelfIfNoNewerStart("previous cleanup stuck")
                     }
                     return@launch
                 }
@@ -2645,7 +2698,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (application.isRecoveryResetPending && !performRecoveryReset()) {
                     withContext(Dispatchers.Main) {
                         refuseWalletInitialization()
-                        stopSelf()
+                        stopSelfIfNoNewerStart("recovery reset failed")
                     }
                     return@launch
                 }
@@ -2999,7 +3052,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // ever came up from PlatformSyncService.init() (once per process,
                     // from WalletApplication). Any service teardown that stops them
                     // (release-build shutdown() -> stopSdkEngines(), reached from
-                    // onTrimMemory's low-memory stopSelf(), the idle detector, or the
+                    // onTrimMemory's low-memory stop, the idle detector, or the
                     // Android 15 FGS timeout) therefore killed L1 sync for the rest
                     // of the process: no incoming transactions, the sync UI stuck at
                     // "syncing", and sends/top-ups failing with "SPV client not
@@ -3036,7 +3089,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 // Service is in a broken state - stop it gracefully
                 handler.post {
-                    stopSelf()
+                    stopSelfIfNoNewerStart("initialization failed")
                 }
             }
         }
@@ -3171,7 +3224,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        log.info(".onStartCommand($intent)")
+        // First, before anything else: from here on the service's own stops
+        // include this start (see stopSelfIfNoNewerStart).
+        recordStartCommand(startId)
+        log.info(".onStartCommand($intent, startId=$startId)")
         intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
             log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
             // A periodic fire into a running service is not a service start, so
@@ -3211,6 +3267,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         //
         // QA reported it as "crash on opening"; it actually fired while the app
         // sat idle, 12 hours before the wallet was next opened.
+        //
+        // A second shape of the same race (12.0.0-beta 39, 06:38:49) crashed
+        // even with this call in place: the idle tick's bare stopSelf() ran
+        // while the alarm's start was already queued, and the system tore the
+        // service down with the foreground promise still open — that crashes
+        // at once, before this line runs. Hence the stop id recorded above
+        // and stopSelfIfNoNewerStart for every stop the service decides on.
         //
         // Safe here: Android guarantees `onCreate()` has RETURNED before
         // `onStartCommand()` runs, and Hilt injects `notificationService` in
@@ -3260,7 +3323,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     if (!sdkRescanOwedForReset) {
                         log.warn("no SDK replay owed for blockchain reset; rescan databases will be kept")
                     }
-                    stopSelf()
+                    // The reset happens on shutdown, so a refused stop stays owed.
+                    stopSelfIfNoNewerStart("reset blockchain", mustStop = true)
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
@@ -3596,7 +3660,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info("onTrimMemory({}) called", level)
         if (shouldStopForMemoryPressure(level)) {
             log.warn("memory pressure (onTrimMemory level {}), stopping service", level)
-            stopSelf()
+            // A refused stop needs no debt: a newer start is about to run, and
+            // the next trim callback or idle tick re-decides.
+            stopSelfIfNoNewerStart("memory pressure")
         }
     }
 
@@ -3604,18 +3670,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onTimeout(startId: Int, fgsType: Int) {
         log.info("onTimeoutCalled({}, {})", startId, fgsType)
         log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
-        
+
+        // Android 15 crashes a timed-out dataSync service that is still in the
+        // foreground a few seconds later (ForegroundServiceDidNotStopInTimeException).
+        // Leave the foreground FIRST: per ActiveServices (android15-release and
+        // main), stopForeground runs maybeStopFgsTimeoutLocked, which removes
+        // SERVICE_FGS_CRASH_TIMEOUT_MSG — so this alone meets the deadline.
+        // The stop itself then goes through stopSelfIfNoNewerStart like every
+        // other self-stop: a bare stopSelf() with an alarm's foreground start
+        // queued is the ForegroundServiceDidNotStartInTimeException teardown.
+        // That queued start is safe too: its startForeground() clears
+        // fgRequired before the "time limit already exhausted" refusal is
+        // thrown (caught in startForegroundAndCatch), and the owed stop then
+        // stops the service from that command.
+        // Before the timeout notification: it reuses the sync notification's id,
+        // which REMOVE would otherwise cancel.
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            foregroundService = ForegroundService.NONE
+        } catch (e: Exception) {
+            log.error("Error leaving the foreground on timeout", e)
+        }
+
         // Show notification about the timeout
         showTimeoutNotification()
-        
-        // Android 15 requires us to call stopSelf() within a few seconds
-        // when onTimeout is called for dataSync services
+
         try {
-            stopSelf()
+            stopSelfIfNoNewerStart("fgs timeout", mustStop = true)
         } catch (e: Exception) {
             log.error("Error stopping service on timeout", e)
         }
-        
+
         super.onTimeout(startId, fgsType)
     }
 
