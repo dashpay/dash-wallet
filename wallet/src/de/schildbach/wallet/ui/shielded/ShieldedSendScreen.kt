@@ -39,6 +39,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -288,6 +289,8 @@ private fun AddressField(
                 value = address,
                 onValueChange = onAddressChanged,
                 textStyle = MyTheme.Typography.BodyMedium.copy(color = LocalDashColors.current.textPrimary),
+                // BasicTextField's default cursor is black; match AddressField.
+                cursorBrush = SolidColor(LocalDashColors.current.textPrimary),
                 maxLines = 3,
                 modifier = Modifier
                     .weight(1f)
