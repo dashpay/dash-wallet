@@ -1145,6 +1145,12 @@ class ContactPaymentAddressProviderTest {
 
         @Volatile var rescanArmed: Boolean = false
 
+        /**
+         * Why the contact accounts' history is not covered yet
+         * ([ContactPaymentChainView.contactHistoryUncoveredBecause]); null: covered.
+         */
+        @Volatile var uncovered: String? = null
+
         /** Processed through the tip, or mid-scan thousands of blocks short. */
         var caughtUp: Boolean
             get() = contactChainScanState(progress, durableSyncedHeight, rescanArmed).processedThroughTip()
@@ -1159,6 +1165,7 @@ class ContactPaymentAddressProviderTest {
         override fun walletId(): String? = walletId
         override suspend fun scanState(walletId: String) =
             contactChainScanState(progress, durableSyncedHeight, rescanArmed)
+        override suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String): String? = uncovered
         override fun paysAddress(address: Address): Boolean? =
             if (readable) address.toBase58() in paid else null
     }
@@ -1536,5 +1543,178 @@ class ContactPaymentAddressProviderTest {
         val store = PaidContactAddressStore(paidFile)
         assertEquals(paidCount - 1, store.paidFrontier(contactUserId, selectedReference))
         assertTrue(keys.take(paidCount).all { store.contains(it.toBase58()) })
+    }
+
+    // ── contact-account coverage (PR #1608 review, round 11) ──
+
+    @Test
+    fun recoveredWallet_cursorsAtTheTip_contactAccountsNotCovered_contactPaymentsBlocked_untilCovered() = runBlocking {
+        // Recovered on a new device: no paid file. dashj's key 0 was paid from
+        // the lost device by a transaction funded entirely from a DIP-15
+        // receiving account (no BIP44 change). L1 sync started while contact
+        // bring-up was still running: that receiving account and our sending
+        // account to the payee are not registered, so the SDK's store has no
+        // trace of the payment — yet both cursors are at the tip.
+        val keys = List(3) { newAddress() }
+        val dashj = FakeDashjChain(keys, current = 0)
+        val paidFile = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        val view = FakeChainView(caughtUp = true).apply { uncovered = "the SDK's contact discovery has not finished" }
+        var cutover = false
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { cutover },
+            sdkAccountReader = { _, _ -> null },
+            dashjNextAddress = { _, _ -> dashj.next() },
+            dashjMarkUsed = { _, _, address -> dashj.mark(address) },
+            params = params,
+            dashjSendingCursor = { _, _ -> dashj.current },
+            paidAddresses = store,
+            chain = view
+        )
+        // A payee resolved before the cutover committed (dashj live): key 0.
+        val resolvedEarlier = provider.nextAddress(target)
+        assertEquals(keys[0], resolvedEarlier?.address)
+        cutover = true
+        var sends = 0
+        fun assertSendRefused(payment: ContactPaymentAddress?) {
+            assertThrows(ContactAddressAlreadyPaidException::class.java) {
+                runBlocking { provider.sendThenMarkUsed(payment) { sends++ } }
+            }
+        }
+
+        assertNull("contact discovery unfinished", provider.nextAddress(target))
+        assertSendRefused(resolvedEarlier)
+
+        // Discovered, but a receiving account is not registered or not yet
+        // covered by the SDK's backfill.
+        view.uncovered = "1 receiving account(s) not yet covered by the SDK's backfill record"
+        assertNull(provider.nextAddress(target))
+        assertSendRefused(resolvedEarlier)
+
+        // Covered: the SDK rewound for the account and its replay climbs.
+        view.uncovered = null
+        view.processedTo(TIP - 200_000)
+        assertNull("the covering replay has not reached the tip", provider.nextAddress(target))
+        assertSendRefused(resolvedEarlier)
+
+        assertEquals(0, sends)
+        assertFalse(store.contains(keys[0].toBase58()))
+        assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown("w1"))
+        assertTrue("dashj never served past what the store could vouch for", dashj.marks.isEmpty())
+
+        // The replay reaches the tip and has imported the payment.
+        view.paid += keys[0].toBase58()
+        view.processedTo(TIP)
+        assertSendRefused(resolvedEarlier)
+        val next = provider.nextAddress(target)
+        assertEquals(keys[1], next?.address)
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown("w1"))
+        provider.sendThenMarkUsed(next) { sends++ }
+        assertEquals(1, sends)
+    }
+
+    private val ourIdBytes = ByteArray(32) { 1 }
+    private val contactA = ByteArray(32) { 2 }
+    private val contactB = ByteArray(32) { 3 }
+    private fun hex(id: ByteArray) = org.bitcoinj.core.Utils.HEX.encode(id)
+
+    @Test
+    fun contactHistoryUncovered_needsDiscoveryAccountsAndBackfillCoverage() {
+        val a = hex(contactA)
+        val b = hex(contactB)
+        fun uncovered(
+            discovered: Boolean = true,
+            sent: Set<String> = setOf(a, b),
+            accounts: List<Pair<String, Int>> = listOf(a to 0, b to 0),
+            coverSet: Map<Pair<String, Int>, Long>? = mapOf((a to 0) to 499L, (b to 0) to 700L)
+        ) = contactHistoryUncoveredBecause(
+            discoveryCompleted = discovered,
+            sentRequestContacts = sent,
+            requestFloors = mapOf(a to 500L, b to 700L),
+            birthHeight = 100,
+            receivalAccounts = accounts,
+            coverSet = coverSet
+        )
+
+        assertNull("discovered, registered and covered", uncovered())
+        assertTrue(uncovered(discovered = false)!!.contains("discovery"))
+        assertTrue(
+            "a contact we sent a request to has no receiving account",
+            uncovered(accounts = listOf(a to 0))!!.contains("no receiving account")
+        )
+        assertTrue(uncovered(coverSet = null)!!.contains("cannot be read"))
+        assertTrue(
+            "registered after the record was written",
+            uncovered(coverSet = mapOf((a to 0) to 499L))!!.contains("not yet covered")
+        )
+        assertTrue(
+            "covered only from above the contact's earliest request",
+            uncovered(coverSet = mapOf((a to 0) to 501L, (b to 0) to 700L))!!.contains("not yet covered")
+        )
+        assertTrue(
+            "coverage is per receiving account, not per contact",
+            uncovered(
+                accounts = listOf(a to 0, a to 1, b to 0),
+                coverSet = mapOf((a to 0) to 499L, (b to 0) to 700L)
+            )!!.contains("not yet covered")
+        )
+        assertNull(
+            "no contacts: nothing to cover",
+            uncovered(sent = emptySet(), accounts = emptyList(), coverSet = emptyMap())
+        )
+        assertNull(
+            "covered from the wallet's birth checkpoint (the SDK's checkpoint for a rotated request)",
+            contactHistoryUncoveredBecause(
+                discoveryCompleted = true,
+                sentRequestContacts = setOf(a),
+                requestFloors = mapOf(a to 50L),
+                birthHeight = 100,
+                receivalAccounts = listOf(a to 0),
+                coverSet = mapOf((a to 0) to 99L)
+            )
+        )
+    }
+
+    private fun coverEntry(owner: ByteArray, contact: ByteArray, index: Int?, coveredFrom: Int): ByteArray {
+        fun le(v: Int) = ByteArray(4) { i -> (v ushr (8 * i)).toByte() }
+        return owner + contact + (index?.let(::le) ?: ByteArray(0)) + le(coveredFrom)
+    }
+
+    @Test
+    fun decodeCoverSet_readsOurEntries_andRefusesWhatItCannotDecode() {
+        val other = ByteArray(32) { 9 }
+        val blob = coverEntry(ourIdBytes, contactA, 0, 1_226_329) +
+            coverEntry(ourIdBytes, contactB, 1, 0x01020304) +
+            coverEntry(other, contactA, 0, 5)
+        assertEquals(
+            mapOf((hex(contactA) to 0) to 1_226_329L, (hex(contactB) to 1) to 0x01020304L),
+            decodeDashPayBackfillCoverSet(blob, ourIdBytes)
+        )
+        assertEquals(emptyMap<Pair<String, Int>, Long>(), decodeDashPayBackfillCoverSet(null, ourIdBytes))
+        assertEquals(emptyMap<Pair<String, Int>, Long>(), decodeDashPayBackfillCoverSet(ByteArray(0), ourIdBytes))
+        assertNull("not a whole number of entries", decodeDashPayBackfillCoverSet(blob.copyOf(blob.size - 1), ourIdBytes))
+        // A height past Int.MAX_VALUE stays unsigned.
+        assertEquals(
+            mapOf((hex(contactA) to 0) to 0xFFFF_FFFFL),
+            decodeDashPayBackfillCoverSet(coverEntry(ourIdBytes, contactA, 0, -1), ourIdBytes)
+        )
+    }
+
+    @Test
+    fun decodeCoverSet_int24ToInt26Layout_readsOnAccountIndexZero() {
+        val legacy = coverEntry(ourIdBytes, contactA, null, 1_000) + coverEntry(ourIdBytes, contactB, null, 2_000)
+        assertEquals(
+            mapOf((hex(contactA) to 0) to 1_000L, (hex(contactB) to 0) to 2_000L),
+            decodeDashPayBackfillCoverSet(legacy, ourIdBytes)
+        )
+        // 18 legacy entries (1224 bytes) are also 17 current ones: the
+        // decoding whose every owner is ours wins.
+        val ambiguous = (0 until 18).fold(ByteArray(0)) { acc, n ->
+            acc + coverEntry(ourIdBytes, ByteArray(32) { n.toByte() }, null, 1_000 + n)
+        }
+        assertEquals(1224, ambiguous.size)
+        val decoded = decodeDashPayBackfillCoverSet(ambiguous, ourIdBytes)
+        assertEquals(18, decoded?.size)
+        assertEquals(1_017L, decoded?.get(hex(ByteArray(32) { 17 }) to 0))
     }
 }

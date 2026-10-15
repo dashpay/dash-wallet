@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Utils
 import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.wallet.FriendChainAccess
 import org.dashfoundation.dashsdk.persistence.DashDatabase
@@ -227,26 +228,143 @@ interface ContactPaymentChainView {
     suspend fun scanState(walletId: String): ContactChainScanState?
 
     /**
+     * Why the SDK cannot yet vouch that every earlier transaction of
+     * [ourUserId]'s DIP-15 contact accounts in [walletId] is one its scan
+     * tested, or null when it can ([contactHistoryUncoveredBecause]): contact
+     * discovery finished, a receiving account registered for every contact
+     * we sent a request to, and each of them in the SDK's durable backfill
+     * record. That record vouches for the blocks from each account's
+     * checkpoint up to the store's synced height, so the caller still needs
+     * [scanState] processed through the tip — read AFTER this, so a rewind
+     * for an account registered in between shows as a lower height.
+     */
+    suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String): String?
+
+    /**
      * Whether a transaction in the SDK's store pays [address] (an output to
      * it); null when the store cannot be read. Blocking.
      */
     fun paysAddress(address: Address): Boolean?
 
     companion object {
-        /** Tests' default: processed through the tip, nothing paid on chain. */
+        /** Tests' default: processed through the tip and covered, nothing paid on chain. */
         internal val NOTHING_PAID = object : ContactPaymentChainView {
             override fun walletId(): String = "test-wallet"
             override suspend fun scanState(walletId: String) =
                 ContactChainScanState(tipHeight = 1, processedHeight = 1, scanSettled = true)
+            override suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String): String? = null
             override fun paysAddress(address: Address): Boolean = false
         }
+    }
+}
+
+/** Size of one entry of the SDK's backfill cover set: owner, contact, account index, covered-from height. */
+private const val COVER_SET_ENTRY_SIZE = 72
+
+/** The int24–int26 layout: owner, contact, covered-from height; account index 0 implied. */
+private const val LEGACY_COVER_SET_ENTRY_SIZE = 68
+
+/**
+ * [ownerId]'s entries of the SDK's durable DashPay backfill record
+ * (`WalletEntity.dashPayBackfillCovered`): (contact id hex, receiving
+ * account index) → the height the account is covered from — every block
+ * from there up to the store's synced height was tested with the account's
+ * addresses watched. Empty for no record; null when the blob cannot be
+ * decoded. Like the SDK's own restore decoder it also reads the int24–int26
+ * layout ([LEGACY_COVER_SET_ENTRY_SIZE]); a length that fits both layouts
+ * is read as the one whose every owner is [ownerId], and as undecodable
+ * when that does not single one out.
+ */
+internal fun decodeDashPayBackfillCoverSet(blob: ByteArray?, ownerId: ByteArray): Map<Pair<String, Int>, Long>? {
+    if (blob == null || blob.isEmpty()) return emptyMap()
+    class Entry(val owner: ByteArray, val contactHex: String, val index: Int, val coveredFrom: Long)
+    fun uint32Le(offset: Int): Long =
+        (0 until 4).fold(0L) { acc, i -> acc or ((blob[offset + i].toLong() and 0xff) shl (8 * i)) }
+    fun decode(size: Int): List<Entry>? = if (blob.size % size != 0) {
+        null
+    } else {
+        (0 until blob.size / size).map { n ->
+            val at = n * size
+            Entry(
+                owner = blob.copyOfRange(at, at + 32),
+                contactHex = Utils.HEX.encode(blob.copyOfRange(at + 32, at + 64)),
+                index = if (size == COVER_SET_ENTRY_SIZE) uint32Le(at + 64).toInt() else 0,
+                coveredFrom = uint32Le(at + size - 4)
+            )
+        }
+    }
+    val current = decode(COVER_SET_ENTRY_SIZE)
+    val legacy = decode(LEGACY_COVER_SET_ENTRY_SIZE)
+    val entries = when {
+        current != null && legacy != null -> {
+            fun ours(entries: List<Entry>) = entries.all { it.owner.contentEquals(ownerId) }
+            when {
+                ours(current) && !ours(legacy) -> current
+                ours(legacy) && !ours(current) -> legacy
+                else -> return null
+            }
+        }
+        else -> current ?: legacy ?: return null
+    }
+    return entries.filter { it.owner.contentEquals(ownerId) }
+        .associate { (it.contactHex to it.index) to it.coveredFrom }
+}
+
+/**
+ * Why the SDK cannot yet vouch for [ourUserId]'s DIP-15 contact-account
+ * history, or null when it can (PR #1608 review, round 11). Reaching the tip
+ * proves the history only of the scripts the scan watched: a payment funded
+ * entirely from a DIP-15 receiving account (no BIP44 change) is in the SDK's
+ * store only if that receiving account was watched when its block was
+ * scanned — and L1 sync starts while contact bring-up is still running
+ * (it times out or fails), with discovery unfinished or account builds
+ * pending. The SDK rewinds for an account registered late (its provisioning
+ * backfill) and records each account it has covered, with the height it is
+ * covered from, in its durable backfill record. So the history is covered
+ * when:
+ * - [discoveryCompleted]: the SDK's contact discovery finished (before that
+ *   its store may list none of the contacts, and so none of the accounts);
+ * - every contact in [sentRequestContacts] (we sent a request to them, so
+ *   they may have paid us) has a receiving account in [receivalAccounts];
+ * - every receiving account is in [coverSet] (null: unreadable), covered
+ *   from no later than its earliest contact request ([requestFloors]) or the
+ *   wallet's birth checkpoint ([birthHeight] - 1), the SDK's own checkpoint
+ *   rule; nothing it receives can be older.
+ * Ids are contact identity ids in hex; receiving accounts are
+ * (contact, account index).
+ */
+internal fun contactHistoryUncoveredBecause(
+    discoveryCompleted: Boolean,
+    sentRequestContacts: Set<String>,
+    requestFloors: Map<String, Long>,
+    birthHeight: Long,
+    receivalAccounts: List<Pair<String, Int>>,
+    coverSet: Map<Pair<String, Int>, Long>?
+): String? {
+    if (!discoveryCompleted) return "the SDK's contact discovery has not finished"
+    val missing = sentRequestContacts - receivalAccounts.mapTo(HashSet()) { it.first }
+    if (missing.isNotEmpty()) {
+        return "${missing.size} contact(s) we sent a request to have no receiving account registered"
+    }
+    coverSet ?: return "the SDK's backfill record cannot be read"
+    val birthCheckpoint = (birthHeight - 1).coerceAtLeast(0L)
+    val uncovered = receivalAccounts.count { account ->
+        val coveredFrom = coverSet[account] ?: return@count true
+        coveredFrom > maxOf(birthCheckpoint, requestFloors[account.first] ?: birthCheckpoint)
+    }
+    return if (uncovered > 0) {
+        "$uncovered receiving account(s) not yet covered by the SDK's backfill record"
+    } else {
+        null
     }
 }
 
 /** [ContactPaymentChainView] over the app's SDK and its L1 sync progress. */
 internal class SdkContactPaymentChainView(
     private val sdkService: DashSdkService,
-    private val l1ShadowSyncService: L1ShadowSyncService
+    private val l1ShadowSyncService: L1ShadowSyncService,
+    /** [SdkWalletBinder.contactDiscoveryCompleted]. */
+    private val contactDiscoveryCompleted: (walletId: String) -> Boolean
 ) : ContactPaymentChainView {
     override fun walletId(): String? = sdkService.loadedWalletIds().singleOrNull()
 
@@ -266,6 +384,39 @@ internal class SdkContactPaymentChainView(
             return null
         }
         return contactChainScanState(progress, durable, rescanArmed)
+    }
+
+    override suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String): String? {
+        // Discovery first: the store read after it then holds what it fetched.
+        val discovered = contactDiscoveryCompleted(walletId)
+        val db = sdkService.databaseOrNull() ?: return "the SDK store is not available"
+        val id = walletIdFromHex(walletId) ?: return "malformed SDK wallet id"
+        return try {
+            val owner = Identifier.from(ourUserId).toBuffer()
+            val wallet = db.walletDao().getByWalletId(id) ?: return "the SDK store has no row for the wallet"
+            val requests = db.dashpayDao().getContactRequestsByOwner(owner)
+            val receival = db.accountDao()
+                .observeByWalletAndType(id, ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS)
+                .first()
+                .filter { it.userIdentityId.contentEquals(owner) }
+            contactHistoryUncoveredBecause(
+                discoveryCompleted = discovered,
+                sentRequestContacts = requests.filter { it.isOutgoing }
+                    .mapTo(HashSet()) { Utils.HEX.encode(it.contactIdentityId) },
+                requestFloors = requests.groupBy { Utils.HEX.encode(it.contactIdentityId) }
+                    .mapValues { (_, pair) -> pair.minOf { it.coreHeightCreatedAt.toLong() } },
+                birthHeight = wallet.birthHeight.toLong(),
+                receivalAccounts = receival.mapNotNull { account ->
+                    account.friendIdentityId?.let { Utils.HEX.encode(it) to account.accountIndex }
+                },
+                coverSet = decodeDashPayBackfillCoverSet(wallet.dashPayBackfillCovered, owner)
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("contact payment address: reading the SDK's contact accounts and backfill record failed", e)
+            "the SDK's contact accounts cannot be read"
+        }
     }
 
     override fun paysAddress(address: Address): Boolean? {
@@ -414,8 +565,10 @@ internal fun selectSdkContactAddress(
  * cleared: the file is not backed up, and the restored dashj chain starts at
  * an old cursor. The blockchain is the source of truth then
  * ([ContactPaymentChainView]): post-cutover no address is handed out until the
- * SDK has processed the recovered wallet's transactions through the chain tip
- * into its store ([ContactChainScanState.processedThroughTip],
+ * SDK has registered and covered every DIP-15 contact account
+ * ([ContactPaymentChainView.contactHistoryUncoveredBecause]) and processed the
+ * recovered wallet's transactions through the chain tip into its store
+ * ([ContactChainScanState.processedThroughTip],
  * [PaidContactAddressStore.paidHistoryKnown]), no candidate the SDK's
  * transaction store shows paid is ever handed out, and [sendThenMarkUsed]
  * checks the store again under its claim gate. SDK candidates the store shows
@@ -458,7 +611,8 @@ class ContactPaymentAddressProvider internal constructor(
         sdkL1SendService: SdkL1SendService,
         sdkService: DashSdkService,
         identityRepository: IdentityRepository,
-        l1ShadowSyncService: L1ShadowSyncService
+        l1ShadowSyncService: L1ShadowSyncService,
+        sdkWalletBinder: SdkWalletBinder
     ) : this(
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
         sdkAccountReader = { ourId, contactId ->
@@ -474,7 +628,7 @@ class ContactPaymentAddressProvider internal constructor(
         params = Constants.NETWORK_PARAMETERS,
         dashjSendingCursor = identityRepository::getContactSendingCursor,
         paidAddresses = PaidContactAddressStore.app(context.filesDir),
-        chain = SdkContactPaymentChainView(sdkService, l1ShadowSyncService)
+        chain = SdkContactPaymentChainView(sdkService, l1ShadowSyncService, sdkWalletBinder::contactDiscoveryCompleted)
     )
 
     /**
@@ -503,8 +657,10 @@ class ContactPaymentAddressProvider internal constructor(
 
     /**
      * Whether every earlier contact payment of the current wallet is known:
-     * recorded in [paidAddresses] since it covered the wallet, or — once the
-     * SDK has processed the wallet's transactions into its store through the
+     * recorded in [paidAddresses] since it covered the wallet, or — once every
+     * DIP-15 contact account is registered and covered by the SDK's backfill
+     * ([ContactPaymentChainView.contactHistoryUncoveredBecause]) and the SDK
+     * has processed the wallet's transactions into its store through the
      * header tip it knows, and through the tip seen when the history was first
      * found unknown ([ContactChainScanState.processedThroughTip], no
      * tolerance) — in the SDK's transaction store, which is then recorded for
@@ -527,6 +683,12 @@ class ContactPaymentAddressProvider internal constructor(
             return false
         }
         if (paidAddresses.paidHistoryKnown(walletId)) return true
+        // The tip proves the history only of the scripts the scan watched
+        // (PR #1608 review, round 11): every DIP-15 contact account must be
+        // registered and covered by the SDK's backfill first. Read before
+        // the scan state, so a rewind for an account registered in between
+        // shows there as a lower height.
+        val uncovered = chain.contactHistoryUncoveredBecause(walletId, target.ourUserId)
         val state = chain.scanState(walletId)
         // The tip seen when the history was first found unknown (in this
         // process): the store must be processed at least that far, even if
@@ -535,10 +697,10 @@ class ContactPaymentAddressProvider internal constructor(
         val floor = historyUnknownAtTip.compute(walletId) { _, seen ->
             seen ?: state?.tipHeight?.takeIf { it > 0 }
         } ?: 0L
-        if (state != null && state.processedThroughTip(floor) && chain.walletId() == walletId) {
+        if (uncovered == null && state != null && state.processedThroughTip(floor) && chain.walletId() == walletId) {
             log.info(
-                "the SDK has processed the wallet's transactions through the tip {} (first seen unknown at {}): " +
-                    "its earlier contact payments are known from now on",
+                "the SDK has processed the wallet's transactions through the tip {} (first seen unknown at {}) " +
+                    "with every contact account covered: its earlier contact payments are known from now on",
                 state.tipHeight, floor
             )
             paidAddresses.markPaidHistoryKnown(walletId)
@@ -548,10 +710,10 @@ class ContactPaymentAddressProvider internal constructor(
         log.warn(
             "contact payment address for {} (accountReference {}): the wallet's earlier contact payments are " +
                 "not known yet (recovered wallet; the SDK has processed through {} of tip {}, must reach {}, " +
-                "scan settled {})",
+                "scan settled {}; contact accounts: {})",
             target.contactUserId, target.accountReference,
             state?.processedHeight ?: "unknown", state?.tipHeight ?: "unknown",
-            maxOf(floor, state?.tipHeight ?: 0L), state?.scanSettled ?: "unknown"
+            maxOf(floor, state?.tipHeight ?: 0L), state?.scanSettled ?: "unknown", uncovered ?: "covered"
         )
         return false
     }

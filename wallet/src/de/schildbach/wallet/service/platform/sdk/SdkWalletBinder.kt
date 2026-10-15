@@ -555,6 +555,27 @@ class SdkWalletBinder internal constructor(
     private var lastProvisionAtMs = 0L
 
     /**
+     * The SDK wallet whose DashPay sweep, in this process, fetched the
+     * contact requests of at least one identity and failed for none
+     * ([contactDiscoveryCompleted]). Cleared with the bound wallet on a
+     * re-creation ([resetForWalletRecreation]).
+     */
+    @Volatile
+    private var contactDiscoveryWalletIdHex: String? = null
+
+    /**
+     * Whether contact discovery has finished for SDK wallet [walletIdHex] in
+     * this process: a provisioning pass's DashPay sweep fetched every managed
+     * identity's contact requests without an error, so the SDK's store holds
+     * every request the wallet had then — the universe of its DIP-15
+     * accounts. Before that the store can be empty or partial (a restore, a
+     * bring-up that timed out), and an empty store vouches for nothing
+     * ([ContactPaymentAddressProvider]'s recovery barrier, PR #1608 review,
+     * round 11).
+     */
+    fun contactDiscoveryCompleted(walletIdHex: String): Boolean = contactDiscoveryWalletIdHex == walletIdHex
+
+    /**
      * Forget everything a previous pass established — the shadow-state
      * recovery hook ([L1ShadowSyncService.recoverByRecreatingWallet])
      * calls this right after [DashSdkService.removeAppWallet] destroyed
@@ -580,6 +601,8 @@ class SdkWalletBinder internal constructor(
             boundWalletIdHex = null
             boundWalletFingerprint = null
             completed = false
+            // The re-created wallet's store starts empty: discovered again.
+            contactDiscoveryWalletIdHex = null
             // A re-created SDK wallet comes up at the default windows again.
             widenedWalletIdHex = null
             debtRecordedWalletIdHex = null
@@ -1050,6 +1073,9 @@ class SdkWalletBinder internal constructor(
      */
     private suspend fun runProvisioningSweep(walletId: String, identityId: ByteArray?): Boolean {
         val report = sdkService.provisionDashPayContactAccounts(walletId)
+        if (report.bound && report.syncSuccess > 0 && report.syncErrors == 0) {
+            contactDiscoveryWalletIdHex = walletId
+        }
         identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
         // The sweep is a long native op: its SDK lines sat in the
         // logcat buffer until the bridge's next 30 s / 5 min poll and

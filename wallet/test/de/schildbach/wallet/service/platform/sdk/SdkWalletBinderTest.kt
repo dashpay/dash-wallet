@@ -1490,6 +1490,33 @@ class SdkWalletBinderTest {
         assertEquals(1, sdk.provisionCalls)
     }
 
+    @Test
+    fun contactDiscovery_completedOnlyByASweepThatSyncedAnIdentityWithoutErrors() = runBlocking {
+        val sdk = readySdk()
+        var report = DashPayContactProvisionReport(
+            bound = true, syncSuccess = 0, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+        )
+        sdk.onProvision = { _ -> report }
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertFalse("no sweep yet", binder.contactDiscoveryCompleted(walletId))
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("no identity synced", binder.contactDiscoveryCompleted(walletId))
+
+        report = report.copy(syncSuccess = 1, syncErrors = 1)
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("an identity's sweep failed", binder.contactDiscoveryCompleted(walletId))
+
+        report = report.copy(syncSuccess = 1, syncErrors = 0)
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertFalse("another wallet", binder.contactDiscoveryCompleted("ff".repeat(32)))
+
+        binder.resetForWalletRecreation()
+        assertFalse("the re-created wallet's store starts empty", binder.contactDiscoveryCompleted(walletId))
+    }
+
     // ── DIP-15 coreHeight-backfill gate wiring ──────────────────────────
 
     @Test
