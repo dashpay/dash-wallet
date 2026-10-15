@@ -397,9 +397,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * That is any active (not released, not watch-expired) payment of this wallet whose engine
      * reservation is not held in this process: after a restart the engine has lost it, and the
      * engine offers no API to reserve an outpoint again, while the dashj-side locks restored by
-     * [resume] are invisible to its coin selection. A reservation older than
-     * [RESERVATION_TRUST_MS] no longer counts either, because the engine's own sweep frees it
-     * after about an hour. A store that cannot be read counts as unprotected.
+     * [resume] are invisible to its coin selection. A reservation made more than
+     * [RESERVATION_TRUST_MS] ago no longer counts either, because the engine's own sweep frees it
+     * after about an hour; its age is taken from [SdkDeferredPayment.reservedAtMs], so a preview
+     * left open before Confirm is not mistaken for a fresh one. A store that cannot be read counts as unprotected.
      *
      * Narrow on purpose: it lifts the moment the payment is committed or released.
      */
@@ -415,7 +416,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
         return pending.any { payment ->
             !payment.abandoned && !payment.watchExpired &&
                 (payment.walletId == null || walletId == null || payment.walletId == walletId) &&
-                (reservations[payment.txId] == null || now - payment.createdAt >= RESERVATION_TRUST_MS)
+                reservations[payment.txId].let { held ->
+                    // The lifetime runs from when the engine reserved the inputs, which for a
+                    // BIP70 preview is when the screen built it, not when the payment was
+                    // submitted and quarantined.
+                    held == null || now - held.reservedAtMs >= RESERVATION_TRUST_MS
+                }
         }
     }
 

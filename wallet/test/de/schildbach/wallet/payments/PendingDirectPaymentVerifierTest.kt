@@ -1046,4 +1046,23 @@ class PendingDirectPaymentVerifierTest {
 
         assertTrue(verifier.hasUnprotectedPendingPayment())
     }
+
+    @Test
+    fun `a reservation built long before its quarantine is not trusted (review 4250735551)`() = runBlocking {
+        // The preview built and reserved this payment 45 minutes ago and sat open; the quarantine
+        // happens only now, on Confirm. The engine's lifetime runs from the reservation, so this
+        // one may already be gone, and its inputs exposed, however fresh the quarantine is.
+        val tx = createTransaction()
+        val oldReservation = de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
+            txidHex = tx.txId.toString(),
+            rawTxBytes = tx.unsafeBitcoinSerialize(),
+            feeDuffs = 1_000L,
+            native = null,
+            reservedAtMs = System.currentTimeMillis() - 45 * 60_000L
+        )
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = oldReservation)
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
+
+        assertTrue(verifier.hasUnprotectedPendingPayment())
+    }
 }

@@ -475,6 +475,12 @@ class SdkDeferredPayment internal constructor(
     val rawTxBytes: ByteArray,
     val feeDuffs: Long,
     internal val native: Any?,
+    /**
+     * When the engine reserved the inputs (wall clock), i.e. when this object was built. The
+     * reservation's lifetime runs from here, not from when the payment is later submitted: a
+     * preview can sit open for a long time between the two.
+     */
+    val reservedAtMs: Long = System.currentTimeMillis(),
 )
 
 // ── Source seam ───────────────────────────────────────────────────────
