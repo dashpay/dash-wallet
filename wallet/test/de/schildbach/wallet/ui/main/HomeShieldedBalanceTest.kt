@@ -60,4 +60,9 @@ class HomeShieldedBalanceTest {
     fun `no shielded context with no cache is an honest zero, not unknown`() {
         assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, null, false))
     }
+
+    @Test
+    fun `no shielded context ignores a stale cache left by an identity reset`() {
+        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, cached, false))
+    }
 }

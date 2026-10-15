@@ -1038,10 +1038,10 @@ class MainViewModel @Inject constructor(
  * runtime is READY and during a re-scan, so only a READY balance is used
  * live; otherwise the persisted last-known (READY) balance stands in.
  *
- * With no cache the amount is unknown (null) — unless the wallet has no
- * shielded context ([hasShieldedContext]): then the runtime can never come
- * up and zero is the honest balance (the More card's rule,
- * `mapShieldedCardDisplay`).
+ * A wallet with no shielded context ([hasShieldedContext]) can never bring
+ * the runtime up, so its live zero is the honest balance — ahead of any
+ * cache, which can outlive an identity reset. Otherwise, with no cache, the
+ * amount is unknown (null).
  */
 internal fun homeShieldedBalance(
     status: ShieldedSyncStatus,
@@ -1050,8 +1050,10 @@ internal fun homeShieldedBalance(
     hasShieldedContext: Boolean
 ): Dash? = when {
     status == ShieldedSyncStatus.READY -> live
-    cached != null -> cached
+    // Before the cache: it survives identity resets, and without a shielded
+    // context the runtime never comes up, so a cached amount would be stale.
     !hasShieldedContext -> live
+    cached != null -> cached
     else -> null
 }
 
