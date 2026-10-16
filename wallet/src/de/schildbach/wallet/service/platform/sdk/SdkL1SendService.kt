@@ -1163,7 +1163,8 @@ class SdkL1SendService internal constructor(
             // and no cycle (CutoverUiDataService does not depend on this
             // service). Null means "unavailable", not "zero", so fall back
             // high rather than under-reserving.
-            DashSdkCutoverUiSource(sdkService).currentSpendableUtxoCount(walletIdHex)
+            // No walker runs for this read, so no stored net can be repaired.
+            DashSdkCutoverUiSource(sdkService, onStoredNetsRepaired = {}).currentSpendableUtxoCount(walletIdHex)
                 ?: MAYA_MAX_RESERVE_MIN_INPUTS
         },
         hasAppLockedCoinJoinOutputs = {

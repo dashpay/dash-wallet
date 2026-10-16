@@ -97,7 +97,8 @@ class SdkTxStoreWalkerTest {
         pageRows: Int = 1_000,
         tailRows: Int = 32,
         payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts,
-        onQuery: (String) -> Unit = { queryLog += it }
+        onQuery: (String) -> Unit = { queryLog += it },
+        onStoredNetsRepaired: (Int) -> Unit = {}
     ) = SdkTxStoreWalker(
         db = db,
         walletId = walletId,
@@ -105,7 +106,8 @@ class SdkTxStoreWalkerTest {
         tailRows = tailRows,
         pageThrottleMs = 0L,
         onQuery = onQuery,
-        payloadFacts = payloadFacts
+        payloadFacts = payloadFacts,
+        onStoredNetsRepaired = onStoredNetsRepaired
     )
 
     /** Deterministic 32-byte wire txid for index [n]. */
@@ -854,6 +856,71 @@ class SdkTxStoreWalkerTest {
         walker(payloadFacts = markerPayloadFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
         assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
         assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+    }
+
+    // ── Repairs are reported: the parity breakdown compares these nets ─
+    //
+    // Review, PR #1605: the write-back is the app's own, so no engine event
+    // tells the parity breakdown its stored nets moved. The walker reports
+    // every committed change of a stored net, and nothing else.
+
+    @Test
+    fun reattribution_reportsTheStoredNetsItChanged_andNothingOnTheNextPass() = runBlocking {
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        walker(payloadFacts = markerPayloadFacts, onStoredNetsRepaired = { reported += it }).walkAll { }
+        // The sweep and the drain both had their nets rewritten.
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+        assertEquals(listOf(2), reported)
+
+        // A corrected store writes nothing, so it reports nothing.
+        reported.clear()
+        walker(payloadFacts = markerPayloadFacts, onStoredNetsRepaired = { reported += it }).walkAll { }
+        assertTrue(reported.isEmpty())
+    }
+
+    @Test
+    fun reattribution_countsOnlyTheRowsItActuallyRewrote() = runBlocking {
+        // The engine rewrites the drain between the walker's read and its
+        // write: the compare-and-set misses that row, and only the sweep's
+        // net changes.
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        var rewritten = false
+        walker(
+            payloadFacts = markerPayloadFacts,
+            onQuery = { sql ->
+                if (!rewritten && sql.startsWith("UPDATE transactions")) {
+                    rewritten = true
+                    exec("UPDATE transactions SET netAmount = 49999000 WHERE txid = ?", ids.drain)
+                }
+            },
+            onStoredNetsRepaired = { reported += it }
+        ).walkAll { }
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(0, 49_999_000L, null), storedShape(ids.drain))
+        assertEquals(listOf(1), reported)
+    }
+
+    @Test
+    fun reattribution_reportsNothing_whenEveryWriteMissed() = runBlocking {
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        var rewritten = false
+        walker(
+            payloadFacts = markerPayloadFacts,
+            onQuery = { sql ->
+                if (!rewritten && sql.startsWith("UPDATE transactions")) {
+                    rewritten = true
+                    exec("UPDATE transactions SET netAmount = netAmount - 1 WHERE txid IN (?, ?)", ids.sweep, ids.drain)
+                }
+            },
+            onStoredNetsRepaired = { reported += it }
+        ).walkAll { }
+        assertEquals(Triple(0, 49_999_773L, null), storedShape(ids.sweep))
+        assertEquals(Triple(0, 49_999_137L, null), storedShape(ids.drain))
+        assertTrue(reported.isEmpty())
     }
 
     // ── Incomplete-TXO-mirror guard: no born-wrong durable stamps ─────

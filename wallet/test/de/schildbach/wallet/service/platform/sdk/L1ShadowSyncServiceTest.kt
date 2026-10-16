@@ -4127,7 +4127,28 @@ class L1ShadowSyncServiceTest {
      * run that read its inputs before the block must not publish either. The
      * same holds for a `TransactionsSwept` that removed records.
      */
-    private fun assertAnEventStopsTheFindings(historyEvent: String): Unit = runBlocking {
+    private fun assertAnEventStopsTheFindings(historyEvent: String) {
+        var forwarded: List<L1TxEvent> = emptyList()
+        assertAHistoryChangeStopsTheFindings(
+            change = { source, _ ->
+                source.eventStrings.emit(historyEvent)
+                source.awaitEventsHandled()
+            },
+            forwardedEvents = { forwarded = it }
+        )
+        assertTrue("the instant-receive feed is unchanged", forwarded.isEmpty())
+    }
+
+    /**
+     * The shared shape of [assertAnEventStopsTheFindings]: a completed run's
+     * findings are expired by [change], a run that read its inputs before it
+     * does not publish, and a run after the settle window does. The engine
+     * events forwarded meanwhile go to [forwardedEvents].
+     */
+    private fun assertAHistoryChangeStopsTheFindings(
+        change: suspend (FakeSource, L1ShadowSyncService) -> Unit,
+        forwardedEvents: (List<L1TxEvent>) -> Unit = {}
+    ): Unit = runBlocking {
         val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
         val source = breakdownSource()
         val service = service(
@@ -4153,16 +4174,15 @@ class L1ShadowSyncServiceTest {
         val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
         withTimeout(5_000) { inside.await() }
 
-        source.eventStrings.emit(historyEvent)
-        source.awaitEventsHandled()
-        assertNull("the event expires the findings", service.latestBreakdownFindings.value)
-        assertTrue("the instant-receive feed is unchanged", forwarded.isEmpty())
+        change(source, service)
+        assertNull("the change expires the findings", service.latestBreakdownFindings.value)
+        forwardedEvents(forwarded.toList())
 
         gate.complete(Unit)
         val result = withTimeout(5_000) { report.await() }
         assertNotNull("the report still gets the run's text", result.stored)
         delay(50) // let the run's completion (cadence update) finish too
-        assertNull("a run that read its inputs before the event must not publish", service.latestBreakdownFindings.value)
+        assertNull("a run that read its inputs before the change must not publish", service.latestBreakdownFindings.value)
 
         clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
         source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 3 }
@@ -4184,6 +4204,85 @@ class L1ShadowSyncServiceTest {
     @Test
     fun aSweepThatRemovesATransaction_expiresTheFindings_andFencesARunInFlight() {
         assertAnEventStopsTheFindings(transactionsSweptDebug(1))
+    }
+
+    /**
+     * Review, PR #1605: the store walker's reattribution write-back rewrites
+     * stored nets — the exact column the breakdown compares — without any
+     * engine event. A run that read the wrong net before the repair must
+     * neither keep its findings nor publish them.
+     */
+    @Test
+    fun aRepairThatChangesAStoredNet_expiresTheFindings_andFencesARunInFlight() {
+        assertAHistoryChangeStopsTheFindings(change = { _, service -> service.storedNetsRepaired(1) })
+    }
+
+    @Test
+    fun aRepairAfterACompletedBreakdown_expiresTheFindings_andReleasesTheHour() = runBlocking {
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+        val computed = checkNotNull(service.latestParityBreakdown(walletIdHex))
+
+        service.storedNetsRepaired(2)
+
+        assertNull("the findings read the nets before the repair", service.latestBreakdownFindings.value)
+        // The text stays a true account of the moment it was computed.
+        assertSameStored(expected = computed, actual = service.latestParityBreakdown(walletIdHex))
+        // Not inside the settle window…
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        // …but the hour is released: past the window the probe recomputes.
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aRepairThatChangedNothing_leavesTheFindings() = runBlocking {
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        val findings = service.latestBreakdownFindings.value
+
+        service.storedNetsRepaired(0)
+
+        assertSame(findings, service.latestBreakdownFindings.value)
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("the hour is still taken", 1, source.breakdownDashjCalls)
+        assertSame(findings, service.latestBreakdownFindings.value)
+        service.stop()
     }
 
     @Test

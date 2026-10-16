@@ -1513,9 +1513,18 @@ internal fun deferredBuildsSettled(count: Int, unchangedReads: Int): Boolean =
  */
 internal const val DEFERRED_BUILDS_SETTLED_READS = 3
 
-/** Production [CutoverUiSource]: the live SDK Room DB, reactive. */
+/**
+ * Production [CutoverUiSource]: the live SDK Room DB, reactive.
+ *
+ * @param onStoredNetsRepaired handed to every [SdkTxStoreWalker] this source
+ *        builds: called when the walker's reattribution write-back changed
+ *        stored nets. Every source that walks the store must pass
+ *        [L1ShadowSyncService.storedNetsRepaired]; only one that never walks
+ *        it may leave the no-op.
+ */
 internal class DashSdkCutoverUiSource(
-    private val service: DashSdkService
+    private val service: DashSdkService,
+    private val onStoredNetsRepaired: (Int) -> Unit
 ) : CutoverUiSource {
 
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
@@ -1752,7 +1761,7 @@ internal class DashSdkCutoverUiSource(
         // only NEW rows past the keyset watermark plus a bounded recent-tail
         // status refresh — never the whole table. Whole-wallet convergence
         // is [forEachWalletTxRecordPage] (the pipeline's 60s reconcile).
-        val walker = SdkTxStoreWalker(db, walletId)
+        val walker = SdkTxStoreWalker(db, walletId, onStoredNetsRepaired = onStoredNetsRepaired)
         walker.primeWatermarks()
         // Initial bounded emission: the recent tail, so recent statuses are
         // fresh long before the first full reconcile walk finishes.
@@ -1773,7 +1782,7 @@ internal class DashSdkCutoverUiSource(
         // between pages, cooperative — an arbitrarily large table walks in
         // O(page) memory and never blocks the pipeline's event lane (the
         // service interleaves these pages with engine events).
-        SdkTxStoreWalker(database(), walletId).walkAll(onPage)
+        SdkTxStoreWalker(database(), walletId, onStoredNetsRepaired = onStoredNetsRepaired).walkAll(onPage)
     }
 
     override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> = flow {
@@ -1788,7 +1797,7 @@ internal class DashSdkCutoverUiSource(
         // stale), per-outpoint indexed EXISTS/lookup, per-txid fresh record
         // reads, and an on-demand paged enumeration for the rare full reads.
         // Nothing O(wallet) is ever built on the per-second path.
-        val walker = SdkTxStoreWalker(db, walletId)
+        val walker = SdkTxStoreWalker(db, walletId, onStoredNetsRepaired = onStoredNetsRepaired)
         walker.primeWatermarks()
         emit(seamSnapshot(db, walker, walker.tailRecords()))
         emitAll(
@@ -2276,7 +2285,7 @@ class CutoverUiDataService internal constructor(
         sdkBindRetryService: SdkBindRetryService,
         sdkWalletBinder: SdkWalletBinder
     ) : this(
-        source = DashSdkCutoverUiSource(sdkService),
+        source = DashSdkCutoverUiSource(sdkService, l1ShadowSyncService::storedNetsRepaired),
         dashPayConfig = dashPayConfig,
         scope = scope,
         txDisplayCacheDao = txDisplayCacheDao,

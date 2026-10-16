@@ -4107,8 +4107,9 @@ class L1ShadowSyncService internal constructor(
 
     /**
      * Advanced by every wallet transaction event, every block that stored or
-     * confirmed one and every sweep that removed one
-     * ([expireParityFindingsForNewTx]);
+     * confirmed one, every sweep that removed one and every app-side repair
+     * that changed a stored net ([expireParityFindingsForNewTx],
+     * [storedNetsRepaired]);
      * under [breakdownLock]. A run that began under an older generation read a
      * history without that transaction: it may still keep its text, but it
      * must not publish findings or touch the hourly cadence, or a clean sheet
@@ -4257,7 +4258,7 @@ class L1ShadowSyncService internal constructor(
      * the LATEST event, so a burst (one event per CoinJoin record) produces
      * one run after it ends, not one per transaction.
      */
-    private fun expireParityFindingsForNewTx() {
+    private fun expireParityFindingsForNewTx(cause: String = "a new transaction") {
         val expired = synchronized(breakdownLock) {
             txHistoryGeneration++
             val hadSomething = _latestBreakdownFindings.value != null ||
@@ -4275,8 +4276,27 @@ class L1ShadowSyncService internal constructor(
         // once: its later events find nothing left (unless a run is still in
         // flight) and only extend the settle window.
         if (expired) {
-            log.info("ParityBreakdown: findings expired by a new transaction; recomputing after the settle window")
+            log.info("ParityBreakdown: findings expired by {}; recomputing after the settle window", cause)
         }
+    }
+
+    /**
+     * The app itself rewrote [count] stored transaction nets in the SDK store
+     * (`SdkTxStoreWalker`'s reattribution write-back, reached from the display
+     * pipeline and its paged reconcile walk). The breakdown compares exactly
+     * those nets, but the write is not the engine's, so no wallet event
+     * reports it: without this call a breakdown that read the wrong net kept
+     * its VALUES_DIFFER for the rest of the hour, and one that read it while
+     * the repair committed could still publish. Same invalidation as an engine
+     * event ([expireParityFindingsForNewTx]): findings cleared, generation
+     * advanced, hourly slot released, settle window. Zero changes nothing.
+     *
+     * Called synchronously after the repair's transaction has committed, from
+     * whichever thread ran it; never blocks beyond [breakdownLock].
+     */
+    fun storedNetsRepaired(count: Int) {
+        if (count <= 0) return
+        expireParityFindingsForNewTx("$count stored net(s) repaired in the SDK store")
     }
 
     /**

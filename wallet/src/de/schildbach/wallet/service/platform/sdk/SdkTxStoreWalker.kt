@@ -272,6 +272,12 @@ internal const val TX_TYPE_KIND_UNKNOWN = 0xFF
  * @param payloadFacts the [TxPayloadFacts] source for [reattributeIncomingRecord]'s
  *        internal-vs-outgoing discrimination (production: [dashjPayloadFacts];
  *        tests inject a deterministic fake).
+ * @param onStoredNetsRepaired called after [persistCorrections] commits, with
+ *        how many stored `netAmount` values it actually changed — never with
+ *        zero. Those writes are the app's own and raise no engine event, yet
+ *        the parity breakdown compares exactly that column, so production
+ *        wires this to [L1ShadowSyncService.storedNetsRepaired]. Called on
+ *        the walker's thread, after the transaction has ended.
  */
 internal class SdkTxStoreWalker(
     private val db: DashDatabase,
@@ -280,7 +286,8 @@ internal class SdkTxStoreWalker(
     private val tailRows: Int = RECENT_TAIL_ROWS,
     private val pageThrottleMs: Long = PAGE_THROTTLE_MS,
     private val onQuery: ((String) -> Unit)? = null,
-    private val payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts
+    private val payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts,
+    private val onStoredNetsRepaired: (Int) -> Unit = {}
 ) {
 
     /**
@@ -863,45 +870,60 @@ internal class SdkTxStoreWalker(
      * pass — the read path never depends on the write having landed.
      * Precedent for app-side raw writes to this store:
      * [L1ShadowSource.clearSdkL1Rows]'s reset deletes.
+     *
+     * A committed write that changed at least one stored net is reported to
+     * [onStoredNetsRepaired]: the parity breakdown read the old value, so its
+     * findings no longer describe the store. A row the compare-and-set missed,
+     * or a correction that left the net as it was, does not count.
      */
     private fun persistCorrections(corrections: List<Pair<RecordRow, L1TxUiRecord>>) {
         if (corrections.isEmpty()) return
-        try {
+        val netsChanged = try {
             val writable = db.openHelper.writableDatabase
+            val sql = "UPDATE transactions SET direction = ?, netAmount = ?, fee = ? " +
+                "WHERE txid = ? AND direction = ? AND netAmount = ?"
+            var changed = 0
             writable.beginTransaction()
             try {
-                for ((row, corrected) in corrections) {
-                    val sql = "UPDATE transactions SET direction = ?, netAmount = ?, fee = ? " +
-                        "WHERE txid = ? AND direction = ? AND netAmount = ?"
-                    onQuery?.invoke(sql)
-                    writable.execSQL(
-                        sql,
-                        arrayOf(
-                            directionCode(corrected.direction),
-                            corrected.netAmountDuffs,
-                            corrected.feeDuffs,
-                            row.wireTxid,
-                            directionCode(row.record.direction),
-                            row.record.netAmountDuffs
-                        )
-                    )
+                // One compiled statement, rebound per row: execSQL reports no
+                // row count, and only a row that matched tells whether a net moved.
+                writable.compileStatement(sql).use { update ->
+                    for ((row, corrected) in corrections) {
+                        onQuery?.invoke(sql)
+                        update.clearBindings()
+                        update.bindLong(1, directionCode(corrected.direction).toLong())
+                        update.bindLong(2, corrected.netAmountDuffs)
+                        val fee = corrected.feeDuffs
+                        if (fee == null) update.bindNull(3) else update.bindLong(3, fee)
+                        update.bindBlob(4, row.wireTxid)
+                        update.bindLong(5, directionCode(row.record.direction).toLong())
+                        update.bindLong(6, row.record.netAmountDuffs)
+                        if (update.executeUpdateDelete() > 0 &&
+                            corrected.netAmountDuffs != row.record.netAmountDuffs
+                        ) {
+                            changed++
+                        }
+                    }
                 }
                 writable.setTransactionSuccessful()
             } finally {
                 writable.endTransaction()
             }
             log.info(
-                "persisted {} reattribution correction(s) into the SDK store — these records " +
-                    "are attributed durably and will not be re-processed",
-                corrections.size
+                "persisted {} reattribution correction(s) into the SDK store ({} stored net(s) " +
+                    "changed) — these records are attributed durably and will not be re-processed",
+                corrections.size, changed
             )
+            changed
         } catch (t: Throwable) {
             log.warn(
                 "failed to persist reattribution corrections; the corrected shapes still " +
                     "served from memory, re-corrected next pass",
                 t
             )
+            0
         }
+        if (netsChanged > 0) onStoredNetsRepaired(netsChanged)
     }
 
     /**
