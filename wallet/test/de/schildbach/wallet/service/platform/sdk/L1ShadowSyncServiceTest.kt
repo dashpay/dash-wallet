@@ -2568,7 +2568,7 @@ class L1ShadowSyncServiceTest {
         // for the empty store that replaces the deleted one, and a payment made
         // before (outside the paid-address file) would look unpaid.
         val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
-        PaidContactAddressStore(paidFile).markPaidHistoryKnown(walletIdHex)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
         val store = PaidContactAddressStore(paidFile)
         val source = FakeSource(boundWalletId = walletIdHex)
         val recreator = FakeRecreator()
@@ -2603,7 +2603,7 @@ class L1ShadowSyncServiceTest {
     @Test
     fun resetShadowState_dropsThePaidHistoryMarkerBeforeTheL1Rows_andRefusesWhenItCannot() = runBlocking {
         val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
-        PaidContactAddressStore(paidFile).markPaidHistoryKnown(walletIdHex)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
         val store = PaidContactAddressStore(paidFile)
         var droppable = false
         val source = FakeSource(boundWalletId = walletIdHex)

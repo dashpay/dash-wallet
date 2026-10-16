@@ -31,6 +31,10 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
+/** [PaidContactAddressStore.markPaidHistoryKnown] with evidence read just now (no drop in between). */
+internal fun PaidContactAddressStore.markPaidHistoryKnownNow(walletId: String): Boolean =
+    markPaidHistoryKnown(walletId, paidHistoryGeneration())
+
 class PaidContactAddressStoreTest {
 
     @get:Rule
@@ -511,7 +515,7 @@ class PaidContactAddressStoreTest {
         val s = store()
         s.record("yA", target, 0)
 
-        s.markPaidHistoryKnown("w1")
+        s.markPaidHistoryKnownNow("w1")
 
         assertTrue(s.paidHistoryKnown("w1"))
         assertFalse("another SDK wallet's history is not known", s.paidHistoryKnown("w2"))
@@ -523,7 +527,7 @@ class PaidContactAddressStoreTest {
     @Test
     fun paidHistory_isUnknownAgainAfterAWalletChange_onDiskToo() {
         val s = store()
-        s.markPaidHistoryKnown("w1")
+        s.markPaidHistoryKnownNow("w1")
 
         saves.walletChanged()
 
@@ -533,7 +537,7 @@ class PaidContactAddressStoreTest {
 
     @Test
     fun paidHistory_unreadableFile_isNeverKnown() {
-        store().markPaidHistoryKnown("w1")
+        store().markPaidHistoryKnownNow("w1")
         assertTrue(file.setReadable(false))
         assumeFalse(file.canRead())
         try {
@@ -549,7 +553,7 @@ class PaidContactAddressStoreTest {
         File(dir, "x").writeText("")
         val s = PaidContactAddressStore(dir, nowMs = { now })
 
-        s.markPaidHistoryKnown("w1")
+        s.markPaidHistoryKnownNow("w1")
 
         assertTrue(s.paidHistoryKnown("w1"))
         assertFalse(PaidContactAddressStore(dir, nowMs = { now }).paidHistoryKnown("w1"))
@@ -561,7 +565,7 @@ class PaidContactAddressStoreTest {
     fun forgetPaidHistory_dropsTheMarkerOnDisk_andKeepsThePaidAddresses() {
         val s = store()
         s.record("yA", target, 0)
-        s.markPaidHistoryKnown("w1")
+        s.markPaidHistoryKnownNow("w1")
 
         assertTrue(s.forgetPaidHistory("w1"))
 
@@ -570,14 +574,14 @@ class PaidContactAddressStoreTest {
         assertFalse("the re-created wallet (same id) is not vouched for", restarted.paidHistoryKnown("w1"))
         assertEquals(setOf("yA"), restarted.paid())
         // Known again only once the rebuilt store has been processed through the tip.
-        s.markPaidHistoryKnown("w1")
+        s.markPaidHistoryKnownNow("w1")
         assertTrue(store().paidHistoryKnown("w1"))
     }
 
     @Test
     fun forgetPaidHistory_ofAnotherWallet_keepsTheMarker() {
         val s = store()
-        s.markPaidHistoryKnown("w1")
+        s.markPaidHistoryKnownNow("w1")
 
         assertTrue(s.forgetPaidHistory("w2"))
 
@@ -586,7 +590,7 @@ class PaidContactAddressStoreTest {
 
     @Test
     fun forgetPaidHistory_unreadableFile_refuses() {
-        store().markPaidHistoryKnown("w1")
+        store().markPaidHistoryKnownNow("w1")
         assertTrue(file.setReadable(false))
         assumeFalse(file.canRead())
         try {
@@ -600,7 +604,7 @@ class PaidContactAddressStoreTest {
     fun forgetPaidHistory_unwritableFile_refuses_butForgetsInMemory() {
         val dir = File(tmp.root, "locked").apply { mkdirs() }
         val locked = File(dir, PaidContactAddressStore.FILE_NAME)
-        PaidContactAddressStore(locked, nowMs = { now }).markPaidHistoryKnown("w1")
+        PaidContactAddressStore(locked, nowMs = { now }).markPaidHistoryKnownNow("w1")
         val s = PaidContactAddressStore(locked, nowMs = { now })
         assertTrue(s.paidHistoryKnown("w1"))
         assertTrue(dir.setWritable(false))
@@ -610,16 +614,55 @@ class PaidContactAddressStoreTest {
             assertFalse(s.forgetPaidHistory("w1"))
 
             assertFalse(s.paidHistoryKnown("w1"))
+            // A retry in the same process: the marker is gone from memory but
+            // still on disk, so it must write again rather than report a drop.
+            assertFalse("the write still fails", s.forgetPaidHistory("w1"))
+            assertTrue("still on disk", PaidContactAddressStore(locked, nowMs = { now }).paidHistoryKnown("w1"))
         } finally {
             dir.setWritable(true)
         }
         assertTrue("still on disk", PaidContactAddressStore(locked, nowMs = { now }).paidHistoryKnown("w1"))
+
+        // Once the write succeeds, the retry reports the drop, and it is on disk.
+        assertTrue(s.forgetPaidHistory("w1"))
+        assertFalse(PaidContactAddressStore(locked, nowMs = { now }).paidHistoryKnown("w1"))
+        assertTrue("nothing left to write", s.forgetPaidHistory("w1"))
+    }
+
+    @Test
+    fun markPaidHistoryKnown_withEvidenceReadBeforeADrop_isRefused() {
+        // A lookup reads the generation, then its evidence; the transaction
+        // store is reset (marker dropped before and after deleting it) before
+        // the lookup records the marker.
+        val s = store()
+        val generation = s.paidHistoryGeneration()
+        assertTrue(s.forgetPaidHistory("w1"))
+        assertTrue(s.forgetPaidHistory("w1"))
+
+        assertFalse(s.markPaidHistoryKnown("w1", generation))
+
+        assertFalse(s.paidHistoryKnown("w1"))
+        assertFalse(store().paidHistoryKnown("w1"))
+        // Evidence read after the reset is recorded.
+        assertTrue(s.markPaidHistoryKnown("w1", s.paidHistoryGeneration()))
+        assertTrue(store().paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun markPaidHistoryKnown_withEvidenceReadBeforeAWalletChange_isRefused() {
+        val saves = WalletSaveTracker()
+        val s = PaidContactAddressStore(file, { now }, saves)
+        val generation = s.paidHistoryGeneration()
+        saves.walletChanged()
+
+        assertFalse(s.markPaidHistoryKnown("w1", generation))
+        assertFalse(s.paidHistoryKnown("w1"))
     }
 
     @Test
     fun paidHistoryLine_isNotReadAsAnEntryOrFrontier() {
         val s = store()
-        s.markPaidHistoryKnown("w1")
+        s.markPaidHistoryKnownNow("w1")
         s.record("yA", target, 2)
 
         val restarted = store()

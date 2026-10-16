@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Utils
 import org.bitcoinj.params.DevNetParams
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
@@ -805,7 +806,10 @@ class DashSdkServiceImpl @Inject constructor(
      * `syncContactRequests` (Rust `sync_contact_requests`) is the same fetch
      * the sweep starts with; unlike `dashPaySyncNow` it runs no
      * `reconcile_dashpay_rescan`, so the synced height is left alone. It throws
-     * when not one identity's requests could be read.
+     * only when not one identity's requests could be read: a failed fetch of
+     * the SENT requests, or a request it could not store, still returns
+     * normally (the SDK's `ContactSyncReport` that would say so is not exposed
+     * to Kotlin in the pinned SDK).
      */
     override suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean {
         ensureStarted()
@@ -1096,6 +1100,27 @@ class DashSdkServiceImpl @Inject constructor(
      * ([ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS]), matched by their
      * `friendIdentityId`. Never throws — null means "unavailable".
      */
+    override suspend fun readDashPayContactRequests(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): StoredDashPayContactRequests? = try {
+        databaseOrNull()?.let { database ->
+            val dao = database.dashpayDao()
+            val requests = dao.getContactRequestsByOwner(ownerIdentityId)
+            fun hex(ids: List<ByteArray>) = ids.mapTo(HashSet()) { Utils.HEX.encode(it) }
+            StoredDashPayContactRequests(
+                outgoing = hex(requests.filter { it.isOutgoing }.map { it.contactIdentityId }),
+                incoming = hex(requests.filterNot { it.isOutgoing }.map { it.contactIdentityId }),
+                ignored = hex(dao.getIgnoredSendersByOwner(ownerIdentityId).map { it.ignoredSenderId })
+            )
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to read the DashPay contact requests of SDK wallet {}…", walletIdHex.take(8), e)
+        null
+    }
+
     override suspend fun readDashPayReceivalCoverage(
         walletIdHex: String,
         ownerIdentityId: ByteArray

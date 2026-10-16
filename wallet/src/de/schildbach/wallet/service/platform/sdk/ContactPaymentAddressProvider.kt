@@ -683,6 +683,10 @@ class ContactPaymentAddressProvider internal constructor(
             return false
         }
         if (paidAddresses.paidHistoryKnown(walletId)) return true
+        // Before any evidence is read: a reset or re-creation that drops the
+        // marker while this lookup holds evidence about the old transaction
+        // store makes the promotion below a no-op (PR #1608 review, round 13).
+        val generation = paidAddresses.paidHistoryGeneration()
         // The tip proves the history only of the scripts the scan watched
         // (PR #1608 review, round 11): every DIP-15 contact account must be
         // registered and covered by the SDK's backfill first. Read before
@@ -698,14 +702,21 @@ class ContactPaymentAddressProvider internal constructor(
             seen ?: state?.tipHeight?.takeIf { it > 0 }
         } ?: 0L
         if (uncovered == null && state != null && state.processedThroughTip(floor) && chain.walletId() == walletId) {
-            log.info(
-                "the SDK has processed the wallet's transactions through the tip {} (first seen unknown at {}) " +
-                    "with every contact account covered: its earlier contact payments are known from now on",
-                state.tipHeight, floor
+            if (paidAddresses.markPaidHistoryKnown(walletId, generation)) {
+                log.info(
+                    "the SDK has processed the wallet's transactions through the tip {} (first seen unknown at {}) " +
+                        "with every contact account covered: its earlier contact payments are known from now on",
+                    state.tipHeight, floor
+                )
+                historyUnknownAtTip.remove(walletId)
+                return true
+            }
+            log.warn(
+                "contact payment address for {} (accountReference {}): the SDK's transaction store was reset " +
+                    "while its scan state was being read; the wallet's earlier contact payments are not known yet",
+                target.contactUserId, target.accountReference
             )
-            paidAddresses.markPaidHistoryKnown(walletId)
-            historyUnknownAtTip.remove(walletId)
-            return true
+            return false
         }
         log.warn(
             "contact payment address for {} (accountReference {}): the wallet's earlier contact payments are " +

@@ -1162,9 +1162,15 @@ class ContactPaymentAddressProviderTest {
             durableSyncedHeight = height
         }
 
+        /** Runs inside [scanState] before it answers: a test pauses a lookup here. */
+        @Volatile var duringScanState: (suspend () -> Unit)? = null
+
         override fun walletId(): String? = walletId
-        override suspend fun scanState(walletId: String) =
-            contactChainScanState(progress, durableSyncedHeight, rescanArmed)
+        override suspend fun scanState(walletId: String): ContactChainScanState {
+            val state = contactChainScanState(progress, durableSyncedHeight, rescanArmed)
+            duringScanState?.invoke()
+            return state
+        }
         override suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String): String? = uncovered
         override fun paysAddress(address: Address): Boolean? =
             if (readable) address.toBase58() in paid else null
@@ -1212,6 +1218,42 @@ class ContactPaymentAddressProviderTest {
         // tip again (a later block not scanned yet).
         view.caughtUp = false
         assertEquals(sdkPool[1], provider().nextAddress(target)?.address)
+    }
+
+    @Test
+    fun recoveredWallet_aResetWhileAPromotionIsPaused_doesNotMarkTheClearedStore() = runBlocking {
+        // A lookup reads full coverage and a through-tip scan state, then is
+        // descheduled. The shadow reset (or a wallet re-creation, same id)
+        // drops the marker, deletes the SDK's transaction store and drops it
+        // again. The lookup resumes with evidence about the deleted store and
+        // must not record the marker for the empty one (PR #1608 review, round 13).
+        val paidFile = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        val view = FakeChainView(caughtUp = true)
+        val paused = CompletableDeferred<Unit>()
+        val resume = CompletableDeferred<Unit>()
+        view.duringScanState = {
+            paused.complete(Unit)
+            resume.await()
+        }
+        val provider = restartedProvider(FakeDashjChain(sdkPool, current = 0), paidFile, account(), store, view)
+
+        val lookup = async(Dispatchers.Default) { provider.nextAddress(target) }
+        paused.await()
+        assertTrue("dropped before the store is deleted", store.forgetPaidHistory("w1"))
+        view.caughtUp = false // the store is rebuilt from the birth height
+        assertTrue("dropped again after", store.forgetPaidHistory("w1"))
+        view.duringScanState = null
+        resume.complete(Unit)
+
+        assertNull(lookup.await())
+        assertFalse(store.paidHistoryKnown("w1"))
+        assertFalse("not on disk", PaidContactAddressStore(paidFile).paidHistoryKnown("w1"))
+
+        // The rebuilt store, once through the tip, is promoted as usual.
+        view.caughtUp = true
+        assertEquals(sdkPool[1], provider.nextAddress(target)?.address)
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown("w1"))
     }
 
     @Test

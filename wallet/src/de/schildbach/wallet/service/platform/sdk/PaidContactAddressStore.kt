@@ -214,6 +214,14 @@ class PaidContactAddressStore(
      */
     private var historyWalletId: String? = null
 
+    /**
+     * Bumped whenever the marker is dropped ([forgetPaidHistory],
+     * [onWalletChanged]): evidence read before a drop is about a transaction
+     * store that has since been deleted or replaced, so it must not record
+     * the marker again ([markPaidHistoryKnown]). In memory only.
+     */
+    private var historyGeneration = 0L
+
     /** The last write failed: the next change, or [sent], writes again. */
     private var unwritten = false
 
@@ -468,6 +476,7 @@ class PaidContactAddressStore(
             // unknown until the SDK has processed it through the tip.
             val hadHistory = historyWalletId != null
             historyWalletId = null
+            historyGeneration++
             if (map.isNotEmpty() || hadHistory) {
                 log.info("the wallet changed; {} paid contact address(es) wait for the new wallet's dashj", map.size)
                 write(map)
@@ -498,19 +507,36 @@ class PaidContactAddressStore(
     }
 
     /**
+     * The marker's generation: read it BEFORE reading the evidence that the
+     * paid-address history is known, and pass it to [markPaidHistoryKnown].
+     */
+    fun paidHistoryGeneration(): Long = synchronized(lock) { historyGeneration }
+
+    /**
      * The SDK has processed [walletId] through the chain tip: its transaction
      * store holds every payment made before this store began covering the
      * wallet, so the paid-address history is known from now on (see
      * [paidHistoryKnown]). Written at once; a failed write keeps it in memory
      * for this process (the next one waits for the scan again).
+     *
+     * Refused (false) when the marker was dropped since [generation] was read
+     * ([paidHistoryGeneration]): the evidence was then read from a transaction
+     * store that has been deleted or replaced since — under the same wallet
+     * id when the wallet was re-created (PR #1608 review, round 13). True
+     * when the marker is recorded (or already was).
      */
-    fun markPaidHistoryKnown(walletId: String) {
+    fun markPaidHistoryKnown(walletId: String, generation: Long): Boolean {
         require(walletId.isNotEmpty() && walletId.none { it.isWhitespace() }) { "invalid wallet id" }
         synchronized(lock) {
             val map = loaded()
-            if (historyWalletId == walletId) return
+            if (generation != historyGeneration) {
+                log.info("the paid-address history marker was dropped while it was being established; not recorded")
+                return false
+            }
+            if (historyWalletId == walletId) return true
             historyWalletId = walletId
             write(map)
+            return true
         }
     }
 
@@ -526,15 +552,21 @@ class PaidContactAddressStore(
      * written, or never there. False when the file cannot be read (it may
      * hold the marker, and the next process could read it) or the write
      * failed: the caller must not delete the store then. The marker is
-     * dropped in memory either way. Blocking.
+     * dropped in memory either way, and a lookup that read its evidence
+     * before this call can no longer record it ([markPaidHistoryKnown]).
+     * Blocking.
      */
     fun forgetPaidHistory(walletId: String): Boolean = synchronized(lock) {
+        historyGeneration++
         val map = loaded()
         if (readFailed) {
             log.warn("could not read {}; the paid-address history marker cannot be dropped", file)
             return false
         }
-        if (historyWalletId != walletId) return true
+        // Not in memory, but a write that failed earlier (this drop's own, or
+        // any other) may have left a marker on disk: write again until one
+        // succeeds, or a retry would report a drop that never reached disk.
+        if (historyWalletId != walletId) return !unwritten || write(map)
         historyWalletId = null
         log.info("the SDK's transaction store is being rebuilt; the paid-address history is unknown again")
         write(map)
