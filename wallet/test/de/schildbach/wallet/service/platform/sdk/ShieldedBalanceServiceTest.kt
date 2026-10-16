@@ -18,7 +18,10 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -310,6 +313,7 @@ class ShieldedBalanceServiceTest {
         }
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
         coEvery { getLastShieldedBalanceDuffs() } returns lastBalanceDuffs
+        coEvery { clearLastShieldedBalanceDuffs() } just Runs
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -1391,6 +1395,37 @@ class ShieldedBalanceServiceTest {
         // A successful local spend marks the last-known balance stale so the
         // card shows "Syncing…" rather than the now-stale amount until the
         // next completed pass (the poller, which runs only with a sweep scope).
+        assertTrue(service.shieldedBalanceMaybeStale.value)
+    }
+
+    @Test
+    fun successfulSpend_durablyInvalidatesTheLastKnownBalance() = runBlocking {
+        // spend → runtime stop / process restart: the in-memory stale flag is
+        // gone, so the persisted pre-spend balance must already be cleared —
+        // a new process then reads no cache (unknown) until a settled READY
+        // balance is persisted again.
+        val cfg = config(true, lastBalanceDuffs = 1_000_000_000L)
+        val service = ShieldedBalanceServiceImpl(
+            source = readySource(),
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp }
+        )
+        assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+        coVerify(exactly = 1) { cfg.clearLastShieldedBalanceDuffs() }
+    }
+
+    @Test
+    fun successfulSpend_staysBroadcast_whenInvalidatingTheCacheFails() = runBlocking {
+        val cfg = config(true, lastBalanceDuffs = 1_000_000_000L)
+        coEvery { cfg.clearLastShieldedBalanceDuffs() } throws IllegalStateException("datastore down")
+        val service = ShieldedBalanceServiceImpl(
+            source = readySource(),
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp }
+        )
+        assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
         assertTrue(service.shieldedBalanceMaybeStale.value)
     }
 

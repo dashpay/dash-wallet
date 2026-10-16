@@ -843,6 +843,13 @@ open class DashPayConfig @Inject constructor(
     suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
 
     /**
+     * Durably invalidate the last-known shielded balance after a local spend,
+     * so a runtime stop or process death before the new balance settles can
+     * never bring the pre-spend amount back. See [LAST_SHIELDED_BALANCE_DUFFS].
+     */
+    suspend fun clearLastShieldedBalanceDuffs() = remove(LAST_SHIELDED_BALANCE_DUFFS)
+
+    /**
      * Whether the dashj-sync DIAGNOSTIC toggle is on (see
      * [DASHJ_SYNC_DIAGNOSTIC]). Defaults to false when unset.
      */

@@ -1371,9 +1371,22 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (balancePersistJob?.isActive == true) return
         balancePersistJob = scope.launch {
             var lastPersisted: Long? = null
-            combine(observeShieldedBalance(), _shieldedSyncStatus) { balance, status ->
-                balance to status
-            }.collect { (balance, status) ->
+            combine(
+                observeShieldedBalance(),
+                _shieldedSyncStatus,
+                _shieldedBalanceMaybeStale
+            ) { balance, status, stale ->
+                Triple(balance, status, stale)
+            }.collect { (balance, status, stale) ->
+                // READY persists through post-spend sync passes, so READY
+                // alone is not settled: never persist while a local spend is
+                // reconciling (see markLocalSpendPending, which cleared the
+                // cache). Forget lastPersisted so the settled value is written
+                // even if it equals the pre-spend one.
+                if (stale) {
+                    lastPersisted = null
+                    return@collect
+                }
                 if (status != ShieldedSyncStatus.READY) return@collect
                 val duffs = balance.duffs
                 if (duffs == lastPersisted) return@collect
@@ -1902,11 +1915,22 @@ class ShieldedBalanceServiceImpl internal constructor(
      * [startSyncStatusPolling]). Only the WRITE paths call this — a plain
      * screen-entry [syncNow] refresh must NOT mark the balance stale.
      */
-    private fun markLocalSpendPending() {
+    private suspend fun markLocalSpendPending() {
         _shieldedBalanceMaybeStale.value = true
         // Restart the two-pass stability window: the flag must survive at
         // least two completed passes with an unchanged balance from here.
         lastPassBalanceCredits = null
+        // The flag is in-memory only (false in a new process, reset by
+        // tearDownReadyState), so also drop the persisted last-known balance:
+        // a runtime stop or process death before the balance settles must not
+        // resurrect the pre-spend amount. [startBalancePersistence] skips
+        // writes while stale, so only a settled balance makes it valid again.
+        // NonCancellable + best-effort: the spend already broadcast, so this
+        // must never turn a success into a failure for the caller.
+        withContext(NonCancellable) {
+            runCatching { dashPayConfig.clearLastShieldedBalanceDuffs() }
+                .onFailure { log.warn("failed to invalidate the last-known shielded balance", it) }
+        }
     }
 
     /** Balance at the last completed sync pass — see the stability gate in [startSyncStatusPolling]. */
