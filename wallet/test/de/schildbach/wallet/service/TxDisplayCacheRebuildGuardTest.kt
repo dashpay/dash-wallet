@@ -74,6 +74,7 @@ class TxDisplayCacheRebuildGuardTest {
         displayRowCount: Int
     ) = decideCacheRebuild(
         cutoverCommitted = true,
+        postCutoverCheckDone = false,
         sdkRecordCount = sdkRecordCount,
         walletTxCount = 0,
         cachedTxCount = 28_291,
@@ -99,6 +100,7 @@ class TxDisplayCacheRebuildGuardTest {
             for (groupCount in listOf(0, 321, 99_999)) {
                 val decision = decideCacheRebuild(
                     cutoverCommitted = true,
+                    postCutoverCheckDone = false,
                     sdkRecordCount = 5_100,
                     walletTxCount = walletTxCount,
                     cachedTxCount = 28_291,
@@ -183,6 +185,7 @@ class TxDisplayCacheRebuildGuardTest {
             CacheRebuildAction.NONE,
             decideCacheRebuild(
                 cutoverCommitted = true,
+                postCutoverCheckDone = false,
                 sdkRecordCount = 0,
                 walletTxCount = 0,
                 cachedTxCount = 0,
@@ -196,6 +199,7 @@ class TxDisplayCacheRebuildGuardTest {
     fun preCutoverMissingGroupCacheEntriesStillRebuildFromDashj() {
         val decision = decideCacheRebuild(
             cutoverCommitted = false,
+            postCutoverCheckDone = false,
             sdkRecordCount = null,
             walletTxCount = 500,
             cachedTxCount = 400,
@@ -210,6 +214,7 @@ class TxDisplayCacheRebuildGuardTest {
     fun preCutoverPartialDisplayCacheStillRebuildsFromDashj() {
         val decision = decideCacheRebuild(
             cutoverCommitted = false,
+            postCutoverCheckDone = false,
             sdkRecordCount = null,
             walletTxCount = 500,
             cachedTxCount = 500,
@@ -226,6 +231,7 @@ class TxDisplayCacheRebuildGuardTest {
             CacheRebuildAction.NONE,
             decideCacheRebuild(
                 cutoverCommitted = false,
+                postCutoverCheckDone = false,
                 sdkRecordCount = null,
                 walletTxCount = 500,
                 cachedTxCount = 500,
@@ -241,6 +247,7 @@ class TxDisplayCacheRebuildGuardTest {
             CacheRebuildAction.NONE,
             decideCacheRebuild(
                 cutoverCommitted = false,
+                postCutoverCheckDone = false,
                 sdkRecordCount = null,
                 walletTxCount = 0,
                 cachedTxCount = 0,
@@ -258,6 +265,7 @@ class TxDisplayCacheRebuildGuardTest {
             CacheRebuildAction.NONE,
             decideCacheRebuild(
                 cutoverCommitted = false,
+                postCutoverCheckDone = false,
                 sdkRecordCount = 99_999,
                 walletTxCount = 500,
                 cachedTxCount = 500,
@@ -282,5 +290,52 @@ class TxDisplayCacheRebuildGuardTest {
         // dashj drops its transactions on a rescan and re-adds them as the
         // replay proceeds; keeping the rows there would show stale history.
         assertTrue(rescanMayClearHistoryCache(cutoverCommitted = false))
+    }
+
+    // ── D-M-01 §4b: the post-cutover check runs once ──────────────────
+
+    /** Run 17, Wallet B: 7460 SDK records folded into 434 CoinJoin-grouped rows. */
+    private fun steadyStateCoinJoinWallet(postCutoverCheckDone: Boolean) = decideCacheRebuild(
+        cutoverCommitted = true,
+        postCutoverCheckDone = postCutoverCheckDone,
+        sdkRecordCount = 7_460,
+        walletTxCount = 0,
+        cachedTxCount = 7_461,
+        groupCount = 434,
+        displayRowCount = 434
+    )
+
+    @Test
+    fun firstPostCutoverCheckOnACoinJoinWalletRequestsOneReconcile() {
+        assertEquals(
+            CacheRebuildAction.SDK_RECONCILE,
+            steadyStateCoinJoinWallet(postCutoverCheckDone = false).action
+        )
+    }
+
+    @Test
+    fun postCutoverCheckNeverRequestsAgainOnceItHasRun() {
+        // Before the latch, every sync-complete tick re-requested a full walk
+        // here, because grouped rows are always fewer than records.
+        val decision = steadyStateCoinJoinWallet(postCutoverCheckDone = true)
+        assertEquals(CacheRebuildAction.NONE, decision.action)
+        assertTrue(decision.reason.contains("already ran once"))
+    }
+
+    @Test
+    fun theLatchDoesNotTouchThePreCutoverRules() {
+        // A stale latch on a not-yet-cut-over wallet must not mute its dashj rebuild.
+        assertEquals(
+            CacheRebuildAction.DASHJ_REBUILD,
+            decideCacheRebuild(
+                cutoverCommitted = false,
+                postCutoverCheckDone = true,
+                sdkRecordCount = null,
+                walletTxCount = 500,
+                cachedTxCount = 400,
+                groupCount = 120,
+                displayRowCount = 120
+            ).action
+        )
     }
 }

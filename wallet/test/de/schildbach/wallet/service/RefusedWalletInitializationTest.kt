@@ -45,13 +45,15 @@ class RefusedWalletInitializationTest {
                 assertFalse(latch.isCompleted)
                 val command = launch(start = CoroutineStart.UNDISPATCHED) { latch.await() }
                 val cleanup = launch(start = CoroutineStart.UNDISPATCHED) { latch.await() }
-                every { service.stopSelf() } answers {
+                every { service.stopSelfResult(0) } answers {
                     assertTrue(latch.isCompleted)
                     assertFalse(ReflectionHelpers.getField<Boolean>(service, "initCompleted"))
                     assertTrue(ReflectionHelpers.getField<Boolean>(service, "deleteWalletFileOnShutdown"))
+                    true
                 }
 
                 service.refuseWalletInitialization()
+                verify(exactly = 0) { service.stopSelfResult(0) }
                 verify(exactly = 0) { service.stopSelf() }
 
                 withTimeout(1_000) {
@@ -59,7 +61,8 @@ class RefusedWalletInitializationTest {
                     cleanup.join()
                 }
                 assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_WIPE_WALLET))
-                verify(exactly = 1) { service.stopSelf() }
+                verify(exactly = 1) { service.stopSelfResult(0) }
+                verify(exactly = 0) { service.stopSelf() }
                 assertFalse(ReflectionHelpers.getField<Boolean>(service, "initCompleted"))
             } finally {
                 latch.complete(Unit)
@@ -75,7 +78,7 @@ class RefusedWalletInitializationTest {
         val application = mockk<WalletApplication>(relaxed = true)
         service.application = application
         markInitialized(service)
-        every { service.stopSelf() } answers { }
+        every { service.stopSelfResult(0) } returns true
         try {
             every { application.wallet } returns null
             every { application.isWalletLoadDegraded } returns false
@@ -90,7 +93,8 @@ class RefusedWalletInitializationTest {
             assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
             service.saveWalletOnShutdown()
             verify(exactly = 0) { application.saveWallet() }
-            verify(exactly = 2) { service.stopSelf() }
+            verify(exactly = 2) { service.stopSelfResult(0) }
+            verify(exactly = 0) { service.stopSelf() }
 
             every { application.isWalletLoadDegraded } returns false
             assertFalse(service.handleWalletLifecycleCommand(null))
@@ -112,9 +116,10 @@ class RefusedWalletInitializationTest {
         val application = mockk<WalletApplication>(relaxed = true)
         service.application = application
         every { application.isWalletLoadDegraded } returns true
-        every { service.stopSelf() } answers {
+        every { service.stopSelfResult(0) } answers {
             // Cleanup reads this flag; it must already be set when any command stops the service.
             assertTrue(ReflectionHelpers.getField<Boolean>(service, "deleteWalletFileOnShutdown"))
+            true
         }
         try {
             // onStartCommand's synchronous part, for the wipe and then a normal start.
@@ -122,7 +127,8 @@ class RefusedWalletInitializationTest {
             service.recordWipeRequest(null)
             // The normal command's coroutine resumes first and stops the service.
             assertTrue(service.handleWalletLifecycleCommand(null))
-            verify(exactly = 1) { service.stopSelf() }
+            verify(exactly = 1) { service.stopSelfResult(0) }
+            verify(exactly = 0) { service.stopSelf() }
             service.saveWalletOnShutdown()
             verify(exactly = 0) { application.saveWallet() }
         } finally {
@@ -151,7 +157,7 @@ class RefusedWalletInitializationTest {
             service.packageInfoProvider = mockk(relaxed = true)
             every { service.getDir("blockstore", any()) } returns directory
             every { coordinator.sdkOwnsL1Flow() } answers { kotlinx.coroutines.flow.flowOf(sdkOwnsL1) }
-            coEvery { binder.oweSpvRescanForRecoveryReset() } answers { sdkDebtRecorded }
+            coEvery { binder.oweSpvRescanForReset() } answers { sdkDebtRecorded }
             every { application.recordRecoveryResetFailure() } answers { ++failures }
             every { application.markRecoveryResetComplete() } answers { markerDeleted }
             coEvery { with(WalletApplicationExt) { application.clearDatabasesForRecoveryReset() } } answers {
@@ -184,10 +190,11 @@ class RefusedWalletInitializationTest {
             assertTrue(service.performRecoveryReset())
             assertFalse(blockChain.exists())
             assertFalse(headers.exists())
-            coVerify(exactly = 1) { binder.oweSpvRescanForRecoveryReset() }
+            coVerify(exactly = 1) { binder.oweSpvRescanForReset() }
             verify(exactly = 1) { application.markRecoveryResetComplete() }
             verify(exactly = 0) { application.recordRecoveryResetFailure() }
-            // Done inline, never by teardown, so it needs no stopSelf().
+            // Done inline, never by teardown, so it needs no stop.
+            verify(exactly = 0) { service.stopSelfResult(0) }
             verify(exactly = 0) { service.stopSelf() }
         }
 
@@ -220,7 +227,7 @@ class RefusedWalletInitializationTest {
     fun `recovery reset owes no SDK rescan before the cutover`() = withRecoveryReset {
         sdkOwnsL1 = false
         assertTrue(service.performRecoveryReset())
-        coVerify(exactly = 0) { binder.oweSpvRescanForRecoveryReset() }
+        coVerify(exactly = 0) { binder.oweSpvRescanForReset() }
         verify(exactly = 1) { application.markRecoveryResetComplete() }
     }
 
@@ -280,7 +287,7 @@ class RefusedWalletInitializationTest {
         }
         every { application.wallet } returns mockk()
         every { application.isWalletLoadDegraded } returns false
-        every { service.stopSelf() } answers { }
+        every { service.stopSelfResult(0) } returns true
         markInitialized(service)
         val onDisk = de.schildbach.wallet.util.RecoveryResetState.inspect
         de.schildbach.wallet.util.RecoveryResetState.inspect = {
@@ -312,7 +319,7 @@ class RefusedWalletInitializationTest {
         every { application.wallet } returns mockk()
         every { application.isWalletLoadDegraded } returns false
         every { application.isRecoveryResetPending } returns true
-        every { service.stopSelf() } answers { }
+        every { service.stopSelfResult(0) } returns true
         markInitialized(service)
         try {
             assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
@@ -349,7 +356,7 @@ class RefusedWalletInitializationTest {
                 if (retryLoading) error("entered the wallet getter during the safe-mode retry")
                 wallet
             }
-            every { service.stopSelf() } answers { }
+            every { service.stopSelfResult(0) } returns true
             try {
                 service.refuseWalletInitialization()
                 withTimeout(1_000) { latch.await() }
@@ -360,12 +367,14 @@ class RefusedWalletInitializationTest {
                 // this instance still never initialized, so it still stops.
                 retryLoading = false
                 assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
-                verify(exactly = 2) { service.stopSelf() }
+                verify(exactly = 2) { service.stopSelfResult(0) }
+                verify(exactly = 0) { service.stopSelf() }
                 verify(exactly = 0) { application.wallet }
                 // A wipe on the refused instance is still recorded and stops.
                 assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_WIPE_WALLET))
                 assertTrue(ReflectionHelpers.getField<Boolean>(service, "deleteWalletFileOnShutdown"))
-                verify(exactly = 3) { service.stopSelf() }
+                verify(exactly = 3) { service.stopSelfResult(0) }
+                verify(exactly = 0) { service.stopSelf() }
             } finally {
                 ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
                 ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()

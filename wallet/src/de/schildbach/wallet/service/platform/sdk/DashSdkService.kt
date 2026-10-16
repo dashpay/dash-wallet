@@ -163,6 +163,30 @@ data class DashPayContactDrainReport(
 }
 
 /**
+ * Outcome of [DashSdkService.backfillAddressPoolHoles] for one wallet.
+ */
+data class AddressPoolBackfillResult(
+    /** Rows inserted across every repaired pool. */
+    val inserted: Int,
+    /**
+     * Inserted rows that lay below a pool's highest stored index: the true
+     * holes, which the engine loaded the pool without. Payments to them were
+     * missed, so a nonzero count owes a rescan once the wallet is reloaded.
+     * The rest of [inserted] is the widened tail the engine already holds.
+     */
+    val holesFilled: Int,
+    /** Pools left untouched because the account key failed to reproduce their stored addresses. */
+    val poolsRefused: Int,
+    /**
+     * Widened pools with no stored rows yet: on a wallet created in this
+     * process, the SDK may not have written its accounts' initial addresses
+     * when the backfill first runs. Their window is still unpersisted, so
+     * the caller retries until this reaches zero.
+     */
+    val poolsPending: Int = 0
+)
+
+/**
  * How completely the bound SDK wallet's DIP-15 receival accounts cover its
  * established (RECEIVED-request) DashPay contacts — the drain-time
  * diagnostic that names the DARK contacts: an established contact with NO
@@ -326,6 +350,36 @@ interface DashSdkService {
      */
     suspend fun stop()
 
+    /**
+     * Reset Wallet's SDK quiescence step, run after the wallet-removal
+     * cascade and BEFORE the secrets store is verified/erased
+     * ([fencedSdkSecretsWipe]). Returns true only when no SDK-owned work can
+     * write a wallet secret any more:
+     *
+     * - every later bootstrap is refused first
+     *   ([WalletSecretWriteFence.haltSdkRuntime] — [ensureStarted] throws
+     *   [WalletWipeInProgressException] until the wipe completes), so no
+     *   restart path (binder retry, shadow-sync restart, platform sync, …)
+     *   can bring a wallet manager back;
+     * - runtime not started → true (nothing runs, nothing can start);
+     * - runtime up → ALWAYS stopped, whatever the loaded-wallet map says (the
+     *   SDK's `removeWallet` empties that map before its fallible secret
+     *   delete and its own tombstone, and the persistence handler still
+     *   derives for a wallet whose Room row survived, so an empty map proves
+     *   nothing): every loaded wallet AND every wallet id handed to
+     *   [removeAppWallet] during the wipe is tombstoned in the live
+     *   `WalletStorage` (its key stores are rejected from that moment), then
+     *   the wallet manager is closed — its native shutdown quiesces every
+     *   callback task, including the persistence deriver — and the runtime
+     *   torn down. True only when the manager reports closed. The next
+     *   [ensureStarted] after the fence is lowered bootstraps a fresh runtime
+     *   (new manager, new `WalletStorage` without the tombstones).
+     *
+     * Bounded by [timeoutMs]; false on timeout or failure, which the wipe
+     * treats as "secrets NOT erased". Default false (fail-closed) for fakes.
+     */
+    suspend fun quiesceForWalletWipe(timeoutMs: Long): Boolean = false
+
     /** The live SDK handle, or null if [ensureStarted] has not completed. */
     fun sdkOrNull(): Sdk?
 
@@ -336,6 +390,14 @@ interface DashSdkService {
      * persistence bridge.
      */
     fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
+
+    /**
+     * The running SDK's `WalletStorage` (its Keystore-encrypted secrets
+     * DataStore), or null if [ensureStarted] has not completed. For Reset
+     * Wallet's post-cascade erase check ([SdkWalletSecretsEraser]) only —
+     * secrets are read and written through the SDK's own APIs.
+     */
+    fun walletStorageOrNull(): org.dashfoundation.dashsdk.security.WalletStorage? = null
 
     /**
      * Widen the SDK wallet's address-pool gap limits to the Rust-side
@@ -360,6 +422,37 @@ interface DashSdkService {
      * the wallet isn't loaded or any present account failed.
      */
     suspend fun widenAddressWindows(walletIdHex: String): Boolean
+
+    /**
+     * Persist the address-pool rows that [widenAddressWindows] leaves in
+     * Rust memory only, so the next load rebuilds a contiguous pool.
+     *
+     * The widening derives its window without emitting the addresses to the
+     * persister, while addresses derived later during sync are persisted, so
+     * the stored pool loses every unused index of the widened window below
+     * rows that do exist. A reload then never re-derives them, and outputs
+     * paid to them stay invisible through any rescan (field case: change iOS
+     * sent to internal index 637). This inserts each missing row of the
+     * widened families, deriving it from the account key the SDK stored; it
+     * never changes or removes an existing row.
+     *
+     * Call it after a successful [widenAddressWindows]. The inserts reach the
+     * engine on the NEXT load, so filling holes owes a rescan once the wallet
+     * has been reloaded. That obligation must be durable BEFORE any hole is
+     * filled: once filled, a hole can never be found again to rebuild it.
+     * So when the plan has holes, [beforeFillingHoles] runs with their count
+     * before anything is written; it records the obligation and returns
+     * true, or returns false to leave every hole unfilled. All rows are then
+     * written in one transaction.
+     *
+     * Null when the wallet or its database is not available, the obligation
+     * could not be recorded, or the repair failed; it is safe to retry on the
+     * next bind.
+     */
+    suspend fun backfillAddressPoolHoles(
+        walletIdHex: String,
+        beforeFillingHoles: suspend (holes: Int) -> Boolean = { true }
+    ): AddressPoolBackfillResult? = null
 
     /**
      * Rewind the SDK wallet's SPV filter watermark to the wallet's birth
@@ -680,6 +773,16 @@ interface DashSdkService {
      * "none queued".
      */
     suspend fun dashPayPendingAccountBuilds(walletIdHex: String): Int?
+
+    /**
+     * Whether the contact-account-build drain on [walletIdHex] has run, has
+     * not been attempted yet this process, or was last held up by the device
+     * being locked — see [AccountBuildDrainState]. In-memory, no I/O beyond a
+     * `KeyguardManager` read. Default [AccountBuildDrainState.RAN] keeps fakes
+     * on the plain pinned-count rule.
+     */
+    fun dashPayAccountBuildDrainState(walletIdHex: String): AccountBuildDrainState =
+        AccountBuildDrainState.RAN
 
     /**
      * Read-only receival-account coverage of the wallet's established

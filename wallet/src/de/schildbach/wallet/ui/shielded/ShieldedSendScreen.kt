@@ -39,6 +39,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -52,6 +53,7 @@ import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -140,7 +142,7 @@ private fun ShieldedSendScreenContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(LocalDashColors.current.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopNavBase(
@@ -191,14 +193,14 @@ private fun ShieldedSendScreenContent(
                     uiState.showInsufficientFunds -> Text(
                         text = stringResource(R.string.shielded_error_insufficient_funds),
                         style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.red,
+                        color = LocalDashColors.current.red,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
                     uiState.submitState is ShieldedSubmitState.NotSent -> Text(
                         text = stringResource(R.string.shielded_transfer_failed),
                         style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.red,
+                        color = LocalDashColors.current.red,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -274,19 +276,21 @@ private fun AddressField(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
+            .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(16.dp))
             .padding(14.dp)
     ) {
         Text(
             text = stringResource(R.string.shielded_send_address_hint),
             style = MyTheme.Typography.BodySmall,
-            color = if (looksValid) MyTheme.Colors.textTertiary else MyTheme.Colors.red
+            color = if (looksValid) LocalDashColors.current.textTertiary else LocalDashColors.current.red
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
                 value = address,
                 onValueChange = onAddressChanged,
-                textStyle = MyTheme.Typography.BodyMedium.copy(color = MyTheme.Colors.textPrimary),
+                textStyle = MyTheme.Typography.BodyMedium.copy(color = LocalDashColors.current.textPrimary),
+                // BasicTextField's default cursor is black; match AddressField.
+                cursorBrush = SolidColor(LocalDashColors.current.textPrimary),
                 maxLines = 3,
                 modifier = Modifier
                     .weight(1f)
@@ -324,7 +328,7 @@ private fun ShieldedSendConfirmSheet(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(
-                    MyTheme.Colors.backgroundPrimary,
+                    LocalDashColors.current.backgroundPrimary,
                     RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                 )
                 .padding(bottom = 20.dp),
@@ -334,19 +338,19 @@ private fun ShieldedSendConfirmSheet(
             Text(
                 text = stringResource(R.string.shielded_confirm),
                 style = MyTheme.Typography.TitleMediumSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = LocalDashColors.current.textPrimary,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
             Text(
                 text = "${amount.toDisplayString()} Đ",
                 style = MyTheme.Typography.HeadlineLargeMedium,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
             rate?.let {
                 Text(
                     text = "~ ${amount.toFiatAt(it)?.toDisplay()}",
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textSecondary,
+                    color = LocalDashColors.current.textSecondary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -357,18 +361,18 @@ private fun ShieldedSendConfirmSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
+                    .background(LocalDashColors.current.backgroundSecondary, RoundedCornerShape(16.dp))
                     .padding(14.dp)
             ) {
                 Text(
                     text = stringResource(R.string.shielded_to),
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textTertiary
+                    color = LocalDashColors.current.textTertiary
                 )
                 Text(
                     text = address.ellipsizeAddress(head = 18, tail = 8),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textPrimary,
+                    color = LocalDashColors.current.textPrimary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }

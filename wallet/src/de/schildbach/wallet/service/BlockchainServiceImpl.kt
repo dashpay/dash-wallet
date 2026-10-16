@@ -642,12 +642,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     /**
      * The SDK half of the recovery reset: when the SDK owns L1 its filter
      * watermark must rewind, owed durably to the next bind
-     * ([SdkWalletBinder.oweSpvRescanForRecoveryReset]). True when nothing is
+     * ([SdkWalletBinder.oweSpvRescanForReset]). True when nothing is
      * owed (pre-cutover, dashj's store wipe is the whole reset) or the debt
      * is recorded. A failed ownership read counts as a failure.
      */
     private suspend fun oweSdkRescanIfCutOver(): Boolean = try {
-        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForRecoveryReset()
+        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForReset()
     } catch (e: kotlinx.coroutines.CancellationException) {
         throw e
     } catch (t: Throwable) {
@@ -655,11 +655,68 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         false
     }
 
+    /** Tracks the newest delivered start and any owed stop, for [stopSelfIfNoNewerStart]. */
+    private val selfStopGate = SelfStopGate()
+
+    /**
+     * Called synchronously in [onStartCommand], right AFTER its foreground
+     * promotion, never before (see [SelfStopGate.onStart]).
+     */
+    internal fun recordStartCommand(startId: Int) {
+        selfStopGate.onStart(startId)
+    }
+
+    /**
+     * The service's own decision to stop. Never a bare `stopSelf()`, which
+     * the system honours even with a `startForegroundService()` start already
+     * queued: tearing the service down then crashes the process with
+     * ForegroundServiceDidNotStartInTimeException (see [SelfStopGate]). When
+     * a newer start is pending the stop is skipped and the service runs that
+     * command: an ordinary stop (idle, memory) is simply re-decided later,
+     * while a [mustStop] one stays owed and that command stops again
+     * ([handleWalletLifecycleCommand]). Safe from any thread.
+     *
+     * @return true when the system accepted the stop.
+     */
+    internal fun stopSelfIfNoNewerStart(reason: String, mustStop: Boolean = false): Boolean {
+        return selfStopGate.requestStop(
+            reason,
+            mustStop,
+            onRefused = { startId ->
+                log.warn(
+                    "stop ({}) with startId {} refused (a newer start is pending, or the service is " +
+                        "already gone){}",
+                    reason,
+                    startId,
+                    if (mustStop) " — the stop stays owed to the next command" else ""
+                )
+            }
+        ) { startId -> stopSelfResult(startId) }
+    }
+
+    /**
+     * The idle detector's stop (once a minute from [tickReceiver]). A refused
+     * stop needs no debt: a later tick stops the service if it is still idle.
+     */
+    internal fun onIdleVerdict() {
+        log.info("idling detected, stopping service")
+        stopSelfIfNoNewerStart("idle")
+    }
+
     /** Called on Main after initialization settles, before ordinary command handling. */
     internal fun handleWalletLifecycleCommand(action: String?): Boolean {
+        // A stop that had to happen was refused because this (newer) command
+        // was pending: stop again now that it is the newest.
+        selfStopGate.owedStopReason?.let { reason ->
+            if (action != null) {
+                log.warn("owed stop ({}) suppresses command {}", reason, action)
+            }
+            stopSelfIfNoNewerStart(reason, mustStop = true)
+            return true
+        }
         if (action == BlockchainService.ACTION_WIPE_WALLET) {
             recordWipeRequest(action)
-            stopSelf()
+            stopSelfIfNoNewerStart("wipe wallet", mustStop = true)
             return true
         }
         // Order matters: this runs on Main.
@@ -680,7 +737,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             application.wallet == null ||
             application.isRecoveryResetPending
         ) {
-            stopSelf()
+            // Every later command repeats this check, so a refused stop needs no debt.
+            stopSelfIfNoNewerStart("wallet not initialized")
             return true
         }
         return false
@@ -938,6 +996,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Volatile
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
+    // True only when ACTION_RESET_BLOCKCHAIN durably owed an SDK replay; gates
+    // the rescan database clear (nothing else repopulates them).
+    @Volatile
+    private var sdkRescanOwedForReset = false
     // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
     @Volatile
     private var deleteWalletFileOnShutdown = false
@@ -1453,9 +1515,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         analyticsService.logError(Exception("Blockstore memory stalled"))
                         rescheduleService()
 
-                        // Force immediate shutdown
+                        // Force immediate shutdown. Owed when refused: the
+                        // memory-failure flag above makes this branch one-shot.
                         withContext(Dispatchers.Main) {
-                            stopSelf()
+                            stopSelfIfNoNewerStart("blockstore memory stall", mustStop = true)
                         }
                     }
                 }
@@ -2432,8 +2495,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
             }
             if (shouldStopForIdle(activityHistory, replaying)) {
-                log.info("idling detected, stopping service")
-                stopSelf()
+                onIdleVerdict()
             }
         }
 
@@ -2624,9 +2686,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         )
                     }
 
-                    // Stop the service - we cannot safely initialize with cleanup still running
+                    // Stop the service - we cannot safely initialize with cleanup still running.
+                    // initCompleted stays false, so a refused stop is retried by the next command.
                     withContext(Dispatchers.Main) {
-                        stopSelf()
+                        stopSelfIfNoNewerStart("previous cleanup stuck")
                     }
                     return@launch
                 }
@@ -2646,7 +2709,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (application.isRecoveryResetPending && !performRecoveryReset()) {
                     withContext(Dispatchers.Main) {
                         refuseWalletInitialization()
-                        stopSelf()
+                        stopSelfIfNoNewerStart("recovery reset failed")
                     }
                     return@launch
                 }
@@ -3000,7 +3063,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // ever came up from PlatformSyncService.init() (once per process,
                     // from WalletApplication). Any service teardown that stops them
                     // (release-build shutdown() -> stopSdkEngines(), reached from
-                    // onTrimMemory's low-memory stopSelf(), the idle detector, or the
+                    // onTrimMemory's low-memory stop, the idle detector, or the
                     // Android 15 FGS timeout) therefore killed L1 sync for the rest
                     // of the process: no incoming transactions, the sync UI stuck at
                     // "syncing", and sends/top-ups failing with "SPV client not
@@ -3037,7 +3100,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 // Service is in a broken state - stop it gracefully
                 handler.post {
-                    stopSelf()
+                    stopSelfIfNoNewerStart("initialization failed")
                 }
             }
         }
@@ -3153,26 +3216,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     /**
      * The SDK half of ACTION_RESET_BLOCKCHAIN: when the SDK owns L1
-     * (cutover committed + SDK L1 engine enabled), arm the SPV filter
-     * rescan ([SdkWalletBinder.armSpvRescanForBlockchainReset]) so the
-     * user-facing reset replays SDK history too — pre-cutover behavior is
-     * untouched (dashj's own file wipe + replay is the whole reset there,
-     * and a shadow-only SDK must not be forced through a full rescan).
-     * Never throws; a failed arm only costs the user a retried reset.
+     * (cutover committed + SDK L1 engine enabled), owe the SPV filter
+     * rescan durably ([SdkWalletBinder.oweSpvRescanForReset]) so the
+     * user-facing reset replays SDK history even when the engines stop
+     * before the in-memory rewind persists: the scan gate holds the next
+     * scan until the rewind is armed, and the debt clears only once it is
+     * durable. Pre-cutover it is a no-op (a shadow-only SDK must not be
+     * forced through a full rescan, and the dashj blockstore is no longer
+     * deleted on reset either). Never throws; returns true only when the SDK
+     * replay is owed, so the caller knows whether clearing the rescan
+     * databases is safe.
      */
-    private suspend fun armSdkRescanForResetIfCutOver() {
-        try {
-            if (!cutoverCoordinator.sdkOwnsL1Flow().first()) return
-            sdkWalletBinder.armSpvRescanForBlockchainReset()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            log.warn("SDK rescan arm for blockchain reset failed", t)
-        }
-    }
+    private suspend fun oweSdkRescanForResetIfCutOver(): Boolean =
+        BlockchainResetShutdownPolicy.oweSdkRescan(
+            sdkOwnsL1 = { cutoverCoordinator.sdkOwnsL1Flow().first() },
+            owe = { sdkWalletBinder.oweSpvRescanForReset() },
+            onFailure = { t -> log.warn("SDK rescan for blockchain reset could not be owed", t) }
+        )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        log.info(".onStartCommand($intent)")
+        // Nothing before the foreground promotion below may stop the service:
+        // this start's id is published to the self-stop gate only after it.
+        log.info(".onStartCommand($intent, startId=$startId)")
         intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
             log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
             // A periodic fire into a running service is not a service start, so
@@ -3213,6 +3278,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // QA reported it as "crash on opening"; it actually fired while the app
         // sat idle, 12 hours before the wallet was next opened.
         //
+        // A second shape of the same race (12.0.0-beta 39, 06:38:49) crashed
+        // even with this call in place: the idle tick's bare stopSelf() ran
+        // while the alarm's start was already queued, and the system tore the
+        // service down with the foreground promise still open — that crashes
+        // at once, before this line runs. Hence the stop id recorded below
+        // and stopSelfIfNoNewerStart for every stop the service decides on.
+        //
         // Safe here: Android guarantees `onCreate()` has RETURNED before
         // `onStartCommand()` runs, and Hilt injects `notificationService` in
         // `super.onCreate()` (line 1833), so the notification can be built. The
@@ -3221,6 +3293,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldPromoteToForeground(intent)) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
+        // Only now, AFTER the promotion: from here on the service's own stops
+        // use this start's id (see stopSelfIfNoNewerStart). Publishing it
+        // earlier would let a stop running off Main in that window have its
+        // stopSelfResult(startId) accepted while this start's foreground
+        // promise is still open — the same crash. A stop in the window uses
+        // the previous id and is refused instead; a must-stop then stays owed
+        // to this command, whose coroutine below reads the debt after this.
+        recordStartCommand(startId)
         recordWipeRequest(intent?.action)
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
@@ -3248,16 +3328,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
                     }
                 } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
-                    log.info("will remove blockchain on service shutdown")
+                    log.info("will reset blockchain state on service shutdown")
                     resetBlockchainOnShutdown = true
-                    // Post-cutover the dashj-store wipe below is an SDK no-op
-                    // (the engine keeps its watermark and stays SYNCED — the
-                    // field reset where "nothing happened"): also arm the SDK
-                    // filter rescan so the reset actually replays SDK history.
+                    // The dashj blockstore is kept (no dashj rescan); the
+                    // reset is the SDK filter rescan owed here plus the
+                    // database/MN-list cleanup on shutdown.
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
-                    armSdkRescanForResetIfCutOver()
-                    stopSelf()
+                    // Without an owed replay the databases are kept on
+                    // shutdown, since nothing would repopulate them.
+                    sdkRescanOwedForReset = oweSdkRescanForResetIfCutOver()
+                    if (!sdkRescanOwedForReset) {
+                        log.warn("no SDK replay owed for blockchain reset; rescan databases will be kept")
+                    }
+                    // The reset happens on shutdown, so a refused stop stays owed.
+                    // On Main, serialised with onStartCommand like the other stops.
+                    withContext(Dispatchers.Main) {
+                        stopSelfIfNoNewerStart("reset blockchain", mustStop = true)
+                    }
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
@@ -3529,12 +3617,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         lock.release()
                     }
                 }
-                if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
-                    log.info("removing blockchain")
-                    blockChainFile?.delete()
-                    headerChainFile?.delete()
+                val shutdownPlan = BlockchainResetShutdownPolicy.plan(
+                    resetBlockchainOnShutdown = resetBlockchainOnShutdown,
+                    deleteWalletFileOnShutdown = deleteWalletFileOnShutdown,
+                    sdkRescanOwedForReset = sdkRescanOwedForReset
+                )
+                if (shutdownPlan.resetMnListsAndState) {
+                    if (shutdownPlan.deleteStores) {
+                        log.info("removing blockchain")
+                        blockChainFile?.delete()
+                        headerChainFile?.delete()
+                    } else {
+                        // Rescan keeps the dashj blockstore; only the SDK replays.
+                        log.info("resetting blockchain state (keeping dashj blockstore)")
+                    }
                     resetMNLists(false)
-                    if (deleteWalletFileOnShutdown) {
+                    if (shutdownPlan.wipeWallet) {
                         log.info("removing wallet file and app data")
                         // The Kotlin-SDK engines must be provably down before the wipe
                         // deletes app data. platformSyncService.shutdown() above already
@@ -3546,9 +3644,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         // WITHOUT blocking this dispatcher thread, which is
                         // what the old runBlocking clear did.
                         application.finishWalletWipe()
-                    } else {
+                    } else if (shutdownPlan.clearRescanDatabases) {
                         //Clear the blockchain identity
                         application.clearDatabasesForRescan()
+                    } else if (shutdownPlan.keepRescanDatabases) {
+                        // No SDK replay owed and dashj keeps its stores (no
+                        // wallet.reset()), so a clear would never be refilled.
+                        log.warn("no SDK replay owed; keeping rescan databases")
                     }
                     resetBlockchainState()
                 }
@@ -3579,7 +3681,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info("onTrimMemory({}) called", level)
         if (shouldStopForMemoryPressure(level)) {
             log.warn("memory pressure (onTrimMemory level {}), stopping service", level)
-            stopSelf()
+            // A refused stop needs no debt: a newer start is about to run, and
+            // the next trim callback or idle tick re-decides.
+            stopSelfIfNoNewerStart("memory pressure")
         }
     }
 
@@ -3587,18 +3691,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onTimeout(startId: Int, fgsType: Int) {
         log.info("onTimeoutCalled({}, {})", startId, fgsType)
         log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
-        
+
+        // Android 15 crashes a timed-out dataSync service that is still in the
+        // foreground a few seconds later (ForegroundServiceDidNotStopInTimeException).
+        // Leave the foreground FIRST: per ActiveServices (android15-release and
+        // main), stopForeground runs maybeStopFgsTimeoutLocked, which removes
+        // SERVICE_FGS_CRASH_TIMEOUT_MSG — so this alone meets the deadline.
+        // The stop itself then goes through stopSelfIfNoNewerStart like every
+        // other self-stop: a bare stopSelf() with an alarm's foreground start
+        // queued is the ForegroundServiceDidNotStartInTimeException teardown.
+        // That queued start is safe too: its startForeground() clears
+        // fgRequired before the "time limit already exhausted" refusal is
+        // thrown (caught in startForegroundAndCatch), and the owed stop then
+        // stops the service from that command.
+        // Before the timeout notification: it reuses the sync notification's id,
+        // which REMOVE would otherwise cancel.
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            foregroundService = ForegroundService.NONE
+        } catch (e: Exception) {
+            log.error("Error leaving the foreground on timeout", e)
+        }
+
         // Show notification about the timeout
         showTimeoutNotification()
-        
-        // Android 15 requires us to call stopSelf() within a few seconds
-        // when onTimeout is called for dataSync services
+
         try {
-            stopSelf()
+            stopSelfIfNoNewerStart("fgs timeout", mustStop = true)
         } catch (e: Exception) {
             log.error("Error stopping service on timeout", e)
         }
-        
+
         super.onTimeout(startId, fgsType)
     }
 

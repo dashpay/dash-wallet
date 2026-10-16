@@ -179,12 +179,7 @@ internal fun reattributeIncomingRecord(
     if (net >= 0L) {
         return if (record.netAmountDuffs == net) record else record.copy(netAmountDuffs = net)
     }
-    val allInputsOurs = payload != null && payload.inputCount == spentOwnedCount
-    val fee = if (payload != null && allInputsOurs && spentOwnedDuffs >= payload.outputsTotalDuffs) {
-        spentOwnedDuffs - payload.outputsTotalDuffs
-    } else {
-        null
-    }
+    val fee = payload?.let { recoveredFeeDuffs(it, spentOwnedCount, spentOwnedDuffs) }
     val internal = fundedForeignDuffs == 0L && payload != null &&
         payload.outputsTotalDuffs == fundedOwnedDuffs
     return record.copy(
@@ -195,6 +190,76 @@ internal fun reattributeIncomingRecord(
 }
 
 /**
+ * Correct the NET of one CoinJoin mixing-round record (rust-dashcore#979
+ * shape). When a restore processes a mixing round BEFORE the transactions
+ * that funded its inputs, the engine does not yet know those inputs are the
+ * wallet's and persists the round "income-only": `netAmount = +(our
+ * outputs)` where the true net is Σout−Σin over our own coins (0 for a pure
+ * denomination round). The TXO mirror's linkage proves the truth — verified
+ * against two testnet wallets' stores, where `funded − spent`
+ * equalled the correct net for every CoinJoin row (and on #979 stores every
+ * row already matched it).
+ *
+ * Only the net changes: the direction stays [L1TxUiDirection.COINJOIN] and
+ * the stored fee stands — a mixing round's inputs are co-funded by other
+ * participants, so neither [reattributeIncomingRecord]'s direction rules nor
+ * its fee recovery apply. An already-correct record round-trips EQUAL (no
+ * persist, no log, no churn).
+ *
+ * MONOTONE — the net may only be LOWERED, never raised. Without #979 the
+ * stored net is born too high, and every additional spent mark the mirror
+ * gains only lowers the recompute, so corrections move down toward the truth.
+ * With #979 the stored net already carries full input attribution, so a
+ * recompute from a mirror whose spent marks are still incomplete (mid-restore,
+ * or an input row that never lands — the rust-dashcore#1006 class) is HIGHER
+ * and is refused: the walker never makes an engine-correct net worse.
+ * Accepted cost: a CoinJoin net stored too LOW (an output missed at the time —
+ * a different engine defect) is never raised here. Pure — host-testable.
+ */
+internal fun recomputeCoinJoinRecordNet(
+    record: L1TxUiRecord,
+    spentOwnedDuffs: Long,
+    fundedOwnedDuffs: Long
+): L1TxUiRecord {
+    if (record.direction != L1TxUiDirection.COINJOIN || spentOwnedDuffs <= 0L) return record
+    val net = fundedOwnedDuffs - spentOwnedDuffs
+    return if (net >= record.netAmountDuffs) record else record.copy(netAmountDuffs = net)
+}
+
+/**
+ * The fee this wallet paid for a transaction: `spentOwned − outputsTotal`,
+ * or null when it cannot be known. Only valid when the payload proves ALL
+ * inputs were ours (`inputCount == spentOwnedCount`) — otherwise other
+ * participants funded part of the tx (a CoinJoin round) and the difference
+ * is not our fee. Every output counts, a value-bearing OP_RETURN credit burn
+ * included, so an AssetLock's fee is the miner fee, not the burn. Pure —
+ * host-testable.
+ */
+internal fun recoveredFeeDuffs(payload: TxPayloadFacts, spentOwnedCount: Int, spentOwnedDuffs: Long): Long? =
+    if (spentOwnedCount > 0 &&
+        payload.inputCount == spentOwnedCount &&
+        spentOwnedDuffs >= payload.outputsTotalDuffs
+    ) {
+        spentOwnedDuffs - payload.outputsTotalDuffs
+    } else {
+        null
+    }
+
+/**
+ * Whether [record] is a send whose fee the store left unset and the walker
+ * should recover ([recoveredFeeDuffs]). The SDK persists `transactions.fee`
+ * as NULL for every row (run 17, Wallet B: 7460/7460), so the display — which
+ * shows a send WITHOUT its fee, as dashj's `TransactionRowView` always has —
+ * otherwise renders fee-included values. OUTGOING and INTERNAL only: a
+ * COINJOIN-direction round is multi-party, so its fee is never ours to show,
+ * and a receive has no fee to remove. Pure — host-testable.
+ */
+internal fun needsFeeRecovery(record: L1TxUiRecord): Boolean =
+    record.feeDuffs == null &&
+        record.netAmountDuffs < 0L &&
+        (record.direction == L1TxUiDirection.OUTGOING || record.direction == L1TxUiDirection.INTERNAL)
+
+/**
  * Rust `TransactionType` discriminant for a classic (Standard) transaction —
  * the ONLY kind [reattributeIncomingRecord] is applied to. Special kinds
  * (asset lock/unlock, provider registrations, coinbase) keep their stored
@@ -203,6 +268,13 @@ internal fun reattributeIncomingRecord(
  * could be any of them.
  */
 internal const val TX_TYPE_KIND_STANDARD = 0
+
+/**
+ * Rust `TransactionType` discriminant for a CoinJoin mixing round — admitted
+ * to a NET-ONLY recompute ([recomputeCoinJoinRecordNet]) when its stored
+ * direction is COINJOIN and it carries confirmed spent evidence.
+ */
+internal const val TX_TYPE_KIND_COINJOIN = 1
 
 /**
  * Rust `TransactionType` discriminant for an AssetLock (credit-funding)
@@ -256,10 +328,11 @@ internal const val TX_TYPE_KIND_UNKNOWN = 0xFF
  * store records (see [reattributeIncomingRecord]).
  *
  * Records materialized here are additionally REATTRIBUTED when the stored
- * direction is provably wrong ([reattributeIncomingRecord]) — every consumer
- * (display pipeline, reconcile walk, seam point reads) sees the corrected
- * shape from one place — and each correction is persisted back into the
- * store exactly once ([persistCorrections]), so an already-corrected record
+ * direction is provably wrong ([reattributeIncomingRecord]), and CoinJoin
+ * rounds stored with a wrong net are re-netted ([recomputeCoinJoinRecordNet]).
+ * Every consumer (display pipeline, reconcile walk, seam point reads) sees
+ * the corrected shape from one place, and each correction is persisted back
+ * into the store exactly once ([persistCorrections]), so an already-corrected record
  * is never re-processed on later passes or later launches.
  *
  * NOT thread-safe: watermark/fingerprint state is confined to the single
@@ -278,6 +351,10 @@ internal const val TX_TYPE_KIND_UNKNOWN = 0xFF
  *        the parity breakdown compares exactly that column, so production
  *        wires this to [L1ShadowSyncService.storedNetsRepaired]. Called on
  *        the walker's thread, after the transaction has ended.
+ * @param onCorrectionsPersisted invoked (on the calling IO thread) with the
+ *        display-hex txids of every correction batch [persistCorrections]
+ *        committed — the signal the display pipeline re-sums the per-day
+ *        "Mixing" group rows on when a grouped member's stored net changed.
  */
 internal class SdkTxStoreWalker(
     private val db: DashDatabase,
@@ -287,7 +364,8 @@ internal class SdkTxStoreWalker(
     private val pageThrottleMs: Long = PAGE_THROTTLE_MS,
     private val onQuery: ((String) -> Unit)? = null,
     private val payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts,
-    private val onStoredNetsRepaired: (Int) -> Unit = {}
+    private val onStoredNetsRepaired: (Int) -> Unit = {},
+    private val onCorrectionsPersisted: ((Set<String>) -> Unit)? = null
 ) {
 
     /**
@@ -433,6 +511,15 @@ internal class SdkTxStoreWalker(
         val spentOwnedCount: Int,
         val spentOwnedDuffs: Long
     )
+
+    /**
+     * A CoinJoin mixing round with CONFIRMED spent evidence — admitted to the
+     * net-only recompute ([recomputeCoinJoinRecordNet]) in [reattributed].
+     */
+    private fun RecordRow.isCoinJoinNetCandidate(): Boolean =
+        typeKind == TX_TYPE_KIND_COINJOIN &&
+            record.direction == L1TxUiDirection.COINJOIN &&
+            spentOwnedDuffs > 0L
 
     /** The shared row projection of [queryTxPage]/[queryTxRecords]/[recordFor]. */
     private fun recordRowFrom(c: android.database.Cursor, startCol: Int): RecordRow {
@@ -582,6 +669,13 @@ internal class SdkTxStoreWalker(
      * chunked payload fetch (internal-vs-send discrimination and fee recovery
      * need the tx's real shape — see [TxPayloadFacts]).
      *
+     * CoinJoin rounds with confirmed spent evidence are flagged too, for a
+     * NET-ONLY recompute ([recomputeCoinJoinRecordNet] — the income-only
+     * rust-dashcore#979 shape). They pay the payload fetch only when their
+     * stored net differs from the mirror recompute, never use pending-input
+     * reservations, and are corrected only behind the completeness guard
+     * below (no payload facts → deferred, since the guard cannot run).
+     *
      * ## Durable — corrections are WRITTEN BACK to the store
      *
      * A computed correction is persisted into the SDK's own `transactions`
@@ -625,7 +719,126 @@ internal class SdkTxStoreWalker(
      * (which stays flagged and is recomputed every pass anyway, so a gap
      * self-heals) are unchanged.
      */
-    private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> {
+    private fun reattributed(rows: List<RecordRow>): List<L1TxUiRecord> =
+        withRecoveredFees(rows, reattributedStored(rows))
+
+    /**
+     * Fill the fee the store left NULL ([needsFeeRecovery]) on [records]
+     * (index-aligned with [rows]), so the display can show a send without its
+     * fee. One `pending_inputs` aggregate plus one chunked payload fetch, paid
+     * only while some send is still missing a fee.
+     *
+     * Durable like [persistCorrections]: a fee recovered from CONFIRMED spent
+     * marks alone is written into the store row (`fee IS NULL` guarded, so a
+     * value the engine wrote is never replaced), and the row then never
+     * qualifies again. A fee that needs a `pending_inputs` reservation is
+     * served from memory only — the reservation is an in-flight claim, the
+     * same rule as reattribution.
+     *
+     * A send whose fee could not be recovered is retried whenever its spend
+     * evidence changes ([feeEvidenceTried]): a null fee may mean another
+     * participant funded it, but equally that the mirror holds only some of
+     * its spend marks so far, and the next mark must get another try.
+     */
+    private fun withRecoveredFees(rows: List<RecordRow>, records: List<L1TxUiRecord>): List<L1TxUiRecord> {
+        val candidates = records.indices.filter { needsFeeRecovery(records[it]) }
+        if (candidates.isEmpty()) return records
+        val pending = pendingSpentAggregates()
+        fun evidenceOf(i: Int) = FeeEvidence(
+            spentOwnedCount = rows[i].spentOwnedCount,
+            pendingCount = pending[records[i].txidHex]?.count ?: 0
+        )
+        val due = candidates.filter {
+            val evidence = evidenceOf(it)
+            evidence.inputCount > 0 && feeEvidenceTried[records[it].txidHex] != evidence
+        }
+        if (due.isEmpty()) return records
+
+        val facts = HashMap<String, TxPayloadFacts>()
+        val payloadSeen = HashSet<String>()
+        for (chunk in due.chunked(TXID_IN_CHUNK)) {
+            val placeholders = chunk.joinToString(",") { "?" }
+            rawQuery(
+                "SELECT txid, transactionData FROM transactions WHERE txid IN ($placeholders)",
+                chunk.map<Int, Any?> { rows[it].wireTxid }.toTypedArray()
+            ) { c ->
+                while (c.moveToNext()) {
+                    if (c.isNull(1)) continue
+                    val hex = displayHexOf(c.getBlob(0))
+                    payloadSeen += hex
+                    payloadFacts(c.getBlob(1))?.let { facts[hex] = it }
+                }
+            }
+        }
+
+        val out = records.toMutableList()
+        val toPersist = ArrayList<Pair<ByteArray, Long>>()
+        for (i in due) {
+            val row = rows[i]
+            val hex = records[i].txidHex
+            val pend = pending[hex]
+            val fee = facts[hex]?.let {
+                recoveredFeeDuffs(it, row.spentOwnedCount + (pend?.count ?: 0), row.spentOwnedDuffs + (pend?.duffs ?: 0L))
+            }
+            if (fee == null) {
+                // A payload that is not there yet gets another try every pass;
+                // one that is there was judged on this evidence.
+                if (hex in payloadSeen) feeEvidenceTried[hex] = evidenceOf(i)
+                continue
+            }
+            feeEvidenceTried.remove(hex)
+            out[i] = records[i].copy(feeDuffs = fee)
+            if (pend == null) toPersist += row.wireTxid to fee
+        }
+        persistRecoveredFees(toPersist)
+        return out
+    }
+
+    /** The spend marks a fee-recovery attempt saw — see [feeEvidenceTried]. */
+    private data class FeeEvidence(val spentOwnedCount: Int, val pendingCount: Int) {
+        val inputCount: Int get() = spentOwnedCount + pendingCount
+    }
+
+    /**
+     * Sends whose fee [withRecoveredFees] could not recover, with the evidence
+     * that attempt saw. Skipped only while the evidence is unchanged. Per
+     * walker: a fee is unrecoverable for good only when an input was not ours,
+     * which is rare outside CoinJoin rounds (never candidates), so re-trying
+     * those once per walker costs little. Bounded; an evicted txid costs one
+     * re-parse. Synchronized: the point lookups ([recordFor]) reach it from
+     * any thread.
+     */
+    private val feeEvidenceTried: MutableMap<String, FeeEvidence> =
+        java.util.Collections.synchronizedMap(
+            object : LinkedHashMap<String, FeeEvidence>() {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, FeeEvidence>): Boolean =
+                    size > WALK_DEDUP_LRU_MAX
+            }
+        )
+
+    /** Write recovered fees into the store's NULL `fee` columns — see [withRecoveredFees]. */
+    private fun persistRecoveredFees(fees: List<Pair<ByteArray, Long>>) {
+        if (fees.isEmpty()) return
+        try {
+            val writable = db.openHelper.writableDatabase
+            writable.beginTransaction()
+            try {
+                val sql = "UPDATE transactions SET fee = ? WHERE txid = ? AND fee IS NULL"
+                for ((wireTxid, fee) in fees) {
+                    onQuery?.invoke(sql)
+                    writable.execSQL(sql, arrayOf(fee, wireTxid))
+                }
+                writable.setTransactionSuccessful()
+            } finally {
+                writable.endTransaction()
+            }
+            log.info("persisted {} recovered fee(s) into the SDK store's NULL fee column", fees.size)
+        } catch (t: Throwable) {
+            log.warn("failed to persist recovered fees; served from memory, recovered again next pass", t)
+        }
+    }
+
+    private fun reattributedStored(rows: List<RecordRow>): List<L1TxUiRecord> {
         // Pending-input reservations ([pendingSpentAggregates]) supplement the
         // confirmed spent marks for DISPLAY, so a just-broadcast send is
         // corrected the moment it is planned instead of after its block lands.
@@ -677,7 +890,15 @@ internal class SdkTxStoreWalker(
                         it.record.direction == L1TxUiDirection.INTERNAL &&
                         it.record.netAmountDuffs == 0L &&
                         it.spentOwnedDuffs > 0L
-                    )
+                    ) ||
+                // CoinJoin rounds persisted "income-only" (rust-dashcore#979
+                // shape — see [recomputeCoinJoinRecordNet]). Flagged on the
+                // STRUCTURAL condition (kind + direction + confirmed spent
+                // evidence), never on the stored value, so a row recomputed
+                // from partial mid-sync evidence is simply recomputed again on
+                // every later pass until the mirror's spent marks are complete;
+                // a correct row costs only its share of the funded aggregate.
+                it.isCoinJoinNetCandidate()
         }
         if (flagged.isEmpty()) return rows.map { it.record }
 
@@ -723,6 +944,17 @@ internal class SdkTxStoreWalker(
         // stored direction legitimately remains INCOMING), so fetching +
         // dashj-parsing their payloads every pass was pure waste.
         val needsFacts = flagged.filter {
+            if (it.isCoinJoinNetCandidate()) {
+                // A CoinJoin row consults the payload ONLY for the
+                // mirror-completeness guard, so only when a correction is
+                // actually pending — the recompute is LOWER than the stored
+                // net ([recomputeCoinJoinRecordNet] never raises one): a
+                // correct store, and a #979 store whose spent marks still
+                // lag, do no payload work. Confirmed evidence only — pending
+                // reservations are never used for CoinJoin rows.
+                return@filter (fundedOwned[it.record.txidHex] ?: 0L) - it.spentOwnedDuffs <
+                    it.record.netAmountDuffs
+            }
             val recomputed = (fundedOwned[it.record.txidHex] ?: 0L) -
                 (it.spentOwnedDuffs + (pendingOf(it)?.duffs ?: 0L))
             recomputed < 0L &&
@@ -778,11 +1010,31 @@ internal class SdkTxStoreWalker(
         }
         // mirroredVouts was filled above, from the SAME read as the funded sums.
 
+        val needsFactsHexes = needsFacts.mapTo(HashSet()) { it.record.txidHex }
         val correctedByHex = HashMap<String, L1TxUiRecord>(flagged.size)
         val toPersist = ArrayList<Pair<RecordRow, L1TxUiRecord>>()
         for (row in flagged) {
             val hex = row.record.txidHex
+            val coinJoin = row.isCoinJoinNetCandidate()
+            // A CoinJoin row whose recompute is not LOWER than its stored net
+            // (already correct, or a refused raise) is served as stored:
+            // nothing persisted, nothing logged.
+            if (coinJoin && hex !in needsFactsHexes) continue
             val fact = facts[hex]
+            if (coinJoin && fact == null) {
+                // No payload facts → the completeness guard cannot run, and a
+                // CoinJoin recompute is only trusted behind it (a dropped
+                // output row would stamp a born-wrong net). Serve the stored
+                // record and retry next pass.
+                if (reattributionDeferredLogged.add(hex)) {
+                    log.info(
+                        "CoinJoin net recompute of {} deferred: no payload facts to verify the TXO " +
+                            "mirror is complete; serving the stored record",
+                        hex
+                    )
+                }
+                continue
+            }
             val unmirroredVout = if (fact == null) {
                 null
             } else {
@@ -800,6 +1052,30 @@ internal class SdkTxStoreWalker(
                             "once the mirror rows land",
                         hex, unmirroredVout, fact?.outputAddresses?.getOrNull(unmirroredVout).orEmpty()
                     )
+                }
+                continue
+            }
+            if (coinJoin) {
+                // NET-ONLY correction from CONFIRMED evidence (direction and
+                // fee stand). Persisted with the compare-and-set against the
+                // row's CURRENT stored values, so a later pass with more
+                // complete spent marks moves it again from wherever it is.
+                val corrected = recomputeCoinJoinRecordNet(
+                    record = row.record,
+                    spentOwnedDuffs = row.spentOwnedDuffs,
+                    fundedOwnedDuffs = fundedOwned[hex] ?: 0L
+                )
+                if (corrected != row.record) {
+                    correctedByHex[hex] = corrected
+                    toPersist += row to corrected
+                    if (reattributionLogged.add(hex)) {
+                        log.info(
+                            "stored SDK CoinJoin record for {} net corrected {} → {} duffs " +
+                                "(fundedOwned={}, spentOwned={} over {} input(s))",
+                            hex, row.record.netAmountDuffs, corrected.netAmountDuffs,
+                            fundedOwned[hex] ?: 0L, row.spentOwnedDuffs, row.spentOwnedCount
+                        )
+                    }
                 }
                 continue
             }
@@ -921,9 +1197,13 @@ internal class SdkTxStoreWalker(
                     "served from memory, re-corrected next pass",
                 t
             )
-            0
+            return
         }
+        // Outside the try: a failing listener must not read as a failed write.
+        // The parity signal goes first, so a failing display listener cannot
+        // leave stale findings standing.
         if (netsChanged > 0) onStoredNetsRepaired(netsChanged)
+        onCorrectionsPersisted?.invoke(corrections.mapTo(HashSet()) { it.first.record.txidHex })
     }
 
     /**
@@ -1116,6 +1396,19 @@ internal class SdkTxStoreWalker(
     // ── Synchronous point/enumeration reads (seam lazy views) ─────────
 
     /**
+     * Fresh SERVED records (reattributed — the same shapes every other read
+     * here serves) for [displayHexes], WITHOUT the membership probe: the
+     * caller already knows these txids belong to the wallet (the per-day
+     * "Mixing" group re-sum reads its `tx_group_cache` members). A txid the
+     * store does not hold is simply absent from the result. Chunked IN reads,
+     * no payload column; bounded by the caller's batch size.
+     */
+    fun recordsFor(displayHexes: Collection<String>): List<L1TxUiRecord> {
+        val wire = displayHexes.mapNotNull { hexToBytesOrNull(it.lowercase())?.reversedArray() }
+        return if (wire.isEmpty()) emptyList() else queryTxRecords(wire)
+    }
+
+    /**
      * Point lookup of ONE wallet-relevant record — fresh from the store,
      * three indexed queries, zero retained state. Null when the tx is
      * unknown to the store or not wallet-relevant (parity with the old
@@ -1145,6 +1438,32 @@ internal class SdkTxStoreWalker(
             recordRowFrom(c, startCol = 0)
         } ?: return null
         return reattributed(listOf(row)).single()
+    }
+
+    /**
+     * Batch [recordFor]: the wallet-relevant records among [displayHexes], keyed
+     * by lowercase display hex, with the same membership rule and corrections.
+     *
+     * Named for the keying, not just pluralised, because `recordsFor` is taken
+     * by the group re-sum's unkeyed read, which deliberately SKIPS the
+     * membership probe (its caller already knows the txids are the wallet's).
+     * The two differ only in return type, which Kotlin cannot overload on, and
+     * the difference that matters is not the return type but whether
+     * membership is checked.
+     * One reattribution pass for the whole set, so the wallet-wide
+     * [pendingSpentAggregates] read runs once per call instead of once per txid
+     * as N [recordFor] calls would. For bulk callers such as the metadata import
+     * of a platform sync. Chunked like every `txid IN (…)` read.
+     */
+    fun recordsByHex(displayHexes: Collection<String>): Map<String, L1TxUiRecord> {
+        val wireByHex = LinkedHashMap<String, ByteArray>()
+        for (hex in displayHexes) {
+            val lower = hex.lowercase()
+            hexToBytesOrNull(lower)?.reversedArray()?.let { wireByHex[lower] = it }
+        }
+        val relevant = walletRelevantSubset(wireByHex)
+        if (relevant.isEmpty()) return emptyMap()
+        return queryTxRecords(relevant.mapNotNull { wireByHex[it] }).associateBy { it.txidHex }
     }
 
     /**

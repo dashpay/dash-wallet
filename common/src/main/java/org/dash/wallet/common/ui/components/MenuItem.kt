@@ -18,6 +18,7 @@
 package org.dash.wallet.common.ui.components
 
 import android.content.res.Configuration
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
 
@@ -80,6 +82,10 @@ fun MenuItem(
     showDirectionIndicator: Boolean = false,
     showInfo: Boolean = false,
     onInfoClick: (() -> Unit)? = null,
+    // Glyph and size of the [showInfo] icon. The defaults are the gray outline "menu-item_base"
+    // glyph; the "Action item / Var 2" rows use a 20dp blue filled info circle instead.
+    @DrawableRes infoIcon: Int = R.drawable.ic_menu_info,
+    infoIconSize: Dp = 15.dp,
     showChevron: Boolean = false,
     // New controlled props
     checked: Boolean? = null,
@@ -178,11 +184,11 @@ fun MenuItem(
 
                     if (showInfo) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_menu_info),
+                            painter = painterResource(id = infoIcon),
                             contentDescription = stringResource(id = R.string.info),
                             tint = Color.Unspecified,
                             modifier = Modifier
-                                .size(15.dp)
+                                .size(infoIconSize)
                                 .then(
                                     if (enabled && onInfoClick != null) {
                                         Modifier.clickable { onInfoClick() }

@@ -25,6 +25,7 @@ import org.bitcoinj.params.OuzoDevNetParams
 import org.bitcoinj.params.RegTestParams
 import org.bitcoinj.params.TestNet3Params
 import org.dashfoundation.dashsdk.Network
+import org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,8 +54,23 @@ class DashSdkServiceImplTest {
 
     private fun newService() = DashSdkServiceImpl(
         context = mockk<Context>(relaxed = true),
-        mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true))
+        mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+        secretWriteFence = WalletSecretWriteFence()
     )
+
+    @Test
+    fun widenedGapLimit_isTheRustMax() {
+        assertEquals(1000, DashSdkServiceImpl.WIDENED_GAP_LIMIT)
+    }
+
+    @Test
+    fun widenedFamily_mapsTheStoredAccountRows() {
+        assertEquals(AccountType.BIP44, DashSdkServiceImpl.widenedFamily(accountType = 0, standardTag = 0))
+        assertEquals(AccountType.BIP32, DashSdkServiceImpl.widenedFamily(accountType = 0, standardTag = 1))
+        assertEquals(AccountType.COIN_JOIN, DashSdkServiceImpl.widenedFamily(accountType = 1, standardTag = 0))
+        assertNull("identity registration is not widened", DashSdkServiceImpl.widenedFamily(2, 0))
+        assertNull("platform payment is not widened", DashSdkServiceImpl.widenedFamily(14, 0))
+    }
 
     @Test
     fun construction_isJvmSafe_andDoesNotStartSdk() {
@@ -64,6 +80,48 @@ class DashSdkServiceImplTest {
         assertFalse(service.isStarted)
         assertNull(service.sdkOrNull())
         assertNull(service.walletManagerOrNull())
+    }
+
+    @Test
+    fun quiesceForWalletWipe_notStarted_isQuiescentAndRefusesRestartsUntilTheFenceIsLowered() {
+        val fence = WalletSecretWriteFence()
+        val service = DashSdkServiceImpl(
+            context = mockk<Context>(relaxed = true),
+            mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+            secretWriteFence = fence
+        )
+
+        assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
+        assertTrue(fence.isSdkRuntimeHalted)
+        // Every restart path goes through ensureStarted: refused before any
+        // bootstrap (no native load is attempted on the JVM).
+        assertThrows(WalletWipeInProgressException::class.java) {
+            runBlocking { service.ensureStarted() }
+        }
+        assertFalse(service.isStarted)
+    }
+
+    @Test
+    fun ensureStarted_afterTheFenceIsLowered_attemptsAFreshBootstrap() {
+        val fence = WalletSecretWriteFence()
+        val service = DashSdkServiceImpl(
+            context = mockk<Context>(relaxed = true),
+            mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
+            secretWriteFence = fence
+        )
+        assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
+
+        fence.lower()
+
+        // No runtime is held after the wipe, so the next wallet setup goes
+        // through a full bootstrap — which on the host JVM dies loading the
+        // native library / Android stack, NOT on the wipe halt.
+        val failure = runCatching { runBlocking { service.ensureStarted() } }.exceptionOrNull()
+        assertFalse(
+            "the halt must be lifted once the wipe completed, got $failure",
+            failure is WalletWipeInProgressException
+        )
+        assertFalse(service.isStarted)
     }
 
     @Test

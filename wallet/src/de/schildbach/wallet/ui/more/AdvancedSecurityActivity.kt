@@ -63,11 +63,7 @@ class AdvancedSecurityActivity : LockScreenActivity() {
 
     private val onBiometricLimitSeekBarChangeListener = object : OnSeekBarChangeListener {
         override fun onStopTrackingTouch(seekBar: SeekBar?) {
-            val value = biometricProgressToLimitValue(binding.biometricLimitSeekbar.progress)
-            analytics.logEvent(
-                AnalyticsConstants.Security.SPENDING_CONFIRMATION_LIMIT,
-                mapOf(AnalyticsConstants.Parameter.VALUE to value)
-            )
+            analytics.logEvent(AnalyticsConstants.Security.SPENDING_CONFIRMATION_LIMIT, mapOf())
         }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
