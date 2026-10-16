@@ -18,7 +18,6 @@
 package de.schildbach.wallet.data
 
 import android.app.Application
-import android.net.Uri
 import androidx.core.net.toUri
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -192,33 +191,33 @@ class InvitationLinkDataTest {
         assertFalse(InvitationLinkData(l1Link()).isShielded)
     }
 
-    // ── avatar-url encoding (#1587: share invite links the iOS wallet can open) ──
+    // ── avatar-url encoding (cross-platform: iOS decodes once) ─────────
 
-    private val base = "dashpay://invite?du=alice&assetlocktx=a0963d1b&pk=cNihCPEQ&islock=0101b1" +
+    private val avatarBase = "dashpay://invite?du=alice&assetlocktx=a0963d1b&pk=cNihCPEQ&islock=0101b1" +
         "&display-name=Test%20Wallet%20(CoinJoin)"
 
     @Test
     fun `single-encoded avatar url is read as is`() {
-        val link = Uri.parse("$base&avatar-url=https%3A%2F%2Fi.imgur.com%2FJgGDEQB.jpeg")
+        val link = "$avatarBase&avatar-url=https%3A%2F%2Fi.imgur.com%2FJgGDEQB.jpeg".toUri()
         assertTrue(InvitationLinkData.isValid(link))
         assertEquals("https://i.imgur.com/JgGDEQB.jpeg", InvitationLinkData(link).avatarUrl)
     }
 
     @Test
     fun `single-encoded avatar url keeps its own percent escapes`() {
-        val link = Uri.parse("$base&avatar-url=https%3A%2F%2Fexample.com%2Fmy%2520avatar.png")
+        val link = "$avatarBase&avatar-url=https%3A%2F%2Fexample.com%2Fmy%2520avatar.png".toUri()
         assertEquals("https://example.com/my%20avatar.png", InvitationLinkData(link).avatarUrl)
     }
 
     @Test
     fun `double-encoded avatar url from older wallets is still decoded`() {
-        val link = Uri.parse("$base&avatar-url=https%253A%252F%252Fi.imgur.com%252FJgGDEQB.jpeg")
+        val link = "$avatarBase&avatar-url=https%253A%252F%252Fi.imgur.com%252FJgGDEQB.jpeg".toUri()
         assertEquals("https://i.imgur.com/JgGDEQB.jpeg", InvitationLinkData(link).avatarUrl)
     }
 
     @Test
     fun `missing avatar url is empty`() {
-        val data = InvitationLinkData(Uri.parse(base))
+        val data = InvitationLinkData(avatarBase.toUri())
         assertEquals("", data.avatarUrl)
         assertEquals("Test Wallet (CoinJoin)", data.displayName)
     }

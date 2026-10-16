@@ -146,10 +146,6 @@ data class InvitationLinkData(
             return InvitationLinkData(linkBuilder.build(), null)
         }
 
-        private fun looksLikeUrl(value: String): Boolean {
-            return value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)
-        }
-
         /**
          * Build the SHIELDED (L2) invitation link: the private-invitation
          * counterpart of [create]. Carries the one-time Orchard spending key
@@ -194,6 +190,10 @@ data class InvitationLinkData(
          * form ([isValidShielded]). Branch on presence of `osk` vs `pk`.
          */
         fun isValid(link: Uri): Boolean = isValidShielded(link) || isValidL1(link)
+
+        private fun looksLikeUrl(value: String): Boolean {
+            return value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)
+        }
 
         /** The unchanged L1 asset-lock invitation validity check. */
         private fun isValidL1(link: Uri): Boolean {

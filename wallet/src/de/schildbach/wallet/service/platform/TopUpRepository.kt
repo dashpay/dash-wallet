@@ -675,20 +675,26 @@ class TopUpRepositoryImpl @Inject constructor(
                     "af_og_image" to imageUrl.toString()
                 )
             )
+            // The long link is built locally from the SDK's stored template settings; it does not
+            // depend on the short-link request below. A short OneLink carries no `af_dp`, and the
+            // iOS wallet has no AppsFlyer SDK to resolve it, so the link we share is always the long
+            // one. See InviteShareLink for the host/path fix-ups.
+            val longLink = linkGenerator.generateLink()
+            val shareLink = InviteShareLink.from(longLink, BuildConfig.APPSFLYER_BRAND_DOMAIN)
+            // The links carry the invitation's bearer key (`pk` / `osk`), so only their shape is
+            // logged: the SDK's host (tells whether the template was resolved) and the length.
+            log.info(
+                "AppsFlyer share link: host {} -> {}, {} chars",
+                longLink.toUri().host,
+                shareLink.toUri().host,
+                shareLink.length
+            )
+
             linkGenerator.generateLink(walletApplication, object : ResponseListener {
                 override fun onResponse(link: String?) {
                     // `link` is AppsFlyer's answer: a short OneLink when the server accepted the
-                    // request, or the SDK's long link when it did not. A short link carries no
-                    // `af_dp`, and the iOS wallet has no AppsFlyer SDK to resolve it, so the link we
-                    // share is always the long one. See InviteShareLink for the host/path fix-ups.
-                    val longLink = linkGenerator.generateLink()
-                    val shareLink = InviteShareLink.from(longLink, BuildConfig.APPSFLYER_BRAND_DOMAIN)
-                    log.info("AppsFlyer link generated successfully: {}", link)
-                    log.info("AppsFlyer link generator : {}", longLink)
-                    log.info("AppsFlyer share link : {}", shareLink)
-                    log.info("AppsFlyer af_dp : {}", invitationLinkData.link.toString())
-                    log.info("AppsFlyer user parameters {}", linkGenerator.userParams)
-
+                    // request, or the long link again when it did not.
+                    log.info("AppsFlyer link generated, short link returned: {}", link != null && link != longLink)
                     continuation.resume(
                         DynamicLink(
                             shareLink,
@@ -700,8 +706,17 @@ class TopUpRepositoryImpl @Inject constructor(
                 }
 
                 override fun onResponseError(error: String?) {
-                    log.error("Failed to generate AppsFlyer link: $error")
-                    continuation.resumeWithException(Exception("Failed to generate AppsFlyer link: $error"))
+                    // Only the short link failed; the funding transaction is already sent, so hand
+                    // back the long link rather than failing the invite.
+                    log.warn("AppsFlyer short link failed, sharing the long link: {}", error)
+                    continuation.resume(
+                        DynamicLink(
+                            shareLink,
+                            longLink,
+                            invitationLinkData.link.toString(),
+                            DynamicLink.AppsFlyer
+                        )
+                    )
                 }
             })
         }
