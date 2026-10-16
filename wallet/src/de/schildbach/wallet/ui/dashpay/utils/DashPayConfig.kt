@@ -289,6 +289,15 @@ open class DashPayConfig @Inject constructor(
         val MIXED_FUNDS_CONSOLIDATION = stringPreferencesKey("mixed_funds_consolidation")
 
         /**
+         * Submission journal of a DIRECT (no consolidation) mixed-funds shield:
+         * `preparing` from the tap until the native funding call is about to
+         * run, `submitted` from then on. A `preparing` journal left by a dead
+         * process proves nothing was submitted; `submitted` (or an absent
+         * journal on an older marker) is uncertain and is never rebuilt.
+         */
+        val MIXED_FUNDS_DIRECT_SHIELD_PHASE = stringPreferencesKey("mixed_funds_direct_shield_phase")
+
+        /**
          * Phase 3c of the dashj → Kotlin SDK migration
          * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
          * username resolution/search through the Dash Platform Kotlin SDK

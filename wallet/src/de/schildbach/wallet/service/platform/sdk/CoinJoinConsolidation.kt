@@ -27,6 +27,9 @@ internal data class CoinJoinConsolidationState(
     companion object {
         const val READY = "ready"
         const val WAITING = "waiting"
+        /** About to call the shield funding; the native call has NOT been reached. */
+        const val SHIELD_PREPARING = "shield_preparing"
+        /** The shield funding call was reached: a lock may be out, never build another. */
         const val SHIELDING = "shielding"
         const val TRANSFERRING = "transferring"
         fun decode(raw: String): CoinJoinConsolidationState {

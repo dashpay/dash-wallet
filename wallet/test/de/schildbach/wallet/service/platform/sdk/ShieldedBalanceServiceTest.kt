@@ -1710,6 +1710,39 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
+    fun mixedFundsShield_submissionCheckpointRunsOnlyRightBeforeTheFundingCall() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        var fundCallsAtCheckpoint = -1
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") {
+            fundCallsAtCheckpoint = source.accountFundCalls
+        }
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        assertEquals(0, fundCallsAtCheckpoint)
+        assertEquals(1, source.accountFundCalls)
+
+        // An existing CoinJoin lock answers without reaching the native call.
+        source.shieldLocks = {
+            listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 2, 206751800L, coinJoinFunded = true))
+        }
+        var checkpointed = false
+        service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") { checkpointed = true }
+        assertFalse(checkpointed)
+        assertEquals(1, source.accountFundCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_failedSubmissionCheckpointSubmitsNothing() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") {
+            throw java.io.IOException("disk full")
+        }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.accountFundCalls)
+    }
+
+    @Test
     fun mixedFundsShield_unrelatedBip44LockDoesNotBlockTheDrain() = runBlocking {
         val source = readySource().apply {
             shieldLocks = {
@@ -1975,6 +2008,24 @@ class ShieldedBalanceServiceTest {
 
         // 3 attempts max per process, later sweeps skip the outpoint.
         assertEquals(3, source.resumeCalls)
+    }
+
+    @Test
+    fun resumeSweep_userRequestGetsOneAttemptPastTheBudget() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        source.shieldLocks = { listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1)) }
+        source.onResume = { _, _ -> throw RuntimeException("no chainlock yet") }
+        repeat(4) { assertEquals(0, service.resumePendingWalletShields()) }
+        assertEquals(3, source.resumeCalls)
+
+        // Connectivity is back and the user taps Try again: one real attempt.
+        source.onResume = { _, _ -> }
+        assertEquals(1, service.resumePendingWalletShieldsOnUserRequest())
+        assertEquals(4, source.resumeCalls)
+        // Unattended sweeps stay capped.
+        service.resumePendingWalletShields()
+        assertEquals(4, source.resumeCalls)
     }
 
     @Test

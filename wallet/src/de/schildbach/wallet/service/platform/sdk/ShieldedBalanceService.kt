@@ -359,10 +359,17 @@ interface ShieldedBalanceService {
      *   `m/9'/1'/4'/0'` elsewhere. Built by
      *   [de.schildbach.wallet.service.platform.sdk.coinJoinAccountPath].
      *   A path naming no account is a clean pre-broadcast failure.
+     * @param onSubmitting invoked once every preflight has passed, immediately
+     *   before the native build+broadcast call — the caller's durable
+     *   "submission may have happened" checkpoint. Not invoked when nothing
+     *   reaches the native call (preflight rejections, an already pending
+     *   CoinJoin lock), so a caller that never saw it run knows nothing was
+     *   submitted. If it throws, nothing is submitted ([SdkWriteResult.NotBroadcast]).
      */
     suspend fun shieldMixedFundsFromWallet(
         amount: Dash,
-        coinJoinAccountPath: String
+        coinJoinAccountPath: String,
+        onSubmitting: suspend () -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome>
 
     /**
@@ -404,6 +411,14 @@ interface ShieldedBalanceService {
      *   is off, the runtime is not ready, or nothing was pending).
      */
     suspend fun resumePendingWalletShields(): Int
+
+    /**
+     * [resumePendingWalletShields] for an explicit user retry: each resumable
+     * lock gets ONE attempt even when the automatic per-process budget is
+     * exhausted (the attempt still counts against it, so unattended sweeps
+     * stay capped). Runs under the same mutex; never builds a new lock.
+     */
+    suspend fun resumePendingWalletShieldsOnUserRequest(): Int
 
     /**
      * Emits the number of locks completed each time a

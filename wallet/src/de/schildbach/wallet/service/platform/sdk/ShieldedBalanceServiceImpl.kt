@@ -1548,9 +1548,10 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override suspend fun shieldMixedFundsFromWallet(
         amount: Dash,
-        coinJoinAccountPath: String
+        coinJoinAccountPath: String,
+        onSubmitting: suspend () -> Unit
     ): SdkWriteResult<ShieldFromWalletOutcome> =
-        shieldFromWalletInternal(amount, fundingPath = coinJoinAccountPath)
+        shieldFromWalletInternal(amount, fundingPath = coinJoinAccountPath, onSubmitting = onSubmitting)
 
     /**
      * The one staged Type-18 pipeline behind both [shieldFromWallet]
@@ -1563,7 +1564,8 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private suspend fun shieldFromWalletInternal(
         amount: Dash,
-        fundingPath: String?
+        fundingPath: String?,
+        onSubmitting: suspend () -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome> {
         val operation = if (fundingPath == null) "shieldFromWallet" else "shieldMixedFundsFromWallet"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
@@ -1662,6 +1664,17 @@ class ShieldedBalanceServiceImpl internal constructor(
                 return notBroadcast(operation, "cannot read the tracked asset-lock state", t)
             }
 
+            // The caller's durable submission checkpoint: from here on the
+            // native call may broadcast, so a caller interrupted after this
+            // point can no longer infer non-submission. A failed write means
+            // nothing is submitted.
+            try {
+                onSubmitting()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast(operation, "could not record the submission checkpoint", t)
+            }
+
             // The single staged attempt: (a) build+broadcast the L1 asset
             // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
             try {
@@ -1753,6 +1766,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         return resumePendingWalletShieldsInner()
     }
 
+    override suspend fun resumePendingWalletShieldsOnUserRequest(): Int {
+        if (!isEnabled()) return 0
+        if (!ensureShieldedReadyInner()) return 0
+        return resumePendingWalletShieldsInner(userRequested = true)
+    }
+
     /**
      * The sweep body: resume every resumable ([PendingWalletShieldLock.resumable])
      * shielded-top-up lock, sequentially, isolating per-lock failures and
@@ -1761,7 +1780,7 @@ class ShieldedBalanceServiceImpl internal constructor(
      * funding gate — the lock already exists, so completing the shield
      * spends nothing new and strands nothing.
      */
-    private suspend fun resumePendingWalletShieldsInner(): Int {
+    private suspend fun resumePendingWalletShieldsInner(userRequested: Boolean = false): Int {
         val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return 0
         return walletShieldMutex.withLock {
             val pending = try {
@@ -1784,7 +1803,9 @@ class ShieldedBalanceServiceImpl internal constructor(
             var resumed = 0
             for (lock in pending) {
                 val attempts = resumeAttempts.getOrDefault(lock.outPointHex, 0)
-                if (attempts >= MAX_RESUME_ATTEMPTS_PER_PROCESS) {
+                // An explicit user retry gets one attempt past the budget;
+                // the counter still advances, so unattended sweeps stay capped.
+                if (attempts >= MAX_RESUME_ATTEMPTS_PER_PROCESS && !userRequested) {
                     log.warn(
                         "pending wallet-shield lock {} skipped after {} failed attempts this " +
                             "process (retries resume on the next app start)",

@@ -31,9 +31,11 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogMixedFundsMigrationBinding
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import javax.inject.Inject
 
 /**
  * The one-time post-upgrade MIXED-FUNDS sheet.
@@ -52,6 +54,9 @@ import org.dash.wallet.common.ui.viewBinding
  * Tools remains reachable, failures retry without restarting, and success
  * stays visible until Done. A pending shield retries its existing lock.
  * Each move — and Restart — asks for confirmation first; Later never does.
+ * A FRESH spend (either move, or Try again after a definitive failure) also
+ * requires PIN/biometric authentication, like every other send; resuming
+ * the transaction already in flight does not.
  *
  * AFTER a choice broadcast (STARTED), the sheet swaps to a PROCESSING
  * presentation (spinner + "your funds are on the way") that must stay
@@ -72,6 +77,9 @@ class MixedFundsMigrationDialogFragment :
     // the activity so unlocking can reopen progress without cancelling it.
     private val viewModel by activityViewModels<MixedFundsMigrationViewModel>()
 
+    @Inject
+    lateinit var authManager: AuthenticationManager
+
     override val expandToContent = true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -90,9 +98,11 @@ class MixedFundsMigrationDialogFragment :
         binding.restartButton.setOnClickListener {
             val state = viewModel.uiState.value
             // A timed-out/unconfirmed transfer resumes the existing transaction;
-            // a failed one runs its move again, so it asks that move's question.
-            val resumesExisting = state.resultTimedOut || state.outcome == MixedFundsMigrationOutcome.UNCONFIRMED
-            confirmThen(if (resumesExisting) null else state.attemptedAction) { viewModel.retryMigration() }
+            // a failed one runs its move again, so it asks that move's question
+            // (and, being a fresh spend, authenticates).
+            confirmThen(if (state.retryStartsFreshSpend()) state.attemptedAction else null) {
+                viewModel.retryMigration()
+            }
         }
         // The fallback offered when SHIELDING failed: run the existing
         // combine ("keep it spendable") migration instead.
@@ -105,6 +115,7 @@ class MixedFundsMigrationDialogFragment :
                 if (state.outcome == null && !state.awaitingResult && !state.resultTimedOut && !state.resultLanded) {
                     viewModel.deferMigration()
                 }
+                viewModel.onSheetClosed()
                 dismissAllowingStateLoss()
             }
         }
@@ -123,26 +134,16 @@ class MixedFundsMigrationDialogFragment :
                 viewModel.uiState.collect { state ->
                     val amount = state.amount
 
-                    // FAILURE state: an attempt ran and provably spent
-                    // nothing (NOT_ATTEMPTED). The sheet swaps to the
-                    // per-scenario error presentation — which buttons it
-                    // offers depends on WHICH action failed.
-                    val failed = state.outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED
+                    // FAILURE (NOT_ATTEMPTED, provably nothing spent), the
+                    // POST-BROADCAST processing window (this session's STARTED
+                    // or the persisted marker), and the terminal "could not
+                    // confirm" guidance — see [presentation].
+                    val presentation = state.presentation()
+                    val failed = presentation.failed
                     val shieldFailed = failed &&
                         state.attemptedAction == MixedFundsMigrationAction.SHIELD
-
-                    // POST-BROADCAST processing window: this session's
-                    // STARTED outcome or the persisted in-flight marker (a
-                    // resumed sheet after lock-screen teardown / activity
-                    // recreation). Spinner + "on the way" until the result
-                    // is user-visible.
-                    val awaiting = !state.inProgress && !state.resultLanded && !state.resultTimedOut &&
-                        (state.awaitingResult || state.outcome == MixedFundsMigrationOutcome.STARTED)
-                    val processingAny = state.inProgress || awaiting
-                    // An unconfirmed transfer is terminal, not a new choice.
-                    val choiceMode = !failed && !processingAny &&
-                        !state.resultTimedOut && !state.resultLanded &&
-                        state.outcome != MixedFundsMigrationOutcome.UNCONFIRMED
+                    val processingAny = presentation.processing
+                    val choiceMode = presentation.choiceMode
 
                     binding.subtitle.text = if (amount == null) {
                         ""
@@ -172,10 +173,10 @@ class MixedFundsMigrationDialogFragment :
                     binding.combineNote.isVisible = choiceMode
                     binding.shieldButton.isEnabled = actionable
                     binding.combineButton.isEnabled = actionable
-                    binding.restartButton.isVisible = failed || state.resultTimedOut
-                    binding.transferUnmixedButton.isVisible = false
-                    isCancelable = !processingAny && !choiceMode
-                    binding.closeButton.isVisible = !processingAny
+                    binding.restartButton.isVisible = presentation.showRestart
+                    binding.transferUnmixedButton.isVisible = presentation.showTransferUnmixed
+                    isCancelable = presentation.cancelable
+                    binding.closeButton.isVisible = presentation.showClose
                     binding.closeButton.setText(when {
                         choiceMode -> R.string.mixed_funds_migration_later_action
                         state.resultLanded -> R.string.mixed_funds_migration_done_action
@@ -227,8 +228,10 @@ class MixedFundsMigrationDialogFragment :
 
     /**
      * Ask before running [action]: [move] picks the shield or combine wording,
-     * null the generic restart wording. Runs [action] only on Confirm. If the
-     * sheet is torn down while asking (e.g. auto-lock), the coroutine is
+     * null the generic restart wording. Runs [action] only on Confirm. A
+     * non-null [move] is a FRESH spend and additionally requires PIN/biometric
+     * authentication; a cancelled or failed authentication runs nothing. If
+     * the sheet is torn down while asking (e.g. auto-lock), the coroutine is
      * cancelled and nothing runs.
      */
     private fun confirmThen(move: MixedFundsMigrationAction?, action: () -> Unit) {
@@ -251,7 +254,9 @@ class MixedFundsMigrationDialogFragment :
                     getString(R.string.button_cancel),
                     getString(R.string.button_confirm)
                 ).showAsync(requireActivity())
-                if (confirmed == true) action()
+                if (confirmed != true) return@launch
+                if (move != null && authManager.authenticate(requireActivity()) == null) return@launch
+                action()
             } finally {
                 confirming = false
             }

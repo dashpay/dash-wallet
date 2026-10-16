@@ -79,6 +79,56 @@ data class MixedFundsMigrationUIState(
     val resultLanded: Boolean = false
 )
 
+/** Which parts of the sheet are shown — a pure function of [MixedFundsMigrationUIState]. */
+internal data class MixedFundsSheetPresentation(
+    /** The attempt provably spent nothing (NOT_ATTEMPTED). */
+    val failed: Boolean,
+    /** "Could not confirm": an UNCONFIRMED outcome or the honesty window lapsed. */
+    val terminalGuidance: Boolean,
+    /** The destination choice (Shield / Keep spendable / Later) is on offer. */
+    val choiceMode: Boolean,
+    /** Spinner; Close is hidden and the sheet cannot be dismissed. */
+    val processing: Boolean,
+    val showRestart: Boolean,
+    val showTransferUnmixed: Boolean,
+    val showClose: Boolean,
+    val cancelable: Boolean
+)
+
+internal fun MixedFundsMigrationUIState.presentation(): MixedFundsSheetPresentation {
+    val failed = outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED
+    // Terminal guidance is closable on its own: the recovery marker and any
+    // still-suspended native call outlive the sheet, so closing cancels
+    // nothing and the marker re-presents the migration later.
+    val terminalGuidance = !resultLanded &&
+        (resultTimedOut || outcome == MixedFundsMigrationOutcome.UNCONFIRMED)
+    val awaiting = !inProgress && !resultLanded && !terminalGuidance &&
+        (awaitingResult || outcome == MixedFundsMigrationOutcome.STARTED)
+    val processing = (inProgress && !terminalGuidance) || awaiting
+    val choiceMode = !failed && !processing && !terminalGuidance && !resultLanded
+    return MixedFundsSheetPresentation(
+        failed = failed,
+        terminalGuidance = terminalGuidance,
+        choiceMode = choiceMode,
+        processing = processing,
+        // Nothing to retry while a call is still running.
+        showRestart = (failed || terminalGuidance) && !inProgress,
+        // After a DEFINITIVE shield failure only — an uncertain one must not
+        // offer a second, fresh spend.
+        showTransferUnmixed = failed && attemptedAction == MixedFundsMigrationAction.SHIELD && !inProgress,
+        showClose = !processing,
+        cancelable = !processing && !choiceMode
+    )
+}
+
+/**
+ * Does Try again start a FRESH spend (re-running a definitively failed
+ * move), as opposed to resuming the transaction already in flight? Fresh
+ * spends need the user's authentication; resuming does not.
+ */
+internal fun MixedFundsMigrationUIState.retryStartsFreshSpend(): Boolean =
+    !(resultTimedOut || outcome == MixedFundsMigrationOutcome.UNCONFIRMED)
+
 /**
  * Drives the two one-time mixed-funds choices. Both are single-source-account
  * transactions on the DIP-9 CoinJoin account — see
@@ -93,11 +143,22 @@ class MixedFundsMigrationViewModel @Inject constructor(
     val uiState: StateFlow<MixedFundsMigrationUIState> = _uiState.asStateFlow()
 
     /**
-     * Whether an in-flight marker was ever observed SET by this ViewModel —
-     * the marker clearing only means "the result landed" when it was seen in
-     * flight first (a sheet opened with no marker must not fake a success).
+     * Whether the latest marker emission was SET. Only a set → cleared
+     * transition can mean "landed"; repeated null emissions (the preference
+     * flow re-emits on unrelated writes) never do.
      */
-    private var observedInFlight = false
+    private var markerSet = false
+
+    /**
+     * [CoinJoinFundsMigrationService.verifiedLandings] when the marker was
+     * seen set: a cleared marker is success only if the watcher VERIFIED a
+     * landing since — a definitive rejection or a reconciled interrupted
+     * attempt also clears it.
+     */
+    private var landingsAtObservation = 0
+
+    /** A verified landing observed while a call was still running. */
+    private var landedWhileRunning = false
 
     /** Re-evaluates [MixedFundsMigrationUIState.resultTimedOut] when the honesty window lapses while the sheet is up. */
     private var expiryJob: Job? = null
@@ -115,13 +176,18 @@ class MixedFundsMigrationViewModel @Inject constructor(
             migrationService.observeInFlightMigration().collect { marker ->
                 expiryJob?.cancel()
                 if (marker == null) {
+                    val landed = markerSet && migrationService.verifiedLandings > landingsAtObservation
+                    markerSet = false
+                    val running = _uiState.value.inProgress
+                    if (running && landed) landedWhileRunning = true
                     _uiState.value = _uiState.value.copy(
                         awaitingResult = false,
                         resultTimedOut = false,
-                        resultLanded = observedInFlight && !_uiState.value.inProgress
+                        resultLanded = _uiState.value.resultLanded || (landed && !running)
                     )
                 } else {
-                    observedInFlight = true
+                    if (!markerSet) landingsAtObservation = migrationService.verifiedLandings
+                    markerSet = true
                     val expired = marker.isExpired()
                     _uiState.value = _uiState.value.copy(
                         awaitingResult = !expired,
@@ -182,9 +248,14 @@ class MixedFundsMigrationViewModel @Inject constructor(
     }
 
     fun retryMigration() {
-        if (_uiState.value.inProgress || _uiState.value.awaitingResult) return
-        if (_uiState.value.resultTimedOut || _uiState.value.outcome == MixedFundsMigrationOutcome.UNCONFIRMED) {
-            _uiState.value = _uiState.value.copy(inProgress = true, resultTimedOut = false)
+        val state = _uiState.value
+        if (state.inProgress) return
+        // A pending marker blocks a retry unless its terminal guidance is up
+        // (an UNCONFIRMED outcome keeps the marker): that retry only resumes.
+        if (state.awaitingResult && !state.presentation().terminalGuidance) return
+        if (!state.retryStartsFreshSpend()) {
+            val landingsBefore = migrationService.verifiedLandings
+            _uiState.value = state.copy(inProgress = true, resultTimedOut = false, outcome = null)
             viewModelScope.launch {
                 val outcome = try {
                     migrationService.retryPendingMigration()
@@ -194,7 +265,8 @@ class MixedFundsMigrationViewModel @Inject constructor(
                     MixedFundsMigrationOutcome.UNCONFIRMED
                 }
                 val landed = outcome == MixedFundsMigrationOutcome.STARTED &&
-                    migrationService.inFlightMigration() == null
+                    migrationService.inFlightMigration() == null &&
+                    migrationService.verifiedLandings > landingsBefore
                 _uiState.value = _uiState.value.copy(
                     inProgress = false, outcome = outcome, resultLanded = landed,
                     awaitingResult = outcome == MixedFundsMigrationOutcome.STARTED && !landed
@@ -204,6 +276,19 @@ class MixedFundsMigrationViewModel @Inject constructor(
             MixedFundsMigrationAction.SHIELD -> shieldMixedFunds()
             MixedFundsMigrationAction.COMBINE -> combineIntoUnmixedBalance()
             null -> Unit
+        }
+    }
+
+    /**
+     * The sheet was closed. A DEFINITIVE failure (nothing spent) returns the
+     * activity-scoped state to the destination choice, so reopening from
+     * Tools offers both moves again instead of the same failed one.
+     * Uncertain or in-flight states are kept.
+     */
+    fun onSheetClosed() {
+        val state = _uiState.value
+        if (!state.inProgress && state.outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+            _uiState.value = state.copy(outcome = null, attemptedAction = null)
         }
     }
 
@@ -242,6 +327,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
             )
             return
         }
+        landedWhileRunning = false
         _uiState.value = _uiState.value.copy(inProgress = true, outcome = null, attemptedAction = action)
         viewModelScope.launch {
             val outcome = try {
@@ -257,7 +343,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 inProgress = false,
                 outcome = outcome,
-                resultLanded = outcome == MixedFundsMigrationOutcome.STARTED && observedInFlight &&
+                resultLanded = outcome == MixedFundsMigrationOutcome.STARTED && landedWhileRunning &&
                     !_uiState.value.awaitingResult && !_uiState.value.resultTimedOut
             )
         }

@@ -33,7 +33,7 @@ class CoinJoinMigrationRecoveryTest {
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 1
-        coEvery { shield.resumePendingWalletShields() } returns 1
+        coEvery { shield.resumePendingWalletShieldsOnUserRequest() } returns 1
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val send = mockk<SdkL1SendService>(relaxed = true)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -46,8 +46,8 @@ class CoinJoinMigrationRecoveryTest {
             assertNotNull(service.inFlightMigration())
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.combineIntoUnmixedBalance())
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.retryPendingMigration())
-            coVerify(exactly = 1) { shield.resumePendingWalletShields() }
-            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any()) }
+            coVerify(exactly = 1) { shield.resumePendingWalletShieldsOnUserRequest() }
+            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
             coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }
         } finally {
             scope.cancel()
@@ -77,7 +77,7 @@ class CoinJoinMigrationRecoveryTest {
         try {
             assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.shieldMixedFunds(Dash.COIN))
             assertNull(service.inFlightMigration())
-            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any()) }
+            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
         } finally {
             scope.cancel()
         }
