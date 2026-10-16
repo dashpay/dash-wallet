@@ -1561,4 +1561,41 @@ class SendCoinsTaskRunnerBIP70Test {
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
         coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
     }
+
+    // ==================== the route is pinned once the order is recorded (review 2573c55dcc82) ==
+
+    @Test
+    fun `a plain payment recorded before the cutover commits is never rebuilt and sent as another transaction`() = runBlocking {
+        // Pre-cutover: dashj completes and signs transaction A, and the caller records its order
+        // for A. The cutover commits while that record is being written. The generic send funnel
+        // then re-checks the cutover and would discard A, build B through the SDK and broadcast
+        // it: the order stays keyed to A, which never goes out.
+        var cutover = false
+        coEvery { sdkL1SendService.cutoverCommitted() } answers { cutover }
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast("ff".repeat(32))
+        var recorded: String? = null
+
+        val outcome = runCatching {
+            sendCoinsTaskRunner.payWithDashUrlTx(
+                "dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=0.01",
+                "PiggyCards",
+                PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = null)
+            ) { txId ->
+                recorded = txId
+                cutover = true // committed while the order is being recorded
+            }
+        }
+
+        assertNotNull("precondition: the order was recorded for a finalized transaction: $outcome", recorded)
+        // nothing but the recorded transaction may go out, and it cannot go out after the cutover
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.sendToAddress(any(), any(), any(), any()) }
+        io.mockk.verify(exactly = 0) { walletApplication.broadcastTransaction(any()) }
+        assertTrue("refused, so the caller discards its order: $outcome", outcome.isFailure)
+        assertFalse(
+            "a refusal must not read as possibly sent",
+            outcome.exceptionOrNull() is PaymentSubmissionPendingException
+        )
+        assertNull("the recorded transaction was not committed", wallet.getTransaction(Sha256Hash.wrap(recorded)))
+    }
 }

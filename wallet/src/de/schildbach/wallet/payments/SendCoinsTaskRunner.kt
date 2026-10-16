@@ -887,7 +887,14 @@ class SendCoinsTaskRunner @Inject constructor(
             // The callback suspends, and the gift card flow runs this NonCancellable, so a wipe can
             // finish while the order is being recorded. Committing to whatever is installed by
             // then would hand the replacement wallet this one's signed transaction.
-            return sendCoins(sendRequestForSigning, txCompleted = true, serviceName = serviceName, originWallet = wallet)
+            // Pinned: the order just recorded is keyed to this exact transaction.
+            return sendCoins(
+                sendRequestForSigning,
+                txCompleted = true,
+                serviceName = serviceName,
+                originWallet = wallet,
+                recordedForDashjRoute = true
+            )
         }
     }
 
@@ -1566,7 +1573,14 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
         intendedRecipient: Address? = null,
-        originWallet: Wallet? = null
+        originWallet: Wallet? = null,
+        /**
+         * The caller has already recorded [sendRequest]'s finalized transaction (an order keyed
+         * to its txid). Then that exact transaction goes out on the dashj route chosen when it
+         * was built, or nothing does: never rerouted through the SDK, which would discard it and
+         * broadcast a different one the record knows nothing about.
+         */
+        recordedForDashjRoute: Boolean = false
     ): Transaction = withContext(Dispatchers.IO) {
         // Callers may have built this request before restoration finished, so wait here too.
         pendingPaymentVerifier.awaitRestored()
@@ -1592,6 +1606,16 @@ class SendCoinsTaskRunner @Inject constructor(
         // anything the SDK can't reproduce (BIP70 multi-output, CrowdNode
         // selectors/locked outputs).
         if (sdkL1SendService.cutoverCommitted()) {
+            if (recordedForDashjRoute) {
+                // The cutover committed after this transaction was finalized and recorded. The held
+                // dashj engine can no longer broadcast it, and rebuilding through the SDK would
+                // send a different transaction than the one recorded. Nothing has been committed
+                // or broadcast: refuse, and the caller discards what it recorded.
+                throw IllegalStateException(
+                    "the cutover committed after ${sendRequest.tx.txId} was recorded; " +
+                        "not broadcasting it, and not rebuilding it as another transaction"
+                )
+            }
             val payment = extractSdkRoutablePayment(
                 sendRequest,
                 walletData.networkParameters,
