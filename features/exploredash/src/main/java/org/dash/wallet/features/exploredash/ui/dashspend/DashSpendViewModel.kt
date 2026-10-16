@@ -24,19 +24,22 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.Configuration
@@ -161,6 +164,16 @@ class DashSpendViewModel @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(DashSpendViewModel::class.java)
+
+        const val DEFAULT_UNRESOLVED_OBSERVATION_RETRY_MS = 1_000L
+
+        /** Test seam: the first wait before observing pending payments again after a failed read. */
+        @androidx.annotation.VisibleForTesting
+        @Volatile
+        var unresolvedObservationRetryDelayMs = DEFAULT_UNRESOLVED_OBSERVATION_RETRY_MS
+
+        /** The longest wait between attempts to observe pending payments again. */
+        private const val UNRESOLVED_OBSERVATION_RETRY_MAX_MS = 60_000L
         private const val MERCHANT_ID_KEY = "merchant_id"
         private const val BALANCE_KEY = "balance"
         private const val SELECTED_PROVIDER_KEY = "selected_provider"
@@ -350,12 +363,25 @@ class DashSpendViewModel @Inject constructor(
      * Null until the store has actually been read. A plain false there would make "we have not
      * looked yet" indistinguishable from "nothing is pending", which is the one direction this
      * flag must never guess in: every reader below treats anything other than an explicit false
-     * as a reason to refuse. A read that fails keeps it null for the same reason, and is caught
-     * rather than left to reach the scope's handler.
+     * as a reason to refuse. A read that fails publishes null for the same reason (unknown, so
+     * blocked), and the observation is started again with backoff rather than left completed: a
+     * completed flow is never restarted by [SharingStarted.Eagerly], and a transient storage error
+     * would otherwise block gift cards for the rest of this view model's life even after storage
+     * recovered.
      */
     private val unresolvedPurchaseOnDisk: StateFlow<Boolean?> = unresolvedPayments
         .observeUnresolvedGiftCardPurchase()
-        .catch { e -> log.error("could not read pending payments; keeping gift card purchases blocked", e) }
+        .map<Boolean, Boolean?> { it }
+        .retryWhen { cause, attempt ->
+            if (cause is CancellationException) return@retryWhen false
+            log.error("could not read pending payments; keeping gift card purchases blocked and retrying", cause)
+            emit(null)
+            delay(
+                (unresolvedObservationRetryDelayMs shl attempt.coerceAtMost(6).toInt())
+                    .coerceAtMost(UNRESOLVED_OBSERVATION_RETRY_MAX_MS)
+            )
+            true
+        }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /**

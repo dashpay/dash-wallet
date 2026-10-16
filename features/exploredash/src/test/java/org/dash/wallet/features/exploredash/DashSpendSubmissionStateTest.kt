@@ -25,6 +25,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
@@ -251,6 +252,28 @@ class DashSpendSubmissionStateTest {
             "a claim was granted from a store that could not be read",
             viewModel.tryStartSubmission()
         )
+    }
+
+    @Test
+    fun `a store read that fails once is retried, and purchases are allowed again once it recovers`() = runBlocking {
+        // 4297952501: a failed read used to complete the observation for good, leaving every later
+        // purchase blocked for the view model's lifetime even after storage recovered
+        var collections = 0
+        every { unresolvedPayments.observeUnresolvedGiftCardPurchase() } returns flow {
+            if (collections++ == 0) throw IllegalStateException("pending payments could not be read")
+            emitAll(MutableStateFlow(false))
+        }
+        DashSpendViewModel.unresolvedObservationRetryDelayMs = 0L
+        try {
+            val viewModel = createViewModel()
+
+            assertTrue("the failed read was retried", collections >= 2)
+            assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+            assertTrue(viewModel.tryStartSubmission())
+        } finally {
+            DashSpendViewModel.unresolvedObservationRetryDelayMs =
+                DashSpendViewModel.DEFAULT_UNRESOLVED_OBSERVATION_RETRY_MS
+        }
     }
 
     @Test
