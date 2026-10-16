@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.payments
 
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PendingDirectPayment
 import de.schildbach.wallet.data.PendingDirectPaymentConfig
@@ -312,6 +314,8 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `resume keeps watching an abandoned payment without locking its inputs`() = runBlocking {
         verifier.recordRetentionMs = 0L
+        // the retention cleanup acts only while connected and synced, like the release
+        goOnlineAndSynced()
         val tx = createTransaction()
         coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
@@ -1071,6 +1075,71 @@ class PendingDirectPaymentVerifierTest {
         assertEquals(EngineObservation.UNAVAILABLE, classifyEngineObservation(recordFound = null, live = true))
         assertEquals(EngineObservation.UNAVAILABLE, classifyEngineObservation(recordFound = false, live = false))
         assertEquals(EngineObservation.ABSENT, classifyEngineObservation(recordFound = false, live = true))
+    }
+
+    // --- absence needs processing to have caught up (review 3cb2e95bbc6b) --------------------
+
+    private fun progress(
+        filterHeight: Long = 1_000L,
+        walletSyncedHeight: Long,
+        phase: ShadowSyncPhase = ShadowSyncPhase.FILTERS
+    ) = ShadowSyncProgress(
+        phase = phase,
+        overallPercent = 99.9,
+        headerHeight = 1_000L,
+        headerTarget = 1_000L,
+        filterHeight = filterHeight,
+        filterTarget = 1_000L,
+        walletSyncedHeight = walletSyncedHeight
+    )
+
+    @Test
+    fun `filters at the tip with the committed wallet cursor far behind is not a live observation`() {
+        // The display predicate reads caught up here, but blocks up to the tip have not been
+        // processed yet: a mined payment in them has no row, and its absence proves nothing.
+        val lagging = progress(walletSyncedHeight = 500L)
+        assertTrue("precondition: the display predicate says caught up", lagging.scanCaughtUpToTip)
+        assertTrue("precondition: the block pipeline is lagging", lagging.blockPipelineLagging)
+
+        assertFalse(isEngineObservationLive(engineRunning = true, progress = lagging))
+    }
+
+    @Test
+    fun `an unknown committed wallet cursor is not a live observation`() {
+        // 0 means no evidence; blockPipelineLagging reads false for it, which is not proof
+        assertFalse(isEngineObservationLive(engineRunning = true, progress = progress(walletSyncedHeight = 0L)))
+    }
+
+    @Test
+    fun `a committed wallet cursor at the tip is a live observation`() {
+        assertTrue(isEngineObservationLive(engineRunning = true, progress = progress(walletSyncedHeight = 1_000L)))
+        assertTrue(isEngineObservationLive(engineRunning = true, progress = progress(walletSyncedHeight = 999L)))
+    }
+
+    @Test
+    fun `the retention cleanup needs the same connected and synced evidence as the release`() = runBlocking {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 50L
+        verifier.recordRetentionMs = 400L
+        goOnlineAndSynced()
+        val tx = createTransaction()
+
+        verifier.quarantine(tx, paymentUrl, "SomeService")
+        // released under the full release guard...
+        withTimeout(5_000) {
+            while (runCatching {
+                    coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+                }.isFailure
+            ) delay(10)
+        }
+        // ...then the wallet loses the network before the retention period ends. The engine row
+        // still reads ABSENT, but nothing is watching: the records of what may be a real payment
+        // must stay.
+        coEvery { blockchainStateProvider.getState() } returns null
+        delay(800)
+
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        coVerify(exactly = 0) { config.remove(tx.txId) }
     }
 
     // --- funding gate for restored payments (review 4245734665) -------------------------------

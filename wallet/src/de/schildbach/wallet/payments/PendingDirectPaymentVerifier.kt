@@ -674,7 +674,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         // for the grace period is not proof the payment never reached the payee.
                         current = release(tx, current, origin)
                     }
-                } else if (now - current.createdAt >= recordRetentionMs) {
+                } else if (now - current.createdAt >= recordRetentionMs && syncedSince != 0L) {
+                    // No weaker than the release: discarding deletes the records of what may yet
+                    // be a real payment, so it acts only on a round that was connected and synced.
                     discardRecords(current, origin)
                     return null
                 }
@@ -843,6 +845,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 }
                 EngineObservation.ABSENT -> Unit
             }
+        }
+        // The same evidence the release needed, asked again right before acting: the engine's
+        // silence counts only while it, and the wallet, are connected and caught up.
+        if (!isConnectedAndSynced()) {
+            log.warn("not discarding the records of {}: the wallet is not connected and synced", payment.txId)
+            jobs.remove(payment.txId)
+            return
         }
 
         if (payment.isGiftCardPurchase) {

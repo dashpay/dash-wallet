@@ -66,12 +66,25 @@ internal fun classifyEngineObservation(recordFound: Boolean?, live: Boolean): En
  * Whether the SDK engine is observing the network right now: running, past connecting, not in
  * error, and with its compact-filter scan caught up to the tip. Pure.
  */
+/**
+ * Whether the engine's silence about a transaction is evidence. [ShadowSyncProgress.scanCaughtUpToTip]
+ * is not enough: it is a DISPLAY predicate, true while the filters are at the tip even when the
+ * blocks they matched have not been processed yet ([ShadowSyncProgress.blockPipelineLagging]). A
+ * payment mined in one of those blocks has no row until they are, so a missing row then proves
+ * nothing. Absence therefore needs affirmative proof that transaction processing has caught up:
+ * the COMMITTED wallet cursor ([ShadowSyncProgress.walletSyncedHeight], 0 = no evidence) within
+ * [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the tip.
+ */
 internal fun isEngineObservationLive(engineRunning: Boolean, progress: ShadowSyncProgress): Boolean =
     engineRunning &&
         progress.phase != ShadowSyncPhase.IDLE &&
         progress.phase != ShadowSyncPhase.CONNECTING &&
         progress.phase != ShadowSyncPhase.ERROR &&
-        progress.scanCaughtUpToTip
+        progress.scanCaughtUpToTip &&
+        progress.headerTarget > 0 &&
+        progress.walletSyncedHeight > 0 &&
+        progress.headerTarget - progress.walletSyncedHeight <= ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS &&
+        !progress.blockPipelineLagging
 
 /**
  * What [PendingDirectPaymentVerifier] needs from the Kotlin SDK engine.
