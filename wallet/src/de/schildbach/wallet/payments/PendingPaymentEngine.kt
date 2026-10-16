@@ -71,20 +71,27 @@ internal fun classifyEngineObservation(recordFound: Boolean?, live: Boolean): En
  * is not enough: it is a DISPLAY predicate, true while the filters are at the tip even when the
  * blocks they matched have not been processed yet ([ShadowSyncProgress.blockPipelineLagging]). A
  * payment mined in one of those blocks has no row until they are, so a missing row then proves
- * nothing. Absence therefore needs affirmative proof that transaction processing has caught up:
- * the COMMITTED wallet cursor ([ShadowSyncProgress.walletSyncedHeight], 0 = no evidence) within
- * [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the tip.
+ * nothing.
+ *
+ * Absence therefore needs affirmative proof that transaction processing has reached the KNOWN
+ * TIP, with no tolerance: the COMMITTED wallet cursor ([ShadowSyncProgress.walletSyncedHeight],
+ * 0 = no evidence) at or past the best tip the engine knows ([ShadowSyncProgress.bestKnownTipHeight],
+ * the larger of the header height and the header target, so a target left behind by headers that
+ * have since moved on is not mistaken for the tip). One block short is one block whose payment may
+ * have no row yet. An unknown tip is no evidence either.
  */
-internal fun isEngineObservationLive(engineRunning: Boolean, progress: ShadowSyncProgress): Boolean =
-    engineRunning &&
+internal fun isEngineObservationLive(engineRunning: Boolean, progress: ShadowSyncProgress): Boolean {
+    val tip = progress.bestKnownTipHeight
+    return engineRunning &&
         progress.phase != ShadowSyncPhase.IDLE &&
         progress.phase != ShadowSyncPhase.CONNECTING &&
         progress.phase != ShadowSyncPhase.ERROR &&
         progress.scanCaughtUpToTip &&
         progress.headerTarget > 0 &&
-        progress.walletSyncedHeight > 0 &&
-        progress.headerTarget - progress.walletSyncedHeight <= ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS &&
+        tip > 0 &&
+        progress.walletSyncedHeight >= tip &&
         !progress.blockPipelineLagging
+}
 
 /**
  * What [PendingDirectPaymentVerifier] needs from the Kotlin SDK engine.

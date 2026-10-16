@@ -447,7 +447,8 @@ class PendingDirectPaymentVerifierTest {
                 metadataProvider.markGiftCardTransaction(tx.txId.toTxId(), "PiggyCards", "https://logo.example/x.png")
             }
         }
-        coVerify { config.remove(tx.txId) }
+        // the record goes after the attribution, on the watch's own coroutine: wait for it
+        coVerify(timeout = 5_000) { config.remove(tx.txId) }
     }
 
     @Test
@@ -1113,7 +1114,135 @@ class PendingDirectPaymentVerifierTest {
     @Test
     fun `a committed wallet cursor at the tip is a live observation`() {
         assertTrue(isEngineObservationLive(engineRunning = true, progress = progress(walletSyncedHeight = 1_000L)))
-        assertTrue(isEngineObservationLive(engineRunning = true, progress = progress(walletSyncedHeight = 999L)))
+    }
+
+    @Test
+    fun `a committed wallet cursor one or two blocks short of the tip is not a live observation`() {
+        // Review 5543338689: a payment mined in block 1000 may have no row while the wallet has
+        // committed only through 999. No tolerance: processing must have reached the tip.
+        assertFalse(isEngineObservationLive(engineRunning = true, progress = progress(walletSyncedHeight = 999L)))
+        assertFalse(isEngineObservationLive(engineRunning = true, progress = progress(walletSyncedHeight = 998L)))
+    }
+
+    @Test
+    fun `a header target behind the known header height is not a known tip`() {
+        // headers have moved past the target the cursor is compared against: the target is stale
+        val stale = progress(walletSyncedHeight = 1_000L).copy(headerHeight = 1_001L)
+        assertFalse(isEngineObservationLive(engineRunning = true, progress = stale))
+        // and no tip at all is no evidence either
+        val unknown = progress(walletSyncedHeight = 1_000L).copy(headerHeight = 0L, headerTarget = 0L)
+        assertFalse(isEngineObservationLive(engineRunning = true, progress = unknown))
+    }
+
+    // The release and the retention cleanup driven through the real engine predicate, at a tip
+    // the committed cursor has not reached.
+
+    private fun liveEngineVerifier(walletSyncedHeight: Long): Pair<PendingDirectPaymentVerifier, suspend () -> Unit> {
+        val shadow = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService>(relaxed = true)
+        every { shadow.isEngineRunning() } returns true
+        every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(progress(walletSyncedHeight = walletSyncedHeight))
+        val sdkL1 = mockk<de.schildbach.wallet.service.platform.sdk.SdkL1SendService>(relaxed = true)
+        coEvery { sdkL1.cutoverCommitted() } returns true
+        val db = mockk<org.dashfoundation.dashsdk.persistence.DashDatabase>(relaxed = true)
+        // no row: the payment is not in the store yet
+        every { db.transactionDao() } returns mockk(relaxed = true) { coEvery { getByTxid(any()) } returns null }
+        val sdkService = mockk<de.schildbach.wallet.service.platform.sdk.DashSdkService>(relaxed = true)
+        every { sdkService.databaseOrNull() } returns db
+        val realEngine = SdkPendingPaymentEngine(sdkL1, sdkService, shadow, mockk(relaxed = true))
+
+        val wipe = slot<suspend () -> Unit>()
+        val ownWalletData = mockk<WalletData>(relaxed = true)
+        every { ownWalletData.wallet } returns wallet
+        every { ownWalletData.attachOnWalletWipedListener(capture(wipe)) } answers { }
+        val v = PendingDirectPaymentVerifier(
+            ownWalletData, walletApplication, blockchainStateProvider, metadataProvider, config, realEngine
+        ).apply { pollIntervalMs = 20L }
+        return v to (if (wipe.isCaptured) wipe.captured else ({ }))
+    }
+
+    private fun releaseIsWithheldAt(walletSyncedHeight: Long) = runBlocking {
+        val (v, stop) = liveEngineVerifier(walletSyncedHeight)
+        try {
+            v.minAgeMs = 0L
+            v.syncedGraceMs = 100L
+            goOnlineAndSynced()
+            val tx = createTransaction()
+
+            v.quarantine(tx, paymentUrl, "SomeService")
+            delay(700)
+
+            coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+            tx.inputs.forEach { assertTrue("inputs stay locked", wallet.isLockedOutput(it.outpoint)) }
+        } finally {
+            stop()
+        }
+    }
+
+    private fun retentionCleanupIsWithheldAt(walletSyncedHeight: Long, giftCard: Boolean) = runBlocking {
+        val (v, stop) = liveEngineVerifier(walletSyncedHeight)
+        try {
+            v.recordRetentionMs = 0L
+            goOnlineAndSynced()
+            val tx = createTransaction()
+            coEvery { config.getAllOrThrow() } returns listOf(
+                PendingDirectPayment(
+                    tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
+                    System.currentTimeMillis() - 1_000L, isGiftCardPurchase = giftCard, abandoned = true
+                )
+            )
+
+            withTimeout(5_000) { v.awaitRestored() }
+            delay(700)
+
+            coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+            coVerify(exactly = 0) { config.remove(tx.txId) }
+            coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.watchExpired }, any()) }
+        } finally {
+            stop()
+        }
+    }
+
+    @Test
+    fun `no release while the committed cursor is one block short of the tip`() = releaseIsWithheldAt(999L)
+
+    @Test
+    fun `no release while the committed cursor is two blocks short of the tip`() = releaseIsWithheldAt(998L)
+
+    @Test
+    fun `no retention cleanup while the committed cursor is one block short of the tip`() =
+        retentionCleanupIsWithheldAt(999L, giftCard = false)
+
+    @Test
+    fun `no retention cleanup while the committed cursor is two blocks short of the tip`() =
+        retentionCleanupIsWithheldAt(998L, giftCard = false)
+
+    @Test
+    fun `no gift card watch expiry while the committed cursor is one block short of the tip`() =
+        retentionCleanupIsWithheldAt(999L, giftCard = true)
+
+    @Test
+    fun `no gift card watch expiry while the committed cursor is two blocks short of the tip`() =
+        retentionCleanupIsWithheldAt(998L, giftCard = true)
+
+    @Test
+    fun `the retention cleanup does run once the committed cursor reaches the tip`() = runBlocking {
+        // the control for the tests above: same setup, cursor at the tip
+        val (v, stop) = liveEngineVerifier(1_000L)
+        try {
+            v.recordRetentionMs = 0L
+            goOnlineAndSynced()
+            val tx = createTransaction()
+            coEvery { config.getAllOrThrow() } returns listOf(
+                PendingDirectPayment(
+                    tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
+                    System.currentTimeMillis() - 1_000L, abandoned = true
+                )
+            )
+            withTimeout(5_000) { v.awaitRestored() }
+            coVerify(timeout = 5_000) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
+        } finally {
+            stop()
+        }
     }
 
     @Test
