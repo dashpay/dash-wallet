@@ -632,4 +632,33 @@ class SdkTransparentUsernameCreationTest {
         assertTrue("must be Broadcast, got $result", result is SdkWriteResult.Broadcast)
         coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
     }
+
+    // ── name-only retry for an existing identity (review 4299080469) ─────
+
+    @Test
+    fun `a name-only retry keeps the existing identity and never funds a new one`() = runTest {
+        // The identity is registered on chain; only its name step failed. Retrying with a new name
+        // must re-drive ONLY the DPNS step for THAT identity: no reset to NONE, no asset lock.
+        val source = source(lockAfterFailure = null)
+        val nameContexts = mutableListOf<List<Any?>>()
+        val handedOff = mutableListOf<String>()
+        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+        val retry = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = { handedOff += it },
+            driveCreationState = { state, error -> states += state to error },
+            persistNameContext = { id, name, secondary, restoring -> nameContexts += listOf(id, name, secondary, restoring) }
+        )
+
+        retry.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice3x")
+
+        assertEquals(listOf(listOf(identityIdBase58, "alice3", "alice3x", true)), nameContexts)
+        assertEquals("the name step, error cleared", listOf(IdentityCreationState.USERNAME_REGISTERING to null), states)
+        assertEquals("the same identity goes to the name-only recovery", listOf(identityIdBase58), handedOff)
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.previewRegistrationKeySet(any(), any(), any()) }
+    }
 }

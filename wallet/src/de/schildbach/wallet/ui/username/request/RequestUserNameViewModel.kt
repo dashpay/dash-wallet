@@ -1121,6 +1121,24 @@ class RequestUserNameViewModel @Inject constructor(
             val submitSource = effectivePaymentSource(
                 requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
             )
+            // After the cutover an identity that already exists on chain gets ONLY its name
+            // retried (review 4299080469): the legacy reuse path below resets it to NONE and
+            // looks for a dashj funding transaction an SDK-created identity never had, so it
+            // would start fresh legacy funding. Before the cutover the legacy path is master's
+            // (#1567) and stays as it is.
+            val existingIdentityId = identity?.userId
+            if (reuseTransaction && existingIdentityId != null && !isUsingInvite() &&
+                transparentUsernameCreation.isCutoverCommitted()
+            ) {
+                log.info("name-only retry for the existing identity (cutover committed)")
+                _uiState.update { it.copy(usernameRequestSubmitting = true) }
+                transparentUsernameCreation.retryNameForExistingIdentity(
+                    existingIdentityId,
+                    requestedUserName!!,
+                    requestedUsernameSecondary
+                )
+                return@launch
+            }
             val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
                 submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
                 transparentUsernameCreation.isCutoverCommitted()

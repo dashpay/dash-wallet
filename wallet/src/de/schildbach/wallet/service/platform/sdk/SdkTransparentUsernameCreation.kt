@@ -1437,6 +1437,27 @@ class SdkTransparentUsernameCreation internal constructor(
      * [SdkWriteResult.Ambiguous] when the outcome cannot be proven pre-broadcast
      * (the caller re-checks the on-chain name before re-registering).
      */
+    /**
+     * Name-only retry for an identity that is already registered on chain and only needs a
+     * (new) DPNS name: a lost or locked vote, or a rejected domain document (review 4299080469).
+     * It never funds and never resets the identity. It records the requested name(s) against the
+     * EXISTING identity with `restoring = true`, puts the creation state back on the name step with
+     * the old error cleared, and hands the identity to the same name-only recovery a home-tile retry
+     * uses ([RestoreIdentityOperation] via [handOffToLegacy]). Post-cutover that worker registers the
+     * requested name through [registerDpnsNameForExistingIdentity].
+     *
+     * The legacy CreateIdentityService reuse path must not be used for this after the cutover: it
+     * replaces the identity record with a fresh one at NONE and looks for a dashj asset-lock
+     * transaction the SDK creation path never put in dashj's AuthenticationGroupExtension, so it
+     * starts fresh legacy funding.
+     */
+    suspend fun retryNameForExistingIdentity(identityIdBase58: String, username: String, secondaryUsername: String?) {
+        log.info("name-only retry for existing identity {}: requesting a new DPNS name", identityIdBase58)
+        persistNameContext(identityIdBase58, username, secondaryUsername, true)
+        driveCreationState(IdentityCreationState.USERNAME_REGISTERING, null)
+        handOffToLegacy(identityIdBase58)
+    }
+
     suspend fun registerDpnsNameForExistingIdentity(
         identityIdBase58: String,
         label: String
