@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -273,11 +274,12 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, fundingAddress)
 
-//    val dynamicLinkData
-//        get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
-
-    val shortDynamicLinkData
-        get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink
+    /**
+     * The L1 invite's share link, read from the saved invitation row; null until that row has
+     * arrived. The shielded path publishes its link through [shieldedInviteShareLink] instead.
+     */
+    val shareLink: String?
+        get() = _invitation.value?.shortDynamicLink
 
     val walletData
         get() = walletApplication
@@ -304,6 +306,9 @@ open class InvitationFragmentViewModel @Inject constructor(
     }
 
     suspend fun sendInviteTransaction(value: Coin): String {
+        // this view model is activity-scoped: drop any invitation selected on a previous screen so
+        // the created screen cannot offer its link while the new invite is still pending
+        clearInvitationSelection()
         // ensure that the fundingAddress hasn't been used
         withContext(Dispatchers.IO) {
             Context.propagate(walletData.wallet!!.context)
@@ -363,6 +368,7 @@ open class InvitationFragmentViewModel @Inject constructor(
      * off the main thread.
      */
     suspend fun createShieldedInvite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        clearInvitationSelection()
         _inviteCreationInFlight.value = true
         return try {
             withContext(Dispatchers.IO) {
@@ -422,6 +428,7 @@ open class InvitationFragmentViewModel @Inject constructor(
      * funding spend off the main thread.
      */
     suspend fun createL1Invite(contested: Boolean): SdkWriteResult<InvitationLinkData> {
+        clearInvitationSelection()
         _inviteCreationInFlight.value = true
         return try {
             withContext(Dispatchers.IO) {
@@ -508,10 +515,23 @@ open class InvitationFragmentViewModel @Inject constructor(
     val invitation: StateFlow<Invitation?>
         get() = _invitation
 
+    /**
+     * Forget everything a previous invite left in this activity-scoped view model: the selected
+     * row (cancelling its database observation) and the SDK-created link flows, so the created
+     * screen cannot show or share the previous invitation while a new one is pending.
+     */
+    fun clearInvitationSelection() {
+        identityId.value = null
+        _invitation.value = null
+        _shieldedInviteLink.value = null
+        _shieldedInviteShareLink.value = null
+    }
+
     init {
         identityId
-            .filterNotNull()
-            .flatMapLatest(invitationDao::observeByUserId)
+            .flatMapLatest { userId ->
+                if (userId == null) flowOf(null) else invitationDao.observeByUserId(userId)
+            }
             .onEach { invitation ->
                 _invitation.value = invitation
             }.launchIn(workerScope)
