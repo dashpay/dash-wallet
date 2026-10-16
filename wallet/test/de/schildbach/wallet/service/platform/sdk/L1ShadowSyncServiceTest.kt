@@ -46,6 +46,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Files
@@ -4035,6 +4036,155 @@ class L1ShadowSyncServiceTest {
 
         clock.set(t0 + 2 * settle) // past the second event's window
         source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        service.stop()
+    }
+
+    /** A `TransactionRecord` Debug string as it appears in a `BlockProcessed` list. */
+    private fun blockRecord(height: Int): String =
+        "TransactionRecord { txid: 0x$recordTxid, account_type: Standard { index: 0, " +
+            "standard_account_type: BIP44 }, context: InBlock(BlockInfo { height: $height }), " +
+            "direction: Incoming, net_amount: 1000000, fee: None, label: \"\" }"
+
+    /** `WalletEvent::BlockProcessed` that stores and/or confirms the record. */
+    private fun blockProcessedWithRecords(
+        inserted: Boolean = false,
+        updated: Boolean = false,
+        matured: Boolean = false,
+        height: Int = 1_200_000
+    ): String {
+        fun list(present: Boolean) = if (present) "[${blockRecord(height)}]" else "[]"
+        return "BlockProcessed { wallet_id: WalletId([205, 205, 205]), height: $height, " +
+            "chain_lock: None, inserted: ${list(inserted)}, updated: ${list(updated)}, " +
+            "matured: ${list(matured)}, " +
+            "balance: WalletCoreBalance { confirmed: 1000000, unconfirmed: 0, immature: 0, locked: 0 }, " +
+            "account_balances: {}, addresses_derived: [] }"
+    }
+
+    @Test
+    fun blockProcessedChangesHistory_onlyWhenItStoresOrConfirmsARecord() {
+        assertTrue(l1BlockProcessedChangesHistory(blockProcessedWithRecords(inserted = true)))
+        assertTrue(l1BlockProcessedChangesHistory(blockProcessedWithRecords(updated = true)))
+        assertTrue(l1BlockProcessedChangesHistory(blockProcessedWithRecords(inserted = true, updated = true)))
+        // Pretty-printed `{:#?}` lists.
+        assertTrue(
+            l1BlockProcessedChangesHistory(
+                "BlockProcessed {\n    inserted: [],\n    updated: [\n        TransactionRecord {\n" +
+                    "            txid: 0x$recordTxid,\n        },\n    ],\n    matured: [],\n}"
+            )
+        )
+        assertFalse(
+            l1BlockProcessedChangesHistory("BlockProcessed {\n    inserted: [],\n    updated: [],\n}")
+        )
+        // Most blocks carry nothing for the wallet; chainlocked or not, they change nothing.
+        assertFalse(l1BlockProcessedChangesHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = null)))
+        assertFalse(
+            l1BlockProcessedChangesHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = 1_200_000))
+        )
+        // A maturing coinbase changes neither membership nor a net value.
+        assertFalse(l1BlockProcessedChangesHistory(blockProcessedWithRecords(matured = true)))
+        // A format whose lists cannot be found must cost a recompute, not keep a stale verdict.
+        assertTrue(l1BlockProcessedChangesHistory("BlockProcessed { wallet_id: WalletId([1]), height: 7 }"))
+        // Other variants belong to other feeds.
+        assertFalse(l1BlockProcessedChangesHistory(detectedDebug()))
+        assertFalse(l1BlockProcessedChangesHistory(instantLockedDebug()))
+        assertFalse(l1BlockProcessedChangesHistory("SyncHeightAdvanced { wallet_id: WalletId([1]), height: 7 }"))
+        assertFalse(l1BlockProcessedChangesHistory(chainLockProcessedDebug(1_200_000)))
+        assertFalse(l1BlockProcessedChangesHistory("not an event at all"))
+    }
+
+    /**
+     * Review, PR #1605: a confirmation arrives as `BlockProcessed`, which the
+     * instant-receive parser drops. A breakdown that ran while a shared tx was
+     * unconfirmed on both sides left it out of the value comparison; once a
+     * block confirms it, that clean sheet no longer covers the history — and a
+     * run that read its inputs before the block must not publish either.
+     */
+    private fun assertABlockStopsTheFindings(blockEvent: String): Unit = runBlocking {
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        val forwarded = mutableListOf<L1TxEvent>()
+        val collector = scope.launch { service.txEvents.collect { forwarded += it } }
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        source.onDashjBreakdownFacts = {
+            inside.complete(Unit)
+            gate.await()
+        }
+        val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
+        withTimeout(5_000) { inside.await() }
+
+        source.eventStrings.emit(blockEvent)
+        source.awaitEventsHandled()
+        assertNull("the block expires the findings", service.latestBreakdownFindings.value)
+        assertTrue("the instant-receive feed is unchanged", forwarded.isEmpty())
+
+        gate.complete(Unit)
+        val result = withTimeout(5_000) { report.await() }
+        assertNotNull("the report still gets the run's text", result.stored)
+        delay(50) // let the run's completion (cadence update) finish too
+        assertNull("a run that read its inputs before the block must not publish", service.latestBreakdownFindings.value)
+
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 3 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        collector.cancel()
+        service.stop()
+    }
+
+    @Test
+    fun aBlockThatStoresATransaction_expiresTheFindings_andFencesARunInFlight() {
+        assertABlockStopsTheFindings(blockProcessedWithRecords(inserted = true))
+    }
+
+    @Test
+    fun aBlockThatConfirmsATransaction_expiresTheFindings_andFencesARunInFlight() {
+        assertABlockStopsTheFindings(blockProcessedWithRecords(updated = true))
+    }
+
+    @Test
+    fun aBlockWithNoWalletTransactions_leavesTheFindings() = runBlocking {
+        // The engine emits one BlockProcessed per block; expiring on each would
+        // keep parity from ever being established.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        val findings = service.latestBreakdownFindings.value
+
+        source.eventStrings.emit(blockProcessedDebug(height = 1_200_000, chainLockHeight = null))
+        source.eventStrings.emit(blockProcessedDebug(height = 1_200_001, chainLockHeight = 1_200_001))
+        source.eventStrings.emit(blockProcessedWithRecords(matured = true, height = 1_200_002))
+        source.awaitEventsHandled()
+
+        assertSame(findings, service.latestBreakdownFindings.value)
+        // Nor did they release the hour: no recompute on the next edges.
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        assertSame(findings, service.latestBreakdownFindings.value)
         service.stop()
     }
 

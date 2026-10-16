@@ -1649,6 +1649,42 @@ fun parseL1TxEvent(eventDebug: String): L1TxEvent? = when {
     else -> null
 }
 
+/*
+ * `BlockProcessed`'s two record lists that change the confirmed history.
+ * Matched at their FIRST occurrence: `wallet_id`, `height` and `chain_lock`
+ * come before them in the derived Debug order and none has a field of
+ * these names, so the first match is the event's own field. The capture is
+ * the list's first non-blank character, empty for `[]`; `\s*` tolerates a
+ * pretty-printed `{:#?}`.
+ */
+private val BLOCK_INSERTED_RECORDS = Regex("""\binserted:\s*\[\s*([^\s\]]?)""")
+private val BLOCK_UPDATED_RECORDS = Regex("""\bupdated:\s*\[\s*([^\s\]]?)""")
+
+/**
+ * Whether one engine wallet-event Debug string is a `BlockProcessed` that
+ * changed the wallet's confirmed history: a record first stored in this
+ * block (`inserted`) or a known record that this block confirmed
+ * (`updated`) — `key-wallet-manager/src/events.rs`. [parseL1TxEvent]
+ * deliberately drops this variant (the instant-receive feed only wants
+ * first sightings and IS locks), so a confirmation would otherwise reach
+ * neither the parity findings nor their generation.
+ *
+ * False for every other variant and for a block with both lists empty —
+ * most blocks, since the engine emits one per processed block, and expiring
+ * the findings on each would keep parity from ever being established. A
+ * `BlockProcessed` in which neither list can be found is treated as a
+ * change: a format the parser no longer reads must cost a recompute, not
+ * leave a stale verdict standing. Pure — host-testable.
+ */
+fun l1BlockProcessedChangesHistory(eventDebug: String): Boolean {
+    if (!eventDebug.startsWith("BlockProcessed")) return false
+    val inserted = BLOCK_INSERTED_RECORDS.find(eventDebug)
+    val updated = BLOCK_UPDATED_RECORDS.find(eventDebug)
+    if (inserted == null && updated == null) return true
+    return inserted?.groupValues?.get(1)?.isNotEmpty() == true ||
+        updated?.groupValues?.get(1)?.isNotEmpty() == true
+}
+
 /**
  * The `ChainLock`'s own `block_height` inside a `WalletEvent` Debug
  * string. `block_height` is the field name of
@@ -3434,6 +3470,14 @@ class L1ShadowSyncService internal constructor(
                     parseL1SyncHeightAdvanced(debug)?.let { height ->
                         _engineWalletSyncedHeight.value = height
                     }
+                    // A block that stored or confirmed a wallet transaction
+                    // changes the history the findings compared (a shared tx
+                    // unconfirmed on both sides was left out of the value
+                    // comparison), though it is not an instant-receive event.
+                    if (l1BlockProcessedChangesHistory(debug)) {
+                        expireParityFindingsForNewTx()
+                        return@collect
+                    }
                     val event = parseL1TxEvent(debug) ?: return@collect
                     log.info("L1 engine tx event: {}", event)
                     // A transaction the findings never saw makes them stale:
@@ -4049,7 +4093,8 @@ class L1ShadowSyncService internal constructor(
     private var breakdownEpoch = 0L
 
     /**
-     * Advanced by every wallet transaction event ([expireParityFindingsForNewTx]);
+     * Advanced by every wallet transaction event, and by every block that
+     * stored or confirmed one ([expireParityFindingsForNewTx]);
      * under [breakdownLock]. A run that began under an older generation read a
      * history without that transaction: it may still keep its text, but it
      * must not publish findings or touch the hourly cadence, or a clean sheet
@@ -4174,9 +4219,10 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * A new transaction arrived: the completed findings described a history
-     * that did not contain it, so they can no longer establish parity for the
-     * history that does. Dropping them makes the verdict fall back to "not
+     * A new transaction arrived, or a block stored or confirmed one
+     * ([l1BlockProcessedChangesHistory]): the completed findings described a
+     * history without that change, so they can no longer establish parity for
+     * the history with it. Dropping them makes the verdict fall back to "not
      * established" until a run has compared the new state.
      *
      * A run IN FLIGHT is just as stale — it may already have read its inputs —
