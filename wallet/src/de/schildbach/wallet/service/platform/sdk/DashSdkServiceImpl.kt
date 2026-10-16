@@ -1589,26 +1589,10 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
-     * See [DashSdkService.readDashPayReceivalCoverage]. Pure Room reads via
-     * [databaseOrNull] — the same posture as [readDashPayBackfillSignals]:
-     * no [ensureStarted], no native call, no sweep.
-     *
-     * Counts SENT (`isOutgoing == true`) contact requests, not received ones.
-     * A receiving account exists for the contacts WE sent a request to: our
-     * outgoing request is what publishes our DIP-15 receiving xpub, which is
-     * what lets that contact pay us. Measured on the reference wallet
-     * 2026-09-16 — all 8 `dashpayReceivingFunds` rows had a matching outgoing
-     * request and none had only an incoming one.
-     *
-     * The first version filtered on RECEIVED requests and so reported the
-     * wrong contacts entirely: it flagged incoming-only relationships (which
-     * need an EXTERNAL account, carry no receive-side exposure, and can never
-     * be "fixed") while missing the outgoing-only ones that genuinely have no
-     * watched script set for money someone can already send us.
-     *
-     * Receival accounts = the wallet's `dashpayReceivingFunds` rows
-     * ([ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS]), matched by their
-     * `friendIdentityId`. Never throws — null means "unavailable".
+     * See [DashSdkService.readDashPayContactRequests]. Pure Room reads via
+     * [databaseOrNull], like [readDashPayReceivalCoverage]: no [ensureStarted],
+     * no native call. Never throws (except cancellation): null means
+     * "unavailable".
      */
     override suspend fun readDashPayContactRequests(
         walletIdHex: String,
@@ -1631,6 +1615,28 @@ class DashSdkServiceImpl @Inject constructor(
         null
     }
 
+    /**
+     * See [DashSdkService.readDashPayReceivalCoverage]. Pure Room reads via
+     * [databaseOrNull] — the same posture as [readDashPayBackfillSignals]:
+     * no [ensureStarted], no native call, no sweep.
+     *
+     * Counts SENT (`isOutgoing == true`) contact requests, not received ones.
+     * A receiving account exists for the contacts WE sent a request to: our
+     * outgoing request is what publishes our DIP-15 receiving xpub, which is
+     * what lets that contact pay us. Measured on the reference wallet
+     * 2026-09-16 — all 8 `dashpayReceivingFunds` rows had a matching outgoing
+     * request and none had only an incoming one.
+     *
+     * The first version filtered on RECEIVED requests and so reported the
+     * wrong contacts entirely: it flagged incoming-only relationships (which
+     * need an EXTERNAL account, carry no receive-side exposure, and can never
+     * be "fixed") while missing the outgoing-only ones that genuinely have no
+     * watched script set for money someone can already send us.
+     *
+     * Receival accounts = the wallet's `dashpayReceivingFunds` rows
+     * ([ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS]), matched by their
+     * `friendIdentityId`. Never throws — null means "unavailable".
+     */
     override suspend fun readDashPayReceivalCoverage(
         walletIdHex: String,
         ownerIdentityId: ByteArray
