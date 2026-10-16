@@ -658,7 +658,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     /** Tracks the newest delivered start and any owed stop, for [stopSelfIfNoNewerStart]. */
     private val selfStopGate = SelfStopGate()
 
-    /** Called synchronously at the very top of [onStartCommand]. */
+    /**
+     * Called synchronously in [onStartCommand], right AFTER its foreground
+     * promotion, never before (see [SelfStopGate.onStart]).
+     */
     internal fun recordStartCommand(startId: Int) {
         selfStopGate.onStart(startId)
     }
@@ -705,6 +708,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // A stop that had to happen was refused because this (newer) command
         // was pending: stop again now that it is the newest.
         selfStopGate.owedStopReason?.let { reason ->
+            if (action != null) {
+                log.warn("owed stop ({}) suppresses command {}", reason, action)
+            }
             stopSelfIfNoNewerStart(reason, mustStop = true)
             return true
         }
@@ -3210,9 +3216,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // First, before anything else: from here on the service's own stops
-        // include this start (see stopSelfIfNoNewerStart).
-        recordStartCommand(startId)
+        // Nothing before the foreground promotion below may stop the service:
+        // this start's id is published to the self-stop gate only after it.
         log.info(".onStartCommand($intent, startId=$startId)")
         intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
             log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
@@ -3258,7 +3263,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // even with this call in place: the idle tick's bare stopSelf() ran
         // while the alarm's start was already queued, and the system tore the
         // service down with the foreground promise still open — that crashes
-        // at once, before this line runs. Hence the stop id recorded above
+        // at once, before this line runs. Hence the stop id recorded below
         // and stopSelfIfNoNewerStart for every stop the service decides on.
         //
         // Safe here: Android guarantees `onCreate()` has RETURNED before
@@ -3269,6 +3274,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldPromoteToForeground(intent)) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
+        // Only now, AFTER the promotion: from here on the service's own stops
+        // use this start's id (see stopSelfIfNoNewerStart). Publishing it
+        // earlier would let a stop running off Main in that window have its
+        // stopSelfResult(startId) accepted while this start's foreground
+        // promise is still open — the same crash. A stop in the window uses
+        // the previous id and is refused instead; a must-stop then stays owed
+        // to this command, whose coroutine below reads the debt after this.
+        recordStartCommand(startId)
         recordWipeRequest(intent?.action)
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
@@ -3310,7 +3323,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         log.warn("no SDK replay owed for blockchain reset; rescan databases will be kept")
                     }
                     // The reset happens on shutdown, so a refused stop stays owed.
-                    stopSelfIfNoNewerStart("reset blockchain", mustStop = true)
+                    // On Main, serialised with onStartCommand like the other stops.
+                    withContext(Dispatchers.Main) {
+                        stopSelfIfNoNewerStart("reset blockchain", mustStop = true)
+                    }
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))

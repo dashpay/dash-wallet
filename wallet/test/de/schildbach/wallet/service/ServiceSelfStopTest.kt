@@ -17,7 +17,9 @@
 package de.schildbach.wallet.service
 
 import android.app.Application
+import android.app.Notification
 import android.content.ComponentCallbacks2
+import android.content.Intent
 import android.os.HandlerThread
 import de.schildbach.wallet.WalletApplication
 import io.mockk.every
@@ -25,7 +27,9 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.Job
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -138,5 +142,37 @@ class ServiceSelfStopTest {
         deliverStart()
         assertFalse(service.handleWalletLifecycleCommand(null))
         verify(exactly = 0) { service.stopSelfResult(2) }
+    }
+
+    @Test
+    fun `a stop landing between delivery and foreground promotion uses the previous id and stays owed`() {
+        deliverStart()
+        val gate = ReflectionHelpers.getField<SelfStopGate>(service, "selfStopGate")
+        // The alarm's startForegroundService(): issued, its promise armed.
+        val alarm = ++lastIssuedStartId
+        val intent =
+            Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN)
+                .putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true)
+        val promotedWith = mutableListOf<Int>()
+        every { service["createNetworkSyncNotification"](any<BlockchainState>()) } returns mockk<Notification>()
+        every { service["startForegroundAndCatch"](any<Notification>()) } answers {
+            // An off-Main stop (e.g. a reset's) landing while onStartCommand
+            // has the start but has not promoted yet: it must not see the
+            // alarm's id, or the system would accept it with the promise open.
+            promotedWith += gate.stopId
+            assertFalse(service.stopSelfIfNoNewerStart("reset blockchain", mustStop = true))
+        }
+
+        service.onStartCommand(intent, 0, alarm)
+
+        assertEquals("the id is published only after the promotion", listOf(1), promotedWith)
+        verify(exactly = 1) { service.stopSelfResult(1) }
+        verify(exactly = 0) { service.stopSelfResult(alarm) }
+        assertEquals(alarm, gate.stopId)
+
+        // The alarm's command then honours the owed stop instead of running.
+        assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
+        verify(exactly = 1) { service.stopSelfResult(alarm) }
+        verify(exactly = 0) { service.stopSelf() }
     }
 }

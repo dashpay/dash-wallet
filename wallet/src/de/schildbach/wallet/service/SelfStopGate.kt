@@ -39,7 +39,9 @@ package de.schildbach.wallet.service
  *
  * `stopSelfResult(id)` stops only when `id` is the newest start id the
  * system has issued, so passing the newest one DELIVERED to `onStartCommand`
- * makes the system refuse the stop exactly when such a start is pending.
+ * makes the system refuse the stop exactly when such a start is pending. The
+ * id counts as delivered only once that start's foreground promotion has run
+ * (see [onStart]), so an accepted stop never leaves a promise open.
  * The comparison happens in the system, so the read here may be stale in
  * either direction without harm: a stale id is refused, never wrongly honoured.
  *
@@ -51,9 +53,9 @@ package de.schildbach.wallet.service
  */
 class SelfStopGate {
     /**
-     * The id to pass to `stopSelfResult`: the newest start delivered so far.
-     * Written only by `onStartCommand`, which always runs on the main thread
-     * with strictly rising ids; read from any thread.
+     * The id to pass to `stopSelfResult`: the newest start delivered AND
+     * promoted so far. Written only by `onStartCommand`, which always runs on
+     * the main thread with strictly rising ids; read from any thread.
      */
     @Volatile
     var stopId: Int = NO_START_ID
@@ -61,9 +63,9 @@ class SelfStopGate {
 
     /**
      * Why a stop that had to happen ([requestStop] with `mustStop`) is still
-     * owed, or null. Set BEFORE the stop is attempted, so the newer start that
-     * made the system refuse it — whose command reads this after it was
-     * delivered — always sees it. Cleared once a must-stop is accepted: a
+     * owed, or null. Set BEFORE the stop reads [stopId], so the newer start
+     * that made the system refuse it always sees it: that start publishes its
+     * id ([onStart]) and only then, in its command's coroutine, reads this. Cleared once a must-stop is accepted: a
      * bound service outlives an accepted stop, and its later commands must
      * run normally.
      */
@@ -71,7 +73,14 @@ class SelfStopGate {
     var owedStopReason: String? = null
         private set
 
-    /** Called synchronously at the very top of `onStartCommand`. */
+    /**
+     * Called synchronously in `onStartCommand`, right AFTER its foreground
+     * promotion (`startForeground()`), never before. Publishing the id is
+     * what lets a stop with it be accepted; publishing it earlier would let a
+     * stop running off the main thread in between be accepted while the
+     * start's foreground promise is still open, which is the crash. Until
+     * then such a stop uses the previous id and is refused.
+     */
     fun onStart(startId: Int) {
         stopId = startId
     }
