@@ -58,7 +58,17 @@ internal data class CoinJoinConsolidationSnapshot(
             .sumOf { it.amount } - (COIN_JOIN_CONSOLIDATION_INPUT_LIMIT * 160L + 100L) * 2L
 }
 
-internal suspend fun coinJoinConsolidationSnapshot(service: DashSdkService): CoinJoinConsolidationSnapshot? {
+/**
+ * @param persistedInstantLocks the subset of the given lowercase display-hex
+ *   txids with app-persisted InstantSend lock evidence (`instant_send_locks`).
+ *   The SDK mirror never sets `txos.isInstantLocked` (see
+ *   [de.schildbach.wallet.database.entity.InstantSendLockEntry]), so an
+ *   IS-locked, not-yet-mined output is final only through this evidence.
+ */
+internal suspend fun coinJoinConsolidationSnapshot(
+    service: DashSdkService,
+    persistedInstantLocks: suspend (Collection<String>) -> Set<String> = { emptySet() }
+): CoinJoinConsolidationSnapshot? {
     val manager = service.walletManagerOrNull() ?: return null
     val walletId = manager.wallets.value.keys.singleOrNull() ?: return null
     val walletBytes = Utils.HEX.decode(walletId)
@@ -71,7 +81,13 @@ internal suspend fun coinJoinConsolidationSnapshot(service: DashSdkService): Coi
         .filter { it.accountId == account.id || it.address in owned }
     // Do not act on a partially persisted snapshot, an unsettled self-spend,
     // or coins already claimed by a different transaction.
-    if (coins.any { it.isLocked || it.spendingTxid != null || (!it.isConfirmed && !it.isInstantLocked) }) return null
+    if (coins.any { it.isLocked || it.spendingTxid != null }) return null
+    val unsettled = coins.filter { !it.isConfirmed && !it.isInstantLocked }
+    if (unsettled.isNotEmpty()) {
+        val txids = unsettled.map { coin -> coin.txid?.let { Utils.HEX.encode(it.reversedArray()) } ?: return null }
+        val locked = persistedInstantLocks(txids.toSet())
+        if (txids.any { it !in locked }) return null
+    }
     val confirmed = parseCoinJoinConfirmedDuffs(manager.accountBalances(walletBytes)) ?: return null
     if (coins.sumOf { it.amount } != confirmed) return null
     return CoinJoinConsolidationSnapshot(walletId, coins, unusedCoinJoinAddress(addresses, account.id))

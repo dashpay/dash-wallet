@@ -185,6 +185,21 @@ class MixedFundsMigrationViewModel @Inject constructor(
                         resultTimedOut = false,
                         resultLanded = _uiState.value.resultLanded || (landed && !running)
                     )
+                } else if (marker.failed) {
+                    // A consolidated migration failed DEFINITIVELY in the
+                    // watcher (nothing submitted, nothing uncertain): present
+                    // it like this session's own failure, with Restart and —
+                    // after a shield — the wallet-balance fallback.
+                    if (!markerSet) landingsAtObservation = migrationService.verifiedLandings
+                    markerSet = true
+                    val state = _uiState.value
+                    _uiState.value = state.copy(
+                        awaitingResult = false,
+                        resultTimedOut = false,
+                        resultLanded = false,
+                        attemptedAction = marker.action,
+                        outcome = if (state.inProgress) state.outcome else MixedFundsMigrationOutcome.NOT_ATTEMPTED
+                    )
                 } else {
                     if (!markerSet) landingsAtObservation = migrationService.verifiedLandings
                     markerSet = true
@@ -282,13 +297,22 @@ class MixedFundsMigrationViewModel @Inject constructor(
     /**
      * The sheet was closed. A DEFINITIVE failure (nothing spent) returns the
      * activity-scoped state to the destination choice, so reopening from
-     * Tools offers both moves again instead of the same failed one.
-     * Uncertain or in-flight states are kept.
+     * Tools offers both moves again instead of the same failed one; a
+     * persisted definitive failure is released the same way (kept if it
+     * cannot be proven safe). Uncertain or in-flight states are kept.
      */
     fun onSheetClosed() {
         val state = _uiState.value
         if (!state.inProgress && state.outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
             _uiState.value = state.copy(outcome = null, attemptedAction = null)
+            viewModelScope.launch {
+                try {
+                    migrationService.releaseFailedMigration()
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("failed to release a failed mixed-funds migration", t)
+                }
+            }
         }
     }
 

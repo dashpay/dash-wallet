@@ -367,4 +367,35 @@ class MixedFundsMigrationViewModelTest {
             assertTrue(reopened.presentation().choiceMode)
         } finally { store.clear() }
     }
+
+    @Test
+    fun persistedDefinitiveFailureAfterConsolidationPresentsTheFallback() {
+        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.restorePendingShieldMigration() } returns true
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        // The watcher recorded the shield's definitive failure; the sheet opens on it later.
+        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis(), 0L, failed = true)
+        )
+        coEvery { service.releaseFailedMigration() } returns true
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            val state = model.uiState.value
+            assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, state.outcome)
+            assertFalse(state.awaitingResult)
+            assertFalse(state.resultTimedOut)
+            val presentation = state.presentation()
+            assertTrue(presentation.failed)
+            assertFalse(presentation.terminalGuidance)
+            assertTrue(presentation.showTransferUnmixed)
+            // Try again is a fresh (authenticated) spend, not a resume of the failed stage.
+            assertTrue(state.retryStartsFreshSpend())
+
+            model.onSheetClosed()
+            assertTrue(model.uiState.value.presentation().choiceMode)
+            coVerify(exactly = 1) { service.releaseFailedMigration() }
+        } finally { store.clear() }
+    }
 }

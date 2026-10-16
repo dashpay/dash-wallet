@@ -98,7 +98,7 @@ class CoinJoinMixedFundsSourceTest {
             every { walletData.wallet } returns dashjWallet
 
             service = CoinJoinFundsMigrationService(
-                walletData, shield, send, blockchain, config, sdk, scope.backgroundScope
+                walletData, shield, send, blockchain, config, sdk, scope.backgroundScope, mockk(relaxed = true)
             )
         }
     }

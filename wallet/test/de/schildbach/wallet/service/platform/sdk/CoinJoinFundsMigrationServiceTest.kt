@@ -184,6 +184,14 @@ class CoinJoinFundsMigrationServiceTest {
     }
 
     @Test
+    fun inFlightMarker_definitiveFailureRoundTripsAndOlderFormStaysUnfailed() {
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1_760_000_000_000L, 5L, failed = true)
+        assertEquals("SHIELD|1760000000000|5|failed", formatInFlightMigration(marker))
+        assertEquals(marker, parseInFlightMigration(formatInFlightMigration(marker)))
+        assertEquals(false, parseInFlightMigration("SHIELD|1760000000000|5")?.failed)
+    }
+
+    @Test
     fun inFlightMarker_blankOrAbsentReadsAsNone() {
         // "" is the CLEARED value (DataStore has no remove here) and null is
         // never-written — both mean "nothing in flight".

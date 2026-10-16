@@ -39,7 +39,7 @@ class CoinJoinMigrationRecoveryTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val service = CoinJoinFundsMigrationService(
             mockk(relaxed = true), shield, send, mockk(relaxed = true), config,
-            mockk(relaxed = true), scope
+            mockk(relaxed = true), scope, mockk(relaxed = true)
         )
         try {
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.shieldMixedFunds(Dash.COIN))
@@ -72,7 +72,7 @@ class CoinJoinMigrationRecoveryTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val service = CoinJoinFundsMigrationService(
             wallet, shield, mockk(relaxed = true), mockk(relaxed = true), config,
-            mockk(relaxed = true), scope
+            mockk(relaxed = true), scope, mockk(relaxed = true)
         )
         try {
             assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.shieldMixedFunds(Dash.COIN))
@@ -100,7 +100,7 @@ class CoinJoinMigrationRecoveryTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val service = CoinJoinFundsMigrationService(
             mockk(relaxed = true), shield, send, mockk(relaxed = true), config,
-            mockk(relaxed = true), scope
+            mockk(relaxed = true), scope, mockk(relaxed = true)
         )
         try {
             // Fresh path: nothing in flight, pre-cutover -> no prompt, and the

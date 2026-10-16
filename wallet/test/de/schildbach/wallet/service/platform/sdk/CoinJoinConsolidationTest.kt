@@ -91,6 +91,9 @@ class CoinJoinConsolidationTest {
         var storedTx: TransactionEntity? = null
         val shieldedBalance = MutableStateFlow(Dash.ZERO)
         var coinJoinLocks = 0
+        /** Display-hex txids with app-persisted InstantSend lock evidence. */
+        var instantLocked = setOf<String>()
+        val instantSendLocks = mockk<de.schildbach.wallet.database.dao.InstantSendLockDao>()
         val service: CoinJoinFundsMigrationService
         init {
             coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
@@ -117,7 +120,10 @@ class CoinJoinConsolidationTest {
             every { shield.observeShieldedBalance() } returns shieldedBalance
             coEvery { shield.shieldMixedFundsFromWallet(any(), any(), any()) } returns SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
             every { wallet.networkParameters } returns params
-            service = CoinJoinFundsMigrationService(wallet, shield, send, blockchain, config, sdk, scope.backgroundScope)
+            coEvery { instantSendLocks.getLockedTxIds(any()) } answers { firstArg<List<String>>().filter { it in instantLocked } }
+            service = CoinJoinFundsMigrationService(
+                wallet, shield, send, blockchain, config, sdk, scope.backgroundScope, instantSendLocks
+            )
         }
     }
 
@@ -358,7 +364,7 @@ class CoinJoinConsolidationTest {
         assertEquals(false, f.service.inFlightMigration()?.isExpired())
     }
 
-    @Test fun otherPreBroadcastShieldFailureStillEndsTheAttempt() = runTest {
+    @Test fun otherPreBroadcastShieldFailureEndsTheAttemptAsADefinitiveFailure() = runTest {
         val f = Fixture(this)
         f.coins.value = f.coins.value.take(100)
         f.engineBalance = f.coins.value.sumOf { it.amount }
@@ -367,7 +373,9 @@ class CoinJoinConsolidationTest {
         f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
         assertTrue(f.service.restorePendingShieldMigration())
         runCurrent()
-        assertEquals(true, f.service.inFlightMigration()?.isExpired())
+        // Recorded as failed (choice + fallback offered), not as "could not confirm".
+        assertEquals(true, f.service.inFlightMigration()?.failed)
+        assertEquals(false, f.service.inFlightMigration()?.isExpired())
         advanceTimeBy(5L * 60_000); runCurrent()
         coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
     }
@@ -524,6 +532,104 @@ class CoinJoinConsolidationTest {
         // The user's (confirmed) move adopts it instead of spending again.
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
         assertEquals(MixedFundsMigrationAction.SHIELD, f.service.inFlightMigration()?.action)
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+    }
+
+    @Test fun persistedInstantSendLockAdvancesConsolidationBeforeABlock() = runTest {
+        val f = Fixture(this)
+        val tx = transaction(f.coins.value)
+        coEvery { f.send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
+            arg<suspend (ByteArray) -> Unit>(3)(tx.bitcoinSerialize())
+            SdkWriteResult.Broadcast(tx.txId.toString())
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        runCurrent()
+        // The mirror keeps context=0 and isConfirmed/isInstantLocked=false until
+        // the block (txos.isInstantLocked is never set on Android).
+        f.storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 0)
+        val output = coin(999).copy(outpoint = TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize(),
+            txid = tx.txId.reversedBytes, amount = tx.outputs[0].value.value, isConfirmed = false)
+        f.coins.value = listOf(output)
+        f.engineBalance = output.amount
+        advanceTimeBy(30_000); runCurrent()
+        // No lock evidence: still waiting for a block, nothing spent.
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+        assertEquals(CoinJoinConsolidationState.WAITING, CoinJoinConsolidationState.decode(f.consolidation).phase)
+        // The persisted InstantSend lock is finality for both the checkpoint and the snapshot.
+        f.instantLocked = setOf(tx.txId.toString())
+        advanceTimeBy(15_000); runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any()) }
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+    }
+
+    @Test fun unlockedUnconfirmedCoinBlocksTheSnapshotButAPersistedLockDoesNot() = runTest {
+        val f = Fixture(this)
+        val pending = coin(5).copy(isConfirmed = false)
+        f.coins.value = listOf(coin(1), pending)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        val locks: suspend (Collection<String>) -> Set<String> = { ids -> ids.filter { it in f.instantLocked }.toSet() }
+        assertNull(coinJoinConsolidationSnapshot(f.sdk, locks))
+        f.instantLocked = setOf(Utils.HEX.encode(pending.txid!!.reversedArray()))
+        assertEquals(2, coinJoinConsolidationSnapshot(f.sdk, locks)?.coins?.size)
+        // Lock evidence never overrides a coin already claimed by another spend.
+        // (TxoEntity equality is by outpoint: reset first so the StateFlow takes the new row.)
+        f.coins.value = emptyList()
+        f.coins.value = listOf(coin(1), pending.copy(spendingTxid = ByteArray(32)))
+        assertNull(coinJoinConsolidationSnapshot(f.sdk, locks))
+    }
+
+    @Test fun definitiveShieldFailureAfterConsolidationOffersTheWalletBalanceFallback() = runTest {
+        val f = Fixture(this)
+        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) } returns
+            SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, Exception("pool fee not covered"))
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        // A distinct, persisted definitive failure — not the "could not confirm" expiry.
+        val failed = f.service.inFlightMigration()
+        assertEquals(true, failed?.failed)
+        assertEquals(false, failed?.isExpired())
+        // The watcher stands down and a resume never re-runs the failed stage.
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
+        advanceTimeBy(5L * 60_000); runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+
+        // A CoinJoin-funded lock showing up keeps the record: no fresh spend.
+        f.coinJoinLocks = 1
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
+        assertEquals(true, f.service.inFlightMigration()?.failed)
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+
+        // Settled and nothing pending: the switch to the wallet balance runs.
+        f.coinJoinLocks = 0
+        coEvery { f.send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
+            val tx = transaction(f.coins.value, regular)
+            arg<suspend (ByteArray) -> Unit>(3)(tx.bitcoinSerialize())
+            SdkWriteResult.Broadcast(tx.txId.toString())
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        val marker = f.service.inFlightMigration()
+        assertEquals(MixedFundsMigrationAction.COMBINE, marker?.action)
+        assertEquals(false, marker?.failed)
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(regular, 1L, true, any()) }
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+    }
+
+    @Test fun failedRecordIsKeptWhileAConsolidationStageIsUnsettled() = runTest {
+        val f = Fixture(this)
+        f.marker = formatInFlightMigration(InFlightMixedFundsMigration(
+            MixedFundsMigrationAction.SHIELD, System.currentTimeMillis(), 0L, failed = true))
+        f.consolidation = CoinJoinConsolidationState(walletId, destination,
+            CoinJoinConsolidationState.SHIELDING).encode()
+        assertFalse(f.service.releaseFailedMigration())
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.shieldMixedFunds(Dash.COIN))
+        assertEquals(true, f.service.inFlightMigration()?.failed)
         coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
     }
