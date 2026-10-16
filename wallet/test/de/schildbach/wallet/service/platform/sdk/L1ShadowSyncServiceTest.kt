@@ -4061,35 +4061,62 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun blockProcessedChangesHistory_onlyWhenItStoresOrConfirmsARecord() {
-        assertTrue(l1BlockProcessedChangesHistory(blockProcessedWithRecords(inserted = true)))
-        assertTrue(l1BlockProcessedChangesHistory(blockProcessedWithRecords(updated = true)))
-        assertTrue(l1BlockProcessedChangesHistory(blockProcessedWithRecords(inserted = true, updated = true)))
+    fun eventChangesTxHistory_onlyWhenABlockStoresOrConfirmsARecord() {
+        assertTrue(l1EventChangesTxHistory(blockProcessedWithRecords(inserted = true)))
+        assertTrue(l1EventChangesTxHistory(blockProcessedWithRecords(updated = true)))
+        assertTrue(l1EventChangesTxHistory(blockProcessedWithRecords(inserted = true, updated = true)))
         // Pretty-printed `{:#?}` lists.
         assertTrue(
-            l1BlockProcessedChangesHistory(
+            l1EventChangesTxHistory(
                 "BlockProcessed {\n    inserted: [],\n    updated: [\n        TransactionRecord {\n" +
                     "            txid: 0x$recordTxid,\n        },\n    ],\n    matured: [],\n}"
             )
         )
         assertFalse(
-            l1BlockProcessedChangesHistory("BlockProcessed {\n    inserted: [],\n    updated: [],\n}")
+            l1EventChangesTxHistory("BlockProcessed {\n    inserted: [],\n    updated: [],\n}")
         )
         // Most blocks carry nothing for the wallet; chainlocked or not, they change nothing.
-        assertFalse(l1BlockProcessedChangesHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = null)))
+        assertFalse(l1EventChangesTxHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = null)))
         assertFalse(
-            l1BlockProcessedChangesHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = 1_200_000))
+            l1EventChangesTxHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = 1_200_000))
         )
         // A maturing coinbase changes neither membership nor a net value.
-        assertFalse(l1BlockProcessedChangesHistory(blockProcessedWithRecords(matured = true)))
+        assertFalse(l1EventChangesTxHistory(blockProcessedWithRecords(matured = true)))
         // A format whose lists cannot be found must cost a recompute, not keep a stale verdict.
-        assertTrue(l1BlockProcessedChangesHistory("BlockProcessed { wallet_id: WalletId([1]), height: 7 }"))
+        assertTrue(l1EventChangesTxHistory("BlockProcessed { wallet_id: WalletId([1]), height: 7 }"))
         // Other variants belong to other feeds.
-        assertFalse(l1BlockProcessedChangesHistory(detectedDebug()))
-        assertFalse(l1BlockProcessedChangesHistory(instantLockedDebug()))
-        assertFalse(l1BlockProcessedChangesHistory("SyncHeightAdvanced { wallet_id: WalletId([1]), height: 7 }"))
-        assertFalse(l1BlockProcessedChangesHistory(chainLockProcessedDebug(1_200_000)))
-        assertFalse(l1BlockProcessedChangesHistory("not an event at all"))
+        assertFalse(l1EventChangesTxHistory(detectedDebug()))
+        assertFalse(l1EventChangesTxHistory(instantLockedDebug()))
+        assertFalse(l1EventChangesTxHistory("SyncHeightAdvanced { wallet_id: WalletId([1]), height: 7 }"))
+        assertFalse(l1EventChangesTxHistory(chainLockProcessedDebug(1_200_000)))
+        assertFalse(l1EventChangesTxHistory("not an event at all"))
+    }
+
+    /** `WalletEvent::TransactionsSwept` Debug string removing [count] records. */
+    private fun transactionsSweptDebug(count: Int): String {
+        val txids = (0 until count).joinToString(", ") { "0x" + "%064x".format(it + 1) }
+        return "TransactionsSwept { wallet_id: WalletId([205, 205, 205]), txids: [$txids], " +
+            "superseded_by: 0x$recordTxid, winner_mined_height: Some(1200000), " +
+            "released_outpoints: [OutPoint { txid: 0x$inputTxid, vout: 1 }], " +
+            "balance: WalletCoreBalance { confirmed: 1000000, unconfirmed: 0, immature: 0, locked: 0 }, " +
+            "account_balances: {} }"
+    }
+
+    @Test
+    fun eventChangesTxHistory_whenASweepRemovesRecords() {
+        assertTrue(l1EventChangesTxHistory(transactionsSweptDebug(1)))
+        assertTrue(l1EventChangesTxHistory(transactionsSweptDebug(3)))
+        assertTrue(
+            l1EventChangesTxHistory(
+                "TransactionsSwept {\n    wallet_id: WalletId([1]),\n    txids: [\n        0x$recordTxid,\n    ],\n}"
+            )
+        )
+        // A sweep that removed nothing changes nothing.
+        assertFalse(l1EventChangesTxHistory(transactionsSweptDebug(0)))
+        // A format whose list cannot be found must cost a recompute.
+        assertTrue(l1EventChangesTxHistory("TransactionsSwept { wallet_id: WalletId([1]) }"))
+        // The sweep is not an instant-receive event either.
+        assertNull(parseL1TxEvent(transactionsSweptDebug(1)))
     }
 
     /**
@@ -4097,9 +4124,10 @@ class L1ShadowSyncServiceTest {
      * instant-receive parser drops. A breakdown that ran while a shared tx was
      * unconfirmed on both sides left it out of the value comparison; once a
      * block confirms it, that clean sheet no longer covers the history — and a
-     * run that read its inputs before the block must not publish either.
+     * run that read its inputs before the block must not publish either. The
+     * same holds for a `TransactionsSwept` that removed records.
      */
-    private fun assertABlockStopsTheFindings(blockEvent: String): Unit = runBlocking {
+    private fun assertAnEventStopsTheFindings(historyEvent: String): Unit = runBlocking {
         val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
         val source = breakdownSource()
         val service = service(
@@ -4125,16 +4153,16 @@ class L1ShadowSyncServiceTest {
         val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
         withTimeout(5_000) { inside.await() }
 
-        source.eventStrings.emit(blockEvent)
+        source.eventStrings.emit(historyEvent)
         source.awaitEventsHandled()
-        assertNull("the block expires the findings", service.latestBreakdownFindings.value)
+        assertNull("the event expires the findings", service.latestBreakdownFindings.value)
         assertTrue("the instant-receive feed is unchanged", forwarded.isEmpty())
 
         gate.complete(Unit)
         val result = withTimeout(5_000) { report.await() }
         assertNotNull("the report still gets the run's text", result.stored)
         delay(50) // let the run's completion (cadence update) finish too
-        assertNull("a run that read its inputs before the block must not publish", service.latestBreakdownFindings.value)
+        assertNull("a run that read its inputs before the event must not publish", service.latestBreakdownFindings.value)
 
         clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
         source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 3 }
@@ -4145,16 +4173,21 @@ class L1ShadowSyncServiceTest {
 
     @Test
     fun aBlockThatStoresATransaction_expiresTheFindings_andFencesARunInFlight() {
-        assertABlockStopsTheFindings(blockProcessedWithRecords(inserted = true))
+        assertAnEventStopsTheFindings(blockProcessedWithRecords(inserted = true))
     }
 
     @Test
     fun aBlockThatConfirmsATransaction_expiresTheFindings_andFencesARunInFlight() {
-        assertABlockStopsTheFindings(blockProcessedWithRecords(updated = true))
+        assertAnEventStopsTheFindings(blockProcessedWithRecords(updated = true))
     }
 
     @Test
-    fun aBlockWithNoWalletTransactions_leavesTheFindings() = runBlocking {
+    fun aSweepThatRemovesATransaction_expiresTheFindings_andFencesARunInFlight() {
+        assertAnEventStopsTheFindings(transactionsSweptDebug(1))
+    }
+
+    @Test
+    fun aBlockWithNoWalletTransactions_orAnEmptySweep_leavesTheFindings() = runBlocking {
         // The engine emits one BlockProcessed per block; expiring on each would
         // keep parity from ever being established.
         val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
@@ -4174,6 +4207,7 @@ class L1ShadowSyncServiceTest {
         source.eventStrings.emit(blockProcessedDebug(height = 1_200_000, chainLockHeight = null))
         source.eventStrings.emit(blockProcessedDebug(height = 1_200_001, chainLockHeight = 1_200_001))
         source.eventStrings.emit(blockProcessedWithRecords(matured = true, height = 1_200_002))
+        source.eventStrings.emit(transactionsSweptDebug(0))
         source.awaitEventsHandled()
 
         assertSame(findings, service.latestBreakdownFindings.value)
