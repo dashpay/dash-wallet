@@ -19,7 +19,9 @@ package de.schildbach.wallet.service.platform
 
 import androidx.annotation.VisibleForTesting
 import org.bitcoinj.core.Coin
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.math.max
 
 /**
@@ -44,15 +46,16 @@ object ContestedUsernameFees {
     private val FEE: Coin = Coin.parseCoin("0.15")
     private val NAME_FEE: Coin = Coin.parseCoin("0.10")
 
-    private val protocolVersion = AtomicInteger(0)
+    private val protocolVersion = MutableStateFlow(0)
+    val protocolVersions = protocolVersion.asStateFlow()
 
     /** The highest Platform protocol version seen so far, 0 if none. */
     val currentProtocolVersion: Int
-        get() = protocolVersion.get()
+        get() = protocolVersion.value
 
     /** Records a protocol version from the network. The stored version only goes up. */
     fun updateProtocolVersion(version: Int) {
-        protocolVersion.accumulateAndGet(version, ::max)
+        protocolVersion.update { max(it, version) }
     }
 
     /** Creating an identity together with a contested username: the asset lock amount. */
@@ -71,6 +74,6 @@ object ContestedUsernameFees {
 
     @VisibleForTesting
     fun reset() {
-        protocolVersion.set(0)
+        protocolVersion.value = 0
     }
 }

@@ -548,6 +548,8 @@ class PlatformRepo @Inject constructor(
                 val version = platform.client.refreshProtocolVersion()
                 ContestedUsernameFees.updateProtocolVersion(version)
                 log.info("platform protocol version: {}", version)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 log.warn("unable to refresh the platform protocol version", e)
             }

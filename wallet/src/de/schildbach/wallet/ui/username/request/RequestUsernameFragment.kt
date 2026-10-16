@@ -25,6 +25,7 @@ import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -220,7 +221,8 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                     val requiredFee = if (it.usernameContestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
                     binding.balanceRequirement.text = getString(
                         R.string.request_username_balance_requirement,
-                        requiredFee.toPlainString()
+                        java.text.NumberFormat.getNumberInstance(resources.configuration.locales[0])
+                            .format(requiredFee.toPlainString().toBigDecimal())
                     )
 
                     if (it.usernameContestable || it.usernameContested) {
@@ -324,9 +326,10 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         } else {
             binding.inviteWithUnmixedFunds.isVisible = false
         }
-        requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
-            val isInviteForContestedNames = requestUserNameViewModel.isInviteForContestedNames()
-            val isInviteContested = requestUserNameViewModel.isUsingInvite() && requestUserNameViewModel.isInviteForContestedNames()
+        combine(requestUserNameViewModel.inviteBalance, ContestedUsernameFees.protocolVersions) { _, _ ->
+            requestUserNameViewModel.isInviteForContestedNames()
+        }.observe(viewLifecycleOwner) { isInviteForContestedNames ->
+            val isInviteContested = requestUserNameViewModel.isUsingInvite() && isInviteForContestedNames
             binding.charLengthRequirement.text = getString(
                 if (isInviteContested) {
                     R.string.request_username_length_requirement
