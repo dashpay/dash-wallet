@@ -289,4 +289,42 @@ class ServiceSelfStopTest {
 
         assertEquals(ReplayRestartAlarmAction.RETIRE, teardownDecision())
     }
+
+    // ── the stuck-cleanup recovery stop (review ad532a825b07) ──
+
+    @Test
+    fun `a refused stuck-cleanup stop still brings the service back through the newer command`() {
+        // initCompleted stays false: this instance never initialises
+        stubRestartAlarm()
+        every { application.wallet } returns mockk()
+        deliverStart()
+        service.releaseInitLatchForStuckCleanup()
+        lastIssuedStartId++ // a newer start is queued
+
+        assertFalse(service.stopForStuckCleanup())
+        assertEquals(0, armedRestarts)
+
+        // the newer command: whichever branch stops it must arm the recovery restart
+        service.recordStartCommand(lastIssuedStartId)
+        assertTrue(service.handleWalletLifecycleCommand(null))
+        verify(exactly = 1) { service.stopSelfResult(2) }
+        assertEquals("the accepted stop arms the recovery restart", 1, armedRestarts)
+        assertTrue(recoveryRequested())
+        assertEquals(ReplayRestartAlarmAction.LEAVE, teardownDecision())
+    }
+
+    @Test
+    fun `a command released by the stuck-cleanup latch before the recovery stop runs still arms it`() {
+        // The ordering window: the latch is released first, and a queued command reaches
+        // handleWalletLifecycleCommand before the recovery stop has run.
+        stubRestartAlarm()
+        every { application.wallet } returns mockk()
+        deliverStart()
+
+        service.releaseInitLatchForStuckCleanup()
+        assertTrue(service.handleWalletLifecycleCommand(null))
+        verify(exactly = 1) { service.stopSelfResult(1) }
+        assertEquals("the stop that landed is the recovery stop", 1, armedRestarts)
+        assertTrue(recoveryRequested())
+    }
 }

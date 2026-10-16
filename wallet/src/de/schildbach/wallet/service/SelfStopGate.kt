@@ -96,6 +96,16 @@ class SelfStopGate {
      *   refused the stop.
      * @return true when the system accepted the stop.
      */
+    /**
+     * Records [reason] as an owed stop WITHOUT attempting one yet: for a decision made before the
+     * commands that must honour it are released (the stuck-cleanup bail-out releases the init
+     * latch, and a queued command can run before the stop itself is attempted). Cleared, like any
+     * owed stop, once a must-stop is accepted.
+     */
+    fun oweStop(reason: String) {
+        owedStopReason = reason
+    }
+
     fun requestStop(
         reason: String,
         mustStop: Boolean,

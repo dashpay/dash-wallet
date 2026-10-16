@@ -373,6 +373,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
+        internal const val STUCK_CLEANUP_STOP_REASON = "previous cleanup stuck"
+
         /** What a teardown does with the replay restart alarm. */
         enum class ReplayRestartAlarmAction { ARM, RETIRE, LEAVE }
 
@@ -1714,6 +1716,35 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      */
     private var owedRecoveryRestart = false
 
+    /**
+     * The previous instance's cleanup is stuck, so this instance will never initialise: release the
+     * init latch so queued commands stop waiting. Main thread.
+     */
+    internal fun releaseInitLatchForStuckCleanup() {
+        // BEFORE the latch: the commands it releases may run before [stopForStuckCleanup] does,
+        // and they must stop as the recovery stop, not through the plain "wallet not initialized"
+        // stop, which arms nothing. Both are on Main, so a released command always sees the debt.
+        selfStopGate.oweStop(STUCK_CLEANUP_STOP_REASON)
+        owedRecoveryRestart = true
+        if (onCreateCompleted.isActive) {
+            onCreateCompleted.complete(Unit)
+        }
+    }
+
+    /**
+     * The recovery stop for a stuck previous cleanup. A MUST-stop: refused (a newer start is
+     * queued), it stays owed together with its restart, and the command that honours it arms the
+     * restart with the stop that lands. Already honoured by a command the latch released: nothing
+     * left to do. Main thread.
+     */
+    internal fun stopForStuckCleanup(): Boolean {
+        if (selfStopGate.owedStopReason == null) {
+            log.info("the stuck-cleanup recovery stop was already honoured by a released command")
+            return true
+        }
+        return stopSelfForRecovery(STUCK_CLEANUP_STOP_REASON, mustStop = true)
+    }
+
     /** Arms the restart for an instance that is about to stop itself and must come back. */
     private fun requestRecoveryRestart() {
         recoveryRestartRequested = true
@@ -2728,9 +2759,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.error("Stopping service to prevent resource conflicts and file lock exceptions; restart scheduled")
 
                     // Complete onCreate to unblock any waiting onStartCommand calls
-                    if (onCreateCompleted.isActive) {
-                        onCreateCompleted.complete(Unit)
-                    }
+                    withContext(Dispatchers.Main) { releaseInitLatchForStuckCleanup() }
 
                     // Plan §37: a cleanup stuck past the bound is never going to
                     // finish. With the app in the background, end the process so
@@ -2767,7 +2796,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // service (and without peers for any payment in progress), come back once the
                     // old instance has had time to release its locks.
                     withContext(Dispatchers.Main) {
-                        stopSelfForRecovery("previous cleanup stuck")
+                        stopForStuckCleanup()
                     }
                     return@launch
                 }
