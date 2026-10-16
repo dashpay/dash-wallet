@@ -788,6 +788,65 @@ class PendingDirectPaymentVerifierTest {
         assertNull(verifier.unresolvedSubmissionFor("abc123"))
     }
 
+    // --- the submission claim (review 5e6eb1215f01) ------------------------------------------
+
+    @Test
+    fun `a claimed invoice refuses a second claim until the first is released`() = runBlocking {
+        val first = createTransaction()
+        val second = createTransaction()
+
+        assertNull(verifier.claimSubmission(first.txId, "abc123", isGiftCardPurchase = false))
+        // nothing saved yet: only the in-memory claim stands between the two
+        assertEquals(first.txId, verifier.claimSubmission(second.txId, "abc123", isGiftCardPurchase = false))
+        // a different invoice is not held up by this one
+        assertNull(verifier.claimSubmission(second.txId, "def456", isGiftCardPurchase = false))
+
+        verifier.releaseSubmissionClaim(first.txId)
+        verifier.releaseSubmissionClaim(second.txId)
+        assertNull(verifier.claimSubmission(second.txId, "abc123", isGiftCardPurchase = false))
+    }
+
+    @Test
+    fun `a saved unresolved record refuses a claim for its invoice`() = runBlocking {
+        val saved = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(saved, "abc123"))
+
+        assertEquals(saved.txId, verifier.claimSubmission(createTransaction().txId, "abc123", false))
+        // released (abandoned) records do not block, as for the lookup
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(saved, "abc123", abandoned = true))
+        assertNull(verifier.claimSubmission(createTransaction().txId, "abc123", false))
+    }
+
+    @Test
+    fun `gift card purchases are claimed one at a time`() = runBlocking {
+        val first = createTransaction()
+        assertNull(verifier.claimSubmission(first.txId, null, isGiftCardPurchase = true))
+        assertEquals(first.txId, verifier.claimSubmission(createTransaction().txId, null, isGiftCardPurchase = true))
+        // an ordinary payment is not a gift card purchase
+        assertNull(verifier.claimSubmission(createTransaction().txId, null, isGiftCardPurchase = false))
+    }
+
+    @Test
+    fun `an unreadable store refuses the claim`() = runBlocking {
+        coEvery { config.getAllOrThrow() } throws IllegalStateException("unreadable")
+        try {
+            verifier.claimSubmission(createTransaction().txId, "abc123", false)
+            fail("an unread store was treated as having nothing outstanding")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+    }
+
+    @Test
+    fun `a wipe drops claims held for the old wallet`() = runBlocking {
+        val old = createTransaction()
+        assertNull(verifier.claimSubmission(old.txId, "abc123", isGiftCardPurchase = true))
+
+        onWalletWiped()
+
+        assertNull(verifier.claimSubmission(createTransaction().txId, "abc123", isGiftCardPurchase = true))
+    }
+
     @Test
     fun `a payment request with no identity blocks nothing`() = runBlocking {
         val tx = createTransaction()

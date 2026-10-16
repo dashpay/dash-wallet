@@ -123,6 +123,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val RESERVATION_TRUST_BLOCKS = 16L
         /** How long a wipe waits for running verifications to stop before going ahead anyway. */
         private const val DRAIN_TIMEOUT_MS = 5_000L
+
+        private const val REQUEST_CLAIM_PREFIX = "request:"
+        private const val GIFT_CARD_CLAIM = "gift-card"
     }
 
     @VisibleForTesting internal var pollIntervalMs = DEFAULT_POLL_INTERVAL_MS
@@ -155,6 +158,18 @@ class PendingDirectPaymentVerifier @Inject constructor(
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
     private val jobsMutex = Mutex()
 
+    /**
+     * Submissions between their claim and their quarantine, keyed by what they must not be
+     * duplicated by: `request:<payment request hash>` for an invoice, [GIFT_CARD_CLAIM] for a gift
+     * card purchase. The saved record answers the same question once it exists; this answers it
+     * in the window before, which is a suspension long (the order is recorded, a refund address
+     * fetched) and which separate screens - each with its own view model - can all be inside at
+     * once. Checked and written under [claimMutex] only. In memory and per submission: released
+     * when the submission reaches its quarantine or fails before it, and dropped by a wipe.
+     */
+    private val submissionClaims = ConcurrentHashMap<String, Sha256Hash>()
+    private val claimMutex = Mutex()
+
     init {
         // A pending payment belongs to the wallet that made it, but this is a singleton: its
         // scope, its jobs and its restored flag all outlive a wipe, which replaces the wallet
@@ -183,6 +198,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
         jobs.clear()
         // The wiped wallet's engine reservations go with it; nothing will consume or release them.
         reservations.clear()
+        // Its in-flight submissions are refused by their own ownership checks; their claims must
+        // not hold up the replacement wallet's payments in the meantime.
+        submissionClaims.clear()
         running.forEach { it.cancel() }
         // Bounded: a job wedged in a call that does not answer cancellation must not hold up the
         // wipe, and the captured-wallet checks below mean a straggler still cannot touch the
@@ -474,6 +492,50 @@ class PendingDirectPaymentVerifier @Inject constructor(
         return config.getAllOrThrow()
             .firstOrNull { it.paymentRequestId == paymentRequestId && !it.abandoned }
             ?.txId
+    }
+
+    /**
+     * Claims the right to submit [txId] as the one payment for its invoice ([paymentRequestId])
+     * and, for a gift card purchase, as the one unresolved gift card purchase. Atomic across the
+     * app: of two submissions racing for the same thing, exactly one is let through.
+     *
+     * Returns null when the claim was taken, or the transaction it conflicts with: another
+     * submission's claim still on its way to quarantine, or a saved record whose outcome is still
+     * unknown. Nothing to key on (no invoice, not a gift card) takes no claim and returns null.
+     *
+     * A claim must be given back with [releaseSubmissionClaim] once the submission has saved its
+     * quarantine (the record blocks duplicates from then on) or failed before it.
+     *
+     * @throws Exception if the store cannot be read: an unread store is not an empty one.
+     */
+    suspend fun claimSubmission(
+        txId: Sha256Hash,
+        paymentRequestId: String?,
+        isGiftCardPurchase: Boolean
+    ): Sha256Hash? = claimMutex.withLock {
+        val keys = buildList {
+            paymentRequestId?.let { add(REQUEST_CLAIM_PREFIX + it) }
+            if (isGiftCardPurchase) add(GIFT_CARD_CLAIM)
+        }
+        if (keys.isEmpty()) {
+            return@withLock null
+        }
+        keys.firstNotNullOfOrNull { key -> submissionClaims[key]?.takeIf { it != txId } }?.let {
+            return@withLock it
+        }
+        val stored = config.getAllOrThrow().filter { !it.abandoned && it.txId != txId }
+        val recorded = paymentRequestId?.let { id -> stored.firstOrNull { it.paymentRequestId == id } }
+            ?: stored.firstOrNull { isGiftCardPurchase && it.isGiftCardPurchase }
+        if (recorded != null) {
+            return@withLock recorded.txId
+        }
+        keys.forEach { submissionClaims[it] = txId }
+        null
+    }
+
+    /** Gives back every claim [txId] holds. Harmless when it holds none (or a wipe dropped them). */
+    fun releaseSubmissionClaim(txId: Sha256Hash) {
+        submissionClaims.entries.removeIf { it.value == txId }
     }
 
     /**

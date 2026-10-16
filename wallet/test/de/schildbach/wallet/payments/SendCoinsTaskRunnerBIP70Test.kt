@@ -36,6 +36,7 @@ import io.mockk.mockkStatic
 import io.mockk.spyk
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -1301,5 +1302,193 @@ class SendCoinsTaskRunnerBIP70Test {
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
         coVerify(exactly = 0) { pendingPaymentConfig.remove(any()) }
         assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
+    }
+
+    // ==================== racing submissions (review 5e6eb1215f01) ============================
+
+    /** A second signed transaction, distinct from [deferredTx]: what another screen would build. */
+    private fun otherDeferredPayment(): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
+        val tx = Transaction(networkParams).apply {
+            addInput(
+                Sha256Hash.of("bip70-racing-${txCounter.incrementAndGet()}".toByteArray()),
+                0,
+                org.bitcoinj.script.ScriptBuilder.createEmpty()
+            )
+            addOutput(Coin.parseCoin("1.0"), Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        }
+        return de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
+            txidHex = tx.txId.toString(),
+            rawTxBytes = tx.unsafeBitcoinSerialize(),
+            feeDuffs = 1000L,
+            native = null
+        )
+    }
+
+    /** The store mock behaves like the store: what a quarantine writes, a later lookup reads. */
+    private fun storeBackedPendingPayments(): MutableList<de.schildbach.wallet.data.PendingDirectPayment> {
+        val stored = java.util.concurrent.CopyOnWriteArrayList<de.schildbach.wallet.data.PendingDirectPayment>()
+        coEvery { pendingPaymentConfig.add(any(), any()) } answers {
+            val payment = firstArg<de.schildbach.wallet.data.PendingDirectPayment>()
+            stored.removeIf { it.txId == payment.txId }
+            stored.add(payment)
+            Unit
+        }
+        coEvery { pendingPaymentConfig.remove(any()) } answers {
+            val txId = firstArg<Sha256Hash>()
+            stored.removeIf { it.txId == txId }
+            mockk(relaxed = true)
+        }
+        coEvery { pendingPaymentConfig.getAllOrThrow() } answers { stored.toList() }
+        return stored
+    }
+
+    private suspend fun awaitUntil(what: String, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (!condition()) {
+            if (System.currentTimeMillis() > deadline) fail("timed out waiting for $what")
+            kotlinx.coroutines.delay(10)
+        }
+    }
+
+    /**
+     * The racing submissions run outside the test's own job, so a test that fails while one is
+     * parked on a gate reports the failure instead of waiting on it forever.
+     */
+    private val racingScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+    )
+
+    @Test
+    fun `two confirmations of one invoice racing before the quarantine post only one payment`() = runBlocking {
+        // Two SendCoinsActivity instances, each with its own view model and its own in-flight
+        // flag. Both ask for an outstanding submission before either has saved its quarantine,
+        // so both lookups come back empty; the refund-address fetch is where the first one sits.
+        storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 9 }
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        val first = deferredPayment()
+        val second = otherDeferredPayment()
+        val refundGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val refundCalls = AtomicInteger(0)
+        coEvery { sdkL1SendService.refundAddressOrNull() } coAnswers {
+            refundCalls.incrementAndGet()
+            refundGate.await()
+            null
+        }
+        // Delivered but unanswered: each POST that happens is a payment the payee may broadcast.
+        repeat(2) { mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR)) }
+
+        val a = racingScope.async {
+            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(first, intent) }
+        }
+        awaitUntil("the first submission to reach the refund fetch") { refundCalls.get() >= 1 }
+
+        // what PaymentProtocolViewModel asks before handing off: nothing is saved yet
+        assertNull(sendCoinsTaskRunner.findUnresolvedSubmission(requestHash))
+        val b = racingScope.async {
+            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(second, intent) }
+        }
+        try {
+            awaitUntil("the second submission to be refused or to reach the refund fetch") {
+                b.isCompleted || refundCalls.get() >= 2
+            }
+        } finally {
+            refundGate.complete(Unit)
+        }
+        awaitUntil("both submissions to finish") { a.isCompleted && b.isCompleted }
+        val firstOutcome = a.await().exceptionOrNull()
+        val secondOutcome = b.await().exceptionOrNull()
+
+        assertEquals("only one payment may reach the payee", 1, mockWebServer.requestCount)
+        assertTrue("the first is pending: $firstOutcome", firstOutcome is PaymentSubmissionPendingException)
+        assertEquals(first.txidHex, (firstOutcome as PaymentSubmissionPendingException).txId)
+        // the loser gets the outcome the duplicate path gives: the submission already outstanding
+        assertTrue("the second is refused as a duplicate: $secondOutcome", secondOutcome is PaymentSubmissionPendingException)
+        assertEquals(first.txidHex, (secondOutcome as PaymentSubmissionPendingException).txId)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(second) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(first) }
+    }
+
+    @Test
+    fun `a claim is given back when its submission fails before the post`() = runBlocking {
+        // A submission refused before anything left (a wipe, here) must not keep the invoice
+        // claimed: the next confirmation is free to pay it.
+        storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 5 }
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        coEvery { metadataProvider.setTransactionService(any(), any()) } throws IllegalStateException("db down")
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(deferredPayment(), intent, serviceName = "Merchant")
+            fail("expected the pre-post failure")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+        assertEquals(0, mockWebServer.requestCount)
+
+        coEvery { metadataProvider.setTransactionService(any(), any()) } returns Unit
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+        val retry = otherDeferredPayment()
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(retry, intent, serviceName = "Merchant")
+            fail("expected pending")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals("the retry itself went out", retry.txidHex, e.txId)
+        }
+        assertEquals(1, mockWebServer.requestCount)
+    }
+
+    @Test
+    fun `two gift card purchases racing before the quarantine broadcast only one`() = runBlocking {
+        // The purchase screen refuses a gift card while another is unresolved, but it only reads
+        // the store, and the store learns of a purchase only at its quarantine. A second screen
+        // asking while the first records its order sees nothing and pays too.
+        storeBackedPendingPayments()
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val first = deferredPayment()
+        val second = otherDeferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returnsMany listOf(first, second)
+        coEvery { sdkL1SendService.broadcastDeferredPayment(any()) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Ambiguous(RuntimeException("timeout"))
+        val orderGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val firstRecording = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val giftCard = PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = null)
+        val uri = "dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=0.1"
+
+        val a = racingScope.async {
+            runCatching {
+                sendCoinsTaskRunner.payWithDashUrlTx(uri, "PiggyCards", giftCard) {
+                    firstRecording.complete(Unit)
+                    orderGate.await()
+                }
+            }
+        }
+        val secondOutcome = try {
+            awaitUntil("the first purchase to record its order") { firstRecording.isCompleted || a.isCompleted }
+            if (a.isCompleted) fail("the first purchase ended early: ${a.await()}")
+            val b = racingScope.async {
+                runCatching { sendCoinsTaskRunner.payWithDashUrlTx(uri, "PiggyCards", giftCard) { } }
+            }
+            awaitUntil("the second purchase to finish") { b.isCompleted }
+            b.await().exceptionOrNull()
+        } finally {
+            orderGate.complete(Unit)
+        }
+        awaitUntil("the first purchase to finish") { a.isCompleted }
+
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(first) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(second) }
+        assertTrue("the second is refused as outstanding: $secondOutcome", secondOutcome is PaymentSubmissionPendingException)
+        assertEquals(first.txidHex, (secondOutcome as PaymentSubmissionPendingException).txId)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(second) }
     }
 }

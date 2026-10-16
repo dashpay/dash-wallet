@@ -1065,6 +1065,9 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             val paymentLabel = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
                 ?.firstOrNull()?.first?.let { "dash:$it" } ?: "dash:"
+            // No invoice to key on here, but a gift card purchase is still the one outstanding
+            // gift card purchase: refused before the caller records an order for it.
+            claimSubmissionOrRelease(tx, payment, null, recovery?.isGiftCardPurchase == true)
 
             try {
                 ensureStillOwned(wallet, "recording the order")
@@ -1089,6 +1092,8 @@ class SendCoinsTaskRunner @Inject constructor(
                 // Nothing has been sent. Free the inputs; the caller discards its order.
                 releaseDeferredPayment(payment)
                 throw e
+            } finally {
+                pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
             }
 
             // The broadcast consumes the reservation, so the watch must not hold it any more.
@@ -1137,6 +1142,35 @@ class SendCoinsTaskRunner @Inject constructor(
                 log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
             }
             sent
+        }
+    }
+
+    /**
+     * Takes the app-wide claim for submitting [tx] (see [PendingDirectPaymentVerifier.claimSubmission]),
+     * or releases [payment] and refuses. Separate screens each have their own view model and their
+     * own in-flight flag, and the saved record that would stop a duplicate is written only at the
+     * quarantine, a few suspensions later; this is the one check that is atomic across them.
+     *
+     * The loser gets what the duplicate check gives: [PaymentSubmissionPendingException] naming the
+     * submission already outstanding. A store that cannot be read refuses too (fail closed).
+     * Called inside the submission's NonCancellable block, so the release cannot be skipped.
+     */
+    private suspend fun claimSubmissionOrRelease(
+        tx: Transaction,
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        paymentRequestId: String?,
+        isGiftCardPurchase: Boolean
+    ) {
+        val conflicting = try {
+            pendingPaymentVerifier.claimSubmission(tx.txId, paymentRequestId, isGiftCardPurchase)
+        } catch (e: Exception) {
+            releaseDeferredPayment(payment)
+            throw e
+        }
+        if (conflicting != null) {
+            log.info("not submitting {}, {} is still unresolved for the same purchase", tx.txId, conflicting)
+            releaseDeferredPayment(payment)
+            throw PaymentSubmissionPendingException(conflicting.toString(), null)
         }
     }
 
@@ -1193,6 +1227,14 @@ class SendCoinsTaskRunner @Inject constructor(
             releaseDeferredPayment(payment)
             throw e
         }
+        // The one payment for this invoice: refused here, before anything can leave, when another
+        // submission for it is already outstanding or on its way to its quarantine.
+        claimSubmissionOrRelease(
+            tx,
+            payment,
+            finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) },
+            recovery?.isGiftCardPurchase == true
+        )
 
         val (verification, request) = try {
             ensureStillOwned(wallet, "submitting")
@@ -1246,6 +1288,10 @@ class SendCoinsTaskRunner @Inject constructor(
             // Nothing has been sent. Free the inputs for an immediate retry.
             releaseDeferredPayment(payment)
             throw e
+        } finally {
+            // Saved, the quarantine blocks a duplicate from here on; failed, there is nothing left
+            // to block. Either way the claim has done its job.
+            pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
         }
 
         try {
