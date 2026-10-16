@@ -1481,7 +1481,20 @@ class SdkL1SendServiceTest {
         val payment = service(source, progress = { behind })
             .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
 
-        assertEquals("the lowest of the reported cursors", 1_499_998L, payment.reservedAtHeight)
+        assertEquals("the committed wallet cursor", 1_499_998L, payment.reservedAtHeight)
+    }
+
+    @Test
+    fun aDeferredBuildWithNoCommittedCursorRecordsNoHeight() = runBlocking {
+        // Review 28775c57d545: header and filter cursors at the tip say nothing about how far the
+        // engine has processed (that can be 100 blocks behind). Recording one as the reservation
+        // height would make an older reservation look fresh; unknown must stay unknown.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val noCommittedCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
+        val payment = service(source, progress = { noCommittedCursor })
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+
+        assertNull(payment.reservedAtHeight)
     }
 
     @Test

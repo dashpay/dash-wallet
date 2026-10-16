@@ -1245,11 +1245,16 @@ class SdkL1SendService internal constructor(
      * it. The committed wallet cursor when known, else the lower of the two scan cursors; null
      * when the engine reports none.
      */
+    /**
+     * A LOWER bound on the height the engine ages this reservation from: the committed wallet
+     * cursor ([ShadowSyncProgress.walletSyncedHeight]), the height through which processing has
+     * actually drained. Null when it is unknown (0). The header and filter cursors are scan
+     * positions, not processing, and can sit well above it (headers and filters at H while
+     * processing is at H-100); recording one of them would make an older reservation look fresh.
+     * Null fails closed: the pending-payment gate does not trust a reservation with no height.
+     */
     private fun reservationHeightLowerBound(): Long? = try {
-        val progress = l1Progress()
-        listOf(progress.walletSyncedHeight, progress.filterHeight, progress.headerHeight)
-            .filter { it > 0 }
-            .minOrNull()
+        l1Progress().walletSyncedHeight.takeIf { it > 0 }
     } catch (e: Exception) {
         null
     }

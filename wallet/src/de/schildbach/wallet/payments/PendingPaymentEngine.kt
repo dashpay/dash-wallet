@@ -159,9 +159,16 @@ class SdkPendingPaymentEngine @Inject constructor(
 
     override suspend fun sdkOwnsL1(): Boolean = sdkL1SendService.cutoverCommitted()
 
+    /**
+     * The best chain tip the engine knows ([ShadowSyncProgress.bestKnownTipHeight]: the larger of
+     * the header height and the header target), which no processing cursor can exceed. Null when
+     * the tip is unknown: the committed wallet cursor is a lower bound on processing and says
+     * nothing about the tip, so it is never used in its place.
+     */
     override fun chainHeightUpperBound(): Long? = try {
         val progress = l1ShadowSyncService.progress.value
-        maxOf(progress.headerHeight, progress.filterHeight, progress.walletSyncedHeight).takeIf { it > 0 }
+        progress.bestKnownTipHeight.takeIf { it > 0 }
+            ?.let { maxOf(it, progress.filterHeight, progress.walletSyncedHeight) }
     } catch (e: Exception) {
         log.warn("could not read the SDK engine height", e)
         null

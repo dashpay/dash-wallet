@@ -1459,4 +1459,26 @@ class PendingDirectPaymentVerifierTest {
 
         coVerify(exactly = 0) { config.remove(any()) }
     }
+
+    // --- the engine's tip bound (review 28775c57d545) ----------------------------------------
+
+    private fun engineWith(progress: ShadowSyncProgress): SdkPendingPaymentEngine {
+        val shadow = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService>(relaxed = true)
+        every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(progress)
+        return SdkPendingPaymentEngine(mockk(relaxed = true), mockk(relaxed = true), shadow, mockk(relaxed = true))
+    }
+
+    @Test
+    fun `the chain height upper bound is the best known tip, header target included`() {
+        // headers still catching up to a target the network already reached
+        val catchingUp = progress(walletSyncedHeight = 990L).copy(headerHeight = 995L, filterHeight = 990L)
+        assertEquals(1_000L, engineWith(catchingUp).chainHeightUpperBound())
+    }
+
+    @Test
+    fun `an unknown tip gives no upper bound, whatever the committed cursor says`() {
+        // the committed cursor is a lower bound on processing, never a bound on the tip
+        val noTip = progress(walletSyncedHeight = 990L).copy(headerHeight = 0L, headerTarget = 0L, filterHeight = 0L)
+        assertNull(engineWith(noTip).chainHeightUpperBound())
+    }
 }
