@@ -26,6 +26,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
 import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.sdkOutpointBytes
 import de.schildbach.wallet.service.platform.sdk.wireTxidBytesOrNull
 import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Transaction
@@ -132,6 +133,14 @@ interface PendingPaymentEngine {
     fun chainHeightUpperBound(): Long?
 
     /**
+     * True when an input of [tx] is spent by a DIFFERENT transaction that is confirmed in a block,
+     * so [tx] can never confirm; false when the engine knows of no such spend; null when it cannot
+     * tell (store not open or unreadable). Affirmative evidence only: an unconfirmed conflict does
+     * not count, because it can still be replaced.
+     */
+    suspend fun inputSpentByConfirmedConflict(tx: Transaction): Boolean?
+
+    /**
      * Commits [rawTx] to the dashj wallet of record the way every SDK send is committed (the
      * bridge: `maybeCommitTx`, the confidence and purpose stamps, the dashj announce, the
      * self-spend grace marker and the send analytics), returning the wallet's live instance, or
@@ -172,6 +181,25 @@ class SdkPendingPaymentEngine @Inject constructor(
     } catch (e: Exception) {
         log.warn("could not read the SDK engine height", e)
         null
+    }
+
+    override suspend fun inputSpentByConfirmedConflict(tx: Transaction): Boolean? {
+        return try {
+            val db = sdkService.databaseOrNull() ?: return null
+            val ownWireTxid = tx.txId.reversedBytes
+            tx.inputs.any { input ->
+                val outpoint = sdkOutpointBytes(input.outpoint.hash.reversedBytes, input.outpoint.index)
+                val txo = db.txoDao().getByOutpoint(outpoint) ?: return@any false
+                val spender = txo.spendingTxid
+                    ?.takeIf { txo.isSpent && !it.contentEquals(ownWireTxid) }
+                    ?: return@any false
+                (db.transactionDao().getByTxid(spender)?.blockHeight ?: 0) > 0
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            log.warn("could not read the SDK store for conflicting spends of {}", tx.txId, e)
+            null
+        }
     }
 
     override fun isObservationLive(): Boolean = try {

@@ -352,14 +352,14 @@ class PendingDirectPaymentConfigTest {
     }
 
     @Test
-    fun aReleasedPurchaseNoLongerBlocks() = runBlocking {
-        // its inputs are free again, and the order that outlives it is kept only to explain a late
-        // broadcast, so waiting out an unlucky purchase must not cost the user gift cards for the
-        // whole retention period
+    fun aReleasedPurchaseStillBlocks() = runBlocking {
+        // Review 9fa90c30ccf1: its inputs are free again, but its signed transaction is still
+        // valid and the payee may still broadcast it. The record leaves the store only once that
+        // transaction is seen or a confirmed conflicting spend invalidates it.
         config.add(giftCardPayment.copy(abandoned = true))
 
-        assertFalse(config.hasUnresolvedGiftCardPurchase())
-        assertFalse(config.observeUnresolvedGiftCardPurchase().first())
+        assertTrue(config.hasUnresolvedGiftCardPurchase())
+        assertTrue(config.observeUnresolvedGiftCardPurchase().first())
     }
 
     @Test

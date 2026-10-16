@@ -206,12 +206,14 @@ open class PendingDirectPaymentConfig @Inject constructor(
         }
 
     /**
-     * Released payments are deliberately not counted: their inputs are free again and the order
-     * that outlives them is kept only to explain a late broadcast, so a user who has waited out an
-     * unlucky purchase can buy again rather than being locked out for the retention period.
+     * Every stored gift card purchase counts, released ones included (review 9fa90c30ccf1).
+     * Releasing a payment frees its inputs but does not revoke its signatures: the payee may still
+     * broadcast it, and a second purchase built from other coins would then be paid twice. A record
+     * leaves the store only once its transaction is seen on the network (paid) or a confirmed
+     * transaction spends one of its inputs (it can never confirm); see PendingDirectPaymentVerifier.
      */
     private val PendingDirectPayment.isUnresolvedGiftCard: Boolean
-        get() = isGiftCardPurchase && !abandoned
+        get() = isGiftCardPurchase
 
     // Both writes read strictly first. Reading through the fallback would turn a failed read into
     // an empty store, and the write would then replace the file with just this one entry,

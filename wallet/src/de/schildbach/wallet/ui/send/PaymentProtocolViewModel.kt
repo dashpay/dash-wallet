@@ -87,13 +87,26 @@ class PaymentProtocolViewModel @Inject constructor(
      */
     private val sendingPayment = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    /** The exact fee of the reserved payment the preview shows. */
+    /**
+     * Set when this invoice was paid before and that payment (T1) was released without being seen:
+     * the confirm action resubmits T1 itself rather than building a new payment, which the payee
+     * could broadcast alongside T1 (review 9fa90c30ccf1).
+     */
+    private val resubmissionRef =
+        java.util.concurrent.atomic.AtomicReference<de.schildbach.wallet.data.PendingDirectPayment?>(null)
+    private var resubmissionFee: Coin? = null
+
+    /** True when confirming resends the earlier payment for this invoice. */
+    val isResubmission: Boolean
+        get() = resubmissionRef.get() != null
+
+    /** The exact fee of the payment the preview shows (the reserved one, or the resubmitted one). */
     val previewFee: Coin?
-        get() = deferredPayment?.let { Coin.valueOf(it.feeDuffs) }
+        get() = deferredPayment?.let { Coin.valueOf(it.feeDuffs) } ?: resubmissionFee.takeIf { isResubmission }
 
     /** True when a confirmed send can actually run (the preview is armed). */
     val canSendPayment: Boolean
-        get() = deferredPayment != null
+        get() = deferredPayment != null || isResubmission
 
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>
@@ -170,7 +183,18 @@ class PaymentProtocolViewModel @Inject constructor(
                 }
             } catch (ex: Exception) {
                 finalPaymentIntent = null
-                _sendRequestLiveData.postValue(Resource.error(ex, ex.message ?: "Failed to fetch payment request"))
+                // An expired invoice can no longer be paid, but one this wallet already paid has an
+                // outcome to report: the same pending/unknown outcome a re-confirmation would get.
+                val earlier = (ex as? org.dash.wallet.common.payments.bip70.PaymentProtocolException.Expired)
+                    ?.paymentRequestHash
+                    ?.let { runCatching { sendCoinsTaskRunner.findUnresolvedSubmission(it) }.getOrNull() }
+                if (earlier != null) {
+                    _sendRequestLiveData.postValue(
+                        Resource.error(PaymentSubmissionPendingException(earlier.toString(), ex))
+                    )
+                } else {
+                    _sendRequestLiveData.postValue(Resource.error(ex, ex.message ?: "Failed to fetch payment request"))
+                }
                 log.error("Failed to fetch payment request", ex)
             }
         }
@@ -191,6 +215,21 @@ class PaymentProtocolViewModel @Inject constructor(
                 // take-then-release atomic against a concurrent send.
                 deferredPaymentRef.getAndSet(null)?.let {
                     sendCoinsTaskRunner.releaseDeferredPayment(it)
+                }
+                // Paid before and released unseen: arm a resubmission of that exact payment and
+                // build nothing new. A store that cannot be read builds the preview as usual; the
+                // confirm then reads it strictly and refuses.
+                val earlier = try {
+                    sendCoinsTaskRunner.findAbandonedSubmission(paymentIntent.paymentRequestHash, wallet)
+                } catch (e: Exception) {
+                    log.warn("could not look for an earlier payment of this request", e)
+                    null
+                }
+                if (earlier != null) {
+                    resubmissionFee = sendCoinsTaskRunner.knownFeeOf(earlier.txBytes, wallet)
+                    resubmissionRef.set(earlier)
+                    _sendRequestLiveData.postValue(Resource.success(null))
+                    return@withContext
                 }
                 // Built on, and later submitted for, the wallet this screen was opened on
                 // ([wallet]): a wipe in between must not have the replacement adopt the payment.
@@ -216,6 +255,10 @@ class PaymentProtocolViewModel @Inject constructor(
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
+            if (isResubmission) {
+                resubmitEarlierPayment()
+                return@launch
+            }
             try {
                 directPaymentAckLiveData.postValue(Resource.loading(null))
 
@@ -276,6 +319,24 @@ class PaymentProtocolViewModel @Inject constructor(
             } finally {
                 sendingPayment.set(false)
             }
+        }
+    }
+
+    /**
+     * Resends the earlier payment of this invoice, exactly as it was signed. No reservation is
+     * involved: T1's inputs were released when it went unseen. Runs inside [sendPayment]'s
+     * single-flight guard.
+     */
+    private suspend fun resubmitEarlierPayment() {
+        try {
+            directPaymentAckLiveData.postValue(Resource.loading(null))
+            val transaction = sendCoinsTaskRunner.resubmitAbandonedPayment(finalPaymentIntent!!, wallet)
+            directPaymentAckLiveData.postValue(Resource.success(transaction))
+        } catch (ex: Exception) {
+            log.error("Failed to resubmit the earlier payment", ex)
+            directPaymentAckLiveData.postValue(Resource.error(ex, ex.message ?: "Payment failed"))
+        } finally {
+            sendingPayment.set(false)
         }
     }
 

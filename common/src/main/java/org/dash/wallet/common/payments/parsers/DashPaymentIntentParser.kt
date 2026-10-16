@@ -210,7 +210,8 @@ class DashPaymentIntentParser(params: AddressNetwork) : PaymentIntentParser("das
             if (paymentSession.isExpired) {
                 throw Expired(
                     "payment details expired: current time " + Date() +
-                        " after expiry time " + paymentSession.expires
+                        " after expiry time " + paymentSession.expires,
+                    Hashing.sha256().hashBytes(serializedPaymentRequest).asBytes()
                 )
             }
 

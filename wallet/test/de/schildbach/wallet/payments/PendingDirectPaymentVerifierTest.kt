@@ -196,34 +196,47 @@ class PendingDirectPaymentVerifierTest {
     fun `releases inputs when connected and synced for the grace period without seeing the tx`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
-        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         val tx = createTransaction()
 
-        val result = verifier.quarantine(tx, paymentUrl, null)
-        val committed = withTimeout(5_000) { result.await() }
+        verifier.quarantine(tx, paymentUrl, null)
+        withTimeout(5_000) {
+            while (runCatching {
+                    coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+                }.isFailure
+            ) delay(10)
+        }
 
-        assertNull("tx never seen: must not be committed", committed)
-        assertNull(wallet.getTransaction(tx.txId))
+        assertNull("tx never seen: must not be committed", wallet.getTransaction(tx.txId))
         tx.inputs.forEach { assertFalse("inputs must be spendable again", wallet.isLockedOutput(it.outpoint)) }
-        coVerify { config.remove(tx.txId) }
+        // released, not resolved: the record stays and so does the watch (review 9fa90c30ccf1)
+        coVerify(exactly = 0) { config.remove(tx.txId) }
+        assertTrue(verifier.isTracked(tx.txId))
         verify(exactly = 0) { walletApplication.broadcastTransaction(any()) }
     }
 
     @Test
-    fun `removes optimistically saved gift cards when the payment is abandoned`() = runBlocking {
+    fun `removes optimistically saved gift cards once the abandoned payment is invalidated`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
-        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         val tx = createTransaction()
 
         val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
-        withTimeout(5_000) { result.await() }
+        withTimeout(5_000) {
+            while (runCatching {
+                    coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+                }.isFailure
+            ) delay(10)
+        }
+        // a confirmed transaction now spends one of its inputs: it can never confirm
+        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        assertNull(withTimeout(5_000) { result.await() })
 
         // the order was never placed, so everything recorded for it must go: cards, metadata,
         // and anything queued for Dash Platform
         coVerify { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
+        coVerify { config.remove(tx.txId) }
     }
 
     @Test
@@ -241,19 +254,24 @@ class PendingDirectPaymentVerifierTest {
     fun `keeps the payment when its records could not be discarded`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
-        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         // cleanup deferred, e.g. no wallet available to confirm the transaction is absent
         coEvery { metadataProvider.forgetTransaction(any()) } returns false
         val tx = createTransaction()
 
-        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
-        withTimeout(5_000) { result.await() }
+        verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        withTimeout(5_000) {
+            while (runCatching {
+                    coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+                }.isFailure
+            ) delay(10)
+        }
+        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        delay(300)
 
         // inputs are freed, but the record survives so the cleanup can be retried
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
         coVerify(exactly = 0) { config.remove(tx.txId) }
-        coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
     }
 
     @Test
@@ -300,22 +318,20 @@ class PendingDirectPaymentVerifierTest {
     fun `keeps the payment when discarding its records throws`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 100L
-        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         coEvery { metadataProvider.forgetTransaction(any()) } throws RuntimeException("database is gone")
+        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
         val tx = createTransaction()
 
-        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
-        withTimeout(5_000) { result.await() }
+        verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        delay(500)
 
         coVerify(exactly = 0) { config.remove(tx.txId) }
+        assertTrue("the cleanup is retried", verifier.isTracked(tx.txId))
     }
 
     @Test
     fun `resume keeps watching an abandoned payment without locking its inputs`() = runBlocking {
-        verifier.recordRetentionMs = 0L
-        // the retention cleanup acts only while connected and synced, like the release
-        goOnlineAndSynced()
         val tx = createTransaction()
         coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
@@ -325,20 +341,16 @@ class PendingDirectPaymentVerifierTest {
         )
 
         // awaitRestored, not resume: it returns only once the scan has finished, so the job is
-        // registered before anything is asserted. resume() returns immediately and isTracked
-        // reads false for a job that has not been created yet, so polling straight after it can
-        // pass without the scan having run at all.
+        // registered before anything is asserted
         withTimeout(5_000) { verifier.awaitRestored() }
-        // Then wait for cleanup to finish, not merely for forgetTransaction to be called: the
-        // verifier still has to return from it and run finish, which clears the tracking job.
-        withTimeout(5_000) {
-            while (verifier.isTracked(tx.txId)) {
-                delay(10)
-            }
-        }
 
-        // an abandoned payment is never re-locked or re-verified, only cleaned up
+        // an abandoned payment is never re-locked, only watched until it is seen or invalidated
+        assertTrue(verifier.isTracked(tx.txId))
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+
+        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        withTimeout(5_000) { while (verifier.isTracked(tx.txId)) delay(10) }
         coVerify { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
         coVerify { config.remove(tx.txId) }
     }
@@ -405,26 +417,31 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
-    fun `keeps a gift card order when the retention period runs out`() = runBlocking {
+    fun `keeps watching an abandoned gift card order until it is seen or invalidated`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 50L
-        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         val tx = createTransaction()
 
-        val result = verifier.quarantine(
+        verifier.quarantine(
             tx,
             paymentUrl,
             "PiggyCards",
             PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = null)
         )
-        withTimeout(5_000) { result.await() }
+        withTimeout(5_000) {
+            while (runCatching {
+                    coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+                }.isFailure
+            ) delay(10)
+        }
+        delay(300)
 
-        // The watch stops, but nothing is deleted: the record holds the only durable copy of the
-        // selected provider, and without it a late arrival cannot be attributed or retrieved.
+        // nothing is deleted and the watch goes on: the payee may still broadcast it
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
         coVerify(exactly = 0) { config.remove(tx.txId) }
-        coVerify { config.add(match { it.txId == tx.txId && it.watchExpired }, any()) }
+        coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.watchExpired }, any()) }
+        assertTrue(verifier.isTracked(tx.txId))
     }
 
     @Test
@@ -452,7 +469,9 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
-    fun `leaves an expired watch alone while its transaction is still absent`() = runBlocking {
+    fun `watches an expired-watch record again while its transaction is still absent`() = runBlocking {
+        // a record left by the old retention rule: still a valid signed payment, so it is watched
+        // like any released one until it is seen or invalidated
         val tx = createTransaction()
         coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
@@ -462,27 +481,34 @@ class PendingDirectPaymentVerifierTest {
             )
         )
 
-        verifier.resume()
-        delay(300)
+        withTimeout(5_000) { verifier.awaitRestored() }
 
-        // no polling, no locks, and the record survives for the next start to look again
-        assertFalse(verifier.isTracked(tx.txId))
+        assertTrue(verifier.isTracked(tx.txId))
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
         coVerify(exactly = 0) { config.remove(tx.txId) }
     }
 
     @Test
-    fun `discards an ordinary payment when the retention period runs out`() = runBlocking {
+    fun `discards an abandoned payment once a confirmed conflicting spend invalidates it`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 50L
-        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         val tx = createTransaction()
 
-        val result = verifier.quarantine(tx, paymentUrl, "SomeService")
-        withTimeout(5_000) { result.await() }
+        val result = verifier.quarantine(tx, paymentUrl, "SomeService", paymentRequestId = "abc123")
+        withTimeout(5_000) {
+            while (runCatching {
+                    coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
+                }.isFailure
+            ) delay(10)
+        }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+
+        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        assertNull(withTimeout(5_000) { result.await() })
 
         coVerify { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
+        coVerify { config.remove(tx.txId) }
     }
 
     @Test
@@ -784,13 +810,14 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
-    fun `a released submission stops blocking its invoice`() = runBlocking {
+    fun `a released submission still blocks its invoice`() = runBlocking {
+        // Review 9fa90c30ccf1: releasing T1's inputs does not revoke its signatures. A payee that
+        // kept T1 could broadcast it alongside any T2 built from other coins and collect twice,
+        // so the invoice stays blocked until T1 is seen or a confirmed conflicting spend kills it.
         val tx = createTransaction()
         coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123", abandoned = true))
 
-        // its inputs were freed because the wallet judged it never sent; refusing to let the user
-        // pay after that would strand them on an invoice they never actually paid
-        assertNull(verifier.unresolvedSubmissionFor("abc123"))
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("abc123"))
     }
 
     // --- the submission claim (review 5e6eb1215f01) ------------------------------------------
@@ -817,9 +844,37 @@ class PendingDirectPaymentVerifierTest {
         coEvery { config.getAllOrThrow() } returns listOf(storedPayment(saved, "abc123"))
 
         assertEquals(saved.txId, verifier.claimSubmission(createTransaction().txId, "abc123", false))
-        // released (abandoned) records do not block, as for the lookup
+        // released (abandoned) records still block a new transaction, as for the lookup
         coEvery { config.getAllOrThrow() } returns listOf(storedPayment(saved, "abc123", abandoned = true))
-        assertNull(verifier.claimSubmission(createTransaction().txId, "abc123", false))
+        assertEquals(saved.txId, verifier.claimSubmission(createTransaction().txId, "abc123", false))
+        // ...but not a resubmission of T1 itself
+        assertNull(verifier.claimSubmission(saved.txId, "abc123", false))
+    }
+
+    @Test
+    fun `an abandoned gift card purchase still blocks another gift card purchase`() = runBlocking {
+        val saved = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(
+            storedPayment(saved, null, abandoned = true).copy(isGiftCardPurchase = true)
+        )
+        assertEquals(saved.txId, verifier.claimSubmission(createTransaction().txId, null, isGiftCardPurchase = true))
+    }
+
+    @Test
+    fun `retention cleanup keeps an abandoned record that still blocks its invoice`() = runBlocking {
+        // Nothing has observed T1 and nothing has spent its inputs elsewhere: it is still a valid
+        // signed payment, so its record (the invoice block) outlives the retention period.
+        goOnlineAndSynced()
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123", abandoned = true))
+
+        withTimeout(5_000) { verifier.awaitRestored() }
+        delay(500)
+
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        coVerify(exactly = 0) { config.remove(tx.txId) }
+        coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.watchExpired }, any()) }
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("abc123"))
     }
 
     @Test
@@ -958,7 +1013,6 @@ class PendingDirectPaymentVerifierTest {
     fun `an abandoned payment the engine has since observed is committed, not forgotten`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 50L
-        verifier.recordRetentionMs = 0L
         goOnlineAndSynced()
         val tx = createTransaction()
         // the first network check misses it, the one taken right before discarding sees it
@@ -1052,7 +1106,6 @@ class PendingDirectPaymentVerifierTest {
         verifier.syncedGraceMs = 50L
         // long enough that the release happens first and the retention cleanup comes due only
         // once the store has become unreadable
-        verifier.recordRetentionMs = 300L
         goOnlineAndSynced()
         val tx = createTransaction()
         // live and absent long enough to release, then the store becomes unreadable before the
@@ -1181,7 +1234,6 @@ class PendingDirectPaymentVerifierTest {
     private fun retentionCleanupIsWithheldAt(walletSyncedHeight: Long, giftCard: Boolean) = runBlocking {
         val (v, stop) = liveEngineVerifier(walletSyncedHeight)
         try {
-            v.recordRetentionMs = 0L
             goOnlineAndSynced()
             val tx = createTransaction()
             coEvery { config.getAllOrThrow() } returns listOf(
@@ -1225,11 +1277,11 @@ class PendingDirectPaymentVerifierTest {
         retentionCleanupIsWithheldAt(998L, giftCard = true)
 
     @Test
-    fun `the retention cleanup does run once the committed cursor reaches the tip`() = runBlocking {
-        // the control for the tests above: same setup, cursor at the tip
+    fun `an abandoned record outlives retention even with the committed cursor at the tip`() = runBlocking {
+        // Review 9fa90c30ccf1: silence never discards a released payment, however well observed;
+        // only its being seen or invalidated does.
         val (v, stop) = liveEngineVerifier(1_000L)
         try {
-            v.recordRetentionMs = 0L
             goOnlineAndSynced()
             val tx = createTransaction()
             coEvery { config.getAllOrThrow() } returns listOf(
@@ -1239,7 +1291,9 @@ class PendingDirectPaymentVerifierTest {
                 )
             )
             withTimeout(5_000) { v.awaitRestored() }
-            coVerify(timeout = 5_000) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
+            delay(500)
+            coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+            coVerify(exactly = 0) { config.remove(tx.txId) }
         } finally {
             stop()
         }
@@ -1249,7 +1303,6 @@ class PendingDirectPaymentVerifierTest {
     fun `the retention cleanup needs the same connected and synced evidence as the release`() = runBlocking {
         verifier.minAgeMs = 0L
         verifier.syncedGraceMs = 50L
-        verifier.recordRetentionMs = 400L
         goOnlineAndSynced()
         val tx = createTransaction()
 
@@ -1480,5 +1533,81 @@ class PendingDirectPaymentVerifierTest {
         // the committed cursor is a lower bound on processing, never a bound on the tip
         val noTip = progress(walletSyncedHeight = 990L).copy(headerHeight = 0L, headerTarget = 0L, filterHeight = 0L)
         assertNull(engineWith(noTip).chainHeightUpperBound())
+    }
+
+    // --- an abandoned invoice stays blocked until T1 is seen or invalidated (9fa90c30ccf1) ---
+
+    @Test
+    fun `an abandoned payment that is then observed is resolved as paid and unblocks its invoice`() = runBlocking {
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        stored.add(storedPayment(tx, "abc123", abandoned = true))
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("abc123"))
+
+        coEvery { engine.observation(tx.txId.toString()) } returns EngineObservation.OBSERVED
+        withTimeout(5_000) { verifier.awaitRestored() }
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }
+
+        assertNotNull("committed as paid", wallet.getTransaction(tx.txId))
+        assertNull(verifier.unresolvedSubmissionFor("abc123"))
+    }
+
+    @Test
+    fun `a confirmed conflicting spend of an input unblocks the invoice`() = runBlocking {
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        stored.add(storedPayment(tx, "abc123", abandoned = true))
+        withTimeout(5_000) { verifier.awaitRestored() }
+        delay(200)
+        assertEquals("still blocked while T1 is valid", tx.txId, verifier.unresolvedSubmissionFor("abc123"))
+
+        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }
+
+        assertNull(verifier.unresolvedSubmissionFor("abc123"))
+        assertNull(verifier.claimSubmission(createTransaction().txId, "abc123", false))
+        assertNull("never committed", wallet.getTransaction(tx.txId))
+    }
+
+    @Test
+    fun `the abandoned submission of an invoice is offered for resubmission, an active one is not`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123", abandoned = true))
+        assertEquals(tx.txId, verifier.abandonedSubmissionFor("abc123", wallet)?.txId)
+
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "abc123"))
+        assertNull(verifier.abandonedSubmissionFor("abc123", wallet))
+    }
+
+    // the SDK engine's view of a conflicting spend
+
+    private fun engineWithTxo(txo: org.dashfoundation.dashsdk.persistence.entities.TxoEntity?, spenderHeight: Int?): SdkPendingPaymentEngine {
+        val db = mockk<org.dashfoundation.dashsdk.persistence.DashDatabase>(relaxed = true)
+        every { db.txoDao() } returns mockk(relaxed = true) { coEvery { getByOutpoint(any()) } returns txo }
+        every { db.transactionDao() } returns mockk(relaxed = true) {
+            coEvery { getByTxid(any()) } returns spenderHeight?.let { h ->
+                mockk<org.dashfoundation.dashsdk.persistence.entities.TransactionEntity> { every { blockHeight } returns h }
+            }
+        }
+        val sdkService = mockk<de.schildbach.wallet.service.platform.sdk.DashSdkService>(relaxed = true)
+        every { sdkService.databaseOrNull() } returns db
+        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, mockk(relaxed = true), mockk(relaxed = true))
+    }
+
+    private fun spentTxo(spendingTxid: ByteArray) =
+        mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { isSpent } returns true
+            every { this@mockk.spendingTxid } returns spendingTxid
+        }
+
+    @Test
+    fun `the SDK engine reports an input spent by a different confirmed transaction`() = runBlocking {
+        val tx = createTransaction()
+        val other = ByteArray(32) { 9 }
+
+        assertEquals(true, engineWithTxo(spentTxo(other), spenderHeight = 1_000).inputSpentByConfirmedConflict(tx))
+        assertEquals("unconfirmed conflict", false, engineWithTxo(spentTxo(other), spenderHeight = 0).inputSpentByConfirmedConflict(tx))
+        assertEquals("spent by T1 itself", false, engineWithTxo(spentTxo(tx.txId.reversedBytes), spenderHeight = 1_000).inputSpentByConfirmedConflict(tx))
+        assertEquals("unknown output", false, engineWithTxo(null, spenderHeight = null).inputSpentByConfirmedConflict(tx))
     }
 }

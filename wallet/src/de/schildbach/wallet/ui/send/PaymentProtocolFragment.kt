@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -113,7 +114,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
     private fun confirmWhenAuthorizedAndNoException() {
         if (viewModel.finalPaymentIntent!!.expired) {
-            showRequestExpiredMessage()
+            // Resending the earlier payment of an expired request is pointless; its outcome is
+            // still unknown, and that is what the screen says.
+            if (viewModel.isResubmission) showSubmissionPending() else showRequestExpiredMessage()
             return
         }
 
@@ -124,6 +127,16 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         } else {
             handleSendRequestException()
         }
+    }
+
+    private fun showSubmissionPending() {
+        // The merchant may have received the payment; the wallet keeps checking the network in
+        // the background. Paying again with a new transaction could pay twice.
+        binding.errorView.title = R.string.payment_submission_pending_title
+        binding.errorView.message = R.string.payment_submission_pending_message
+        binding.errorView.hideConfirmButton()
+        binding.errorView.hideCancelButton()
+        binding.viewFlipper.displayedChild = VIEW_ERROR
     }
 
     private fun showRequestExpiredMessage() {
@@ -149,7 +162,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
                 Status.ERROR -> {
-                    if (it.exception is PaymentProtocolException.Expired) {
+                    if (it.exception is PaymentSubmissionPendingException) {
+                        showSubmissionPending()
+                    } else if (it.exception is PaymentProtocolException.Expired) {
                         showRequestExpiredMessage()
                     } else if (viewModel.finalPaymentIntent == null) {
                         // server error
@@ -289,6 +304,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         binding.paymentRequest.totalAmount.text = amount.toDashjCoin().add(txFee).toPlainString()
 
         binding.paymentRequest.memo.text = paymentIntent.memo
+        binding.paymentRequest.resendNotice.isVisible = viewModel.isResubmission
         if (paymentIntent.payeeVerifiedBy != null) {
             binding.paymentRequest.securedBy.text = getString(R.string.dialog_confirm_secured_by)
             binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy

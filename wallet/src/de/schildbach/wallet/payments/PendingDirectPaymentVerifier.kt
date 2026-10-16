@@ -100,14 +100,6 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val DEFAULT_SYNCED_GRACE_MS = 5 * 60_000L
         /** A chain tip older than this means we are not really caught up, whatever the sync state says. */
         private const val RECENT_CHAIN_TIP_MS = 30 * 60_000L
-        /**
-         * How long a released payment is still watched before its records are discarded.
-         *
-         * Releasing does not prove the payment never happened: the payee chooses when to relay
-         * the transaction, so one that withholds it until the grace period expires can broadcast
-         * afterwards. Keep watching, and keep the order, well beyond that point.
-         */
-        private const val DEFAULT_RECORD_RETENTION_MS = 24 * 60 * 60_000L
         /** How long a payment flow waits for restoration before refusing to proceed. */
         private const val DEFAULT_RESTORE_TIMEOUT_MS = 30_000L
         /**
@@ -135,7 +127,6 @@ class PendingDirectPaymentVerifier @Inject constructor(
     @VisibleForTesting internal var pollIntervalMs = DEFAULT_POLL_INTERVAL_MS
     @VisibleForTesting internal var minAgeMs = DEFAULT_MIN_AGE_MS
     @VisibleForTesting internal var syncedGraceMs = DEFAULT_SYNCED_GRACE_MS
-    @VisibleForTesting internal var recordRetentionMs = DEFAULT_RECORD_RETENTION_MS
     @VisibleForTesting internal var restoreTimeoutMs = DEFAULT_RESTORE_TIMEOUT_MS
     @VisibleForTesting internal var removalRetryInitialMs = DEFAULT_REMOVAL_RETRY_INITIAL_MS
 
@@ -392,14 +383,17 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         val tx = Transaction(wallet.params, payment.txBytes)
 
                         if (payment.watchExpired) {
-                            // Polling stopped long ago. If ordinary syncing has since found the
-                            // transaction, attribute it and let the record go; otherwise leave it
-                            // untouched for the next start to look again.
+                            // Polling stopped long ago (a record from before released payments
+                            // were watched until resolved). If ordinary syncing has since found the
+                            // transaction, attribute it and let the record go; otherwise watch it
+                            // again like any released payment, until it is seen or invalidated.
                             val arrived = wallet.getTransaction(tx.txId)
                                 ?: tx.takeIf { engineObservation(tx.txId) == EngineObservation.OBSERVED }
-                            arrived?.let {
+                            if (arrived != null) {
                                 log.info("transaction {} arrived after its watch expired", tx.txId)
-                                commit(it, payment, wallet)
+                                commit(arrived, payment, wallet)
+                            } else {
+                                track(tx, payment, wallet)
                             }
                             continue
                         }
@@ -504,16 +498,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * from different ones, leaving two payments the payee can both broadcast. A screen that has
      * lost its own state - process death, or the invoice opened again - has nothing else to ask.
      *
-     * An abandoned payment does not count. Its inputs have been released because the wallet judged
-     * it never sent, and refusing to let the user pay after that would strand them on an invoice
-     * they never actually paid.
+     * An abandoned (released) payment counts too (review 9fa90c30ccf1). Its inputs were freed,
+     * but its signatures were not revoked: a payee that kept it can still broadcast it, alongside
+     * any new payment built from other coins. Its record leaves the store, and with it this block,
+     * only once it is seen on the network (paid) or a confirmed transaction spends one of its
+     * inputs (it can never confirm). Until then the invoice is paid again by resubmitting that same
+     * transaction ([abandonedSubmissionFor]), never with a new one.
      */
     suspend fun unresolvedSubmissionFor(paymentRequestId: String?): Sha256Hash? {
         if (paymentRequestId == null) {
             return null
         }
         return config.getAllOrThrow()
-            .firstOrNull { it.paymentRequestId == paymentRequestId && !it.abandoned && it.txId !in pendingRemovals }
+            .firstOrNull { it.paymentRequestId == paymentRequestId && it.txId !in pendingRemovals }
             ?.txId
     }
 
@@ -546,7 +543,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
         keys.firstNotNullOfOrNull { key -> submissionClaims[key]?.takeIf { it != txId } }?.let {
             return@withLock it
         }
-        val stored = config.getAllOrThrow().filter { !it.abandoned && it.txId != txId && it.txId !in pendingRemovals }
+        // Released (abandoned) records count too (review 9fa90c30ccf1): their signed transaction
+        // is still valid. Only T1 itself is let through, to be resubmitted as it is.
+        val stored = config.getAllOrThrow().filter { it.txId != txId && it.txId !in pendingRemovals }
         val recorded = paymentRequestId?.let { id -> stored.firstOrNull { it.paymentRequestId == id } }
             ?: stored.firstOrNull { isGiftCardPurchase && it.isGiftCardPurchase }
         if (recorded != null) {
@@ -669,6 +668,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     return commit(tx, current, origin)
                 }
 
+                // The only other way out: a confirmed transaction spends one of its inputs, so it
+                // can never confirm and the payee can no longer be paid with it. Until then its
+                // record stays, and with it the block on its invoice (review 9fa90c30ccf1).
+                if (isInvalidated(tx, origin) && discardInvalidated(tx, current, origin)) {
+                    return null
+                }
+
                 val now = System.currentTimeMillis()
                 if (evidence == EngineObservation.UNAVAILABLE) {
                     // Nothing can be concluded this round. The grace period measures continuous
@@ -693,12 +699,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         // for the grace period is not proof the payment never reached the payee.
                         current = release(tx, current, origin)
                     }
-                } else if (now - current.createdAt >= recordRetentionMs && syncedSince != 0L) {
-                    // No weaker than the release: discarding deletes the records of what may yet
-                    // be a real payment, so it acts only on a round that was connected and synced.
-                    discardRecords(current, origin)
-                    return null
                 }
+                // A released payment is never discarded for age: silence, however long, does not
+                // revoke its signatures. It is watched until it is seen or invalidated.
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -833,83 +836,86 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     /**
-     * Removes everything saved against a payment that was never sent. The payment is only dropped
-     * once that succeeds: discarding it earlier would leave gift cards, metadata or queued
-     * platform changes behind with nothing left to retry them.
+     * Whether [tx] can never confirm: one of its inputs is spent by a DIFFERENT transaction that is
+     * confirmed in a block. Asked of the dashj wallet (its own view of the parent outputs) and of
+     * the SDK engine's store. Affirmative evidence only; anything unknown is false.
      */
-    private suspend fun discardRecords(payment: PendingDirectPayment, origin: Wallet) {
-        // The transaction can arrive between the last network check and this call. forgetTransaction
-        // then reports settled without deleting anything, because the wallet holds it, and finishing
-        // here would lose the gift card metadata commit() restores. Look again first.
-        origin.takeIf { stillOwnedBy(it) }?.getTransaction(payment.txId)?.let { walletTx ->
-            log.info("abandoned payment {} turned out to be real after all, committing it", payment.txId)
-            commit(walletTx, payment, origin)
-            return
+    private suspend fun isInvalidated(tx: Transaction, origin: Wallet): Boolean {
+        if (dashjConflictConfirmed(origin, tx)) return true
+        return try {
+            engine.inputSpentByConfirmedConflict(tx) == true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not ask the SDK engine about conflicting spends of {}", tx.txId, e)
+            false
         }
-        // The dashj wallet is not the only place a real payment can be by now: once the SDK owns
-        // L1 the transaction may be known to the engine alone, and forgetTransaction() only asks
-        // the dashj wallet whether it is real.
+    }
+
+    private fun dashjConflictConfirmed(wallet: Wallet, tx: Transaction): Boolean = try {
+        tx.inputs.any { input ->
+            val parent = wallet.getTransaction(input.outpoint.hash) ?: return@any false
+            val spender = parent.outputs.getOrNull(input.outpoint.index.toInt())?.spentBy?.parentTransaction
+                ?: return@any false
+            spender.txId != tx.txId &&
+                spender.confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
+        }
+    } catch (e: Exception) {
+        log.warn("could not check the wallet for conflicting spends of {}", tx.txId, e)
+        false
+    }
+
+    /**
+     * Drops a payment that can never confirm: its inputs are freed, its reservation given back,
+     * everything recorded for it (gift cards, metadata, queued platform changes) removed, and then
+     * its record, which lifts the block on its invoice. Returns false, keeping the record and the
+     * watch for the next round, when the records could not be removed.
+     */
+    private suspend fun discardInvalidated(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): Boolean {
+        log.info("{} can never confirm: a confirmed transaction spends one of its inputs; dropping it", tx.txId)
         if (stillOwnedBy(origin)) {
-            when (engineObservation(payment.txId)) {
-                EngineObservation.OBSERVED -> {
-                    log.info("abandoned payment {} was observed by the SDK engine after all, committing it", payment.txId)
-                    commit(Transaction(origin.params, payment.txBytes), payment, origin)
-                    return
-                }
-                EngineObservation.UNAVAILABLE -> {
-                    // Unknown is not absent. Keep everything; the next resume() asks again.
-                    log.warn("could not ask the SDK engine about {}, keeping its records for now", payment.txId)
-                    jobs.remove(payment.txId)
-                    return
-                }
-                EngineObservation.ABSENT -> Unit
-            }
+            unlockInputs(origin, tx)
         }
-        // The same evidence the release needed, asked again right before acting: the engine's
-        // silence counts only while it, and the wallet, are connected and caught up.
-        if (!isConnectedAndSynced()) {
-            log.warn("not discarding the records of {}: the wallet is not connected and synced", payment.txId)
-            jobs.remove(payment.txId)
-            return
-        }
-
-        if (payment.isGiftCardPurchase) {
-            // Stop polling, but keep everything needed to make sense of a late arrival. Dropping
-            // the record would take the selected provider with it: the card rows do not store it,
-            // and the metadata could never be written while the transaction was absent from the
-            // wallet. Without it GiftCardDetailsViewModel has nothing to dispatch on and a paid
-            // purchase cannot be retrieved. Marked so resume() applies it if the transaction ever
-            // shows up, without watching for it.
-            log.warn(
-                "giving up watching {} after the retention period, keeping its order and provider " +
-                    "in case the transaction still arrives",
-                payment.txId
-            )
-            try {
-                config.add(payment.copy(watchExpired = true)) { stillOwnedBy(origin) }
-            } catch (e: Exception) {
-                log.error("could not record the expired watch for {}", payment.txId, e)
-            }
-            jobs.remove(payment.txId)
-            return
-        }
-
+        reservations.remove(tx.txId)?.let { engine.release(it) }
         val settled = try {
             metadataProvider.forgetTransaction(payment.txId.toTxId())
         } catch (e: Exception) {
-            log.error("could not discard the records of abandoned payment {}", payment.txId, e)
+            log.error("could not discard the records of invalidated payment {}", payment.txId, e)
             false
         }
-
-        if (settled) {
-            finish(payment)
-        } else {
-            log.warn(
-                "records of abandoned payment {} are still present, keeping it to retry the cleanup",
-                payment.txId
-            )
-            jobs.remove(payment.txId)
+        if (!settled) {
+            log.warn("records of invalidated payment {} are still present, retrying", payment.txId)
+            return false
         }
+        finish(payment)
+        return true
+    }
+
+    /**
+     * The released submission of [paymentRequestId] made by [origin], if there is one on record:
+     * the exact transaction a re-confirmation of that invoice resubmits instead of building a new
+     * one (review 9fa90c30ccf1).
+     */
+    suspend fun abandonedSubmissionFor(paymentRequestId: String?, origin: Wallet): PendingDirectPayment? {
+        paymentRequestId ?: return null
+        val walletId = walletIdentity(origin)
+        return config.getAllOrThrow().firstOrNull {
+            it.paymentRequestId == paymentRequestId &&
+                (it.abandoned || it.watchExpired) &&
+                it.txId !in pendingRemovals &&
+                (it.walletId == null || walletId == null || it.walletId == walletId)
+        }
+    }
+
+    /**
+     * The payee acknowledged a resubmitted [tx]: commit it from its stored record exactly as any
+     * acknowledged payment is committed, and end its watch.
+     */
+    suspend fun commitAcknowledged(tx: Transaction, origin: Wallet): Transaction {
+        val payment = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
+            ?: throw IllegalStateException("no pending record for acknowledged payment ${tx.txId}")
+        jobs.remove(tx.txId)?.cancel()
+        return commit(tx, payment, origin)
     }
 
     /** What the SDK engine can say about [txId]; a failure to ask is [EngineObservation.UNAVAILABLE]. */

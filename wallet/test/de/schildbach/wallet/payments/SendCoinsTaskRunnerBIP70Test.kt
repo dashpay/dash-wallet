@@ -146,9 +146,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // dashj requires a Context to be constructed before reading a wallet
         org.bitcoinj.core.Context.propagate(org.bitcoinj.core.Context.getOrCreate(networkParams))
 
-        javaClass.getResourceAsStream("coinjoin.wallet").use {
-            wallet = WalletProtobufSerializer().readWallet(it)
-        }
+        wallet = fixtureWallet
 
         // Setup default mock behaviors
         every { walletDataProvider.wallet } returns wallet
@@ -238,6 +236,9 @@ class SendCoinsTaskRunnerBIP70Test {
         runBlocking { wipeListeners.forEach { it() } }
         mockWebServer.shutdown()
         unmockkStatic(SecurityGuard::class)
+        // The runner keeps finished test instances reachable; their mocks' recorded calls (each
+        // poll of a watch) need not be.
+        io.mockk.clearAllMocks()
     }
 
     /**
@@ -682,6 +683,19 @@ class SendCoinsTaskRunnerBIP70Test {
     private companion object {
         // static: a per-instance counter would hand every test the same txid
         val txCounter = AtomicInteger(0)
+
+        /**
+         * The coinjoin.wallet fixture, parsed once for the class. A parsed copy is tens of MB and
+         * stays reachable for the rest of the test fork once loaded (dashj's global Context keeps
+         * hold of it), so a copy per test had grown the fork to the edge of its 2 GB heap. The
+         * tests only touch transactions and outpoints unique to themselves, so sharing it is safe.
+         */
+        val fixtureWallet: Wallet by lazy {
+            org.bitcoinj.core.Context.propagate(org.bitcoinj.core.Context.getOrCreate(TestNet3Params.get()))
+            SendCoinsTaskRunnerBIP70Test::class.java.getResourceAsStream("coinjoin.wallet").use {
+                WalletProtobufSerializer().readWallet(it)
+            }
+        }
     }
 
     private fun bip70PaymentIntent(
@@ -1496,8 +1510,7 @@ class SendCoinsTaskRunnerBIP70Test {
     // ==================== the wallet the payment belongs to (review f04fe92ac0a6) ==============
 
     /** A second wallet instance standing in for the one a wipe installs mid-payment. */
-    private fun replacementWallet(): Wallet =
-        javaClass.getResourceAsStream("coinjoin.wallet").use { WalletProtobufSerializer().readWallet(it) }
+    private fun replacementWallet(): Wallet = Wallet.createBasic(networkParams)
 
     @Test
     fun `a BIP70 payment whose wallet is replaced during the SDK build is released, never posted`() = runBlocking {
@@ -1597,5 +1610,103 @@ class SendCoinsTaskRunnerBIP70Test {
             outcome.exceptionOrNull() is PaymentSubmissionPendingException
         )
         assertNull("the recorded transaction was not committed", wallet.getTransaction(Sha256Hash.wrap(recorded)))
+    }
+
+    // ==================== an abandoned invoice stays blocked (review 9fa90c30ccf1) ============
+
+    @Test
+    fun `a new transaction for an invoice whose earlier payment was abandoned is refused`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 3 }
+        val requestId = org.dash.wallet.common.util.Constants.HEX.encode(requestHash)
+        val t1 = deferredTx
+        // T1 was submitted, never seen, and released after the grace period
+        stored.add(
+            de.schildbach.wallet.data.PendingDirectPayment(
+                t1.txId, t1.bitcoinSerialize(), mockWebServer.url("/payment").toString(), "Merchant",
+                System.currentTimeMillis(), abandoned = true, paymentRequestId = requestId
+            )
+        )
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        val t2 = otherDeferredPayment()
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(t2, intent, wallet)
+            fail("T2 was submitted for an invoice T1 may still pay")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(t1.txId.toString(), e.txId)
+        }
+        assertEquals(0, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(t2) }
+    }
+
+    private fun abandonedT1For(requestHash: ByteArray, stored: MutableList<de.schildbach.wallet.data.PendingDirectPayment>) =
+        de.schildbach.wallet.data.PendingDirectPayment(
+            deferredTx.txId, deferredTx.bitcoinSerialize(), mockWebServer.url("/payment").toString(), "Merchant",
+            System.currentTimeMillis(), abandoned = true,
+            paymentRequestId = org.dash.wallet.common.util.Constants.HEX.encode(requestHash)
+        ).also { stored.add(it) }
+
+    @Test
+    fun `re-confirming an abandoned invoice posts the exact stored transaction and completes on ack`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 4 }
+        abandonedT1For(requestHash, stored)
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        val liveTx = mockk<Transaction>(relaxed = true)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        val result = sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+
+        assertEquals("T1 is what was completed", deferredTx.txId, result.txId)
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
+        val posted = Protos.Payment.parseFrom(mockWebServer.takeRequest().body.readByteArray())
+        assertEquals("one transaction, T1 itself", 1, posted.transactionsCount)
+        assertTrue(posted.getTransactions(0).toByteArray().contentEquals(deferredTx.bitcoinSerialize()))
+        // nothing new was built or reserved
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any()) }
+        // acknowledged: committed like any ack, and the record (the invoice block) goes
+        assertTrue(stored.isEmpty())
+    }
+
+    @Test
+    fun `a resubmission whose outcome is unknown stays pending and keeps the invoice blocked`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 6 }
+        abandonedT1For(requestHash, stored)
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("an unknown outcome was reported as definite")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+
+        assertEquals(1, stored.size)
+        assertEquals(deferredTx.txId, sendCoinsTaskRunner.findUnresolvedSubmission(requestHash))
     }
 }

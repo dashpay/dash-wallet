@@ -1348,28 +1348,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
         try {
             log.info("trying to send tx {} to {}", payment.txidHex, requestUrl)
-            val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
-            val response = directPayHttpClient.call(request)
-            response.ensureSuccessful()
-            requestUrl.toUri().host?.let {
-                timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
-            }
-            log.info("tx sent via http")
-
-            val byteStream = response.body?.byteStream()
-                ?: throw IOException("Null response for the payment request: $requestUrl")
-            val paymentAck = byteStream.use { Protos.PaymentACK.parseFrom(it) }
-            val acknowledged = PaymentProtocol.parsePaymentAck(paymentAck).memo != "nack"
-            log.info("received {} via http", if (acknowledged) "ack" else "nack")
-            if (!acknowledged) {
-                // A nack is not a refusal we can act on. It is reached only after the request
-                // arrived and the payee answered, so by then it has had the transaction and may
-                // have broadcast it whatever the memo says. Treating it as proof of non-receipt
-                // would free the inputs and send callers into cleanup that deletes a gift card
-                // order, so a payee that nacked and relayed anyway would leave a paid purchase
-                // with nothing to redeem. Falls through to the ambiguous handling below.
-                throw DirectPayException("Payment was not acknowledged by the server")
-            }
+            postPaymentForAck(request, requestUrl)
         } catch (e: Exception) {
             if (isDefinitelyNotSubmitted(e)) {
                 log.warn("Payment submission failed before the request could be sent: {}", payment.txidHex, e)
@@ -1425,6 +1404,137 @@ class SendCoinsTaskRunner @Inject constructor(
             log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
         }
         sent
+    }
+
+    /**
+     * POSTs a BIP70 Payment message and returns once the payee acknowledged it. Throws on anything
+     * else; a nack included ([DirectPayException]), see the callers for what each failure proves.
+     */
+    private suspend fun postPaymentForAck(request: Request, requestUrl: String) {
+        val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
+        val response = directPayHttpClient.call(request)
+        response.ensureSuccessful()
+        requestUrl.toUri().host?.let {
+            timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
+        }
+        log.info("tx sent via http")
+
+        val byteStream = response.body?.byteStream()
+            ?: throw IOException("Null response for the payment request: $requestUrl")
+        val paymentAck = byteStream.use { Protos.PaymentACK.parseFrom(it) }
+        val acknowledged = PaymentProtocol.parsePaymentAck(paymentAck).memo != "nack"
+        log.info("received {} via http", if (acknowledged) "ack" else "nack")
+        if (!acknowledged) {
+            // A nack is not a refusal we can act on. It is reached only after the request
+            // arrived and the payee answered, so by then it has had the transaction and may
+            // have broadcast it whatever the memo says. Treating it as proof of non-receipt
+            // would free the inputs and send callers into cleanup that deletes a gift card
+            // order, so a payee that nacked and relayed anyway would leave a paid purchase
+            // with nothing to redeem. Falls through to the ambiguous handling of the caller.
+            throw DirectPayException("Payment was not acknowledged by the server")
+        }
+    }
+
+    /**
+     * The released submission for this invoice made from [originWallet], if there is one: what a
+     * re-confirmation resubmits ([resubmitAbandonedPayment]) instead of building a new payment.
+     */
+    suspend fun findAbandonedSubmission(
+        paymentRequestHash: ByteArray?,
+        originWallet: Wallet
+    ): de.schildbach.wallet.data.PendingDirectPayment? =
+        pendingPaymentVerifier.abandonedSubmissionFor(paymentRequestHash?.let { Constants.HEX.encode(it) }, originWallet)
+
+    /**
+     * Best-effort fee of a stored transaction, for the confirm screen: Σ(inputs) − Σ(outputs),
+     * with the input values from the dashj wallet or the SDK store. Null when any is unknown.
+     */
+    suspend fun knownFeeOf(rawTx: ByteArray, originWallet: Wallet): Coin? = try {
+        val tx = Transaction(NETWORK_PARAMETERS, rawTx)
+        var inputs = 0L
+        for (input in tx.inputs) {
+            val fromWallet = originWallet.getTransaction(input.outpoint.hash)
+                ?.outputs?.getOrNull(input.outpoint.index.toInt())?.value?.value
+            val value = fromWallet ?: l1SendProbeService.txoAmountOrNull(
+                de.schildbach.wallet.service.platform.sdk.sdkOutpointBytes(
+                    input.outpoint.hash.reversedBytes,
+                    input.outpoint.index
+                )
+            ) ?: return null
+            inputs += value
+        }
+        val fee = inputs - tx.outputs.sumOf { it.value.value }
+        if (fee >= 0) Coin.valueOf(fee) else null
+    } catch (e: Exception) {
+        log.warn("could not work out the fee of a stored payment", e)
+        null
+    }
+
+    /**
+     * Pays an invoice again with the EXACT transaction submitted for it before (T1), never with a
+     * new one (review 9fa90c30ccf1). T1 was released after going unseen, but its signatures are
+     * still valid: a new transaction from other coins could be broadcast alongside it and pay the
+     * invoice twice. So the stored T1 is posted to the payee again, as a new Payment message for
+     * the same request. Same rules as a first submission: the app-wide claim, the origin wallet,
+     * nothing recorded or sent for a wallet that has been replaced.
+     *
+     * Outcomes: acknowledged, T1 is committed from its record like any acknowledged payment;
+     * anything after the request may have arrived, [PaymentSubmissionPendingException] for T1,
+     * whose record and watch carry on; a request that never left, its error (T1 stays on record
+     * and keeps blocking the invoice).
+     */
+    suspend fun resubmitAbandonedPayment(
+        finalPaymentIntent: PaymentIntent,
+        originWallet: Wallet
+    ): Transaction = withContext(NonCancellable) {
+        val wallet = originWallet
+        val requestUrl = finalPaymentIntent.paymentUrl
+            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            throw IllegalStateException("the wallet this invoice was paid from has been replaced; not resubmitting")
+        }
+        val paymentRequestId = finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) }
+        val record = pendingPaymentVerifier.abandonedSubmissionFor(paymentRequestId, wallet)
+            ?: throw IllegalStateException("no earlier payment on record for this request")
+        Context.propagate(wallet.context)
+        val tx = Transaction(NETWORK_PARAMETERS, record.txBytes)
+
+        pendingPaymentVerifier.claimSubmission(tx.txId, paymentRequestId, record.isGiftCardPurchase)?.let { other ->
+            throw PaymentSubmissionPendingException(other.toString(), null)
+        }
+        try {
+            val refundAddress = sdkL1SendService.refundAddressOrNull()
+            val paymentMessage = PaymentProtocol.createPaymentMessage(
+                listOf(record.txBytes),
+                finalPaymentIntent.amount,
+                refundAddress,
+                null,
+                finalPaymentIntent.payeeData
+            )
+            val request = buildOkHttpDirectPayRequest(requestUrl, paymentMessage)
+            if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                throw IllegalStateException("the wallet that signed ${tx.txId} has been replaced; not resubmitting")
+            }
+            try {
+                log.info("resubmitting the earlier payment {} to {}", tx.txId, requestUrl)
+                postPaymentForAck(request, requestUrl)
+            } catch (e: Exception) {
+                if (isDefinitelyNotSubmitted(e)) {
+                    log.warn("resubmission of {} failed before the request could be sent", tx.txId, e)
+                    throw e
+                }
+                log.warn("resubmission of {} failed, but it may have arrived", tx.txId, e)
+                throw PaymentSubmissionPendingException(tx.txId.toString(), e)
+            }
+            if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                throw IllegalStateException(
+                    "the wallet that signed ${tx.txId} was wiped before its acknowledgement; not completing it"
+                )
+            }
+            pendingPaymentVerifier.commitAcknowledged(tx, wallet)
+        } finally {
+            pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
+        }
     }
 
     /**

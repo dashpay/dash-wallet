@@ -84,6 +84,8 @@ class PaymentProtocolViewModelRaceTest {
             every { isExtendedBy(any(), any(), any()) } returns true
         }
         coEvery { runner.fetchPaymentRequest(any()) } returns mockk(relaxed = true)
+        // nothing paid before: the preview builds a new payment
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
         coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
 
         viewModel.requestPaymentRequest(baseIntent)
