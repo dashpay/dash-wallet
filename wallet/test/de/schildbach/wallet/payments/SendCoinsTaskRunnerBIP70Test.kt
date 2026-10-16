@@ -891,7 +891,7 @@ class SendCoinsTaskRunnerBIP70Test {
 
         var postsSeenByCallback = -1
         var recordedTxId: String? = null
-        sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, "CTXSpend", null) { txId ->
+        sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet, "CTXSpend", null) { txId ->
             postsSeenByCallback = mockWebServer.requestCount
             recordedTxId = txId
         }
@@ -922,6 +922,7 @@ class SendCoinsTaskRunnerBIP70Test {
         sendCoinsTaskRunner.sendPrebuiltDirectPayment(
             payment,
             paymentIntent,
+            wallet,
             "CTXSpend",
             PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = "https://icon")
         )
@@ -951,7 +952,7 @@ class SendCoinsTaskRunnerBIP70Test {
         )
 
         try {
-            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent)
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
             fail("Expected the acked-but-not-displayed payment to be reported")
         } catch (e: PaymentSubmissionPendingException) {
             // callers that keep the order and withhold a retry catch this type
@@ -999,7 +1000,7 @@ class SendCoinsTaskRunnerBIP70Test {
         runBlocking { wipeListeners.forEach { it() } }
 
         try {
-            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent)
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
             fail("Expected the payment to be refused")
         } catch (e: IllegalStateException) {
             assertNotNull(e)
@@ -1099,7 +1100,7 @@ class SendCoinsTaskRunnerBIP70Test {
         )
         coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
 
-        val built = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent)
+        val built = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet)
         val outpoints = realTx.inputs.map { it.outpoint }
         outpoints.forEach { assertTrue("locked after build: $it", wallet.isLockedOutput(it)) }
 
@@ -1180,7 +1181,7 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         try {
-            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent)
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
             fail("an acknowledgement for a wiped wallet was completed")
         } catch (e: IllegalStateException) {
             assertNotNull(e)
@@ -1211,7 +1212,7 @@ class SendCoinsTaskRunnerBIP70Test {
                 .setBody(okio.Buffer().write(createPaymentAck()))
         )
 
-        sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent)
+        sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
 
         // bound to the captured origin, not to whatever walletData.wallet reads at bridge time
         io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
@@ -1384,14 +1385,14 @@ class SendCoinsTaskRunnerBIP70Test {
         repeat(2) { mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR)) }
 
         val a = racingScope.async {
-            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(first, intent) }
+            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(first, intent, wallet) }
         }
         awaitUntil("the first submission to reach the refund fetch") { refundCalls.get() >= 1 }
 
         // what PaymentProtocolViewModel asks before handing off: nothing is saved yet
         assertNull(sendCoinsTaskRunner.findUnresolvedSubmission(requestHash))
         val b = racingScope.async {
-            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(second, intent) }
+            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(second, intent, wallet) }
         }
         try {
             awaitUntil("the second submission to be refused or to reach the refund fetch") {
@@ -1428,7 +1429,7 @@ class SendCoinsTaskRunnerBIP70Test {
         )
         coEvery { metadataProvider.setTransactionService(any(), any()) } throws IllegalStateException("db down")
         try {
-            sendCoinsTaskRunner.sendPrebuiltDirectPayment(deferredPayment(), intent, serviceName = "Merchant")
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(deferredPayment(), intent, wallet, serviceName = "Merchant")
             fail("expected the pre-post failure")
         } catch (e: IllegalStateException) {
             assertNotNull(e)
@@ -1439,7 +1440,7 @@ class SendCoinsTaskRunnerBIP70Test {
         mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
         val retry = otherDeferredPayment()
         try {
-            sendCoinsTaskRunner.sendPrebuiltDirectPayment(retry, intent, serviceName = "Merchant")
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(retry, intent, wallet, serviceName = "Merchant")
             fail("expected pending")
         } catch (e: PaymentSubmissionPendingException) {
             assertEquals("the retry itself went out", retry.txidHex, e.txId)
@@ -1490,5 +1491,74 @@ class SendCoinsTaskRunnerBIP70Test {
         assertTrue("the second is refused as outstanding: $secondOutcome", secondOutcome is PaymentSubmissionPendingException)
         assertEquals(first.txidHex, (secondOutcome as PaymentSubmissionPendingException).txId)
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(second) }
+    }
+
+    // ==================== the wallet the payment belongs to (review f04fe92ac0a6) ==============
+
+    /** A second wallet instance standing in for the one a wipe installs mid-payment. */
+    private fun replacementWallet(): Wallet =
+        javaClass.getResourceAsStream("coinjoin.wallet").use { WalletProtobufSerializer().readWallet(it) }
+
+    @Test
+    fun `a BIP70 payment whose wallet is replaced during the SDK build is released, never posted`() = runBlocking {
+        // payWithDashUrlTx captures the wallet the user confirmed on. The SDK build suspends; a
+        // wipe that finishes in that window installs a replacement. Submitting then would quarantine
+        // the payment under, and adopt, a wallet that never made it.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentUrl = mockWebServer.url("/payment").toString()
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTREQUEST)
+                .setBody(okio.Buffer().write(createPaymentRequest(testAddress, Coin.parseCoin("1.0"), paymentUrl = paymentUrl)))
+        )
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+        val payment = deferredPayment()
+        val replacement = replacementWallet()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } answers {
+            every { walletDataProvider.wallet } returns replacement
+            payment
+        }
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrlTx(
+                "dash:$testAddress?amount=1.0&r=${mockWebServer.url("/request")}",
+                "TestService"
+            )
+            fail("a payment whose wallet was replaced during its build went ahead")
+        } catch (e: PaymentSubmissionPendingException) {
+            fail("it was submitted: $e")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        assertEquals("only the invoice fetch may reach the server", 1, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
+    }
+
+    @Test
+    fun `a prebuilt payment is submitted for the wallet it was built on, not the installed one`() = runBlocking {
+        // PaymentProtocolViewModel builds at preview time and submits on confirm; a wipe between the
+        // two must not let the confirm adopt the replacement.
+        val paymentIntent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString()
+        )
+        val payment = deferredPayment()
+        every { walletDataProvider.wallet } returns replacementWallet()
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
+            fail("a payment built on a replaced wallet was submitted")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        assertEquals(0, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
     }
 }

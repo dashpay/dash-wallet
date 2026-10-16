@@ -830,9 +830,13 @@ class SendCoinsTaskRunner @Inject constructor(
         paymentIntent: PaymentIntent,
         serviceName: String? = null,
         recovery: PaymentRecoveryMetadata? = null
-    ): Transaction = withContext(Dispatchers.IO) {
-        pendingPaymentVerifier.awaitRestored()
-        directPayViaSdk(paymentIntent, serviceName, recovery)
+    ): Transaction {
+        // Taken before anything here suspends: the payment belongs to the wallet installed now.
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        return withContext(Dispatchers.IO) {
+            pendingPaymentVerifier.awaitRestored()
+            directPayViaSdk(wallet, paymentIntent, serviceName, recovery)
+        }
     }
 
     /**
@@ -854,7 +858,7 @@ class SendCoinsTaskRunner @Inject constructor(
             // so leaving the screen does not end the wait: a wipe can start, or finish and
             // install a replacement, before the invoice arrives.
             ensureStillOwned(wallet, "selecting coins")
-            return directPayViaSdk(paymentIntent, serviceName, recovery, onTransactionCreated)
+            return directPayViaSdk(wallet, paymentIntent, serviceName, recovery, onTransactionCreated)
         } else {
             ensureStillOwned(wallet, "selecting coins")
             if (sdkL1SendService.cutoverCommitted()) {
@@ -925,8 +929,11 @@ class SendCoinsTaskRunner @Inject constructor(
      * SDK builder is address-only. Also runs the same pre-send
      * leftover-balance condition the dashj path enforces at commit time.
      */
-    suspend fun buildDeferredBip70Payment(paymentIntent: PaymentIntent): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment =
-        buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = true)
+    suspend fun buildDeferredBip70Payment(
+        paymentIntent: PaymentIntent,
+        originWallet: Wallet
+    ): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment =
+        buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = true, originWallet = originWallet)
 
     /**
      * Builds, signs and reserves [paymentIntent]'s outputs through the SDK without broadcasting
@@ -935,12 +942,17 @@ class SendCoinsTaskRunner @Inject constructor(
      */
     private suspend fun buildDeferredSdkPayment(
         paymentIntent: PaymentIntent,
-        requirePaymentUrl: Boolean
+        requirePaymentUrl: Boolean,
+        originWallet: Wallet
     ): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
         // Before the SDK selects and reserves inputs: an uncertain payment's dashj-side locks
         // must be back first (see awaitPaymentReadiness).
         pendingPaymentVerifier.awaitRestored()
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        // The SDK API takes no wallet to build from: it builds from whichever wallet is bound. So
+        // this is bracketed instead. A wipe retires the old wallet before it unbinds anything, so
+        // a wallet still owned on both sides of the build was the bound one throughout.
+        val wallet = originWallet
+        ensureStillOwned(wallet, "building the payment")
         Context.propagate(wallet.context)
         val recipients = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
             ?: throw SendNotSdkRoutableException(
@@ -964,6 +976,14 @@ class SendCoinsTaskRunner @Inject constructor(
         }
 
         val payment = sdkL1SendService.buildDeferredPayment(recipients)
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            // The build may have selected the replacement wallet's funds. Nothing has been sent:
+            // give the reservation back and refuse.
+            releaseDeferredPayment(payment, wallet = null)
+            throw IllegalStateException(
+                "the wallet this payment was confirmed on was replaced during its build; not submitting"
+            )
+        }
         // Reservation mirror — TRANSITION-ONLY, delete with Phase 2
         // (#1521): until the dashj engine is retired, a not-yet-cut-over
         // install still has dashj-side spenders (manual sends, the
@@ -975,7 +995,7 @@ class SendCoinsTaskRunner @Inject constructor(
         // a lock failure must not fail the build. Once Phase 2 lands
         // (no dashj engine constructs at all) this mirror is dead code,
         // and Phase 3 (#1522) removes the Wallet object it locks.
-        runCatching { setReservedOutpointLocks(payment, locked = true) }
+        runCatching { setReservedOutpointLocks(payment, locked = true, wallet = wallet) }
             .onFailure { log.warn("failed to mirror the BIP70 reservation into wallet locks", it) }
         return payment
     }
@@ -1008,8 +1028,15 @@ class SendCoinsTaskRunner @Inject constructor(
      * preview / pre-ack failure): SDK engine release + removal of the
      * mirrored wallet locks.
      */
-    suspend fun releaseDeferredPayment(payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment) {
-        runCatching { setReservedOutpointLocks(payment, locked = false) }
+    suspend fun releaseDeferredPayment(payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment) =
+        releaseDeferredPayment(payment, walletData.wallet)
+
+    /** [releaseDeferredPayment], unlocking the mirrored locks on [wallet] (null: none were set). */
+    private suspend fun releaseDeferredPayment(
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        wallet: Wallet?
+    ) {
+        runCatching { setReservedOutpointLocks(payment, locked = false, wallet = wallet) }
             .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks", it) }
         sdkL1SendService.releaseDeferredPayment(payment)
     }
@@ -1022,13 +1049,17 @@ class SendCoinsTaskRunner @Inject constructor(
      * [sendPrebuiltDirectPayment] on confirm.
      */
     private suspend fun directPayViaSdk(
+        wallet: Wallet,
         finalPaymentIntent: PaymentIntent,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): Transaction {
-        val payment = buildDeferredBip70Payment(finalPaymentIntent)
-        return sendPrebuiltDirectPayment(payment, finalPaymentIntent, serviceName, recovery, onTransactionCreated)
+        // [wallet] is the one the caller captured before anything suspended. The build suspends,
+        // and a wipe that finishes meanwhile installs a replacement: build and submit both stay
+        // bound to [wallet], and each refuses once it is no longer the installed one.
+        val payment = buildDeferredBip70Payment(finalPaymentIntent, wallet)
+        return sendPrebuiltDirectPayment(payment, finalPaymentIntent, wallet, serviceName, recovery, onTransactionCreated)
     }
 
     /**
@@ -1055,19 +1086,19 @@ class SendCoinsTaskRunner @Inject constructor(
         recovery: PaymentRecoveryMetadata?,
         onTransactionCreated: (suspend (String) -> Unit)?
     ): Transaction {
-        val payment = buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = false)
+        val payment = buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = false, originWallet = wallet)
         return withContext(NonCancellable) {
             val tx = try {
                 Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
             } catch (e: Exception) {
-                releaseDeferredPayment(payment)
+                releaseDeferredPayment(payment, wallet)
                 throw e
             }
             val paymentLabel = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
                 ?.firstOrNull()?.first?.let { "dash:$it" } ?: "dash:"
             // No invoice to key on here, but a gift card purchase is still the one outstanding
             // gift card purchase: refused before the caller records an order for it.
-            claimSubmissionOrRelease(tx, payment, null, recovery?.isGiftCardPurchase == true)
+            claimSubmissionOrRelease(wallet, tx, payment, null, recovery?.isGiftCardPurchase == true)
 
             try {
                 ensureStillOwned(wallet, "recording the order")
@@ -1090,7 +1121,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
             } catch (e: Exception) {
                 // Nothing has been sent. Free the inputs; the caller discards its order.
-                releaseDeferredPayment(payment)
+                releaseDeferredPayment(payment, wallet)
                 throw e
             } finally {
                 pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
@@ -1105,7 +1136,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 is SdkWriteResult.NotBroadcast -> {
                     // Refused before reaching the network: definitively not sent.
                     pendingPaymentVerifier.cancelQuarantine(tx)
-                    releaseDeferredPayment(payment)
+                    releaseDeferredPayment(payment, wallet)
                     throw sdkSendNotAttemptedException(result.reason)
                 }
                 is SdkWriteResult.Ambiguous -> {
@@ -1156,6 +1187,7 @@ class SendCoinsTaskRunner @Inject constructor(
      * Called inside the submission's NonCancellable block, so the release cannot be skipped.
      */
     private suspend fun claimSubmissionOrRelease(
+        wallet: Wallet,
         tx: Transaction,
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
         paymentRequestId: String?,
@@ -1164,12 +1196,12 @@ class SendCoinsTaskRunner @Inject constructor(
         val conflicting = try {
             pendingPaymentVerifier.claimSubmission(tx.txId, paymentRequestId, isGiftCardPurchase)
         } catch (e: Exception) {
-            releaseDeferredPayment(payment)
+            releaseDeferredPayment(payment, wallet)
             throw e
         }
         if (conflicting != null) {
             log.info("not submitting {}, {} is still unresolved for the same purchase", tx.txId, conflicting)
-            releaseDeferredPayment(payment)
+            releaseDeferredPayment(payment, wallet)
             throw PaymentSubmissionPendingException(conflicting.toString(), null)
         }
     }
@@ -1209,27 +1241,40 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun sendPrebuiltDirectPayment(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
         finalPaymentIntent: PaymentIntent,
+        /**
+         * The wallet [payment] was built on ([buildDeferredBip70Payment]'s `originWallet`), and
+         * the one its quarantine belongs to. Never re-read from the installed wallet: a wipe
+         * between build and submit installs a replacement, which must not adopt this payment.
+         */
+        originWallet: Wallet,
         serviceName: String? = null,
         recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): Transaction = withContext(NonCancellable) {
-        val requestUrl = finalPaymentIntent.paymentUrl
-            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
-        // The wallet the user confirmed this payment on, and the one its quarantine belongs to.
-        val wallet = walletData.wallet ?: run {
-            releaseDeferredPayment(payment)
-            throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val wallet = originWallet
+        val requestUrl = finalPaymentIntent.paymentUrl ?: run {
+            releaseDeferredPayment(payment, wallet)
+            throw InvalidPaymentRequestURL("Final payment intent URL is null")
+        }
+        // Before anything else: once the wallet is no longer the installed one, nothing of this
+        // payment may be recorded or sent. The reservation goes back.
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            releaseDeferredPayment(payment, wallet)
+            throw IllegalStateException(
+                "the wallet ${payment.txidHex} was built on has been replaced; not submitting"
+            )
         }
         Context.propagate(wallet.context)
         val tx = try {
             Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
         } catch (e: Exception) {
-            releaseDeferredPayment(payment)
+            releaseDeferredPayment(payment, wallet)
             throw e
         }
         // The one payment for this invoice: refused here, before anything can leave, when another
         // submission for it is already outstanding or on its way to its quarantine.
         claimSubmissionOrRelease(
+            wallet,
             tx,
             payment,
             finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) },
@@ -1286,7 +1331,7 @@ class SendCoinsTaskRunner @Inject constructor(
             } to request
         } catch (e: Exception) {
             // Nothing has been sent. Free the inputs for an immediate retry.
-            releaseDeferredPayment(payment)
+            releaseDeferredPayment(payment, wallet)
             throw e
         } finally {
             // Saved, the quarantine blocks a duplicate from here on; failed, there is nothing left
@@ -1322,7 +1367,7 @@ class SendCoinsTaskRunner @Inject constructor(
             if (isDefinitelyNotSubmitted(e)) {
                 log.warn("Payment submission failed before the request could be sent: {}", payment.txidHex, e)
                 pendingPaymentVerifier.cancelQuarantine(tx)
-                releaseDeferredPayment(payment)
+                releaseDeferredPayment(payment, wallet)
                 throw e
             }
 

@@ -192,7 +192,9 @@ class PaymentProtocolViewModel @Inject constructor(
                 deferredPaymentRef.getAndSet(null)?.let {
                     sendCoinsTaskRunner.releaseDeferredPayment(it)
                 }
-                deferredPaymentRef.set(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent))
+                // Built on, and later submitted for, the wallet this screen was opened on
+                // ([wallet]): a wipe in between must not have the replacement adopt the payment.
+                deferredPaymentRef.set(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet))
                 _sendRequestLiveData.postValue(Resource.success(null))
             } catch (x: Exception) {
                 deferredPaymentRef.set(null)
@@ -260,7 +262,7 @@ class PaymentProtocolViewModel @Inject constructor(
                     //
                     // From here the runner owns the reservation: it consumes, holds or releases it.
                     handedOff = true
-                    sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!)
+                    sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!, wallet)
                 } finally {
                     if (!handedOff) {
                         withContext(NonCancellable) { sendCoinsTaskRunner.releaseDeferredPayment(prebuilt) }

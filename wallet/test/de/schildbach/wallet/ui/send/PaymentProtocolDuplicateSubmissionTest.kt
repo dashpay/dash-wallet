@@ -108,7 +108,7 @@ class PaymentProtocolDuplicateSubmissionTest {
             every { isExtendedBy(any(), any(), any()) } returns true
         }
         coEvery { runner.fetchPaymentRequest(any()) } returns finalIntent
-        coEvery { runner.buildDeferredBip70Payment(any()) } returns payment
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
 
         viewModel.requestPaymentRequest(baseIntent)
         awaitCondition("deferred preview armed") { viewModel.deferredPayment != null }
@@ -148,7 +148,7 @@ class PaymentProtocolDuplicateSubmissionTest {
         runBlocking {
             // nothing was submitted, so there is no second transaction for the payee to broadcast,
             // and the preview's reservation was given back
-            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 1) { runner.releaseDeferredPayment(payment) }
         }
     }
@@ -158,7 +158,7 @@ class PaymentProtocolDuplicateSubmissionTest {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         coEvery { runner.findUnresolvedSubmission(any()) } returns null
         val liveTx = mockk<Transaction>(relaxed = true)
-        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } returns liveTx
+        coEvery { runner.sendPrebuiltDirectPayment(any(), any(), any()) } returns liveTx
         val viewModel = armedViewModel(runner)
 
         viewModel.sendPayment()
@@ -166,7 +166,7 @@ class PaymentProtocolDuplicateSubmissionTest {
 
         assertEquals(Status.SUCCESS, viewModel.directPaymentAckLiveData.value?.status)
         runBlocking {
-            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(payment, any()) }
+            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(payment, any(), any()) }
             coVerify(exactly = 0) { runner.releaseDeferredPayment(any()) }
         }
     }
@@ -185,7 +185,7 @@ class PaymentProtocolDuplicateSubmissionTest {
 
         assertEquals(Status.ERROR, viewModel.directPaymentAckLiveData.value?.status)
         runBlocking {
-            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 1) { runner.releaseDeferredPayment(payment) }
         }
     }
