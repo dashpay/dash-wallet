@@ -782,6 +782,16 @@ open class DashPayConfig @Inject constructor(
          * above (e.g. [TRANSACTION_METADATA_LAST_PAST_SAVE]).
          */
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
+
+        /**
+         * A local shielded spend is still reconciling (its note settlement can
+         * span several sync passes). Set together with removing
+         * [LAST_SHIELDED_BALANCE_DUFFS]; cleared only once the balance has
+         * settled. Survives a runtime stop and process death so the next
+         * bring-up restores the settlement guard instead of trusting the first
+         * READY pass.
+         */
+        val SHIELDED_SPEND_RECONCILE_PENDING = booleanPreferencesKey("shielded_spend_reconcile_pending")
     }
 
     // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
@@ -843,11 +853,22 @@ open class DashPayConfig @Inject constructor(
     suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
 
     /**
-     * Durably invalidate the last-known shielded balance after a local spend,
-     * so a runtime stop or process death before the new balance settles can
-     * never bring the pre-spend amount back. See [LAST_SHIELDED_BALANCE_DUFFS].
+     * Durably record that a local shielded spend is reconciling: in ONE
+     * transaction, drop the last-known balance and set
+     * [SHIELDED_SPEND_RECONCILE_PENDING], so a runtime stop or process death
+     * before the balance settles can neither bring the pre-spend amount back
+     * nor lose the pending settlement.
      */
-    suspend fun clearLastShieldedBalanceDuffs() = remove(LAST_SHIELDED_BALANCE_DUFFS)
+    suspend fun markShieldedSpendReconcilePending() = editPreferences { prefs ->
+        prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
+        prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
+    }
+
+    /** Whether a local shielded spend is still reconciling. See [SHIELDED_SPEND_RECONCILE_PENDING]. */
+    suspend fun isShieldedSpendReconcilePending(): Boolean = get(SHIELDED_SPEND_RECONCILE_PENDING) == true
+
+    /** The pending spend has settled. See [SHIELDED_SPEND_RECONCILE_PENDING]. */
+    suspend fun clearShieldedSpendReconcilePending() = remove(SHIELDED_SPEND_RECONCILE_PENDING)
 
     /**
      * Whether the dashj-sync DIAGNOSTIC toggle is on (see

@@ -313,7 +313,9 @@ class ShieldedBalanceServiceTest {
         }
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
         coEvery { getLastShieldedBalanceDuffs() } returns lastBalanceDuffs
-        coEvery { clearLastShieldedBalanceDuffs() } just Runs
+        coEvery { markShieldedSpendReconcilePending() } just Runs
+        coEvery { isShieldedSpendReconcilePending() } returns false
+        coEvery { clearShieldedSpendReconcilePending() } just Runs
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -1412,13 +1414,48 @@ class ShieldedBalanceServiceTest {
             displayHrp = { hrp }
         )
         assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
-        coVerify(exactly = 1) { cfg.clearLastShieldedBalanceDuffs() }
+        coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending() }
+    }
+
+    /**
+     * spend → restart → first READY: the persisted reconcile marker restores
+     * the settlement guard before READY is published, so the first READY pass
+     * is neither trusted (stale stays set) nor persisted as the last-known
+     * balance — the settlement still needs two stable completed passes.
+     */
+    @Test
+    fun afterRestart_aPendingReconcile_keepsTheFirstReadyStale_andUnpersisted() = runBlocking {
+        val cfg = config(true)
+        coEvery { cfg.isShieldedSpendReconcilePending() } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffs(any()) } just Runs
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            // a fresh service = a new process: the in-memory flag starts false
+            val service = ShieldedBalanceServiceImpl(
+                source = readySource(),
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope
+            )
+            assertFalse(service.shieldedBalanceMaybeStale.value)
+            assertTrue(service.ensureShieldedReady())
+
+            withTimeout(10_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
+            }
+            assertTrue("first READY after restart is still reconciling", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffs(any()) }
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
     }
 
     @Test
     fun successfulSpend_staysBroadcast_whenInvalidatingTheCacheFails() = runBlocking {
         val cfg = config(true, lastBalanceDuffs = 1_000_000_000L)
-        coEvery { cfg.clearLastShieldedBalanceDuffs() } throws IllegalStateException("datastore down")
+        coEvery { cfg.markShieldedSpendReconcilePending() } throws IllegalStateException("datastore down")
         val service = ShieldedBalanceServiceImpl(
             source = readySource(),
             dashPayConfig = cfg,

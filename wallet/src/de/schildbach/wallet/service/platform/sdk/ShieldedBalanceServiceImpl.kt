@@ -1304,6 +1304,21 @@ class ShieldedBalanceServiceImpl internal constructor(
             var firstPassCompleted = false
             var idlePolls = 0
             var prevInFlight = false
+            // A local spend that was still reconciling when the runtime stopped
+            // or the process died: restore the settlement guard BEFORE the first
+            // READY can be published, so that pass is not trusted (and not
+            // persisted) until the balance is stable across two completed
+            // passes — the same rule as a spend in this process.
+            val reconcilePending = runCatching { dashPayConfig.isShieldedSpendReconcilePending() }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    log.warn("failed to read the pending shielded spend reconciliation", it)
+                    false
+                }
+            if (reconcilePending) {
+                _shieldedBalanceMaybeStale.value = true
+                lastPassBalanceCredits = null
+            }
             while (isActive) {
                 if (readyWalletIdHex.value == null) {
                     _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
@@ -1340,6 +1355,14 @@ class ShieldedBalanceServiceImpl internal constructor(
                         }
                     }.getOrNull()
                     if (settledCredits != null && settledCredits == lastPassBalanceCredits) {
+                        if (_shieldedBalanceMaybeStale.value) {
+                            // Settled: the durable marker goes with the flag.
+                            runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
+                                .onFailure {
+                                    if (it is CancellationException) throw it
+                                    log.warn("failed to clear the pending shielded spend reconciliation", it)
+                                }
+                        }
                         _shieldedBalanceMaybeStale.value = false
                     }
                     lastPassBalanceCredits = settledCredits
@@ -1921,15 +1944,17 @@ class ShieldedBalanceServiceImpl internal constructor(
         // least two completed passes with an unchanged balance from here.
         lastPassBalanceCredits = null
         // The flag is in-memory only (false in a new process, reset by
-        // tearDownReadyState), so also drop the persisted last-known balance:
-        // a runtime stop or process death before the balance settles must not
-        // resurrect the pre-spend amount. [startBalancePersistence] skips
-        // writes while stale, so only a settled balance makes it valid again.
+        // tearDownReadyState), so record the pending reconciliation durably
+        // too: drop the persisted last-known balance (a stop or process death
+        // must not resurrect the pre-spend amount) and set the marker that
+        // [startSyncStatusPolling] restores the settlement guard from on the
+        // next bring-up. [startBalancePersistence] skips writes while stale,
+        // so only a settled balance makes the cache valid again.
         // NonCancellable + best-effort: the spend already broadcast, so this
         // must never turn a success into a failure for the caller.
         withContext(NonCancellable) {
-            runCatching { dashPayConfig.clearLastShieldedBalanceDuffs() }
-                .onFailure { log.warn("failed to invalidate the last-known shielded balance", it) }
+            runCatching { dashPayConfig.markShieldedSpendReconcilePending() }
+                .onFailure { log.warn("failed to persist the pending shielded spend reconciliation", it) }
         }
     }
 
