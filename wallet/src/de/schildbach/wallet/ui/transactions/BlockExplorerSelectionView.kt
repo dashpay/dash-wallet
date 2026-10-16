@@ -137,6 +137,10 @@ fun BlockExplorerSelectionViewPreview() {
     val colors = LocalDashColors.current
     Box(Modifier.background(colors.backgroundPrimary)) {
         BlockExplorerSelectionView(object: AnalyticsService {
+            override val isEnabled = true
+            override fun setEnabled(enabled: Boolean) = true
+            override fun applyStoredSetting() {}
+            override val isAvailable = true
             override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {}
             override fun logError(error: Throwable, details: String?) {}
         }) { }

@@ -26,6 +26,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -705,7 +706,14 @@ class SdkShieldedUsernameCreation internal constructor(
     private val recordInviteOverage: suspend (identityIdBase58: String, overageCredits: Long) -> Unit =
         { _, _ -> },
     /** Scope for [submit]; null (tests' default path) makes submit inert. */
-    private val executorScope: CoroutineScope? = null
+    private val executorScope: CoroutineScope? = null,
+    /**
+     * Reset Wallet's fence over old-wallet secret writes: the key persist and
+     * the funding calls are refused/awaited by it, and [submit]'s job is
+     * registered so the wipe can cancel and join it. A fresh (lowered) fence
+     * by default keeps the host-JVM tests unaffected.
+     */
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
 ) {
     @Inject
     constructor(
@@ -714,7 +722,8 @@ class SdkShieldedUsernameCreation internal constructor(
         shieldedBalanceService: ShieldedBalanceService,
         walletApplication: WalletApplication,
         blockchainIdentityConfig: BlockchainIdentityConfig,
-        applicationScope: CoroutineScope
+        applicationScope: CoroutineScope,
+        secretWriteFence: WalletSecretWriteFence
     ) : this(
         source = DashSdkShieldedUsernameSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -742,7 +751,8 @@ class SdkShieldedUsernameCreation internal constructor(
         recordInviteOverage = { identityIdBase58, overageCredits ->
             ShieldedInviteOverageTopUp.persistPendingRecord(dashPayConfig, identityIdBase58, overageCredits)
         },
-        executorScope = applicationScope
+        executorScope = applicationScope,
+        secretWriteFence = secretWriteFence
     )
 
     /** Test seam: the pipeline blocks for a ~30s proof — keep it off main. */
@@ -766,6 +776,10 @@ class SdkShieldedUsernameCreation internal constructor(
             log.warn("shielded username creation submit refused: no executor scope")
             return false
         }
+        if (secretWriteFence.isRaised) {
+            log.warn("shielded username creation submit refused: wallet wipe in progress")
+            return false
+        }
         synchronized(this) {
             val state = _submitState.value
             if (state != ShieldedUsernameSubmitState.Idle &&
@@ -776,7 +790,8 @@ class SdkShieldedUsernameCreation internal constructor(
             }
             _submitState.value = ShieldedUsernameSubmitState.Proving
         }
-        scope.launch {
+        // LAZY + tracked before start: the job can never run unfenced.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             val result = withContext(ioDispatcher) {
                 createUsernameFromShielded(username, secondaryUsername)
             }
@@ -798,7 +813,24 @@ class SdkShieldedUsernameCreation internal constructor(
                 _submitState.value = outcome
             }
         }
+        job.invokeOnCompletion { cause -> if (cause is CancellationException) onCancelled() }
+        secretWriteFence.track(job)
+        job.start()
         return true
+    }
+
+    /**
+     * The wipe cancelled the run (the only canceller). In-memory only: the
+     * single-flight slot is released so the NEXT wallet can submit in this
+     * process; nothing persisted is touched.
+     */
+    private fun onCancelled() {
+        synchronized(this) {
+            if (_submitState.value == ShieldedUsernameSubmitState.Proving) {
+                log.warn("shielded username creation cancelled (wallet wipe) — released the submit slot")
+                _submitState.value = ShieldedUsernameSubmitState.Idle
+            }
+        }
     }
 
     /**
@@ -930,6 +962,10 @@ class SdkShieldedUsernameCreation internal constructor(
         // key-persist crash the transparent path hit). Store each preview
         // row's own scalar, then zero the in-memory copy (storePrivateKey has
         // encrypted it into the keystore the signer reads).
+        if (secretWriteFence.isRaised) {
+            keys.forEach { it.privateKey.fill(0) }
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+        }
         try {
             keys.forEach { key ->
                 source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
@@ -952,6 +988,11 @@ class SdkShieldedUsernameCreation internal constructor(
             ?: return notBroadcast("malformed fallback platform address", null)
 
         // THE spend — one attempt, ~30s Halo 2 proof.
+        // Under the wipe fence's permit: the SDK commit after the create can
+        // persist keys, so a Reset Wallet refuses it or waits for it.
+        if (!secretWriteFence.tryAcquire("shielded identity funding")) {
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+        }
         val identityId = try {
             source.createIdentityFromPool(walletId, identityIndex, keys, denominationCredits, fallbackRaw21)
         } catch (t: Throwable) {
@@ -970,6 +1011,8 @@ class SdkShieldedUsernameCreation internal constructor(
                     SdkWriteResult.Ambiguous(t)
                 }
             }
+        } finally {
+            secretWriteFence.release()
         }
         val identityIdBase58 = Identifier.from(identityId).toString()
         log.info(
@@ -1197,6 +1240,10 @@ class SdkShieldedUsernameCreation internal constructor(
         // MANDATORY KEY PERSIST before the claim create (see
         // createUsernameFromShielded). Store each preview row's own scalar,
         // then zero the in-memory copy.
+        if (secretWriteFence.isRaised) {
+            keys.forEach { it.privateKey.fill(0) }
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+        }
         try {
             keys.forEach { key ->
                 source.storeIdentityPrivateKey(walletId, key.publicKeyHex, key.privateKey)
@@ -1246,78 +1293,91 @@ class SdkShieldedUsernameCreation internal constructor(
         // rather than every claim. Once only — a second divergence would mean the
         // parse is wrong, and looping on it must not be possible.
         var divergenceHandled = false
-        while (attempt < ladder.size) {
-            val denominationCredits = ladder[attempt]
-            try {
-                claimedIdentityId = source.createIdentityFromOneTimeKey(
-                    walletIdHex = walletId,
-                    oneTimeSk = oneTimeSk,
-                    changeAddressRaw43 = changeAddressRaw43,
-                    identityIndex = identityIndex,
-                    keys = keys,
-                    denominationCredits = denominationCredits,
-                    fallbackAddress21 = fallbackRaw21,
-                    fundingBirthHeight = fundingHeight
-                )
-                spentDenominationCredits = denominationCredits
-                break
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                // TERMINAL, checked BEFORE the ladder's descend arm: an
-                // already-claimed invite (typed ShieldedInviteAlreadyClaimed,
-                // native code 37) means the note is consumed on chain, so no
-                // smaller denomination can ever spend it. Descending would only
-                // burn another ~30 s transient scan to reach the identical
-                // refusal.
-                if (isInviteAlreadyUsedFailure(t)) {
-                    log.warn("shielded invite claim rejected — the one-time note is already spent", t)
-                    return SdkWriteResult.NotBroadcast(REASON_INVITE_ALREADY_USED, t)
+        // Under the wipe fence's permit (see createUsernameFromShielded).
+        if (!secretWriteFence.tryAcquire("shielded invite claim")) {
+            return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
+        }
+        try {
+            while (attempt < ladder.size) {
+                val denominationCredits = ladder[attempt]
+                // Every earlier attempt was a pre-broadcast refusal: a wipe that
+                // started meanwhile stops the ladder with nothing spent.
+                if (attempt > 0 && secretWriteFence.isRaised) {
+                    return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
                 }
-                val sdkAllowed = parseAllowedExitDenominations(t.message)
-                if (!divergenceHandled && sdkAllowed != null &&
-                    sdkAllowed != SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
-                ) {
-                    divergenceHandled = true
-                    log.error(
-                        "exit-denomination set DIVERGED from the SDK's — ours {}, SDK {}; " +
-                            "re-deriving the claim ladder from the SDK's set",
-                        SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList(),
-                        sdkAllowed
+                try {
+                    claimedIdentityId = source.createIdentityFromOneTimeKey(
+                        walletIdHex = walletId,
+                        oneTimeSk = oneTimeSk,
+                        changeAddressRaw43 = changeAddressRaw43,
+                        identityIndex = identityIndex,
+                        keys = keys,
+                        denominationCredits = denominationCredits,
+                        fallbackAddress21 = fallbackRaw21,
+                        fundingBirthHeight = fundingHeight
                     )
-                    val correctedMinimum = chooseShieldedIdentityDenominationCredits(fee, sdkAllowed)
-                    val corrected = correctedMinimum?.let {
-                        inviteClaimDenominationLadder(it, fundingCredits, sdkAllowed)
-                    }.orEmpty()
-                    if (corrected.isNotEmpty()) {
-                        ladder = corrected
-                        attempt = 0
+                    spentDenominationCredits = denominationCredits
+                    break
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    // TERMINAL, checked BEFORE the ladder's descend arm: an
+                    // already-claimed invite (typed ShieldedInviteAlreadyClaimed,
+                    // native code 37) means the note is consumed on chain, so no
+                    // smaller denomination can ever spend it. Descending would only
+                    // burn another ~30 s transient scan to reach the identical
+                    // refusal.
+                    if (isInviteAlreadyUsedFailure(t)) {
+                        log.warn("shielded invite claim rejected — the one-time note is already spent", t)
+                        return SdkWriteResult.NotBroadcast(REASON_INVITE_ALREADY_USED, t)
+                    }
+                    val sdkAllowed = parseAllowedExitDenominations(t.message)
+                    if (!divergenceHandled && sdkAllowed != null &&
+                        sdkAllowed != SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList()
+                    ) {
+                        divergenceHandled = true
+                        log.error(
+                            "exit-denomination set DIVERGED from the SDK's — ours {}, SDK {}; " +
+                                "re-deriving the claim ladder from the SDK's set",
+                            SHIELDED_IDENTITY_DENOMINATIONS_CREDITS.toList(),
+                            sdkAllowed
+                        )
+                        val correctedMinimum = chooseShieldedIdentityDenominationCredits(fee, sdkAllowed)
+                        val corrected = correctedMinimum?.let {
+                            inviteClaimDenominationLadder(it, fundingCredits, sdkAllowed)
+                        }.orEmpty()
+                        if (corrected.isNotEmpty()) {
+                            ladder = corrected
+                            attempt = 0
+                            continue
+                        }
+                    }
+                    if (attempt < ladder.lastIndex && isNoteBelowDenominationFailure(t)) {
+                        log.info(
+                            "no invite note covers the {} denomination ({}) — falling back to {}",
+                            creditsToDash(denominationCredits).toPlainString(),
+                            t.message,
+                            creditsToDash(ladder[attempt + 1]).toPlainString()
+                        )
+                        attempt++
                         continue
                     }
-                }
-                if (attempt < ladder.lastIndex && isNoteBelowDenominationFailure(t)) {
-                    log.info(
-                        "no invite note covers the {} denomination ({}) — falling back to {}",
-                        creditsToDash(denominationCredits).toPlainString(),
-                        t.message,
-                        creditsToDash(ladder[attempt + 1]).toPlainString()
-                    )
-                    attempt++
-                    continue
-                }
-                return when (val classified = classifyBroadcastFailure(t)) {
-                    is SdkWriteResult.NotBroadcast -> {
-                        log.warn("shielded invite claim rejected pre-broadcast", t)
-                        classified
-                    }
-                    else -> {
-                        log.error(
-                            "shielded invite claim outcome unconfirmed — the identity MAY be on chain; do NOT retry",
-                            t
-                        )
-                        SdkWriteResult.Ambiguous(t)
+                    return when (val classified = classifyBroadcastFailure(t)) {
+                        is SdkWriteResult.NotBroadcast -> {
+                            log.warn("shielded invite claim rejected pre-broadcast", t)
+                            classified
+                        }
+                        else -> {
+                            log.error(
+                                "shielded invite claim outcome unconfirmed — the identity MAY be on chain; do NOT retry",
+                                t
+                            )
+                            SdkWriteResult.Ambiguous(t)
+                        }
                     }
                 }
             }
+        } finally {
+            secretWriteFence.release()
         }
         val identityId = checkNotNull(claimedIdentityId) {
             "invite-claim ladder exited without an identity or a classified failure"

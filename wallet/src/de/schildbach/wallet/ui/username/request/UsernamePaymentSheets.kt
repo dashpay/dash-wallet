@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.Grabber
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -178,7 +179,7 @@ fun MakeUsernamePrivateSheet(
                 Text(
                     text = stringResource(R.string.username_payment_min_shield, minShieldAmount),
                     style = MyTheme.Typography.BodyMedium,
-                    color = MyTheme.Colors.textPrimary,
+                    color = LocalDashColors.current.textPrimary,
                     modifier = Modifier.weight(1f, fill = false)
                 )
                 Image(
@@ -195,7 +196,7 @@ fun MakeUsernamePrivateSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MyTheme.Colors.dashBlue5, RoundedCornerShape(20.dp))
+                    .background(LocalDashColors.current.dashBlue5, RoundedCornerShape(20.dp))
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.Top
@@ -209,12 +210,12 @@ fun MakeUsernamePrivateSheet(
                     Text(
                         text = stringResource(R.string.shielded_privacy_tip_title),
                         style = MyTheme.Typography.BodyMediumMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = LocalDashColors.current.textPrimary
                     )
                     Text(
                         text = stringResource(R.string.username_payment_privacy_tip_message),
                         style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.textSecondary
+                        color = LocalDashColors.current.textSecondary
                     )
                 }
             }
@@ -256,12 +257,12 @@ fun MakeUsernamePrivateSheet(
 private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MyTheme.Colors.backgroundPrimary,
+        containerColor = LocalDashColors.current.backgroundPrimary,
         title = {
             Text(
                 text = stringResource(R.string.username_cost_info_title),
                 style = MyTheme.SubtitleSemibold,
-                color = MyTheme.Colors.textPrimary
+                color = LocalDashColors.current.textPrimary
             )
         },
         text = {
@@ -270,7 +271,7 @@ private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
                     Text(
                         text = stringResource(R.string.username_cost_info_noncontested_title),
                         style = MyTheme.Typography.BodyMediumMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = LocalDashColors.current.textPrimary
                     )
                     Text(
                         // Funding guidance ("shield at least") fed from the live
@@ -280,14 +281,14 @@ private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
                             de.schildbach.wallet.Constants.SHIELDED_USERNAME_FUND_MIN.toPlainString()
                         ),
                         style = MyTheme.Typography.BodySmall,
-                        color = MyTheme.Colors.textSecondary
+                        color = LocalDashColors.current.textSecondary
                     )
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = stringResource(R.string.username_cost_info_contested_title),
                         style = MyTheme.Typography.BodyMediumMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = LocalDashColors.current.textPrimary
                     )
                     Text(
                         text = stringResource(
@@ -295,7 +296,7 @@ private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
                             de.schildbach.wallet.Constants.SHIELDED_USERNAME_FUND_MIN_CONTESTED.toPlainString()
                         ),
                         style = MyTheme.Typography.BodySmall,
-                        color = MyTheme.Colors.textSecondary
+                        color = LocalDashColors.current.textSecondary
                     )
                 }
             }
@@ -304,7 +305,7 @@ private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
             Text(
                 text = stringResource(org.dash.wallet.common.R.string.button_okay),
                 style = MyTheme.Typography.BodyMediumMedium,
-                color = MyTheme.Colors.dashBlue,
+                color = LocalDashColors.current.dashBlue,
                 modifier = Modifier
                     .clickable(onClick = onDismiss)
                     .padding(8.dp)
@@ -333,13 +334,13 @@ private fun SheetIntro(title: String, description: String) {
         Text(
             text = title,
             style = MyTheme.Typography.HeadlineMediumBold,
-            color = MyTheme.Colors.textPrimary,
+            color = LocalDashColors.current.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
         Text(
             text = description,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textSecondary,
+            color = LocalDashColors.current.textSecondary,
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -362,8 +363,8 @@ private fun PaymentOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(if (selected) MyTheme.Colors.dashBlue5 else Color.Transparent, shape)
-            .border(1.5.dp, if (selected) MyTheme.Colors.dashBlue else SelectStrokeDefault, shape)
+            .background(if (selected) LocalDashColors.current.dashBlue5 else Color.Transparent, shape)
+            .border(1.5.dp, if (selected) LocalDashColors.current.dashBlue else SelectStrokeDefault, shape)
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp)
@@ -371,12 +372,12 @@ private fun PaymentOptionCard(
         Text(
             text = name,
             style = MyTheme.Typography.BodyMediumMedium,
-            color = MyTheme.Colors.textPrimary
+            color = LocalDashColors.current.textPrimary
         )
         Text(
             text = description,
             style = MyTheme.Typography.BodySmall,
-            color = MyTheme.Colors.textSecondary
+            color = LocalDashColors.current.textSecondary
         )
     }
 }

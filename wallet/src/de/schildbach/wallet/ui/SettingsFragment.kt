@@ -25,6 +25,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -40,6 +41,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.more.AnalyticsSaveFailure
 import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
 import de.schildbach.wallet.ui.more.SettingsViewModel
@@ -126,7 +128,9 @@ class SettingsFragment : Fragment() {
                             }
                         }
                     },
-                    onBatteryOptimizationClick = { batteryOptimization() }
+                    onBatteryOptimizationClick = { batteryOptimization() },
+                    onAnalyticsToggle = { viewModel.setAnalyticsEnabled(it) },
+                    onAnalyticsInfoClick = { showAnalyticsInfo() }
                 )
                 }
             }
@@ -235,6 +239,30 @@ class SettingsFragment : Fragment() {
             val balance = walletApplication.getWalletBalance()
             WalletBalanceWidgetProvider.updateWidgets(requireContext(), balance)
         }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewModel.analyticsSaveFailures.observe(viewLifecycleOwner) { failure ->
+            // The switch is back on the saved value, so toggling it again retries.
+            Toast.makeText(
+                requireContext(),
+                when (failure) {
+                    AnalyticsSaveFailure.TURNING_ON -> R.string.settings_analytics_save_failed_on
+                    AnalyticsSaveFailure.TURNING_OFF -> R.string.settings_analytics_save_failed_off
+                },
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun showAnalyticsInfo() {
+        AdaptiveDialog.create(
+            R.drawable.ic_info_blue,
+            getString(R.string.settings_analytics_info_title),
+            getString(R.string.settings_analytics_info_message),
+            getString(R.string.button_okay)
+        ).show(requireActivity())
     }
 
     private fun batteryOptimization() {

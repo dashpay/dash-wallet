@@ -191,6 +191,10 @@ data class InvitationLinkData(
          */
         fun isValid(link: Uri): Boolean = isValidShielded(link) || isValidL1(link)
 
+        private fun looksLikeUrl(value: String): Boolean {
+            return value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)
+        }
+
         /** The unchanged L1 asset-lock invitation validity check. */
         private fun isValidL1(link: Uri): Boolean {
             return try {
@@ -239,7 +243,10 @@ data class InvitationLinkData(
     @IgnoredOnParcel
     val avatarUrl by lazy {
         link.getQueryParameter(PARAM_AVATAR_URL)?.run {
-            Uri.decode(this)
+            // Links from wallets before 11.10 carry the avatar URL percent-encoded a second time
+            // (`https%3A%2F%2F...`); a value that already reads as a URL must not be decoded again,
+            // or a legitimate `%20` inside it would be corrupted.
+            if (looksLikeUrl(this)) this else Uri.decode(this)
         } ?: ""
     }
 
@@ -298,6 +305,25 @@ data class InvitationLinkData(
     @IgnoredOnParcel
     val shieldedFundingCredits: Long? by lazy {
         link.getQueryParameter(PARAM_FUNDING_CREDITS)?.toLongOrNull()?.takeIf { it > 0 }
+    }
+
+    /**
+     * The link in the form the platform SDK's invitation parser accepts
+     * (`dashpay://invite?...`). The app also accepts `dashwallet://invite`
+     * (AndroidManifest) and links unwrapped from AppsFlyer, and
+     * [isValid] only checks the query parameters — but the SDK rejects any
+     * scheme/host other than `dashpay://invite` or
+     * `https://invitations.dashpay.io/applink`, which failed the claim with
+     * "not a dashpay://invite ... link". The query carries everything the
+     * claim needs, so re-home it onto the canonical prefix.
+     */
+    @IgnoredOnParcel
+    val sdkClaimUri: String by lazy {
+        if (link.scheme == "dashpay" && link.host == "invite") {
+            link.toString()
+        } else {
+            "$URI_PREFIX?${link.encodedQuery.orEmpty()}"
+        }
     }
 
     @Deprecated("use link")

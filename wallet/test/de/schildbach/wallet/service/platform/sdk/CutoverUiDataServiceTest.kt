@@ -35,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
@@ -1226,6 +1227,51 @@ class CutoverUiDataServiceTest {
 
         override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> =
             records.map { SdkSeamTxSnapshot(it, emptyMap(), emptySet(), emptyMap()) }
+
+        /** The store's CURRENT record nets, for the mixing-group re-sum (absent = not in the store). */
+        var storeNets: Map<String, Long> = emptyMap()
+
+        /**
+         * The store's CURRENT served records, for the mixing-group re-sum —
+         * mapped to nets through the production [mixingMemberNets], so a
+         * TXO-parent stub here is treated exactly as the real source treats it.
+         */
+        var storeRecords: List<L1TxUiRecord> = emptyList()
+
+        /** [recordNetsFor] invocations — the re-sum's record-read count. */
+        var recordNetsCalls = 0
+
+        /** Called before each [recordNetsFor] answers, with its 1-based call number. */
+        var beforeRecordNets: (suspend (call: Int) -> Unit)? = null
+
+        /**
+         * When set, [recordNetsFor] reports each txid it reads as corrected on
+         * [corrected] — once per txid, as the store's compare-and-set write
+         * corrects a record once. Models a re-sum read whose corrections come
+         * back as store-correction signals.
+         */
+        var reportCorrectionsOnRead = false
+        private val reportedCorrections = HashSet<String>()
+
+        override suspend fun recordNetsFor(
+            walletIdHex: String,
+            txidHexes: Collection<String>
+        ): Map<String, Long> {
+            val call = ++recordNetsCalls
+            beforeRecordNets?.invoke(call)
+            if (reportCorrectionsOnRead) {
+                val fresh = txidHexes.filterTo(HashSet()) { reportedCorrections.add(it) }
+                if (fresh.isNotEmpty()) corrected.emit(fresh)
+            }
+            val wanted = txidHexes.toSet()
+            return storeNets.filterKeys { it in wanted } +
+                mixingMemberNets(storeRecords.filter { it.txidHex in wanted })
+        }
+
+        /** In-place record corrections the store reports (the walker's write-back signal). */
+        val corrected = kotlinx.coroutines.flow.MutableSharedFlow<Set<String>>(extraBufferCapacity = 8)
+
+        override fun observeCorrectedRecordTxids(): Flow<Set<String>> = corrected
     }
 
     private fun configWithState(state: String?): DashPayConfig = mockk {
@@ -1284,6 +1330,13 @@ class CutoverUiDataServiceTest {
         deferredContactBuilds: Int? = null,
         /** When non-null, the deferred-build probe calls THIS per read (overrides [deferredContactBuilds]). */
         deferredContactBuildFeed: (suspend () -> Int?)? = null,
+        /** The contact-account-build drain state read with each count; default = the drain has run. */
+        drainState: () -> AccountBuildDrainState = { AccountBuildDrainState.RAN },
+        /**
+         * Receives (buildsSettled, backfillSettled, buildsHeldByLockedDevice,
+         * buildsAwaitingFirstDrain) per publication.
+         */
+        publishDashPaySyncTerms: (Boolean, Boolean, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
         /** When non-null, backs BOTH the IS-lock persist and the persisted-lock read (restart-safe store fake). */
         persistedIsLocks: MutableSet<String>? = null,
         /**
@@ -1319,6 +1372,8 @@ class CutoverUiDataServiceTest {
         deferredContactBuildCount = {
             if (deferredContactBuildFeed != null) deferredContactBuildFeed() else deferredContactBuilds
         },
+        accountBuildDrainState = { drainState() },
+        publishDashPaySyncTerms = publishDashPaySyncTerms,
         persistInstantLock = { txid, _ -> persistedIsLocks?.add(txid) },
         loadPersistedInstantLocks = { txids ->
             persistedIsLocks?.let { store -> txids.filterTo(mutableSetOf()) { it in store } } ?: emptySet()
@@ -1722,6 +1777,219 @@ class CutoverUiDataServiceTest {
         }
 
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    // ── QA phone 2 (12.0.0-qa28, restore): builds that cannot drain ───
+
+    @Test
+    fun postCutover_buildsBlockedByTheLockedDevice_neverSettle_andHoldTheIndicator() = runTest {
+        // 212 builds, every drain refused by the Keystore while the phone sat
+        // locked. The count cannot move, so its standing still must never be
+        // read as "stuck": no persist, and the indicator is told the builds
+        // are held by the locked device.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        var drain = AccountBuildDrainState.BLOCKED_DEVICE_LOCKED
+        val published = mutableListOf<PublishedTerms>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuildFeed = { 212 },
+            drainState = { drain },
+            publishDashPaySyncTerms = { builds, backfill, held, firstDrain ->
+                published += PublishedTerms(builds, backfill, held, firstDrain)
+            }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS * 10) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        assertEquals(
+            "builds unsettled and held by the locked device",
+            PublishedTerms(false, true, true, false),
+            published.last()
+        )
+
+        // Unlocked: the drain ran but these entries stay queued (the stuck
+        // shape). Fresh evidence is gathered under the new state, then the
+        // ordinary pin settles them — the protection against a truly stuck
+        // queue holding the seed and the header forever is intact.
+        drain = AccountBuildDrainState.RAN
+        repeat(2) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(PublishedTerms(false, true, false, false), published.last())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(PublishedTerms(true, true, false, false), published.last())
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 3_554_481_263L) }
+    }
+
+    @Test
+    fun postCutover_buildsNoDrainHasTouched_doNotSettleOnTheOrdinaryPin() = runTest {
+        // The restore shape: the SDK queued 211 builds during the scan, but the
+        // app only drains after it recovers the identity. Three unchanged reads
+        // used to "settle" them and persist a short seed.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, deferredContactBuildFeed = { 211 },
+            drainState = { AccountBuildDrainState.NOT_ATTEMPTED }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS * 5) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_buildsNoDrainHasTouched_holdTheIndicatorUntilTheFirstDrainRuns() = runTest {
+        // The same restore shape, as the header sees it: the builds must be
+        // published as awaiting their first drain (the longer ceiling), not as
+        // ordinary unsettled builds the 15-minute ceiling would clear. When the
+        // first drain runs the flag drops while the builds stay unsettled, so
+        // the header starts a fresh ordinary ceiling.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        var drain = AccountBuildDrainState.NOT_ATTEMPTED
+        val published = mutableListOf<PublishedTerms>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            deferredContactBuildFeed = { 211 },
+            drainState = { drain },
+            publishDashPaySyncTerms = { builds, backfill, held, firstDrain ->
+                published += PublishedTerms(builds, backfill, held, firstDrain)
+            }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_SETTLED_READS * 5) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(
+            "unsettled, awaiting the first drain",
+            PublishedTerms(false, true, false, true),
+            published.last()
+        )
+
+        drain = AccountBuildDrainState.RAN
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(
+            "the first drain ran: still unsettled, now an ordinary drain",
+            PublishedTerms(false, true, false, false),
+            published.last()
+        )
+
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(PublishedTerms(true, true, false, false), published.last())
+    }
+
+    @Test
+    fun postCutover_buildsNoDrainHasTouched_stopAwaitingOnceTheUndrainedPinSettlesThem() = runTest {
+        // The producer's own ~1 h caught-up backstop still ends the hold.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(3_554_481_263L))
+        val published = mutableListOf<PublishedTerms>()
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            deferredContactBuildFeed = { 211 },
+            drainState = { AccountBuildDrainState.NOT_ATTEMPTED },
+            publishDashPaySyncTerms = { builds, backfill, held, firstDrain ->
+                published += PublishedTerms(builds, backfill, held, firstDrain)
+            }
+        )
+        service.start()
+        runCurrent()
+        repeat(DEFERRED_BUILDS_UNDRAINED_SETTLED_READS + 2) {
+            testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+            runCurrent()
+        }
+        assertEquals(PublishedTerms(true, true, false, false), published.last())
+    }
+
+    /** One `publishDashPaySyncTerms` call. */
+    private data class PublishedTerms(
+        val buildsSettled: Boolean,
+        val backfillSettled: Boolean,
+        val heldByLockedDevice: Boolean,
+        val awaitingFirstDrain: Boolean
+    )
+
+    @Test
+    fun deferredBuilds_aCountThatCannotMove_isNoEvidenceOfAStuckQueue() {
+        var observation = DeferredBuildObservation()
+        repeat(100) {
+            observation = nextDeferredBuildObservation(
+                observation, 212, AccountBuildDrainState.BLOCKED_DEVICE_LOCKED, l1Synced = true
+            )
+        }
+        assertEquals(0, observation.unchangedReads)
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+        // Drained is drained, whatever the drain state.
+        assertTrue(deferredBuildsSettled(0, 0, AccountBuildDrainState.BLOCKED_DEVICE_LOCKED))
+    }
+
+    @Test
+    fun deferredBuilds_aNewDrainStateStartsAFreshStreak() {
+        var observation = DeferredBuildObservation()
+        repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
+            observation = nextDeferredBuildObservation(observation, 91, AccountBuildDrainState.RAN, l1Synced = true)
+        }
+        assertTrue(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+
+        observation = nextDeferredBuildObservation(
+            observation, 91, AccountBuildDrainState.BLOCKED_DEVICE_LOCKED, l1Synced = true
+        )
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+
+        observation = nextDeferredBuildObservation(observation, 91, AccountBuildDrainState.RAN, l1Synced = true)
+        assertEquals(0, observation.unchangedReads)
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+    }
+
+    @Test
+    fun deferredBuilds_beforeAnyDrain_onlyCaughtUpReadsCount_towardALongPin() {
+        var observation = DeferredBuildObservation()
+        // 2.5 h of scan on QA phone 2: none of these reads is evidence.
+        repeat(150) {
+            observation = nextDeferredBuildObservation(
+                observation, 211, AccountBuildDrainState.NOT_ATTEMPTED, l1Synced = false
+            )
+        }
+        assertEquals(0, observation.unchangedReads)
+
+        repeat(DEFERRED_BUILDS_UNDRAINED_SETTLED_READS - 1) {
+            observation = nextDeferredBuildObservation(
+                observation, 211, AccountBuildDrainState.NOT_ATTEMPTED, l1Synced = true
+            )
+        }
+        assertFalse(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
+
+        // The backstop: a wallet whose app never drains still settles.
+        observation = nextDeferredBuildObservation(
+            observation, 211, AccountBuildDrainState.NOT_ATTEMPTED, l1Synced = true
+        )
+        assertTrue(deferredBuildsSettled(observation.count, observation.unchangedReads, observation.drainState))
     }
 
     @Test
@@ -4576,5 +4844,417 @@ class CutoverUiDataServiceTest {
         coVerify(exactly = 0) { displayDao.upsertGroupRows(any(), any()) }
         coVerify(exactly = 0) { displayDao.insertAll(any()) }
         coVerify(exactly = 0) { groupDao.insertAll(any()) }
+    }
+
+    // ── Mixing group re-sum (members corrected after they were grouped) ──
+
+    private fun mixingRow(groupId: String, value: Long, count: Int) = TxDisplayCacheEntry(
+        rowId = groupId,
+        title = "Mixing Transactions",
+        valueSatoshis = value,
+        iconType = TxDisplayCacheEntry.ICON_COINJOIN,
+        iconBgType = TxDisplayCacheEntry.BG_SENT,
+        statusText = "",
+        comment = "my memo",
+        transactionAmount = count,
+        time = now - 3_600_000,
+        hasErrors = false,
+        service = null,
+        exchangeRateFiatCode = "USD",
+        exchangeRateFiatValue = 42L,
+        contactUsername = null,
+        contactDisplayName = null,
+        contactAvatarUrl = null,
+        contactUserId = null,
+        filterFlags = TxDisplayCacheEntry.FLAG_COINJOIN
+    )
+
+    /** One `tx_group_cache` group as the fake DAO serves it. */
+    private data class FakeGroup(val groupId: String, val wrapperType: String, val members: List<String>)
+
+    /** A `tx_group_cache` fake over [groups]: keyset member pages, txid → group lookups. */
+    private fun groupDaoOver(groups: List<FakeGroup>): TxGroupCacheDao {
+        val dao = mockk<TxGroupCacheDao>(relaxed = true)
+        coEvery { dao.getCoinJoinGroupIds() } returns
+            groups.filter { it.wrapperType == TxGroupCacheEntry.TYPE_COINJOIN }.map { it.groupId }
+        coEvery { dao.getGroupMemberTxIdsAfter(any(), any(), any()) } coAnswers {
+            val groupId = firstArg<String>()
+            val after = secondArg<String>()
+            val limit = thirdArg<Int>()
+            groups.firstOrNull { it.groupId == groupId }?.members.orEmpty()
+                .sorted().filter { it > after }.take(limit)
+        }
+        coEvery { dao.countGroupMembers(any()) } coAnswers {
+            groups.firstOrNull { it.groupId == firstArg<String>() }?.members.orEmpty().size
+        }
+        coEvery { dao.getGroupsForTxIds(any()) } coAnswers {
+            val ids = firstArg<List<String>>().toSet()
+            groups.flatMap { g ->
+                g.members.filter { it in ids }.map { txid ->
+                    TxGroupCacheEntry(g.groupId, txid, g.wrapperType, g.groupId.substringAfter('_'), 0)
+                }
+            }
+        }
+        return dao
+    }
+
+    /** [statefulDisplayDao] plus the re-sum's targeted value/count UPDATE. */
+    private fun resumDisplayDao(store: MutableMap<String, TxDisplayCacheEntry>): TxDisplayCacheDao {
+        val dao = statefulDisplayDao(store)
+        coEvery { dao.updateGroupValueAndCount(any(), any(), any()) } coAnswers {
+            val rowId = firstArg<String>()
+            val row = store[rowId]
+            if (row == null) {
+                0
+            } else {
+                store[rowId] = row.copy(valueSatoshis = secondArg(), transactionAmount = thirdArg())
+                1
+            }
+        }
+        return dao
+    }
+
+    private fun memberHex(n: Int) = "%064x".format(n)
+
+    @Test
+    fun mixingResum_plan_onlyStaleCoinJoinRowsWithEveryMemberPresent() {
+        val stale = mixingRow("coinjoin_2025-07-20", value = 200_002L, count = 1)
+        // The born income-only net was summed at grouping time; the members
+        // now net −446 over 2 grouped txs → value AND count corrected.
+        val plan = requireNotNull(planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 2, presentNetSumDuffs = -446L))
+        assertEquals(MixingGroupResum("coinjoin_2025-07-20", -446L, 2), plan)
+        // Already equal → no write.
+        assertNull(planMixingGroupResum(mixingRow("coinjoin_2025-07-20", -446L, 2), 2, 2, -446L))
+        // Never a non-CoinJoin group row.
+        assertNull(planMixingGroupResum(stale.copy(rowId = "crowdnode"), 2, 2, -446L))
+        // No member in the store → nothing to re-derive from; left as is.
+        assertNull(planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 0, presentNetSumDuffs = 0L))
+        // A member the store does not hold has an UNKNOWN net, not a zero one:
+        // a complete cached total (−300 = −100 + −200, e.g. a dashj-era group)
+        // is never cut to the −100 of the one member the store holds.
+        val complete = mixingRow("coinjoin_2025-07-20", value = -300L, count = 2)
+        assertNull(planMixingGroupResum(complete, memberCount = 2, presentMemberCount = 1, presentNetSumDuffs = -100L))
+        // Even a stale row waits for every member rather than taking a partial sum.
+        assertNull(planMixingGroupResum(stale, memberCount = 2, presentMemberCount = 1, presentNetSumDuffs = -100L))
+        // Once the missing member arrives the row is re-summed as usual.
+        assertEquals(
+            MixingGroupResum("coinjoin_2025-07-20", -250L, 2),
+            planMixingGroupResum(complete, memberCount = 2, presentMemberCount = 2, presentNetSumDuffs = -250L)
+        )
+    }
+
+    @Test
+    fun mixingResum_fullWalkResumsStaleGroupsOnly_andConverges() = runTest {
+        val stale = "coinjoin_2025-07-20"
+        val correct = "coinjoin_2025-07-21"
+        val partial = "coinjoin_2025-07-22"
+        val big = "coinjoin_2025-07-23"
+        val bigMembers = (1_000 until 2_203).map { memberHex(it) } // > 2 keyset pages
+        val store = mutableMapOf(
+            // Grouped while m1 still had its born +200002 net; m1 was later
+            // corrected to 0 (#979 / the walker's re-net), m2 nets −446.
+            stale to mixingRow(stale, value = 200_002L - 446L, count = 2),
+            correct to mixingRow(correct, value = -300L, count = 1),
+            // One member (m5) the SDK store does not hold: the complete cached
+            // total (−100 + −200) must survive the store's partial history.
+            partial to mixingRow(partial, value = -300L, count = 2),
+            big to mixingRow(big, value = 0L, count = bigMembers.size),
+            "crowdnode" to mixingRow("crowdnode", value = -1_000L, count = 3).copy(filterFlags = 0)
+        )
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(
+            listOf(
+                FakeGroup(stale, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(1), memberHex(2))),
+                FakeGroup(correct, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(3))),
+                FakeGroup(partial, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(4), memberHex(5))),
+                FakeGroup(big, TxGroupCacheEntry.TYPE_COINJOIN, bigMembers),
+                FakeGroup("crowdnode", TxGroupCacheEntry.TYPE_CROWDNODE, listOf(memberHex(6), memberHex(7), memberHex(8)))
+            )
+        )
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = mapOf(
+                memberHex(1) to 0L,
+                memberHex(2) to -446L,
+                memberHex(3) to -300L,
+                memberHex(4) to -100L,
+                memberHex(6) to 5L
+            ) + bigMembers.associateWith { -1L }
+        }
+
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+        // Nothing before the first full walk.
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+
+        // The stale group converges to Σ current member nets.
+        assertEquals(-446L, store.getValue(stale).valueSatoshis)
+        assertEquals(2, store.getValue(stale).transactionAmount)
+        // Its memo, rate and title are untouched.
+        assertEquals("my memo", store.getValue(stale).comment)
+        assertEquals(42L, store.getValue(stale).exchangeRateFiatValue)
+        assertEquals("Mixing Transactions", store.getValue(stale).title)
+        // A group with a member the store does not hold keeps its cached total.
+        assertEquals(-300L, store.getValue(partial).valueSatoshis)
+        assertEquals(2, store.getValue(partial).transactionAmount)
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(partial, any(), any()) }
+        // Multi-page group summed across every keyset page.
+        assertEquals(-bigMembers.size.toLong(), store.getValue(big).valueSatoshis)
+        // Correct and non-CoinJoin groups are never rewritten.
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(correct, any(), any()) }
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount("crowdnode", any(), any()) }
+        assertEquals(-1_000L, store.getValue("crowdnode").valueSatoshis)
+
+        // The next walk finds everything equal: no write loop, and the
+        // partial group is still left alone.
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(2, source.reconcileWalks)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(stale, any(), any()) }
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(partial, any(), any()) }
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(big, any(), any()) }
+        coVerify(exactly = 2) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+        assertEquals(-300L, store.getValue(partial).valueSatoshis)
+
+        // The missing member's record arrives: the group is re-summed from
+        // its complete, current history.
+        source.storeNets = source.storeNets + (memberHex(5) to -150L)
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(-250L, store.getValue(partial).valueSatoshis)
+        assertEquals(2, store.getValue(partial).transactionAmount)
+    }
+
+    @Test
+    fun mixingResum_memberNets_leaveOutTheStoreStub() {
+        val real = minedRecord(1, -100L, twoYearsAgoSec, direction = 3)
+        val stub = stubRecord(2)
+        // The stub is absent, like a txid the store does not hold — never a zero net.
+        assertEquals(mapOf(real.txidHex to -100L), mixingMemberNets(listOf(real, stub)))
+        assertTrue(mixingMemberNets(listOf(stub)).isEmpty())
+    }
+
+    @Test
+    fun mixingResum_storeStubMember_keepsTheCachedTotal_untilItsRealRecordArrives() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val real = minedRecord(1, -100L, twoYearsAgoSec, direction = 3)
+        val stub = stubRecord(2)
+        // Complete cached total, built while both members were known: −100 + −200.
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = -300L, count = 2))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(
+            listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, listOf(real.txidHex, stub.txidHex)))
+        )
+        // The store holds one real member and only a TXO-parent stub for the other.
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeRecords = listOf(real, stub)
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        testScheduler.advanceTimeBy(CutoverUiDataService.RECONCILE_INITIAL_DELAY_MS + 1)
+        runCurrent()
+        assertEquals(1, source.reconcileWalks)
+        assertTrue("the re-sum read the group's members", source.recordNetsCalls > 0)
+        // The stub's zero net is not the member's value: the cached total stands.
+        assertEquals(-300L, store.getValue(groupId).valueSatoshis)
+        assertEquals(2, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount(any(), any(), any()) }
+
+        // The stub is replaced by its real transaction: the group is re-summed
+        // from its complete, current history.
+        source.storeRecords = listOf(real, minedRecord(2, -150L, twoYearsAgoSec, direction = 3))
+        testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(2, source.reconcileWalks)
+        assertEquals(-250L, store.getValue(groupId).valueSatoshis)
+        assertEquals(2, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(groupId, -250L, 2) }
+    }
+
+    @Test
+    fun mixingResum_storeCorrectionResumsTheHoldingGroupImmediately() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val store = mutableMapOf(
+            groupId to mixingRow(groupId, value = 200_002L, count = 1),
+            "crowdnode" to mixingRow("crowdnode", value = -1_000L, count = 1).copy(filterFlags = 0)
+        )
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(
+            listOf(
+                FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(1))),
+                FakeGroup("crowdnode", TxGroupCacheEntry.TYPE_CROWDNODE, listOf(memberHex(2)))
+            )
+        )
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = mapOf(memberHex(1) to 0L, memberHex(2) to 7L)
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        // The walker persists corrections for a grouped member and a
+        // non-CoinJoin one — no reconcile walk has run yet.
+        source.corrected.emit(setOf(memberHex(1), memberHex(2)))
+        runCurrent()
+        assertEquals(0, source.reconcileWalks)
+        assertEquals(0L, store.getValue(groupId).valueSatoshis)
+        assertEquals(1, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 0) { displayDao.updateGroupValueAndCount("crowdnode", any(), any()) }
+    }
+
+    @Test
+    fun mixingResumQueue_coalescesByGroupId_andRequeuesARunningGroupOnce() = runTest {
+        val queue = MixingResumQueue()
+        queue.enqueue(listOf("a", "b", "a"))
+        queue.enqueue(listOf("b"))
+        assertEquals("a", queue.take())
+        // "a" is being re-summed: corrections for it queue ONE more pass,
+        // however many arrive meanwhile.
+        queue.enqueue(listOf("a"))
+        queue.enqueue(listOf("a"))
+        assertEquals("b", queue.take())
+        assertEquals("a", queue.take())
+        assertNull(queue.poll())
+        // take() waits for the next request.
+        val next = backgroundScope.async { queue.take() }
+        runCurrent()
+        assertFalse(next.isCompleted)
+        queue.enqueue(listOf("c"))
+        runCurrent()
+        assertEquals("c", next.await())
+    }
+
+    @Test
+    fun mixingResum_largeGroupDoesNotHoldTxEventsBehindIt() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val members = (1_000 until 2_203).map { memberHex(it) } // 3 keyset pages
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = 200_002L, count = members.size))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, members)))
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
+        val secondPage = CompletableDeferred<Unit>()
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = members.associateWith { -1L }
+            beforeRecordNets = { call -> if (call == 2) secondPage.await() }
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao, txEvents = events
+        )
+        service.start()
+        runCurrent()
+
+        source.corrected.emit(setOf(members.first()))
+        runCurrent()
+        // The re-sum has read its first page and is held on the second.
+        assertEquals(2, source.recordNetsCalls)
+        assertEquals(200_002L, store.getValue(groupId).valueSatoshis)
+
+        // A live transaction lands mid-group: it is rendered NOW, between the
+        // group's pages, not after the whole group has been read.
+        val txid = displayHex(7)
+        events.emit(L1TxEvent.Detected(txid, 1_000_000L, null, contextCode = 0, directionCode = 0))
+        runCurrent()
+        assertEquals(1_000_000L, store.getValue(txid).valueSatoshis)
+        assertEquals(2, source.recordNetsCalls)
+
+        // The re-sum then finishes with the same result as before.
+        secondPage.complete(Unit)
+        runCurrent()
+        assertEquals(3, source.recordNetsCalls)
+        assertEquals(-members.size.toLong(), store.getValue(groupId).valueSatoshis)
+        assertEquals(members.size, store.getValue(groupId).transactionAmount)
+    }
+
+    @Test
+    fun mixingResum_groupGrownWhileItWasRead_isReadAgainNotOverwritten() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val members = (1_000 until 2_203).mapTo(mutableListOf()) { memberHex(it) } // 3 keyset pages
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = 0L, count = members.size))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, members)))
+        val secondPage = CompletableDeferred<Unit>()
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = members.associateWith { -1L }
+            beforeRecordNets = { call -> if (call == 2) secondPage.await() }
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+        source.corrected.emit(setOf(members.first()))
+        runCurrent()
+        assertEquals(2, source.recordNetsCalls)
+
+        // While the read is held, a pass groups a new round into the same day
+        // (member + row extended, as syncDisplayCache does). Its txid sorts
+        // before the read's cursor, so the held read never sees it.
+        val newMember = memberHex(1)
+        members += newMember
+        source.storeNets = source.storeNets + (newMember to -500L)
+        store[groupId] = store.getValue(groupId).let {
+            it.copy(valueSatoshis = it.valueSatoshis - 500L, transactionAmount = it.transactionAmount + 1)
+        }
+        secondPage.complete(Unit)
+        runCurrent()
+
+        // The held tally (missing the new member) is NOT written; the group is
+        // read again and written once, complete.
+        assertEquals(6, source.recordNetsCalls)
+        assertEquals(-1_203L - 500L, store.getValue(groupId).valueSatoshis)
+        assertEquals(1_204, store.getValue(groupId).transactionAmount)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(groupId, any(), any()) }
+    }
+
+    @Test
+    fun mixingResum_correctionsReportedByItsOwnReads_costAtMostOneMorePass() = runTest {
+        val groupId = "coinjoin_2025-07-20"
+        val members = (10_000 until 20_000).map { memberHex(it) }
+        val pages = members.size / CutoverUiDataService.MIXING_RESUM_PAGE // 20
+        val store = mutableMapOf(groupId to mixingRow(groupId, value = 0L, count = members.size))
+        val displayDao = resumDisplayDao(store)
+        val groupDao = groupDaoOver(listOf(FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, members)))
+        val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
+            storeNets = members.associateWith { -1L }
+            // Every page the re-sum reads corrects (and reports) its records.
+            reportCorrectionsOnRead = true
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            displayDao = displayDao, groupDao = groupDao
+        )
+        service.start()
+        runCurrent()
+
+        source.corrected.emit(setOf(members.first()))
+        runCurrent()
+
+        // The 20 correction batches the first pass reports re-queue the group
+        // ONCE (coalesced by group id) — one more pass, not one more full pass
+        // per corrected page (20 × 20 further reads).
+        assertEquals(2 * pages, source.recordNetsCalls)
+        assertEquals(-members.size.toLong(), store.getValue(groupId).valueSatoshis)
+        coVerify(exactly = 1) { displayDao.updateGroupValueAndCount(groupId, any(), any()) }
+        // And it settles: nothing further is queued.
+        testScheduler.advanceTimeBy(1_000)
+        runCurrent()
+        assertEquals(2 * pages, source.recordNetsCalls)
     }
 }

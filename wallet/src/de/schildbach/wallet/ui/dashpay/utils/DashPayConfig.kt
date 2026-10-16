@@ -700,15 +700,27 @@ open class DashPayConfig @Inject constructor(
         val SDK_GAP_WIDEN_RESCAN_OWED = booleanPreferencesKey("sdk_gap_widen_rescan_owed")
 
         /**
-         * A backup-recovered wallet's reset owes the SDK SPV rewind to birth:
-         * the recovered wallet must re-scan its history, so its scan may not
-         * resume from the previous watermark. MANDATORY, unlike
+         * The address-pool backfill filled holes the engine loaded its pool
+         * without, so payments to those addresses were missed and a rescan is
+         * owed. The inserted rows only reach the engine on its next load, so
+         * the rescan waits for a later process: this holds the token of the
+         * process that filled them, and a bind in any other process turns it
+         * into [SDK_GAP_WIDEN_RESCAN_OWED] and clears it. Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] step 4c.
+         */
+        val SDK_POOL_HOLES_RESCAN_PENDING = stringPreferencesKey("sdk_pool_holes_rescan_pending")
+
+        /**
+         * A reset owes the SDK SPV rewind to birth: a backup-recovered
+         * wallet's reset, or Settings → Rescan Blockchain (the key keeps its
+         * original name). The wallet must re-scan its history, so its scan may
+         * not resume from the previous watermark. MANDATORY, unlike
          * [SDK_GAP_WIDEN_RESCAN_OWED]: the scan gate holds the SPV scan until
          * the rewind is armed (at the default windows if widening fails, in
          * which case the widening's own debt is kept for a later, wider
          * rescan). It is cleared only once the armed rewind is durable
          * (see [SDK_OWED_RESCAN_ARMED]). Written by
-         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForRecoveryReset].
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForReset].
          */
         val SDK_RECOVERY_RESCAN_OWED = booleanPreferencesKey("sdk_recovery_rescan_owed")
 

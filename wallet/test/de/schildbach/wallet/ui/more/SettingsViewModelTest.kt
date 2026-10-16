@@ -24,10 +24,14 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -39,6 +43,7 @@ import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -82,11 +87,13 @@ class SettingsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = SettingsViewModel(
+    private fun viewModel(
+        analytics: AnalyticsService = mockk<AnalyticsService>(relaxed = true)
+    ) = SettingsViewModel(
         walletApplication = walletApplication,
         walletUIConfig = walletUIConfig,
         walletDataProvider = walletDataProvider,
-        analytics = mockk<AnalyticsService>(relaxed = true),
+        analytics = analytics,
         configuration = mockk<Configuration>(),
         dashPayConfig = dashPayConfig,
         blockchainIdentityConfig = blockchainIdentityConfig,
@@ -115,5 +122,122 @@ class SettingsViewModelTest {
         viewModel.updateTransactionMetadataSubtitle("Last saved: Jan 15, 2024")
 
         assertEquals("Last saved: Jan 15, 2024", viewModel.uiState.value.transactionMetadataSubtitle)
+    }
+
+    private fun analyticsService(enabled: Boolean, available: Boolean, saves: Boolean = true): AnalyticsService {
+        var stored = enabled
+        return mockk(relaxed = true) {
+            every { isEnabled } answers { stored }
+            every { setEnabled(any()) } answers {
+                // Mirrors the service: a failed save leaves the saved value in place.
+                if (saves) stored = firstArg()
+                saves
+            }
+            every { isAvailable } returns available
+        }
+    }
+
+    @Test
+    fun analyticsState_enabled_isInitializedFromService() = runTest(dispatcher) {
+        val state = viewModel(analyticsService(enabled = true, available = true)).uiState.value
+
+        assertTrue(state.analyticsEnabled)
+        assertTrue(state.analyticsAvailable)
+    }
+
+    @Test
+    fun analyticsState_disabled_isInitializedFromService() = runTest(dispatcher) {
+        val state = viewModel(analyticsService(enabled = false, available = true)).uiState.value
+
+        assertFalse(state.analyticsEnabled)
+        assertTrue(state.analyticsAvailable)
+    }
+
+    @Test
+    fun analyticsState_unavailable_isInitializedFromService() = runTest(dispatcher) {
+        val state = viewModel(analyticsService(enabled = true, available = false)).uiState.value
+
+        assertFalse(state.analyticsAvailable)
+    }
+
+    /** Collects every save-failure event the ViewModel emits for the rest of the test. */
+    private fun TestScope.failuresOf(viewModel: SettingsViewModel): List<AnalyticsSaveFailure> {
+        val events = mutableListOf<AnalyticsSaveFailure>()
+        backgroundScope.launch { viewModel.analyticsSaveFailures.toList(events) }
+        return events
+    }
+
+    @Test
+    fun setAnalyticsEnabled_false_updatesServiceAndState() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = true, available = true)
+        val viewModel = viewModel(analytics)
+        val failures = failuresOf(viewModel)
+
+        viewModel.setAnalyticsEnabled(false)
+
+        verify { analytics.setEnabled(false) }
+        assertFalse(viewModel.uiState.value.analyticsEnabled)
+        assertEquals(emptyList<AnalyticsSaveFailure>(), failures)
+    }
+
+    @Test
+    fun setAnalyticsEnabled_true_updatesServiceAndState() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = false, available = true)
+        val viewModel = viewModel(analytics)
+        val failures = failuresOf(viewModel)
+
+        viewModel.setAnalyticsEnabled(true)
+
+        verify { analytics.setEnabled(true) }
+        assertTrue(viewModel.uiState.value.analyticsEnabled)
+        assertEquals(emptyList<AnalyticsSaveFailure>(), failures)
+    }
+
+    @Test
+    fun setAnalyticsEnabled_failedOptIn_isReported_andTheSwitchStaysOff() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = false, available = true, saves = false)
+        val viewModel = viewModel(analytics)
+        val failures = failuresOf(viewModel)
+
+        viewModel.setAnalyticsEnabled(true)
+
+        assertEquals(listOf(AnalyticsSaveFailure.TURNING_ON), failures)
+        assertFalse("an unsaved opt-in stays off", viewModel.uiState.value.analyticsEnabled)
+    }
+
+    @Test
+    fun setAnalyticsEnabled_failedOptOut_showsTheSavedValueSoTogglingRetries() = runTest(dispatcher) {
+        val analytics = analyticsService(enabled = true, available = true, saves = false)
+        val viewModel = viewModel(analytics)
+        val failures = failuresOf(viewModel)
+
+        viewModel.setAnalyticsEnabled(false)
+
+        assertEquals(listOf(AnalyticsSaveFailure.TURNING_OFF), failures)
+        assertTrue("the switch shows the still-saved on", viewModel.uiState.value.analyticsEnabled)
+        assertTrue(
+            "a reopened Settings screen shows the same saved value",
+            viewModel(analytics).uiState.value.analyticsEnabled
+        )
+    }
+
+    @Test
+    fun twoSettingsScreens_inSequence_endOnTheLastToggle() = runTest(dispatcher) {
+        // Settings A turns analytics off then on; the user reopens Settings (B) and turns
+        // it off. Saves run inline on the main thread, so B's later toggle is saved last.
+        val analytics = analyticsService(enabled = true, available = true)
+        val first = viewModel(analytics)
+        val firstFailures = failuresOf(first)
+
+        first.setAnalyticsEnabled(false)
+        first.setAnalyticsEnabled(true)
+        val second = viewModel(analytics)
+        val secondFailures = failuresOf(second)
+        assertTrue("B opens on A's last saved choice", second.uiState.value.analyticsEnabled)
+        second.setAnalyticsEnabled(false)
+
+        assertFalse("the last toggle is what is saved", analytics.isEnabled)
+        assertFalse(second.uiState.value.analyticsEnabled)
+        assertEquals(emptyList<AnalyticsSaveFailure>(), firstFailures + secondFailures)
     }
 }

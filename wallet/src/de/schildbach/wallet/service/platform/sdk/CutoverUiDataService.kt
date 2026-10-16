@@ -31,10 +31,12 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -59,6 +61,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -1237,6 +1240,121 @@ internal fun planMixingGroupUpdates(
         }
 }
 
+/**
+ * The re-summed value and member count of one per-day "Mixing" group row, or
+ * null when [existing] needs no write.
+ *
+ * [planMixingGroupUpdates] adds a member's net ONCE, when it is first
+ * grouped; the member is skipped by every later pass. During a restore a round
+ * is often grouped while its record still carries the born income-only net,
+ * and the record is corrected only later (by the engine — rust-dashcore#979 —
+ * or by [recomputeCoinJoinRecordNet]), so the group row kept the stale sum
+ * (measured on two testnet wallets, A and B: +1.86 and +4.78 DASH shown where the
+ * true sums were −0.085 and −0.012). This re-derives the row from its members
+ * as they are NOW:
+ *  - value = Σ current net of every member ([presentNetSumDuffs]);
+ *  - count = [memberCount], every `tx_group_cache` member of the group.
+ *
+ * Only when the SDK store holds a current net for EVERY member
+ * ([presentMemberCount] == [memberCount]). A member the store does not hold
+ * has an UNKNOWN net, not a zero one: dashj-era groups share these group ids,
+ * so a cached total built from the dashj wallet (say −300 = −100 + −200) must
+ * not be cut to the −100 of the one member the store happens to hold. Such a
+ * group — including one with no member in the store yet (a store still
+ * filling, or a dashj-era group the store never saw) — keeps its cached value
+ * and count until the missing records arrive.
+ *
+ * Only `coinjoin_<date>` rows are touched, and only their value and count —
+ * title, memo, rate, time and flags are the other writers' business.
+ * Pure — host-testable.
+ */
+internal fun planMixingGroupResum(
+    existing: TxDisplayCacheEntry,
+    memberCount: Int,
+    presentMemberCount: Int,
+    presentNetSumDuffs: Long
+): MixingGroupResum? {
+    if (!existing.rowId.startsWith(MIXING_GROUP_ROWID_PREFIX)) return null
+    if (presentMemberCount <= 0 || presentMemberCount != memberCount) return null
+    if (existing.valueSatoshis == presentNetSumDuffs && existing.transactionAmount == memberCount) return null
+    return MixingGroupResum(existing.rowId, presentNetSumDuffs, memberCount)
+}
+
+/**
+ * The member nets the "Mixing" group re-sum ([planMixingGroupResum]) may use,
+ * keyed by display hex, from the store's served [records]. An SDK store stub
+ * ([L1TxUiRecord.isStoreStub]) is left OUT, exactly like a txid the store does
+ * not hold: its zero net is a placeholder, not the member's value, so counting
+ * it as present would let a partial sum pass the all-members-present guard
+ * (a cached −300 = −100 + −200 cut to −100 by one real member and one stub).
+ * The group keeps its cached total until the stub becomes a real record.
+ * Pure — host-testable.
+ */
+internal fun mixingMemberNets(records: Collection<L1TxUiRecord>): Map<String, Long> =
+    records.asSequence()
+        .filterNot { it.isStoreStub }
+        .associate { it.txidHex to it.netAmountDuffs }
+
+/** One planned group-row rewrite from [planMixingGroupResum]. */
+internal data class MixingGroupResum(
+    val groupId: String,
+    val valueSatoshis: Long,
+    val transactionAmount: Int
+)
+
+/**
+ * One group's member nets as read OFF the tx-feed collector, plus the group
+ * row as it stood when the read began ([rowValueAtStart]/[rowCountAtStart]).
+ * The collector applies it ([planMixingGroupResum]) only if the row and the
+ * member count still match — otherwise the group changed under the read and
+ * is re-summed again.
+ */
+internal data class MixingGroupTally(
+    val groupId: String,
+    val rowValueAtStart: Long,
+    val rowCountAtStart: Int,
+    val memberCount: Int,
+    val presentMemberCount: Int,
+    val presentNetSumDuffs: Long
+)
+
+/**
+ * The "Mixing" group re-sums still to run, coalesced by group id: a group
+ * requested any number of times before its re-sum starts is re-summed once.
+ * A group requested again WHILE its re-sum runs (it was already taken) is
+ * queued once more — a correction to a member the running read has already
+ * passed must not be lost — so a burst of corrections costs at most one
+ * extra pass, never one pass per correction. FIFO; thread-safe (the tx-feed
+ * collector enqueues, the re-sum worker takes).
+ */
+internal class MixingResumQueue {
+    private val lock = Any()
+    private val pending = LinkedHashSet<String>()
+    private val wake = Channel<Unit>(Channel.CONFLATED)
+
+    /** Queue [groupIds]; one already waiting is not queued twice. */
+    fun enqueue(groupIds: Collection<String>) {
+        if (groupIds.isEmpty()) return
+        val added = synchronized(lock) { groupIds.count { pending.add(it) } > 0 }
+        if (added) wake.trySend(Unit)
+    }
+
+    /** The oldest waiting group id, without waiting; null when none is queued. */
+    fun poll(): String? = synchronized(lock) {
+        val oldest = pending.firstOrNull()
+        if (oldest != null) pending.remove(oldest)
+        oldest
+    }
+
+    /** The oldest waiting group id, suspending until one is queued. */
+    suspend fun take(): String {
+        while (true) {
+            poll()?.let { return it }
+            wake.receive()
+        }
+    }
+}
+
 /** Which figure [overlayBalanceChoice] put on screen. */
 internal enum class OverlayBalanceSource(val logName: String) {
     /** The SDK has not published yet this launch; the dashj wallet's own balance. */
@@ -1478,6 +1596,36 @@ interface CutoverUiSource {
     ): Set<String> = emptySet()
 
     /**
+     * The CURRENT net (duffs) of each of [txidHexes] (display-order hex) as the
+     * store serves its record right now — the same reattributed record the
+     * change feed and the reconcile walk emit — keyed by display hex. A txid
+     * the store does not hold, or holds only as a TXO-parent stub
+     * ([L1TxUiRecord.isStoreStub], see [mixingMemberNets]), is absent from the
+     * map. Used by the per-day
+     * "Mixing" group re-sum ([planMixingGroupResum]) to re-derive a group
+     * row's value from its members. Callers pass bounded batches. Default
+     * empty: sources without a store (test fixtures) — every group then reads
+     * as "no member present" and is left untouched.
+     *
+     * A correction these reads persist is NOT reported on
+     * [observeCorrectedRecordTxids]: the returned nets already carry it, and
+     * the re-sum that asked is the one consumer of that signal — reporting it
+     * would only queue the same group again.
+     */
+    suspend fun recordNetsFor(
+        walletIdHex: String,
+        txidHexes: Collection<String>
+    ): Map<String, Long> = emptyMap()
+
+    /**
+     * Display-hex txids whose STORED record the app just corrected in place
+     * ([SdkTxStoreWalker]'s durable write-back) — hot, lossy (a dropped batch
+     * is converged by the next full reconcile walk). The pipeline re-sums the
+     * "Mixing" group rows holding any of them. Default: never emits.
+     */
+    fun observeCorrectedRecordTxids(): Flow<Set<String>> = emptyFlow()
+
+    /**
      * Live wallet-relevant transaction records, neutral shape, in BOUNDED
      * batches. Each emission is a page of new/changed records (production:
      * an initial recent-tail prime, then watermark-driven deltas via
@@ -1526,37 +1674,55 @@ data class SdkBalanceSplitDuffs(val confirmed: Long, val unconfirmed: Long) {
 
 /**
  * One observation of the SDK's deferred contact-account-build queue: the
- * queued [count] and how many CONSECUTIVE refreshes (beyond the one that
- * first saw it) have returned that same count ([unchangedReads], saturated
- * at [DEFERRED_BUILDS_SETTLED_READS]). Input to [deferredBuildsSettled].
+ * queued [count], the [drainState] it was read under, and how many
+ * CONSECUTIVE refreshes (beyond the one that first saw it) have returned that
+ * same count as evidence of a stuck queue ([unchangedReads], saturated at
+ * [deferredBuildsSettledReads]). Built by [nextDeferredBuildObservation];
+ * input to [deferredBuildsSettled].
  */
 internal data class DeferredBuildObservation(
     val count: Int = 0,
-    val unchangedReads: Int = 0
+    val unchangedReads: Int = 0,
+    val drainState: AccountBuildDrainState = AccountBuildDrainState.RAN
 )
 
 /**
- * Whether the deferred contact-account-build queue counts as SETTLED for the
- * purpose of persisting [org.dash.wallet.common.data.WalletUIConfig.LAST_TOTAL_BALANCE]:
+ * Whether the deferred contact-account-build queue counts as SETTLED — the
+ * gate on persisting [org.dash.wallet.common.data.WalletUIConfig.LAST_TOTAL_BALANCE]
+ * and the account-build term of the user-facing "still syncing" signal:
  *
  * - drained ([count] == 0) — provably nothing pending, settled immediately;
  * - PINNED — the same non-zero count observed across
- *   [DEFERRED_BUILDS_SETTLED_READS] consecutive refreshes. Some queue entries
- *   never complete (the SDK re-queues them on every drain pass without ever
- *   marking them broken — observed live: a sender key-purpose mismatch the
- *   drain can never resolve), and the app cannot see WHY an entry is queued.
- *   A count that has stopped moving is the only available evidence that the
- *   queue is stuck rather than draining — and on such a wallet a bare
- *   `count == 0` gate would block the persist FOREVER, freezing the launch
- *   seed on a stale figure (the very staleness the gate exists to prevent).
+ *   [deferredBuildsSettledReads] consecutive refreshes in which the drain
+ *   could have moved it. Some queue entries never complete (the SDK
+ *   re-queues them on every drain pass without ever marking them broken —
+ *   observed live: a sender key-purpose mismatch the drain can never
+ *   resolve), and the app cannot see WHY an entry is queued. A count that has
+ *   stopped moving is the only available evidence that the queue is stuck
+ *   rather than draining — and on such a wallet a bare `count == 0` gate
+ *   would block the persist FOREVER, freezing the launch seed on a stale
+ *   figure (the very staleness the gate exists to prevent).
  *
  * A count still MOVING (each refresh differs from the last) is an active
  * drain: every completed build can add previously-unmatched receives to the
  * total, so the figure is still provably incomplete and must not be
- * persisted. Pure — host-testable.
+ * persisted.
+ *
+ * A count that CANNOT move is not evidence of anything, which is what
+ * [drainState] adds: while the drain is blocked by the locked device
+ * ([AccountBuildDrainState.BLOCKED_DEVICE_LOCKED]) the queue never settles —
+ * QA phone 2 (12.0.0-qa28, restore) "settled" 212 such builds and showed
+ * 35.54 DASH as final, 1.856 DASH short of the contact payments those builds
+ * would match. Before any drain has run
+ * ([AccountBuildDrainState.NOT_ATTEMPTED]) it takes a much longer pin. Both
+ * are bounded — see [AccountBuildDrainTracker] and
+ * [DEFERRED_BUILDS_UNDRAINED_SETTLED_READS]. Pure — host-testable.
  */
-internal fun deferredBuildsSettled(count: Int, unchangedReads: Int): Boolean =
-    count == 0 || unchangedReads >= DEFERRED_BUILDS_SETTLED_READS
+internal fun deferredBuildsSettled(
+    count: Int,
+    unchangedReads: Int,
+    drainState: AccountBuildDrainState = AccountBuildDrainState.RAN
+): Boolean = count == 0 || unchangedReads >= deferredBuildsSettledReads(drainState)
 
 /**
  * Consecutive unchanged refreshes (at the balance pipeline's
@@ -1565,6 +1731,57 @@ internal fun deferredBuildsSettled(count: Int, unchangedReads: Int): Boolean =
  * fit in the window, so a queue that was genuinely draining would have moved.
  */
 internal const val DEFERRED_BUILDS_SETTLED_READS = 3
+
+/**
+ * The pin for a queue no drain has touched yet this process
+ * ([AccountBuildDrainState.NOT_ATTEMPTED]), counted only in refreshes taken
+ * while the L1 scan is caught up — ~1 hour of caught-up time. On a restore
+ * the SDK queues the builds during the scan, the app recovers the identity
+ * after it and drains only once its first contact sync has finished: QA phone
+ * 2 sat 2.5 h with 211 untouched builds, "pinned" them two minutes in, and
+ * persisted a seed 1.856 DASH short when the scan finished. The first drain
+ * came 28 minutes after the scan caught up (a 230-contact first sync). The
+ * pin stays as the backstop for a wallet whose app never drains.
+ */
+internal const val DEFERRED_BUILDS_UNDRAINED_SETTLED_READS = 60
+
+/** How many evidence-bearing unchanged reads pin a non-zero queue under [drainState]. */
+internal fun deferredBuildsSettledReads(drainState: AccountBuildDrainState): Int = when (drainState) {
+    AccountBuildDrainState.RAN -> DEFERRED_BUILDS_SETTLED_READS
+    AccountBuildDrainState.NOT_ATTEMPTED -> DEFERRED_BUILDS_UNDRAINED_SETTLED_READS
+    AccountBuildDrainState.BLOCKED_DEVICE_LOCKED -> Int.MAX_VALUE
+}
+
+/**
+ * The next [DeferredBuildObservation] after one refresh read [count] queued
+ * builds under [drainState]. A new count or a new drain state starts a fresh
+ * streak: evidence gathered while the drain could not run says nothing about
+ * whether it is stuck once it can. An unchanged read adds to the streak only
+ * when it IS evidence — always after a drain has run, never while the drain is
+ * blocked by the locked device, and before the first drain only while the
+ * scan is caught up ([l1Synced]). Pure — host-testable.
+ */
+internal fun nextDeferredBuildObservation(
+    previous: DeferredBuildObservation,
+    count: Int,
+    drainState: AccountBuildDrainState,
+    l1Synced: Boolean
+): DeferredBuildObservation {
+    if (count != previous.count || drainState != previous.drainState) {
+        return DeferredBuildObservation(count = count, drainState = drainState)
+    }
+    val evidence = when (drainState) {
+        AccountBuildDrainState.RAN -> true
+        AccountBuildDrainState.NOT_ATTEMPTED -> l1Synced
+        AccountBuildDrainState.BLOCKED_DEVICE_LOCKED -> false
+    }
+    if (!evidence) return previous
+    // Saturating: only the threshold crossing matters, and an unbounded
+    // counter would eventually overflow on a long session.
+    return previous.copy(
+        unchangedReads = (previous.unchangedReads + 1).coerceAtMost(deferredBuildsSettledReads(drainState))
+    )
+}
 
 /** Production [CutoverUiSource]: the live SDK Room DB, reactive. */
 internal class DashSdkCutoverUiSource(
@@ -1786,6 +2003,48 @@ internal class DashSdkCutoverUiSource(
         return out
     }
 
+    /**
+     * Txid batches every walker this source builds reports as durably corrected
+     * ([SdkTxStoreWalker]'s `onCorrectionsPersisted`). Hot and lossy by design:
+     * a burst past the buffer drops its oldest batches, and the pipeline's next
+     * full reconcile walk re-sums every group anyway.
+     */
+    private val correctedRecordTxids = MutableSharedFlow<Set<String>>(
+        extraBufferCapacity = CORRECTED_TXIDS_BUFFER,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    /**
+     * A walker over [walletId]. [reportCorrections] false is for the mixing
+     * re-sum's own member reads ([recordNetsFor]): the corrections they persist
+     * are already in the nets they return, so signalling them would only
+     * re-queue the group being re-summed — one extra full-group pass per
+     * corrected page.
+     */
+    private fun walker(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        walletId: ByteArray,
+        reportCorrections: Boolean = true
+    ) = SdkTxStoreWalker(
+        db,
+        walletId,
+        onCorrectionsPersisted = if (reportCorrections) ({ correctedRecordTxids.tryEmit(it) }) else null
+    )
+
+    override fun observeCorrectedRecordTxids(): Flow<Set<String>> = correctedRecordTxids
+
+    override suspend fun recordNetsFor(
+        walletIdHex: String,
+        txidHexes: Collection<String>
+    ): Map<String, Long> {
+        if (txidHexes.isEmpty()) return emptyMap()
+        val walletId = walletIdFromHex(walletIdHex) ?: return emptyMap()
+        val db = database()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            mixingMemberNets(walker(db, walletId, reportCorrections = false).recordsFor(txidHexes))
+        }
+    }
+
     override fun observeWalletTxRecords(walletIdHex: String): Flow<List<L1TxUiRecord>> = flow {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         val db = database()
@@ -1805,7 +2064,7 @@ internal class DashSdkCutoverUiSource(
         // only NEW rows past the keyset watermark plus a bounded recent-tail
         // status refresh — never the whole table. Whole-wallet convergence
         // is [forEachWalletTxRecordPage] (the pipeline's 60s reconcile).
-        val walker = SdkTxStoreWalker(db, walletId)
+        val walker = walker(db, walletId)
         walker.primeWatermarks()
         // Initial bounded emission: the recent tail, so recent statuses are
         // fresh long before the first full reconcile walk finishes.
@@ -1826,7 +2085,7 @@ internal class DashSdkCutoverUiSource(
         // between pages, cooperative — an arbitrarily large table walks in
         // O(page) memory and never blocks the pipeline's event lane (the
         // service interleaves these pages with engine events).
-        SdkTxStoreWalker(database(), walletId).walkAll(onPage)
+        walker(database(), walletId).walkAll(onPage)
     }
 
     override fun observeSeamTxSnapshots(walletIdHex: String): Flow<SdkSeamTxSnapshot> = flow {
@@ -1841,7 +2100,7 @@ internal class DashSdkCutoverUiSource(
         // stale), per-outpoint indexed EXISTS/lookup, per-txid fresh record
         // reads, and an on-demand paged enumeration for the rare full reads.
         // Nothing O(wallet) is ever built on the per-second path.
-        val walker = SdkTxStoreWalker(db, walletId)
+        val walker = walker(db, walletId)
         walker.primeWatermarks()
         emit(seamSnapshot(db, walker, walker.tailRecords()))
         emitAll(
@@ -1981,6 +2240,9 @@ internal class DashSdkCutoverUiSource(
 
         /** Chunk size for raw `txid IN (…)` queries (SQLite's variable cap is 999). */
         const val TXID_IN_CHUNK = 500
+
+        /** Buffered correction batches before the oldest are dropped (see [correctedRecordTxids]). */
+        const val CORRECTED_TXIDS_BUFFER = 64
 
         /**
          * [payloadLru] cap — sized to the walker's page window
@@ -2220,6 +2482,16 @@ class CutoverUiDataService internal constructor(
      */
     private val deferredContactBuildCount: suspend (String) -> Int? = { null },
     /**
+     * Whether the drain that would empty [deferredContactBuildCount]'s queue
+     * has run, has not been attempted yet, or is held up by the locked device
+     * ([DashSdkService.dashPayAccountBuildDrainState]) — what decides whether
+     * a count that is not moving counts as stuck ([nextDeferredBuildObservation]).
+     * Read alongside the count. Default [AccountBuildDrainState.RAN]: the
+     * plain pinned-count rule, for the fake-fed tests.
+     */
+    private val accountBuildDrainState: (String) -> AccountBuildDrainState =
+        { AccountBuildDrainState.RAN },
+    /**
      * The DIP-15 contact-backfill bookkeeping ([DashPayBackfillGate.readBackfillStatus]) —
      * the THIRD guard on persisting [WalletUIConfig.LAST_TOTAL_BALANCE].
      *
@@ -2249,11 +2521,19 @@ class CutoverUiDataService internal constructor(
      * Publishes the DashPay-side sync terms this service already observes —
      * the account-build queue and the backfill bookkeeping — to the
      * user-facing "still syncing" signal ([de.schildbach.wallet.service.DashPaySyncStatus]).
+     * `buildsHeldByLockedDevice` says the unsettled builds are waiting on a
+     * device unlock, which the signal's time ceiling does not count against;
+     * `buildsAwaitingFirstDrain` says no drain has touched them yet this
+     * process, which runs the signal's longer pre-first-drain ceiling.
      * Pure fan-out; no behaviour of this service depends on it. Default no-op
      * for the fake-fed tests.
      */
-    private val publishDashPaySyncTerms: (buildsSettled: Boolean, backfillSettled: Boolean) -> Unit =
-        { _, _ -> },
+    private val publishDashPaySyncTerms: (
+        buildsSettled: Boolean,
+        backfillSettled: Boolean,
+        buildsHeldByLockedDevice: Boolean,
+        buildsAwaitingFirstDrain: Boolean
+    ) -> Unit = { _, _, _, _ -> },
     /**
      * PERSIST one engine-reported IS lock (display-hex txid, observation
      * epoch-millis) into the APP-OWNED `instant_send_locks` table
@@ -2364,9 +2644,10 @@ class CutoverUiDataService internal constructor(
         walletBindConfirmations = sdkWalletBinder.walletBindConfirmations,
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
+        accountBuildDrainState = { walletIdHex -> sdkService.dashPayAccountBuildDrainState(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
-        publishDashPaySyncTerms = { buildsSettled, backfillSettled ->
-            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled)
+        publishDashPaySyncTerms = { buildsSettled, backfillSettled, heldByLockedDevice, awaitingFirstDrain ->
+            dashPaySyncStatus.setAccountBuildsSettled(buildsSettled, heldByLockedDevice, awaitingFirstDrain)
             dashPaySyncStatus.setBackfillSettled(backfillSettled)
         },
         persistInstantLock = { txidHex, lockedAtMs ->
@@ -2440,6 +2721,14 @@ class CutoverUiDataService internal constructor(
      * (worst case after eviction: one repeated WARN per >1000-tx window).
      */
     private val noNetWarnedTxids: MutableSet<String> = boundedSet(SEEN_TX_DIRECTIONS_MAX)
+
+    /**
+     * Once-per-process latch for the "mixing group has members the SDK store
+     * does not hold" INFO in [applyMixingGroupResum] — the re-sum repeats every
+     * reconcile walk. Keyed by group id; only touched from [txPipeline]'s
+     * sequential collector.
+     */
+    private val mixingResumMissingLogged: MutableSet<String> = boundedSet(SEEN_TX_DIRECTIONS_MAX)
 
     /**
      * Txids whose rows are TERMINAL for resolution purposes — CHAINLOCKED and
@@ -3580,7 +3869,9 @@ class CutoverUiDataService internal constructor(
      * an unknown/failed read leaves the previous observation rather than
      * claiming zero. The unchanged-read streak is what lets
      * [deferredBuildsSettled] tell a PERMANENTLY STUCK queue (count pinned,
-     * never drains) from an actively draining one (count moving).
+     * never drains) from an actively draining one (count moving); the drain
+     * state read with it ([accountBuildDrainState]) tells both from a queue
+     * that cannot move yet.
      */
     private val _deferredContactBuilds = MutableStateFlow(DeferredBuildObservation())
 
@@ -4241,48 +4532,70 @@ class CutoverUiDataService internal constructor(
      * (no probe wired, SDK down, read failed) leaves the last observation
      * alone — claiming zero would unlock the balance persist on no evidence,
      * and counting it as an unchanged read would advance the settled streak
-     * on no evidence.
+     * on no evidence. The drain state is read with it: an unchanged count
+     * only counts as stuck while the drain could have moved it
+     * ([nextDeferredBuildObservation]).
      */
     private suspend fun refreshDeferredContactBuilds(walletIdHex: String) {
+        val drainState = try {
+            accountBuildDrainState(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Fail open: the plain pinned-count rule, as before the drain
+            // state existed.
+            log.warn("contact-account-build drain state read failed", t)
+            AccountBuildDrainState.RAN
+        }
+        val previous = _deferredContactBuilds.value
         val pending = try {
             deferredContactBuildCount(walletIdHex)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("deferred contact-account-build count read failed", t)
             null
-        } ?: return
-        val previous = _deferredContactBuilds.value
-        val next = if (pending == previous.count) {
-            // Saturating: only the threshold crossing matters, and an
-            // unbounded counter would eventually overflow on a long session.
-            previous.copy(
-                unchangedReads = (previous.unchangedReads + 1)
-                    .coerceAtMost(DEFERRED_BUILDS_SETTLED_READS)
-            )
-        } else {
-            DeferredBuildObservation(count = pending)
         }
+        if (pending == null) {
+            // Unknown count: keep the observation — but not a drain state the
+            // tracker has moved on from, or a lock hold could outlive the
+            // tracker's own unlock grace while the count is unreadable.
+            if (drainState != previous.drainState) {
+                _deferredContactBuilds.value = previous.copy(drainState = drainState, unchangedReads = 0)
+            }
+            return
+        }
+        val next = nextDeferredBuildObservation(previous, pending, drainState, _l1Synced.value)
         _deferredContactBuilds.value = next
+        val settled = deferredBuildsSettled(next.count, next.unchangedReads, next.drainState)
         if (previous.count != pending) {
             log.info(
-                "deferred DashPay contact account builds: {} (was {}) — the balance {} be " +
+                "deferred DashPay contact account builds: {} (was {}, drain {}) — the balance {} be " +
                     "persisted as the next launch's last-known figure",
-                pending, previous.count,
-                if (deferredBuildsSettled(next.count, next.unchangedReads)) "may" else "will NOT"
+                pending, previous.count, drainState, if (settled) "may" else "will NOT"
             )
-        } else if (pending != 0 &&
-            next.unchangedReads == DEFERRED_BUILDS_SETTLED_READS &&
-            previous.unchangedReads < DEFERRED_BUILDS_SETTLED_READS
+        } else if (pending != 0 && previous.drainState != drainState) {
+            log.info(
+                "deferred DashPay contact account builds: {} still queued, drain {} (was {}) — {}",
+                pending, drainState, previous.drainState,
+                when (drainState) {
+                    AccountBuildDrainState.BLOCKED_DEVICE_LOCKED ->
+                        "the drain resumes once the device is unlocked; until then the balance " +
+                            "stays not-final and is not persisted"
+                    else -> "re-checking whether the queue is still moving"
+                }
+            )
+        } else if (pending != 0 && settled &&
+            !deferredBuildsSettled(previous.count, previous.unchangedReads, previous.drainState)
         ) {
             // The Joel shape: entries the SDK re-queues forever (it cannot mark
             // them broken, and the app cannot see why they are queued). A count
-            // that has stopped moving is settled — blocking the persist any
-            // longer would freeze the launch seed on a stale figure for good.
+            // that has stopped moving while the drain could run is settled —
+            // blocking the persist any longer would freeze the launch seed on a
+            // stale figure for good.
             log.info(
                 "deferred DashPay contact account builds pinned at {} across {} consecutive " +
-                    "reads — treating the queue as settled (stuck, not draining); the balance " +
-                    "may be persisted as the next launch's last-known figure",
-                pending, next.unchangedReads
+                    "reads (drain {}) — treating the queue as settled (stuck, not draining); " +
+                    "the balance may be persisted as the next launch's last-known figure",
+                pending, next.unchangedReads, drainState
             )
         }
     }
@@ -4408,7 +4721,8 @@ class CutoverUiDataService internal constructor(
         // on a stale figure, the exact staleness this gate exists to prevent.
         // So the gate is SETTLED-ness ([deferredBuildsSettled]): drained, or
         // pinned at the same non-zero count long enough to prove nothing is
-        // moving.
+        // moving — counted only while the drain could have moved it, so a
+        // queue held up by the locked device never reads as settled.
         val deferredBuilds = _deferredContactBuilds.value
         // …and an app-armed rescan/replay in flight makes the figure
         // untrustworthy even while the caught-up gate still reads true —
@@ -4422,7 +4736,16 @@ class CutoverUiDataService internal constructor(
         // addresses will find, so this figure is short by exactly them. This
         // is the guard that would have caught the field incident; see
         // [dashPayBackfillStatus].
-        val buildsSettled = deferredBuildsSettled(deferredBuilds.count, deferredBuilds.unchangedReads)
+        val buildsSettled = deferredBuildsSettled(
+            deferredBuilds.count, deferredBuilds.unchangedReads, deferredBuilds.drainState
+        )
+        val buildsHeldByLockedDevice = !buildsSettled &&
+            deferredBuilds.drainState == AccountBuildDrainState.BLOCKED_DEVICE_LOCKED
+        // …and builds no drain has touched yet (the restore shape) hold the
+        // indicator under its longer pre-first-drain ceiling; once the first
+        // drain runs this drops and a fresh ordinary ceiling starts.
+        val buildsAwaitingFirstDrain = !buildsSettled &&
+            deferredBuilds.drainState == AccountBuildDrainState.NOT_ATTEMPTED
         // Fan the two DashPay terms out to the user-facing sync signal — same
         // cadence, same readings.
         //
@@ -4435,7 +4758,9 @@ class CutoverUiDataService internal constructor(
         // (S21, 11.10.87). The DURABLE seed below still uses the strict test,
         // where the cost of being wrong is a persisted figure that poisons
         // every later launch; its armed term carries its own deadline.
-        publishDashPaySyncTerms(buildsSettled, !backfillStatus.ledgerIncomplete)
+        publishDashPaySyncTerms(
+            buildsSettled, !backfillStatus.ledgerIncomplete, buildsHeldByLockedDevice, buildsAwaitingFirstDrain
+        )
         // …and the block/tx pipeline must have DRAINED. This is the veto that
         // left the display predicate on 2026-09-21 (see [pipelineLagging]):
         // "synced" above now means what iOS means by it, which can be true
@@ -4453,10 +4778,10 @@ class CutoverUiDataService internal constructor(
             log.info(
                 "SDK balance published: {} duffs (was {}) | l1Synced={} pipelineLagging={} " +
                     "rescanArmedHold={} dashPayBackfill(armed={},replaying={}) " +
-                    "deferredContactBuilds={} (unchangedReads={}) persistedAsLastKnown={} lastKnown={}",
+                    "deferredContactBuilds={} (unchangedReads={}, drain {}) persistedAsLastKnown={} lastKnown={}",
                 duffs, previous?.value ?: "none", synced, lagging, armedRescanHold,
                 backfillStatus.armed, backfillStatus.replaying, deferredBuilds.count,
-                deferredBuilds.unchangedReads, persist,
+                deferredBuilds.unchangedReads, deferredBuilds.drainState, persist,
                 _lastKnownTotalBalance.value?.value ?: "none"
             )
         }
@@ -4492,6 +4817,23 @@ class CutoverUiDataService internal constructor(
          * for the 60s ticker — only for the log line.
          */
         data class Reconcile(val requested: Boolean) : TxFeedAction()
+
+        /** Queue a re-sum of these per-day "Mixing" group rows from their members' current nets. */
+        data class ResumMixingGroups(val groupIds: Collection<String>) : TxFeedAction()
+
+        /** These stored records were just corrected in place — re-sum any "Mixing" group holding one. */
+        data class RecordsCorrected(val txids: Set<String>) : TxFeedAction()
+
+        /**
+         * A group's member nets, read off the collector by the re-sum worker,
+         * to be checked and written ON the collector. [applied] is completed
+         * once handled, so the worker starts its next read only after this
+         * write (or this re-queue) has landed.
+         */
+        class ApplyMixingGroupResum(
+            val tally: MixingGroupTally,
+            val applied: CompletableDeferred<Unit>
+        ) : TxFeedAction()
     }
 
     /**
@@ -4517,7 +4859,7 @@ class CutoverUiDataService internal constructor(
      */
     private suspend fun txPipeline(walletIdHex: String) {
         bindReceiveAddressWallet(walletIdHex)
-        // Three feeds, one sequential collector (merge never runs two
+        // Four feeds, one sequential collector (merge never runs two
         // actions concurrently — that serial execution is what makes the
         // insert/notify dedup race-free):
         // - the Room CHANGE feed — bounded incremental pages of new/changed
@@ -4532,7 +4874,16 @@ class CutoverUiDataService internal constructor(
         //   cache rebuild can never permanently drop SDK rows) are preserved;
         // - the engine's instant tx events — the FAST feed: a mempool
         //   receive renders (and notifies) the moment the engine sees the
-        //   tx, and an IS lock flips the row before any block confirms it.
+        //   tx, and an IS lock flips the row before any block confirms it;
+        // - the store's in-place record corrections — re-sum the per-day
+        //   "Mixing" group rows holding a corrected member (a complete
+        //   reconcile walk re-sums every such group as well). A re-sum reads
+        //   every member of a group, which can be thousands of records, so
+        //   the reads run in a CHILD coroutine ([runMixingResumWorker]) and
+        //   only the final, membership-checked write comes back through this
+        //   collector ([applyMixingGroupResum]) — engine events are never
+        //   held behind a large group. Requests are coalesced by group id
+        //   ([MixingResumQueue]).
         //
         // Never dies silently: one upstream exception terminates the WHOLE
         // merged flow, so a single .catch would leave the tx list frozen
@@ -4544,17 +4895,27 @@ class CutoverUiDataService internal constructor(
                 coroutineScope {
                     // Unbuffered: each page emission suspends the walker until
                     // the sequential collector has processed it — natural
-                    // backpressure, and events slot in between pages.
-                    val reconcilePages = MutableSharedFlow<List<L1TxUiRecord>>()
+                    // backpressure, and events slot in between pages. Carries
+                    // the walk's pages, then its per-group mixing re-sums.
+                    val reconcilePages = MutableSharedFlow<TxFeedAction>()
                     var reconcileJob: kotlinx.coroutines.Job? = null
                     val reconcileAgain = AtomicBoolean(false)
                     // Whether a request (not the ticker) is among the walks
                     // coalesced into [reconcileAgain] — for the log line only.
                     val reconcileAgainRequested = AtomicBoolean(false)
+                    // The mixing-group re-sum: requests queue here (coalesced
+                    // by group id); the worker reads member nets off this
+                    // collector and sends each group's tally back to be
+                    // applied ON it.
+                    val resumQueue = MixingResumQueue()
+                    val resumApplies = Channel<TxFeedAction>()
+                    val resumWorker = launch {
+                        runMixingResumWorker(resumQueue) { resumApplies.send(it) }
+                    }
                     merge(
                         source.observeWalletTxRecords(walletIdHex)
                             .map { TxFeedAction.Snapshot(it) as TxFeedAction },
-                        reconcilePages.map { TxFeedAction.Snapshot(it) as TxFeedAction },
+                        reconcilePages,
                         merge(
                             reconcileTicker().map { false },
                             // Replay a request made while nothing collected. Checked
@@ -4564,11 +4925,20 @@ class CutoverUiDataService internal constructor(
                                 if (fullReconcilePending.get()) emit(Unit)
                             }.map { true }
                         ).map { TxFeedAction.Reconcile(requested = it) as TxFeedAction },
-                        txEvents.map { TxFeedAction.EngineEvent(it) }
+                        txEvents.map { TxFeedAction.EngineEvent(it) },
+                        source.observeCorrectedRecordTxids().map { TxFeedAction.RecordsCorrected(it) },
+                        resumApplies.receiveAsFlow()
                     ).collect { action ->
                         when (action) {
                             is TxFeedAction.Snapshot -> syncDisplayCache(action.records)
                             is TxFeedAction.EngineEvent -> handleTxEvent(action.event)
+                            is TxFeedAction.ResumMixingGroups -> resumQueue.enqueue(action.groupIds)
+                            is TxFeedAction.RecordsCorrected -> resumMixingGroupsHolding(action.txids, resumQueue)
+                            is TxFeedAction.ApplyMixingGroupResum -> try {
+                                applyMixingGroupResum(action.tally, resumQueue)
+                            } finally {
+                                action.applied.complete(Unit)
+                            }
                             is TxFeedAction.Reconcile -> {
                                 // Whatever triggered this, the walk it starts (or
                                 // the one more it queues) covers a pending request.
@@ -4597,7 +4967,18 @@ class CutoverUiDataService internal constructor(
                                                 source.forEachWalletTxRecordPage(walletIdHex) { page ->
                                                     pages++
                                                     records += page.size
-                                                    reconcilePages.emit(page)
+                                                    reconcilePages.emit(TxFeedAction.Snapshot(page))
+                                                }
+                                                // The walk is COMPLETE: every member record has been
+                                                // served as the store holds it now (and any correction
+                                                // persisted). Re-sum every mixing group from those
+                                                // current nets — the convergence point for a member
+                                                // corrected after it was grouped (engine #979 or the
+                                                // walker's own re-net). Queued for the re-sum worker,
+                                                // which reads off the collector.
+                                                val mixingGroupIds = txGroupCacheDao.getCoinJoinGroupIds()
+                                                if (mixingGroupIds.isNotEmpty()) {
+                                                    reconcilePages.emit(TxFeedAction.ResumMixingGroups(mixingGroupIds))
                                                 }
                                                 logReconcileWalk(
                                                     walk, requested, records, pages,
@@ -4617,6 +4998,9 @@ class CutoverUiDataService internal constructor(
                             }
                         }
                     }
+                    // Every feed completed: the worker would otherwise keep
+                    // this scope open waiting for requests that cannot come.
+                    resumWorker.cancel()
                 }
                 return // all upstream feeds completed normally
             } catch (t: Throwable) {
@@ -4855,6 +5239,153 @@ class CutoverUiDataService internal constructor(
             runCatching { notifyCoinsReceived(duffs) }
                 .onFailure { log.warn("coins-received notification failed for {}", txidHex, it) }
         }
+    }
+
+    /**
+     * The mixing-group re-sum worker: re-derives each per-day "Mixing" group
+     * row [queue] hands it from its members' CURRENT nets
+     * ([planMixingGroupResum]) — the convergence pass for a member whose record
+     * was corrected after it was grouped.
+     *
+     * Runs as a CHILD of [txPipeline], not on its sequential collector: a
+     * group can hold thousands of members, and reading them all inside one
+     * collector action held every live transaction and InstantLock event
+     * behind the whole group. Here only the reads run, one group at a time;
+     * each group's result goes to [deliver] (the collector's lane) and is
+     * written by [applyMixingGroupResum] ON the collector, which re-checks the
+     * group's membership first. The worker waits for that write before it
+     * reads the next group.
+     *
+     * Bounded: per group, ⌈members / [MIXING_RESUM_PAGE]⌉ keyset reads of
+     * `tx_group_cache` plus as many chunked record reads
+     * ([CutoverUiSource.recordNetsFor]); at most one page of txids is held at a
+     * time, never a group's (let alone the wallet's) whole member list.
+     * Fail-soft per group: the next reconcile walk retries.
+     */
+    private suspend fun runMixingResumWorker(
+        queue: MixingResumQueue,
+        deliver: suspend (TxFeedAction) -> Unit
+    ) {
+        while (true) {
+            val groupId = queue.take()
+            val tally = try {
+                tallyMixingGroup(groupId)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("mixing group {} re-sum failed; the next reconcile walk retries", groupId, t)
+                null
+            } ?: continue
+            val applied = CompletableDeferred<Unit>()
+            deliver(TxFeedAction.ApplyMixingGroupResum(tally, applied))
+            applied.await()
+        }
+    }
+
+    /**
+     * Read every member net of [groupId] (see [runMixingResumWorker]). Null when
+     * the group is not a CoinJoin group, its row is gone, or no wallet is bound.
+     */
+    private suspend fun tallyMixingGroup(groupId: String): MixingGroupTally? {
+        if (!groupId.startsWith(MIXING_GROUP_ROWID_PREFIX)) return null
+        val walletIdHex = activeWalletIdHex ?: return null
+        val existing = txDisplayCacheDao.getEntriesByIds(listOf(groupId)).firstOrNull() ?: return null
+        var memberCount = 0
+        var presentCount = 0
+        var presentSum = 0L
+        var after = ""
+        while (true) {
+            val page = txGroupCacheDao.getGroupMemberTxIdsAfter(groupId, after, MIXING_RESUM_PAGE)
+            if (page.isEmpty()) break
+            memberCount += page.size
+            val nets = source.recordNetsFor(walletIdHex, page)
+            for (txid in page) {
+                val net = nets[txid] ?: continue
+                presentCount++
+                presentSum += net
+            }
+            after = page.last()
+            if (page.size < MIXING_RESUM_PAGE) break
+        }
+        return MixingGroupTally(
+            groupId = groupId,
+            rowValueAtStart = existing.valueSatoshis,
+            rowCountAtStart = existing.transactionAmount,
+            memberCount = memberCount,
+            presentMemberCount = presentCount,
+            presentNetSumDuffs = presentSum
+        )
+    }
+
+    /**
+     * Write one group's re-sum ([tally], read off the collector by
+     * [runMixingResumWorker]). Runs on [txPipeline]'s sequential collector, so
+     * it never interleaves with a [syncDisplayCache] pass extending the same
+     * group. The tally is applied only if the group is as it was when the read
+     * began — the row's value and count unchanged and the same number of
+     * members. A group that changed meanwhile (a pass grouped new members into
+     * it) is queued on [queue] again, so it is re-read rather than overwritten
+     * with a sum that misses the new members. Writes only a row whose value or
+     * count differs, and only those two columns. Fail-soft: the next reconcile
+     * walk retries.
+     */
+    private suspend fun applyMixingGroupResum(tally: MixingGroupTally, queue: MixingResumQueue) {
+        val groupId = tally.groupId
+        try {
+            val existing = txDisplayCacheDao.getEntriesByIds(listOf(groupId)).firstOrNull() ?: return
+            if (existing.valueSatoshis != tally.rowValueAtStart ||
+                existing.transactionAmount != tally.rowCountAtStart ||
+                txGroupCacheDao.countGroupMembers(groupId) != tally.memberCount
+            ) {
+                log.info("mixing group {} changed while its members were read; re-summing it again", groupId)
+                queue.enqueue(listOf(groupId))
+                return
+            }
+            val missing = tally.memberCount - tally.presentMemberCount
+            if (missing > 0 && mixingResumMissingLogged.add(groupId)) {
+                log.info(
+                    "mixing group {}: {} of {} member(s) are not in the SDK store — the group " +
+                        "row keeps its cached value until they arrive",
+                    groupId, missing, tally.memberCount
+                )
+            }
+            val plan = planMixingGroupResum(
+                existing,
+                tally.memberCount,
+                tally.presentMemberCount,
+                tally.presentNetSumDuffs
+            ) ?: return
+            txDisplayCacheDao.updateGroupValueAndCount(plan.groupId, plan.valueSatoshis, plan.transactionAmount)
+            displayCacheRefreshBus.signalChanged()
+            log.info(
+                "mixing group {} re-summed from its members' current nets: value {} → {} duffs, " +
+                    "count {} → {}",
+                groupId, existing.valueSatoshis, plan.valueSatoshis,
+                existing.transactionAmount, plan.transactionAmount
+            )
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("mixing group {} re-sum failed; the next reconcile walk retries", groupId, t)
+        }
+    }
+
+    /**
+     * Queue a re-sum of every CoinJoin group holding one of [txids] — the store
+     * just corrected those records in place. A txid in no group (the common
+     * case: not a grouped mixing member) costs one indexed lookup.
+     */
+    private suspend fun resumMixingGroupsHolding(txids: Set<String>, queue: MixingResumQueue) {
+        if (txids.isEmpty()) return
+        val groupIds = try {
+            txids.toList().chunked(500)
+                .flatMap { txGroupCacheDao.getGroupsForTxIds(it) }
+                .filter { it.wrapperType == TxGroupCacheEntry.TYPE_COINJOIN }
+                .mapTo(LinkedHashSet()) { it.groupId }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("group lookup for {} corrected record(s) failed; the next reconcile walk re-sums", txids.size, t)
+            return
+        }
+        queue.enqueue(groupIds)
     }
 
     private fun ticker(): Flow<Unit> = flow {
@@ -5316,6 +5847,9 @@ class CutoverUiDataService internal constructor(
          * events with an unanswered probe ever wait, and only once.
          */
         internal const val NEGATIVE_EVENT_MIRROR_RETRY_MS = 400L
+
+        /** Group members read per keyset page by [tallyMixingGroup] (also its record-read batch). */
+        internal const val MIXING_RESUM_PAGE = 500
 
         /** Grace before an activation's first full reconcile walk — see [reconcileInitialDelayMs]. */
         internal const val RECONCILE_INITIAL_DELAY_MS = 10_000L
