@@ -852,12 +852,56 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
-    fun `an abandoned gift card purchase still blocks another gift card purchase`() = runBlocking {
+    fun `an abandoned gift card purchase no longer blocks a different gift card purchase`() = runBlocking {
+        // A new purchase is a separate order with its own invoice, not a duplicate payment of the
+        // released one (whose late arrival is still attributed to its own order)
         val saved = createTransaction()
         coEvery { config.getAllOrThrow() } returns listOf(
             storedPayment(saved, null, abandoned = true).copy(isGiftCardPurchase = true)
         )
+        assertNull(verifier.claimSubmission(createTransaction().txId, null, isGiftCardPurchase = true))
+    }
+
+    @Test
+    fun `an unreleased gift card purchase still blocks another gift card purchase`() = runBlocking {
+        val saved = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(
+            storedPayment(saved, null).copy(isGiftCardPurchase = true)
+        )
         assertEquals(saved.txId, verifier.claimSubmission(createTransaction().txId, null, isGiftCardPurchase = true))
+    }
+
+    @Test
+    fun `an abandoned gift card purchase still blocks its own invoice`() = runBlocking {
+        // review 9fa90c30ccf1: the same request is never paid with a second transaction
+        val saved = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(
+            storedPayment(saved, "abc123", abandoned = true).copy(isGiftCardPurchase = true)
+        )
+        assertEquals(saved.txId, verifier.claimSubmission(createTransaction().txId, "abc123", isGiftCardPurchase = true))
+        assertEquals(saved.txId, verifier.unresolvedSubmissionFor("abc123"))
+        // a different order (different request) goes through
+        assertNull(verifier.claimSubmission(createTransaction().txId, "def456", isGiftCardPurchase = true))
+    }
+
+    @Test
+    fun `a late broadcast of an abandoned gift card purchase is still attributed to its order`() = runBlocking {
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        stored.add(
+            storedPayment(tx, "abc123", abandoned = true).copy(
+                isGiftCardPurchase = true,
+                serviceName = "CTXSpend",
+                merchantIconUrl = "https://logo.example/x.png"
+            )
+        )
+        withTimeout(5_000) { verifier.awaitRestored() }
+
+        coEvery { engine.observation(tx.txId.toString()) } returns EngineObservation.OBSERVED
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }
+
+        coVerify { metadataProvider.markGiftCardTransaction(tx.txId.toTxId(), "CTXSpend", "https://logo.example/x.png") }
+        assertNotNull(wallet.getTransaction(tx.txId))
     }
 
     @Test

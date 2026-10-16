@@ -523,7 +523,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
 
     /**
      * Claims the right to submit [txId] as the one payment for its invoice ([paymentRequestId])
-     * and, for a gift card purchase, as the one unresolved gift card purchase. Atomic across the
+     * and, for a gift card purchase, as the one unreleased gift card purchase. Atomic across the
      * app: of two submissions racing for the same thing, exactly one is let through.
      *
      * Returns null when the claim was taken, or the transaction it conflicts with: another
@@ -550,11 +550,16 @@ class PendingDirectPaymentVerifier @Inject constructor(
         keys.firstNotNullOfOrNull { key -> submissionClaims[key]?.takeIf { it != txId } }?.let {
             return@withLock it
         }
-        // Released (abandoned) records count too (review 9fa90c30ccf1): their signed transaction
-        // is still valid. Only T1 itself is let through, to be resubmitted as it is.
+        // For the SAME invoice, released (abandoned) records count too (review 9fa90c30ccf1): their
+        // signed transaction is still valid, so a second one could pay it twice. Only T1 itself is
+        // let through, to be resubmitted as it is.
+        //
+        // The gift-card key is different (the #1560 rule): only an UNRELEASED gift card purchase
+        // blocks another. A new purchase is a separate order with its own invoice, not a duplicate
+        // of a released one, whose late broadcast is still attributed to its own order.
         val stored = config.getAllOrThrow().filter { it.txId != txId && it.txId !in pendingRemovals }
         val recorded = paymentRequestId?.let { id -> stored.firstOrNull { it.paymentRequestId == id } }
-            ?: stored.firstOrNull { isGiftCardPurchase && it.isGiftCardPurchase }
+            ?: stored.firstOrNull { isGiftCardPurchase && it.isGiftCardPurchase && !it.abandoned }
         if (recorded != null) {
             return@withLock recorded.txId
         }

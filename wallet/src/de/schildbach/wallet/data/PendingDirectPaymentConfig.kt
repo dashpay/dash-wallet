@@ -206,14 +206,17 @@ open class PendingDirectPaymentConfig @Inject constructor(
         }
 
     /**
-     * Every stored gift card purchase counts, released ones included (review 9fa90c30ccf1).
-     * Releasing a payment frees its inputs but does not revoke its signatures: the payee may still
-     * broadcast it, and a second purchase built from other coins would then be paid twice. A record
-     * leaves the store only once its transaction is seen on the network (paid) or a confirmed
-     * transaction spends one of its inputs (it can never confirm); see PendingDirectPaymentVerifier.
+     * Only an unreleased gift card purchase blocks another one (the #1560 rule). A released
+     * (abandoned) one does not: a new purchase is a separate order with its own invoice, not a
+     * second payment of the released one, and if the payee still broadcasts that late, the watch
+     * attributes it to its own order, so the user gets that card and loses nothing.
+     *
+     * The protection of review 9fa90c30ccf1 is untouched: it is about paying the SAME invoice twice,
+     * and the released record keeps blocking its own request (by request hash, in
+     * PendingDirectPaymentVerifier) until its transaction is seen or invalidated.
      */
     private val PendingDirectPayment.isUnresolvedGiftCard: Boolean
-        get() = isGiftCardPurchase
+        get() = isGiftCardPurchase && !abandoned
 
     // Both writes read strictly first. Reading through the fallback would turn a failed read into
     // an empty store, and the write would then replace the file with just this one entry,

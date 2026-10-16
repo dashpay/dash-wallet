@@ -352,14 +352,14 @@ class PendingDirectPaymentConfigTest {
     }
 
     @Test
-    fun aReleasedPurchaseStillBlocks() = runBlocking {
-        // Review 9fa90c30ccf1: its inputs are free again, but its signed transaction is still
-        // valid and the payee may still broadcast it. The record leaves the store only once that
-        // transaction is seen or a confirmed conflicting spend invalidates it.
+    fun aReleasedPurchaseNoLongerBlocksAnotherPurchase() = runBlocking {
+        // A new gift card purchase is a separate order with its own invoice, not a second payment
+        // of this one: a late broadcast of the released payment is still attributed to its own
+        // order. Only the same invoice stays blocked (review 9fa90c30ccf1, by request hash).
         config.add(giftCardPayment.copy(abandoned = true))
 
-        assertTrue(config.hasUnresolvedGiftCardPurchase())
-        assertTrue(config.observeUnresolvedGiftCardPurchase().first())
+        assertFalse(config.hasUnresolvedGiftCardPurchase())
+        assertFalse(config.observeUnresolvedGiftCardPurchase().first())
     }
 
     @Test
