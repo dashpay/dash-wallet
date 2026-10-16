@@ -29,6 +29,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -123,6 +124,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val RESERVATION_TRUST_BLOCKS = 16L
         /** How long a wipe waits for running verifications to stop before going ahead anyway. */
         private const val DRAIN_TIMEOUT_MS = 5_000L
+        /** First wait before retrying a record removal that failed; doubles up to the cap. */
+        private const val DEFAULT_REMOVAL_RETRY_INITIAL_MS = 2_000L
+        private const val REMOVAL_RETRY_MAX_MS = 5 * 60_000L
 
         private const val REQUEST_CLAIM_PREFIX = "request:"
         private const val GIFT_CARD_CLAIM = "gift-card"
@@ -133,6 +137,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
     @VisibleForTesting internal var syncedGraceMs = DEFAULT_SYNCED_GRACE_MS
     @VisibleForTesting internal var recordRetentionMs = DEFAULT_RECORD_RETENTION_MS
     @VisibleForTesting internal var restoreTimeoutMs = DEFAULT_RESTORE_TIMEOUT_MS
+    @VisibleForTesting internal var removalRetryInitialMs = DEFAULT_REMOVAL_RETRY_INITIAL_MS
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val scanMutex = Mutex()
@@ -168,6 +173,17 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * when the submission reaches its quarantine or fails before it, and dropped by a wipe.
      */
     private val submissionClaims = ConcurrentHashMap<String, Sha256Hash>()
+
+    /**
+     * Payments whose outcome is settled (committed, acknowledged, definitively never sent, or
+     * discarded) but whose stored record could not be removed yet. They count as resolved
+     * everywhere in this process: the funding gate, the invoice lookup and claim, and the scan,
+     * which neither watches nor locks them again. [retryPendingRemovals] keeps trying, with backoff,
+     * until each removal lands. In memory and per wallet: a wipe clears the store and this set.
+     */
+    private val pendingRemovals: MutableSet<Sha256Hash> = ConcurrentHashMap.newKeySet()
+
+    @Volatile private var removalRetryJob: Job? = null
     private val claimMutex = Mutex()
 
     init {
@@ -201,6 +217,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // Its in-flight submissions are refused by their own ownership checks; their claims must
         // not hold up the replacement wallet's payments in the meantime.
         submissionClaims.clear()
+        // The store is cleared below; nothing of the old wallet is retried after the wipe.
+        removalRetryJob?.cancel()
+        pendingRemovals.clear()
         running.forEach { it.cancel() }
         // Bounded: a job wedged in a call that does not answer cancellation must not hold up the
         // wipe, and the captured-wallet checks below mean a straggler still cannot touch the
@@ -253,6 +272,8 @@ class PendingDirectPaymentVerifier @Inject constructor(
             walletId = walletIdentity(wallet)
         )
         lockInputs(wallet, tx)
+        // A record being quarantined is active again, whatever an earlier resolution left behind.
+        pendingRemovals.remove(tx.txId)
         try {
             config.add(payment) { stillOwnedBy(wallet) }
         } catch (e: Exception) {
@@ -351,6 +372,11 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 log.info("resuming verification of {} pending direct payment(s)", pending.size)
                 val walletId = walletIdentity(wallet)
                 for (payment in pending) {
+                    if (payment.txId in pendingRemovals) {
+                        // Settled in this process; only its removal is outstanding. Never watched
+                        // or locked again: the retry, not the scan, finishes it.
+                        continue
+                    }
                     if (payment.walletId != null && payment.walletId != walletId) {
                         // Left by a wallet that has since been wiped: a write that was already on
                         // its way when the wipe cleared the store, or a clear that failed. Its
@@ -359,11 +385,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         // rebroadcast a transaction this wallet never made. Dropped, not kept:
                         // no wallet that could use it is left.
                         log.warn("discarding pending payment {}, it belongs to a wallet that was wiped", payment.txId)
-                        try {
-                            config.remove(payment.txId)
-                        } catch (e: Exception) {
-                            log.error("could not discard {}; it will be skipped again next time", payment.txId, e)
-                        }
+                        removeRecord(payment.txId)
                         continue
                     }
                     try {
@@ -459,7 +481,8 @@ class PendingDirectPaymentVerifier @Inject constructor(
             null
         }
         return pending.any { payment ->
-            !payment.abandoned && !payment.watchExpired &&
+            payment.txId !in pendingRemovals &&
+                !payment.abandoned && !payment.watchExpired &&
                 (payment.walletId == null || walletId == null || payment.walletId == walletId) &&
                 !isReservationStillHeld(reservations[payment.txId], now, tip)
         }
@@ -490,7 +513,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
             return null
         }
         return config.getAllOrThrow()
-            .firstOrNull { it.paymentRequestId == paymentRequestId && !it.abandoned }
+            .firstOrNull { it.paymentRequestId == paymentRequestId && !it.abandoned && it.txId !in pendingRemovals }
             ?.txId
     }
 
@@ -523,7 +546,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         keys.firstNotNullOfOrNull { key -> submissionClaims[key]?.takeIf { it != txId } }?.let {
             return@withLock it
         }
-        val stored = config.getAllOrThrow().filter { !it.abandoned && it.txId != txId }
+        val stored = config.getAllOrThrow().filter { !it.abandoned && it.txId != txId && it.txId !in pendingRemovals }
         val recorded = paymentRequestId?.let { id -> stored.firstOrNull { it.paymentRequestId == id } }
             ?: stored.firstOrNull { isGiftCardPurchase && it.isGiftCardPurchase }
         if (recorded != null) {
@@ -552,11 +575,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         jobs.remove(tx.txId)?.cancel()
         reservations.remove(tx.txId)
         walletData.wallet?.let { unlockInputs(it, tx) }
-        try {
-            config.remove(tx.txId)
-        } catch (e: Exception) {
-            log.error("could not remove the pending record of resolved payment {}", tx.txId, e)
-        }
+        removeRecord(tx.txId)
         log.info("quarantine cancelled for {}, its outcome is known", tx.txId)
     }
 
@@ -904,8 +923,58 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     private suspend fun finish(payment: PendingDirectPayment) {
-        config.remove(payment.txId)
+        // Settled either way: the watch ends here even when the removal has to be retried.
+        removeRecord(payment.txId)
         jobs.remove(payment.txId)
+    }
+
+    /**
+     * Removes the stored record of a payment whose outcome is settled. Never throws: a removal that
+     * fails is remembered in [pendingRemovals], which makes the record count as resolved in this
+     * process, and retried with backoff ([retryPendingRemovals]) until it lands. Without that, a
+     * transient storage error left an active record with no watch and no reservation, which the
+     * funding gate reads as unprotected and the gift card check as outstanding, until the next
+     * process start: nothing else scans again once restoration has succeeded.
+     */
+    private suspend fun removeRecord(txId: Sha256Hash) {
+        pendingRemovals.add(txId)
+        try {
+            config.remove(txId)
+            pendingRemovals.remove(txId)
+        } catch (e: CancellationException) {
+            scheduleRemovalRetry()
+            throw e
+        } catch (e: Exception) {
+            log.error("could not remove the record of settled payment {}; retrying", txId, e)
+            scheduleRemovalRetry()
+        }
+    }
+
+    private fun scheduleRemovalRetry() {
+        synchronized(pendingRemovals) {
+            if (removalRetryJob?.isActive == true) return
+            removalRetryJob = scope.launch { retryPendingRemovals() }
+        }
+    }
+
+    /** Retries every pending removal with doubling backoff until none is left. */
+    private suspend fun retryPendingRemovals() {
+        var wait = removalRetryInitialMs
+        while (pendingRemovals.isNotEmpty()) {
+            delay(wait)
+            for (txId in pendingRemovals.toList()) {
+                try {
+                    config.remove(txId)
+                    pendingRemovals.remove(txId)
+                    log.info("removed the record of settled payment {} on retry", txId)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("still could not remove the record of settled payment {}", txId, e)
+                }
+            }
+            wait = minOf(wait * 2, REMOVAL_RETRY_MAX_MS)
+        }
     }
 
     private fun lockInputs(wallet: Wallet, tx: Transaction) {

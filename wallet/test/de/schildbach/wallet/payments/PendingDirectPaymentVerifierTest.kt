@@ -1356,4 +1356,107 @@ class PendingDirectPaymentVerifierTest {
         assertFalse("no build height", protectedWith(null, RESERVED_AT_HEIGHT))
         assertFalse("no current tip", protectedWith(RESERVED_AT_HEIGHT, null))
     }
+
+    // --- a record whose removal fails (review e73b1d7e4d5f) ----------------------------------
+
+    /**
+     * The config mock behaving like the store, with removals that fail while [failRemovals] is
+     * set: what a quarantine writes, later reads see, until a removal actually lands.
+     */
+    private fun storeWithFlakyRemovals(): Pair<MutableList<PendingDirectPayment>, java.util.concurrent.atomic.AtomicBoolean> {
+        val stored = java.util.concurrent.CopyOnWriteArrayList<PendingDirectPayment>()
+        val failRemovals = java.util.concurrent.atomic.AtomicBoolean(false)
+        coEvery { config.add(any(), any()) } answers {
+            val payment = firstArg<PendingDirectPayment>()
+            stored.removeIf { it.txId == payment.txId }
+            stored.add(payment)
+            Unit
+        }
+        coEvery { config.remove(any()) } answers {
+            if (failRemovals.get()) throw java.io.IOException("storage temporarily unavailable")
+            val txId = firstArg<Sha256Hash>()
+            stored.removeIf { it.txId == txId }
+            mockk(relaxed = true)
+        }
+        coEvery { config.getAllOrThrow() } answers { stored.toList() }
+        return stored to failRemovals
+    }
+
+    @Test
+    fun `a resolved payment whose record removal fails once is cleaned up without a restart`() = runBlocking {
+        verifier.removalRetryInitialMs = 50L
+        val (stored, failRemovals) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        assertFalse("held reservation: protected", verifier.hasUnprotectedPendingPayment())
+
+        // acknowledged (or definitively never sent): the outcome is known, but the removal fails
+        failRemovals.set(true)
+        verifier.cancelQuarantine(tx)
+        assertEquals("the record is still on disk", 1, stored.size)
+
+        // resolved, so it must not block SDK funding while its removal is pending
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+        assertNull(verifier.unresolvedSubmissionFor("abc123"))
+
+        // storage recovers: the record goes on its own, with no new service or process
+        failRemovals.set(false)
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(20) }
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+        assertFalse("no watch was resurrected", verifier.isTracked(tx.txId))
+    }
+
+    @Test
+    fun `a scan never resurrects the watch of a resolved payment whose removal is pending`() = runBlocking {
+        verifier.removalRetryInitialMs = 60_000L // the retry stays out of the way
+        val (stored, failRemovals) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        failRemovals.set(true)
+        verifier.cancelQuarantine(tx)
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+
+        verifier.resume()
+        delay(300)
+
+        assertEquals(1, stored.size)
+        assertFalse("no watch for a resolved payment", verifier.isTracked(tx.txId))
+        tx.inputs.forEach { assertFalse("its inputs are not locked again", wallet.isLockedOutput(it.outpoint)) }
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `a committed payment whose record removal fails once is cleaned up without a restart`() = runBlocking {
+        verifier.removalRetryInitialMs = 50L
+        val (stored, failRemovals) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        failRemovals.set(true)
+        coEvery { engine.observation(tx.txId.toString()) } returns EngineObservation.OBSERVED
+
+        val result = verifier.quarantine(tx, paymentUrl, "CTXSpend")
+        val committed = withTimeout(5_000) { result.await() }
+        assertNotNull("committed despite the failed removal", committed)
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+
+        failRemovals.set(false)
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(20) }
+        assertFalse(verifier.isTracked(tx.txId))
+    }
+
+    @Test
+    fun `a wipe drops pending removals and stops their retry`() = runBlocking {
+        verifier.removalRetryInitialMs = 50L
+        val (_, failRemovals) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        failRemovals.set(true)
+        verifier.cancelQuarantine(tx)
+
+        onWalletWiped()
+        // the wipe cleared the store itself; nothing of the old wallet may be retried after it
+        io.mockk.clearMocks(config, answers = false, recordedCalls = true, childMocks = false)
+        delay(400)
+
+        coVerify(exactly = 0) { config.remove(any()) }
+    }
 }
