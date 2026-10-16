@@ -21,6 +21,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -1448,6 +1449,69 @@ class ShieldedBalanceServiceTest {
             coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffs(any()) }
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Settlement of an earlier reconciliation pauses while clearing its durable
+     * marker; a new spend arrives in that window. The older settlement must not
+     * clear the newer spend's flag or marker: after both finish the newer
+     * reconciliation is still pending, and its marker was written AFTER the
+     * older clear.
+     */
+    @Test
+    fun anOlderSettlement_doesNotClearANewerSpendsReconciliation() = runBlocking {
+        val cfg = config(true)
+        // the earlier reconciliation (restored at bring-up, as after a restart)
+        coEvery { cfg.isShieldedSpendReconcilePending() } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffs(any()) } just Runs
+        val clearEntered = CompletableDeferred<Unit>()
+        val clearGate = CompletableDeferred<Unit>()
+        coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
+            clearEntered.complete(Unit)
+            clearGate.await()
+        }
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (!service.shieldedBalanceMaybeStale.value) delay(20) }
+
+            // Drive completed passes (in-flight → idle) with an unchanged balance
+            // until the older settlement reaches its marker clear and pauses.
+            val pollMs = ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS
+            withTimeout(20_000) {
+                while (!clearEntered.isCompleted) {
+                    source.syncing = true
+                    delay(pollMs * 2)
+                    source.syncing = false
+                    delay(pollMs * 2)
+                }
+            }
+
+            // A newer spend lands while the older settlement is paused.
+            val spend = async(Dispatchers.Default) {
+                service.transferShielded(recipientAddress, Dash.COIN, null)
+            }
+            delay(pollMs)
+            clearGate.complete(Unit)
+            assertTrue(withTimeout(5_000) { spend.await() } is SdkWriteResult.Broadcast)
+
+            assertTrue("the newer spend is still reconciling", service.shieldedBalanceMaybeStale.value)
+            coVerifyOrder {
+                cfg.clearShieldedSpendReconcilePending()
+                cfg.markShieldedSpendReconcilePending()
+            }
+        } finally {
+            source.syncing = false
             sweepScope.cancel()
         }
     }

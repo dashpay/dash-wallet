@@ -1316,8 +1316,11 @@ class ShieldedBalanceServiceImpl internal constructor(
                     false
                 }
             if (reconcilePending) {
-                _shieldedBalanceMaybeStale.value = true
-                lastPassBalanceCredits = null
+                reconcileMutex.withLock {
+                    reconcileGeneration++
+                    _shieldedBalanceMaybeStale.value = true
+                    lastPassBalanceCredits = null
+                }
             }
             while (isActive) {
                 if (readyWalletIdHex.value == null) {
@@ -1349,23 +1352,31 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // across two consecutive completed passes before clearing —
                 // the surface holds "Syncing…" until the value stops moving.
                 if (prevInFlight && !inFlight) {
+                    val generation = reconcileMutex.withLock { reconcileGeneration }
                     val settledCredits = runCatching {
                         readyWalletIdHex.value?.let(::walletIdFromHex)?.let { walletId ->
                             source.observeUnspentNotes(walletId).first().sumOf { it.value }
                         }
                     }.getOrNull()
-                    if (settledCredits != null && settledCredits == lastPassBalanceCredits) {
-                        if (_shieldedBalanceMaybeStale.value) {
-                            // Settled: the durable marker goes with the flag.
-                            runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
-                                .onFailure {
-                                    if (it is CancellationException) throw it
-                                    log.warn("failed to clear the pending shielded spend reconciliation", it)
-                                }
+                    // Decide and apply atomically with markLocalSpendPending: a
+                    // spend that started since [generation] owns the flag, the
+                    // marker and the stability window, so this pass's reading
+                    // is dropped rather than clearing (or seeding) them.
+                    reconcileMutex.withLock {
+                        if (generation != reconcileGeneration) return@withLock
+                        if (settledCredits != null && settledCredits == lastPassBalanceCredits) {
+                            if (_shieldedBalanceMaybeStale.value) {
+                                // Settled: the durable marker goes with the flag.
+                                runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
+                                    .onFailure {
+                                        if (it is CancellationException) throw it
+                                        log.warn("failed to clear the pending shielded spend reconciliation", it)
+                                    }
+                            }
+                            _shieldedBalanceMaybeStale.value = false
                         }
-                        _shieldedBalanceMaybeStale.value = false
+                        lastPassBalanceCredits = settledCredits
                     }
-                    lastPassBalanceCredits = settledCredits
                 }
                 prevInFlight = inFlight
                 _shieldedSyncStatus.value = mapShieldedSyncStatus(
@@ -1939,24 +1950,46 @@ class ShieldedBalanceServiceImpl internal constructor(
      * screen-entry [syncNow] refresh must NOT mark the balance stale.
      */
     private suspend fun markLocalSpendPending() {
-        _shieldedBalanceMaybeStale.value = true
-        // Restart the two-pass stability window: the flag must survive at
-        // least two completed passes with an unchanged balance from here.
-        lastPassBalanceCredits = null
-        // The flag is in-memory only (false in a new process, reset by
-        // tearDownReadyState), so record the pending reconciliation durably
-        // too: drop the persisted last-known balance (a stop or process death
-        // must not resurrect the pre-spend amount) and set the marker that
-        // [startSyncStatusPolling] restores the settlement guard from on the
-        // next bring-up. [startBalancePersistence] skips writes while stale,
-        // so only a settled balance makes the cache valid again.
         // NonCancellable + best-effort: the spend already broadcast, so this
         // must never turn a success into a failure for the caller.
         withContext(NonCancellable) {
-            runCatching { dashPayConfig.markShieldedSpendReconcilePending() }
-                .onFailure { log.warn("failed to persist the pending shielded spend reconciliation", it) }
+            // Under [reconcileMutex], like settlement completion in
+            // [startSyncStatusPolling]: a settlement for an EARLIER spend that
+            // is mid-flight (suspended clearing its marker) must not clear this
+            // spend's flag, marker or stability window. The new generation makes
+            // that earlier decision void once it re-enters the lock.
+            reconcileMutex.withLock {
+                reconcileGeneration++
+                _shieldedBalanceMaybeStale.value = true
+                // Restart the two-pass stability window: the flag must survive
+                // at least two completed passes with an unchanged balance.
+                lastPassBalanceCredits = null
+                // The flag is in-memory only (false in a new process, reset by
+                // tearDownReadyState), so record the pending reconciliation
+                // durably too: drop the persisted last-known balance (a stop or
+                // process death must not resurrect the pre-spend amount) and set
+                // the marker [startSyncStatusPolling] restores the guard from on
+                // the next bring-up. [startBalancePersistence] skips writes while
+                // stale, so only a settled balance makes the cache valid again.
+                runCatching { dashPayConfig.markShieldedSpendReconcilePending() }
+                    .onFailure { log.warn("failed to persist the pending shielded spend reconciliation", it) }
+            }
         }
     }
+
+    /**
+     * Serializes a local spend's reconciliation start ([markLocalSpendPending])
+     * with settlement completion in [startSyncStatusPolling], covering the
+     * in-memory flag, [lastPassBalanceCredits] and the durable marker together.
+     */
+    private val reconcileMutex = Mutex()
+
+    /**
+     * Bumped (under [reconcileMutex]) whenever a reconciliation starts. The
+     * poller captures it before reading a pass's balance and drops its
+     * settlement decision if a newer reconciliation began in the meantime.
+     */
+    private var reconcileGeneration = 0L
 
     /** Balance at the last completed sync pass — see the stability gate in [startSyncStatusPolling]. */
     @Volatile
