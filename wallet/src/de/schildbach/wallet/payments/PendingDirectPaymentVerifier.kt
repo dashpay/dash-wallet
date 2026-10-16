@@ -131,6 +131,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
     @VisibleForTesting internal var restoreTimeoutMs = DEFAULT_RESTORE_TIMEOUT_MS
     @VisibleForTesting internal var removalRetryInitialMs = DEFAULT_REMOVAL_RETRY_INITIAL_MS
 
+    /**
+     * Test seam: runs in the removal retry worker right after it finds the queue drained, before
+     * it decides whether to retire: the window in which another removal can fail and be queued.
+     */
+    @VisibleForTesting internal var afterRemovalQueueDrained: suspend () -> Unit = {}
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val scanMutex = Mutex()
 
@@ -216,8 +222,11 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // not hold up the replacement wallet's payments in the meantime.
         submissionClaims.clear()
         // The store is cleared below; nothing of the old wallet is retried after the wipe.
-        removalRetryJob?.cancel()
-        pendingRemovals.clear()
+        synchronized(pendingRemovals) {
+            removalRetryJob?.cancel()
+            removalRetryJob = null
+            pendingRemovals.clear()
+        }
         running.forEach { it.cancel() }
         // Bounded: a job wedged in a call that does not answer cancellation must not hold up the
         // wipe, and the captured-wallet checks below mean a straggler still cannot touch the
@@ -1001,6 +1010,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
     }
 
+    /**
+     * Starts the retry worker unless one is running. "Running" means its reference is still set:
+     * the worker clears it itself, under the same lock, at the moment it decides to retire
+     * ([retireRemovalWorkerIfDrained]), so a removal queued after that decision always starts a
+     * new worker, and one queued before it is seen by the worker's own check.
+     */
     private fun scheduleRemovalRetry() {
         synchronized(pendingRemovals) {
             if (removalRetryJob?.isActive == true) return
@@ -1008,10 +1023,25 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
     }
 
+    /**
+     * The worker's exit decision, atomic with [scheduleRemovalRetry]: if nothing is queued it gives
+     * up its reference and retires (true); otherwise it carries on (false). The queue is added to
+     * before scheduling, so an id queued at any point is either seen here or starts a new worker.
+     */
+    private fun retireRemovalWorkerIfDrained(): Boolean = synchronized(pendingRemovals) {
+        if (pendingRemovals.isNotEmpty()) return@synchronized false
+        removalRetryJob = null
+        true
+    }
+
     /** Retries every pending removal with doubling backoff until none is left. */
     private suspend fun retryPendingRemovals() {
         var wait = removalRetryInitialMs
-        while (pendingRemovals.isNotEmpty()) {
+        while (true) {
+            if (pendingRemovals.isEmpty()) {
+                afterRemovalQueueDrained()
+                if (retireRemovalWorkerIfDrained()) return
+            }
             delay(wait)
             for (txId in pendingRemovals.toList()) {
                 try {

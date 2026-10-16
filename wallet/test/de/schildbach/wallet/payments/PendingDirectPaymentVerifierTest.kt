@@ -1718,4 +1718,35 @@ class PendingDirectPaymentVerifierTest {
         assertNull(wallet.getTransaction(tx.txId))
         assertTrue(verifier.isTracked(tx.txId))
     }
+
+    @Test
+    fun `a removal that fails while the retry worker is retiring is still retried`() = runBlocking {
+        // r4296870284: the worker found the queue empty and was about to exit, still active, when
+        // another payment's removal failed; scheduling saw the active worker and started none, so
+        // the new id was never retried
+        verifier.removalRetryInitialMs = 20L
+        val (stored, failRemovals) = storeWithFlakyRemovals()
+        val first = createTransaction()
+        val second = createTransaction()
+        verifier.quarantine(first, paymentUrl, "CTXSpend", reservation = reservationFor(first))
+        verifier.quarantine(second, paymentUrl, "CTXSpend", reservation = reservationFor(second))
+
+        var interleaved = false
+        verifier.afterRemovalQueueDrained = {
+            if (!interleaved) {
+                interleaved = true
+                // in the retiring worker's window: the second payment settles and its removal fails
+                failRemovals.set(true)
+                verifier.cancelQuarantine(second)
+                failRemovals.set(false)
+            }
+        }
+
+        failRemovals.set(true)
+        verifier.cancelQuarantine(first)
+        failRemovals.set(false)
+
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }
+        assertTrue(interleaved)
+    }
 }
