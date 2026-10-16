@@ -171,6 +171,14 @@ class SdkWalletBinderTest {
             return onProvision(walletIdHex)
         }
 
+        /** The sweep-free contact fetch ([DashSdkService.discoverDashPayContactRequests]). */
+        var contactFetchCalls = 0
+        var onContactFetch: suspend (String, ByteArray) -> Boolean = { _, _ -> true }
+        override suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean {
+            contactFetchCalls++
+            return onContactFetch(walletIdHex, identityId)
+        }
+
         var drainCalls = 0
         var lastDrainWalletId: String? = null
         var onDrain: suspend (String) -> DashPayContactDrainReport = { _ ->
@@ -1515,6 +1523,160 @@ class SdkWalletBinderTest {
 
         binder.resetForWalletRecreation()
         assertFalse("the re-created wallet's store starts empty", binder.contactDiscoveryCompleted(walletId))
+    }
+
+    @Test
+    fun contactDiscovery_aSweepThatStartedBeforeAWalletRecreation_doesNotMarkTheNewStore() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock)
+        sdk.onProvision = { _ ->
+            // The wallet is re-created while the sweep is answering for the old store.
+            binder.resetForWalletRecreation()
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.provisionCalls)
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+    }
+
+    // ── Contact discovery when the backfill gate skips the sweep (PR #1608 review, round 12) ──
+
+    /**
+     * Backfill coverage already recorded (an upgraded wallet, or a recovery
+     * restarted after its backfill finished): the gate skips the sweep on
+     * every pass, the drain registers nothing new, so no sweep ever runs in
+     * this process.
+     */
+    private fun coveredGate() = FakeBackfillGate(shouldRun = false).apply { persistedCoverage = true }
+
+    @Test
+    fun contactDiscovery_gateSkipsTheSweep_confirmedByAFetchWithoutTheSweep() = runBlocking {
+        val sdk = readySdk()
+        var fetchedFor: Pair<String, ByteArray>? = null
+        sdk.onContactFetch = { wallet, identity ->
+            fetchedFor = wallet to identity
+            true
+        }
+        val gate = coveredGate()
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertEquals("no sweep, so no rewind", 0, sdk.provisionCalls)
+        assertEquals(1, sdk.contactFetchCalls)
+        assertEquals(walletId, fetchedFor?.first)
+        assertTrue(Identifier.from(userId).toBuffer().contentEquals(fetchedFor?.second))
+        assertEquals("the drain still runs, after the fetch", 1, sdk.drainCalls)
+        assertTrue("coverage untouched", gate.persistedCoverage)
+
+        // Once confirmed, later passes do not fetch again.
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals(1, sdk.contactFetchCalls)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun contactDiscovery_gateSkipsTheSweep_aFailedFetch_failsClosed_andTheNextPassRetries() = runBlocking {
+        val sdk = readySdk()
+        var outcome: () -> Boolean = { throw IllegalStateException("Platform unreachable") }
+        sdk.onContactFetch = { _, _ -> outcome() }
+        val binder = binder(sdk, backfillGate = coveredGate(), scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("the fetch threw", binder.contactDiscoveryCompleted(walletId))
+        assertEquals("the drain still runs", 1, sdk.drainCalls)
+
+        outcome = { false }
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("the wallet or identity was not loaded", binder.contactDiscoveryCompleted(walletId))
+
+        outcome = { true }
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertEquals(3, sdk.contactFetchCalls)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun contactDiscovery_gateSkipsTheSweep_aFetchAnsweringForARecreatedWallet_isIgnored() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, backfillGate = coveredGate(), scope = this)
+        binder.bindIfEnabled(unlock)
+        sdk.onContactFetch = { _, _ ->
+            binder.resetForWalletRecreation()
+            true
+        }
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+    }
+
+    @Test
+    fun recoveredWallet_existingCoverage_noHistoryMarker_drainRegistersNothing_paidHistoryBecomesKnown() = runBlocking {
+        // The round-12 blocker end to end: backfill coverage already recorded,
+        // no paid-history marker, a drain that registers nothing, every contact
+        // account registered and covered and the scan through the tip. The
+        // only missing piece was discovery, which only a sweep confirmed — and
+        // the gate never lets one run — so contact payments were refused forever.
+        val sdk = readySdk()
+        val binder = binder(sdk, backfillGate = coveredGate(), scope = this)
+        binder.bindIfEnabled(unlock)
+        val contactHex = "ab".repeat(32)
+        fun uncovered(walletId: String) = de.schildbach.wallet.service.platform.sdk.contactHistoryUncoveredBecause(
+            discoveryCompleted = binder.contactDiscoveryCompleted(walletId),
+            sentRequestContacts = setOf(contactHex),
+            requestFloors = mapOf(contactHex to 1_500L),
+            birthHeight = 1_000L,
+            receivalAccounts = listOf(contactHex to 0),
+            coverSet = mapOf((contactHex to 0) to 999L)
+        )
+        val chain = object : ContactPaymentChainView {
+            override fun walletId(): String = walletId
+            override suspend fun scanState(walletId: String) =
+                ContactChainScanState(tipHeight = 2_000L, processedHeight = 2_000L, scanSettled = true)
+            override suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String) =
+                uncovered(walletId)
+            override fun paysAddress(address: org.bitcoinj.core.Address): Boolean = false
+        }
+        val params = org.bitcoinj.params.TestNet3Params.get()
+        val pool = List(2) { org.bitcoinj.core.Address.fromKey(params, org.bitcoinj.core.ECKey()) }
+        val reference = 0x1234
+        val paid = PaidContactAddressStore(file = null)
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ ->
+                SdkContactSendingAccount(
+                    incomingRequestFound = true,
+                    paymentChannelBroken = false,
+                    externalAccountReference = reference,
+                    addresses = pool.mapIndexed { i, a -> SdkContactPoolAddress(a.toBase58(), i, i == 0, poolTypeTag = 2) }
+                )
+            },
+            dashjNextAddress = { _, _ -> null },
+            dashjMarkUsed = { _, _, _ -> null },
+            params = params,
+            paidAddresses = paid,
+            chain = chain
+        )
+        val target = ContactPaymentTarget(userId, Identifier.from(ByteArray(32) { 2 }).toString(), reference)
+        assertEquals("the SDK's contact discovery has not finished", uncovered(walletId))
+        assertNull(provider.nextAddress(target))
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(0, sdk.provisionCalls)
+        assertNull(uncovered(walletId))
+        assertEquals(pool[1], provider.nextAddress(target)?.address)
+        assertTrue(paid.paidHistoryKnown(walletId))
     }
 
     // ── DIP-15 coreHeight-backfill gate wiring ──────────────────────────

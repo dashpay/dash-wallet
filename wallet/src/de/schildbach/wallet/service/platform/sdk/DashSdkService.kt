@@ -657,6 +657,27 @@ interface DashSdkService {
     suspend fun provisionDashPayContactAccounts(walletIdHex: String): DashPayContactProvisionReport
 
     /**
+     * Contact discovery WITHOUT the sweep: fetch [identityId]'s received and
+     * sent contact requests from Platform into the SDK wallet [walletIdHex]
+     * (`Dashpay.syncContactRequests` — step 1 of
+     * [provisionDashPayContactAccounts]'s sweep only). It ingests and persists
+     * the requests and enqueues any missing account builds for the drain, but
+     * runs none of the sweep's reconciles, so it never lowers the SPV synced
+     * height. For passes the DIP-15 backfill gate keeps from sweeping, which
+     * still need discovery confirmed ([SdkWalletBinder.contactDiscoveryCompleted],
+     * PR #1608 review, round 12).
+     *
+     * True only when the wallet is loaded, manages [identityId], and the fetch
+     * answered; false when the wallet or the identity is not there. Throws when
+     * the fetch failed. Default false (nothing confirmed) so fakes stay
+     * source-compatible.
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     * @param identityId our 32-byte platform identity id.
+     */
+    suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean = false
+
+    /**
      * Run the signer-backed drain of the DEFERRED contact-crypto queue ALONE
      * — step 2 of [provisionDashPayContactAccounts] without the sweep — and
      * observe the outcome for a bounded window so the pass can report how many

@@ -311,7 +311,8 @@ class L1ShadowSyncServiceTest {
         scanMayAdvance: suspend (String) -> Boolean = { true },
         scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
         durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS,
-        breakdownStore: ParityBreakdownStore? = null
+        breakdownStore: ParityBreakdownStore? = null,
+        forgetContactPaidHistory: suspend (String) -> Boolean = { true }
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -328,7 +329,8 @@ class L1ShadowSyncServiceTest {
         scanMayAdvance = scanMayAdvance,
         scanGateRetryInitialMs = scanGateRetryInitialMs,
         durableHeightRefreshMs = durableHeightRefreshMs,
-        breakdownStore = breakdownStore
+        breakdownStore = breakdownStore,
+        forgetContactPaidHistory = forgetContactPaidHistory
     )
 
     /**
@@ -2557,6 +2559,73 @@ class L1ShadowSyncServiceTest {
             while (source.startCalls < 2) delay(5)
         }
         assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_dropsThePaidHistoryMarkerBeforeTheSdkWalletIsRemoved() = runBlocking {
+        // PR #1608 review, round 12: the marker names the seed-derived wallet,
+        // and the re-created SDK wallet has the same id. Kept, it would vouch
+        // for the empty store that replaces the deleted one, and a payment made
+        // before (outside the paid-address file) would look unpaid.
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnown(walletIdHex)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        var markerOnDiskWhenRemoved: Boolean? = null
+        recreator.onRemove = {
+            markerOnDiskWhenRemoved = PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex)
+        }
+        val service = service(source, recreator = recreator, forgetContactPaidHistory = store::forgetPaidHistory)
+        assertTrue(service.startIfEnabled())
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertEquals(false, markerOnDiskWhenRemoved)
+        assertFalse(store.paidHistoryKnown(walletIdHex))
+        // The re-created wallet (same id) is not vouched for after a restart either.
+        assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusesWhenThePaidHistoryMarkerCannotBeDropped() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, forgetContactPaidHistory = { false })
+
+        assertFalse(service.recoverByRecreatingWallet())
+
+        assertTrue(recreator.removedWalletIds.isEmpty())
+        assertFalse(recreator.events.contains("rebind"))
+    }
+
+    @Test
+    fun resetShadowState_dropsThePaidHistoryMarkerBeforeTheL1Rows_andRefusesWhenItCannot() = runBlocking {
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnown(walletIdHex)
+        val store = PaidContactAddressStore(paidFile)
+        var droppable = false
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var markerOnDiskWhenRowsCleared: Boolean? = null
+        source.onClearRows = {
+            markerOnDiskWhenRowsCleared = PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex)
+        }
+        val service = service(
+            source,
+            forgetContactPaidHistory = { id -> droppable && store.forgetPaidHistory(id) }
+        )
+        assertTrue(service.startIfEnabled())
+
+        assertFalse(service.resetShadowState(hard = true))
+        assertEquals(0, source.clearL1RowsCalls)
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+
+        droppable = true
+        assertTrue(service.resetShadowState(hard = true))
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(false, markerOnDiskWhenRowsCleared)
+        assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
     }
 
     @Test

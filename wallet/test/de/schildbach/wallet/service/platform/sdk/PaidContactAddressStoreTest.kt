@@ -555,6 +555,67 @@ class PaidContactAddressStoreTest {
         assertFalse(PaidContactAddressStore(dir, nowMs = { now }).paidHistoryKnown("w1"))
     }
 
+    // ── the SDK's transaction store rebuilt (PR #1608 review, round 12) ──
+
+    @Test
+    fun forgetPaidHistory_dropsTheMarkerOnDisk_andKeepsThePaidAddresses() {
+        val s = store()
+        s.record("yA", target, 0)
+        s.markPaidHistoryKnown("w1")
+
+        assertTrue(s.forgetPaidHistory("w1"))
+
+        assertFalse(s.paidHistoryKnown("w1"))
+        val restarted = store()
+        assertFalse("the re-created wallet (same id) is not vouched for", restarted.paidHistoryKnown("w1"))
+        assertEquals(setOf("yA"), restarted.paid())
+        // Known again only once the rebuilt store has been processed through the tip.
+        s.markPaidHistoryKnown("w1")
+        assertTrue(store().paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun forgetPaidHistory_ofAnotherWallet_keepsTheMarker() {
+        val s = store()
+        s.markPaidHistoryKnown("w1")
+
+        assertTrue(s.forgetPaidHistory("w2"))
+
+        assertTrue(store().paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun forgetPaidHistory_unreadableFile_refuses() {
+        store().markPaidHistoryKnown("w1")
+        assertTrue(file.setReadable(false))
+        assumeFalse(file.canRead())
+        try {
+            assertFalse("the file may hold the marker for the next process", store().forgetPaidHistory("w1"))
+        } finally {
+            file.setReadable(true)
+        }
+    }
+
+    @Test
+    fun forgetPaidHistory_unwritableFile_refuses_butForgetsInMemory() {
+        val dir = File(tmp.root, "locked").apply { mkdirs() }
+        val locked = File(dir, PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(locked, nowMs = { now }).markPaidHistoryKnown("w1")
+        val s = PaidContactAddressStore(locked, nowMs = { now })
+        assertTrue(s.paidHistoryKnown("w1"))
+        assertTrue(dir.setWritable(false))
+        try {
+            assumeFalse(File(dir, "probe").let { runCatching { it.createNewFile() }.getOrDefault(false) })
+
+            assertFalse(s.forgetPaidHistory("w1"))
+
+            assertFalse(s.paidHistoryKnown("w1"))
+        } finally {
+            dir.setWritable(true)
+        }
+        assertTrue("still on disk", PaidContactAddressStore(locked, nowMs = { now }).paidHistoryKnown("w1"))
+    }
+
     @Test
     fun paidHistoryLine_isNotReadAsAnEntryOrFrontier() {
         val s = store()

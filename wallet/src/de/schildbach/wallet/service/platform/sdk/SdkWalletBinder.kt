@@ -555,25 +555,51 @@ class SdkWalletBinder internal constructor(
     private var lastProvisionAtMs = 0L
 
     /**
-     * The SDK wallet whose DashPay sweep, in this process, fetched the
-     * contact requests of at least one identity and failed for none
-     * ([contactDiscoveryCompleted]). Cleared with the bound wallet on a
-     * re-creation ([resetForWalletRecreation]).
+     * The SDK wallet whose contact requests were fetched from Platform, in
+     * this process, without an error ([contactDiscoveryCompleted]) — by a
+     * DashPay sweep or, when the backfill gate skips the sweep, by the
+     * fetch alone ([confirmContactDiscoveryWithoutSweep]). Cleared with the
+     * bound wallet on a re-creation ([resetForWalletRecreation]). Written
+     * under [discoveryLock].
      */
     @Volatile
     private var contactDiscoveryWalletIdHex: String? = null
 
     /**
+     * Bumped by [resetForWalletRecreation]: a fetch that started before a
+     * re-creation answered for the destroyed wallet's store, so it must not
+     * mark the re-created one (same deterministic id) discovered. Under
+     * [discoveryLock].
+     */
+    private var contactStoreGeneration = 0L
+    private val discoveryLock = Any()
+
+    /**
      * Whether contact discovery has finished for SDK wallet [walletIdHex] in
-     * this process: a provisioning pass's DashPay sweep fetched every managed
-     * identity's contact requests without an error, so the SDK's store holds
-     * every request the wallet had then — the universe of its DIP-15
-     * accounts. Before that the store can be empty or partial (a restore, a
-     * bring-up that timed out), and an empty store vouches for nothing
+     * this process: every managed identity's contact requests were fetched
+     * from Platform without an error, so the SDK's store holds every request
+     * the wallet had then — the universe of its DIP-15 accounts. Before that
+     * the store can be empty or partial (a restore, a bring-up that timed
+     * out), and an empty store vouches for nothing
      * ([ContactPaymentAddressProvider]'s recovery barrier, PR #1608 review,
      * round 11).
      */
     fun contactDiscoveryCompleted(walletIdHex: String): Boolean = contactDiscoveryWalletIdHex == walletIdHex
+
+    /** The [contactStoreGeneration] a fetch starts in, for [markContactDiscoveryCompleted]. */
+    private fun contactStoreGeneration(): Long = synchronized(discoveryLock) { contactStoreGeneration }
+
+    /**
+     * Record that a fetch begun in [generation] completed discovery for
+     * [walletIdHex] — unless the wallet was re-created since. Returns whether
+     * it was recorded.
+     */
+    private fun markContactDiscoveryCompleted(walletIdHex: String, generation: Long): Boolean =
+        synchronized(discoveryLock) {
+            if (generation != contactStoreGeneration) return false
+            contactDiscoveryWalletIdHex = walletIdHex
+            true
+        }
 
     /**
      * Forget everything a previous pass established — the shadow-state
@@ -601,8 +627,12 @@ class SdkWalletBinder internal constructor(
             boundWalletIdHex = null
             boundWalletFingerprint = null
             completed = false
-            // The re-created wallet's store starts empty: discovered again.
-            contactDiscoveryWalletIdHex = null
+            // The re-created wallet's store starts empty: discovered again,
+            // and not by a fetch still answering for the destroyed one.
+            synchronized(discoveryLock) {
+                contactStoreGeneration++
+                contactDiscoveryWalletIdHex = null
+            }
             // A re-created SDK wallet comes up at the default windows again.
             widenedWalletIdHex = null
             debtRecordedWalletIdHex = null
@@ -806,6 +836,15 @@ class SdkWalletBinder internal constructor(
                         // short — and before this, the queue was only ever
                         // drained on a pass the gate allowed through, i.e. on
                         // almost no launch after the first.
+                        //
+                        // Nor does it skip contact DISCOVERY: the sweep is the
+                        // only other thing that confirms it, so a wallet whose
+                        // coverage is already recorded would otherwise never
+                        // confirm it in this process — and contact payments stay
+                        // refused while it is unconfirmed (PR #1608 review,
+                        // round 12). Fetched before the drain, so the drain
+                        // registers any account a new contact needs.
+                        confirmContactDiscoveryWithoutSweep(walletId, identityId)
                         val registeredNew = drainDeferredAccountBuilds(walletId, identityId)
                         // Post-drain follow-up sweep, at most ONE per cycle:
                         // accounts this drain just REGISTERED were not there
@@ -1059,6 +1098,44 @@ class SdkWalletBinder internal constructor(
     }
 
     /**
+     * Confirm contact discovery for [walletId] on a pass the backfill gate
+     * keeps from sweeping ([contactDiscoveryCompleted]): fetch the contact
+     * requests from Platform without the sweep
+     * ([DashSdkService.discoverDashPayContactRequests]), which never lowers
+     * the SPV synced height. Fails closed: a fetch that throws or cannot run
+     * leaves discovery unconfirmed, and the next provisioning pass tries
+     * again. Nothing to do once confirmed in this process. Never throws.
+     */
+    private suspend fun confirmContactDiscoveryWithoutSweep(walletId: String, identityId: ByteArray) {
+        if (contactDiscoveryCompleted(walletId)) return
+        val generation = contactStoreGeneration()
+        try {
+            if (!sdkService.discoverDashPayContactRequests(walletId, identityId)) {
+                log.info(
+                    "DashPay contact discovery on {}… not confirmed: the SDK wallet or the identity " +
+                        "is not loaded yet; retried on the next pass",
+                    walletId.take(8)
+                )
+            } else if (markContactDiscoveryCompleted(walletId, generation)) {
+                log.info(
+                    "DashPay contact discovery confirmed on {}… by a fetch without the sweep (the " +
+                        "backfill gate skipped it)",
+                    walletId.take(8)
+                )
+            } else {
+                log.info("DashPay contact discovery on {}… ignored: the wallet was re-created", walletId.take(8))
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn(
+                "DashPay contact discovery on {}… failed; contact payments stay refused until a later " +
+                    "pass confirms it",
+                walletId.take(8), t
+            )
+        }
+    }
+
+    /**
      * One provisioning pass — the SDK sweep + drain
      * ([DashSdkService.provisionDashPayContactAccounts]) with its gate
      * accounting, wallet.log lines and post-drain receival-coverage
@@ -1072,9 +1149,10 @@ class SdkWalletBinder internal constructor(
      *   a gate that records nothing ([DashPayBackfillGate.ALWAYS_RUN]).
      */
     private suspend fun runProvisioningSweep(walletId: String, identityId: ByteArray?): Boolean {
+        val generation = contactStoreGeneration()
         val report = sdkService.provisionDashPayContactAccounts(walletId)
         if (report.bound && report.syncSuccess > 0 && report.syncErrors == 0) {
-            contactDiscoveryWalletIdHex = walletId
+            markContactDiscoveryCompleted(walletId, generation)
         }
         identityId?.let { backfillGate.recordPassOutcome(walletId, it, report) }
         // The sweep is a long native op: its SDK lines sat in the

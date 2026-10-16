@@ -118,8 +118,9 @@ import java.util.concurrent.TimeUnit
  * What a lookup finds paid there is recorded like a sent payment
  * ([recordPaidOnChain]). It is unknown
  * when there is no file (new install, cleared data, new device), when the file
- * predates the marker, after every wallet change ([onWalletChanged]), and for
- * any other SDK wallet. While it is unknown, [ContactPaymentAddressProvider]
+ * predates the marker, after every wallet change ([onWalletChanged]), once the
+ * SDK's transaction store is deleted to be rebuilt ([forgetPaidHistory]), and
+ * for any other SDK wallet. While it is unknown, [ContactPaymentAddressProvider]
  * hands out no post-cutover contact address at all.
  *
  * File format: optionally `history <sdkWalletId>` ([paidHistoryKnown]), then
@@ -511,6 +512,32 @@ class PaidContactAddressStore(
             historyWalletId = walletId
             write(map)
         }
+    }
+
+    /**
+     * The SDK's transaction store for [walletId] is about to be deleted (its
+     * wallet re-created under the same id, or its L1 rows cleared): what that
+     * store vouched for is gone, so the paid-address history is unknown again
+     * until the rebuilt store has been processed through the tip (PR #1608
+     * review, round 12). The marker names the seed-derived wallet, which the
+     * re-created wallet shares, so it has to be dropped here.
+     *
+     * True when no marker for [walletId] is left on disk — dropped and
+     * written, or never there. False when the file cannot be read (it may
+     * hold the marker, and the next process could read it) or the write
+     * failed: the caller must not delete the store then. The marker is
+     * dropped in memory either way. Blocking.
+     */
+    fun forgetPaidHistory(walletId: String): Boolean = synchronized(lock) {
+        val map = loaded()
+        if (readFailed) {
+            log.warn("could not read {}; the paid-address history marker cannot be dropped", file)
+            return false
+        }
+        if (historyWalletId != walletId) return true
+        historyWalletId = null
+        log.info("the SDK's transaction store is being rebuilt; the paid-address history is unknown again")
+        write(map)
     }
 
     /** Whether [address] has an entry and it is settled; null without an entry. For tests and logs. */

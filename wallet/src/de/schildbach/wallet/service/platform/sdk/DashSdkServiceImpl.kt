@@ -801,6 +801,24 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
+     * See [DashSdkService.discoverDashPayContactRequests]. The wallet-level
+     * `syncContactRequests` (Rust `sync_contact_requests`) is the same fetch
+     * the sweep starts with; unlike `dashPaySyncNow` it runs no
+     * `reconcile_dashpay_rescan`, so the synced height is left alone. It throws
+     * when not one identity's requests could be read.
+     */
+    override suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val managed = current.walletManager.wallets.value[walletIdHex] ?: return false
+        // A wallet without the identity answers vacuously: nothing was fetched.
+        if (!isIdentityManaged(walletIdHex, identityId)) return false
+        managed.dashpay.syncContactRequests()
+        log.info("DashPay contact requests fetched for SDK wallet {}… without a sweep", walletIdHex.take(8))
+        return true
+    }
+
+    /**
      * See [DashSdkService.drainDashPayContactAccountBuilds]. Deliberately does
      * NOT sweep: the sweep is what rewinds the SPV synced height, and this
      * exists precisely so the queue can be drained on launches where the
