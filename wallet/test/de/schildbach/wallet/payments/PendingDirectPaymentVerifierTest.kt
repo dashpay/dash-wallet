@@ -230,7 +230,7 @@ class PendingDirectPaymentVerifierTest {
             ) delay(10)
         }
         // a confirmed transaction now spends one of its inputs: it can never confirm
-        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        coEvery { engine.inputSpentByFinalConflict(any()) } returns true
         assertNull(withTimeout(5_000) { result.await() })
 
         // the order was never placed, so everything recorded for it must go: cards, metadata,
@@ -266,7 +266,7 @@ class PendingDirectPaymentVerifierTest {
                 }.isFailure
             ) delay(10)
         }
-        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        coEvery { engine.inputSpentByFinalConflict(any()) } returns true
         delay(300)
 
         // inputs are freed, but the record survives so the cleanup can be retried
@@ -320,7 +320,7 @@ class PendingDirectPaymentVerifierTest {
         verifier.syncedGraceMs = 100L
         goOnlineAndSynced()
         coEvery { metadataProvider.forgetTransaction(any()) } throws RuntimeException("database is gone")
-        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        coEvery { engine.inputSpentByFinalConflict(any()) } returns true
         val tx = createTransaction()
 
         verifier.quarantine(tx, paymentUrl, "CTXSpend")
@@ -349,7 +349,7 @@ class PendingDirectPaymentVerifierTest {
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
 
-        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        coEvery { engine.inputSpentByFinalConflict(any()) } returns true
         withTimeout(5_000) { while (verifier.isTracked(tx.txId)) delay(10) }
         coVerify { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
         coVerify { config.remove(tx.txId) }
@@ -504,7 +504,7 @@ class PendingDirectPaymentVerifierTest {
         }
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
 
-        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        coEvery { engine.inputSpentByFinalConflict(any()) } returns true
         assertNull(withTimeout(5_000) { result.await() })
 
         coVerify { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
@@ -1605,7 +1605,7 @@ class PendingDirectPaymentVerifierTest {
         delay(200)
         assertEquals("still blocked while T1 is valid", tx.txId, verifier.unresolvedSubmissionFor("abc123"))
 
-        coEvery { engine.inputSpentByConfirmedConflict(any()) } returns true
+        coEvery { engine.inputSpentByFinalConflict(any()) } returns true
         withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }
 
         assertNull(verifier.unresolvedSubmissionFor("abc123"))
@@ -1625,17 +1625,31 @@ class PendingDirectPaymentVerifierTest {
 
     // the SDK engine's view of a conflicting spend
 
-    private fun engineWithTxo(txo: org.dashfoundation.dashsdk.persistence.entities.TxoEntity?, spenderHeight: Int?): SdkPendingPaymentEngine {
+    private fun engineWithTxo(
+        txo: org.dashfoundation.dashsdk.persistence.entities.TxoEntity?,
+        spenderHeight: Int?,
+        spenderContext: Int = 2, // inBlock
+        chainLockHeight: Int = 0,
+        headerHeight: Long = 0L
+    ): SdkPendingPaymentEngine {
         val db = mockk<org.dashfoundation.dashsdk.persistence.DashDatabase>(relaxed = true)
         every { db.txoDao() } returns mockk(relaxed = true) { coEvery { getByOutpoint(any()) } returns txo }
         every { db.transactionDao() } returns mockk(relaxed = true) {
             coEvery { getByTxid(any()) } returns spenderHeight?.let { h ->
-                mockk<org.dashfoundation.dashsdk.persistence.entities.TransactionEntity> { every { blockHeight } returns h }
+                mockk<org.dashfoundation.dashsdk.persistence.entities.TransactionEntity> {
+                    every { blockHeight } returns h
+                    every { context } returns spenderContext
+                }
             }
         }
         val sdkService = mockk<de.schildbach.wallet.service.platform.sdk.DashSdkService>(relaxed = true)
         every { sdkService.databaseOrNull() } returns db
-        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, mockk(relaxed = true), mockk(relaxed = true))
+        val shadow = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService>(relaxed = true)
+        every { shadow.chainLockHeight } returns kotlinx.coroutines.flow.MutableStateFlow(chainLockHeight)
+        every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(
+            progress(walletSyncedHeight = headerHeight).copy(headerHeight = headerHeight, headerTarget = headerHeight)
+        )
+        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, shadow, mockk(relaxed = true))
     }
 
     private fun spentTxo(spendingTxid: ByteArray) =
@@ -1645,14 +1659,110 @@ class PendingDirectPaymentVerifierTest {
         }
 
     @Test
-    fun `the SDK engine reports an input spent by a different confirmed transaction`() = runBlocking {
+    fun `the SDK engine counts a conflicting spend only once it is final`() = runBlocking {
+        // 4297952515: inclusion in a block is not finality; a shallow reorg can take the spend out
+        // and make T1 valid again after its records are gone. Same rule as ChainLockedCoinSelector.
         val tx = createTransaction()
         val other = ByteArray(32) { 9 }
 
-        assertEquals(true, engineWithTxo(spentTxo(other), spenderHeight = 1_000).inputSpentByConfirmedConflict(tx))
-        assertEquals("unconfirmed conflict", false, engineWithTxo(spentTxo(other), spenderHeight = 0).inputSpentByConfirmedConflict(tx))
-        assertEquals("spent by T1 itself", false, engineWithTxo(spentTxo(tx.txId.reversedBytes), spenderHeight = 1_000).inputSpentByConfirmedConflict(tx))
-        assertEquals("unknown output", false, engineWithTxo(null, spenderHeight = null).inputSpentByConfirmedConflict(tx))
+        assertEquals(
+            "in a chainlocked block", true,
+            engineWithTxo(spentTxo(other), 1_000, spenderContext = 3).inputSpentByFinalConflict(tx)
+        )
+        assertEquals(
+            "at or below the chainlock height", true,
+            engineWithTxo(spentTxo(other), 1_000, chainLockHeight = 1_000, headerHeight = 1_001).inputSpentByFinalConflict(tx)
+        )
+        assertEquals(
+            "above the chainlock height: unknown, not final", false,
+            engineWithTxo(spentTxo(other), 1_000, chainLockHeight = 999, headerHeight = 1_100).inputSpentByFinalConflict(tx)
+        )
+        assertEquals(
+            "no chainlock known, six deep", true,
+            engineWithTxo(spentTxo(other), 1_000, headerHeight = 1_005).inputSpentByFinalConflict(tx)
+        )
+        assertEquals(
+            "no chainlock known, only five deep", false,
+            engineWithTxo(spentTxo(other), 1_000, headerHeight = 1_004).inputSpentByFinalConflict(tx)
+        )
+        assertEquals(
+            "no chainlock and no known tip", false,
+            engineWithTxo(spentTxo(other), 1_000).inputSpentByFinalConflict(tx)
+        )
+        assertEquals(
+            "unconfirmed conflict", false,
+            engineWithTxo(spentTxo(other), 0, headerHeight = 1_100).inputSpentByFinalConflict(tx)
+        )
+        assertEquals(
+            "spent by T1 itself", false,
+            engineWithTxo(spentTxo(tx.txId.reversedBytes), 1_000, spenderContext = 3).inputSpentByFinalConflict(tx)
+        )
+        assertEquals("unknown output", false, engineWithTxo(null, null).inputSpentByFinalConflict(tx))
+    }
+
+    /**
+     * A wallet holding [parent], whose output 0 is spent by [spender]; T1 spends the same output.
+     */
+    private fun walletWithConflict(): Triple<Transaction, Transaction, Transaction> {
+        val key = org.bitcoinj.core.ECKey()
+        wallet.importKey(key)
+        val parent = Transaction(params).apply {
+            addInput(Sha256Hash.of("funding-${txCounter.incrementAndGet()}".toByteArray()), 0, ScriptBuilder.createEmpty())
+            addOutput(Coin.parseCoin("1.0"), Address.fromKey(params, key))
+        }
+        val spender = Transaction(params).apply {
+            addInput(parent.getOutput(0))
+            addOutput(Coin.parseCoin("0.9"), Address.fromString(params, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        }
+        val t1 = Transaction(params).apply {
+            addInput(parent.getOutput(0))
+            addOutput(Coin.parseCoin("0.8"), Address.fromString(params, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        }
+        parent.getOutput(0).markAsSpent(spender.getInput(0))
+        wallet.addWalletTransaction(
+            org.bitcoinj.wallet.WalletTransaction(org.bitcoinj.wallet.WalletTransaction.Pool.SPENT, parent)
+        )
+        return Triple(parent, spender, t1)
+    }
+
+    private fun abandonedRecordOf(t1: Transaction) {
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(t1, "abc123", abandoned = true))
+    }
+
+    @Test
+    fun `a shallow confirmed conflicting spend in the dashj wallet does not discard T1`() = runBlocking {
+        val (_, spender, t1) = walletWithConflict()
+        spender.confidence.confidenceType = org.bitcoinj.core.TransactionConfidence.ConfidenceType.BUILDING
+        spender.confidence.appearedAtChainHeight = 99_998
+        // tip 100_000: three deep, no chainlock known
+        coEvery { blockchainStateProvider.getState() } returns BlockchainState(
+            Date(), 100_000, false, EnumSet.noneOf(BlockchainState.Impediment::class.java), 0, 0, 100
+        )
+        abandonedRecordOf(t1)
+
+        withTimeout(5_000) { verifier.awaitRestored() }
+        delay(400)
+
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(any()) }
+        assertTrue("watched until the spend is final", verifier.isTracked(t1.txId))
+    }
+
+    @Test
+    fun `a chainlocked conflicting spend in the dashj wallet discards T1`() = runBlocking {
+        val (_, spender, t1) = walletWithConflict()
+        spender.confidence.confidenceType = org.bitcoinj.core.TransactionConfidence.ConfidenceType.BUILDING
+        spender.confidence.appearedAtChainHeight = 99_998
+        // a chainlock at the tip locks everything below it
+        coEvery { blockchainStateProvider.getState() } returns BlockchainState(
+            Date(), 100_000, false, EnumSet.noneOf(BlockchainState.Impediment::class.java), 100_000, 0, 100
+        )
+        abandonedRecordOf(t1)
+
+        withTimeout(5_000) { verifier.awaitRestored() }
+        withTimeout(5_000) { while (verifier.isTracked(t1.txId)) delay(10) }
+
+        coVerify { metadataProvider.forgetTransaction(t1.txId.toTxId()) }
+        coVerify { config.remove(t1.txId) }
     }
 
     // --- completing an acknowledged resubmission (round 10) -----------------------------------

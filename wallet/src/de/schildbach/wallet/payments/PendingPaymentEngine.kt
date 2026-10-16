@@ -26,6 +26,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
 import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.TX_CONTEXT_CHAIN_LOCKED
 import de.schildbach.wallet.service.platform.sdk.sdkOutpointBytes
 import de.schildbach.wallet.service.platform.sdk.wireTxidBytesOrNull
 import kotlinx.coroutines.CancellationException
@@ -133,12 +134,17 @@ interface PendingPaymentEngine {
     fun chainHeightUpperBound(): Long?
 
     /**
-     * True when an input of [tx] is spent by a DIFFERENT transaction that is confirmed in a block,
-     * so [tx] can never confirm; false when the engine knows of no such spend; null when it cannot
-     * tell (store not open or unreadable). Affirmative evidence only: an unconfirmed conflict does
-     * not count, because it can still be replaced.
+     * True when an input of [tx] is spent by a DIFFERENT transaction whose place in the chain is
+     * FINAL, so [tx] can never confirm; false when the engine knows of no such spend, or of none
+     * that is final yet; null when it cannot tell (store not open or unreadable).
+     *
+     * Inclusion in a block is not enough: a shallow reorganisation can take the spend out again
+     * and make [tx] valid, after its recovery records were deleted. Final means the same as for
+     * [ChainLockedCoinSelector]: in a chainlocked block, at or below the best known chainlock
+     * height, or, when no chainlock height is known, [ChainLockedCoinSelector.FALLBACK_CONFIRMATIONS]
+     * deep below the known tip. An unknown tip is not final.
      */
-    suspend fun inputSpentByConfirmedConflict(tx: Transaction): Boolean?
+    suspend fun inputSpentByFinalConflict(tx: Transaction): Boolean?
 
     /**
      * Commits [rawTx] to the dashj wallet of record the way every SDK send is committed (the
@@ -183,7 +189,7 @@ class SdkPendingPaymentEngine @Inject constructor(
         null
     }
 
-    override suspend fun inputSpentByConfirmedConflict(tx: Transaction): Boolean? {
+    override suspend fun inputSpentByFinalConflict(tx: Transaction): Boolean? {
         return try {
             val db = sdkService.databaseOrNull() ?: return null
             val ownWireTxid = tx.txId.reversedBytes
@@ -193,7 +199,16 @@ class SdkPendingPaymentEngine @Inject constructor(
                 val spender = txo.spendingTxid
                     ?.takeIf { txo.isSpent && !it.contentEquals(ownWireTxid) }
                     ?: return@any false
-                (db.transactionDao().getByTxid(spender)?.blockHeight ?: 0) > 0
+                val row = db.transactionDao().getByTxid(spender) ?: return@any false
+                row.context == TX_CONTEXT_CHAIN_LOCKED ||
+                    ChainLockedCoinSelector.isChainLockedHeight(
+                        appearedAtHeight = row.blockHeight,
+                        chainLockHeight = l1ShadowSyncService.chainLockHeight.value,
+                        // the validated header chain, never the peers' claimed target: an
+                        // over-estimated tip would over-estimate the depth
+                        bestChainHeight = l1ShadowSyncService.progress.value.headerHeight
+                            .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                    )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

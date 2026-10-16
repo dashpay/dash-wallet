@@ -857,14 +857,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     /**
-     * Whether [tx] can never confirm: one of its inputs is spent by a DIFFERENT transaction that is
-     * confirmed in a block. Asked of the dashj wallet (its own view of the parent outputs) and of
-     * the SDK engine's store. Affirmative evidence only; anything unknown is false.
+     * Whether [tx] can never confirm: one of its inputs is spent by a DIFFERENT transaction whose
+     * place in the chain is FINAL (review 4297952515). Inclusion in a block is not enough: a
+     * shallow reorganisation could take that spend out and make [tx] valid again after its records
+     * were deleted. Final follows [ChainLockedCoinSelector]: chainlocked, or at or below the best
+     * known chainlock height, or [ChainLockedCoinSelector.FALLBACK_CONFIRMATIONS] deep when no
+     * chainlock height is known. Asked of the dashj wallet (its own view of the parent outputs) and
+     * of the SDK engine's store. Affirmative evidence only; anything unknown is false, and the
+     * record and its watch stay.
      */
     private suspend fun isInvalidated(tx: Transaction, origin: Wallet): Boolean {
-        if (dashjConflictConfirmed(origin, tx)) return true
+        if (dashjConflictFinal(origin, tx)) return true
         return try {
-            engine.inputSpentByConfirmedConflict(tx) == true
+            engine.inputSpentByFinalConflict(tx) == true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -873,14 +878,26 @@ class PendingDirectPaymentVerifier @Inject constructor(
         }
     }
 
-    private fun dashjConflictConfirmed(wallet: Wallet, tx: Transaction): Boolean = try {
+    private suspend fun dashjConflictFinal(wallet: Wallet, tx: Transaction): Boolean = try {
+        val state = blockchainStateProvider.getState()
         tx.inputs.any { input ->
             val parent = wallet.getTransaction(input.outpoint.hash) ?: return@any false
             val spender = parent.outputs.getOrNull(input.outpoint.index.toInt())?.spentBy?.parentTransaction
                 ?: return@any false
+            val confidence = spender.confidence
             spender.txId != tx.txId &&
-                spender.confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
+                confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING &&
+                (
+                    confidence.isChainLocked ||
+                        ChainLockedCoinSelector.isChainLockedHeight(
+                            confidence.appearedAtChainHeight,
+                            state?.chainlockHeight ?: 0,
+                            state?.bestChainHeight ?: 0
+                        )
+                    )
         }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         log.warn("could not check the wallet for conflicting spends of {}", tx.txId, e)
         false
