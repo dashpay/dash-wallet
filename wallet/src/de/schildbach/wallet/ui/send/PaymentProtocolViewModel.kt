@@ -185,13 +185,20 @@ class PaymentProtocolViewModel @Inject constructor(
                 finalPaymentIntent = null
                 // An expired invoice can no longer be paid, but one this wallet already paid has an
                 // outcome to report: the same pending/unknown outcome a re-confirmation would get.
-                val earlier = (ex as? org.dash.wallet.common.payments.bip70.PaymentProtocolException.Expired)
-                    ?.paymentRequestHash
+                // The parser wraps the typed expiry (PaymentIntentParserException), so look through
+                // the causes for it.
+                val expired = generateSequence<Throwable>(ex) { it.cause }.take(8)
+                    .filterIsInstance<org.dash.wallet.common.payments.bip70.PaymentProtocolException.Expired>()
+                    .firstOrNull()
+                val earlier = expired?.paymentRequestHash
                     ?.let { runCatching { sendCoinsTaskRunner.findUnresolvedSubmission(it) }.getOrNull() }
                 if (earlier != null) {
                     _sendRequestLiveData.postValue(
                         Resource.error(PaymentSubmissionPendingException(earlier.toString(), ex))
                     )
+                } else if (expired != null) {
+                    // the typed expiry, so the screen shows its "expired" message
+                    _sendRequestLiveData.postValue(Resource.error(expired, expired.message ?: "Payment request expired"))
                 } else {
                     _sendRequestLiveData.postValue(Resource.error(ex, ex.message ?: "Failed to fetch payment request"))
                 }

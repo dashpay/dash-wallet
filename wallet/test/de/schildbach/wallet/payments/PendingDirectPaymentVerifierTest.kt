@@ -1610,4 +1610,68 @@ class PendingDirectPaymentVerifierTest {
         assertEquals("spent by T1 itself", false, engineWithTxo(spentTxo(tx.txId.reversedBytes), spenderHeight = 1_000).inputSpentByConfirmedConflict(tx))
         assertEquals("unknown output", false, engineWithTxo(null, spenderHeight = null).inputSpentByConfirmedConflict(tx))
     }
+
+    // --- completing an acknowledged resubmission (round 10) -----------------------------------
+
+    @Test
+    fun `an acknowledgement that arrives after the watch settled the payment returns it as paid`() = runBlocking {
+        // 2f5ba48cac7c: the payee broadcast T1 and the watch committed it and removed its record
+        // while the resubmission's POST was still waiting for the ACK
+        val tx = createTransaction()
+        wallet.maybeCommitTx(tx)
+        coEvery { config.getAllOrThrow() } returns emptyList()
+
+        val settled = verifier.commitAcknowledged(tx, wallet)
+
+        assertEquals(tx.txId, settled.txId)
+    }
+
+    @Test
+    fun `a failed finalisation of an acknowledged resubmission keeps the watch, which finishes it later`() = runBlocking {
+        // 85487eabbf1b: a transient metadata failure must not drop the only background retry
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        stored.add(
+            storedPayment(tx, "abc123", abandoned = true).copy(isGiftCardPurchase = true, serviceName = "CTXSpend")
+        )
+        withTimeout(5_000) { verifier.awaitRestored() }
+        var attempts = 0
+        coEvery { metadataProvider.markGiftCardTransaction(any(), any(), any()) } answers {
+            if (++attempts == 1) throw java.io.IOException("metadata store unavailable")
+        }
+
+        try {
+            verifier.commitAcknowledged(tx, wallet)
+            fail("a failed finalisation was reported as done")
+        } catch (e: org.dash.wallet.common.services.PaymentSubmissionPendingException) {
+            assertEquals(tx.txId.toString(), e.txId)
+        }
+        assertEquals("the record stays", 1, stored.size)
+        assertTrue("the watch stays", verifier.isTracked(tx.txId))
+
+        // storage recovers and the network shows T1: the watch finishes the job
+        coEvery { engine.observation(tx.txId.toString()) } returns EngineObservation.OBSERVED
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }
+        assertTrue(attempts >= 2)
+    }
+
+    @Test
+    fun `an acknowledged resubmission is not completed while the SDK owns L1 and nothing relays it`() = runBlocking {
+        // 3fc3cd86956b: the released reservation is gone and the dashj peers are held, so nothing
+        // here can put T1 on the network; it stays pending and watched until the network shows it
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        stored.add(storedPayment(tx, "abc123", abandoned = true))
+        coEvery { engine.sdkOwnsL1() } returns true
+
+        try {
+            verifier.commitAcknowledged(tx, wallet)
+            fail("an unrelayed payment was reported as paid")
+        } catch (e: org.dash.wallet.common.services.PaymentSubmissionPendingException) {
+            assertEquals(tx.txId.toString(), e.txId)
+        }
+        assertEquals(1, stored.size)
+        assertNull(wallet.getTransaction(tx.txId))
+        assertTrue(verifier.isTracked(tx.txId))
+    }
 }

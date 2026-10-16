@@ -44,6 +44,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
@@ -175,6 +176,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
     private val pendingRemovals: MutableSet<Sha256Hash> = ConcurrentHashMap.newKeySet()
 
     @Volatile private var removalRetryJob: Job? = null
+
+    /**
+     * Serializes settling a payment: its watch committing it on observing it, and an acknowledged
+     * resubmission completing it. Whichever runs second finds it settled and does not repeat it.
+     */
+    private val settleMutex = Mutex()
     private val claimMutex = Mutex()
 
     init {
@@ -665,7 +672,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     // Also the late-broadcast case: a released payment is still watched, so a
                     // payee that held the transaction back cannot leave us with a paid order
                     // whose records were thrown away.
-                    return commit(tx, current, origin)
+                    return settleMutex.withLock { commit(tx, current, origin) }
                 }
 
                 // The only other way out: a confirmed transaction spends one of its inputs, so it
@@ -908,14 +915,47 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     /**
-     * The payee acknowledged a resubmitted [tx]: commit it from its stored record exactly as any
-     * acknowledged payment is committed, and end its watch.
+     * The payee acknowledged a resubmitted [tx]: complete it from its stored record as any
+     * acknowledged payment is completed. Never drops recovery on the way:
+     * - already settled by its watch while the request was in flight (the payee broadcast it and
+     *   the watch committed it): that committed transaction is the result;
+     * - the SDK owns L1: nothing here can relay T1 (its reservation was released when it went
+     *   unseen, and the dashj peers are held), so an acknowledgement alone proves no delivery. It
+     *   stays recorded and watched, and is reported pending until the network shows it;
+     * - finalising fails part way (attribution, metadata): the watch is kept, or started again, to
+     *   finish it once it is seen, and the outcome is reported pending.
+     *
+     * @throws PaymentSubmissionPendingException in the last two cases, and when the record is gone
+     *   but the transaction is not in the wallet either
      */
-    suspend fun commitAcknowledged(tx: Transaction, origin: Wallet): Transaction {
-        val payment = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
-            ?: throw IllegalStateException("no pending record for acknowledged payment ${tx.txId}")
-        jobs.remove(tx.txId)?.cancel()
-        return commit(tx, payment, origin)
+    suspend fun commitAcknowledged(tx: Transaction, origin: Wallet): Transaction = settleMutex.withLock {
+        val payment = config.getAllOrThrow().firstOrNull { it.txId == tx.txId && it.txId !in pendingRemovals }
+        if (payment == null) {
+            origin.takeIf { stillOwnedBy(it) }?.getTransaction(tx.txId)?.let {
+                log.info("acknowledged payment {} was already settled by its watch", tx.txId)
+                return@withLock it
+            }
+            throw PaymentSubmissionPendingException(tx.txId.toString(), null)
+        }
+        if (engine.sdkOwnsL1()) {
+            log.info("payment {} acknowledged; nothing here can relay it, watching for it on the network", tx.txId)
+            track(tx, payment, origin)
+            throw PaymentSubmissionPendingException(
+                tx.txId.toString(),
+                null,
+                "payment ${tx.txId} was acknowledged by the payee; waiting to see it on the network"
+            )
+        }
+        val watch = jobs[tx.txId]
+        try {
+            commit(tx, payment, origin).also { watch?.cancel() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("could not finalise acknowledged payment {}; its watch finishes it", tx.txId, e)
+            track(tx, payment, origin)
+            throw PaymentSubmissionPendingException(tx.txId.toString(), e)
+        }
     }
 
     /** What the SDK engine can say about [txId]; a failure to ask is [EngineObservation.UNAVAILABLE]. */

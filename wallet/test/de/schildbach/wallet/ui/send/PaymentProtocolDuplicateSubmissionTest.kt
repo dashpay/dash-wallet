@@ -256,4 +256,74 @@ class PaymentProtocolDuplicateSubmissionTest {
         awaitCondition("resubmission armed") { viewModel.isResubmission }
         return viewModel
     }
+
+    // --- a0d31d8245b5: an expired invoice with a submission outstanding -----------------------
+
+    /** A real serialized BIP70 PaymentRequest that expired an hour ago. */
+    private fun expiredPaymentRequestBytes(): ByteArray {
+        val address = org.bitcoinj.core.Address.fromString(
+            de.schildbach.wallet.Constants.NETWORK_PARAMETERS,
+            "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"
+        )
+        val now = System.currentTimeMillis() / 1000
+        val details = org.dash.wallet.common.payments.bip70.Protos.PaymentDetails.newBuilder()
+            .setNetwork("test")
+            .setTime(now - 7_200)
+            .setExpires(now - 3_600)
+            .setMemo("expired invoice")
+            .setPaymentUrl("https://merchant.example/pay")
+            .addOutputs(
+                org.dash.wallet.common.payments.bip70.Protos.Output.newBuilder()
+                    .setAmount(25_000_000L)
+                    .setScript(
+                        com.google.protobuf.ByteString.copyFrom(
+                            org.bitcoinj.script.ScriptBuilder.createOutputScript(address).program
+                        )
+                    )
+            )
+            .build()
+        return org.dash.wallet.common.payments.bip70.Protos.PaymentRequest.newBuilder()
+            .setPaymentDetailsVersion(1)
+            .setSerializedPaymentDetails(details.toByteString())
+            .build()
+            .toByteArray()
+    }
+
+    @Test
+    fun `reopening an expired invoice with an outstanding submission shows it as pending`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val serialized = expiredPaymentRequestBytes()
+        val expectedHash = java.security.MessageDigest.getInstance("SHA-256").digest(serialized)
+        // what fetchPaymentRequest really throws: the real parser on the real bytes
+        coEvery { runner.fetchPaymentRequest(any()) } coAnswers {
+            org.dash.wallet.common.payments.parsers.DashPaymentIntentParser(
+                org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(
+                    de.schildbach.wallet.Constants.NETWORK_PARAMETERS.id
+                )
+            ).parse(
+                java.io.ByteArrayInputStream(serialized),
+                org.dash.wallet.common.payments.bip70.PaymentProtocol.MIMETYPE_PAYMENTREQUEST
+            )
+        }
+        coEvery { runner.findUnresolvedSubmission(any()) } returns null
+        coEvery { runner.findUnresolvedSubmission(match { it.contentEquals(expectedHash) }) } returns earlierSubmission
+        val walletData = mockk<WalletData>(relaxed = true) { every { this@mockk.wallet } returns mockk(relaxed = true) }
+        val walletUIConfig = mockk<WalletUIConfig> {
+            every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()
+        }
+        val viewModel = PaymentProtocolViewModel(
+            walletData,
+            mockk<Configuration>(relaxed = true),
+            mockk<ExchangeRatesProvider>(relaxed = true),
+            runner,
+            walletUIConfig
+        )
+
+        viewModel.requestPaymentRequest(mockk(relaxed = true))
+        awaitCondition("the fetch outcome") { viewModel.sendRequestLiveData.value?.status == Status.ERROR }
+
+        val failure = viewModel.sendRequestLiveData.value!!.exception
+        assertTrue("expected the pending outcome, got $failure", failure is PaymentSubmissionPendingException)
+        assertEquals(earlierSubmission.toString(), (failure as PaymentSubmissionPendingException).txId)
+    }
 }

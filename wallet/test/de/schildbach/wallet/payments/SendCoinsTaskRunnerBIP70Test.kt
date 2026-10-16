@@ -1709,4 +1709,36 @@ class SendCoinsTaskRunnerBIP70Test {
         assertEquals(1, stored.size)
         assertEquals(deferredTx.txId, sendCoinsTaskRunner.findUnresolvedSubmission(requestHash))
     }
+
+    @Test
+    fun `an acknowledged resubmission after the cutover stays pending until the network shows it`() = runBlocking {
+        // 3fc3cd86956b: with the reservation released and the dashj peers held, nothing here can
+        // relay T1; a payee that acks without broadcasting must not produce a success screen
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 8 }
+        abandonedT1For(requestHash, stored)
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("an unrelayed payment was reported as paid")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+        assertEquals("the record (and its block) stays", 1, stored.size)
+        assertTrue("watched until the network shows it", pendingPaymentVerifier.isTracked(deferredTx.txId))
+        io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
+    }
 }
