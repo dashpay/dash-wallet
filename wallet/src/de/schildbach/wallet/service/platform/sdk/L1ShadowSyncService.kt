@@ -2121,6 +2121,49 @@ internal class DashSdkShadowWalletRecreator(
     override fun rebindInBackground(): Job = binder.bindInBackground(unlock::unlockOrNull)
 }
 
+/**
+ * The paid contact address history marker's side of deleting an SDK wallet's
+ * transaction store ([PaidContactAddressStore.beginHistoryInvalidation] and
+ * [PaidContactAddressStore.endHistoryInvalidation]): the marker vouches for
+ * that store, so it is dropped before the deletion and cannot be recorded
+ * again until the deletion is over (PR #1608 review, rounds 12-14).
+ */
+interface ContactPaidHistoryInvalidation {
+    /**
+     * Drops the marker for [walletIdHex] and holds its recording. False when
+     * it could not be dropped on disk: the store must not be deleted then.
+     * Followed by exactly one [end], whatever happens.
+     */
+    suspend fun begin(walletIdHex: String): Boolean
+
+    /** Drops the marker again and lets it be recorded; false when that drop did not reach disk. */
+    suspend fun end(walletIdHex: String): Boolean
+
+    companion object {
+        /** No marker to drop (tests' default). */
+        val NONE = object : ContactPaidHistoryInvalidation {
+            override suspend fun begin(walletIdHex: String) = true
+            override suspend fun end(walletIdHex: String) = true
+        }
+
+        /**
+         * Over the [store] it returns (resolved on first use), with its
+         * blocking file work on [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO].
+         */
+        fun of(store: () -> PaidContactAddressStore) = object : ContactPaidHistoryInvalidation {
+            override suspend fun begin(walletIdHex: String) =
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    store().beginHistoryInvalidation(walletIdHex)
+                }
+
+            override suspend fun end(walletIdHex: String) =
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    store().endHistoryInvalidation(walletIdHex)
+                }
+        }
+    }
+}
+
 // ── The shadow-sync service ───────────────────────────────────────────
 
 /**
@@ -2244,12 +2287,11 @@ class L1ShadowSyncService internal constructor(
     private val breakdownStore: ParityBreakdownStore? = null,
     /**
      * Drops the paid contact address history marker for an SDK wallet whose
-     * transaction store is about to be deleted
-     * ([PaidContactAddressStore.forgetPaidHistory]); false when it could not
-     * be dropped on disk, which refuses the deletion. Tests' default: nothing
-     * to drop.
+     * transaction store is about to be deleted, and holds its recording until
+     * the deletion is over; a failed drop refuses the deletion. Tests'
+     * default: nothing to drop.
      */
-    private val forgetContactPaidHistory: suspend (walletIdHex: String) -> Boolean = { true }
+    private val contactPaidHistory: ContactPaidHistoryInvalidation = ContactPaidHistoryInvalidation.NONE
 ) {
     @Inject
     constructor(
@@ -2303,11 +2345,7 @@ class L1ShadowSyncService internal constructor(
             )
         },
         balanceFactsEnabled = true,
-        forgetContactPaidHistory = { walletIdHex ->
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                PaidContactAddressStore.app(context.filesDir).forgetPaidHistory(walletIdHex)
-            }
-        }
+        contactPaidHistory = ContactPaidHistoryInvalidation.of { PaidContactAddressStore.app(context.filesDir) }
     )
 
     /** Serializes [startIfEnabled]/[stop] — the single-flight guarantee. */
@@ -4426,24 +4464,27 @@ class L1ShadowSyncService internal constructor(
                     return false
                 }
                 // The L1 rows below are what a paid-history marker vouches
-                // for; nothing is deleted if it cannot be dropped.
-                if (!forgetPaidHistoryBeforeDeletion(walletIdHex, "shadow reset")) {
-                    return false
+                // for: it is dropped, and not recorded again until they are
+                // gone (or the reset failed); nothing is deleted if it cannot
+                // be dropped.
+                try {
+                    if (!beginPaidHistoryInvalidation(walletIdHex, "shadow reset")) {
+                        return false
+                    }
+                    runCatching { source.stopSpv() }
+                        .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
+                    _progress.value = ShadowSyncProgress.IDLE
+                    sessionHeaderStart = 0L // the rescan is a new session's work
+                    sessionFilterStart = 0L
+                    // Pre-reset parity evidence must never count toward a cutover.
+                    parityStreakRecorder.clear()
+                    if (hard) {
+                        deleteSpvDataDir()
+                    }
+                    source.clearSdkL1Rows(walletIdHex)
+                } finally {
+                    endPaidHistoryInvalidation(walletIdHex, "shadow reset")
                 }
-                runCatching { source.stopSpv() }
-                    .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
-                _progress.value = ShadowSyncProgress.IDLE
-                sessionHeaderStart = 0L // the rescan is a new session's work
-                sessionFilterStart = 0L
-                // Pre-reset parity evidence must never count toward a cutover.
-                parityStreakRecorder.clear()
-                if (hard) {
-                    deleteSpvDataDir()
-                }
-                source.clearSdkL1Rows(walletIdHex)
-                // Again: a lookup that read the old rows' state just before
-                // the engine stopped may have recorded it since.
-                forgetPaidHistoryAfterDeletion(walletIdHex, "shadow reset")
                 if (!hard) {
                     source.clearSpvStorage()
                 }
@@ -4466,13 +4507,15 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * Drop the paid contact address history marker for [walletIdHex]
-     * ([forgetContactPaidHistory]) before its SDK transaction store is
-     * deleted; false (logged) when it could not be dropped, or the drop threw.
+     * Drop the paid contact address history marker for [walletIdHex] before
+     * its SDK transaction store is deleted, holding its recording until
+     * [endPaidHistoryInvalidation] ([ContactPaidHistoryInvalidation.begin]);
+     * false (logged) when it could not be dropped, or the drop threw. Call
+     * inside a `try` whose `finally` runs [endPaidHistoryInvalidation].
      */
-    private suspend fun forgetPaidHistoryBeforeDeletion(walletIdHex: String, what: String): Boolean {
+    private suspend fun beginPaidHistoryInvalidation(walletIdHex: String, what: String): Boolean {
         val dropped = try {
-            forgetContactPaidHistory(walletIdHex)
+            contactPaidHistory.begin(walletIdHex)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -4490,15 +4533,19 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * [forgetPaidHistoryBeforeDeletion] once the store is gone: a lookup that
-     * read its state just before the engine stopped may have recorded the
-     * marker again in between. Best effort — logged, never refuses anything.
+     * Ends [beginPaidHistoryInvalidation], whether the deletion completed,
+     * failed or was cancelled ([ContactPaidHistoryInvalidation.end]): drops
+     * the marker again — a lookup that read the old store's state just before
+     * the first drop may have recorded it since — and lets it be recorded
+     * once more. Runs even in a cancelled coroutine: skipped, the marker could
+     * not be recorded again in this process. Best effort — logged, never
+     * throws.
      */
-    private suspend fun forgetPaidHistoryAfterDeletion(walletIdHex: String, what: String) {
+    private suspend fun endPaidHistoryInvalidation(walletIdHex: String, what: String) {
         val dropped = try {
-            forgetContactPaidHistory(walletIdHex)
-        } catch (e: CancellationException) {
-            throw e
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                contactPaidHistory.end(walletIdHex)
+            }
         } catch (e: Exception) {
             log.warn("{}: re-dropping the paid contact address history marker failed", what, e)
             return
@@ -4644,18 +4691,21 @@ class L1ShadowSyncService internal constructor(
                     }
                     // The re-created wallet has the same id, so a paid-history
                     // marker would vouch for the empty store that replaces this
-                    // one. Dropped first; nothing is deleted if it cannot be.
-                    if (!forgetPaidHistoryBeforeDeletion(walletIdHex, "wallet re-creation")) {
-                        return false
+                    // one. Dropped first, and not recorded again until the
+                    // store and the binder latch are gone (or this failed);
+                    // nothing is deleted if it cannot be dropped.
+                    try {
+                        if (!beginPaidHistoryInvalidation(walletIdHex, "wallet re-creation")) {
+                            return false
+                        }
+                        recreator.removeSdkWallet(walletIdHex)
+                        deleteSpvDataDir()
+                        runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
+                            .onFailure { log.warn("wallet re-creation: failed to persist the reset marker", it) }
+                        recreator.resetBinderLatch()
+                    } finally {
+                        endPaidHistoryInvalidation(walletIdHex, "wallet re-creation")
                     }
-                    recreator.removeSdkWallet(walletIdHex)
-                    deleteSpvDataDir()
-                    runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
-                        .onFailure { log.warn("wallet re-creation: failed to persist the reset marker", it) }
-                    recreator.resetBinderLatch()
-                    // Again: a lookup that read the old store's state just
-                    // before the engine stopped may have recorded it since.
-                    forgetPaidHistoryAfterDeletion(walletIdHex, "wallet re-creation")
                 }
                 val bindJob = recreator.rebindInBackground()
                 scope.launch {

@@ -649,6 +649,71 @@ class PaidContactAddressStoreTest {
     }
 
     @Test
+    fun markPaidHistoryKnown_duringAnInvalidation_isRefused_evenWithEvidenceReadAfterTheFirstDrop() {
+        // PR #1608 review, round 14: a lookup that starts after the first
+        // drop, while the old store is still there, reads the current
+        // generation. It must not record the marker until the deletion ends.
+        val s = store()
+        s.markPaidHistoryKnownNow("w1")
+        assertTrue(s.beginHistoryInvalidation("w1"))
+        assertFalse(store().paidHistoryKnown("w1"))
+
+        assertFalse(s.markPaidHistoryKnown("w1", s.paidHistoryGeneration()))
+        assertFalse(s.paidHistoryKnown("w1"))
+        assertFalse("not on disk for a process that dies now", store().paidHistoryKnown("w1"))
+
+        assertTrue(s.endHistoryInvalidation("w1"))
+        assertTrue("reopened", s.markPaidHistoryKnown("w1", s.paidHistoryGeneration()))
+        assertTrue(store().paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun endHistoryInvalidation_dropsAMarkerRecordedJustBeforeTheBegin() {
+        val s = store()
+        val generation = s.paidHistoryGeneration()
+        assertTrue(s.markPaidHistoryKnown("w1", generation))
+        assertTrue(s.beginHistoryInvalidation("w1"))
+        assertTrue(s.endHistoryInvalidation("w1"))
+
+        assertFalse(s.paidHistoryKnown("w1"))
+        assertFalse(store().paidHistoryKnown("w1"))
+    }
+
+    @Test
+    fun historyInvalidation_holdsUntilEveryBeginHasEnded_andAnUnpairedEndCannotOpenTheNext() {
+        val s = store()
+        // An end whose begin never ran (its caller was cancelled first).
+        assertTrue(s.endHistoryInvalidation("w1"))
+        assertTrue(s.beginHistoryInvalidation("w1"))
+        assertFalse("the unpaired end did not pre-open this one", s.markPaidHistoryKnown("w1", s.paidHistoryGeneration()))
+
+        assertTrue(s.beginHistoryInvalidation("w1"))
+        assertTrue(s.endHistoryInvalidation("w1"))
+        assertFalse("one still in progress", s.markPaidHistoryKnown("w1", s.paidHistoryGeneration()))
+        assertTrue(s.endHistoryInvalidation("w1"))
+        assertTrue(s.markPaidHistoryKnown("w1", s.paidHistoryGeneration()))
+    }
+
+    @Test
+    fun historyInvalidation_whoseDropsFail_stillReopensAtItsEnd() {
+        val dir = File(tmp.root, "locked").apply { mkdirs() }
+        val locked = File(dir, PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(locked, nowMs = { now }).markPaidHistoryKnownNow("w1")
+        val s = PaidContactAddressStore(locked, nowMs = { now })
+        assertTrue(dir.setWritable(false))
+        try {
+            assumeFalse(File(dir, "probe").let { runCatching { it.createNewFile() }.getOrDefault(false) })
+
+            assertFalse("the deletion must be refused", s.beginHistoryInvalidation("w1"))
+            assertFalse(s.endHistoryInvalidation("w1"))
+        } finally {
+            dir.setWritable(true)
+        }
+        assertTrue("reopened", s.markPaidHistoryKnown("w1", s.paidHistoryGeneration()))
+        assertTrue(s.paidHistoryKnown("w1"))
+    }
+
+    @Test
     fun markPaidHistoryKnown_withEvidenceReadBeforeAWalletChange_isRefused() {
         val saves = WalletSaveTracker()
         val s = PaidContactAddressStore(file, { now }, saves)

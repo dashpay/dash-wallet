@@ -48,6 +48,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.nio.file.Files
 
 /**
@@ -312,7 +313,7 @@ class L1ShadowSyncServiceTest {
         scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
         durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS,
         breakdownStore: ParityBreakdownStore? = null,
-        forgetContactPaidHistory: suspend (String) -> Boolean = { true }
+        contactPaidHistory: ContactPaidHistoryInvalidation = ContactPaidHistoryInvalidation.NONE
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -330,7 +331,7 @@ class L1ShadowSyncServiceTest {
         scanGateRetryInitialMs = scanGateRetryInitialMs,
         durableHeightRefreshMs = durableHeightRefreshMs,
         breakdownStore = breakdownStore,
-        forgetContactPaidHistory = forgetContactPaidHistory
+        contactPaidHistory = contactPaidHistory
     )
 
     /**
@@ -2576,7 +2577,7 @@ class L1ShadowSyncServiceTest {
         recreator.onRemove = {
             markerOnDiskWhenRemoved = PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex)
         }
-        val service = service(source, recreator = recreator, forgetContactPaidHistory = store::forgetPaidHistory)
+        val service = service(source, recreator = recreator, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
         assertTrue(service.startIfEnabled())
 
         assertTrue(service.recoverByRecreatingWallet())
@@ -2592,7 +2593,7 @@ class L1ShadowSyncServiceTest {
     fun recoverByRecreatingWallet_refusesWhenThePaidHistoryMarkerCannotBeDropped() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
         val recreator = FakeRecreator()
-        val service = service(source, recreator = recreator, forgetContactPaidHistory = { false })
+        val service = service(source, recreator = recreator, contactPaidHistory = undroppablePaidHistory)
 
         assertFalse(service.recoverByRecreatingWallet())
 
@@ -2613,7 +2614,10 @@ class L1ShadowSyncServiceTest {
         }
         val service = service(
             source,
-            forgetContactPaidHistory = { id -> droppable && store.forgetPaidHistory(id) }
+            contactPaidHistory = object : ContactPaidHistoryInvalidation {
+                override suspend fun begin(walletIdHex: String) = droppable && store.beginHistoryInvalidation(walletIdHex)
+                override suspend fun end(walletIdHex: String) = !droppable || store.endHistoryInvalidation(walletIdHex)
+            }
         )
         assertTrue(service.startIfEnabled())
 
@@ -2626,6 +2630,132 @@ class L1ShadowSyncServiceTest {
         assertEquals(1, source.clearL1RowsCalls)
         assertEquals(false, markerOnDiskWhenRowsCleared)
         assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    /** A marker that cannot be dropped: every deletion is refused. */
+    private val undroppablePaidHistory = object : ContactPaidHistoryInvalidation {
+        override suspend fun begin(walletIdHex: String) = false
+        override suspend fun end(walletIdHex: String) = false
+    }
+
+    /**
+     * A contact lookup that STARTS now: reads the marker's generation, finds
+     * the wallet processed through the tip (the old store is still there to
+     * read) and records the marker. Whether it was recorded, and whether a
+     * process exiting right after would find it on disk.
+     */
+    private fun lookupStartingNow(store: PaidContactAddressStore, paidFile: File): Pair<Boolean, Boolean> {
+        val recorded = store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration())
+        return recorded to PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex)
+    }
+
+    @Test
+    fun resetShadowState_aLookupStartingAfterTheFirstDrop_cannotRecordTheMarker_untilTheRowsAreGone() = runBlocking {
+        // PR #1608 review, round 14: a lookup that starts after the marker is
+        // dropped but before the rows are deleted reads the old rows, still
+        // through the tip. Recorded then, a process exit before the second
+        // drop (or a failed one) leaves a marker vouching for empty rows.
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var duringDeletion: Pair<Boolean, Boolean>? = null
+        source.onClearRows = { duringDeletion = lookupStartingNow(store, paidFile) }
+        val service = service(source, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
+        assertTrue(service.startIfEnabled())
+
+        assertTrue(service.resetShadowState(hard = true))
+
+        assertEquals("not recorded, nor on disk", false to false, duringDeletion)
+        assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+        // Once the reset is over, the rebuilt rows can be vouched for again.
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun resetShadowState_thatFails_reopensTheMarker() = runBlocking {
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.onClearRows = { throw IllegalStateException("Room delete failed") }
+        val service = service(source, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
+        assertTrue(service.startIfEnabled())
+
+        assertFalse(service.resetShadowState(hard = true))
+
+        assertEquals(1, source.clearL1RowsCalls)
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_aLookupStartingAfterTheFirstDrop_cannotRecordTheMarker_untilTheWalletIsGone() =
+        runBlocking {
+            val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+            PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
+            val store = PaidContactAddressStore(paidFile)
+            val source = FakeSource(boundWalletId = walletIdHex)
+            val recreator = FakeRecreator()
+            var beforeRemoval: Pair<Boolean, Boolean>? = null
+            var beforeLatchReset: Pair<Boolean, Boolean>? = null
+            recreator.onRemove = { beforeRemoval = lookupStartingNow(store, paidFile) }
+            recreator.onBinderReset = { beforeLatchReset = lookupStartingNow(store, paidFile) }
+            val service = service(
+                source,
+                recreator = recreator,
+                contactPaidHistory = ContactPaidHistoryInvalidation.of { store }
+            )
+            assertTrue(service.startIfEnabled())
+
+            assertTrue(service.recoverByRecreatingWallet())
+
+            assertEquals("not recorded, nor on disk", false to false, beforeRemoval)
+            assertEquals("the discovery latch is still set", false to false, beforeLatchReset)
+            assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+            assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        }
+
+    @Test
+    fun recoverByRecreatingWallet_thatFails_reopensTheMarker() = runBlocking {
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        recreator.onRemove = { throw IllegalStateException("native removeWallet failed") }
+        val service = service(source, recreator = recreator, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
+        assertTrue(service.startIfEnabled())
+
+        assertFalse(service.recoverByRecreatingWallet())
+
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusedBecauseTheMarkerCannotBeDropped_reopensTheMarker() = runBlocking {
+        // The store's own drop fails (unreadable file); the refusal must not
+        // hold the marker closed for the rest of the process.
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        var failDrops = true
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(
+            source,
+            recreator = recreator,
+            contactPaidHistory = object : ContactPaidHistoryInvalidation {
+                override suspend fun begin(walletIdHex: String) =
+                    store.beginHistoryInvalidation(walletIdHex) && !failDrops
+                override suspend fun end(walletIdHex: String) = store.endHistoryInvalidation(walletIdHex)
+            }
+        )
+
+        assertFalse(service.recoverByRecreatingWallet())
+        assertTrue(recreator.removedWalletIds.isEmpty())
+
+        failDrops = false
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
     }
 
     @Test

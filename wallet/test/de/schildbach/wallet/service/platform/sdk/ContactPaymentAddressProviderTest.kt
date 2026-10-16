@@ -1257,6 +1257,33 @@ class ContactPaymentAddressProviderTest {
     }
 
     @Test
+    fun recoveredWallet_aLookupStartingWhileTheStoreIsBeingDeleted_doesNotMarkIt() = runBlocking {
+        // PR #1608 review, round 14: the marker has been dropped, but the SDK's
+        // transaction store is not deleted yet and still reads through the tip.
+        // A lookup that starts now reads the current generation; it must not
+        // record the marker, or a process that dies before the second drop
+        // keeps a marker vouching for the deleted store.
+        val paidFile = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        val view = FakeChainView(caughtUp = true)
+        val provider = restartedProvider(FakeDashjChain(sdkPool, current = 0), paidFile, account(), store, view)
+        assertTrue(store.beginHistoryInvalidation("w1"))
+
+        assertNull(provider.nextAddress(target))
+        assertFalse(store.paidHistoryKnown("w1"))
+        assertFalse("not on disk", PaidContactAddressStore(paidFile).paidHistoryKnown("w1"))
+
+        view.caughtUp = false // the store is rebuilt from the birth height
+        assertTrue(store.endHistoryInvalidation("w1"))
+        assertNull(provider.nextAddress(target))
+
+        // The rebuilt store, once through the tip, is promoted as usual.
+        view.caughtUp = true
+        assertEquals(sdkPool[1], provider.nextAddress(target)?.address)
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown("w1"))
+    }
+
+    @Test
     fun recoveredWallet_noSdkWalletLoaded_noAddress() = runBlocking {
         val view = FakeChainView(caughtUp = true, walletId = null)
         val provider = restartedProvider(

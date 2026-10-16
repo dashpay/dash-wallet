@@ -222,6 +222,17 @@ class PaidContactAddressStore(
      */
     private var historyGeneration = 0L
 
+    /**
+     * Deletions of an SDK transaction store in progress
+     * ([beginHistoryInvalidation] .. [endHistoryInvalidation]): while any is,
+     * [markPaidHistoryKnown] records nothing. The generation alone only
+     * rejects evidence read before the first drop; a lookup that starts after
+     * it, while the old store is still there to read, would pass every check
+     * and record the marker again (PR #1608 review, round 14). In memory only:
+     * a process that dies mid-deletion leaves no marker it could trust.
+     */
+    private var invalidationsInProgress = 0
+
     /** The last write failed: the next change, or [sent], writes again. */
     private var unwritten = false
 
@@ -522,8 +533,10 @@ class PaidContactAddressStore(
      * Refused (false) when the marker was dropped since [generation] was read
      * ([paidHistoryGeneration]): the evidence was then read from a transaction
      * store that has been deleted or replaced since — under the same wallet
-     * id when the wallet was re-created (PR #1608 review, round 13). True
-     * when the marker is recorded (or already was).
+     * id when the wallet was re-created (PR #1608 review, round 13). Refused
+     * too while a deletion is in progress ([beginHistoryInvalidation]): the
+     * evidence may be about the store being deleted (round 14). True when the
+     * marker is recorded (or already was).
      */
     fun markPaidHistoryKnown(walletId: String, generation: Long): Boolean {
         require(walletId.isNotEmpty() && walletId.none { it.isWhitespace() }) { "invalid wallet id" }
@@ -531,6 +544,10 @@ class PaidContactAddressStore(
             val map = loaded()
             if (generation != historyGeneration) {
                 log.info("the paid-address history marker was dropped while it was being established; not recorded")
+                return false
+            }
+            if (invalidationsInProgress > 0) {
+                log.info("the SDK's transaction store is being deleted; the paid-address history marker is not recorded")
                 return false
             }
             if (historyWalletId == walletId) return true
@@ -557,6 +574,46 @@ class PaidContactAddressStore(
      * Blocking.
      */
     fun forgetPaidHistory(walletId: String): Boolean = synchronized(lock) {
+        dropPaidHistory(walletId)
+    }
+
+    /**
+     * The SDK's transaction store for [walletId] is about to be deleted:
+     * drops the marker ([forgetPaidHistory]) and, atomically with it, stops
+     * [markPaidHistoryKnown] from recording it until [endHistoryInvalidation].
+     * A lookup that starts in between reads the store being deleted, which
+     * still looks processed through the tip (PR #1608 review, round 14).
+     *
+     * Returns what [forgetPaidHistory] returns: false means the store must not
+     * be deleted. Either way — false, or a throw — the caller must call
+     * [endHistoryInvalidation] exactly once afterwards (in a `finally`), or
+     * the marker can never be recorded again in this process. Blocking.
+     */
+    fun beginHistoryInvalidation(walletId: String): Boolean = synchronized(lock) {
+        invalidationsInProgress++
+        dropPaidHistory(walletId)
+    }
+
+    /**
+     * The deletion begun by [beginHistoryInvalidation] is over, done or
+     * failed: drops the marker again, in case a lookup recorded it from the
+     * old store's state just before the deletion began, then lets
+     * [markPaidHistoryKnown] record it again. Returns what [forgetPaidHistory]
+     * returns; the marker is dropped in memory and recording reopens either
+     * way. Blocking.
+     */
+    fun endHistoryInvalidation(walletId: String): Boolean = synchronized(lock) {
+        try {
+            dropPaidHistory(walletId)
+        } finally {
+            // At most once per begin; an end whose begin never ran (the
+            // caller was cancelled before it) must not go below zero.
+            invalidationsInProgress = (invalidationsInProgress - 1).coerceAtLeast(0)
+        }
+    }
+
+    /** [forgetPaidHistory], under [lock]. */
+    private fun dropPaidHistory(walletId: String): Boolean {
         historyGeneration++
         val map = loaded()
         if (readFailed) {
@@ -569,7 +626,7 @@ class PaidContactAddressStore(
         if (historyWalletId != walletId) return !unwritten || write(map)
         historyWalletId = null
         log.info("the SDK's transaction store is being rebuilt; the paid-address history is unknown again")
-        write(map)
+        return write(map)
     }
 
     /** Whether [address] has an entry and it is settled; null without an entry. For tests and logs. */
