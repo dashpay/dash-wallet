@@ -267,14 +267,23 @@ internal fun detailSignedNet(cachedValue: Long, isContactRow: Boolean, record: L
  * or null when the manager is not up, no single wallet is bound, the tx is not
  * the wallet's, or the read fails — the detail sheet then falls back to the raw
  * store row.
+ *
+ * The lookup reattributes like any walk, so it can rewrite the stored net;
+ * [onStoredNetsRepaired] is the walker's report of that (production:
+ * [L1ShadowSyncService.storedNetsRepaired]).
  */
-private suspend fun boundWalletRecordOrNull(
+internal suspend fun boundWalletRecordOrNull(
     sdkService: DashSdkService,
     db: DashDatabase,
-    displayHex: String
+    displayHex: String,
+    onStoredNetsRepaired: (Int) -> Unit
 ): L1TxUiRecord? = try {
     val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
-    walletId?.let { withContext(Dispatchers.IO) { SdkTxStoreWalker(db, it).recordFor(displayHex) } }
+    walletId?.let {
+        withContext(Dispatchers.IO) {
+            SdkTxStoreWalker(db, it, onStoredNetsRepaired = onStoredNetsRepaired).recordFor(displayHex)
+        }
+    }
 } catch (e: CancellationException) {
     throw e
 } catch (t: Throwable) {
@@ -286,16 +295,21 @@ private suspend fun boundWalletRecordOrNull(
 /**
  * Batch [boundWalletRecordOrNull]: one walker and one [SdkTxStoreWalker.recordsByHex]
  * pass for all of [displayHexes], keyed by lowercase display hex. Empty when the
- * manager is not up, no single wallet is bound, or the read fails.
+ * manager is not up, no single wallet is bound, or the read fails. Repaired
+ * stored nets go to [onStoredNetsRepaired], as in [boundWalletRecordOrNull].
  */
-private suspend fun boundWalletRecordsOrEmpty(
+internal suspend fun boundWalletRecordsOrEmpty(
     sdkService: DashSdkService,
     db: DashDatabase,
-    displayHexes: Collection<String>
+    displayHexes: Collection<String>,
+    onStoredNetsRepaired: (Int) -> Unit
 ): Map<String, L1TxUiRecord> = try {
     val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
-    walletId?.let { withContext(Dispatchers.IO) { SdkTxStoreWalker(db, it).recordsByHex(displayHexes) } }
-        ?: emptyMap()
+    walletId?.let {
+        withContext(Dispatchers.IO) {
+            SdkTxStoreWalker(db, it, onStoredNetsRepaired = onStoredNetsRepaired).recordsByHex(displayHexes)
+        }
+    } ?: emptyMap()
 } catch (e: CancellationException) {
     throw e
 } catch (t: Throwable) {
@@ -349,26 +363,34 @@ class SdkTxDetailProvider internal constructor(
     private val sdkService: DashSdkService,
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val assetLockKindResolver: AssetLockKindResolver,
+    // Where the walkers below report the stored nets their reattribution
+    // rewrote; production passes [L1ShadowSyncService.storedNetsRepaired].
+    // Used only by the two defaults that build walkers.
+    onStoredNetsRepaired: (Int) -> Unit = {},
     // Batch form of [walletRecordFor] for bulk metadata imports: one walker pass
     // for many txids ([SdkTxStoreWalker.recordsByHex]), keyed by lowercase display hex.
     private val walletRecordsFor: suspend (DashDatabase, Collection<String>) -> Map<String, L1TxUiRecord> =
-        { db, displayHexes -> boundWalletRecordsOrEmpty(sdkService, db, displayHexes) },
+        { db, displayHexes -> boundWalletRecordsOrEmpty(sdkService, db, displayHexes, onStoredNetsRepaired) },
     // The bound wallet's record for a txid as the history list sees it
     // ([SdkTxStoreWalker.recordFor]): reattributed, with its fee recovered.
     // Null when no wallet is bound or the tx is not the wallet's. A seam so
     // host tests can supply the record without a Room store.
-    private val walletRecordFor: suspend (DashDatabase, String) -> L1TxUiRecord?
+    private val walletRecordFor: suspend (DashDatabase, String) -> L1TxUiRecord? =
+        { db, displayHex -> boundWalletRecordOrNull(sdkService, db, displayHex, onStoredNetsRepaired) }
 ) : SdkTxMetadataSource {
     @Inject
     constructor(
         sdkService: DashSdkService,
         txDisplayCacheDao: TxDisplayCacheDao,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        // Provider, as in [CutoverTxSeamService]: resolved on the first repair,
+        // so this provider adds no start-up edge to the shadow service's graph.
+        l1ShadowSyncService: javax.inject.Provider<L1ShadowSyncService>
     ) : this(
         sdkService,
         txDisplayCacheDao,
         assetLockKindResolver,
-        walletRecordFor = { db, displayHex -> boundWalletRecordOrNull(sdkService, db, displayHex) }
+        onStoredNetsRepaired = { count -> l1ShadowSyncService.get().storedNetsRepaired(count) }
     )
 
     /**
