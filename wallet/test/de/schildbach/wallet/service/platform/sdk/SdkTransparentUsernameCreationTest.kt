@@ -35,6 +35,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.TestScope
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
 import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
@@ -663,5 +664,63 @@ class SdkTransparentUsernameCreationTest {
         coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
         coVerify(exactly = 0) { source.previewRegistrationKeySet(any(), any(), any()) }
+    }
+
+    // ── failures inside the application-scoped name retry (review 4302041841) ──
+
+    /** Runs [retry] on an app-like scope and returns whatever escaped it uncaught. */
+    private fun TestScope.uncaughtFrom(
+        persistNameContext: suspend (String, String, String?, Boolean) -> Unit = { _, _, _, _ -> },
+        handOffToLegacy: (String) -> Unit = {},
+        states: MutableList<Pair<IdentityCreationState, String?>>
+    ): List<Throwable> {
+        val uncaught = mutableListOf<Throwable>()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() +
+                kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) +
+                kotlinx.coroutines.CoroutineExceptionHandler { _, e -> uncaught += e }
+        )
+        val retry = SdkTransparentUsernameCreation(
+            source = source(lockAfterFailure = null),
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = handOffToLegacy,
+            driveCreationState = { state, error -> states += state to error },
+            persistNameContext = persistNameContext,
+            executorScope = appScope
+        )
+        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        return uncaught
+    }
+
+    @Test
+    fun `a failed name-context write records a retryable error instead of crashing`() = runTest {
+        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+
+        val uncaught = uncaughtFrom(
+            persistNameContext = { _, _, _, _ -> throw java.io.IOException("datastore write failed") },
+            states = states
+        )
+
+        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
+        val (state, error) = states.last()
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
+        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
+    }
+
+    @Test
+    fun `a failed worker handoff records a retryable error instead of crashing`() = runTest {
+        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+
+        val uncaught = uncaughtFrom(
+            handOffToLegacy = { throw IllegalStateException("WorkManager not initialised") },
+            states = states
+        )
+
+        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
+        val (state, error) = states.last()
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
+        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
     }
 }

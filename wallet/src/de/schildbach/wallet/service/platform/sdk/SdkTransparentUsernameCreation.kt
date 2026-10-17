@@ -1469,11 +1469,36 @@ class SdkTransparentUsernameCreation internal constructor(
         }
         // LAZY + tracked before start: the job can never run unfenced.
         val job = scope.launch(start = CoroutineStart.LAZY) {
-            retryNameNow(identityIdBase58, username, secondaryUsername)
+            try {
+                retryNameNow(identityIdBase58, username, secondaryUsername)
+            } catch (e: CancellationException) {
+                // the wipe fence cancelling the run: nothing to record for a wallet being wiped
+                throw e
+            } catch (e: Exception) {
+                // Never out of the launch: the application scope has no handler, so an escaped
+                // exception crashes the process after the screen was told the retry started.
+                // Nothing reached the worker; record a retryable error so the retry card shows.
+                log.error("name-only retry for identity {} failed before its handoff", identityIdBase58, e)
+                recordRetryFailure(e)
+            }
         }
         secretWriteFence.track(job)
         job.start()
         return true
+    }
+
+    /** Best effort: if the state write fails as well, the failure is only logged. */
+    private suspend fun recordRetryFailure(cause: Exception) {
+        try {
+            driveCreationState(
+                IdentityCreationState.USERNAME_REGISTERING,
+                "username registration did not start (retryable): ${cause.message ?: cause.javaClass.simpleName}"
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("could not record the failed name-only retry", e)
+        }
     }
 
     private suspend fun retryNameNow(identityIdBase58: String, username: String, secondaryUsername: String?) {
