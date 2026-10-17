@@ -32,6 +32,7 @@ import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toDash
 import org.dash.wallet.common.util.toFiatValue
@@ -931,6 +932,9 @@ class SwapKitApiAggregator @Inject constructor(
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel> {
+        // The wallet the user confirmed on, before the route refresh below waits (review
+        // 4304575003): the deposit is refused, with nothing sent, if a wipe replaces it meanwhile.
+        val session = sendPaymentService.currentWalletSession()
         // Refresh the route via SwapKit (routeId expires after 60s) and then hand off
         // to the existing DASH-tx builder.
         val refreshed = getSwapInfo(
@@ -963,7 +967,7 @@ class SwapKitApiAggregator @Inject constructor(
                 // the one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using the
                 // Maya builder here would fabricate a Maya-format memo and overflow the 80-byte
                 // OP_RETURN limit for long token identifiers such as TRON.USDT-<contract>.
-                buildAndSendDepositTx(model)
+                buildAndSendDepositTx(model, session)
             }
         } else {
             refreshed
@@ -990,7 +994,8 @@ class SwapKitApiAggregator @Inject constructor(
      * 80-byte OP_RETURN limit.
      */
     private suspend fun buildAndSendDepositTx(
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        session: WalletSession?
     ): ResponseResource<SwapTradeUIModel> {
         return try {
             // Deposit amount = sellAmount + swap fee, matching the total shown in the
@@ -1051,7 +1056,8 @@ class SwapKitApiAggregator @Inject constructor(
                 swapTradeUIModel.vaultAddress,
                 amount,
                 // Mirror the Maya builder, which bypasses leftover-balance checks for swaps.
-                checkBalanceConditions = false
+                checkBalanceConditions = false,
+                session = session
             )
             swapTradeUIModel.txid = sentTxId
             ResponseResource.Success(swapTradeUIModel)

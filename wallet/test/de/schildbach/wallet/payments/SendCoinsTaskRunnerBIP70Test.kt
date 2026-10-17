@@ -1552,6 +1552,59 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `a dash payment confirmed on a wallet replaced before it reached the runner is refused`() = runBlocking {
+        // review 4304575003: the caller bound the purchase to the wallet the user confirmed on and
+        // then waited (a lookup, an IO dispatch) before calling; the wallet was replaced meanwhile
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val session = sendCoinsTaskRunner.currentWalletSession()
+        every { walletDataProvider.wallet } returns replacementWallet()
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrlTx(
+                "dash:$testAddress?amount=1.0&r=${mockWebServer.url("/request")}",
+                "TestService",
+                session = session
+            )
+            fail("a payment confirmed on a replaced wallet was paid from the replacement")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        assertEquals("nothing was fetched or posted", 0, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any()) }
+        coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
+    }
+
+    @Test
+    fun `a plain send confirmed on a wallet replaced before it reached the runner is refused`() = runBlocking {
+        // the integrations' sends (Coinbase, SwapKit) carry the session the same way
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val session = sendCoinsTaskRunner.currentWalletSession()
+        every { walletDataProvider.wallet } returns replacementWallet()
+
+        try {
+            sendCoinsTaskRunner.sendCoins(
+                "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL",
+                org.dash.wallet.common.money.Dash.valueOf(100_000L),
+                session = session
+            )
+            fail("a send confirmed on a replaced wallet was sent from the replacement")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.sendToAddress(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a session for the installed wallet names that wallet`() {
+        val session = sendCoinsTaskRunner.currentWalletSession()
+        assertTrue(sendCoinsTaskRunner.walletOf(session) === wallet)
+        assertNull(sendCoinsTaskRunner.walletOf(null))
+    }
+
+    @Test
     fun `a prebuilt payment is submitted for the wallet it was built on, not the installed one`() = runBlocking {
         // PaymentProtocolViewModel builds at preview time and submits on confirm; a wipe between the
         // two must not let the confirm adopt the replacement.

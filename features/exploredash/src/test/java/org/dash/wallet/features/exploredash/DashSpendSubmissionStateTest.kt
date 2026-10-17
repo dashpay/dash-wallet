@@ -39,6 +39,7 @@ import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.UnresolvedPaymentsProvider
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
@@ -121,7 +122,7 @@ class DashSpendSubmissionStateTest {
 
     /** Submits a payment whose result never came back, leaving the purchase unresolved. */
     private suspend fun submitAmbiguously(viewModel: DashSpendViewModel) {
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } answers {
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
             // the verifier quarantines and persists the payment before the submission fails, so
             // the record is already on disk by the time the screen hears about it
             unresolvedOnDisk.value = true
@@ -134,6 +135,74 @@ class DashSpendSubmissionStateTest {
         } catch (expected: PaymentSubmissionPendingException) {
             // what an ambiguous submission looks like to the screen
         }
+    }
+
+    @Test
+    fun `a wallet replaced while the purchase waits is never the one that pays`() = runBlocking {
+        // review 4304575003: the purchase suspends in the unresolved-payment lookup (and in the IO
+        // dispatch) before it reaches the payment service. Wallet A, on which the user confirmed,
+        // is wiped and B installed meanwhile; the purchase must be refused, not paid from B.
+        val walletA = WalletSession("wallet A")
+        val walletB = WalletSession("wallet B")
+        var installed: WalletSession? = walletA
+        every { sendPaymentService.currentWalletSession() } answers { installed }
+        coEvery { unresolvedPayments.hasUnresolvedGiftCardPurchase() } coAnswers {
+            installed = walletB
+            false
+        }
+        val paidFrom = mutableListOf<WalletSession?>()
+        // the payment service's contract: a session whose wallet is no longer installed is refused
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+            val session = arg<WalletSession?>(3)
+            if (session == null || session !== installed) {
+                throw IllegalStateException("the wallet this payment was confirmed on has been wiped")
+            }
+            paidFrom += session
+            mockk<TxInfo>(relaxed = true) { every { txId } returns ZERO_TX_ID }
+        }
+        val viewModel = createViewModel()
+
+        try {
+            viewModel.payAndRecordOrder(paymentUri, emptyList())
+            fail("a purchase confirmed on wallet A was paid after A was replaced")
+        } catch (expected: IllegalStateException) {
+            // refused: nothing was sent
+        }
+
+        assertTrue("nothing was paid from the replacement wallet: $paidFrom", paidFrom.isEmpty())
+        assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+    }
+
+    @Test
+    fun `a purchase claimed at the tap pays from the wallet it was confirmed on, or not at all`() = runBlocking {
+        // the dialog claims at the confirm tap, then creates the order at the merchant (and may
+        // show the minimum-balance dialog) before payAndRecordOrder; a wipe in that window must
+        // not have the replacement pay for the order
+        val walletA = WalletSession("wallet A")
+        val walletB = WalletSession("wallet B")
+        var installed: WalletSession? = walletA
+        every { sendPaymentService.currentWalletSession() } answers { installed }
+        val paidFrom = mutableListOf<WalletSession?>()
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+            val session = arg<WalletSession?>(3)
+            if (session == null || session !== installed) {
+                throw IllegalStateException("the wallet this payment was confirmed on has been wiped")
+            }
+            paidFrom += session
+            mockk<TxInfo>(relaxed = true) { every { txId } returns ZERO_TX_ID }
+        }
+        val viewModel = createViewModel()
+
+        assertTrue(viewModel.tryStartSubmission())
+        installed = walletB // the order is being created at the merchant; the wallet is replaced
+
+        try {
+            viewModel.payAndRecordOrder(paymentUri, emptyList())
+            fail("a purchase confirmed on wallet A was paid after A was replaced")
+        } catch (expected: IllegalStateException) {
+            // refused: nothing was sent
+        }
+        assertTrue("nothing was paid from the replacement wallet: $paidFrom", paidFrom.isEmpty())
     }
 
     @Test
@@ -157,7 +226,7 @@ class DashSpendSubmissionStateTest {
         val viewModel = createViewModel()
         val transaction = mockk<TxInfo>(relaxed = true)
         every { transaction.txId } returns ZERO_TX_ID
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } returns transaction
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
 
         viewModel.payAndRecordOrder(paymentUri, emptyList())
         assertEquals(GiftCardSubmissionState.COMPLETED, viewModel.submissionState.value)
@@ -293,7 +362,7 @@ class DashSpendSubmissionStateTest {
             assertEquals(GiftCardSubmissionState.PENDING, expected.state)
         }
 
-        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) }
     }
 
     private companion object {

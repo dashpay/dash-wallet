@@ -24,12 +24,14 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.Wallet
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.transactions.toTxInfo
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.SpendSelection
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.transactions.TxInfo
 import java.util.function.Consumer
 import java.util.function.Predicate
@@ -50,7 +52,8 @@ class FakeDashSpendService @Inject constructor(
         emptyWallet: Boolean,
         checkBalanceConditions: Boolean,
         beforeSending: Consumer<Transaction>?,
-        canSendLockedOutput: Predicate<TransactionOutput>?
+        canSendLockedOutput: Predicate<TransactionOutput>?,
+        originWallet: Wallet?
     ): Transaction {
         return realService.sendCoins(
             address,
@@ -59,17 +62,23 @@ class FakeDashSpendService @Inject constructor(
             emptyWallet,
             checkBalanceConditions,
             beforeSending,
-            canSendLockedOutput
+            canSendLockedOutput,
+            originWallet
         )
     }
+
+    override fun currentWalletSession(): WalletSession? = realService.currentWalletSession()
+
+    override fun walletOf(session: WalletSession?): Wallet? = realService.walletOf(session)
 
     override suspend fun sendCoins(
         address: String,
         amount: Dash,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean
+        checkBalanceConditions: Boolean,
+        session: WalletSession?
     ): String {
-        return realService.sendCoins(address, amount, emptyWallet, checkBalanceConditions)
+        return realService.sendCoins(address, amount, emptyWallet, checkBalanceConditions, session)
     }
 
     override suspend fun estimateNetworkFee(
@@ -92,6 +101,7 @@ class FakeDashSpendService @Inject constructor(
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
+        session: WalletSession?,
         onTransactionCreated: (suspend (String) -> Unit)?
     ): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
@@ -99,7 +109,8 @@ class FakeDashSpendService @Inject constructor(
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
             val transaction = realService.sendCoins(
                 Address.fromBase58(walletDataProvider.networkParameters, "yiCvnqNp53bjCReThnPx8ttuhM7JXUUyfQ"),
-                amount
+                amount,
+                originWallet = realService.walletOf(session)
             )
             // Callers persist the order from this callback, so skipping it leaves a completed
             // purchase with nothing for the details screen to load. Later than the real path,
@@ -107,7 +118,7 @@ class FakeDashSpendService @Inject constructor(
             onTransactionCreated?.invoke(transaction.txId.toString())
             transaction
         } else {
-            realService.payWithDashUrlTx(dashUri, serviceName, recovery, onTransactionCreated)
+            realService.payWithDashUrlTx(dashUri, serviceName, recovery, session, onTransactionCreated)
         }
     }
 
@@ -115,9 +126,10 @@ class FakeDashSpendService @Inject constructor(
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
+        session: WalletSession?,
         onTransactionCreated: (suspend (String) -> Unit)?
     ): TxInfo {
-        return payWithDashUrlTx(dashUri, serviceName, recovery, onTransactionCreated)
+        return payWithDashUrlTx(dashUri, serviceName, recovery, session, onTransactionCreated)
             .toTxInfo(walletDataProvider.transactionBag, walletDataProvider.networkParameters)
     }
 
@@ -128,10 +140,12 @@ class FakeDashSpendService @Inject constructor(
         emptyWallet: Boolean,
         checkBalanceConditions: Boolean,
         lockSentOutputsTo: String?,
-        canSpendLockedOutputsTo: String?
+        canSpendLockedOutputsTo: String?,
+        session: WalletSession?
     ): TxInfo {
         return realService.sendCoinsSelected(
-            address, amount, selection, emptyWallet, checkBalanceConditions, lockSentOutputsTo, canSpendLockedOutputsTo
+            address, amount, selection, emptyWallet, checkBalanceConditions, lockSentOutputsTo, canSpendLockedOutputsTo,
+            session
         )
     }
 

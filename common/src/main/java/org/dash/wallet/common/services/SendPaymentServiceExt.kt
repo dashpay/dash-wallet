@@ -63,10 +63,11 @@ suspend fun SendPaymentService.payAndGetTxId(
     dashUri: String,
     serviceName: String?,
     recovery: PaymentRecoveryMetadata? = null,
+    session: WalletSession? = null,
     onTransactionCreated: (suspend (String) -> Unit)? = null
 ): String {
     val transaction = try {
-        payWithDashUrl(dashUri, serviceName, recovery, onTransactionCreated)
+        payWithDashUrl(dashUri, serviceName, recovery, session, onTransactionCreated)
     } catch (e: Exception) {
         if (e.isInsufficientMoney && e !is InsufficientFundsException) {
             throw InsufficientFundsException(e.message, e)
