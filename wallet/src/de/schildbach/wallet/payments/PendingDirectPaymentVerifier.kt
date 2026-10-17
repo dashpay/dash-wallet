@@ -325,9 +325,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
             // an earlier settlement of this txid re-checks the queue under it, so it cannot
             // delete the record written here (review 4302741459).
             recordMutex.withLock {
-                // A record being quarantined is active again, whatever an earlier resolution left behind.
-                pendingRemovals.remove(tx.txId)
                 config.add(payment) { stillOwnedBy(wallet) }
+                // A record being quarantined is active again, whatever an earlier resolution left
+                // behind - but only once its new record is durable (review 4303092964). Cleared
+                // before the write, a failed write left the earlier settled record on disk with
+                // nothing queued to remove it, counted as unresolved by the funding gate and the
+                // invoice lookup until the next process start.
+                pendingRemovals.remove(tx.txId)
             }
         } catch (e: Exception) {
             // Callers quarantine before submitting, so nothing has been sent yet and aborting
@@ -337,6 +341,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
             // to fund a retry.
             log.error("could not persist pending direct payment {}, releasing its inputs", tx.txId, e)
             unlockInputs(wallet, tx)
+            // An earlier settlement of this txid is still queued for removal: keep it retried.
+            if (tx.txId in pendingRemovals) {
+                scheduleRemovalRetry()
+            }
             throw e
         }
         reservation?.let { reservations[tx.txId] = it }

@@ -1945,6 +1945,48 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `a failed re-quarantine keeps the queued removal of the earlier record`() = runBlocking {
+        // review 4303092964: the re-quarantine took the id out of the removal queue before its own
+        // write; that write failed, so the earlier settled record stayed on disk with nothing left
+        // to remove it, blocking SDK funding and the invoice after storage recovered
+        verifier.removalRetryInitialMs = 50L
+        val (stored, failRemovals) = storeWithFlakyRemovals()
+        val failAdds = java.util.concurrent.atomic.AtomicBoolean(false)
+        coEvery { config.add(any(), any()) } answers {
+            if (failAdds.get()) throw java.io.IOException("storage temporarily unavailable")
+            val payment = firstArg<PendingDirectPayment>()
+            stored.removeIf { it.txId == payment.txId }
+            stored.add(payment)
+            Unit
+        }
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx), paymentRequestId = "abc123")
+
+        // definitively unsent, but the removal fails: the record stays, queued for removal
+        failRemovals.set(true)
+        verifier.cancelQuarantine(tx)
+        assertEquals(1, stored.size)
+
+        // the same transaction, rebuilt, cannot be recorded
+        failAdds.set(true)
+        try {
+            verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx), paymentRequestId = "abc123")
+            fail("a quarantine that could not be recorded must not go ahead")
+        } catch (e: java.io.IOException) {
+            // expected
+        }
+
+        // storage recovers: the earlier record is still cleaned up, with no new scan
+        failAdds.set(false)
+        failRemovals.set(false)
+        withTimeout(5_000) { while (stored.isNotEmpty()) delay(20) }
+        assertFalse(verifier.hasUnprotectedPendingPayment())
+        assertNull(verifier.unresolvedSubmissionFor("abc123"))
+        assertFalse(verifier.isTracked(tx.txId))
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+    }
+
+    @Test
     fun `a removal that fails while the retry worker is retiring is still retried`() = runBlocking {
         // r4296870284: the worker found the queue empty and was about to exit, still active, when
         // another payment's removal failed; scheduling saw the active worker and started none, so
