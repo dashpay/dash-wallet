@@ -1443,8 +1443,58 @@ class SdkTransparentUsernameCreation internal constructor(
      * replaces the identity record with a fresh one at NONE and looks for a dashj asset-lock
      * transaction the SDK creation path never put in dashj's AuthenticationGroupExtension, so it
      * starts fresh legacy funding.
+     *
+     * Runs on the application scope, like [submit], and is registered with the wipe fence: the
+     * caller's screen finishes as soon as this is accepted (review 5556781925), and a retry
+     * cancelled half way, with the name context written but the worker never enqueued, would leave
+     * the user on Home with nothing submitted. Returns false, doing nothing, when there is no
+     * executor scope or a wallet wipe is in progress.
      */
-    suspend fun retryNameForExistingIdentity(identityIdBase58: String, username: String, secondaryUsername: String?) {
+    fun retryNameForExistingIdentity(identityIdBase58: String, username: String, secondaryUsername: String?): Boolean {
+        val scope = executorScope
+        if (scope == null) {
+            log.warn("name-only retry refused: no executor scope")
+            return false
+        }
+        if (secretWriteFence.isRaised) {
+            log.warn("name-only retry refused: wallet wipe in progress")
+            return false
+        }
+        // LAZY + tracked before start: the job can never run unfenced.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                retryNameNow(identityIdBase58, username, secondaryUsername)
+            } catch (e: CancellationException) {
+                // the wipe fence cancelling the run: nothing to record for a wallet being wiped
+                throw e
+            } catch (e: Exception) {
+                // Never out of the launch: the application scope has no handler, so an escaped
+                // exception crashes the process after the screen was told the retry started.
+                // Nothing reached the worker; record a retryable error so the retry card shows.
+                log.error("name-only retry for identity {} failed before its handoff", identityIdBase58, e)
+                recordRetryFailure(e)
+            }
+        }
+        secretWriteFence.track(job)
+        job.start()
+        return true
+    }
+
+    /** Best effort: if the state write fails as well, the failure is only logged. */
+    private suspend fun recordRetryFailure(cause: Exception) {
+        try {
+            driveCreationState(
+                IdentityCreationState.USERNAME_REGISTERING,
+                "username registration did not start (retryable): ${cause.message ?: cause.javaClass.simpleName}"
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("could not record the failed name-only retry", e)
+        }
+    }
+
+    private suspend fun retryNameNow(identityIdBase58: String, username: String, secondaryUsername: String?) {
         log.info("name-only retry for existing identity {}: requesting a new DPNS name", identityIdBase58)
         persistNameContext(identityIdBase58, username, secondaryUsername, true)
         markNameRetry(username)

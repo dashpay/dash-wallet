@@ -1103,12 +1103,16 @@ class RequestUserNameViewModel @Inject constructor(
                 transparentUsernameCreation.isCutoverCommitted()
             ) {
                 log.info("name-only retry for the existing identity (cutover committed)")
-                _uiState.update { it.copy(usernameRequestSubmitting = true) }
-                transparentUsernameCreation.retryNameForExistingIdentity(
+                // Accepted means the retry runs on the application scope and survives this screen,
+                // which the submitting state closes; publish it only then.
+                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
                     existingIdentityId,
                     requestedUserName!!,
                     requestedUsernameSecondary
                 )
+                _uiState.update {
+                    if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
+                }
                 return@launch
             }
             val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
