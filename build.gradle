@@ -15,12 +15,26 @@ buildscript {
         // bring-up binding (#4658) + #4643 keystore fixes, on the fork engine pin
         // af88edf6 (v4.2-dev pin 93260bf + rust-dashcore #979/#1001/#989).
         dashSdkVersion = '0.1.0-v42int21-SNAPSHOT'
-        // 4.0.1 fixes the CBOR crash that aborted every identity read:
+        // 5.0.0 carries a libsdklib.so that knows document serialization
+        // format 3. Format 3 arrives with Platform protocol version 14 (it
+        // stamps the document with the contract version its bytes conform to,
+        // enabling `requiredSince` properties), so once testnet activated v14
+        // every DPNS document Drive wrote came back in a format 4.0.1's bundled
+        // rs-dpp could not decode. Its local proof verification failed with
+        //   Proof verification error: dash drive: protocol: dpp unknown version
+        //   on Document::from_bytes (deserialization),
+        //   known versions: [0, 1, 2], received: 3
+        // surfacing as "Attempted to unwrap a Failure" out of
+        // org.dashj.platform.sdk.base.Result.unwrap() and stranding identity
+        // creation at USERNAME_REGISTERING (PlatformRepo.recoverUsernames ->
+        // BlockchainIdentity.recoverUsernames). This is the legacy SDK only:
+        // the Kotlin SDK's libdash_sdk_jni.so already handles format 3.
+        // 5.0.0 keeps the 4.0.1 CBOR fix that aborted every identity read:
         // IdentityPublicKey.toObject() put the raw ContractBounds object
         // (SingleContractDocumentType) into the map handed to Cbor, which has
         // no converter for it -> IllegalArgumentException("No converter for ...").
-        // 4.0.1 calls this.toObject() first. Cbor.kt itself is unchanged.
-        dppVersion = "4.0.1"
+        // It calls this.toObject() first. Cbor.kt itself is unchanged.
+        dppVersion = "5.0.0-SNAPSHOT"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
