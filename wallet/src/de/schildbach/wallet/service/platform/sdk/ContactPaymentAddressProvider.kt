@@ -604,6 +604,9 @@ class ContactPaymentAddressProvider internal constructor(
         index: Int,
         address: Address
     ) -> FriendChainAccess.AdvanceResult? = { _, _, _, _ -> null },
+    /** [IdentityRepository.getContactSendingAddressAt]. */
+    private val dashjAddressAt: (contactUserId: String, accountReference: Int, index: Int) -> Address? =
+        { _, _, _ -> null },
     /** Addresses recorded paid; survives a restart when file-backed. */
     private val paidAddresses: PaidContactAddressStore = PaidContactAddressStore(file = null),
     /** Where the blocking dashj and file work runs. */
@@ -642,6 +645,7 @@ class ContactPaymentAddressProvider internal constructor(
         params = Constants.NETWORK_PARAMETERS,
         dashjSendingCursor = identityRepository::getContactSendingCursor,
         dashjAdvancePast = identityRepository::advanceContactSendingChainPast,
+        dashjAddressAt = identityRepository::getContactSendingAddressAt,
         paidAddresses = PaidContactAddressStore.app(context.filesDir),
         chain = SdkContactPaymentChainView(sdkService, l1ShadowSyncService, sdkWalletBinder::contactDiscoveryCompleted)
     )
@@ -657,19 +661,80 @@ class ContactPaymentAddressProvider internal constructor(
      * ([ContactPaymentChainView]).
      */
     suspend fun nextAddress(target: ContactPaymentTarget): ContactPaymentAddress? = withContext(ioDispatcher) {
+        // Which of the contact's other references are provably another xpub;
+        // every other one shares this chain's frontier (a rotated request).
+        val distinctChains = distinctChains(target)
         // The frontier first: a restored chain far behind it is moved up to it,
         // so the marks of live entries above it are within dashj's forward scan.
-        reapplyFoldedFrontier(target)
+        reapplyFoldedFrontier(target, distinctChains)
         reapplyDashjMarks(target)
         if (!cutoverCommitted()) {
             // dashj is the live engine and sees the chain itself; the SDK's
             // store is only consulted when it can be read.
-            dashjAddress(target, "pre-cutover", chainRequired = false)
+            dashjAddress(target, "pre-cutover", chainRequired = false, distinctChains = distinctChains)
         } else if (!paidHistoryKnown(target)) {
             null
         } else {
-            postCutoverAddress(target)
+            postCutoverAddress(target, distinctChains)
         }
+    }
+
+    /**
+     * The references of [target]'s contact, other than [target]'s own, that
+     * are PROVEN to be another xpub (PR #1608 review, round 15): for each one
+     * with a recorded paid (index, address) ([PaidContactAddressStore.chainWitnesses]),
+     * [target]'s chain has a different address at that index — on dashj's
+     * sending chain for [target] ([dashjAddressAt]) and on the SDK's sending
+     * account when it was built from [target]'s reference. Every source that
+     * answers must differ; with no answer the reference is not proven
+     * distinct and its frontier is inherited (fail-safe: it can only skip
+     * addresses). A rotated request with the same xpub is never distinct: its
+     * addresses at the recorded indices are the recorded ones. Empty — no
+     * reads at all — for a contact with one reference. Blocking; never throws
+     * except a cancellation.
+     */
+    private suspend fun distinctChains(target: ContactPaymentTarget): Set<Int> {
+        val witnesses = try {
+            paidAddresses.chainWitnesses(target.contactUserId, target.accountReference)
+        } catch (e: Exception) {
+            log.warn("contact payment address: reading the paid addresses failed", e)
+            return emptySet()
+        }
+        if (witnesses.isEmpty()) return emptySet()
+        val sdkPool = try {
+            sdkAccountReader(
+                Identifier.from(target.ourUserId).toBuffer(),
+                Identifier.from(target.contactUserId).toBuffer()
+            )
+                ?.takeIf { it.externalAccountReference == target.accountReference }
+                ?.addresses
+                ?.takeIf { pool -> pool.map { it.poolTypeTag }.distinct().size == 1 }
+                ?.associate { it.index to it.address }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("contact payment address: reading the SDK's sending account failed", e)
+            null
+        }
+        val distinct = witnesses.filter { (_, witness) ->
+            val dashj = try {
+                dashjAddressAt(target.contactUserId, target.accountReference, witness.index)?.toBase58()
+            } catch (e: Exception) {
+                log.warn("contact payment address: deriving dashj's sending address failed", e)
+                null
+            }
+            val answers = listOfNotNull(dashj, sdkPool?.get(witness.index))
+            answers.isNotEmpty() && answers.none { it == witness.address }
+        }.keys
+        val inherited = witnesses.keys - distinct
+        if (inherited.isNotEmpty()) {
+            log.info(
+                "contact payment address for {} (accountReference {}): shares the paid frontier of reference(s) " +
+                    "{} (same xpub, or not provably another); another xpub: {}",
+                target.contactUserId, target.accountReference, inherited, distinct
+            )
+        }
+        return distinct
     }
 
     /**
@@ -759,7 +824,10 @@ class ContactPaymentAddressProvider internal constructor(
             null -> if (chainRequired) null else false
         }
 
-    private suspend fun postCutoverAddress(target: ContactPaymentTarget): ContactPaymentAddress? {
+    private suspend fun postCutoverAddress(
+        target: ContactPaymentTarget,
+        distinctChains: Set<Int>
+    ): ContactPaymentAddress? {
         var account: SdkContactSendingAccount? = null
         var cursor: Int? = null
         var frontier: Int? = null
@@ -774,7 +842,7 @@ class ContactPaymentAddressProvider internal constructor(
                 log.warn("contact payment address: reading dashj's sending cursor failed", e)
                 null
             }
-            frontier = paidAddresses.paidFrontier(target.contactUserId, target.accountReference)
+            frontier = paidAddresses.paidFrontier(target.contactUserId, target.accountReference, distinctChains)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -857,7 +925,13 @@ class ContactPaymentAddressProvider internal constructor(
             ?.mapTo(HashSet()) { it.address }
             .orEmpty() + paidOnChain.keys
         val reason = (selection as? SdkContactAddressSelection.Unavailable)?.reason
-        return dashjAddress(target, "post-cutover fallback ($reason)", chainRequired = true, sdkUsed = sdkUsed)
+        return dashjAddress(
+            target,
+            "post-cutover fallback ($reason)",
+            chainRequired = true,
+            sdkUsed = sdkUsed,
+            distinctChains = distinctChains
+        )
     }
 
     /**
@@ -928,9 +1002,10 @@ class ContactPaymentAddressProvider internal constructor(
      * Runs on every lookup and is cheap when dashj is already past it.
      * Blocking.
      */
-    private fun reapplyFoldedFrontier(target: ContactPaymentTarget) {
+    private fun reapplyFoldedFrontier(target: ContactPaymentTarget, distinctChains: Set<Int>) {
         try {
-            val frontier = paidAddresses.foldedFrontier(target.contactUserId, target.accountReference) ?: return
+            val frontier =
+                paidAddresses.foldedFrontier(target.contactUserId, target.accountReference, distinctChains) ?: return
             val cursor = dashjSendingCursor(target.contactUserId, target.accountReference) ?: return
             if (cursor > frontier.index) return
             val address = Address.fromString(params, frontier.address)
@@ -1003,7 +1078,8 @@ class ContactPaymentAddressProvider internal constructor(
         target: ContactPaymentTarget,
         why: String,
         chainRequired: Boolean,
-        sdkUsed: Set<String> = emptySet()
+        sdkUsed: Set<String> = emptySet(),
+        distinctChains: Set<Int>
     ): ContactPaymentAddress? {
         var address = dashjNextAddress(target.contactUserId, target.accountReference)
         if (address == null) {
@@ -1077,7 +1153,7 @@ class ContactPaymentAddressProvider internal constructor(
             return null
         }
         val index = dashjServedIndex(target, address)
-        val folded = paidAddresses.foldedFrontier(target.contactUserId, target.accountReference)
+        val folded = paidAddresses.foldedFrontier(target.contactUserId, target.accountReference, distinctChains)
         // With a folded frontier, an address whose index is unknown cannot be
         // shown to lie above it: the frontier keeps only its highest address,
         // so an earlier paid one is no longer in [excluded].
@@ -1176,12 +1252,15 @@ class ContactPaymentAddressProvider internal constructor(
                 )
                 throw ContactAddressAlreadyPaidException(payment)
             }
+            // Outside the gate (it reads dashj and the SDK store); a reference
+            // recorded after this read is not in it, so it is inherited.
+            val distinctChains = distinctChains(payment.target)
             var result: PaidContactAddressStore.ClaimResult? = null
             claimGate {
                 // An unreadable store refuses the claim itself (STORE_UNAVAILABLE),
                 // and its paid history never reads known.
                 result = if (paidAddresses.unreadable() || unpaidOnChain(payment, chainRequired, historyWallet)) {
-                    paidAddresses.claim(base58, payment.target, payment.index)
+                    paidAddresses.claim(base58, payment.target, payment.index, distinctChains)
                 } else {
                     PaidContactAddressStore.ClaimResult.ALREADY_PAID
                 }

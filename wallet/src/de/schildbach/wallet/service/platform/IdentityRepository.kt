@@ -186,6 +186,14 @@ interface IdentityRepository {
     fun getContactSendingCursor(userId: String, accountReference: Int): Int?
 
     /**
+     * The address of derivation [index] on the dashj SENDING chain for this
+     * contact and channel, derived from the chain's public key
+     * ([FriendChainAccess.sendingPubKeyHashAtOrNull]). Null when there is no
+     * dashj identity, wallet or chain. Never issues a key.
+     */
+    fun getContactSendingAddressAt(userId: String, accountReference: Int, index: Int): Address?
+
+    /**
      * Moves the dashj SENDING chain for this contact and channel past derivation
      * [index], whose key must be [address] (a paid frontier recorded with its
      * index): derives only the key at [index] to check it, then issues keys up to
@@ -1016,6 +1024,17 @@ class IdentityRepositoryImpl @Inject constructor(
         val identity = _blockchainIdentity ?: return null
         val wallet = identity.wallet ?: return null
         return FriendChainAccess.sendingCursorOrNull(wallet, sendingChainContact(identity, userId, accountReference))
+    }
+
+    override fun getContactSendingAddressAt(userId: String, accountReference: Int, index: Int): Address? {
+        val identity = _blockchainIdentity ?: return null
+        val wallet = identity.wallet ?: return null
+        val hash = FriendChainAccess.sendingPubKeyHashAtOrNull(
+            wallet,
+            sendingChainContact(identity, userId, accountReference),
+            index
+        ) ?: return null
+        return Address.fromPubKeyHash(wallet.params, hash)
     }
 
     /**

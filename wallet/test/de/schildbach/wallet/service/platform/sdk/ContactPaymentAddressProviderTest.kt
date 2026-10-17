@@ -1167,6 +1167,143 @@ class ContactPaymentAddressProviderTest {
         assertEquals(keys[2], restartedProvider(older, file, sdkAccount = null, store).nextAddress(target)?.address)
     }
 
+    // ── one xpub, several references (PR #1608 review, round 15) ────────
+
+    /** The reference of the contact's re-sent (rotated) request. */
+    private val rotatedReference = selectedReference + (1 shl 28)
+
+    /**
+     * A store whose reference-[selectedReference] frontier folded two sends
+     * on [keys]: index 0, whose outcome was unknown and which never reached
+     * the chain, and index 1, paid.
+     */
+    private fun foldedAmbiguousAndPaid(keys: List<Address>): PaidContactAddressStore {
+        var now = 1_000_000_000_000L
+        val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
+        val saves = WalletSaveTracker()
+        val store = PaidContactAddressStore(file, { now }, saves)
+        keys.take(2).forEachIndexed { index, key ->
+            assertEquals(PaidContactAddressStore.ClaimResult.CLAIMED, store.claim(key.toBase58(), target, index))
+            store.sent(key.toBase58())
+            store.dashjMarked(key.toBase58(), FriendChainAccess.MarkResult.MARKED)
+        }
+        saves.saveCompleted(saves.saveStarting())
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        store.record(newAddress().toBase58()) // a write expires what is due
+        val after = PaidContactAddressStore(file, { now })
+        assertEquals(PaidContactAddressStore.Frontier(1, keys[1].toBase58()), after.foldedFrontier(contactUserId, selectedReference))
+        assertFalse(keys[0].toBase58() in after.paid())
+        return after
+    }
+
+    /** A provider whose dashj chain for the rotated reference is [chain]. */
+    private fun rotationProvider(
+        store: PaidContactAddressStore,
+        chain: FakeDashjChain,
+        sdkAccount: SdkContactSendingAccount?,
+        cutover: Boolean = true
+    ) = ContactPaymentAddressProvider(
+        cutoverCommitted = { cutover },
+        sdkAccountReader = { _, _ -> sdkAccount },
+        dashjNextAddress = { _, ref -> chain.next().takeIf { ref == rotatedReference } },
+        dashjMarkUsed = { _, _, address -> chain.mark(address) },
+        params = params,
+        dashjSendingCursor = { _, ref -> chain.current.takeIf { ref == rotatedReference } },
+        dashjAdvancePast = { _, _, index, address -> chain.advancePast(index, address) },
+        dashjAddressAt = { _, ref, index -> chain.keys.getOrNull(index).takeIf { ref == rotatedReference } },
+        paidAddresses = store
+    )
+
+    @Test
+    fun rotatedRequest_sameXpub_sdkPickNeverReturnsTheFoldedAmbiguousAddress() = runBlocking {
+        val store = foldedAmbiguousAndPaid(sdkPool)
+        val rotated = target.copy(accountReference = rotatedReference)
+        // The SDK rebuilt the sending account under the new reference: the same
+        // addresses; index 0 never reached the chain, so it is not flagged used.
+        val sdkAccount = account(externalAccountReference = rotatedReference, addresses = pool(false, true, false, false))
+        val chain = FakeDashjChain(sdkPool, current = 0) // dashj's new chain starts at 0
+
+        val next = rotationProvider(store, chain, sdkAccount).nextAddress(rotated)
+
+        assertEquals(ContactAddressSource.SDK, next?.source)
+        assertEquals(sdkPool[2], next?.address)
+        assertEquals("dashj's new chain is advanced past the inherited frontier", 2, chain.current)
+    }
+
+    @Test
+    fun rotatedRequest_sameXpub_theEarlierAmbiguousAddressCannotBeClaimed() = runBlocking {
+        val store = foldedAmbiguousAndPaid(sdkPool)
+        val rotated = target.copy(accountReference = rotatedReference)
+        val provider = rotationProvider(
+            store,
+            FakeDashjChain(sdkPool, current = 0),
+            account(externalAccountReference = rotatedReference, addresses = pool(false, true, false, false))
+        )
+        var sent = false
+
+        assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking {
+                provider.sendThenMarkUsed(ContactPaymentAddress(rotated, sdkPool[0], ContactAddressSource.SDK, 0)) {
+                    sent = true
+                }
+            }
+        }
+        assertFalse(sent)
+        assertFalse(store.contains(sdkPool[0].toBase58()))
+    }
+
+    @Test
+    fun rotatedRequest_sameXpub_dashjFallbackIsAdvancedPastTheInheritedFrontier() = runBlocking {
+        val store = foldedAmbiguousAndPaid(sdkPool)
+        val chain = FakeDashjChain(sdkPool, current = 0)
+
+        val next = rotationProvider(store, chain, sdkAccount = null, cutover = false)
+            .nextAddress(target.copy(accountReference = rotatedReference))
+
+        assertEquals(ContactAddressSource.DASHJ, next?.source)
+        assertEquals(sdkPool[2], next?.address)
+        assertEquals(listOf(1 to sdkPool[1]), chain.frontierAdvances)
+    }
+
+    @Test
+    fun rotatedRequest_anotherXpub_startsAtItsOwnIndexZero() = runBlocking {
+        val store = foldedAmbiguousAndPaid(sdkPool)
+        val otherKeys = List(4) { newAddress() }
+        val otherPool = otherKeys.mapIndexed { i, key -> SdkContactPoolAddress(key.toBase58(), i, false, poolTypeTag = 2) }
+        val chain = FakeDashjChain(otherKeys, current = 0)
+
+        val next = rotationProvider(
+            store,
+            chain,
+            account(externalAccountReference = rotatedReference, addresses = otherPool)
+        ).nextAddress(target.copy(accountReference = rotatedReference))
+
+        assertEquals(ContactAddressSource.SDK, next?.source)
+        assertEquals("a different xpub is a new chain: nothing inherited", otherKeys[0], next?.address)
+        assertTrue("dashj's new chain is left alone", chain.frontierAdvances.isEmpty())
+    }
+
+    @Test
+    fun rotatedRequest_unprovableChain_inheritsTheFrontier() = runBlocking {
+        // Neither dashj (no chain for the new reference) nor the SDK (account
+        // still built from the old reference) can derive the new chain's
+        // address at index 1: the frontier is inherited, fail-safe.
+        val store = foldedAmbiguousAndPaid(sdkPool)
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ -> account(externalAccountReference = rotatedReference, addresses = pool(false)) },
+            dashjNextAddress = { _, _ -> null },
+            dashjMarkUsed = { _, _, _ -> FriendChainAccess.MarkResult.NO_CHAIN },
+            params = params,
+            paidAddresses = store
+        )
+
+        assertNull(
+            "index 0 is at or below the inherited frontier, and the pool has nothing above it",
+            provider.nextAddress(target.copy(accountReference = rotatedReference))
+        )
+    }
+
     // ── recovery: the chain is the source of truth (PR #1608 review, round 9) ──
 
     /**

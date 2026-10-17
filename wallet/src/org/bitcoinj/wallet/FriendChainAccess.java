@@ -115,6 +115,40 @@ public final class FriendChainAccess {
         }
     }
 
+    /**
+     * The public key hash of the SENDING chain's child {@code index} for {@code contact}
+     * — one derivation from the chain's public key — or {@code null} when this wallet
+     * holds no such chain, or the index has no valid child. Never issues a key.
+     *
+     * <p>Tells two account references of one contact apart (PR #1608 review): a
+     * rotated request carries a new reference, and dashj a new chain, but often the
+     * same xpub; a recorded paid address at {@code index} on the old reference that
+     * differs from this proves the new chain is another xpub.
+     */
+    public static byte[] sendingPubKeyHashAtOrNull(Wallet wallet, EvolutionContact contact, int index) {
+        if (index < 0) {
+            return null;
+        }
+        wallet.keyChainGroupLock.lock();
+        try {
+            FriendKeyChainGroup group = wallet.sendingToFriendsGroup;
+            if (group == null) {
+                return null;
+            }
+            FriendKeyChain chain =
+                    group.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            if (chain == null) {
+                return null;
+            }
+            return HDKeyDerivation.deriveChildKey(chain.getWatchingKey(), new ChildNumber(index, false))
+                    .getPubKeyHash();
+        } catch (HDDerivationException | IllegalArgumentException e) {
+            return null;
+        } finally {
+            wallet.keyChainGroupLock.unlock();
+        }
+    }
+
     /** Outcome of {@link #markSendingAddressUsed}. */
     public enum MarkResult {
         /** The key was marked used and dashj's current sending key moved past it. */

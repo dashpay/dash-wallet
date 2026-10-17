@@ -164,11 +164,18 @@ class PaidContactAddressStoreTest {
 
         val after = store()
         assertEquals(Frontier(4, "a"), after.foldedFrontier("contactId", 7))
-        assertNull("another channel has none", after.foldedFrontier("contactId", 8))
+        assertNull(
+            "a reference proven to be another xpub has none",
+            after.foldedFrontier("contactId", 8, distinctChains = setOf(7))
+        )
+        assertNull("another contact has none", after.foldedFrontier("other", 7))
         assertEquals(ClaimResult.ALREADY_PAID, after.claim("a", target, 9))
         assertEquals(ClaimResult.ALREADY_PAID, after.claim("lower", target, 3))
         assertEquals(ClaimResult.CLAIMED, after.claim("higher", target, 5))
-        assertEquals(ClaimResult.CLAIMED, after.claim("otherChannel", target.copy(accountReference = 8), 0))
+        assertEquals(
+            ClaimResult.CLAIMED,
+            after.claim("otherChain", target.copy(accountReference = 8), 0, distinctChains = setOf(7))
+        )
     }
 
     @Test
@@ -186,9 +193,9 @@ class PaidContactAddressStoreTest {
         assertEquals(ClaimResult.ALREADY_PAID, after.claim("earlierPaid", target, null))
         assertFalse("nothing recorded", after.contains("earlierPaid"))
         assertEquals(
-            "a channel without a frontier still takes an unindexed claim",
+            "a chain without a frontier still takes an unindexed claim",
             ClaimResult.CLAIMED,
-            after.claim("otherChannel", target.copy(accountReference = 8), null)
+            after.claim("otherChain", target.copy(accountReference = 8), null, distinctChains = setOf(7))
         )
     }
 
@@ -202,7 +209,95 @@ class PaidContactAddressStoreTest {
         s.release("b")
 
         assertEquals(0, s.paidFrontier("contactId", 7))
-        assertNull(s.paidFrontier("contactId", 8))
+        assertNull(s.paidFrontier("contactId", 8, distinctChains = setOf(7)))
+        assertNull(s.paidFrontier("other", 7))
+    }
+
+    // ── one xpub, several references (PR #1608 review, round 15) ────────
+
+    /**
+     * Index 0 was claimed by a send whose outcome is unknown (it may still
+     * reach the chain), index 1 was paid; both settle and fold into reference
+     * 7's frontier at 1. The contact re-sends their request with the same xpub
+     * under reference 8: dashj builds a new chain from index 0 and the SDK
+     * rebuilds the same addresses. Address 0 must stay excluded.
+     */
+    private fun foldedAmbiguousAndPaid(): PaidContactAddressStore {
+        val s = store()
+        assertEquals(ClaimResult.CLAIMED, s.claim("ambiguous0", target, 0))
+        s.sent("ambiguous0")
+        assertEquals(ClaimResult.CLAIMED, s.claim("paid1", target, 1))
+        s.sent("paid1")
+        s.dashjMarked("ambiguous0", MarkResult.MARKED)
+        s.dashjMarked("paid1", MarkResult.MARKED)
+        walletSave()
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        s.record("trigger", target.copy(contactUserId = "other"))
+        return store()
+    }
+
+    @Test
+    fun rotatedReference_sameXpub_inheritsTheFoldedFrontier_andRefusesTheEarlierAmbiguousAddress() {
+        val after = foldedAmbiguousAndPaid()
+        assertEquals(Frontier(1, "paid1"), after.foldedFrontier("contactId", 7))
+        assertFalse("folded away: only the frontier address is listed", "ambiguous0" in after.paid())
+
+        val rotated = target.copy(accountReference = 8)
+        assertEquals(Frontier(1, "paid1"), after.foldedFrontier("contactId", 8))
+        assertEquals(1, after.paidFrontier("contactId", 8))
+        assertEquals(ClaimResult.ALREADY_PAID, after.claim("ambiguous0", rotated, 0))
+        assertEquals(ClaimResult.ALREADY_PAID, after.claim("ambiguous0", rotated, null))
+        assertFalse("nothing recorded", after.contains("ambiguous0"))
+        assertEquals(ClaimResult.CLAIMED, after.claim("next2", rotated, 2))
+    }
+
+    @Test
+    fun rotatedReference_provenAnotherXpub_doesNotInherit() {
+        val after = foldedAmbiguousAndPaid()
+        val rotated = target.copy(accountReference = 8)
+
+        assertNull(after.foldedFrontier("contactId", 8, distinctChains = setOf(7)))
+        assertNull(after.paidFrontier("contactId", 8, distinctChains = setOf(7)))
+        assertEquals(
+            "a new chain's index 0 is another address",
+            ClaimResult.CLAIMED,
+            after.claim("newChain0", rotated, 0, distinctChains = setOf(7))
+        )
+        assertEquals("the old chain keeps its own frontier", 1, after.paidFrontier("contactId", 7, setOf(8)))
+    }
+
+    @Test
+    fun rotatedReference_inheritsLiveIndexedEntries_andTheHighestFrontier() {
+        val s = store()
+        s.recordSettled("a", index = 4)
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        s.record("trigger", target.copy(contactUserId = "other"))
+        s.record("live6", target.copy(accountReference = 8), 6)
+        s.record("unindexed", target.copy(accountReference = 9))
+
+        assertEquals(6, s.paidFrontier("contactId", 10))
+        assertEquals(4, s.paidFrontier("contactId", 10, distinctChains = setOf(8)))
+        assertEquals(6, s.paidFrontier("contactId", 10, distinctChains = setOf(7)))
+        assertEquals(Frontier(4, "a"), s.foldedFrontier("contactId", 8))
+    }
+
+    @Test
+    fun chainWitnesses_oneRecordedIndexPerOtherReference_preferringTheFoldedFrontier() {
+        val s = store()
+        s.recordSettled("a", index = 4)
+        now += PaidContactAddressStore.RETENTION_MS + 1
+        s.record("trigger", target.copy(contactUserId = "other"))
+        s.record("live2", target, 2)
+        s.record("live5", target.copy(accountReference = 8), 5)
+        s.record("live3", target.copy(accountReference = 8), 3)
+        s.record("unindexed", target.copy(accountReference = 9))
+
+        assertEquals(
+            mapOf(7 to Frontier(4, "a"), 8 to Frontier(5, "live5")),
+            s.chainWitnesses("contactId", 10)
+        )
+        assertEquals(mapOf(8 to Frontier(5, "live5")), s.chainWitnesses("contactId", 7))
+        assertEquals(emptyMap<Int, Frontier>(), s.chainWitnesses("nobody", 7))
     }
 
     @Test

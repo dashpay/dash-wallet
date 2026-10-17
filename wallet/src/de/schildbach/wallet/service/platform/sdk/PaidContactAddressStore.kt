@@ -97,10 +97,27 @@ import java.util.concurrent.TimeUnit
  * line per such payment.
  *
  * Scoping: a contact payment address is derived from the xpub that contact
- * gave THIS identity for ONE contact request (accountReference, which is
- * derived from that xpub), so an address and a channel name its wallet and
+ * gave THIS identity in a contact request, so an address names its wallet and
  * contact. The contact and accountReference are stored to re-apply the dashj
- * mark and to key the frontier.
+ * mark (dashj keeps one sending chain per accountReference) and to key the
+ * frontier.
+ *
+ * ## One xpub, several references (PR #1608 review, round 15)
+ *
+ * A channel's accountReference is not its xpub: a contact who re-sends their
+ * request (a rotation) bumps the reference's 4-bit version and, from the SDK,
+ * sends the SAME xpub (always derived at account 0). dashj then builds a new
+ * sending chain under the new reference, starting at index 0, and the SDK
+ * rebuilds its sending account — the same addresses at the same indices. A
+ * frontier keyed by the old reference alone would leave every folded address
+ * below it unprotected on the new one. So every frontier lookup and claim
+ * ([paidFrontier], [foldedFrontier], [claim]) takes the frontiers and indexed
+ * entries of ALL the contact's references, except those the caller has
+ * PROVEN to be another xpub (`distinctChains`: the target chain's address at
+ * a recorded index differs from the recorded one, [chainWitnesses]). A
+ * reference that cannot be told apart is inherited — at worst that skips
+ * addresses of a genuinely new chain; never reuses one. The file format is
+ * unchanged: what changed is only which lines a lookup reads.
  *
  * ## What the store cannot know: payments made before it existed (PR #1608 review, round 9)
  *
@@ -268,13 +285,19 @@ class PaidContactAddressStore(
      * (unsettled, in flight) and writes the store; [ClaimResult.CLAIMED] only
      * once the claim is on disk (or the store is memory-only). Check and record
      * are one atomic step, so of two concurrent claims of one address exactly
-     * one wins. On a channel with a folded frontier ([foldedFrontier]) the
-     * claim needs an [index] above it: at or below it, or null (unknown — the
-     * frontier no longer lists the earlier paid addresses), it is
+     * one wins. On a chain with a folded frontier ([foldedFrontier], over
+     * every reference of the contact not in [distinctChains]) the claim needs
+     * an [index] above it: at or below it, or null (unknown — the frontier no
+     * longer lists the earlier paid addresses), it is
      * [ClaimResult.ALREADY_PAID]. Nothing changes unless it returns
      * [ClaimResult.CLAIMED].
      */
-    fun claim(address: String, target: ContactPaymentTarget, index: Int? = null): ClaimResult =
+    fun claim(
+        address: String,
+        target: ContactPaymentTarget,
+        index: Int? = null,
+        distinctChains: Set<Int> = emptySet()
+    ): ClaimResult =
         synchronized(lock) {
             val map = loaded()
             if (readFailed) {
@@ -284,14 +307,13 @@ class PaidContactAddressStore(
             if (address in map || folded.values.any { it.address == address }) {
                 return ClaimResult.ALREADY_PAID
             }
-            val channel = Channel(target.contactUserId, target.accountReference)
-            val frontier = folded[channel]
-            // The frontier keeps only the channel's highest paid address: an
+            val frontier = chainFolded(target.contactUserId, target.accountReference, distinctChains)
+            // The frontier keeps only the chain's highest paid address: an
             // address whose index is unknown cannot be shown to lie above it,
             // so it may be an earlier paid one — refused like a paid address.
             if (frontier != null && (index == null || index <= frontier.index)) {
                 log.warn(
-                    "contact payment refused: index {} is not provably above the channel's paid frontier {}",
+                    "contact payment refused: index {} is not provably above the chain's paid frontier {}",
                     index ?: "unknown", frontier.index
                 )
                 return ClaimResult.ALREADY_PAID
@@ -388,26 +410,84 @@ class PaidContactAddressStore(
     }
 
     /**
-     * The highest derivation index recorded paid or claimed on the channel —
-     * the folded frontier and every live entry with a known index, claims in
-     * flight included — or null when none is known. An address at or below it
-     * must not be picked.
+     * The highest derivation index recorded paid or claimed on the chain of
+     * [contactUserId]'s [accountReference] — the folded frontiers and every
+     * live entry with a known index, claims in flight included, of each of
+     * the contact's references not in [distinctChains] (see the class doc) —
+     * or null when none is known. An address at or below it must not be
+     * picked.
      */
-    fun paidFrontier(contactUserId: String, accountReference: Int): Int? = synchronized(lock) {
-        val channel = Channel(contactUserId, accountReference)
-        val live = loaded().values.filter { it.channel == channel }.mapNotNull { it.index }.maxOrNull()
-        listOfNotNull(folded[channel]?.index, live).maxOrNull()
+    fun paidFrontier(
+        contactUserId: String,
+        accountReference: Int,
+        distinctChains: Set<Int> = emptySet()
+    ): Int? = synchronized(lock) {
+        val live = loaded().values
+            .filter { e ->
+                e.contactUserId == contactUserId &&
+                    e.accountReference?.let { sameChain(it, accountReference, distinctChains) } == true
+            }
+            .mapNotNull { it.index }
+            .maxOrNull()
+        listOfNotNull(chainFolded(contactUserId, accountReference, distinctChains)?.index, live).maxOrNull()
     }
 
     /**
-     * The channel's folded frontier: the highest paid address whose entry has
-     * expired. Independent of the wallet — the provider advances any dashj
-     * chain at or below it past it on every lookup. Null when nothing expired.
+     * The chain's folded frontier: the highest paid address whose entry has
+     * expired, over [contactUserId]'s [accountReference] and each of the
+     * contact's references not in [distinctChains]. Independent of the wallet
+     * — the provider advances any dashj chain at or below it past it on every
+     * lookup. Null when nothing expired.
      */
-    fun foldedFrontier(contactUserId: String, accountReference: Int): Frontier? = synchronized(lock) {
+    fun foldedFrontier(
+        contactUserId: String,
+        accountReference: Int,
+        distinctChains: Set<Int> = emptySet()
+    ): Frontier? = synchronized(lock) {
         loaded()
-        folded[Channel(contactUserId, accountReference)]
+        chainFolded(contactUserId, accountReference, distinctChains)
     }
+
+    /**
+     * One recorded (index, address) pair for each of [contactUserId]'s
+     * references other than [accountReference] that has one: its folded
+     * frontier, else its highest-index live entry. The caller derives the
+     * address at that index on [accountReference]'s chain: a different
+     * address proves the reference is another xpub (`distinctChains`); the
+     * same one, or no answer, means it is inherited. Empty in the common case
+     * of a contact with one reference.
+     */
+    fun chainWitnesses(contactUserId: String, accountReference: Int): Map<Int, Frontier> = synchronized(lock) {
+        val witnesses = HashMap<Int, Frontier>()
+        loaded().forEach { (address, e) ->
+            val reference = e.accountReference ?: return@forEach
+            val index = e.index ?: return@forEach
+            if (e.contactUserId != contactUserId || reference == accountReference) return@forEach
+            val current = witnesses[reference]
+            if (current == null || index > current.index) witnesses[reference] = Frontier(index, address)
+        }
+        // A folded frontier wins over live entries: it is what the lookups use.
+        folded.forEach { (channel, frontier) ->
+            if (channel.contactUserId == contactUserId && channel.accountReference != accountReference) {
+                witnesses[channel.accountReference] = frontier
+            }
+        }
+        witnesses
+    }
+
+    /** Whether [reference] counts as the chain of [target] (see the class doc). */
+    private fun sameChain(reference: Int, target: Int, distinctChains: Set<Int>): Boolean =
+        reference == target || reference !in distinctChains
+
+    /** [foldedFrontier], under [lock] with the store loaded. */
+    private fun chainFolded(contactUserId: String, accountReference: Int, distinctChains: Set<Int>): Frontier? =
+        folded.entries
+            .filter { (channel, _) ->
+                channel.contactUserId == contactUserId &&
+                    sameChain(channel.accountReference, accountReference, distinctChains)
+            }
+            .map { it.value }
+            .maxByOrNull { it.index }
 
     /**
      * The unsettled addresses paid to [contactUserId] on [accountReference]

@@ -265,4 +265,95 @@ class FriendChainAccessFrontierRecoveryTest {
         assertFalse("the send callback never ran", sent)
         assertEquals(0, FriendChainAccess.sendingCursorOrNull(restored, contact))
     }
+
+    // ── one xpub, several references (PR #1608 review, round 15) ────────
+
+    private val rotatedReference = accountReference + (1 shl 28)
+    private val rotatedContact = EvolutionContact(ourId, 0, contactId, rotatedReference)
+    private val rotatedTarget = target.copy(accountReference = rotatedReference)
+
+    /** Another contact xpub, for a re-sent request that is a genuinely new chain. */
+    private val otherXpub: String = run {
+        val key = HDKeyDerivation.deriveChildKey(
+            HDKeyDerivation.createMasterPrivateKey(ByteArray(32) { 8 }),
+            ChildNumber(0, true)
+        )
+        DeterministicKey.deserializeContactPub(params, ByteArray(4) { 9 } + key.chainCode + key.pubKey)
+            .serializePubB58(params)
+    }
+
+    /** The provider for the rotated reference over [wallet], wired as IdentityRepositoryImpl does. */
+    private fun rotatedProvider(wallet: Wallet, store: PaidContactAddressStore) = ContactPaymentAddressProvider(
+        cutoverCommitted = { true },
+        sdkAccountReader = { _, _ -> brokenSdkChannel },
+        dashjNextAddress = { _, _ -> wallet.currentAddress(rotatedContact, FriendKeyChain.KeyChainType.SENDING_CHAIN) },
+        dashjMarkUsed = { _, _, address ->
+            FriendChainAccess.markSendingAddressUsed(wallet, rotatedContact, address.hash)
+        },
+        params = params,
+        dashjSendingCursor = { _, _ -> FriendChainAccess.sendingCursorOrNull(wallet, rotatedContact) },
+        dashjAdvancePast = { _, _, index, address ->
+            FriendChainAccess.advanceSendingChainPast(wallet, rotatedContact, index, address.hash)
+        },
+        dashjAddressAt = { _, _, index ->
+            FriendChainAccess.sendingPubKeyHashAtOrNull(wallet, rotatedContact, index)
+                ?.let { Address.fromPubKeyHash(params, it) }
+        },
+        paidAddresses = store,
+        chain = ChainView()
+    )
+
+    /** Index 0 (ambiguous, never on chain) and 1 (paid) folded into the old reference's frontier at 1. */
+    private fun foldedFrontierFile(): File = File(tmp.root, PaidContactAddressStore.FILE_NAME).apply {
+        writeText("frontier ${target.contactUserId} $accountReference 1 ${contactAddress(1).toBase58()}\n")
+    }
+
+    @Test
+    fun sendingPubKeyHashAt_derivesTheChainsKey_withoutIssuingOne() {
+        val wallet = newWallet()
+
+        assertEquals(
+            contactAddress(7),
+            Address.fromPubKeyHash(params, requireNotNull(FriendChainAccess.sendingPubKeyHashAtOrNull(wallet, contact, 7)))
+        )
+        assertEquals("nothing issued", 0, FriendChainAccess.sendingCursorOrNull(wallet, contact))
+        assertNull("no chain for that reference", FriendChainAccess.sendingPubKeyHashAtOrNull(wallet, rotatedContact, 0))
+        assertNull(FriendChainAccess.sendingPubKeyHashAtOrNull(wallet, contact, -1))
+    }
+
+    @Test
+    fun rotatedRequest_sameXpub_newDashjChainIsAdvancedPastTheOldReferencesFrontier() = runBlocking {
+        val wallet = newWallet()
+        // The contact re-sent their request with the same xpub: dashj builds a
+        // second chain under the new reference, at index 0 — the ambiguous one.
+        wallet.addSendingToFriendKeyChain(contactXpub, ourId, 0, contactId, rotatedReference)
+        assertEquals(0, FriendChainAccess.sendingCursorOrNull(wallet, rotatedContact))
+        val provider = rotatedProvider(wallet, PaidContactAddressStore(foldedFrontierFile()))
+
+        val next = provider.nextAddress(rotatedTarget)
+
+        assertEquals(ContactAddressSource.DASHJ, next?.source)
+        assertEquals(contactAddress(2), next?.address)
+        val stale = ContactPaymentAddress(rotatedTarget, contactAddress(0), ContactAddressSource.DASHJ, index = 0)
+        assertThrows(ContactAddressAlreadyPaidException::class.java) {
+            runBlocking { provider.sendThenMarkUsed(stale) { "txid" } }
+        }
+        assertEquals(2, next?.index)
+    }
+
+    @Test
+    fun rotatedRequest_anotherXpub_newDashjChainStartsAtItsOwnIndexZero() = runBlocking {
+        val wallet = newWallet()
+        wallet.addSendingToFriendKeyChain(otherXpub, ourId, 0, contactId, rotatedReference)
+        val provider = rotatedProvider(wallet, PaidContactAddressStore(foldedFrontierFile()))
+
+        val next = provider.nextAddress(rotatedTarget)
+
+        val otherZero = Address.fromKey(
+            params,
+            HDKeyDerivation.deriveChildKey(DeterministicKey.deserializeB58(otherXpub, params), ChildNumber(0, false))
+        )
+        assertEquals(otherZero, next?.address)
+        assertEquals(0, next?.index)
+    }
 }
