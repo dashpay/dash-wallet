@@ -202,4 +202,46 @@ class ContestedReregistrationGuardTest {
             .filter { missingNameOutcome(it) == MissingNameOutcome.PARK_ASK_FOR_NEW_NAME }
         assertEquals(listOf(false), parking)
     }
+
+    // ── the name step's gate (replacement name after a lost or locked vote) ──
+
+    @Test
+    fun `a replacement is registered although the identity already owns its instant secondary`() {
+        val owned = listOf("br1m0ztest3")
+        assertTrue(
+            "non-contestable replacement",
+            requestedNameStepApplies(true, "br1m0ztest3", owned, "replacement22", "replacement22")
+        )
+        assertTrue(
+            "contestable replacement (its contender guard still runs after this)",
+            requestedNameStepApplies(true, "br1m0ztest3", owned, "replacement", "replacement")
+        )
+    }
+
+    @Test
+    fun `with no name on chain the requested name is registered as before`() {
+        assertTrue(requestedNameStepApplies(true, null, emptyList(), "replacement22", null))
+        assertTrue(requestedNameStepApplies(true, null, emptyList(), "replacement22", "replacement22"))
+    }
+
+    @Test
+    fun `a replacement already on chain is never submitted again`() {
+        // an earlier attempt (an Ambiguous one included) that landed: the label is owned now
+        assertFalse(
+            requestedNameStepApplies(
+                true, "br1m0ztest3", listOf("br1m0ztest3", "rep1acement22"), "Replacement22", "replacement22"
+            )
+        )
+    }
+
+    @Test
+    fun `a plain restore never re-registers the old name of an identity that owns a name`() {
+        // no pending replacement: USERNAME still holds the lost contested name; registering it
+        // again would pay its prefund twice
+        assertFalse(requestedNameStepApplies(true, "br1m0ztest3", listOf("br1m0ztest3"), "brimoztest", null))
+        // a pending replacement for a different label does not license this one
+        assertFalse(requestedNameStepApplies(true, "br1m0ztest3", listOf("br1m0ztest3"), "brimoztest", "other22"))
+        // no identity: nothing to register for
+        assertFalse(requestedNameStepApplies(false, null, emptyList(), "replacement22", "replacement22"))
+    }
 }

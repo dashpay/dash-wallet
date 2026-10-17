@@ -42,6 +42,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.username.UsernameType
 import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -367,6 +368,80 @@ class RequestUserNameViewModelTest {
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun submit_afterTheCutover_lostVoteWithASecondary_retriesOnlyTheName() = runVmTest {
+        // An SDK-created identity whose contested primary lost while its instant secondary
+        // registered: the replacement is registered for THIS identity, never funded again.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } just Runs
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            "alice2instant",
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false,
+            usernameRequested = UsernameRequestStatus.LOST_VOTE
+        )
+
+        viewModel.submit()
+
+        coVerify(exactly = 1, timeout = 5_000) {
+            transparentUsernameCreation.retryNameForExistingIdentity(
+                "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+                "alice3",
+                null
+            )
+        }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun submit_afterTheCutover_nameRejectedAfterRegistration_retriesOnlyTheName() = runVmTest {
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } just Runs
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "username registration did not complete (retryable): domain document rejected",
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false
+        )
+
+        viewModel.submit()
+
+        coVerify(exactly = 1, timeout = 5_000) {
+            transparentUsernameCreation.retryNameForExistingIdentity("6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr", "alice3", null)
+        }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun submit_beforeTheCutover_lostVote_keepsTheLegacyReusePath() = runVmTest {
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false,
+            usernameRequested = UsernameRequestStatus.LOST_VOTE
+        )
+
+        viewModel.submit()
+
+        verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
     }
 
     // ── Submit-state mirroring ──────────────────────────────────────────────

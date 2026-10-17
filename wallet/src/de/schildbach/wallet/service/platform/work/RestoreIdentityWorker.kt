@@ -261,8 +261,22 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // has POSITIVELY seen this identity's contender document, "no name found"
             // down there is a failed read, never an absent name.
             var confirmedOwnContender = false
-            if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
-                val requestedLabel = identityConfig.get(BlockchainIdentityConfig.USERNAME)
+            // The requested name was submitted by THIS run (a contest included, which shows up
+            // as VOTING further down rather than as an owned name).
+            var requestedNameSubmitted = false
+            val requestedLabel = identityConfig.get(BlockchainIdentityConfig.USERNAME)
+            if (requestedNameStepApplies(
+                    identityExists = blockchainIdentity.identity != null,
+                    currentUsername = blockchainIdentity.currentUsername,
+                    ownedNames = listOfNotNull(
+                        blockchainIdentity.currentUsername,
+                        blockchainIdentity.primaryUsername,
+                        blockchainIdentity.secondaryUsername
+                    ) + blockchainIdentity.usernameStatuses.keys,
+                    requestedLabel = requestedLabel,
+                    pendingReplacementLabel = identityConfig.get(BlockchainIdentityConfig.REQUESTED_NAME_RETRY)
+                )
+            ) {
                 val cutoverCommitted = try {
                     transparentUsernameCreation.isCutoverCommitted()
                 } catch (e: CancellationException) {
@@ -348,7 +362,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
                         requestedLabel
                     )
                 } else if (cutoverCommitted && !requestedLabel.isNullOrEmpty()) {
-                    log.info("identity has no on-chain name yet — registering DPNS name '{}' via the SDK", requestedLabel)
+                    log.info("registering the requested DPNS name '{}' for the existing identity via the SDK", requestedLabel)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.PREORDER_REGISTERING)
                     identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
                     when (
@@ -359,6 +373,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
                     ) {
                         is SdkWriteResult.Broadcast -> {
                             log.info("SDK DPNS registration of '{}' confirmed: {}", requestedLabel, result.value)
+                            requestedNameSubmitted = true
                             // Re-recover so the contested / DONE handling below sees
                             // the now on-chain name (populates currentUsername; the
                             // contested block picks up a name in voting).
@@ -851,7 +866,30 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
             identityRepository.addInviteUserAlert()
 
-            // We are finished recovering
+            // We are finished recovering. A pending replacement name has been registered, or
+            // found already on chain, by now; a later plain restore must not act on it again.
+            // If it is still neither (this run started before the retry asked for it), say so
+            // instead of finishing quietly with the requested name never submitted: the error
+            // keeps the retry card up rather than leaving "registering" or a DONE that lies.
+            identityConfig.get(BlockchainIdentityConfig.REQUESTED_NAME_RETRY)?.let { replacement ->
+                val stillMissing = requestedNameStepApplies(
+                    identityExists = true,
+                    currentUsername = blockchainIdentity.currentUsername,
+                    ownedNames = listOfNotNull(
+                        blockchainIdentity.currentUsername,
+                        blockchainIdentity.primaryUsername,
+                        blockchainIdentity.secondaryUsername
+                    ) + blockchainIdentity.usernameStatuses.keys,
+                    requestedLabel = replacement,
+                    pendingReplacementLabel = replacement
+                )
+                if (stillMissing && !requestedNameSubmitted && !confirmedOwnContender &&
+                    blockchainIdentityData.creationState != IdentityCreationState.VOTING
+                ) {
+                    throw IllegalStateException("the requested name '$replacement' was not registered (retryable)")
+                }
+                identityConfig.remove(BlockchainIdentityConfig.REQUESTED_NAME_RETRY)
+            }
             blockchainIdentityData.finishRestoration()
             if (blockchainIdentityData.creationState != IdentityCreationState.VOTING ||
                 (blockchainIdentityData.creationState == IdentityCreationState.VOTING && blockchainIdentityData.lostVote && blockchainIdentityData.showSecondaryUsername)) {
@@ -1017,6 +1055,34 @@ internal fun contestedNameListsCanMatch(
  *
  * Blank/absent label means there is nothing to re-register at all.
  */
+/**
+ * Does the name step have a requested label to register for this identity?
+ *
+ * - no name on chain at all ([currentUsername] null): yes, as before (the fresh-create case);
+ * - the identity already owns a name: only for a pending REPLACEMENT a name-only retry asked for
+ *   ([pendingReplacementLabel], after a lost or locked vote or a rejected name), only when it is
+ *   the [requestedLabel], and only while that label is not already one of [ownedNames]. An earlier
+ *   attempt that landed (an Ambiguous one included) owns the label by now and is never submitted
+ *   again; a plain restore never re-registers the old name, whose prefund is already spent.
+ *
+ * Contestable labels still go through the contender guard after this.
+ * All comparisons are on DPNS-normalized labels. Pure — host-testable.
+ */
+internal fun requestedNameStepApplies(
+    identityExists: Boolean,
+    currentUsername: String?,
+    ownedNames: Collection<String>,
+    requestedLabel: String?,
+    pendingReplacementLabel: String?
+): Boolean {
+    if (!identityExists) return false
+    if (currentUsername == null) return true
+    if (requestedLabel.isNullOrBlank() || pendingReplacementLabel.isNullOrBlank()) return false
+    val requested = Names.normalizeString(requestedLabel)
+    if (Names.normalizeString(pendingReplacementLabel) != requested) return false
+    return ownedNames.none { it.isNotBlank() && Names.normalizeString(it) == requested }
+}
+
 internal fun contestedReregistrationCheckApplies(requestedLabel: String?): Boolean =
     !requestedLabel.isNullOrBlank() && Names.isUsernameContestable(requestedLabel)
 
