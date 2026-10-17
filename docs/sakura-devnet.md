@@ -1,7 +1,9 @@
 # Sakura Devnet
 
 The `devnet` flavor targets `devnet-sakura`. Its application ID is
-`org.dash.dashpay.devnet.sakura`, separate from Ouzo, testnet, and mainnet.
+`org.dash.wallet.devnet`, reusing the existing Firebase-registered devnet app.
+Only one devnet is supported at a time; this ID shares app storage with any
+previously installed wallet using the same ID, but is separate from testnet and mainnet.
 Wallet, chain, and bootstrap filenames use the existing `-sakura` suffix mechanism.
 No DashJ release or key-derivation changes are required.
 
@@ -17,8 +19,8 @@ No DashJ release or key-derivation changes are required.
 - Core port defaults to `20001` by assumption; override with `-PsakuraCorePort=...`.
 
 Build with `./gradlew :wallet:assembleDevnetDebug` after installing the updated SDK.
-An existing google-services.json must contain the Sakura application ID, or omit
-that optional local file for a build without Google Services configuration.
+The local, Git-ignored `wallet/google-services.json` must contain
+`org.dash.wallet.devnet` so Firebase-dependent startup workers can initialize.
 
 ## Validation Still Required
 
