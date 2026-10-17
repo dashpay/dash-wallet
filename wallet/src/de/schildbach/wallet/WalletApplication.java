@@ -1611,6 +1611,15 @@ public class WalletApplication extends MultiDexApplication
         return wallet;
     }
 
+    /**
+     * Whether a wallet is loaded, safe to ask from any thread. The wallet field is not volatile,
+     * so a background thread reading it can go on seeing a wallet a wipe has already removed;
+     * the state flow is updated alongside it and publishes the change to every thread.
+     */
+    public boolean hasWallet() {
+        return walletStateFlow.getValue() != null;
+    }
+
     private final MutableStateFlow<Wallet> walletStateFlow = StateFlowKt.MutableStateFlow(null);
     @NonNull
     @Override
@@ -2481,14 +2490,18 @@ public class WalletApplication extends MultiDexApplication
             int importance = runningAppProcesses.get(0).importance;
             if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
                 if (wallet == null) {
-                    log.warn("wallet does not exist, but starting blockchain service");
+                    // The environment was never initialized in this process (no wallet file at
+                    // startup), so blockchainServiceIntent may still be null and the service has
+                    // no wallet to work with anyway.
+                    log.warn("wallet does not exist, not starting blockchain service");
+                    return;
                 }
                 if (cancelCoinsReceived) {
                     Intent blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
                             this, BlockchainServiceImpl.class);
                     startService(blockchainServiceCancelCoinsReceivedIntent);
                 } else {
-                    startService(blockchainServiceIntent);
+                    startService(getBlockchainServiceIntent());
                 }
             }
         }
@@ -2537,7 +2550,19 @@ public class WalletApplication extends MultiDexApplication
 
     @Deprecated(message = "not used")
     public void stopBlockchainService() {
-        stopService(blockchainServiceIntent);
+        stopService(getBlockchainServiceIntent());
+    }
+
+    /**
+     * {@link #blockchainServiceIntent} is only assigned by {@link #initEnvironment()}, which does
+     * not run when the app starts without a wallet file. Build it on demand so that callers can
+     * never pass null to startService()/stopService().
+     */
+    private Intent getBlockchainServiceIntent() {
+        if (blockchainServiceIntent == null) {
+            blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
+        }
+        return blockchainServiceIntent;
     }
 
     /**

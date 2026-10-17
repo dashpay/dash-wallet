@@ -229,4 +229,33 @@ class SdkTransparentTopUpTest {
         assertEquals(0, source.resumeCalls)
         assertEquals(1, source.topUpFromCoreCalls)
     }
+
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun freshTopUp_refusedWhileAPendingPaymentIsUnprotected() {
+        val source = fakeSource()
+        source.onTopUpFromCore = { 42_000L }
+        val topUp = SdkTransparentTopUp(source = source, cutoverCommitted = { true }, freshFundingBlocked = { true })
+
+        val result = runBlocking { topUp.topUp(identityBase58, amountDuffs, newUserIntent = true) }
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertEquals("no fresh coin selection while the inputs are exposed", 0, source.topUpFromCoreCalls)
+    }
+
+    @Test
+    fun resumingAnExistingLock_isNotBlockedByAnUnprotectedPendingPayment() {
+        val source = fakeSource()
+        source.unresolvedLock = { trackedLock() }
+        source.onResume = { 42_000L }
+        val topUp = SdkTransparentTopUp(source = source, cutoverCommitted = { true }, freshFundingBlocked = { true })
+
+        val result = runBlocking { topUp.topUp(identityBase58, amountDuffs, newUserIntent = false) }
+
+        // re-consumes the lock's own UTXOs, selects nothing fresh
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(1, source.resumeCalls)
+    }
 }

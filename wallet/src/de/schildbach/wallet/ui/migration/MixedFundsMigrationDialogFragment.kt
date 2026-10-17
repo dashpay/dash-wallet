@@ -119,6 +119,10 @@ class MixedFundsMigrationDialogFragment :
                     // per-scenario error presentation — which buttons it
                     // offers depends on WHICH action failed.
                     val failed = state.outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED
+                    // Refused because an earlier payment is still confirming: nothing was spent
+                    // and nothing is wrong, so the choice stays on offer with the reason shown,
+                    // and the sheet may be dismissed (the prompt returns on the next start).
+                    val stillConfirming = state.outcome == MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
                     val shieldFailed = failed &&
                         state.attemptedAction == MixedFundsMigrationAction.SHIELD
 
@@ -166,7 +170,8 @@ class MixedFundsMigrationDialogFragment :
                     // Dismissing the processing sheet is fine — the marker
                     // keeps the state, and the sheet re-shows on the next
                     // (re)creation while it is set.
-                    isCancelable = state.outcome == MixedFundsMigrationOutcome.STARTED ||
+                    isCancelable = stillConfirming ||
+                        state.outcome == MixedFundsMigrationOutcome.STARTED ||
                         state.outcome == MixedFundsMigrationOutcome.UNCONFIRMED ||
                         awaiting || state.resultTimedOut || state.resultLanded
 
@@ -196,6 +201,7 @@ class MixedFundsMigrationDialogFragment :
                             }
                         state.outcome == MixedFundsMigrationOutcome.UNCONFIRMED ->
                             getString(R.string.mixed_funds_migration_unconfirmed)
+                        stillConfirming -> getString(R.string.payment_still_confirming)
                         // While awaiting, the started message lives in the
                         // progress row next to the spinner.
                         else -> null

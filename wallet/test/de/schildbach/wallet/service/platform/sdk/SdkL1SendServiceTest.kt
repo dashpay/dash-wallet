@@ -228,7 +228,8 @@ class SdkL1SendServiceTest {
         utxoCount: suspend (String) -> Int = { 1 },
         // Fresh empty registry by default: no seam locks, drain paths
         // exercisable. Seam-lock refusal is covered by dedicated tests.
-        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry()
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
+        unprotectedPendingPayment: suspend () -> Boolean = { false }
     ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(enabled, cutoverState),
@@ -238,7 +239,8 @@ class SdkL1SendServiceTest {
         spendableUtxoCount = utxoCount,
         seamOutputLockRegistry = seamRegistry,
         onSelfSpendBroadcast = { selfSpendMarks++ },
-        bridgeAfterBroadcast = bridgeAfterBroadcast
+        bridgeAfterBroadcast = bridgeAfterBroadcast,
+        hasUnprotectedPendingPayment = unprotectedPendingPayment
     )
 
     /** A source in the fully-ready state: wallet bound, send succeeds. */
@@ -1505,5 +1507,108 @@ class SdkL1SendServiceTest {
             assertTrue(e.message!!.contains("memoSizeBytes"))
         }
         Unit
+    }
+
+    // ── unprotected pending payment (review 4245734665) ────────────────────
+    //
+    // After a restart an uncertain BIP70 payment's inputs are locked only on the dashj side, and
+    // SDK coin selection cannot see those locks. Every SDK-funded build must refuse while such a
+    // payment is outstanding.
+
+    @Test
+    fun sendToAddress_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { true })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            (result as SdkWriteResult.NotBroadcast).reason.contains(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
+        )
+        assertEquals("nothing may be built while the old inputs are exposed", 0, source.sendCalls)
+    }
+
+    @Test
+    fun sendToAddress_proceedsOnceNoPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { false })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+    }
+
+    @Test
+    fun buildDeferredPayment_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val svc = service(readySource(), unprotectedPendingPayment = { true })
+
+        try {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L))
+            fail("a deferred build went ahead while a pending payment's inputs were exposed")
+        } catch (e: org.dash.wallet.common.services.PaymentStillConfirmingException) {
+            assertTrue(e.message!!.isNotEmpty())
+        }
+        Unit
+    }
+
+    @Test
+    fun aRefusedSendSurfacesAsPaymentStillConfirming() {
+        val e = de.schildbach.wallet.payments.sdkSendNotAttemptedException(
+            "sendToAddress: $L1_PENDING_PAYMENT_UNPROTECTED_REASON"
+        )
+        assertTrue(e is org.dash.wallet.common.services.PaymentStillConfirmingException)
+    }
+
+    @Test
+    fun aDeferredBuildRecordsALowerBoundOfTheHeightItWasReservedAt() = runBlocking {
+        // The pending-payment gate measures the reservation's remaining life in blocks from
+        // here, so it must never be above the engine's processed height (review 2a8b1c7c057e).
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        // within the funding gate's tolerance, with the cursors a little apart
+        val behind = caughtUpProgress().copy(filterHeight = 1_499_999, walletSyncedHeight = 1_499_998)
+        val payment = service(source, progress = { behind })
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+
+        assertEquals("the committed wallet cursor", 1_499_998L, payment.reservedAtHeight)
+    }
+
+    @Test
+    fun aDeferredBuildWithNoCommittedCursorRecordsNoHeight() = runBlocking {
+        // Review 28775c57d545: header and filter cursors at the tip say nothing about how far the
+        // engine has processed (that can be 100 blocks behind). Recording one as the reservation
+        // height would make an older reservation look fresh; unknown must stay unknown.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val noCommittedCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
+        val payment = service(source, progress = { noCommittedCursor })
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+
+        assertNull(payment.reservedAtHeight)
+    }
+
+    @Test
+    fun aDeferredBuildWithNoKnownHeightRecordsNone() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val unknown = caughtUpProgress().copy(headerHeight = 0, filterHeight = 0, walletSyncedHeight = 0)
+        val payment = try {
+            service(source, progress = { unknown }).buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+        } catch (e: IllegalStateException) {
+            // the funding gate may refuse an engine with no heights at all, which is fine too
+            return@runBlocking
+        }
+        assertNull(payment.reservedAtHeight)
+    }
+
+    @Test
+    fun coinJoinDrain_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        // The drain selects fresh transparent inputs too (review 1b15e950af15). The FakeSource
+        // has no drain; reaching it would throw UnsupportedOperationException, which this
+        // refusal must come before.
+        val svc = service(readySource(), unprotectedPendingPayment = { true })
+
+        val result = svc.drainCoinJoinAccountTo(validAddress)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
     }
 }

@@ -28,12 +28,16 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.platform.IdentityRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.spyk
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -41,18 +45,27 @@ import org.dash.wallet.common.payments.bip70.Protos
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.common.payments.bip70.PaymentProtocol
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
+import de.schildbach.wallet.data.PendingDirectPaymentConfig
 import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -62,6 +75,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.FileInputStream
 import java.net.HttpURLConnection
+import java.util.concurrent.atomic.AtomicInteger
 import de.schildbach.wallet.util.toNeutralCoin
 
 /**
@@ -91,7 +105,13 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var sdkL1SendService: de.schildbach.wallet.service.platform.sdk.SdkL1SendService
     private lateinit var l1SendProbeService: de.schildbach.wallet.service.platform.sdk.L1SendProbeService
     private lateinit var bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
+    private lateinit var blockchainStateProvider: BlockchainStateProvider
+    private lateinit var pendingPaymentConfig: PendingDirectPaymentConfig
+    private lateinit var pendingPaymentVerifier: PendingDirectPaymentVerifier
     private lateinit var wallet: Wallet
+
+    /** The verifier's own wipe listener, captured so tearDown can stop its watches. */
+    private val wipeListeners = mutableListOf<suspend () -> Unit>()
 
     private val networkParams: NetworkParameters = TestNet3Params.get()
 
@@ -126,9 +146,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // dashj requires a Context to be constructed before reading a wallet
         org.bitcoinj.core.Context.propagate(org.bitcoinj.core.Context.getOrCreate(networkParams))
 
-        javaClass.getResourceAsStream("coinjoin.wallet").use {
-            wallet = WalletProtobufSerializer().readWallet(it)
-        }
+        wallet = fixtureWallet
 
         // Setup default mock behaviors
         every { walletDataProvider.wallet } returns wallet
@@ -142,6 +160,41 @@ class SendCoinsTaskRunnerBIP70Test {
         every { SecurityGuard.getInstance() } returns mockSecurityGuard
         every { mockSecurityGuard.retrievePassword() } returns "testPassword"
         every { securityFunctions.deriveKey(any(), any()) } returns mockk(relaxed = true)
+
+        // No peers, no sync, nothing observed: the verifier never resolves a quarantined payment
+        // on its own unless a test says otherwise.
+        blockchainStateProvider = mockk(relaxed = true)
+        every { blockchainStateProvider.getNetworkStatus() } returns NetworkStatus.DISCONNECTED
+        coEvery { blockchainStateProvider.getState() } returns null
+        pendingPaymentConfig = mockk(relaxed = true)
+        coEvery { pendingPaymentConfig.getAllOrThrow() } returns emptyList()
+        every { walletDataProvider.attachOnWalletWipedListener(any()) } answers { wipeListeners.add(firstArg()) }
+        coEvery { sdkL1SendService.cutoverCommitted() } returns false
+        // The real engine for broadcast/release/bridge, so those reach the mocked SDK services the
+        // tests verify; observation answers from the mocked probe, with the engine treated as live.
+        val sdkEngine = SdkPendingPaymentEngine(
+            sdkL1SendService,
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            bridgedTransactionFactory
+        )
+        val pendingPaymentEngine = object : PendingPaymentEngine by sdkEngine {
+            override fun isObservationLive(): Boolean = true
+            override suspend fun observation(txIdHex: String): EngineObservation =
+                if (l1SendProbeService.observedTxContext(txIdHex) != null) {
+                    EngineObservation.OBSERVED
+                } else {
+                    EngineObservation.ABSENT
+                }
+        }
+        pendingPaymentVerifier = PendingDirectPaymentVerifier(
+            walletDataProvider,
+            walletApplication,
+            blockchainStateProvider,
+            metadataProvider,
+            pendingPaymentConfig,
+            pendingPaymentEngine
+        ).apply { pollIntervalMs = 20L }
 
         // Create SendCoinsTaskRunner
         sendCoinsTaskRunner = spyk(
@@ -166,9 +219,12 @@ class SendCoinsTaskRunnerBIP70Test {
                 l1SendProbeService,
                 // Phase 5d bridge factory: reached only under a committed
                 // cutover — programmed by the post-cutover BIP70 tests.
-                bridgedTransactionFactory
+                bridgedTransactionFactory,
+                pendingPaymentVerifier
             )
         )
+        // don't wait the production 30 seconds for network evidence in tests
+        sendCoinsTaskRunner.ambiguousSubmissionWaitMs = 500L
 
         coEvery { sendCoinsTaskRunner.logSendTxEvent(any(), any()) } returns Unit
 
@@ -176,8 +232,13 @@ class SendCoinsTaskRunnerBIP70Test {
 
     @After
     fun tearDown() {
+        // Stop this test's watches: the verifier's scope outlives the test.
+        runBlocking { wipeListeners.forEach { it() } }
         mockWebServer.shutdown()
         unmockkStatic(SecurityGuard::class)
+        // The runner keeps finished test instances reachable; their mocks' recorded calls (each
+        // poll of a watch) need not be.
+        io.mockk.clearAllMocks()
     }
 
     /**
@@ -596,16 +657,53 @@ class SendCoinsTaskRunnerBIP70Test {
 
     // ============ Direct-pay (SDK deferred — the only route) ============
 
-    private val deferredTxidHex = "aa".repeat(32)
+    /**
+     * The signed transaction an SDK deferred build hands back: decodable, because the runner
+     * quarantines it, and absent from the fixture wallet, so nothing reads it as already sent.
+     */
+    private val deferredTx: Transaction by lazy {
+        Transaction(networkParams).apply {
+            addInput(
+                Sha256Hash.of("bip70-deferred-${txCounter.incrementAndGet()}".toByteArray()),
+                0,
+                org.bitcoinj.script.ScriptBuilder.createEmpty()
+            )
+            addOutput(Coin.parseCoin("1.0"), Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        }
+    }
+    private val deferredTxidHex: String by lazy { deferredTx.txId.toString() }
 
     private fun deferredPayment() = de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
         txidHex = deferredTxidHex,
-        rawTxBytes = byteArrayOf(1, 2, 3, 4),
+        rawTxBytes = deferredTx.unsafeBitcoinSerialize(),
         feeDuffs = 1000L,
         native = null
     )
 
-    private fun bip70PaymentIntent(address: Address, amount: Coin, paymentUrl: String) = PaymentIntent(
+    private companion object {
+        // static: a per-instance counter would hand every test the same txid
+        val txCounter = AtomicInteger(0)
+
+        /**
+         * The coinjoin.wallet fixture, parsed once for the class. A parsed copy is tens of MB and
+         * stays reachable for the rest of the test fork once loaded (dashj's global Context keeps
+         * hold of it), so a copy per test had grown the fork to the edge of its 2 GB heap. The
+         * tests only touch transactions and outpoints unique to themselves, so sharing it is safe.
+         */
+        val fixtureWallet: Wallet by lazy {
+            org.bitcoinj.core.Context.propagate(org.bitcoinj.core.Context.getOrCreate(TestNet3Params.get()))
+            SendCoinsTaskRunnerBIP70Test::class.java.getResourceAsStream("coinjoin.wallet").use {
+                WalletProtobufSerializer().readWallet(it)
+            }
+        }
+    }
+
+    private fun bip70PaymentIntent(
+        address: Address,
+        amount: Coin,
+        paymentUrl: String,
+        paymentRequestHash: ByteArray? = null
+    ) = PaymentIntent(
         PaymentIntent.Standard.BIP70,
         "Test Merchant",
         null,
@@ -619,7 +717,7 @@ class SendCoinsTaskRunnerBIP70Test {
         paymentUrl,
         null,
         null,
-        null,
+        paymentRequestHash,
         null,
         null
     )
@@ -640,7 +738,7 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
-        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes) } returns
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes, any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
                 liveTx, adoptedWalletInstance = false
             )
@@ -668,10 +766,19 @@ class SendCoinsTaskRunnerBIP70Test {
         // And the Payment message actually went over HTTP.
         assertEquals(1, mockWebServer.requestCount)
         assertEquals("POST", mockWebServer.takeRequest().method)
+
+        // Quarantined before the POST, and the quarantine dropped once the ack was committed.
+        coVerifyOrder {
+            pendingPaymentConfig.add(match { it.txId == deferredTx.txId }, any())
+            pendingPaymentConfig.remove(deferredTx.txId)
+        }
+        assertFalse(pendingPaymentVerifier.isTracked(deferredTx.txId))
     }
 
     @Test
-    fun `directPay releases the reservation on NACK and never broadcasts`() = runTest {
+    fun `a nacked payment stays quarantined and is reported as pending`() = runTest {
+        // A nack is answered only after the payee has had the transaction, so it is no proof the
+        // payee will not broadcast it: the reservation is held, not released, and the watch goes on.
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("1.0")
         val paymentIntent =
@@ -689,20 +796,19 @@ class SendCoinsTaskRunnerBIP70Test {
 
         try {
             sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
-            fail("Expected DirectPayException for NACK")
-        } catch (e: org.dash.wallet.common.services.DirectPayException) {
-            assertTrue(
-                "nack should surface as not-acknowledged: ${e.message}",
-                e.message!!.contains("not acknowledged")
-            )
+            fail("Expected PaymentSubmissionPendingException for NACK")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
         }
 
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        coVerify(exactly = 0) { pendingPaymentConfig.remove(any()) }
+        assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
     }
 
     @Test
-    fun `directPay releases the reservation on transport failure when the tx is never observed`() = runTest {
+    fun `an HTTP error after the request leaves the payment quarantined as pending`() = runTest {
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("1.0")
         val paymentIntent =
@@ -715,17 +821,211 @@ class SendCoinsTaskRunnerBIP70Test {
 
         try {
             sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
-            fail("Expected exception for HTTP 500")
-        } catch (e: Exception) {
+            fail("Expected PaymentSubmissionPendingException for HTTP 500")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
+    }
+
+    @Test
+    fun `a delivered payment answered with 503 stays pending and is never replayed`() = runTest {
+        // A 503 with Retry-After: 0 would make OkHttp replay the request at the HTTP level; the
+        // one-shot body stops that, so the payee is sent the payment exactly once.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns deferredPayment()
+
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAVAILABLE).setHeader("Retry-After", "0")
+        )
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck()))
+        )
+
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
+            fail("Expected PaymentSubmissionPendingException for HTTP 503")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+
+        assertEquals("the payment must be posted once", 1, mockWebServer.requestCount)
+    }
+
+    @Test
+    fun `a request that never left the device releases the reservation and drops the quarantine`() = runTest {
+        // .invalid is reserved by RFC 2606, so this host never resolves: the payee cannot have
+        // received anything, and that is the one failure that frees the inputs again.
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), "http://payment.dash-wallet-test.invalid/pay")
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
+            fail("Expected the DNS failure to surface")
+        } catch (e: PaymentSubmissionPendingException) {
+            fail("a request that never left the device is not pending: $e")
+        } catch (e: java.net.UnknownHostException) {
             assertNotNull(e)
         }
 
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        coVerify(exactly = 1) { pendingPaymentConfig.remove(deferredTx.txId) }
+        assertFalse(pendingPaymentVerifier.isTracked(deferredTx.txId))
     }
 
     @Test
-    fun `directPay completes as paid when the engine observes the server broadcast`() = runTest {
+    fun `the order callback runs before anything is posted`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
+                mockk(relaxed = true), adoptedWalletInstance = false
+            )
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck()))
+        )
+
+        var postsSeenByCallback = -1
+        var recordedTxId: String? = null
+        sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet, "CTXSpend", null) { txId ->
+            postsSeenByCallback = mockWebServer.requestCount
+            recordedTxId = txId
+        }
+
+        assertEquals(deferredTxidHex, recordedTxId)
+        assertEquals("the order must be recorded before the payment is posted", 0, postsSeenByCallback)
+    }
+
+    @Test
+    fun `an acknowledged gift card payment is attributed before its quarantine is cancelled`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        val liveTx = mockk<Transaction>(relaxed = true)
+        every { liveTx.txId } returns deferredTx.txId
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck()))
+        )
+
+        sendCoinsTaskRunner.sendPrebuiltDirectPayment(
+            payment,
+            paymentIntent,
+            wallet,
+            "CTXSpend",
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = "https://icon")
+        )
+
+        // the quarantine record is the only durable copy of the provider until this is written
+        coVerifyOrder {
+            metadataProvider.markGiftCardTransaction(any(), "CTXSpend", "https://icon")
+            pendingPaymentConfig.remove(deferredTx.txId)
+        }
+    }
+
+    @Test
+    fun `an acknowledged payment whose display bridge fails is pending and stays quarantined`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged("wallet unavailable")
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck()))
+        )
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
+            fail("Expected the acked-but-not-displayed payment to be reported")
+        } catch (e: PaymentSubmissionPendingException) {
+            // callers that keep the order and withhold a retry catch this type
+            assertTrue(e is SendCoinsTaskRunner.Bip70AckedDisplayException)
+        }
+
+        // acked: consumed by the broadcast, never released, and the record stays for a later commit
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+        coVerify(exactly = 0) { pendingPaymentConfig.remove(any()) }
+    }
+
+    @Test
+    fun `a quarantined payment records which invoice it was for`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val requestHash = ByteArray(32) { 7 }
+        val paymentIntent = bip70PaymentIntent(
+            testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString(), requestHash
+        )
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns deferredPayment()
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
+            fail("Expected PaymentSubmissionPendingException")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertNotNull(e)
+        }
+
+        coVerify {
+            pendingPaymentConfig.add(
+                match { it.paymentRequestId == org.dash.wallet.common.util.Constants.HEX.encode(requestHash) },
+                any()
+            )
+        }
+    }
+
+    @Test
+    fun `a payment whose wallet was wiped before submission is refused and released`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        // a wipe has started on the installed wallet
+        runBlocking { wipeListeners.forEach { it() } }
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
+            fail("Expected the payment to be refused")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        assertEquals("nothing may be posted for a wiped wallet", 0, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+    }
+
+    @Test
+    fun `directPay completes as paid when the engine observes the server broadcast`() = runBlocking {
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val testAmount = Coin.parseCoin("1.0")
         val paymentIntent =
@@ -745,16 +1045,20 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 0
         coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
-        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes) } returns
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
                 liveTx, adoptedWalletInstance = false
             )
 
+        // real time here: the watch runs on its own scope, and its first poll includes MockK's
+        // first-call warm-up, which can outlast the 500 ms the other tests allow
+        sendCoinsTaskRunner.ambiguousSubmissionWaitMs = 10_000L
         val result = sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
 
-        // Completed as PAID: the reservation was never released, the tx
-        // was bridged, and the caller got the live instance.
-        assertEquals(liveTx, result)
+        // Completed as PAID by the pending-payment watch: the reservation was consumed, never
+        // released, and the tx was committed through the bridge.
+        assertEquals(deferredTx.txId, result.txId)
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
     }
@@ -810,7 +1114,7 @@ class SendCoinsTaskRunnerBIP70Test {
         )
         coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
 
-        val built = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent)
+        val built = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet)
         val outpoints = realTx.inputs.map { it.outpoint }
         outpoints.forEach { assertTrue("locked after build: $it", wallet.isLockedOutput(it)) }
 
@@ -862,5 +1166,613 @@ class SendCoinsTaskRunnerBIP70Test {
             null, null, null, null, null, null, null
         )
         assertEquals(null, extractBip70Recipients(zeroAmount, network))
+    }
+
+    // ==================== acknowledgement vs a wipe (review 4245734681) ====================
+
+    @Test
+    fun `an acknowledgement that arrives after a wipe is not completed on the replacement wallet`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        // a real wallet: a relaxed mock hands dashj a mock Context and poisons the tests after it
+        val replacement = Wallet.createDeterministic(networkParams, org.bitcoinj.script.Script.ScriptType.P2PKH)
+        // stubbed so a regression fails on the assertions below rather than inside MockK
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged("test")
+        // the wipe finishes and installs a replacement while the payee is answering
+        mockWebServer.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                every { walletDataProvider.wallet } returns replacement
+                return MockResponse()
+                    .setResponseCode(HttpURLConnection.HTTP_OK)
+                    .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                    .setBody(okio.Buffer().write(createPaymentAck()))
+            }
+        }
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
+            fail("an acknowledgement for a wiped wallet was completed")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        // nothing may be broadcast through, or committed to, the wallet that replaced the signer
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
+        assertNull(replacement.getTransaction(deferredTx.txId))
+    }
+
+    @Test
+    fun `an acknowledged payment is committed to the wallet that signed it`() = runTest {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent =
+            bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        val liveTx = mockk<Transaction>(relaxed = true)
+        every { liveTx.txId } returns deferredTx.txId
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck()))
+        )
+
+        sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
+
+        // bound to the captured origin, not to whatever walletData.wallet reads at bridge time
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
+    }
+
+    // ==================== plain dash: payments after the cutover (review 4250735559) ==========
+
+    @Test
+    fun `a plain dash URI after the cutover records the order and a recovery record before broadcasting`() = runTest {
+        // A PiggyCards-style order pays a bare dash: address. Once the SDK owns L1 the payment must
+        // be built and reserved first, the order and the pending-payment record written, and only
+        // then broadcast: a process death between the broadcast and the order write would
+        // otherwise leave a paid order with nothing to redeem it against.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val payment = deferredPayment()
+        val liveTx = mockk<Transaction>(relaxed = true)
+        every { liveTx.txId } returns deferredTx.txId
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        var callbackRan = false
+        var recordWritten = false
+        coEvery { pendingPaymentConfig.add(any(), any()) } answers { recordWritten = true }
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } answers {
+            assertTrue("the order must be recorded before the broadcast", callbackRan)
+            assertTrue("the recovery record must exist before the broadcast", recordWritten)
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+        }
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        // the old one-step SDK send, which broadcasts before the caller can record anything
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
+
+        val result = sendCoinsTaskRunner.payWithDashUrlTx(
+            "dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=1.0",
+            "PiggyCards",
+            PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = "https://icon")
+        ) { txId ->
+            assertEquals(deferredTxidHex, txId)
+            callbackRan = true
+        }
+
+        assertEquals(deferredTx.txId, result.txId)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.sendToAddress(any(), any(), any(), any()) }
+        // resolved: attributed, then the record dropped
+        coVerifyOrder {
+            metadataProvider.markGiftCardTransaction(any(), "PiggyCards", "https://icon")
+            pendingPaymentConfig.remove(deferredTx.txId)
+        }
+    }
+
+    @Test
+    fun `a plain dash URI after the cutover that is refused before the network releases and reports it`() = runTest {
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.NotBroadcast("refused pre-network")
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrlTx("dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=1.0", "PiggyCards")
+            fail("a refused broadcast was reported as sent")
+        } catch (e: PaymentSubmissionPendingException) {
+            fail("a definitive refusal is not pending: $e")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        coVerify(exactly = 1) { pendingPaymentConfig.remove(deferredTx.txId) }
+    }
+
+    @Test
+    fun `a plain dash URI after the cutover whose broadcast outcome is unknown stays pending`() = runTest {
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Ambiguous(RuntimeException("timeout"))
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrlTx("dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=1.0", "PiggyCards")
+            fail("an unknown broadcast outcome was reported as definite")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+        coVerify(exactly = 0) { pendingPaymentConfig.remove(any()) }
+        assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
+    }
+
+    // ==================== racing submissions (review 5e6eb1215f01) ============================
+
+    /** A second signed transaction, distinct from [deferredTx]: what another screen would build. */
+    private fun otherDeferredPayment(): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
+        val tx = Transaction(networkParams).apply {
+            addInput(
+                Sha256Hash.of("bip70-racing-${txCounter.incrementAndGet()}".toByteArray()),
+                0,
+                org.bitcoinj.script.ScriptBuilder.createEmpty()
+            )
+            addOutput(Coin.parseCoin("1.0"), Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        }
+        return de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
+            txidHex = tx.txId.toString(),
+            rawTxBytes = tx.unsafeBitcoinSerialize(),
+            feeDuffs = 1000L,
+            native = null
+        )
+    }
+
+    /** The store mock behaves like the store: what a quarantine writes, a later lookup reads. */
+    private fun storeBackedPendingPayments(): MutableList<de.schildbach.wallet.data.PendingDirectPayment> {
+        val stored = java.util.concurrent.CopyOnWriteArrayList<de.schildbach.wallet.data.PendingDirectPayment>()
+        coEvery { pendingPaymentConfig.add(any(), any()) } answers {
+            val payment = firstArg<de.schildbach.wallet.data.PendingDirectPayment>()
+            stored.removeIf { it.txId == payment.txId }
+            stored.add(payment)
+            Unit
+        }
+        coEvery { pendingPaymentConfig.remove(any()) } answers {
+            val txId = firstArg<Sha256Hash>()
+            stored.removeIf { it.txId == txId }
+            mockk(relaxed = true)
+        }
+        coEvery { pendingPaymentConfig.getAllOrThrow() } answers { stored.toList() }
+        return stored
+    }
+
+    private suspend fun awaitUntil(what: String, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (!condition()) {
+            if (System.currentTimeMillis() > deadline) fail("timed out waiting for $what")
+            kotlinx.coroutines.delay(10)
+        }
+    }
+
+    /**
+     * The racing submissions run outside the test's own job, so a test that fails while one is
+     * parked on a gate reports the failure instead of waiting on it forever.
+     */
+    private val racingScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+    )
+
+    @Test
+    fun `two confirmations of one invoice racing before the quarantine post only one payment`() = runBlocking {
+        // Two SendCoinsActivity instances, each with its own view model and its own in-flight
+        // flag. Both ask for an outstanding submission before either has saved its quarantine,
+        // so both lookups come back empty; the refund-address fetch is where the first one sits.
+        storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 9 }
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        val first = deferredPayment()
+        val second = otherDeferredPayment()
+        val refundGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val refundCalls = AtomicInteger(0)
+        coEvery { sdkL1SendService.refundAddressOrNull() } coAnswers {
+            refundCalls.incrementAndGet()
+            refundGate.await()
+            null
+        }
+        // Delivered but unanswered: each POST that happens is a payment the payee may broadcast.
+        repeat(2) { mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR)) }
+
+        val a = racingScope.async {
+            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(first, intent, wallet) }
+        }
+        awaitUntil("the first submission to reach the refund fetch") { refundCalls.get() >= 1 }
+
+        // what PaymentProtocolViewModel asks before handing off: nothing is saved yet
+        assertNull(sendCoinsTaskRunner.findUnresolvedSubmission(requestHash))
+        val b = racingScope.async {
+            runCatching { sendCoinsTaskRunner.sendPrebuiltDirectPayment(second, intent, wallet) }
+        }
+        try {
+            awaitUntil("the second submission to be refused or to reach the refund fetch") {
+                b.isCompleted || refundCalls.get() >= 2
+            }
+        } finally {
+            refundGate.complete(Unit)
+        }
+        awaitUntil("both submissions to finish") { a.isCompleted && b.isCompleted }
+        val firstOutcome = a.await().exceptionOrNull()
+        val secondOutcome = b.await().exceptionOrNull()
+
+        assertEquals("only one payment may reach the payee", 1, mockWebServer.requestCount)
+        assertTrue("the first is pending: $firstOutcome", firstOutcome is PaymentSubmissionPendingException)
+        assertEquals(first.txidHex, (firstOutcome as PaymentSubmissionPendingException).txId)
+        // the loser gets the outcome the duplicate path gives: the submission already outstanding
+        assertTrue("the second is refused as a duplicate: $secondOutcome", secondOutcome is PaymentSubmissionPendingException)
+        assertEquals(first.txidHex, (secondOutcome as PaymentSubmissionPendingException).txId)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(second) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(first) }
+    }
+
+    @Test
+    fun `a claim is given back when its submission fails before the post`() = runBlocking {
+        // A submission refused before anything left (a wipe, here) must not keep the invoice
+        // claimed: the next confirmation is free to pay it.
+        storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 5 }
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        coEvery { metadataProvider.setTransactionService(any(), any()) } throws IllegalStateException("db down")
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(deferredPayment(), intent, wallet, serviceName = "Merchant")
+            fail("expected the pre-post failure")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+        assertEquals(0, mockWebServer.requestCount)
+
+        coEvery { metadataProvider.setTransactionService(any(), any()) } returns Unit
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+        val retry = otherDeferredPayment()
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(retry, intent, wallet, serviceName = "Merchant")
+            fail("expected pending")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals("the retry itself went out", retry.txidHex, e.txId)
+        }
+        assertEquals(1, mockWebServer.requestCount)
+    }
+
+    @Test
+    fun `two gift card purchases racing before the quarantine broadcast only one`() = runBlocking {
+        // The purchase screen refuses a gift card while another is unresolved, but it only reads
+        // the store, and the store learns of a purchase only at its quarantine. A second screen
+        // asking while the first records its order sees nothing and pays too.
+        storeBackedPendingPayments()
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val first = deferredPayment()
+        val second = otherDeferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returnsMany listOf(first, second)
+        coEvery { sdkL1SendService.broadcastDeferredPayment(any()) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Ambiguous(RuntimeException("timeout"))
+        val orderGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val firstRecording = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val giftCard = PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = null)
+        val uri = "dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=0.1"
+
+        val a = racingScope.async {
+            runCatching {
+                sendCoinsTaskRunner.payWithDashUrlTx(uri, "PiggyCards", giftCard) {
+                    firstRecording.complete(Unit)
+                    orderGate.await()
+                }
+            }
+        }
+        val secondOutcome = try {
+            awaitUntil("the first purchase to record its order") { firstRecording.isCompleted || a.isCompleted }
+            if (a.isCompleted) fail("the first purchase ended early: ${a.await()}")
+            val b = racingScope.async {
+                runCatching { sendCoinsTaskRunner.payWithDashUrlTx(uri, "PiggyCards", giftCard) { } }
+            }
+            awaitUntil("the second purchase to finish") { b.isCompleted }
+            b.await().exceptionOrNull()
+        } finally {
+            orderGate.complete(Unit)
+        }
+        awaitUntil("the first purchase to finish") { a.isCompleted }
+
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(first) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(second) }
+        assertTrue("the second is refused as outstanding: $secondOutcome", secondOutcome is PaymentSubmissionPendingException)
+        assertEquals(first.txidHex, (secondOutcome as PaymentSubmissionPendingException).txId)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(second) }
+    }
+
+    // ==================== the wallet the payment belongs to (review f04fe92ac0a6) ==============
+
+    /** A second wallet instance standing in for the one a wipe installs mid-payment. */
+    private fun replacementWallet(): Wallet = Wallet.createBasic(networkParams)
+
+    @Test
+    fun `a BIP70 payment whose wallet is replaced during the SDK build is released, never posted`() = runBlocking {
+        // payWithDashUrlTx captures the wallet the user confirmed on. The SDK build suspends; a
+        // wipe that finishes in that window installs a replacement. Submitting then would quarantine
+        // the payment under, and adopt, a wallet that never made it.
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentUrl = mockWebServer.url("/payment").toString()
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTREQUEST)
+                .setBody(okio.Buffer().write(createPaymentRequest(testAddress, Coin.parseCoin("1.0"), paymentUrl = paymentUrl)))
+        )
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+        val payment = deferredPayment()
+        val replacement = replacementWallet()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } answers {
+            every { walletDataProvider.wallet } returns replacement
+            payment
+        }
+
+        try {
+            sendCoinsTaskRunner.payWithDashUrlTx(
+                "dash:$testAddress?amount=1.0&r=${mockWebServer.url("/request")}",
+                "TestService"
+            )
+            fail("a payment whose wallet was replaced during its build went ahead")
+        } catch (e: PaymentSubmissionPendingException) {
+            fail("it was submitted: $e")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        assertEquals("only the invoice fetch may reach the server", 1, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
+    }
+
+    @Test
+    fun `a prebuilt payment is submitted for the wallet it was built on, not the installed one`() = runBlocking {
+        // PaymentProtocolViewModel builds at preview time and submits on confirm; a wipe between the
+        // two must not let the confirm adopt the replacement.
+        val paymentIntent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString()
+        )
+        val payment = deferredPayment()
+        every { walletDataProvider.wallet } returns replacementWallet()
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(payment, paymentIntent, wallet)
+            fail("a payment built on a replaced wallet was submitted")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+
+        assertEquals(0, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
+    }
+
+    // ==================== the route is pinned once the order is recorded (review 2573c55dcc82) ==
+
+    @Test
+    fun `a plain payment recorded before the cutover commits is never rebuilt and sent as another transaction`() = runBlocking {
+        // Pre-cutover: dashj completes and signs transaction A, and the caller records its order
+        // for A. The cutover commits while that record is being written. The generic send funnel
+        // then re-checks the cutover and would discard A, build B through the SDK and broadcast
+        // it: the order stays keyed to A, which never goes out.
+        var cutover = false
+        coEvery { sdkL1SendService.cutoverCommitted() } answers { cutover }
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast("ff".repeat(32))
+        var recorded: String? = null
+
+        val outcome = runCatching {
+            sendCoinsTaskRunner.payWithDashUrlTx(
+                "dash:yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL?amount=0.01",
+                "PiggyCards",
+                PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = null)
+            ) { txId ->
+                recorded = txId
+                cutover = true // committed while the order is being recorded
+            }
+        }
+
+        assertNotNull("precondition: the order was recorded for a finalized transaction: $outcome", recorded)
+        // nothing but the recorded transaction may go out, and it cannot go out after the cutover
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.sendToAddress(any(), any(), any(), any()) }
+        io.mockk.verify(exactly = 0) { walletApplication.broadcastTransaction(any()) }
+        assertTrue("refused, so the caller discards its order: $outcome", outcome.isFailure)
+        assertFalse(
+            "a refusal must not read as possibly sent",
+            outcome.exceptionOrNull() is PaymentSubmissionPendingException
+        )
+        assertNull("the recorded transaction was not committed", wallet.getTransaction(Sha256Hash.wrap(recorded)))
+    }
+
+    // ==================== an abandoned invoice stays blocked (review 9fa90c30ccf1) ============
+
+    @Test
+    fun `a new transaction for an invoice whose earlier payment was abandoned is refused`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 3 }
+        val requestId = org.dash.wallet.common.util.Constants.HEX.encode(requestHash)
+        val t1 = deferredTx
+        // T1 was submitted, never seen, and released after the grace period
+        stored.add(
+            de.schildbach.wallet.data.PendingDirectPayment(
+                t1.txId, t1.bitcoinSerialize(), mockWebServer.url("/payment").toString(), "Merchant",
+                System.currentTimeMillis(), abandoned = true, paymentRequestId = requestId
+            )
+        )
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        val t2 = otherDeferredPayment()
+
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(t2, intent, wallet)
+            fail("T2 was submitted for an invoice T1 may still pay")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(t1.txId.toString(), e.txId)
+        }
+        assertEquals(0, mockWebServer.requestCount)
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(t2) }
+    }
+
+    private fun abandonedT1For(requestHash: ByteArray, stored: MutableList<de.schildbach.wallet.data.PendingDirectPayment>) =
+        de.schildbach.wallet.data.PendingDirectPayment(
+            deferredTx.txId, deferredTx.bitcoinSerialize(), mockWebServer.url("/payment").toString(), "Merchant",
+            System.currentTimeMillis(), abandoned = true,
+            paymentRequestId = org.dash.wallet.common.util.Constants.HEX.encode(requestHash)
+        ).also { stored.add(it) }
+
+    @Test
+    fun `re-confirming an abandoned invoice posts the exact stored transaction and completes on ack`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 4 }
+        abandonedT1For(requestHash, stored)
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        val liveTx = mockk<Transaction>(relaxed = true)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        val result = sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+
+        assertEquals("T1 is what was completed", deferredTx.txId, result.txId)
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
+        val posted = Protos.Payment.parseFrom(mockWebServer.takeRequest().body.readByteArray())
+        assertEquals("one transaction, T1 itself", 1, posted.transactionsCount)
+        assertTrue(posted.getTransactions(0).toByteArray().contentEquals(deferredTx.bitcoinSerialize()))
+        // nothing new was built or reserved
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any()) }
+        // acknowledged: committed like any ack, and the record (the invoice block) goes
+        assertTrue(stored.isEmpty())
+    }
+
+    @Test
+    fun `a resubmission whose outcome is unknown stays pending and keeps the invoice blocked`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 6 }
+        abandonedT1For(requestHash, stored)
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("an unknown outcome was reported as definite")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+
+        assertEquals(1, stored.size)
+        assertEquals(deferredTx.txId, sendCoinsTaskRunner.findUnresolvedSubmission(requestHash))
+    }
+
+    @Test
+    fun `an ambiguous resubmission on a fresh process leaves the payment watched until it is seen`() = runBlocking {
+        // review 4302741463: the screen skips the build (and its restoration barrier) for an
+        // abandoned invoice, and nothing has scanned yet in this process; a lost reply must still
+        // leave T1 watched, so a late broadcast by the payee is committed and settles the record
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 9 }
+        abandonedT1For(requestHash, stored)
+        assertFalse("restored on disk only, nothing watches it yet", pendingPaymentVerifier.isTracked(deferredTx.txId))
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("an unknown outcome was reported as definite")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+        assertTrue("watched after the ambiguous resubmission", pendingPaymentVerifier.isTracked(deferredTx.txId))
+
+        // the payee broadcasts T1 after all: the watch commits it and the record goes
+        val liveTx = mockk<Transaction>(relaxed = true)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 0
+        awaitUntil("the late broadcast to settle the record") { stored.isEmpty() }
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
+    }
+
+    @Test
+    fun `an acknowledged resubmission after the cutover stays pending until the network shows it`() = runBlocking {
+        // 3fc3cd86956b: with the reservation released and the dashj peers held, nothing here can
+        // relay T1; a payee that acks without broadcasting must not produce a success screen
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 8 }
+        abandonedT1For(requestHash, stored)
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("an unrelayed payment was reported as paid")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+        assertEquals("the record (and its block) stays", 1, stored.size)
+        assertTrue("watched until the network shows it", pendingPaymentVerifier.isTracked(deferredTx.txId))
+        io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
     }
 }

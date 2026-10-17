@@ -127,7 +127,9 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
                 sdkL1SendService,
                 mockk(relaxed = true),
                 mockk(relaxed = true),
-                bridgeFactory
+                bridgeFactory,
+                // the pending-payment verifier: no uncertain payment, nothing to restore
+                mockk(relaxed = true)
             )
         )
         coEvery { runner.logSendTxEvent(any(), any()) } returns Unit

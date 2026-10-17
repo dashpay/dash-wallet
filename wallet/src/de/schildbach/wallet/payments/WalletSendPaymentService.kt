@@ -24,6 +24,7 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
 import java.util.function.Consumer
 import java.util.function.Predicate
@@ -58,5 +59,10 @@ interface WalletSendPaymentService : SendPaymentService {
     )
 
     /** The dashj-typed twin of the neutral `payWithDashUrl` (returns the live transaction). */
-    suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction
+    suspend fun payWithDashUrlTx(
+        dashUri: String,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
+        onTransactionCreated: (suspend (String) -> Unit)? = null
+    ): Transaction
 }

@@ -197,14 +197,19 @@ class SdkBridgedTransactionFactory internal constructor(
      *   them (GAP-1); null → bounded poll of the SDK Room row.
      * @param memo app-side memo to persist on the committed instance.
      * @param exchangeRate fiat rate to persist on the committed instance.
+     * @param originWallet the wallet that signed this transaction, when the caller captured it.
+     *   The commit goes to that wallet and never to whatever is installed by the time the bridge
+     *   runs: after a wipe the two differ, and `maybeCommitTx` does not ask whose transaction it
+     *   is handed. Null keeps the installed wallet.
      */
     suspend fun bridge(
         txidHex: String,
         rawTxBytes: ByteArray? = null,
         memo: String? = null,
-        exchangeRate: ExchangeRate? = null
+        exchangeRate: ExchangeRate? = null,
+        originWallet: Wallet? = null
     ): BridgedTxResult = try {
-        bridgeContained(txidHex, rawTxBytes, memo, exchangeRate)
+        bridgeContained(txidHex, rawTxBytes, memo, exchangeRate, originWallet)
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         notBridged(txidHex, "unexpected bridge failure", t)
@@ -214,13 +219,14 @@ class SdkBridgedTransactionFactory internal constructor(
         txidHex: String,
         rawTxBytes: ByteArray?,
         memo: String?,
-        exchangeRate: ExchangeRate?
+        exchangeRate: ExchangeRate?,
+        originWallet: Wallet?
     ): BridgedTxResult {
         val bytes = rawTxBytes ?: resolveBytesFromSdkStore(txidHex)
             ?: return notBridged(
                 txidHex, "tx bytes unavailable (SDK Room row absent after ${bytesTimeoutMs}ms)", null
             )
-        val wallet = walletOrNull()
+        val wallet = originWallet ?: walletOrNull()
             ?: return notBridged(txidHex, "dashj wallet unavailable", null)
         org.bitcoinj.core.Context.propagate(wallet.context)
 

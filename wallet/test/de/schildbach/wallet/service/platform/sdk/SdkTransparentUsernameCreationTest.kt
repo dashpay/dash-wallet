@@ -33,7 +33,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.TestScope
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
 import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
@@ -126,7 +128,8 @@ class SdkTransparentUsernameCreationTest {
         source: TransparentUsernameSource,
         fence: WalletSecretWriteFence = WalletSecretWriteFence(),
         executorScope: CoroutineScope? = null,
-        pause: suspend (Long) -> Unit = { pauses += it }
+        pause: suspend (Long) -> Unit = { pauses += it },
+        freshFundingBlocked: suspend () -> Boolean = { false }
     ) = SdkTransparentUsernameCreation(
         source = source,
         cutoverCommitted = { true },
@@ -135,7 +138,8 @@ class SdkTransparentUsernameCreationTest {
         driveCreationState = { state, _ -> creationStates += state },
         executorScope = executorScope,
         pause = pause,
-        secretWriteFence = fence
+        secretWriteFence = fence,
+        freshFundingBlocked = freshFundingBlocked
     )
 
     @Test
@@ -604,5 +608,119 @@ class SdkTransparentUsernameCreationTest {
         assertFalse(creation.submit(label))
         fence.lower()
         scope.cancel()
+    }
+
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun `a fresh registration is refused while a pending payment is unprotected`() = runTest {
+        val source = source(lockAfterFailure = null)
+
+        val result = creation(source, freshFundingBlocked = { true }).createUsernameTransparent(label)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `resuming a tracked registration lock is not blocked`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } returns lock
+        coEvery { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) } returns identityId
+
+        val result = creation(source, freshFundingBlocked = { true }).createUsernameTransparent(label)
+
+        assertTrue("must be Broadcast, got $result", result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+    }
+
+    // ── name-only retry for an existing identity (review 4299080469) ─────
+
+    @Test
+    fun `a name-only retry keeps the existing identity and never funds a new one`() = runTest {
+        // The identity is registered on chain; only its name step failed. Retrying with a new name
+        // must re-drive ONLY the DPNS step for THAT identity: no reset to NONE, no asset lock.
+        val source = source(lockAfterFailure = null)
+        val nameContexts = mutableListOf<List<Any?>>()
+        val handedOff = mutableListOf<String>()
+        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+        val retry = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = { handedOff += it },
+            driveCreationState = { state, error -> states += state to error },
+            persistNameContext = { id, name, secondary, restoring -> nameContexts += listOf(id, name, secondary, restoring) },
+            executorScope = this
+        )
+
+        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice3x"))
+        advanceUntilIdle()
+
+        assertEquals(listOf(listOf(identityIdBase58, "alice3", "alice3x", true)), nameContexts)
+        assertEquals("the name step, error cleared", listOf(IdentityCreationState.USERNAME_REGISTERING to null), states)
+        assertEquals("the same identity goes to the name-only recovery", listOf(identityIdBase58), handedOff)
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.previewRegistrationKeySet(any(), any(), any()) }
+    }
+
+    // ── failures inside the application-scoped name retry (review 4302041841) ──
+
+    /** Runs [retry] on an app-like scope and returns whatever escaped it uncaught. */
+    private fun TestScope.uncaughtFrom(
+        persistNameContext: suspend (String, String, String?, Boolean) -> Unit = { _, _, _, _ -> },
+        handOffToLegacy: (String) -> Unit = {},
+        states: MutableList<Pair<IdentityCreationState, String?>>
+    ): List<Throwable> {
+        val uncaught = mutableListOf<Throwable>()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() +
+                kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) +
+                kotlinx.coroutines.CoroutineExceptionHandler { _, e -> uncaught += e }
+        )
+        val retry = SdkTransparentUsernameCreation(
+            source = source(lockAfterFailure = null),
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = handOffToLegacy,
+            driveCreationState = { state, error -> states += state to error },
+            persistNameContext = persistNameContext,
+            executorScope = appScope
+        )
+        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        return uncaught
+    }
+
+    @Test
+    fun `a failed name-context write records a retryable error instead of crashing`() = runTest {
+        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+
+        val uncaught = uncaughtFrom(
+            persistNameContext = { _, _, _, _ -> throw java.io.IOException("datastore write failed") },
+            states = states
+        )
+
+        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
+        val (state, error) = states.last()
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
+        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
+    }
+
+    @Test
+    fun `a failed worker handoff records a retryable error instead of crashing`() = runTest {
+        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+
+        val uncaught = uncaughtFrom(
+            handOffToLegacy = { throw IllegalStateException("WorkManager not initialised") },
+            states = states
+        )
+
+        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
+        val (state, error) = states.last()
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
+        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
     }
 }

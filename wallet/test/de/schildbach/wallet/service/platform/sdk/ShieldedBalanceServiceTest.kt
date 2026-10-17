@@ -349,7 +349,8 @@ class ShieldedBalanceServiceTest {
         noteSelfSpendBroadcast: () -> Unit = {},
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
         afterReadyCommitted: suspend () -> Unit = {},
-        afterStopFallbackBump: suspend () -> Unit = {}
+        afterStopFallbackBump: suspend () -> Unit = {},
+        freshFundingBlocked: suspend () -> Boolean = { false }
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs),
@@ -361,7 +362,8 @@ class ShieldedBalanceServiceTest {
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
         stopLockTimeoutMs = stopLockTimeoutMs,
         afterReadyCommitted = afterReadyCommitted,
-        afterStopFallbackBump = afterStopFallbackBump
+        afterStopFallbackBump = afterStopFallbackBump,
+        freshFundingBlocked = freshFundingBlocked
     )
 
     // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
@@ -1998,5 +2000,19 @@ class ShieldedBalanceServiceTest {
         require(bytes.size <= 32)
         bytes.copyInto(out, destinationOffset = 4)
         return out
+    }
+
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun shieldFromWallet_refusedWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() }, freshFundingBlocked = { true })
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertEquals(0, source.fundCalls)
     }
 }

@@ -116,6 +116,7 @@ class WalletTransactionMetadataProviderObserveTest {
             iconBitmapDao = mockk<IconBitmapDao>(relaxed = true),
             walletData = walletData,
             giftCardDao = mockk(relaxed = true),
+            transactionRecordsDao = mockk(relaxed = true),
             swapOrderDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = mockk<TransactionMetadataChangeCacheDao>(relaxed = true),
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),

@@ -372,7 +372,14 @@ class SdkL1InviteCreation internal constructor(
      * persist and both funding calls are refused/awaited by it. A fresh
      * (lowered) fence by default keeps the host-JVM tests unaffected.
      */
-    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence(),
+    /**
+     * True while an uncertain BIP70 payment's inputs are exposed to the engine's coin selection
+     * ([de.schildbach.wallet.payments.PendingPaymentFundingGate]); invite funding (always a fresh
+     * selection) is then refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON]. Default false keeps
+     * the host-JVM tests inert.
+     */
+    private val freshFundingBlocked: suspend () -> Boolean = { false }
 ) {
     @Inject
     constructor(
@@ -383,7 +390,8 @@ class SdkL1InviteCreation internal constructor(
         invitationsDao: InvitationsDao,
         topUpRepository: TopUpRepository,
         assetLockKindResolver: AssetLockKindResolver,
-        secretWriteFence: WalletSecretWriteFence
+        secretWriteFence: WalletSecretWriteFence,
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
     ) : this(
         source = DashSdkL1InviteSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -411,7 +419,8 @@ class SdkL1InviteCreation internal constructor(
                 false
             }
         },
-        secretWriteFence = secretWriteFence
+        secretWriteFence = secretWriteFence,
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() }
     )
 
     /**
@@ -477,6 +486,17 @@ class SdkL1InviteCreation internal constructor(
                     null
                 }
         }?.takeIf { it.size == 32 }
+
+        // Invite funding always selects fresh inputs: refuse it while an uncertain payment's
+        // inputs are exposed (fails closed). Nothing is spent, so it is retry-safe.
+        val fundingBlocked = try {
+            freshFundingBlocked()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not check for unprotected pending payments; refusing invite funding", t)
+            true
+        }
+        if (fundingBlocked) return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
 
         // THE funding transfer — one attempt, under the wipe fence's permit.
         if (!secretWriteFence.tryAcquire("L1 invite funding")) {

@@ -58,6 +58,8 @@ class PaymentProtocolViewModelRaceTest {
     private val deferredTxid = "bb".repeat(32)
 
     private fun buildViewModel(runner: SendCoinsTaskRunner): PaymentProtocolViewModel {
+        // nothing outstanding for this invoice (a relaxed mock would answer with a mock hash)
+        coEvery { runner.findUnresolvedSubmission(any()) } returns null
         val wallet = mockk<Wallet>(relaxed = true)
         val walletData = mockk<WalletData>(relaxed = true) { every { this@mockk.wallet } returns wallet }
         val walletUIConfig = mockk<WalletUIConfig> {
@@ -82,7 +84,9 @@ class PaymentProtocolViewModelRaceTest {
             every { isExtendedBy(any(), any(), any()) } returns true
         }
         coEvery { runner.fetchPaymentRequest(any()) } returns mockk(relaxed = true)
-        coEvery { runner.buildDeferredBip70Payment(any()) } returns payment
+        // nothing paid before: the preview builds a new payment
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
 
         viewModel.requestPaymentRequest(baseIntent)
         awaitCondition("deferred preview armed") { viewModel.deferredPayment != null }
@@ -111,7 +115,7 @@ class PaymentProtocolViewModelRaceTest {
         // strictly while it is in flight.
         val submissionGate = CompletableDeferred<Unit>()
         val liveTx = mockk<Transaction>(relaxed = true)
-        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } coAnswers {
+        coEvery { runner.sendPrebuiltDirectPayment(any(), any(), any()) } coAnswers {
             submissionGate.await()
             liveTx
         }
@@ -125,51 +129,44 @@ class PaymentProtocolViewModelRaceTest {
         submissionGate.complete(Unit)
 
         awaitCondition("winner completed") {
-            runCatching { coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(any(), any()) } }.isSuccess &&
+            runCatching { coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(any(), any(), any()) } }.isSuccess &&
                 viewModel.directPaymentAckLiveData.value?.data != null
         }
 
         // Exactly one submission, and the loser never rebuilt a fresh
         // reservation over the winner (one build total, from the preview).
         runBlocking {
-            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(payment, any()) }
-            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any()) }
+            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(payment, any(), any()) }
+            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any(), any()) }
         }
         assertEquals(liveTx, viewModel.directPaymentAckLiveData.value?.data)
     }
 
     @Test
-    fun `definitive nack releases the guard and rebuilds the preview for a clean retry`() {
+    fun `a nack reported as pending does NOT re-arm the preview`() {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         val payment = SdkDeferredPayment(deferredTxid, byteArrayOf(1, 2, 3), 260L, null)
         val viewModel = buildViewModel(runner)
         armDeferredPreview(viewModel, runner, payment)
 
-        // A definitive nack (server refused; nothing on the network) is
-        // the ONE failure that re-arms the preview — an ambiguous
-        // transport failure must not, or a retry could double-pay.
-        val retryPayment = SdkDeferredPayment("cc".repeat(32), byteArrayOf(4, 5), 300L, null)
-        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } throws
-            org.dash.wallet.common.services.DirectPayException("Payment was not acknowledged by the server")
-        coEvery { runner.buildDeferredBip70Payment(any()) } returns retryPayment
+        // A nack is answered only after the payee has had the transaction, so the runner keeps
+        // it quarantined and reports the outcome as unknown. A fresh reservation here would let
+        // a retry pay the same invoice again from different inputs.
+        coEvery { runner.sendPrebuiltDirectPayment(any(), any(), any()) } throws
+            org.dash.wallet.common.services.PaymentSubmissionPendingException(deferredTxid, null)
 
         viewModel.sendPayment()
-        awaitCondition("failure surfaced and preview rebuilt") {
-            viewModel.directPaymentAckLiveData.value?.exception != null &&
-                viewModel.deferredPayment == retryPayment
-        }
+        awaitCondition("failure surfaced") { viewModel.directPaymentAckLiveData.value?.exception != null }
 
-        // The guard was released by the failure: a retry is accepted and
-        // submits the REBUILT reservation, not the dead one.
-        val liveTx = mockk<Transaction>(relaxed = true)
-        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } returns liveTx
-        viewModel.sendPayment()
-        awaitCondition("retry succeeded") { viewModel.directPaymentAckLiveData.value?.data != null }
-
+        assertTrue(
+            viewModel.directPaymentAckLiveData.value?.exception is
+                org.dash.wallet.common.services.PaymentSubmissionPendingException
+        )
+        assertTrue("preview must stay un-armed", viewModel.deferredPayment == null)
         runBlocking {
-            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(retryPayment, any()) }
+            // Exactly the preview build — no rebuild after the pending outcome.
+            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any(), any()) }
         }
-        assertTrue(viewModel.deferredPayment == null)
     }
 
     @Test
@@ -182,7 +179,7 @@ class PaymentProtocolViewModelRaceTest {
         // The runner already ran (and lost) its network-observation
         // rescue; the outcome is genuinely unknown, so the flow must NOT
         // hand the user a fresh reservation to retry with.
-        coEvery { runner.sendPrebuiltDirectPayment(any(), any()) } throws okio.IOException("transport down")
+        coEvery { runner.sendPrebuiltDirectPayment(any(), any(), any()) } throws okio.IOException("transport down")
 
         viewModel.sendPayment()
         awaitCondition("failure surfaced") { viewModel.directPaymentAckLiveData.value?.exception != null }
@@ -191,7 +188,7 @@ class PaymentProtocolViewModelRaceTest {
         assertTrue("send must be gated off", !viewModel.canSendPayment)
         runBlocking {
             // Exactly the preview build — no rebuild after the ambiguity.
-            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any()) }
+            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any(), any()) }
         }
     }
 }

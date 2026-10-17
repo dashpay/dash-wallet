@@ -486,6 +486,10 @@ class SendCoinsViewModel @Inject constructor(
         // contact payment address, never one without the other.
         val resolved = payee.get()
 
+        // Before coin selection: after a restart the locks of an unresolved payment are gone
+        // until restoration runs, and a transaction built now could spend its outpoints.
+        sendCoinsTaskRunner.awaitPaymentReadiness()
+
         // The contact payment this send pays, once known (inside the try).
         var contactPayment: ContactPaymentAddress? = null
         val transaction = try {

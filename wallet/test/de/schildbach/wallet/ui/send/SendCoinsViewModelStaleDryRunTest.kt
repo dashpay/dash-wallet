@@ -147,6 +147,8 @@ class SendCoinsViewModelStaleDryRunTest {
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
+                any<Wallet>(),
+                any<Boolean>(),
                 any<(String?) -> Unit>(),
                 any<() -> Unit>()
             )
