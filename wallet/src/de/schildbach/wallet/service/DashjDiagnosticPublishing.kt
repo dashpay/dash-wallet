@@ -44,11 +44,12 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * [request] never blocks or suspends, so it is safe from dashj callbacks.
  * A pass that throws is reported to [onError] and does not stop later passes.
+ * A pass may suspend (it reads the SDK store); the next one still waits for it.
  */
 internal class SerialRepublisher(
     scope: CoroutineScope,
     private val onError: (Exception) -> Unit,
-    private val pass: () -> Unit
+    private val pass: suspend () -> Unit
 ) {
     private val requests = Channel<Unit>(Channel.CONFLATED)
 
@@ -142,6 +143,42 @@ internal fun deriveDashjDiagnosticVerdict(
         DashjDiagnosticSyncState.Parity.UNKNOWN
     }
     return DashjDiagnosticVerdict(parity, freshReport, freshFindings)
+}
+
+/**
+ * [deriveDashjDiagnosticVerdict], with the breakdown findings checked against
+ * the store they describe before they may count.
+ *
+ * Findings are true of the SDK store state their run read, and the events
+ * that revoke them when it changes can be lost. So whenever the verdict would
+ * rest on them — any verdict that read fresh findings, MATCH and
+ * VALUES_DIFFER above all — [stillCurrent] re-reads the store's fingerprint
+ * ([L1ShadowSyncService.breakdownFindingsStillCurrent]). If they no longer
+ * describe it, the verdict is derived again as if no breakdown had run since
+ * dashj caught up, which can be BALANCE_MATCH at most.
+ *
+ * Nothing is read when the verdict would not use the findings (dashj behind,
+ * no fresh report, no fresh findings), so the check costs one store read per
+ * pass at most, and only while there is a verdict to protect.
+ */
+internal suspend fun deriveCurrentDashjDiagnosticVerdict(
+    percent: Int,
+    report: ParityReport?,
+    findings: TimedBreakdownFindings?,
+    caughtUpAtMs: Long?,
+    stillCurrent: suspend (TimedBreakdownFindings) -> Boolean
+): DashjDiagnosticVerdict {
+    val verdict = deriveDashjDiagnosticVerdict(percent, report, findings, caughtUpAtMs)
+    if (findings == null || verdict.freshFindings == null ||
+        verdict.parity == DashjDiagnosticSyncState.Parity.UNKNOWN
+    ) {
+        return verdict
+    }
+    return if (stillCurrent(findings)) {
+        verdict
+    } else {
+        deriveDashjDiagnosticVerdict(percent, report, null, caughtUpAtMs)
+    }
 }
 
 /**

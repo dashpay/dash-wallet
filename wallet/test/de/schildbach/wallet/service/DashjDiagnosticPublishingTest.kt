@@ -26,6 +26,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -224,6 +225,55 @@ class DashjDiagnosticPublishingTest {
         commitDashjDiagnostic(state, 100, null, derived, null)
         assertEquals(99, state.state.value.percent)
         assertTrue(state.state.value.verifying)
+    }
+
+    // ── Findings checked against the store before they count ──
+
+    /** [deriveCurrentDashjDiagnosticVerdict] with a store check that answers [current] and counts its calls. */
+    private fun checkedVerdict(
+        report: ParityReport?,
+        findings: TimedBreakdownFindings?,
+        current: Boolean,
+        checks: AtomicInteger,
+        percent: Int = 100
+    ) = runBlocking {
+        deriveCurrentDashjDiagnosticVerdict(percent, report, findings, CAUGHT_UP_AT_MS) {
+            checks.incrementAndGet()
+            current
+        }
+    }
+
+    @Test
+    fun `findings the store no longer matches support neither MATCH nor VALUES_DIFFER`() {
+        val checks = AtomicInteger()
+        val match = checkedVerdict(report(), findings(), current = false, checks = checks)
+        assertEquals(Parity.BALANCE_MATCH, match.parity)
+        assertNull(match.freshFindings)
+        val differ = checkedVerdict(report(), findings(valueDiffers = 2), current = false, checks = checks)
+        assertEquals(Parity.BALANCE_MATCH, differ.parity)
+        assertEquals(2, checks.get())
+    }
+
+    @Test
+    fun `findings the store still matches keep their verdict`() {
+        val checks = AtomicInteger()
+        assertEquals(Parity.MATCH, checkedVerdict(report(), findings(), current = true, checks = checks).parity)
+        assertEquals(
+            Parity.VALUES_DIFFER,
+            checkedVerdict(report(), findings(valueDiffers = 2), current = true, checks = checks).parity
+        )
+        assertEquals(2, checks.get())
+    }
+
+    @Test
+    fun `the store is not read when the verdict would not use the findings`() {
+        val checks = AtomicInteger()
+        // dashj behind, a stale report, findings from before the catch-up, none at all.
+        checkedVerdict(report(), findings(), current = false, checks = checks, percent = 99)
+        checkedVerdict(report(timestampMs = CAUGHT_UP_AT_MS - 1), findings(), current = false, checks = checks)
+        checkedVerdict(report(), findings(computedAtMs = CAUGHT_UP_AT_MS - 1), current = false, checks = checks)
+        checkedVerdict(report(), null, current = false, checks = checks)
+        assertEquals(0, checks.get())
     }
 
     private companion object {

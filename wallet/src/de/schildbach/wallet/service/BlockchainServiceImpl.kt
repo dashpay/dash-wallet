@@ -3881,7 +3881,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * read, the verdict and the write below are one step as far as any other
      * publication is concerned.
      */
-    private fun runDashjDiagnosticPass() {
+    private suspend fun runDashjDiagnosticPass() {
         if (!dashjSyncDiagnostic) {
             // Turned off since this pass was requested, possibly while an
             // earlier pass was writing. Leave the inert default behind.
@@ -3930,11 +3930,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             dashjCaughtUpAtMs = null
         }
         val report = l1ShadowSyncService.latestParity.value
-        val verdict = deriveDashjDiagnosticVerdict(
+        // The findings only count while the SDK store still reads as their run
+        // read it: a change whose event was lost must not leave MATCH standing.
+        val verdict = deriveCurrentDashjDiagnosticVerdict(
             percent,
             report,
             l1ShadowSyncService.latestBreakdownFindings.value,
-            dashjCaughtUpAtMs
+            dashjCaughtUpAtMs,
+            l1ShadowSyncService::breakdownFindingsStillCurrent
         )
         val freshReport = verdict.freshReport
         if (verdict.parity != DashjDiagnosticSyncState.Parity.UNKNOWN &&

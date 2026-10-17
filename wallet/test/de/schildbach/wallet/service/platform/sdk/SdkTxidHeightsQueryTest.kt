@@ -23,6 +23,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -176,5 +177,71 @@ class SdkTxidHeightsQueryTest {
             emptyMap<Sha256Hash, SdkTxFacts>(),
             querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
         )
+    }
+
+    // ── The store fingerprint the diagnostic checks findings against ──
+
+    private val readable get() = db.openHelper.readableDatabase
+
+    /** The streamed fingerprint, after checking it equals the one a breakdown takes from its map. */
+    private fun fingerprint(): SdkTxStoreFingerprint {
+        val streamed = querySdkTxStoreFingerprint(readable, walletId)
+        assertEquals(
+            "the publish-time fingerprint must be the breakdown's own, for the same state",
+            fingerprintOf(querySdkTxidHeights(readable, walletId)),
+            streamed
+        )
+        return streamed
+    }
+
+    @Test
+    fun fingerprint_changesOnInsertNetUpdateConfirmationAndDelete() {
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTx(2, 0, netAmount = -7_500_000L)
+        insertTxo(walletId, funding = 1, spending = 2)
+        val start = fingerprint()
+        assertEquals(2, start.rows)
+
+        // Insert: a new receive, as the engine stores it (tx row, then its TXO).
+        insertTx(3, 0, netAmount = 250_000L)
+        insertTxo(walletId, funding = 3)
+        val inserted = fingerprint()
+        assertNotEquals("insert", start, inserted)
+
+        // Update of the stored net (what the walker's write-back does).
+        exec("UPDATE transactions SET netAmount = ? WHERE txid = ?", 250_001L, wire(3))
+        val netUpdated = fingerprint()
+        assertNotEquals("net update", inserted, netUpdated)
+
+        // Confirmation: the height moves from 0 to the block's.
+        exec("UPDATE transactions SET blockHeight = ? WHERE txid = ?", 990, wire(2))
+        val confirmed = fingerprint()
+        assertNotEquals("confirmation", netUpdated, confirmed)
+
+        // Delete: the sweep's path, a transactions row removed (its TXOs cascade).
+        exec("DELETE FROM transactions WHERE txid = ?", wire(3))
+        val deleted = fingerprint()
+        assertNotEquals("delete", confirmed, deleted)
+
+        // A reservation for an in-flight change-less send joins the set too.
+        val reserved = insertTxo(walletId, funding = 1)
+        insertReservation(walletId, reserved, spending = 9)
+        assertNotEquals("reservation", deleted, fingerprint())
+    }
+
+    @Test
+    fun fingerprint_ignoresWhatTheBreakdownDoesNotRead() {
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTxo(walletId, funding = 1)
+        val start = fingerprint()
+
+        // A label (metadata) and another wallet's history are not compared.
+        exec("UPDATE transactions SET label = 'rent' WHERE txid = ?", wire(1))
+        insertTx(6, 990, netAmount = 5L)
+        insertTxo(otherWalletId, funding = 6)
+        // A second TXO of a transaction already in the set adds no member.
+        insertTxo(walletId, funding = 1)
+
+        assertEquals(start, fingerprint())
     }
 }

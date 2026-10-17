@@ -477,7 +477,31 @@ internal fun parityBreakdownLog(
  * `SdkTxStoreWalker` uses for membership. Not the whole `transactions`
  * table: it has no walletId column, so it is not this wallet's set.
  */
-internal fun querySdkTxidHeights(db: SupportSQLiteDatabase, walletId: ByteArray): Map<Sha256Hash, SdkTxFacts> =
+internal fun querySdkTxidHeights(db: SupportSQLiteDatabase, walletId: ByteArray): Map<Sha256Hash, SdkTxFacts> {
+    lateinit var out: HashMap<Sha256Hash, SdkTxFacts>
+    forEachSdkTxRow(db, walletId, onCount = { out = HashMap(it * 4 / 3 + 1) }) { wire, height, netDuffs ->
+        // Room stores wire order; dashj's Sha256Hash is display order.
+        out[Sha256Hash.wrapReversed(wire)] = SdkTxFacts(height, netDuffs)
+    }
+    return out
+}
+
+/**
+ * The one read behind both [querySdkTxidHeights] and
+ * [querySdkTxStoreFingerprint], so the two cannot disagree about which rows
+ * exist or how a row reads. One SELECT, so one consistent snapshot of the
+ * committed store. [onCount] runs once, before the first row.
+ *
+ * `transactions.txid` is the table's primary key and the membership is a
+ * UNION, so every txid appears at most once: folding the rows and folding the
+ * map built from them give the same result.
+ */
+private inline fun forEachSdkTxRow(
+    db: SupportSQLiteDatabase,
+    walletId: ByteArray,
+    onCount: (Int) -> Unit,
+    onRow: (wire: ByteArray, height: Int, netDuffs: Long?) -> Unit
+) {
     db.query(
         SimpleSQLiteQuery(
             "SELECT u.t, tx.blockHeight, tx.netAmount FROM (" +
@@ -490,22 +514,105 @@ internal fun querySdkTxidHeights(db: SupportSQLiteDatabase, walletId: ByteArray)
             arrayOf<Any?>(walletId, walletId, walletId)
         )
     ).use { cursor ->
-        // Read straight off the cursor into one map.
-        val out = HashMap<Sha256Hash, SdkTxFacts>(cursor.count * 4 / 3 + 1)
+        onCount(cursor.count)
         while (cursor.moveToNext()) {
             val wire = cursor.getBlob(0) ?: continue
             if (wire.size != 32) continue
-            // Room stores wire order; dashj's Sha256Hash is display order.
             // A LEFT JOIN miss leaves BOTH null: no `transactions` row, so no
             // height and — importantly — no stored net. Null net means unknown,
             // which the comparison skips; it must not become a zero.
-            out[Sha256Hash.wrapReversed(wire)] = SdkTxFacts(
-                height = if (cursor.isNull(1)) 0 else cursor.getInt(1),
-                netDuffs = if (cursor.isNull(2)) null else cursor.getLong(2)
+            onRow(
+                wire,
+                if (cursor.isNull(1)) 0 else cursor.getInt(1),
+                if (cursor.isNull(2)) null else cursor.getLong(2)
             )
         }
-        out
     }
+}
+
+// ── SDK store fingerprint ─────────────────────────────────────────────
+
+/**
+ * A fingerprint of exactly what a breakdown read from the SDK store: the
+ * [querySdkTxidHeights] map, every member txid with its height and stored net.
+ *
+ * The findings of a breakdown are only true of the store state it read.
+ * Every event-driven invalidation depends on the event reaching the tap, and
+ * events can be lost (the SDK's event buffer drops when full, and the tap is
+ * not subscribed while it starts, stops or recovers). So the diagnostic
+ * re-reads this fingerprint before it lets the findings support a verdict,
+ * and treats any difference as "the history changed".
+ *
+ * [rows] is the member count. [digest] is the wrapping sum, over the members,
+ * of a 64-bit mix of (txid, height, net, net-known) ([sdkTxRowDigest]), so it
+ * is a function of the compared state alone, not of row order, rowids or
+ * columns the breakdown does not read. Every mutation the breakdown could see
+ * changes the set of (txid, height, net) members: an insert or delete adds or
+ * removes a term (and changes [rows] unless another offsets it); a confirmation,
+ * reorg, net rewrite, a net becoming known or unknown, or one txid replaced by
+ * another, swaps a member's term for a different one. The digest misses it
+ * only if the removed and added terms sum to the same 64-bit value: about
+ * 2^-64 per changed state, since every term mixes all of its member's fields
+ * and txids are SHA-256d outputs nobody here chooses. Plain sums of net and
+ * height would not do: two nets swapped between transactions, or one
+ * confirmation and one reorg in the same interval, leave them unchanged.
+ */
+data class SdkTxStoreFingerprint(val rows: Int, val digest: Long)
+
+/** [SdkTxStoreFingerprint] of a [querySdkTxidHeights] result, as a breakdown run read it. */
+internal fun fingerprintOf(sdkTxids: Map<Sha256Hash, SdkTxFacts>): SdkTxStoreFingerprint {
+    var digest = 0L
+    for ((txid, facts) in sdkTxids) {
+        digest += sdkTxRowDigest(txid.reversedBytes, facts.height, facts.netDuffs)
+    }
+    return SdkTxStoreFingerprint(sdkTxids.size, digest)
+}
+
+/**
+ * The current [SdkTxStoreFingerprint] of wallet [walletId], straight from the
+ * store without building the map: one SELECT over the same rows
+ * [querySdkTxidHeights] reads, folded as it streams. Blocking: call off the
+ * main thread.
+ */
+internal fun querySdkTxStoreFingerprint(db: SupportSQLiteDatabase, walletId: ByteArray): SdkTxStoreFingerprint {
+    var rows = 0
+    var digest = 0L
+    forEachSdkTxRow(db, walletId, onCount = {}) { wire, height, netDuffs ->
+        rows++
+        digest += sdkTxRowDigest(wire, height, netDuffs)
+    }
+    return SdkTxStoreFingerprint(rows, digest)
+}
+
+/**
+ * One member's term in [SdkTxStoreFingerprint.digest]: the 32 wire bytes of
+ * the txid, the height, whether the net is known and the net, each folded
+ * through the SplitMix64 finalizer (a bijection on 64 bits), so every field
+ * reaches every output bit and no field can cancel another.
+ */
+internal fun sdkTxRowDigest(wire: ByteArray, height: Int, netDuffs: Long?): Long {
+    require(wire.size == 32) { "a txid is 32 bytes" }
+    var h = 0L
+    for (word in 0 until 4) {
+        var w = 0L
+        for (b in 0 until 8) w = w or ((wire[word * 8 + b].toLong() and 0xff) shl (8 * b))
+        h = mix64(h xor w)
+    }
+    h = mix64(h xor height.toLong())
+    h = mix64(h xor if (netDuffs == null) NET_UNKNOWN_TAG else NET_KNOWN_TAG)
+    return mix64(h xor (netDuffs ?: 0L))
+}
+
+private const val NET_KNOWN_TAG = 0x4b4e4f574e4e4554L // "KNOWNNET"
+private const val NET_UNKNOWN_TAG = 0x554e4b4e4f574e4eL // "UNKNOWNN"
+
+/** SplitMix64: add the golden gamma, then its finalizer. A bijection on 64 bits. */
+private fun mix64(x: Long): Long {
+    var z = x + -0x61c8864680b583ebL // 0x9e3779b97f4a7c15
+    z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L // 0xbf58476d1ce4e5b9
+    z = (z xor (z ushr 27)) * -0x6b2fb644ecceee15L // 0x94d049bb133111eb
+    return z xor (z ushr 31)
+}
 
 // ── dashj side ────────────────────────────────────────────────────────
 
@@ -579,11 +686,6 @@ private fun specialTag(tx: Transaction): String? = when {
 // ── Keeping the latest result ─────────────────────────────────────────
 
 /**
- * The latest breakdown as the support report shows it: which SDK wallet it
- * was computed for, when, and the [parityBreakdownLog] text (txids and
- * amounts). A result is only ever shown for the wallet it came from.
- */
-/**
  * The structured verdict of one breakdown, so a caller can ask "did this find
  * anything?" without parsing the log text.
  *
@@ -631,8 +733,22 @@ data class ParityBreakdownFindings(
         }
 }
 
-/** [ParityBreakdownFindings] with the moment it was computed, for freshness checks. */
-data class TimedBreakdownFindings(val computedAtMs: Long, val findings: ParityBreakdownFindings)
+/**
+ * [ParityBreakdownFindings] with what they are true of, for freshness checks.
+ *
+ * @property computedAtMs when the run started, before it read anything.
+ * @property walletIdHex the SDK wallet whose store the run read.
+ * @property storeFingerprint that store as the run read it
+ *   ([fingerprintOf] its SDK input). Findings without one cannot be checked
+ *   against the store and never support a verdict
+ *   ([L1ShadowSyncService.breakdownFindingsStillCurrent]).
+ */
+data class TimedBreakdownFindings(
+    val computedAtMs: Long,
+    val findings: ParityBreakdownFindings,
+    val walletIdHex: String? = null,
+    val storeFingerprint: SdkTxStoreFingerprint? = null
+)
 
 /** The findings of [b], for a caller that needs the verdict rather than the text. */
 internal fun findingsOf(b: ParityBreakdown): ParityBreakdownFindings = ParityBreakdownFindings(
@@ -644,6 +760,10 @@ internal fun findingsOf(b: ParityBreakdown): ParityBreakdownFindings = ParityBre
 )
 
 /**
+ * The latest breakdown as the support report shows it: which SDK wallet it
+ * was computed for, when, and the [parityBreakdownLog] text (txids and
+ * amounts). A result is only ever shown for the wallet it came from.
+ *
  * @property findings null for a breakdown restored from [breakdownStore] after a
  *   restart, which carries only its text. A null findings set can never support
  *   a MATCH verdict — the conservative reading, on purpose.

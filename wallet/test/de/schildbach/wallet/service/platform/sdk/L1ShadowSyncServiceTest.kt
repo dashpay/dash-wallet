@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.service.DashjDiagnosticSyncState.Parity
+import de.schildbach.wallet.service.deriveCurrentDashjDiagnosticVerdict
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -32,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -149,7 +152,11 @@ class L1ShadowSyncServiceTest {
 
         override fun spvProgress(): Flow<SpvSyncProgressData> = progressFlow
 
-        override fun walletEventStrings(): Flow<String> = eventStrings
+        /** [FAIL_TAP] on [eventStrings] makes the tap's collect throw, as a broken feed would. */
+        override fun walletEventStrings(): Flow<String> = eventStrings.map {
+            check(it != FAIL_TAP) { "simulated wallet-event feed failure" }
+            it
+        }
 
         override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> {
             onProbe()
@@ -4695,5 +4702,198 @@ class L1ShadowSyncServiceTest {
             )
         }
         service.stop()
+    }
+
+    // ── Findings anchored to the store, not to the events ─────────────
+
+    /** One shared, confirmed transaction both engines value the same: a clean sheet. */
+    private fun cleanBreakdownSource() = FakeSource(boundWalletId = walletIdHex).apply {
+        walletSyncedHeight = 1_000
+        sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, 100L))
+        dashjFacts = DashjBreakdownFacts(
+            lastBlockSeenHeight = 1_000,
+            txs = listOf(DashjTxFacts(sharedTxid, 900, netDuffs = 100L, valueKnown = true))
+        )
+    }
+
+    /** Balances and counts agree, captured after the catch-up moment [diagnosticVerdict] uses. */
+    private val fullMatchReport = ParityReport(
+        balancesMatch = true,
+        sdkDuffs = 100,
+        dashjDuffs = 100,
+        sdkTxCount = 1,
+        dashjTxCount = 1,
+        sdkSynced = true,
+        timestampMs = 1_000_000L,
+        confirmedBalancesMatch = true,
+        sdkConfirmedDuffs = 100,
+        dashjAvailableDuffs = 100
+    )
+
+    /** What a BlockchainServiceImpl diagnostic pass derives, dashj at 100 % since t=1. */
+    private suspend fun L1ShadowSyncService.diagnosticVerdict() = deriveCurrentDashjDiagnosticVerdict(
+        100,
+        fullMatchReport,
+        latestBreakdownFindings.value,
+        1L,
+        ::breakdownFindingsStillCurrent
+    )
+
+    @Test
+    fun aStoreChangeNoEventReported_cannotSupportMatch_andExpiresTheFindings() = runBlocking {
+        // The regression review asked for. Every other invalidation needs an
+        // event to reach the tap; here the SDK store changes and none does (a
+        // full SDK event buffer drops it). Before the fingerprint the clean
+        // sheet stayed, and MATCH was published for a history nothing compared.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = cleanBreakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+        assertEquals(Parity.MATCH, service.diagnosticVerdict().parity)
+
+        // The engine rewrites the shared transaction's stored net. No event.
+        source.sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, 7_781_409L))
+
+        val verdict = service.diagnosticVerdict()
+        assertEquals("the balances still agree, and nothing more is known", Parity.BALANCE_MATCH, verdict.parity)
+        assertNull(verdict.freshFindings)
+        assertNull(
+            "the findings expire, as a delivered event would have expired them",
+            service.latestBreakdownFindings.value
+        )
+
+        // Expired the way an event expires them: the settle window first…
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        // …then the hour is free, and the recompute sees the changed net.
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(2, source.breakdownDashjCalls)
+        assertEquals(Parity.VALUES_DIFFER, service.diagnosticVerdict().parity)
+        service.stop()
+    }
+
+    @Test
+    fun anUnchangedStore_keepsMatch_andTheFindings() = runBlocking {
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val findings = checkNotNull(service.latestBreakdownFindings.value)
+        assertNotNull(findings.storeFingerprint)
+
+        repeat(3) {
+            assertEquals(Parity.MATCH, service.diagnosticVerdict().parity)
+        }
+        assertSame(findings, service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
+    fun anUnreadableStore_cannotSupportMatch_butKeepsTheFindings() = runBlocking {
+        // Unknown is not "unchanged". But it is not "changed" either: if the
+        // store reads the same again, the findings are still true of it.
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val findings = checkNotNull(service.latestBreakdownFindings.value)
+        val store = source.sdkTxidHeights
+
+        source.sdkTxidHeights = null
+        assertEquals(Parity.BALANCE_MATCH, service.diagnosticVerdict().parity)
+        assertSame(findings, service.latestBreakdownFindings.value)
+
+        source.sdkTxidHeights = store
+        assertEquals(Parity.MATCH, service.diagnosticVerdict().parity)
+        service.stop()
+    }
+
+    @Test
+    fun aCheckOfReplacedFindings_doesNotRevokeTheirReplacement() = runBlocking {
+        // A pass read the old findings; before its check ran, a newer run
+        // published findings for the changed store. The old ones fail the
+        // check — and must not take the new ones down with them.
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val old = checkNotNull(service.latestBreakdownFindings.value)
+        source.sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, 101L))
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val replacement = checkNotNull(service.latestBreakdownFindings.value)
+
+        assertFalse(service.breakdownFindingsStillCurrent(old))
+        assertSame(replacement, service.latestBreakdownFindings.value)
+        assertTrue(service.breakdownFindingsStillCurrent(replacement))
+        service.stop()
+    }
+
+    @Test
+    fun aTapRestart_expiresTheFindings() = runBlocking {
+        // Stopped, the tap hears nothing (it is cancelled before SPV stops), and
+        // a start runs SPV before the tap subscribes; the feed has no replay.
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+
+        service.stop()
+        source.progressFlow.value = SpvSyncProgressData.EMPTY
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+
+        assertNull(service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
+    fun aTapFailure_expiresTheFindings_atOnce_andHoldsOffTheRecompute() = runBlocking {
+        // The tap re-collects only after a delay, and the feed has no replay:
+        // whatever happens meanwhile is never heard. The gap starts at the
+        // failure, so that is when the findings go. And a failing feed must
+        // not buy a breakdown per probe tick: the settle window holds it off.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = cleanBreakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+
+        source.eventStrings.emit(FAIL_TAP)
+
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value != null) delay(10) }
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    private companion object {
+        const val FAIL_TAP = "simulated: the wallet-event feed fails here"
     }
 }

@@ -1878,6 +1878,18 @@ interface L1ShadowSource {
     suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, SdkTxFacts>? = null
 
     /**
+     * The current [SdkTxStoreFingerprint] of what [sdkTxidHeights] would
+     * return, for checking that a breakdown's findings still describe the
+     * store ([L1ShadowSyncService.breakdownFindingsStillCurrent]). Null when
+     * unavailable, which never counts as unchanged. The default folds
+     * [sdkTxidHeights] itself, so a test fake's store and fingerprint cannot
+     * disagree; the production source streams the same rows instead
+     * ([querySdkTxStoreFingerprint]).
+     */
+    suspend fun sdkTxStoreFingerprint(walletIdHex: String): SdkTxStoreFingerprint? =
+        sdkTxidHeights(walletIdHex)?.let { fingerprintOf(it) }
+
+    /**
      * The dashj side of the [ParityBreakdown] ([collectDashjBreakdownFacts]),
      * classifying only the transactions missing from [sdkTxids]; null when
      * the wallet isn't loaded. Default null for test fakes.
@@ -2059,6 +2071,20 @@ internal class DashSdkL1ShadowSource(
         val db = database()
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
+        }
+    }
+
+    /**
+     * Streams the rows rather than building the map: this runs on every
+     * diagnostic pass that would use the findings. Never boots the SDK for it
+     * ([DashSdkService.databaseOrNull], not [database]): a store that is not
+     * open reads as unavailable, which never counts as unchanged.
+     */
+    override suspend fun sdkTxStoreFingerprint(walletIdHex: String): SdkTxStoreFingerprint? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        val db = service.databaseOrNull() ?: return null
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            querySdkTxStoreFingerprint(db.openHelper.readableDatabase, walletId)
         }
     }
 
@@ -3456,7 +3482,25 @@ class L1ShadowSyncService internal constructor(
      * cadence, but it should not do so silently.
      */
     private suspend fun tapWalletEvents() {
+        var afterFailure = false
         while (currentCoroutineContext().isActive) {
+            // A history change in a gap reaches no invalidation: the feed has
+            // no replay, SPV is started before this tap and stopped after it,
+            // and a failed collect leaves a retry delay. So every
+            // (re)subscription revokes the findings. A change between here and
+            // the subscription itself is still unseen by the tap; the
+            // fingerprint check ([breakdownFindingsStillCurrent]) catches that.
+            //
+            // The session's first subscription needs no settle window: nothing
+            // is known to be arriving. After a failure it does: a feed failing
+            // every retry would otherwise free the hourly slot each time and
+            // buy a full breakdown per probe tick, every one of them fenced by
+            // the next failure. With the window, a broken feed simply keeps
+            // parity unestablished until it has stayed up for one window.
+            expireParityFindingsForNewTx(
+                if (afterFailure) "the wallet-event tap re-subscribing" else "the wallet-event tap subscribing",
+                settle = afterFailure
+            )
             try {
                 source.walletEventStrings().collect { debug ->
                     // Liveness for the filter-stall watchdog, stamped before
@@ -3500,9 +3544,14 @@ class L1ShadowSyncService internal constructor(
                         log.warn("L1 tx-event buffer full; dropped {} (Room snapshot will reconcile)", event)
                     }
                 }
-                return // upstream flow completed normally
+                // Upstream flow completed normally: no events from here on.
+                expireParityFindingsForNewTx("the wallet-event feed ending", settle = false)
+                return
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                // The gap starts now, not at the re-subscription after the delay.
+                expireParityFindingsForNewTx("the wallet-event tap failing")
+                afterFailure = true
                 log.warn("L1 wallet-event tap failed; re-collecting in ${LOOP_RETRY_DELAY_MS}ms", t)
                 delay(LOOP_RETRY_DELAY_MS)
             }
@@ -4257,19 +4306,37 @@ class L1ShadowSyncService internal constructor(
      * waiting out the hour, held off by [PARITY_BREAKDOWN_TX_SETTLE_MS] past
      * the LATEST event, so a burst (one event per CoinJoin record) produces
      * one run after it ends, not one per transaction.
+     *
+     * Also the conservative answer when a change may have gone unreported:
+     * a gap in the event tap ([tapWalletEvents]) and a store that no longer
+     * matches the findings' fingerprint ([breakdownFindingsStillCurrent]).
+     *
+     * @param settle hold the next run off by the settle window. False for the
+     *   tap's first subscription of a session and a feed that ended: nothing
+     *   is known to be arriving, so a recompute need not wait.
+     * @param onlyIfStill expire only while these exact findings are the
+     *   published ones. A check that read them may finish after a newer run
+     *   replaced them, and must not revoke findings it never checked.
      */
-    private fun expireParityFindingsForNewTx(cause: String = "a new transaction") {
+    private fun expireParityFindingsForNewTx(
+        cause: String = "a new transaction",
+        settle: Boolean = true,
+        onlyIfStill: TimedBreakdownFindings? = null
+    ) {
         val expired = synchronized(breakdownLock) {
+            if (onlyIfStill != null && _latestBreakdownFindings.value !== onlyIfStill) return
             txHistoryGeneration++
             val hadSomething = _latestBreakdownFindings.value != null ||
                 lastBreakdownRunMs != null ||
                 inFlightParityBreakdown(breakdownRun) != null
             _latestBreakdownFindings.value = null
             lastBreakdownRunMs = null
-            breakdownRetryNotBeforeMs = maxOf(
-                breakdownRetryNotBeforeMs,
-                nowMs() + PARITY_BREAKDOWN_TX_SETTLE_MS
-            )
+            if (settle) {
+                breakdownRetryNotBeforeMs = maxOf(
+                    breakdownRetryNotBeforeMs,
+                    nowMs() + PARITY_BREAKDOWN_TX_SETTLE_MS
+                )
+            }
             hadSomething
         }
         // Logged only when something was expired, so a burst normally logs
@@ -4297,6 +4364,52 @@ class L1ShadowSyncService internal constructor(
     fun storedNetsRepaired(count: Int) {
         if (count <= 0) return
         expireParityFindingsForNewTx("$count stored net(s) repaired in the SDK store")
+    }
+
+    /**
+     * Whether [findings] still describe the SDK store, checked against the
+     * store itself rather than against the events that report changes to it.
+     *
+     * Every other invalidation needs an event to reach the tap, and events can
+     * be lost: the SDK's event buffer drops when full, and the tap is not
+     * subscribed while it starts, stops or recovers. So before the findings
+     * may support a verdict, the diagnostic pass re-reads the store's
+     * [SdkTxStoreFingerprint] and compares it with the one the run recorded
+     * from its own input. Equal means the SDK side the run compared is still
+     * exactly the store's state.
+     *
+     * Not equal expires the findings, as a lost event would have
+     * ([expireParityFindingsForNewTx], settle window included: a lost event
+     * usually means a burst), and returns false; the next probe recomputes.
+     * Findings without a fingerprint, or for a wallet other than the one
+     * running, are not current, and neither is a store that cannot be read
+     * now (that one is left in place: if the store reads the same later, the
+     * findings are still true of it).
+     *
+     * One aggregate over the wallet's txid set per call; call off the main
+     * thread. Never throws, except cancellation.
+     */
+    suspend fun breakdownFindingsStillCurrent(findings: TimedBreakdownFindings): Boolean {
+        val expected = findings.storeFingerprint ?: return false
+        val walletIdHex = findings.walletIdHex ?: return false
+        val running = runningWalletIdHex.value
+        if (running != null && running != walletIdHex) {
+            expireParityFindingsForNewTx("a different SDK wallet running", settle = false, onlyIfStill = findings)
+            return false
+        }
+        val current = try {
+            source.sdkTxStoreFingerprint(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("ParityBreakdown: SDK store fingerprint unreadable", t)
+            null
+        } ?: return false
+        if (current == expected) return true
+        expireParityFindingsForNewTx(
+            "an SDK store change no event reported (wallet txids ${expected.rows} -> ${current.rows})",
+            onlyIfStill = findings
+        )
+        return false
     }
 
     /**
@@ -4534,10 +4647,13 @@ class L1ShadowSyncService internal constructor(
                         ParityBreakdownRunResult.Unavailable(processing)
                     } else {
                         val breakdown = computeParityBreakdown(dashj.txs, sdkTxids, dashj.lastBlockSeenHeight)
+                        // What the findings are true of: the SDK side exactly as
+                        // this run read it, from the same single query.
+                        val storeFingerprint = fingerprintOf(sdkTxids)
                         val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
                         val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
                         val stored = StoredParityBreakdown(walletIdHex, startedMs, text, findingsOf(breakdown))
-                        when (keepParityBreakdown(stored, epoch, generation)) {
+                        when (keepParityBreakdown(stored, storeFingerprint, epoch, generation)) {
                             BreakdownKept.PUBLISHED -> {
                                 log.info(text)
                                 ParityBreakdownRunResult.Done(stored)
@@ -4607,13 +4723,15 @@ class L1ShadowSyncService internal constructor(
 
     /**
      * Keep [stored] as the latest result (memory and [breakdownStore]) unless
-     * a wallet wipe happened since [epoch], and publish its findings unless a
-     * transaction arrived since [generation]. The checks and the writes are
-     * one step under [breakdownLock], so neither a wipe nor a transaction
-     * event can slip in between the check and the publication.
+     * a wallet wipe happened since [epoch], and publish its findings, with the
+     * [storeFingerprint] of the SDK state they describe, unless a transaction
+     * arrived since [generation]. The checks and the writes are one step under
+     * [breakdownLock], so neither a wipe nor a transaction event can slip in
+     * between the check and the publication.
      */
     private suspend fun keepParityBreakdown(
         stored: StoredParityBreakdown,
+        storeFingerprint: SdkTxStoreFingerprint,
         epoch: Long,
         generation: Long
     ): BreakdownKept =
@@ -4626,7 +4744,12 @@ class L1ShadowSyncService internal constructor(
                     breakdownStore?.save(stored)
                     if (generation == txHistoryGeneration) {
                         stored.findings?.let {
-                            _latestBreakdownFindings.value = TimedBreakdownFindings(stored.computedAtMs, it)
+                            _latestBreakdownFindings.value = TimedBreakdownFindings(
+                                stored.computedAtMs,
+                                it,
+                                stored.walletIdHex,
+                                storeFingerprint
+                            )
                         }
                         BreakdownKept.PUBLISHED
                     } else {

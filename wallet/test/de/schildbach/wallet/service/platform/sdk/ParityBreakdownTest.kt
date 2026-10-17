@@ -779,4 +779,51 @@ class ParityBreakdownTest {
         assertEquals(1, f.valueDiffers)
         assertEquals(7_800_078L, b.valueDeltaDuffs)
     }
+
+    // ── SDK store fingerprint ─────────────────────────────────────────
+
+    private val storeBefore = mapOf(
+        h(1) to sdkAt(900, 11_000_000L),
+        h(2) to sdkAt(950, -7_500_000L),
+        h(3) to sdkAt(0, 250_000L)
+    )
+
+    @Test
+    fun fingerprint_changesOnEveryKindOfStoreChange() {
+        val before = fingerprintOf(storeBefore)
+        val changes = mapOf(
+            "insert" to storeBefore + (h(4) to sdkAt(0, 1L)),
+            "delete" to storeBefore - h(2),
+            "net update" to storeBefore + (h(1) to sdkAt(900, 11_000_001L)),
+            "confirmation" to storeBefore + (h(3) to sdkAt(990, 250_000L)),
+            "reorg to another height" to storeBefore + (h(1) to sdkAt(901, 11_000_000L)),
+            "net becomes unknown" to storeBefore + (h(3) to SdkTxFacts(0, null)),
+            // Plain sums of net and height cannot see these two.
+            "nets swapped between transactions" to storeBefore +
+                (h(1) to sdkAt(900, -7_500_000L)) + (h(2) to sdkAt(950, 11_000_000L)),
+            "one confirmed, one reorged out, same height total" to storeBefore +
+                (h(2) to sdkAt(0, -7_500_000L)) + (h(3) to sdkAt(950, 250_000L)),
+            // Same count, same nets, same heights: only the txid differs.
+            "one txid replaced by another" to (storeBefore - h(3)) + (h(5) to sdkAt(0, 250_000L))
+        )
+        for ((what, after) in changes) {
+            assertFalse("$what must change the fingerprint", fingerprintOf(after) == before)
+        }
+    }
+
+    @Test
+    fun fingerprint_aKnownZeroNet_isNotAnUnknownNet() {
+        assertFalse(
+            fingerprintOf(mapOf(h(1) to sdkAt(0, 0L))) == fingerprintOf(mapOf(h(1) to SdkTxFacts(0, null)))
+        )
+    }
+
+    @Test
+    fun fingerprint_dependsOnTheStateOnly_notOnHowTheMapWasBuilt() {
+        val reordered = LinkedHashMap<Sha256Hash, SdkTxFacts>()
+        for (key in storeBefore.keys.reversed()) reordered[key] = checkNotNull(storeBefore[key])
+        assertEquals(fingerprintOf(storeBefore), fingerprintOf(reordered))
+        assertEquals(fingerprintOf(storeBefore), fingerprintOf(HashMap(storeBefore)))
+        assertEquals(SdkTxStoreFingerprint(0, 0L), fingerprintOf(emptyMap()))
+    }
 }
