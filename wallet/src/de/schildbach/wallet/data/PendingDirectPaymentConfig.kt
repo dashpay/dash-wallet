@@ -83,7 +83,15 @@ data class PendingDirectPayment(
      *
      * Null for a record written before this was stored.
      */
-    val walletId: String? = null
+    val walletId: String? = null,
+    /**
+     * The fee of [txBytes] in duffs, as the SDK reported it when the transaction was built, so a
+     * resubmission can show the real fee (review 4303472428). Rebuilding it later needs the value
+     * of every input, which the wallet may no longer be able to supply.
+     *
+     * Null for a record written before this was stored, and when the fee was not known.
+     */
+    val feeDuffs: Long? = null
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
@@ -97,6 +105,7 @@ data class PendingDirectPayment(
         .put(KEY_ABANDONED, abandoned)
         .put(KEY_WATCH_EXPIRED, watchExpired)
         .put(KEY_WALLET_ID, walletId ?: JSONObject.NULL)
+        .put(KEY_FEE_DUFFS, feeDuffs ?: JSONObject.NULL)
 
     companion object {
         private const val KEY_TX_ID = "txId"
@@ -110,6 +119,7 @@ data class PendingDirectPayment(
         private const val KEY_ICON_URL = "iconUrl"
         private const val KEY_WATCH_EXPIRED = "watchExpired"
         private const val KEY_WALLET_ID = "walletId"
+        private const val KEY_FEE_DUFFS = "feeDuffs"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
@@ -130,7 +140,9 @@ data class PendingDirectPayment(
             abandoned = json.optBoolean(KEY_ABANDONED, false),
             watchExpired = json.optBoolean(KEY_WATCH_EXPIRED, false),
             // opt for the same reason as paymentRequestId
-            walletId = if (json.isNull(KEY_WALLET_ID)) null else json.optString(KEY_WALLET_ID, "").ifEmpty { null }
+            walletId = if (json.isNull(KEY_WALLET_ID)) null else json.optString(KEY_WALLET_ID, "").ifEmpty { null },
+            // opt for the same reason as paymentRequestId; a negative value is not a fee
+            feeDuffs = if (json.isNull(KEY_FEE_DUFFS)) null else json.optLong(KEY_FEE_DUFFS, -1L).takeIf { it >= 0 }
         )
     }
 }

@@ -425,4 +425,19 @@ class PendingDirectPaymentConfigTest {
 
         assertEquals(null, config.getAllOrThrow().single().paymentRequestId)
     }
+
+    @Test
+    fun theFeeRoundTripsAndAnOlderRecordHasNone() = runBlocking {
+        // review 4303472428: the fee is stored so a resubmission can show it; a record written
+        // before it was (the seeded shape above) decodes with no fee rather than being refused
+        config.add(payment.copy(feeDuffs = 1_234L))
+        assertEquals(1_234L, config.getAllOrThrow().single().feeDuffs)
+
+        seed(
+            """[{"txId":"${payment.txId}","tx":"01020304",""" +
+                """"paymentUrl":"https://merchant.example/pay/1",""" +
+                """"serviceName":"CTX","createdAt":1700000000000}]"""
+        )
+        assertEquals(null, config.getAllOrThrow().single().feeDuffs)
+    }
 }

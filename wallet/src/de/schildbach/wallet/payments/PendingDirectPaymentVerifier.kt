@@ -317,7 +317,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
             createdAt = System.currentTimeMillis(),
             isGiftCardPurchase = recovery?.isGiftCardPurchase ?: false,
             merchantIconUrl = recovery?.merchantIconUrl,
-            walletId = walletIdentity(wallet)
+            walletId = walletIdentity(wallet),
+            // what the SDK built it for; a resubmission shows it (review 4303472428)
+            feeDuffs = reservation?.feeDuffs
         )
         lockInputs(wallet, tx)
         try {

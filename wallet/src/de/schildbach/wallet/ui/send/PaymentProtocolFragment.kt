@@ -294,14 +294,15 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount.toDashjCoin())
         val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
-        // The SDK deferred build's exact fee; the fake fee only shows on
-        // a failed preview (send is gated off then anyway).
-        val txFee = viewModel.previewFee ?: PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
+        // The exact fee of the payment the preview shows, or none: a fee that cannot be known is
+        // shown as not available, never invented (review 4303472428).
+        val txFee = viewModel.displayFee
+        val notAvailable = getString(R.string.transaction_row_rate_not_available)
 
         binding.paymentRequest.amount.inputValue.text = amountStr
         binding.paymentRequest.amount.fiatValue.text = fiatAmountStr
-        binding.paymentRequest.transactionFee.text = txFee.toPlainString()
-        binding.paymentRequest.totalAmount.text = amount.toDashjCoin().add(txFee).toPlainString()
+        binding.paymentRequest.transactionFee.text = txFee?.toPlainString() ?: notAvailable
+        binding.paymentRequest.totalAmount.text = txFee?.let { amount.toDashjCoin().add(it).toPlainString() } ?: notAvailable
 
         binding.paymentRequest.memo.text = paymentIntent.memo
         binding.paymentRequest.resendNotice.isVisible = viewModel.isResubmission

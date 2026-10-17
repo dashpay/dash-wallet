@@ -104,6 +104,14 @@ class PaymentProtocolViewModel @Inject constructor(
     val previewFee: Coin?
         get() = deferredPayment?.let { Coin.valueOf(it.feeDuffs) } ?: resubmissionFee.takeIf { isResubmission }
 
+    /**
+     * The fee the confirmation shows; null shows it, and the total, as not available. The
+     * placeholder fee is only for a failed preview, which cannot be sent; an armed resubmission
+     * whose fee cannot be known shows none rather than an invented one (review 4303472428).
+     */
+    val displayFee: Coin?
+        get() = previewFee ?: FAKE_FEE_FOR_EXCEPTIONS.takeUnless { isResubmission }
+
     /** True when a confirmed send can actually run (the preview is armed). */
     val canSendPayment: Boolean
         get() = deferredPayment != null || isResubmission
@@ -233,7 +241,10 @@ class PaymentProtocolViewModel @Inject constructor(
                     null
                 }
                 if (earlier != null) {
-                    resubmissionFee = sendCoinsTaskRunner.knownFeeOf(earlier.txBytes, wallet)
+                    // The fee stored when T1 was built; rebuilt from its inputs for an older record
+                    // that has none, and unknown (shown as not available) when that fails too.
+                    resubmissionFee = earlier.feeDuffs?.let { Coin.valueOf(it) }
+                        ?: sendCoinsTaskRunner.knownFeeOf(earlier.txBytes, wallet)
                     resubmissionRef.set(earlier)
                     _sendRequestLiveData.postValue(Resource.success(null))
                     return@withContext

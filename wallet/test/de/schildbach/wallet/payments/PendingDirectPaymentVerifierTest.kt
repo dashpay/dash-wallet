@@ -990,6 +990,21 @@ class PendingDirectPaymentVerifierTest {
         )
 
     @Test
+    fun `the record keeps the fee the SDK built the payment with, through its release`() = runBlocking {
+        // review 4303472428: a resubmission shows this fee; the wallet may not be able to rebuild it
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        assertEquals(1_000L, stored.single().feeDuffs)
+
+        goOnlineAndSynced()
+        withTimeout(5_000) { while (!stored.single().abandoned) delay(10) }
+        assertEquals("released, the fee stays with the record", 1_000L, stored.single().feeDuffs)
+    }
+
+    @Test
     fun `commits once the SDK engine has observed the tx and consumes the held reservation`() = runBlocking {
         val tx = createTransaction()
         val reservation = reservationFor(tx)

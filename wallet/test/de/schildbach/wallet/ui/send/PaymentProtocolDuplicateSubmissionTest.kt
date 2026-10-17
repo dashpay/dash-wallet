@@ -28,6 +28,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
@@ -37,6 +38,7 @@ import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -209,6 +211,9 @@ class PaymentProtocolDuplicateSubmissionTest {
 
         assertTrue(viewModel.isResubmission)
         assertTrue(viewModel.canSendPayment)
+        // review 4303472428: an old record with no stored fee, and a fee that cannot be rebuilt,
+        // shows the fee and total as not available, never the placeholder as if it were real
+        assertNull("no invented fee on an armed resubmission", viewModel.displayFee)
         viewModel.sendPayment()
         awaitOutcome(viewModel)
 
@@ -218,6 +223,22 @@ class PaymentProtocolDuplicateSubmissionTest {
             coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 1) { runner.resubmitAbandonedPayment(any(), any()) }
         }
+    }
+
+    @Test
+    fun `a resubmission shows the fee stored with its record`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val earlier = de.schildbach.wallet.data.PendingDirectPayment(
+            earlierSubmission, byteArrayOf(1, 2, 3), "https://merchant.example/pay", "Merchant",
+            System.currentTimeMillis(), abandoned = true, feeDuffs = 1_234L
+        )
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns earlier
+        // the wallet can no longer rebuild it: the stored fee is what is shown
+        coEvery { runner.knownFeeOf(any(), any()) } returns null
+        val viewModel = resubmissionViewModel(runner)
+
+        assertTrue(viewModel.canSendPayment)
+        assertEquals(Coin.valueOf(1_234L), viewModel.displayFee)
     }
 
     private fun resubmissionViewModel(runner: SendCoinsTaskRunner): PaymentProtocolViewModel {
