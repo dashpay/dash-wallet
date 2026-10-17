@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.send
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentNotRecordableException
 
 /**
  * How [SendCoinsFragment.showFailureDialog] renders a failed send. Pure
@@ -45,6 +46,14 @@ enum class SendFailureKind {
     SIGNER_LOCKED,
 
     /**
+     * A contact payment was refused before sending because the claim of its
+     * address could not be made durable (the paid-address store could not be
+     * read or written). Nothing was sent; resolving the address again does
+     * not help, so the copy points at storage / a restart.
+     */
+    CONTACT_PAYMENT_NOT_RECORDED,
+
+    /**
      * Any other [IllegalStateException] from the send path: internal
      * machinery — show a generic failure, NEVER the raw exception text.
      */
@@ -61,6 +70,8 @@ fun classifySendFailure(exception: Exception): SendFailureKind = when (exception
     // Before the generic IllegalStateException arm: SendSignerLockedException
     // IS an IllegalStateException and must keep its own honest copy.
     is SendSignerLockedException -> SendFailureKind.SIGNER_LOCKED
+    // Also an IllegalStateException: its own copy, not the generic one.
+    is ContactPaymentNotRecordableException -> SendFailureKind.CONTACT_PAYMENT_NOT_RECORDED
     is IllegalStateException -> SendFailureKind.GENERIC_INTERNAL
     else -> SendFailureKind.VERBATIM
 }
