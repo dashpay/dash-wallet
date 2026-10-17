@@ -121,4 +121,58 @@ class CoinJoinMigrationRecoveryTest {
             scope.cancel()
         }
     }
+
+    @Test
+    fun acknowledgedUnconfirmedMigrationStopsAutomaticPresentationButKeepsTheRecord() = runBlocking {
+        val config = mockk<DashPayConfig>(relaxed = true)
+        var consolidation = "kept"
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } answers { consolidation }
+        coEvery { config.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, any()) } answers { consolidation = secondArg() }
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) } returns ""
+        var marker = formatInFlightMigration(
+            InFlightMixedFundsMigration(
+                MixedFundsMigrationAction.SHIELD,
+                System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1_000L,
+                0L
+            )
+        )
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
+        coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, any()) } answers { marker = secondArg() }
+        var acknowledgedAt: Long? = null
+        coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT) } answers { acknowledgedAt }
+        coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT, any()) } answers {
+            acknowledgedAt = secondArg()
+        }
+        val shield = mockk<ShieldedBalanceService>(relaxed = true)
+        coEvery { shield.ensureShieldedReady() } returns true
+        coEvery { shield.pendingCoinJoinShieldLockCount() } returns 1
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val service = CoinJoinFundsMigrationService(
+            mockk(relaxed = true), shield, mockk(relaxed = true), mockk(relaxed = true), config,
+            mockk(relaxed = true), scope, mockk(relaxed = true)
+        )
+        try {
+            // Not yet seen: the automatic triggers present it.
+            assertTrue(service.shouldPresentPrompt())
+            service.acknowledgeUnconfirmedMigration()
+            // Closed by the user: no longer re-presented on resume / startup ...
+            assertFalse(service.shouldPresentPrompt())
+            // ... but the record is intact: still pending, still blocking a fresh spend.
+            assertNotNull(service.inFlightMigration())
+            assertEquals("kept", consolidation)
+            coVerify(exactly = 0) { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, "") }
+
+            // Try again from Tools restarts the window: the new attempt is presented again.
+            val current = parseInFlightMigration(marker)!!
+            marker = formatInFlightMigration(current.copy(startedAtMillis = System.currentTimeMillis()))
+            assertTrue(service.shouldPresentPrompt())
+
+            // A definitive failure is always presented, never acknowledged away.
+            marker = formatInFlightMigration(current.copy(failed = true))
+            service.acknowledgeUnconfirmedMigration()
+            assertTrue(service.shouldPresentPrompt())
+        } finally {
+            scope.cancel()
+        }
+    }
 }

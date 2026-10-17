@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.ui.migration
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
@@ -66,7 +67,9 @@ import javax.inject.Inject
  * recreation re-shows this sheet directly in the processing presentation
  * (`MainViewModel` re-fires the prompt while the marker is set). The sheet
  * cannot be dismissed during processing. Closing terminal guidance retains
- * the recovery marker; it is cleared only when the result becomes visible.
+ * the recovery marker (it is cleared only when the result becomes visible)
+ * but acknowledges it, so the automatic triggers stop re-presenting it;
+ * Tools still opens it to resume.
  */
 @AndroidEntryPoint
 class MixedFundsMigrationDialogFragment :
@@ -221,6 +224,18 @@ class MixedFundsMigrationDialogFragment :
                 }
             }
         }
+    }
+
+    /**
+     * Back / outside tap while the sheet is cancelable (failure, terminal
+     * guidance, success) — a USER close like the Close button, so it gets
+     * the same handling: a definitive failure is released for a new choice
+     * and "could not confirm" guidance is acknowledged. A lock-screen
+     * teardown dismisses without cancelling and so changes nothing.
+     */
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
+        viewModel.onSheetClosed()
     }
 
     /** True while a confirmation is up, so a second tap cannot stack another. */

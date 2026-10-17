@@ -433,11 +433,10 @@ class MainViewModel @Inject constructor(
                 // A persisted IN-FLIGHT marker re-shows the sheet in its
                 // post-choice PROCESSING presentation (a broadcast whose
                 // result is not user-visible yet — e.g. the lock screen tore
-                // the sheet down during the confirmation window); otherwise
-                // the service decides whether the forced choice is due.
-                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
-                    coinJoinFundsMigrationService.shouldPrompt()
-                ) {
+                // the sheet down during the confirmation window) unless its
+                // "could not confirm" guidance was already acknowledged;
+                // otherwise the service decides whether the forced choice is due.
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
                     mixedFundsPromptShownThisSession = true
                     showMixedFundsMigration.postCall()
                 }
@@ -924,11 +923,11 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // The in-flight marker re-shows the PROCESSING presentation
-                // (a broadcast migration whose result is not visible yet);
+                // (a broadcast migration whose result is not visible yet) —
+                // but not "could not confirm" guidance the user already
+                // closed, which would otherwise return on every resume;
                 // shouldPrompt() covers the pre-decision forced choice.
-                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
-                    coinJoinFundsMigrationService.shouldPrompt()
-                ) {
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
                     mixedFundsPromptShownThisSession = true
                     showMixedFundsMigration.postCall()
                 }

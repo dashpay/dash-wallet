@@ -897,11 +897,13 @@ class CoinJoinFundsMigrationService @Inject constructor(
             .map { parseInFlightMigration(it) }
 
     /**
-     * Drop the marker. Called by the watcher when the result became visible,
-     * and by the UI when the user acknowledges (dismisses) the TIMED-OUT
-     * presentation — a marker past [MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS] is
-     * deliberately NOT auto-cleared, so the "could not confirm" guidance is
-     * shown at least once before it stops re-appearing.
+     * Drop the marker together with its consolidation stage and journal.
+     * Called only when nothing is (or may still be) pending: the watcher
+     * after a VERIFIED landing, a definitive rejection, a reconciled
+     * interrupted intent, a released definitive failure. Never for an
+     * uncertain migration — closing the "could not confirm" guidance
+     * acknowledges it instead ([acknowledgeUnconfirmedMigration]), keeping
+     * the record so nothing in flight is ever rebuilt.
      */
     suspend fun clearInFlightMigration() {
         try {
@@ -912,6 +914,50 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (t is CancellationException) throw t
             log.warn("failed to clear the in-flight mixed-funds marker", t)
         }
+    }
+
+    /**
+     * The user closed the "could not confirm" guidance of the current
+     * (non-failed) marker: stop re-presenting it automatically
+     * ([shouldPresentPrompt]) — WITHOUT dropping the marker or its
+     * consolidation stage, which still block a fresh spend and keep the
+     * migration resumable from Tools. A later window (Try again, a
+     * signer-locked retry) has a new start time and is presented again.
+     */
+    suspend fun acknowledgeUnconfirmedMigration() {
+        try {
+            val marker = inFlightMigration() ?: return
+            if (marker.failed) return
+            dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT, marker.startedAtMillis)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to acknowledge the unconfirmed mixed-funds migration", t)
+        }
+    }
+
+    /**
+     * Should an AUTOMATIC trigger (startup, resume after unlock) present the
+     * sheet? A persisted marker does — processing, failure, or not-yet-seen
+     * guidance — unless the user already closed this window's "could not
+     * confirm" guidance ([acknowledgeUnconfirmedMigration]); otherwise
+     * [shouldPrompt] decides. Tools opens the sheet regardless.
+     */
+    suspend fun shouldPresentPrompt(): Boolean {
+        if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
+        // Same reconcile/restore as [shouldPrompt], so a stale interrupted
+        // intent is dropped before it can be presented.
+        if (restorePendingShieldMigration()) {
+            val marker = inFlightMigration() ?: return true
+            if (marker.failed) return true
+            val acknowledgedAt = try {
+                dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                null
+            }
+            return acknowledgedAt != marker.startedAtMillis
+        }
+        return shouldPrompt()
     }
 
     private suspend fun markInFlight(action: MixedFundsMigrationAction, startWatcher: Boolean = true) {
