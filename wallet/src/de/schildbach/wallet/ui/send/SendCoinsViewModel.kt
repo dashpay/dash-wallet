@@ -82,7 +82,11 @@ import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 
-class SendException(message: String) : Exception(message)
+/**
+ * The payee could not be resolved; the screen shows it (SendCoinsFragment) and
+ * nothing can be sent until a later resolution succeeds.
+ */
+class SendException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
@@ -1174,14 +1178,28 @@ class SendCoinsViewModel @Inject constructor(
             ?: receivedFromContact
 
         // Post-cutover from the SDK's sending account for this contact and
-        // channel, else dashj — see ContactPaymentAddressProvider.
-        val contactAddress = contactPaymentAddressProvider.nextAddress(
-            ContactPaymentTarget(
-                ourUserId = ourUserId,
-                contactUserId = dashPayProfile.userId,
-                accountReference = contactRequest.accountReference
-            )
+        // channel, else dashj — see ContactPaymentAddressProvider. A lookup
+        // that fails (e.g. the cutover state cannot be read: the provider
+        // fails closed) is an unresolvable contact address like a null one:
+        // the screen shows the error and the payee stays unresolved, so
+        // nothing can be sent (PR #1608 review: an IOException escaped
+        // SendCoinsFragment, which handles SendException, and crashed the app).
+        val target = ContactPaymentTarget(
+            ourUserId = ourUserId,
+            contactUserId = dashPayProfile.userId,
+            accountReference = contactRequest.accountReference
         )
+        val contactAddress = try {
+            contactPaymentAddressProvider.nextAddress(target)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn(
+                "contact payment address for {} (accountReference {}) could not be looked up; nothing can be sent",
+                target.contactUserId, target.accountReference, e
+            )
+            throw SendException("Failed to get contact address for ${dashPayProfile.userId}", e)
+        }
         return if (contactAddress != null) {
             ResolvedPayee(
                 PaymentIntent.fromAddressWithIdentity(

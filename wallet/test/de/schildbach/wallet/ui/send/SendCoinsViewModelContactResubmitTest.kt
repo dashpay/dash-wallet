@@ -549,6 +549,76 @@ class SendCoinsViewModelContactResubmitTest {
         assertTrue(sends.recipients.isEmpty())
     }
 
+    /** The real provider, whose persisted cutover state cannot be read (it fails closed). */
+    private fun unreadableCutoverProvider(chain: FakeDashjChain, failure: Exception) = ContactPaymentAddressProvider(
+        cutoverCommitted = { throw failure },
+        sdkAccountReader = { _, _ -> null },
+        dashjNextAddress = { _, _ -> chain.next() },
+        dashjMarkUsed = { _, _, address -> chain.mark(address) },
+        params = params,
+        dashjSendingCursor = { _, _ -> chain.current },
+        paidAddresses = PaidContactAddressStore(file = null)
+    )
+
+    @Test
+    fun contactScreenInit_cutoverStateUnreadable_showsTheContactError_andNothingIsSendable() {
+        // PR #1608 review: the provider fails closed on an unreadable cutover
+        // state, and that IOException escaped initPaymentIntent — the fragment
+        // handles only SendException, so the app crashed. It is now the
+        // unresolvable-contact-address error the screen shows.
+        val chain = FakeDashjChain(keys)
+        val sends = Sends()
+        val unreadable = java.io.IOException("preferences unreadable")
+        val viewModel = buildViewModel(
+            chain,
+            succeedingRunner(sends),
+            provider = unreadableCutoverProvider(chain, unreadable)
+        )
+
+        // What SendCoinsFragment.onViewCreated does: anything but a
+        // SendException is uncaught on the main thread.
+        var shown: SendException? = null
+        runBlocking {
+            try {
+                viewModel.initPaymentIntent(PaymentIntent.fromUserId(contactUserId))
+            } catch (ex: SendException) {
+                shown = ex
+            }
+        }
+
+        val error = requireNotNull(shown) { "the screen shows the contact address error" }
+        assertTrue(error.message.orEmpty().startsWith("Failed to get contact address"))
+        // Coroutine stack-trace recovery may copy exceptions (the copy's cause
+        // is the original): look for the read failure along the cause chain.
+        assertTrue(
+            "the read failure is kept as the cause",
+            generateSequence(error.cause) { it.cause }.any {
+                it is java.io.IOException && it.message == unreadable.message
+            }
+        )
+        assertFalse(viewModel.everythingPlausible())
+        assertThrows(PayeeNotResolvedException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertTrue("nothing was sent", sends.recipients.isEmpty())
+        assertTrue("no address was marked", chain.marks.isEmpty())
+    }
+
+    @Test
+    fun contactScreenInit_lookupCancelled_cancellationPropagates() {
+        val chain = FakeDashjChain(keys)
+        val viewModel = buildViewModel(
+            chain,
+            succeedingRunner(Sends()),
+            provider = unreadableCutoverProvider(chain, kotlinx.coroutines.CancellationException("screen closed"))
+        )
+
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) {
+            runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromUserId(contactUserId)) }
+        }
+        assertFalse(viewModel.everythingPlausible())
+    }
+
     @Test
     fun noDryRunResult_refusesTheSend_withoutSpendingTheContactIntent() {
         // A send that finds no dry run result (one is running, or the last one
