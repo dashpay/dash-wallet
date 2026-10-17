@@ -793,6 +793,16 @@ open class DashPayConfig @Inject constructor(
          * above (e.g. [TRANSACTION_METADATA_LAST_PAST_SAVE]).
          */
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
+
+        /**
+         * A local shielded spend is still reconciling (its note settlement can
+         * span several sync passes). Set together with removing
+         * [LAST_SHIELDED_BALANCE_DUFFS]; cleared only once the balance has
+         * settled. Survives a runtime stop and process death so the next
+         * bring-up restores the settlement guard instead of trusting the first
+         * READY pass.
+         */
+        val SHIELDED_SPEND_RECONCILE_PENDING = booleanPreferencesKey("shielded_spend_reconcile_pending")
     }
 
     // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
@@ -850,8 +860,43 @@ open class DashPayConfig @Inject constructor(
      */
     suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
 
-    /** Persist the last trustworthy shielded balance (duffs). See [LAST_SHIELDED_BALANCE_DUFFS]. */
-    suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
+    /**
+     * Durably record that a local shielded spend is reconciling: in ONE
+     * transaction, drop the last-known balance and set
+     * [SHIELDED_SPEND_RECONCILE_PENDING], so a runtime stop or process death
+     * before the balance settles can neither bring the pre-spend amount back
+     * nor lose the pending settlement.
+     */
+    suspend fun markShieldedSpendReconcilePending() = editPreferences { prefs ->
+        prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
+        prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
+    }
+
+    /**
+     * Persist [duffs] as the last-known shielded balance UNLESS a local spend
+     * is reconciling — checked in the same DataStore transaction as the write,
+     * so a balance sampled before a spend can never be written back after
+     * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
+     * and whichever lands second wins against the stale snapshot (the spend's
+     * removes it; this one sees the marker and skips). Returns whether it was
+     * written.
+     */
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long): Boolean {
+        var written = false
+        editPreferences { prefs ->
+            if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
+                prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
+                written = true
+            }
+        }
+        return written
+    }
+
+    /** Whether a local shielded spend is still reconciling. See [SHIELDED_SPEND_RECONCILE_PENDING]. */
+    suspend fun isShieldedSpendReconcilePending(): Boolean = get(SHIELDED_SPEND_RECONCILE_PENDING) == true
+
+    /** The pending spend has settled. See [SHIELDED_SPEND_RECONCILE_PENDING]. */
+    suspend fun clearShieldedSpendReconcilePending() = remove(SHIELDED_SPEND_RECONCILE_PENDING)
 
     /**
      * Whether the dashj-sync DIAGNOSTIC toggle is on (see
