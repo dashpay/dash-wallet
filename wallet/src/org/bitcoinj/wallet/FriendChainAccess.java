@@ -21,14 +21,17 @@ import java.util.Arrays;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDDerivationException;
 import org.bitcoinj.crypto.HDKeyDerivation;
 import org.bitcoinj.evolution.EvolutionContact;
 
 /**
  * Access to a DIP-15 SENDING friendship chain: READ-ONLY for its extended public
  * key ({@link #sendingExtendedPublicKeyOrNull}) and its cursor ({@link #sendingCursorOrNull}),
- * plus one deliberate write —
- * {@link #markSendingAddressUsed}, which advances the chain past a key the SDK paid.
+ * plus two deliberate writes —
+ * {@link #markSendingAddressUsed}, which advances the chain past a key the SDK paid,
+ * and {@link #advanceSendingChainPast}, which advances it past a recorded paid
+ * frontier given its index.
  *
  * <h2>Why this class lives in dashj's package</h2>
  *
@@ -136,7 +139,7 @@ public final class FriendChainAccess {
     static final int MAX_FORWARD_SCAN = 100;
 
     /**
-     * THE ONE WRITE in this class: records that the SENDING chain key with
+     * The first write in this class: records that the SENDING chain key with
      * {@code pubKeyHash} has been paid, so dashj's next
      * {@code currentAddress(contact, SENDING_CHAIN)} returns a later key.
      *
@@ -213,6 +216,114 @@ public final class FriendChainAccess {
         }
         wallet.saveLater();
         return MarkResult.MARKED;
+    }
+
+    /** Outcome of {@link #advanceSendingChainPast}. */
+    public enum AdvanceResult {
+        /** dashj's current sending key is now above the index. */
+        ADVANCED,
+        /** dashj's current sending key was already above the index — nothing changed. */
+        ALREADY_PAST,
+        /**
+         * Keys were issued toward the index, {@link #MAX_ADVANCE_PER_CALL} of them, but
+         * dashj's current sending key is not above it yet: call again (each call
+         * continues where the last one stopped).
+         */
+        PARTIAL,
+        /** This wallet holds no SENDING chain for {@code contact}. */
+        NO_CHAIN,
+        /**
+         * The chain's key at that index does not hash to the expected address (a
+         * different xpub, or a corrupt record): nothing was changed.
+         */
+        MISMATCH
+    }
+
+    /**
+     * How many keys one {@link #advanceSendingChainPast} call issues at most, which
+     * bounds how long it holds {@code keyChainGroupLock}. A frontier further ahead
+     * than this is reached over several calls ({@link AdvanceResult#PARTIAL}).
+     */
+    public static final int MAX_ADVANCE_PER_CALL = 1000;
+
+    /**
+     * Moves dashj's SENDING chain for {@code contact} past child {@code index}, whose
+     * key must hash to {@code pubKeyHash} — a paid frontier recorded with its index
+     * (PR #1608 review). Unlike {@link #markSendingAddressUsed}, which finds a key by
+     * scanning at most {@link #MAX_FORWARD_SCAN} keys past the issued ones, this derives
+     * only the key AT {@code index} from the chain's public key (one derivation) to
+     * check it, so a frontier any distance ahead of a restored chain can be reached.
+     *
+     * <p>Under {@code keyChainGroupLock}: if the key at {@code index} does not match,
+     * {@link AdvanceResult#MISMATCH} and nothing changes. If dashj's current key is
+     * already above {@code index}, {@link AdvanceResult#ALREADY_PAST}. Otherwise it
+     * issues keys up to and including {@code index} — at most
+     * {@link #MAX_ADVANCE_PER_CALL} per call ({@link AdvanceResult#PARTIAL} until it is
+     * there) — marks that key used, issues the next key and makes it current, so the
+     * next {@code currentAddress(contact, SENDING_CHAIN)} is above {@code index}, and
+     * schedules a wallet save. Every key in between is skipped; that only costs
+     * addresses, never reuses one.
+     */
+    public static AdvanceResult advanceSendingChainPast(
+            Wallet wallet, EvolutionContact contact, int index, byte[] pubKeyHash) {
+        if (index < 0) {
+            return AdvanceResult.MISMATCH;
+        }
+        AdvanceResult result;
+        wallet.keyChainGroupLock.lock();
+        try {
+            FriendKeyChainGroup group = wallet.sendingToFriendsGroup;
+            if (group == null) {
+                return AdvanceResult.NO_CHAIN;
+            }
+            FriendKeyChain chain =
+                    group.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+            if (chain == null) {
+                return AdvanceResult.NO_CHAIN;
+            }
+            if (!keyAtIndexMatches(chain, index, pubKeyHash)) {
+                return AdvanceResult.MISMATCH;
+            }
+            DeterministicKey current = group.currentContactKeys.get(chain.getAccountPath());
+            int cursor = current != null ? current.getChildNumber().num() : chain.getIssuedExternalKeys();
+            if (cursor > index) {
+                return AdvanceResult.ALREADY_PAST;
+            }
+            int missing = index + 1 - chain.getIssuedExternalKeys();
+            if (missing > MAX_ADVANCE_PER_CALL) {
+                chain.getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, MAX_ADVANCE_PER_CALL);
+                result = AdvanceResult.PARTIAL;
+            } else {
+                if (missing > 0) {
+                    // Issues (derives and imports) keys up to and including `index`.
+                    chain.getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, missing);
+                }
+                chain.markPubHashAsUsed(pubKeyHash);
+                DeterministicKey next =
+                        group.freshKey(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+                group.currentContactKeys.put(chain.getAccountPath(), next);
+                result = AdvanceResult.ADVANCED;
+            }
+        } finally {
+            wallet.keyChainGroupLock.unlock();
+        }
+        wallet.saveLater();
+        return result;
+    }
+
+    /**
+     * Whether the chain's child {@code index} hashes to {@code pubKeyHash}: one
+     * derivation from the chain's public key, no scan. An index with no valid child
+     * (vanishingly rare) does not match.
+     */
+    private static boolean keyAtIndexMatches(FriendKeyChain chain, int index, byte[] pubKeyHash) {
+        try {
+            DeterministicKey child =
+                    HDKeyDerivation.deriveChildKey(chain.getWatchingKey(), new ChildNumber(index, false));
+            return Arrays.equals(child.getPubKeyHash(), pubKeyHash);
+        } catch (HDDerivationException | IllegalArgumentException e) {
+            return false;
+        }
     }
 
     /**

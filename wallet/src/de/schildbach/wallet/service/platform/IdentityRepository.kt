@@ -184,6 +184,20 @@ interface IdentityRepository {
      * Never issues a key.
      */
     fun getContactSendingCursor(userId: String, accountReference: Int): Int?
+
+    /**
+     * Moves the dashj SENDING chain for this contact and channel past derivation
+     * [index], whose key must be [address] (a paid frontier recorded with its
+     * index): derives only the key at [index] to check it, then issues keys up to
+     * it ([FriendChainAccess.advanceSendingChainPast]). Returns the dashj outcome,
+     * or null when there is no dashj identity / wallet.
+     */
+    fun advanceContactSendingChainPast(
+        userId: String,
+        accountReference: Int,
+        index: Int,
+        address: Address
+    ): FriendChainAccess.AdvanceResult?
     suspend fun clearDatabase(includeInvitations: Boolean)
     fun updateIdentity()
 }
@@ -978,6 +992,22 @@ class IdentityRepositoryImpl @Inject constructor(
         return FriendChainAccess.markSendingAddressUsed(
             wallet,
             sendingChainContact(identity, userId, accountReference),
+            address.hash
+        )
+    }
+
+    override fun advanceContactSendingChainPast(
+        userId: String,
+        accountReference: Int,
+        index: Int,
+        address: Address
+    ): FriendChainAccess.AdvanceResult? {
+        val identity = _blockchainIdentity ?: return null
+        val wallet = identity.wallet ?: return null
+        return FriendChainAccess.advanceSendingChainPast(
+            wallet,
+            sendingChainContact(identity, userId, accountReference),
+            index,
             address.hash
         )
     }

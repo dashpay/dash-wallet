@@ -592,6 +592,13 @@ class ContactPaymentAddressProvider internal constructor(
     private val params: NetworkParameters,
     /** [IdentityRepository.getContactSendingCursor]. */
     private val dashjSendingCursor: (contactUserId: String, accountReference: Int) -> Int? = { _, _ -> null },
+    /** [IdentityRepository.advanceContactSendingChainPast]. */
+    private val dashjAdvancePast: (
+        contactUserId: String,
+        accountReference: Int,
+        index: Int,
+        address: Address
+    ) -> FriendChainAccess.AdvanceResult? = { _, _, _, _ -> null },
     /** Addresses recorded paid; survives a restart when file-backed. */
     private val paidAddresses: PaidContactAddressStore = PaidContactAddressStore(file = null),
     /** Where the blocking dashj and file work runs. */
@@ -627,6 +634,7 @@ class ContactPaymentAddressProvider internal constructor(
         dashjMarkUsed = identityRepository::markContactAddressUsed,
         params = Constants.NETWORK_PARAMETERS,
         dashjSendingCursor = identityRepository::getContactSendingCursor,
+        dashjAdvancePast = identityRepository::advanceContactSendingChainPast,
         paidAddresses = PaidContactAddressStore.app(context.filesDir),
         chain = SdkContactPaymentChainView(sdkService, l1ShadowSyncService, sdkWalletBinder::contactDiscoveryCompleted)
     )
@@ -642,8 +650,10 @@ class ContactPaymentAddressProvider internal constructor(
      * ([ContactPaymentChainView]).
      */
     suspend fun nextAddress(target: ContactPaymentTarget): ContactPaymentAddress? = withContext(ioDispatcher) {
-        reapplyDashjMarks(target)
+        // The frontier first: a restored chain far behind it is moved up to it,
+        // so the marks of live entries above it are within dashj's forward scan.
         reapplyFoldedFrontier(target)
+        reapplyDashjMarks(target)
         if (!cutoverCommitted()) {
             // dashj is the live engine and sees the chain itself; the SDK's
             // store is only consulted when it can be read.
@@ -902,8 +912,14 @@ class ContactPaymentAddressProvider internal constructor(
      * frontier ([PaidContactAddressStore.foldedFrontier]) when its cursor is
      * at or below it — a wallet whose chain is behind what was paid (an older
      * key backup, a restore) after the records of those payments expired.
-     * Marking the frontier address moves dashj past every earlier key. Runs on
-     * every lookup and is cheap when dashj is already past it. Blocking.
+     * Index-aware ([FriendChainAccess.advanceSendingChainPast]): dashj derives
+     * only the key at the frontier's index, checks it is the frontier's
+     * address, and issues keys up to it — so a frontier any distance ahead of
+     * the chain is reached (marking the frontier address instead finds it only
+     * within dashj's forward scan, PR #1608 review). A mismatch advances
+     * nothing; [dashjAddress] then serves nothing at or below the frontier.
+     * Runs on every lookup and is cheap when dashj is already past it.
+     * Blocking.
      */
     private fun reapplyFoldedFrontier(target: ContactPaymentTarget) {
         try {
@@ -911,10 +927,19 @@ class ContactPaymentAddressProvider internal constructor(
             val cursor = dashjSendingCursor(target.contactUserId, target.accountReference) ?: return
             if (cursor > frontier.index) return
             val address = Address.fromString(params, frontier.address)
-            val outcome = dashjMarkUsed(target.contactUserId, target.accountReference, address)
+            val outcome = dashjAdvancePast(target.contactUserId, target.accountReference, frontier.index, address)
+            if (outcome == FriendChainAccess.AdvanceResult.MISMATCH) {
+                log.warn(
+                    "contact payment address for {} (accountReference {}): the paid frontier's recorded address " +
+                        "is not dashj's key at index {} — dashj not advanced; nothing at or below the frontier " +
+                        "is served",
+                    target.contactUserId, target.accountReference, frontier.index
+                )
+                return
+            }
             log.info(
                 "contact payment address for {} (accountReference {}): dashj's cursor {} is at or below the " +
-                    "paid frontier {} — advanced past it: {}",
+                    "paid frontier {} — advancing past it: {}",
                 target.contactUserId, target.accountReference, cursor, frontier.index, outcome ?: "no dashj identity"
             )
         } catch (e: Exception) {

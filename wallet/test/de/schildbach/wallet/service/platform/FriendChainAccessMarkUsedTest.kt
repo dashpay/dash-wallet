@@ -28,6 +28,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.FriendChainAccess
+import org.bitcoinj.wallet.FriendChainAccess.AdvanceResult
 import org.bitcoinj.wallet.FriendChainAccess.MarkResult
 import org.bitcoinj.wallet.FriendKeyChain
 import org.bitcoinj.wallet.Wallet
@@ -207,5 +208,110 @@ class FriendChainAccessMarkUsedTest {
         val otherReference = EvolutionContact(ourId, 0, contactId, accountReference + 1)
 
         assertEquals(null, FriendChainAccess.sendingCursorOrNull(newWallet(), otherReference))
+    }
+
+    // ── advanceSendingChainPast: the index-aware frontier advance ────────
+
+    @Test
+    fun advance_aFrontierBeyondTheForwardScan_movesPastIt_inSessionAndAfterReload() {
+        // PR #1608 review: markSendingAddressUsed refuses index 150 (see
+        // anAddressBeyondTheForwardScan_isNotMarked); given the index, it is reached.
+        val wallet = newWallet()
+        assertEquals(contactAddress(0), current(wallet))
+
+        assertEquals(
+            AdvanceResult.ADVANCED,
+            FriendChainAccess.advanceSendingChainPast(wallet, contact, 150, contactAddress(150).hash)
+        )
+
+        assertEquals(contactAddress(151), current(wallet))
+        assertEquals(151, FriendChainAccess.sendingCursorOrNull(wallet, contact))
+        val reloaded = reload(wallet)
+        assertEquals(151, FriendChainAccess.sendingCursorOrNull(reloaded, contact))
+        assertEquals(contactAddress(151), current(reloaded))
+    }
+
+    @Test
+    fun advance_anAddressThatIsNotTheKeyAtTheIndex_changesNothing() {
+        val wallet = newWallet()
+
+        // a real address of the chain, at another index
+        assertEquals(
+            AdvanceResult.MISMATCH,
+            FriendChainAccess.advanceSendingChainPast(wallet, contact, 150, contactAddress(149).hash)
+        )
+        // another chain's address
+        assertEquals(
+            AdvanceResult.MISMATCH,
+            FriendChainAccess.advanceSendingChainPast(
+                wallet,
+                contact,
+                150,
+                Address.fromKey(params, org.bitcoinj.core.ECKey()).hash
+            )
+        )
+        assertEquals(
+            AdvanceResult.MISMATCH,
+            FriendChainAccess.advanceSendingChainPast(wallet, contact, -1, contactAddress(0).hash)
+        )
+
+        // No current key memoized yet, so the cursor is the issued count: nothing issued.
+        assertEquals(0, FriendChainAccess.sendingCursorOrNull(wallet, contact))
+        assertEquals(contactAddress(0), current(wallet))
+    }
+
+    @Test
+    fun advance_whenDashjIsAlreadyPastTheIndex_isANoOp() {
+        val wallet = newWallet()
+        current(wallet)
+        FriendChainAccess.markSendingAddressUsed(wallet, contact, contactAddress(3).hash)
+
+        assertEquals(
+            AdvanceResult.ALREADY_PAST,
+            FriendChainAccess.advanceSendingChainPast(wallet, contact, 2, contactAddress(2).hash)
+        )
+        assertEquals(contactAddress(4), current(wallet))
+    }
+
+    @Test
+    fun advance_atTheCurrentKey_movesOne() {
+        val wallet = newWallet()
+        current(wallet)
+
+        assertEquals(
+            AdvanceResult.ADVANCED,
+            FriendChainAccess.advanceSendingChainPast(wallet, contact, 0, contactAddress(0).hash)
+        )
+        assertEquals(contactAddress(1), current(wallet))
+    }
+
+    @Test
+    fun advance_noChainForThatAccountReference() {
+        val otherReference = EvolutionContact(ourId, 0, contactId, accountReference + 1)
+
+        assertEquals(
+            AdvanceResult.NO_CHAIN,
+            FriendChainAccess.advanceSendingChainPast(newWallet(), otherReference, 0, contactAddress(0).hash)
+        )
+    }
+
+    @Test
+    fun advance_furtherThanOneCallIssues_isReachedOverSeveralCalls() {
+        val wallet = newWallet()
+        current(wallet)
+        val index = FriendChainAccess.MAX_ADVANCE_PER_CALL + 20
+
+        assertEquals(
+            AdvanceResult.PARTIAL,
+            FriendChainAccess.advanceSendingChainPast(wallet, contact, index, contactAddress(index).hash)
+        )
+        // not yet past: dashj still serves below the index
+        assertEquals(contactAddress(0), current(wallet))
+        assertEquals(
+            AdvanceResult.ADVANCED,
+            FriendChainAccess.advanceSendingChainPast(wallet, contact, index, contactAddress(index).hash)
+        )
+        assertEquals(contactAddress(index + 1), current(wallet))
+        assertEquals(index + 1, FriendChainAccess.sendingCursorOrNull(reload(wallet), contact))
     }
 }

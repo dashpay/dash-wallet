@@ -83,10 +83,11 @@ import java.util.concurrent.TimeUnit
  * below it has been paid on that channel (payments take the lowest index above
  * what was paid; skipping an unpaid one is harmless). The provider uses it on
  * every lookup ([foldedFrontier], [paidFrontier]): the SDK pick is taken above
- * it, and a dashj chain at or below it is advanced past it (marking the
- * frontier address moves dashj past every earlier key) or not used. An entry
- * whose index is not known (rare: dashj's cursor could not be read when it
- * served the address) is never expired — it cannot be folded.
+ * it, and a dashj chain at or below it is advanced past it (dashj derives
+ * the key at the frontier's index, checks it is the frontier's address and
+ * issues keys up to it, [FriendChainAccess.advanceSendingChainPast]) or not
+ * used. An entry whose index is not known (rare: dashj's cursor could not be
+ * read when it served the address) is never expired — it cannot be folded.
  *
  * Why the file stays small: an entry settles with the first wallet save after
  * its payment (normally within a minute while the app is open) and is folded

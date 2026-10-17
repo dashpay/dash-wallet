@@ -580,6 +580,8 @@ class ContactPaymentAddressProviderTest {
      * A dashj SENDING chain as the provider sees it: [current] is served until
      * a mark of it advances to the next key (FriendChainAccess.markSendingAddressUsed
      * issuing a fresh current key). [advances] false: marks change nothing.
+     * [advancePast] is FriendChainAccess.advanceSendingChainPast: index-aware,
+     * any distance ahead, refused when the key at the index is not the address.
      */
     private class FakeDashjChain(
         val keys: List<Address>,
@@ -591,7 +593,21 @@ class ContactPaymentAddressProviderTest {
     ) {
         val marks = mutableListOf<Address>()
 
+        val frontierAdvances = mutableListOf<Pair<Int, Address>>()
+
         fun next(): Address? = keys.getOrNull(current)
+
+        fun advancePast(index: Int, address: Address): FriendChainAccess.AdvanceResult {
+            frontierAdvances += index to address
+            return when {
+                keys.getOrNull(index) != address -> FriendChainAccess.AdvanceResult.MISMATCH
+                current > index -> FriendChainAccess.AdvanceResult.ALREADY_PAST
+                else -> {
+                    current = index + 1
+                    FriendChainAccess.AdvanceResult.ADVANCED
+                }
+            }
+        }
 
         fun mark(address: Address): FriendChainAccess.MarkResult? {
             marks += address
@@ -619,6 +635,7 @@ class ContactPaymentAddressProviderTest {
         dashjMarkUsed = { _, _, address -> chain.mark(address) },
         params = params,
         dashjSendingCursor = { _, _ -> chain.current },
+        dashjAdvancePast = { _, _, index, address -> chain.advancePast(index, address) },
         paidAddresses = store,
         chain = chainView
     )
@@ -1014,7 +1031,8 @@ class ContactPaymentAddressProviderTest {
         val next = restartedProvider(rebuilt, file, sdkAccount = null).nextAddress(target)
 
         assertEquals(keys[3], next?.address)
-        assertEquals(listOf(keys[2]), rebuilt.marks)
+        assertEquals(listOf(2 to keys[2]), rebuilt.frontierAdvances)
+        assertTrue(rebuilt.marks.isEmpty())
     }
 
     @Test
@@ -1034,13 +1052,16 @@ class ContactPaymentAddressProviderTest {
 
     @Test
     fun frontierDashjCannotBeAdvancedPast_noAddress() = runBlocking {
-        // e.g. the frontier is beyond dashj's forward scan: never serve below it.
+        // The frontier's recorded address is not dashj's key at its index (a
+        // corrupt record, another xpub): dashj is not advanced, and nothing at
+        // or below the frontier is served.
         val keys = List(5) { newAddress() }
         val file = File(tmp.root, PaidContactAddressStore.FILE_NAME)
-        file.writeText("frontier $contactUserId $selectedReference 2 ${keys[2].toBase58()}\n")
+        file.writeText("frontier $contactUserId $selectedReference 2 ${newAddress().toBase58()}\n")
         val stuck = FakeDashjChain(keys, current = 0, markResult = FriendChainAccess.MarkResult.KEY_NOT_ON_CHAIN)
 
         assertNull(restartedProvider(stuck, file, sdkAccount = null).nextAddress(target))
+        assertEquals(0, stuck.current)
     }
 
     @Test
