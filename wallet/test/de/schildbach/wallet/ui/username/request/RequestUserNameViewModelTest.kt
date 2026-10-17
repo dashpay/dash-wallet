@@ -31,6 +31,8 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.username.UsernameType
@@ -42,8 +44,12 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.withTimeout
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -58,6 +64,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.After
+import org.bitcoinj.core.Coin
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancel
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -90,9 +100,11 @@ class RequestUserNameViewModelTest {
     private lateinit var platformRepo: PlatformRepo
     private lateinit var walletApplication: WalletApplication
     private lateinit var viewModel: RequestUserNameViewModel
+    private val balance = MutableStateFlow(Coin.ZERO)
 
     @Before
     fun setUp() {
+        ContestedUsernameFees.reset()
         identityConfig = mockk(relaxed = true)
         every { identityConfig.observe(IDENTITY_ID) } returns emptyFlow()
         coEvery { identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK) } returns null
@@ -101,12 +113,14 @@ class RequestUserNameViewModelTest {
         walletApplication = mockk(relaxed = true)
 
         val coinJoinConfig = mockk<CoinJoinConfig>(relaxed = true)
-        every { coinJoinConfig.observeMode() } returns emptyFlow()
+        every { coinJoinConfig.observeMode() } returns flowOf(CoinJoinMode.NONE)
+        val walletData = mockk<WalletDataProvider>(relaxed = true)
+        every { walletData.observeBalance(any()) } returns balance
 
         viewModel = RequestUserNameViewModel(
             walletApplication,
             identityConfig,
-            mockk<WalletDataProvider>(relaxed = true),
+            walletData,
             platformRepo,
             mockk<UsernameRequestDao>(relaxed = true),
             coinJoinConfig,
@@ -116,6 +130,34 @@ class RequestUserNameViewModelTest {
     }
 
     // --- checkUsername ---
+
+    @After
+    fun tearDown() {
+        viewModel.viewModelScope.cancel()
+        ContestedUsernameFees.reset()
+    }
+
+    @Test
+    fun reducedFee_recomputesAffordabilityWithoutLosingAvailability() = runTest {
+        balance.value = Coin.parseCoin("0.20")
+        runCurrent()
+        withTimeout(5_000) { viewModel.walletBalance.first { it == balance.value } }
+        viewModel.checkUsernameValid(username, UsernameType.Primary)
+        nameLookupReturns(null)
+        every { platformRepo.getVoteContendersOrNull(username) } returns contenders()
+        assertFalse(checkUsername().enoughBalance)
+
+        ContestedUsernameFees.updateProtocolVersion(14)
+        val state = withTimeout(5_000) { viewModel.uiState.first { it.feeProtocolVersion == 14 } }
+
+        assertTrue(state.enoughBalance)
+        assertTrue(viewModel.hasAvailableResultFor(username))
+        assertEquals(username, state.checkedUsername)
+
+        balance.value = Coin.parseCoin("0.10")
+        withTimeout(5_000) { viewModel.uiState.first { !it.enoughBalance } }
+        assertTrue(viewModel.hasAvailableResultFor(username))
+    }
 
     @Test
     fun checkUsername_lookupFails_isNotReportedAsChecked() {
