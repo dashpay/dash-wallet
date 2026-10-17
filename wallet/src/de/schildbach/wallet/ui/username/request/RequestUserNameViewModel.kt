@@ -1384,18 +1384,10 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private fun validateNonContestedUsernameSize(uname: String): Boolean {
-        return uname.length in Constants.USERNAME_NON_CONTESTED_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
-    }
-
     private fun validateUsernameCharacters(uname: String): Pair<Boolean, Boolean> {
         val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
         val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
         return Pair(alphaNumHyphenValid, startOrEndWithHyphen)
-    }
-
-    private fun validateNonContestedUsernameCharacters(uname: String): Boolean {
-        return Regex("[2-9]").containsMatchIn(uname)
     }
 
     /**
@@ -1681,8 +1673,8 @@ class RequestUserNameViewModel @Inject constructor(
                 checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,
-                usernameNonContestedLength = validateNonContestedUsernameSize(username),
-                usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
+                usernameNonContestedLength = isNonContestedByLength(username),
+                usernameNonContestedChars = isNonContestedByCharacters(username)
             )
         }
         return lookupWillFollow
