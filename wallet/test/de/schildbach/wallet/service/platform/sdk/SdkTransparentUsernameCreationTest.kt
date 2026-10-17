@@ -605,4 +605,34 @@ class SdkTransparentUsernameCreationTest {
         fence.lower()
         scope.cancel()
     }
+
+    // ── name-only retry for an existing identity ─────────────────────────
+
+    @Test
+    fun `a name-only retry keeps the existing identity and never funds a new one`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val nameContexts = mutableListOf<List<Any?>>()
+        val handedOff = mutableListOf<String>()
+        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+        val retries = mutableListOf<String>()
+        val retry = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = { handedOff += it },
+            driveCreationState = { state, error -> states += state to error },
+            persistNameContext = { id, name, secondary, restoring -> nameContexts += listOf(id, name, secondary, restoring) },
+            markNameRetry = { retries += it }
+        )
+
+        retry.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+
+        assertEquals(listOf(listOf(identityIdBase58, "alice3", null, true)), nameContexts)
+        assertEquals("the replacement this restore may register", listOf("alice3"), retries)
+        assertEquals("the name step, error cleared", listOf(IdentityCreationState.USERNAME_REGISTERING to null), states)
+        assertEquals("the same identity goes to the name-only recovery", listOf(identityIdBase58), handedOff)
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.previewRegistrationKeySet(any(), any(), any()) }
+    }
 }

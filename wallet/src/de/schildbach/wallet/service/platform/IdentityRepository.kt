@@ -437,22 +437,19 @@ class IdentityRepositoryImpl @Inject constructor(
                         recordPrimary = username,
                         recordSecondary = usernameSecondary,
                         recoveredPrimary = recoveredPrimary,
-                        normalize = Names::normalizeString,
-                        contestable = Names::isUsernameContestable
+                        normalize = Names::normalizeString
                     )
                 ) {
-                    // DUAL flow, contested primary still in its vote: the only
-                    // REGISTERED name is the instant secondary, so dashj
-                    // adopted it as "primary". Copying it over the record's
-                    // requested primary erased the in-flight contest (no
-                    // voting tile, no request row, state DONE, normalized
-                    // name on More — the Mo-972 shape, S21 2026-08-18). Keep
-                    // the requested primary — the contested-name scan reads
-                    // it as its candidate — and route the recovered name's
-                    // status/salt to the SECONDARY fields it belongs to.
+                    // dashj adopted the record's own secondary as "primary": a
+                    // DUAL create whose contested primary is still in its vote
+                    // (the Mo-972 shape, S21 2026-08-18), or a replacement name
+                    // after a lost or locked vote. Keep the requested primary
+                    // (the contested-name scan and the name step read it) and
+                    // route the recovered name's status/salt to the SECONDARY
+                    // fields it belongs to.
                     log.info(
-                        "recovered primary '{}' is the record's own instant secondary — keeping requested " +
-                            "contested primary '{}' (its contest is pending vote)",
+                        "recovered primary '{}' is the record's own secondary — keeping requested " +
+                            "primary '{}'",
                         recoveredPrimary,
                         username
                     )
@@ -477,7 +474,12 @@ class IdentityRepositoryImpl @Inject constructor(
                 }
 
                 log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
-                blockchainIdentity.secondaryUsername?.let { name ->
+                blockchainIdentity.secondaryUsername?.takeUnless { name ->
+                    // dashj called the requested primary its "secondary" (it owns both names
+                    // and adopted the old secondary as primary): the record already has it
+                    // right, primary and secondary, and must not end up with it twice.
+                    username?.let { Names.normalizeString(it) } == Names.normalizeString(name)
+                }?.let { name ->
                     usernameSecondary = preferDisplayLabel(usernameSecondary, name, Names::normalizeString)
                     usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
                     log.info("creation: secondary username: {}, usernameSecondaryStatus = {}", name, usernameSecondaryStatus)
