@@ -37,6 +37,20 @@ import org.junit.Test
  */
 class InviteCreationFailureTest {
 
+    // ── An unavailable protocol version is TRANSIENT: bounded retry, not a rejection ──
+    @Test
+    fun protocolVersionUnavailable_isUnreachable_andRetryable() {
+        // The exact shape SdkL1InviteCreation / SdkShieldedInviteCreation return when
+        // ContestedUsernameFees.resolved() refuses an unknown protocol version at
+        // funding time (MO-1069). It must NOT share the deterministic "invite fee
+        // unavailable" reason, which latches the dialog's retry gate.
+        val result = SdkWriteResult.NotBroadcast(
+            "protocol version unavailable",
+            de.schildbach.wallet.service.platform.sdk.ProtocolVersionUnavailableException()
+        )
+        assertEquals(InviteCreationFailureKind.UNREACHABLE, classifyInviteCreationFailure(result))
+    }
+
     // ── The observed amount-cap rejection (deterministic → never retry) ──
 
     @Test

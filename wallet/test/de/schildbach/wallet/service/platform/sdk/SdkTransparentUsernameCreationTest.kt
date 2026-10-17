@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -41,6 +42,7 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -604,5 +606,46 @@ class SdkTransparentUsernameCreationTest {
         assertFalse(creation.submit(label))
         fence.lower()
         scope.cancel()
+    }
+
+    // MO-1069 (#1584): the protocol-gated transparent username fee.
+
+
+    private fun sdkService(protocolVersion: Int?) = mockk<DashSdkService> {
+        coEvery { currentProtocolVersion() } returns protocolVersion
+    }
+
+    @Test
+    fun `contested registration funds 0_25 DASH while the network still runs protocol 13`() = runTest {
+        val amountDuffs = transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(13))
+        assertEquals(Constants.DASH_PAY_FEE_CONTESTED_LEGACY.value, amountDuffs)
+    }
+
+    @Test
+    fun `contested registration funds 0_15 DASH once the network reports protocol 14`() = runTest {
+        val amountDuffs = transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(14))
+        assertEquals(Constants.DASH_PAY_FEE_CONTESTED.value, amountDuffs)
+    }
+
+    @Test
+    fun `an unresolved protocol version refuses to fund rather than falling back to a fee`() = runTest {
+        // A lower successful quote followed by a failed funding-time lookup must
+        // not become a higher actual funding; the service turns the throw into a
+        // NotBroadcast the user can retry.
+        assertThrows(ProtocolVersionUnavailableException::class.java) {
+            runBlocking { transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(null)) }
+        }
+    }
+
+    @Test
+    fun `non-contested registration always funds the fixed 0_03 DASH fee, regardless of protocol version`() = runTest {
+        assertEquals(
+            Constants.DASH_PAY_FEE.value,
+            transparentUsernameFeeDuffs(contested = false, sdkService = sdkService(13))
+        )
+        assertEquals(
+            Constants.DASH_PAY_FEE.value,
+            transparentUsernameFeeDuffs(contested = false, sdkService = sdkService(14))
+        )
     }
 }

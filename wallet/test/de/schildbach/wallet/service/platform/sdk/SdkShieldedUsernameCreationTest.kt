@@ -70,7 +70,7 @@ class SdkShieldedUsernameCreationTest {
             "denomination 30000000000 is not a member of the allowed exit-denomination set " +
             "[3000000000, 10000000000, 25000000000, 50000000000, 100000000000]"
 
-    /** 0.25 DASH in credits — Constants.DASH_PAY_FEE_CONTESTED without loading Constants. */
+    /** 0.25 DASH in credits — the LEGACY (protocol-13) contested fee, without loading Constants. */
     private val contestedFeeCredits = 25_000_000_000L
 
     /** The smallest covering denomination: 0.03 DASH (an exact member since v13). */
@@ -205,6 +205,11 @@ class SdkShieldedUsernameCreationTest {
         // The RETIRED 0.3 value is not a denomination — a fee of exactly 0.3
         // steps UP to 0.5 rather than resolving to the non-member 0.3.
         assertEquals(50_000_000_000L, chooseShieldedIdentityDenominationCredits(30_000_000_000L))
+        // The protocol-14 CURRENT contested fee (0.15 DASH) rounds up to the
+        // same 0.25 DASH denomination as the protocol-13 LEGACY 0.25 DASH fee
+        // (contestedFeeCredits above) — neither 0.1 nor any smaller member
+        // covers 0.15, so the shielded path is unaffected by the fee cut.
+        assertEquals(25_000_000_000L, chooseShieldedIdentityDenominationCredits(15_000_000_000L))
     }
 
     @Test
