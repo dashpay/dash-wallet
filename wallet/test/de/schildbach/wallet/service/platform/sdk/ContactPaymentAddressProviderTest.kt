@@ -109,8 +109,14 @@ class ContactPaymentAddressProviderTest {
         var markResult: FriendChainAccess.MarkResult? = FriendChainAccess.MarkResult.MARKED
         var markThrows = false
 
+        /** The persisted cutover state cannot be read (production: [SdkL1SendService.cutoverCommittedOrThrow]). */
+        var cutoverUnreadable = false
+
         val provider = ContactPaymentAddressProvider(
-            cutoverCommitted = { cutover },
+            cutoverCommitted = {
+                if (cutoverUnreadable) throw java.io.IOException("preferences unreadable")
+                cutover
+            },
             sdkAccountReader = { ourId, contactId ->
                 sdkReads++
                 sdkReadIds += ourId to contactId
@@ -301,6 +307,25 @@ class ContactPaymentAddressProviderTest {
     }
 
     // ── marking used only after a successful send ───────────────────────
+
+    @Test
+    fun unreadableCutoverState_handsOutNothing_andSendsNothing() = runBlocking {
+        // PR #1608 review (self-review): an unreadable state used to read as
+        // "not committed" — the pre-cutover dashj path, which skips the
+        // post-cutover paid-history and SDK-store checks.
+        val h = harness()
+        val payment = h.provider.nextAddress(target)
+        h.cutoverUnreadable = true
+
+        assertThrows(java.io.IOException::class.java) { runBlocking { h.provider.nextAddress(target) } }
+        var sent = false
+        assertThrows(java.io.IOException::class.java) {
+            runBlocking { h.provider.sendThenMarkUsed(payment) { sent = true } }
+        }
+        assertFalse("nothing is sent", sent)
+        assertTrue("nothing is marked", h.marks.isEmpty())
+        assertTrue("dashj was not asked for an address", h.dashjReads.isEmpty())
+    }
 
     @Test
     fun successfulSend_marksTheDashjKeyUsed_andTheNextPickMovesOn() = runBlocking {

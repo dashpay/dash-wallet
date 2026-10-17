@@ -25,11 +25,15 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddressProvider
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
@@ -50,10 +54,12 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.io.IOException
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 
@@ -107,10 +113,15 @@ class SendCoinsViewModelStaleDryRunTest {
         gate: DryRunGate,
         cutover: Boolean,
         /** The engine mode, when a test changes it; else fixed at [cutover]. */
-        engine: MutableStateFlow<Boolean>? = null
+        engine: MutableStateFlow<Boolean>? = null,
+        /** The real engine-mode service, when a test drives its persisted state. */
+        modeService: SdkL1SendService? = null
     ): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        if (engine != null) {
+        if (modeService != null) {
+            coEvery { runner.isCutoverCommitted() } coAnswers { modeService.cutoverCommitted() }
+            every { runner.observeCutoverCommitted() } answers { modeService.cutoverCommittedFlow() }
+        } else if (engine != null) {
             coEvery { runner.isCutoverCommitted() } coAnswers { engine.value }
             every { runner.observeCutoverCommitted() } returns engine
         } else {
@@ -494,6 +505,62 @@ class SendCoinsViewModelStaleDryRunTest {
         awaitCondition("the post-cutover replacement") { viewModel.currentDryRun() != null }
         assertTrue(viewModel.currentDryRun()?.feeEstimate != null)
         assertEquals(true, viewModel.dryRunSuccessful.value)
+        send(viewModel, Coin.COIN)
+        assertEquals(listOf<Address?>(payee1), sends.recipients)
+    }
+
+    @Test
+    fun engineModeObservationFailsOnce_theScreenRefusesWhileUnknown_thenRecovers_withoutBeingRecreated() {
+        // PR #1608 review: the first observation of the cutover state fails on
+        // a CUT_OVER install. It used to read as "not committed" and end the
+        // flow, so every (committed) dry run looked stale for the screen's
+        // lifetime and Continue stayed blocked. Now the mode is unknown — no
+        // dry run is vouched for, nothing is sent — until the re-observation
+        // reads the persisted state, and the same screen can send again.
+        val subscriptions = AtomicInteger()
+        // The store as BaseConfig serves it: `observe` rescues a failed read
+        // as an absent key and ends; `observePreservingErrors` keeps it.
+        fun observed(): kotlinx.coroutines.flow.Flow<String?> =
+            if (subscriptions.getAndIncrement() == 0) {
+                flow { throw IOException("preferences unreadable") }
+            } else {
+                flowOf("CUT_OVER")
+            }
+        val config = mockk<DashPayConfig> {
+            coEvery { get(DashPayConfig.CUTOVER_STATE) } returns "CUT_OVER"
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers { observed() }
+            every { observe(DashPayConfig.CUTOVER_STATE) } answers {
+                observed().catch { e -> if (e is IOException) emit(null) else throw e }
+            }
+        }
+        val modeService = SdkL1SendService(
+            source = mockk(relaxed = true),
+            dashPayConfig = config,
+            isValidAddress = { true }
+        )
+        val sends = Sends()
+        val viewModel = buildViewModel(
+            runner(sends, DryRunGate(), cutover = true, modeService = modeService),
+            MutableStateFlow(balance)
+        )
+
+        idle() // the balance feed, and the failed first observation
+        viewModel.setAmount(Coin.COIN)
+        runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromAddress(payee1.toBase58(), null)) }
+        idle()
+        assertNull("no dry run is vouched for while the mode is unknown", viewModel.currentDryRun())
+        assertEquals(false, viewModel.dryRunSuccessful.value)
+        assertThrows(DryRunOutdatedException::class.java) { send(viewModel, Coin.COIN) }
+        assertTrue(sends.sent.isEmpty())
+        viewModel.resetState() // as the screen does after a failed send
+        idle()
+
+        // The re-observation's backoff (the main looper's clock, not the wall's).
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        awaitCondition("the committed dry run vouched for again") { viewModel.currentDryRun() != null }
+        assertTrue("a post-cutover dry run", viewModel.currentDryRun()?.feeEstimate != null)
+        assertEquals(true, viewModel.dryRunSuccessful.value)
+
         send(viewModel, Coin.COIN)
         assertEquals(listOf<Address?>(payee1), sends.recipients)
     }

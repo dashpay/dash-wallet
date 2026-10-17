@@ -698,8 +698,12 @@ class SendCoinsTaskRunner @Inject constructor(
      */
     suspend fun isCutoverCommitted(): Boolean = sdkL1SendService.cutoverCommitted()
 
-    /** [isCutoverCommitted] as it changes: the current value, then each change. */
-    fun observeCutoverCommitted(): kotlinx.coroutines.flow.Flow<Boolean> = sdkL1SendService.cutoverCommittedFlow()
+    /**
+     * [isCutoverCommitted] as it changes: the current value, then each change;
+     * `null` while the state cannot be read (retried until it can — see
+     * [SdkL1SendService.cutoverCommittedFlow]). Fail closed on `null`.
+     */
+    fun observeCutoverCommitted(): kotlinx.coroutines.flow.Flow<Boolean?> = sdkL1SendService.cutoverCommittedFlow()
 
     override suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction =
         withContext(Dispatchers.IO) {

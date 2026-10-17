@@ -197,8 +197,12 @@ class SendCoinsViewModel @Inject constructor(
 
     /**
      * The engine mode as last observed ([SendCoinsTaskRunner.observeCutoverCommitted]);
-     * null until the first value. A dry run for the other mode is not for the
-     * payment the screen shows ([isFor]): its send would be refused.
+     * null while it is UNKNOWN — before the first value, and while the state
+     * cannot be read (the observation is retried until it can). A dry run for
+     * the other mode is not for the payment the screen shows ([isFor]): its
+     * send would be refused. While the mode is unknown no dry run is (fail
+     * closed): the screen cannot continue and nothing is sent, until a read
+     * succeeds and the dry run is vouched for again ([revalidateDryRunForUi]).
      */
     @Volatile
     private var engineCutoverCommitted: Boolean? = null
@@ -356,14 +360,25 @@ class SendCoinsViewModel @Inject constructor(
         // refused, and nothing else would check the payment again. A dry run
         // still running is not seen here (no outcome yet): it checks the mode
         // itself when it publishes ([publishDryRun]).
+        // An unknown mode (null: the state could not be read) vouches for no
+        // dry run; when a read succeeds again, a dry run for that mode holds
+        // again (PR #1608 review: a failed first read used to leave a
+        // fabricated "not committed" here for the screen's lifetime).
         sendCoinsTaskRunner.observeCutoverCommitted()
             .distinctUntilChanged()
             .onEach { committed ->
                 engineCutoverCommitted = committed
-                if (isEngineStale(dryRunOutcome)) {
-                    log.info("the engine mode changed (cutover committed: {}); checking the payment again", committed)
-                    invalidateDryRunForUi()
-                    scheduleDryRun()
+                when {
+                    committed == null -> {
+                        log.warn("the engine mode is unknown (the cutover state cannot be read); the payment cannot be sent")
+                        invalidateDryRunForUi()
+                    }
+                    isEngineStale(dryRunOutcome) -> {
+                        log.info("the engine mode changed (cutover committed: {}); checking the payment again", committed)
+                        invalidateDryRunForUi()
+                        scheduleDryRun()
+                    }
+                    else -> revalidateDryRunForUi()
                 }
             }
             .launchIn(viewModelScope)
@@ -787,16 +802,21 @@ class SendCoinsViewModel @Inject constructor(
 
     /**
      * Whether this outcome was concluded for paying [amount] to [resolved],
-     * on the engine mode last observed (when known).
+     * on the engine mode last observed — which must be known.
      */
     private fun DryRunOutcome.isFor(resolved: ResolvedPayee?, amount: Coin): Boolean =
         resolved != null &&
             payee === resolved &&
             this.amount == amount &&
             (sendAllBalance == null || sendAllBalance == maxOutputAmount.value) &&
+            engineCutoverCommitted != null &&
             !isEngineStale(this)
 
-    /** Whether [outcome] was concluded on the other engine mode than the one last observed. */
+    /**
+     * Whether [outcome] was concluded on the other engine mode than the one
+     * last observed. False while the mode is unknown: nothing to re-run for
+     * ([isFor] refuses the outcome meanwhile).
+     */
     private fun isEngineStale(outcome: DryRunOutcome?): Boolean {
         val observed = engineCutoverCommitted ?: return false
         return outcome != null && outcome.cutoverCommitted != observed
@@ -810,6 +830,20 @@ class SendCoinsViewModel @Inject constructor(
     private fun invalidateDryRunForUi() = synchronized(dryRunLock) {
         if (dryRunPostedSuccess && currentDryRun() == null) {
             postDryRunSuccessful(false)
+        }
+    }
+
+    /**
+     * The converse of [invalidateDryRunForUi]: tells the screen it can
+     * continue when the published dry run is for the current payment again —
+     * the engine mode became known after the dry run was published while it
+     * was unknown. The mode is written before this takes [dryRunLock], and
+     * [publishDryRun] reads it under the lock, so a dry run published
+     * meanwhile is told one way or the other.
+     */
+    private fun revalidateDryRunForUi() = synchronized(dryRunLock) {
+        if (!dryRunPostedSuccess && currentDryRun() != null) {
+            postDryRunSuccessful(true)
         }
     }
 
@@ -873,7 +907,10 @@ class SendCoinsViewModel @Inject constructor(
             }
             dryRunOutcome = outcome
             val engineStale = isEngineStale(outcome)
-            postDryRunSuccessful(outcome?.result != null && !engineStale)
+            // An unknown mode vouches for no dry run; the mode observer tells
+            // the screen once it is known ([revalidateDryRunForUi]).
+            val engineKnown = engineCutoverCommitted != null
+            postDryRunSuccessful(outcome?.result != null && engineKnown && !engineStale)
             isBalanceStale(outcome) to engineStale
         }
         // Likewise for the engine mode, written by its observer before it

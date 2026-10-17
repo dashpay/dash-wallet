@@ -22,11 +22,15 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -1837,18 +1841,51 @@ class SdkL1SendService internal constructor(
     }
 
     /**
-     * [cutoverCommitted] as it changes (the persisted cutover state observed):
-     * emits the current value, then each change. A failed read ends the flow
-     * after reading as not committed, like [cutoverCommitted].
+     * [cutoverCommitted] for a caller that must fail closed: an unreadable
+     * state THROWS instead of reading as "not committed" (the store is read
+     * with its errors kept, [DashPayConfig.observePreservingErrors]). An absent
+     * state is still a real answer: not committed.
      */
-    fun cutoverCommittedFlow(): Flow<Boolean> =
-        dashPayConfig.observe(DashPayConfig.CUTOVER_STATE)
-            .map { !dashjEngineMayStart(CutoverState.fromStored(it)) }
-            .catch { e ->
-                log.warn("failed to observe the cutover state; treating as not committed", e)
-                emit(false)
-            }
-            .distinctUntilChanged()
+    suspend fun cutoverCommittedOrThrow(): Boolean =
+        !dashjEngineMayStart(
+            CutoverState.fromStored(dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE).first())
+        )
+
+    /**
+     * [cutoverCommitted] as it changes (the persisted cutover state observed):
+     * emits the current value, then each change.
+     *
+     * `null` means UNKNOWN: the state could not be read. It is never turned
+     * into "not committed" (PR #1608 review: `observe` rescued an unreadable
+     * store as an absent key — "not committed" — and the flow then ended, so a
+     * send screen on a CUT_OVER install kept a fabricated `false` and refused
+     * every SDK dry run until it was recreated). The store is read with its
+     * errors kept ([DashPayConfig.observePreservingErrors]); a failed read
+     * emits `null` and the observation is retried with a capped backoff
+     * ([cutoverObserveRetryDelayMs]) until a read succeeds again. Callers must
+     * fail closed while it is `null`.
+     */
+    fun cutoverCommittedFlow(): Flow<Boolean?> = flow {
+        // Consecutive failed observations; reset by each successful read.
+        var failures = 0
+        emitAll(
+            // Asked for afresh on each (re)subscription.
+            flow { emitAll(dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE)) }
+                .map<String?, Boolean?> { !dashjEngineMayStart(CutoverState.fromStored(it)) }
+                .onEach { failures = 0 }
+                .retryWhen { cause, _ ->
+                    if (cause is CancellationException || cause !is Exception) {
+                        false
+                    } else {
+                        val delayMs = cutoverObserveRetryDelayMs(failures++)
+                        log.warn("failed to observe the cutover state; unknown, retrying in {} ms", delayMs, cause)
+                        emit(null)
+                        delay(delayMs)
+                        true
+                    }
+                }
+        )
+    }.distinctUntilChanged()
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkL1SendService::class.java)
@@ -1868,5 +1905,16 @@ class SdkL1SendService internal constructor(
          * engine's `DEFAULT_MAX_OP_RETURN_BYTES`, which re-checks).
          */
         const val MAX_MAYA_MEMO_BYTES = 80
+
+        private const val CUTOVER_OBSERVE_RETRY_INITIAL_MS = 1_000L
+        private const val CUTOVER_OBSERVE_RETRY_MAX_MS = 30_000L
+
+        /**
+         * The wait before re-observing the cutover state after [failures]
+         * consecutive failed observations: 1 s, doubling, capped at 30 s.
+         */
+        internal fun cutoverObserveRetryDelayMs(failures: Int): Long =
+            (CUTOVER_OBSERVE_RETRY_INITIAL_MS shl failures.coerceIn(0, 5))
+                .coerceAtMost(CUTOVER_OBSERVE_RETRY_MAX_MS)
     }
 }

@@ -577,7 +577,12 @@ internal fun selectSdkContactAddress(
  */
 @Singleton
 class ContactPaymentAddressProvider internal constructor(
-    /** Persisted cutover state is CUT_OVER / SETTLED ([SdkL1SendService.cutoverCommitted]). */
+    /**
+     * Persisted cutover state is CUT_OVER / SETTLED
+     * ([SdkL1SendService.cutoverCommittedOrThrow]). Throws when it cannot be
+     * read: [nextAddress] and [sendThenMarkUsed] then throw too — nothing is
+     * handed out, claimed or sent.
+     */
     private val cutoverCommitted: suspend () -> Boolean,
     /** The SDK mirror for (our identity id, contact identity id); null when unavailable. */
     private val sdkAccountReader: suspend (ByteArray, ByteArray) -> SdkContactSendingAccount?,
@@ -621,7 +626,9 @@ class ContactPaymentAddressProvider internal constructor(
         l1ShadowSyncService: L1ShadowSyncService,
         sdkWalletBinder: SdkWalletBinder
     ) : this(
-        cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
+        // Fail closed: an unreadable state refuses the lookup and the send
+        // (never "not committed", which skips the post-cutover paid checks).
+        cutoverCommitted = { sdkL1SendService.cutoverCommittedOrThrow() },
         sdkAccountReader = { ourId, contactId ->
             readSdkContactSendingAccount(
                 sdkService.databaseOrNull(),
