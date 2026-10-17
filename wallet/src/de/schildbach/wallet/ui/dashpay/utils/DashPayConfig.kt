@@ -849,9 +849,6 @@ open class DashPayConfig @Inject constructor(
      */
     suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
 
-    /** Persist the last trustworthy shielded balance (duffs). See [LAST_SHIELDED_BALANCE_DUFFS]. */
-    suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
-
     /**
      * Durably record that a local shielded spend is reconciling: in ONE
      * transaction, drop the last-known balance and set
@@ -862,6 +859,26 @@ open class DashPayConfig @Inject constructor(
     suspend fun markShieldedSpendReconcilePending() = editPreferences { prefs ->
         prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
         prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
+    }
+
+    /**
+     * Persist [duffs] as the last-known shielded balance UNLESS a local spend
+     * is reconciling — checked in the same DataStore transaction as the write,
+     * so a balance sampled before a spend can never be written back after
+     * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
+     * and whichever lands second wins against the stale snapshot (the spend's
+     * removes it; this one sees the marker and skips). Returns whether it was
+     * written.
+     */
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long): Boolean {
+        var written = false
+        editPreferences { prefs ->
+            if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
+                prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
+                written = true
+            }
+        }
+        return written
     }
 
     /** Whether a local shielded spend is still reconciling. See [SHIELDED_SPEND_RECONCILE_PENDING]. */

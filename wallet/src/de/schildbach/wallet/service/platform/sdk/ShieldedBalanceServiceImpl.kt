@@ -1424,8 +1424,13 @@ class ShieldedBalanceServiceImpl internal constructor(
                 if (status != ShieldedSyncStatus.READY) return@collect
                 val duffs = balance.duffs
                 if (duffs == lastPersisted) return@collect
-                runCatching { dashPayConfig.setLastShieldedBalanceDuffs(duffs) }
-                    .onSuccess { lastPersisted = duffs }
+                // The sampled `stale` above can be outdated by the time this
+                // write lands (a spend may have dropped the cache in between),
+                // so the write itself is conditional on the durable reconcile
+                // marker, inside one DataStore transaction — a pre-spend
+                // snapshot can never resurrect the cache.
+                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs) }
+                    .onSuccess { written -> if (written) lastPersisted = duffs }
                     .onFailure {
                         if (it is CancellationException) throw it
                         log.warn("failed to persist the last-known shielded balance", it)

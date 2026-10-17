@@ -317,6 +317,7 @@ class ShieldedBalanceServiceTest {
         coEvery { markShieldedSpendReconcilePending() } just Runs
         coEvery { isShieldedSpendReconcilePending() } returns false
         coEvery { clearShieldedSpendReconcilePending() } just Runs
+        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -1428,7 +1429,7 @@ class ShieldedBalanceServiceTest {
     fun afterRestart_aPendingReconcile_keepsTheFirstReadyStale_andUnpersisted() = runBlocking {
         val cfg = config(true)
         coEvery { cfg.isShieldedSpendReconcilePending() } returns true
-        coEvery { cfg.setLastShieldedBalanceDuffs(any()) } just Runs
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             // a fresh service = a new process: the in-memory flag starts false
@@ -1446,7 +1447,7 @@ class ShieldedBalanceServiceTest {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
             }
             assertTrue("first READY after restart is still reconciling", service.shieldedBalanceMaybeStale.value)
-            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffs(any()) }
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) }
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
             sweepScope.cancel()
@@ -1465,7 +1466,7 @@ class ShieldedBalanceServiceTest {
         val cfg = config(true)
         // the earlier reconciliation (restored at bring-up, as after a restart)
         coEvery { cfg.isShieldedSpendReconcilePending() } returns true
-        coEvery { cfg.setLastShieldedBalanceDuffs(any()) } just Runs
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
         val clearEntered = CompletableDeferred<Unit>()
         val clearGate = CompletableDeferred<Unit>()
         coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
