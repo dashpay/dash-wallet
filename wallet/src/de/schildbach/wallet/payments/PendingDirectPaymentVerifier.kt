@@ -140,6 +140,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
     @VisibleForTesting internal var afterRemovalQueueDrained: suspend () -> Unit = {}
 
     /**
+     * Test seam: runs in the removal retry worker for each queued id, after it has taken its list
+     * and before it removes that record: the window in which the payment can be quarantined again.
+     */
+    @VisibleForTesting internal var afterRemovalSnapshot: suspend (Sha256Hash) -> Unit = {}
+
+    /**
      * Test seam: runs in a recovery scan right after it has read the stored payments, before it
      * applies them: the window in which a payment can be settled under the scan's feet.
      */
@@ -212,7 +218,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * (review 4302333212). The scan re-reads each record under this lock before applying it.
      *
      * A watch's release takes it too, to write the abandoned record only while that record is
-     * still stored and unsettled.
+     * still stored and unsettled. So do a quarantine's write, the removal retry worker (which
+     * re-checks that an id is still queued, review 4302741459), the scan's discard of another
+     * wallet's record, and [ensureWatched]: every write and delete of a record this class makes,
+     * except the wipe's clear, which must never wait on a write in flight and does not need to.
      *
      * Innermost: taken after [scanMutex] or [settleMutex], never before them. While holding it,
      * only [jobsMutex] (through [track]) is taken.
@@ -263,6 +272,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
         withTimeoutOrNull(DRAIN_TIMEOUT_MS) { running.forEach { runCatching { it.join() } } }
         locksRestored = false
         try {
+            // Deliberately not under recordMutex: a write held there (a slow quarantine) must not
+            // hold up the wipe, and need not, since every write for this wallet is refused where
+            // it lands once the wallet is retired (above).
             config.clearAll()
         } catch (e: Exception) {
             log.error("could not clear pending payments during wipe", e)
@@ -308,10 +320,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
             walletId = walletIdentity(wallet)
         )
         lockInputs(wallet, tx)
-        // A record being quarantined is active again, whatever an earlier resolution left behind.
-        pendingRemovals.remove(tx.txId)
         try {
-            config.add(payment) { stillOwnedBy(wallet) }
+            // Under the record lock, like every write and delete of a record: a queued removal of
+            // an earlier settlement of this txid re-checks the queue under it, so it cannot
+            // delete the record written here (review 4302741459).
+            recordMutex.withLock {
+                // A record being quarantined is active again, whatever an earlier resolution left behind.
+                pendingRemovals.remove(tx.txId)
+                config.add(payment) { stillOwnedBy(wallet) }
+            }
         } catch (e: Exception) {
             // Callers quarantine before submitting, so nothing has been sent yet and aborting
             // costs nothing. Carrying on without a record would be the expensive choice: the
@@ -422,7 +439,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         // rebroadcast a transaction this wallet never made. Dropped, not kept:
                         // no wallet that could use it is left.
                         log.warn("discarding pending payment {}, it belongs to a wallet that was wiped", payment.txId)
-                        removeRecord(payment.txId)
+                        recordMutex.withLock { removeRecord(payment.txId) }
                         continue
                     }
                     try {
@@ -633,6 +650,35 @@ class PendingDirectPaymentVerifier @Inject constructor(
     /** Gives back every claim [txId] holds. Harmless when it holds none (or a wipe dropped them). */
     fun releaseSubmissionClaim(txId: Sha256Hash) {
         submissionClaims.entries.removeIf { it.value == txId }
+    }
+
+    /**
+     * Makes sure the stored record of [tx] is restored and watched before [tx] is posted to the
+     * payee again (review 4302741463). A resubmission does not pass through the payment build and
+     * its restoration barrier, and after a restart nothing may have scanned yet; without a watch,
+     * an outcome left unknown by the post would leave a late broadcast by the payee uncommitted.
+     * Inputs are locked only for a record still active and not yet watched, as the scan does.
+     *
+     * @return false when the record is no longer stored as unsettled: it was settled meanwhile,
+     *   for instance committed by the restoration this ran
+     * @throws IllegalStateException when restoration fails or [origin] is no longer the wallet
+     */
+    suspend fun ensureWatched(tx: Transaction, origin: Wallet): Boolean {
+        awaitRestored()
+        return recordMutex.withLock {
+            if (!stillOwnedBy(origin)) {
+                throw IllegalStateException("the wallet that signed ${tx.txId} has been replaced")
+            }
+            val payment = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
+            if (payment == null || tx.txId in pendingRemovals) {
+                return@withLock false
+            }
+            if (!payment.abandoned && !payment.watchExpired && !isTracked(tx.txId)) {
+                lockInputs(origin, tx)
+            }
+            track(tx, payment, origin)
+            true
+        }
     }
 
     /**
@@ -1140,10 +1186,18 @@ class PendingDirectPaymentVerifier @Inject constructor(
             }
             delay(wait)
             for (txId in pendingRemovals.toList()) {
+                afterRemovalSnapshot(txId)
                 try {
-                    config.remove(txId)
-                    pendingRemovals.remove(txId)
-                    log.info("removed the record of settled payment {} on retry", txId)
+                    // Re-checked under the lock a quarantine takes: one that made this payment
+                    // active again since the list was taken has also taken it out of the queue,
+                    // and the record now stored is its new one (review 4302741459).
+                    recordMutex.withLock {
+                        if (txId in pendingRemovals) {
+                            config.remove(txId)
+                            pendingRemovals.remove(txId)
+                            log.info("removed the record of settled payment {} on retry", txId)
+                        }
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

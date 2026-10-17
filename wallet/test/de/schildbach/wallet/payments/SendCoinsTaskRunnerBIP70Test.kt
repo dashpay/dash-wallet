@@ -1711,6 +1711,40 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `an ambiguous resubmission on a fresh process leaves the payment watched until it is seen`() = runBlocking {
+        // review 4302741463: the screen skips the build (and its restoration barrier) for an
+        // abandoned invoice, and nothing has scanned yet in this process; a lost reply must still
+        // leave T1 watched, so a late broadcast by the payee is committed and settles the record
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 9 }
+        abandonedT1For(requestHash, stored)
+        assertFalse("restored on disk only, nothing watches it yet", pendingPaymentVerifier.isTracked(deferredTx.txId))
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("an unknown outcome was reported as definite")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+        assertTrue("watched after the ambiguous resubmission", pendingPaymentVerifier.isTracked(deferredTx.txId))
+
+        // the payee broadcasts T1 after all: the watch commits it and the record goes
+        val liveTx = mockk<Transaction>(relaxed = true)
+        coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
+        coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 0
+        awaitUntil("the late broadcast to settle the record") { stored.isEmpty() }
+        io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), wallet) }
+    }
+
+    @Test
     fun `an acknowledged resubmission after the cutover stays pending until the network shows it`() = runBlocking {
         // 3fc3cd86956b: with the reservation released and the dashj peers held, nothing here can
         // relay T1; a payee that acks without broadcasting must not produce a success screen

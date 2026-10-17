@@ -1498,6 +1498,14 @@ class SendCoinsTaskRunner @Inject constructor(
             ?: throw IllegalStateException("no earlier payment on record for this request")
         Context.propagate(wallet.context)
         val tx = Transaction(NETWORK_PARAMETERS, record.txBytes)
+        // Watched before it is posted (review 4302741463): this path skips the build and its
+        // restoration barrier, so after a restart nothing may be watching T1 yet, and an unknown
+        // outcome below must leave it watched for a late broadcast by the payee.
+        if (!pendingPaymentVerifier.ensureWatched(tx, wallet)) {
+            // settled meanwhile (restoration found it on the network): that is the result
+            wallet.getTransaction(tx.txId)?.let { return@withContext it }
+            throw IllegalStateException("the earlier payment for this request is no longer on record")
+        }
 
         pendingPaymentVerifier.claimSubmission(tx.txId, paymentRequestId, record.isGiftCardPurchase)?.let { other ->
             throw PaymentSubmissionPendingException(other.toString(), null)

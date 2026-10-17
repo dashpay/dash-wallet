@@ -1911,6 +1911,40 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `a queued removal never deletes the record of a payment quarantined again since`() = runBlocking {
+        // review 4302741459: the retry worker took its list of settled ids, then the same
+        // transaction was quarantined again (a definitively unsent payment rebuilt with the same
+        // txid); the worker went on to delete the new, active record
+        verifier.removalRetryInitialMs = 20L
+        val (stored, failRemovals) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+
+        val reached = CompletableDeferred<Unit>()
+        val proceed = CompletableDeferred<Unit>()
+        verifier.afterRemovalSnapshot = { txId ->
+            if (txId == tx.txId) {
+                reached.complete(Unit)
+                proceed.await()
+            }
+        }
+        // settled, but its removal fails: queued for the worker
+        failRemovals.set(true)
+        verifier.cancelQuarantine(tx)
+        failRemovals.set(false)
+        withTimeout(5_000) { reached.await() }
+
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        proceed.complete(Unit)
+        delay(300)
+
+        assertEquals("the new quarantine's record survives", listOf(tx.txId), stored.map { it.txId })
+        assertFalse(stored.single().abandoned)
+        assertTrue(verifier.isTracked(tx.txId))
+        tx.inputs.forEach { assertTrue("its inputs stay locked", wallet.isLockedOutput(it.outpoint)) }
+    }
+
+    @Test
     fun `a removal that fails while the retry worker is retiring is still retried`() = runBlocking {
         // r4296870284: the worker found the queue empty and was about to exit, still active, when
         // another payment's removal failed; scheduling saw the active worker and started none, so
