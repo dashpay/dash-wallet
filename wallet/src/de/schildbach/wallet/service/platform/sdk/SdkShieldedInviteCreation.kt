@@ -376,10 +376,17 @@ class SdkShieldedInviteCreation internal constructor(
                             "shielded invite funding outcome unconfirmed — the note MAY exist; do NOT retry",
                             t
                         )
+                        // The transfer MAY have spent pool notes.
+                        markPoolSpent()
                         SdkWriteResult.Ambiguous(t)
                     }
                 }
             }
+            // The transfer spent pool notes outside the balance service's own
+            // write paths: mark the shielded balance stale now, so no surface
+            // (the home total, the More card) shows the pre-spend amount until
+            // the next sync pass lands the spend.
+            markPoolSpent()
 
             // Advisory scan hint; a missing height is fine (claim scans without one).
             val fundingHeight = try {
@@ -460,6 +467,16 @@ class SdkShieldedInviteCreation internal constructor(
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded invite not created ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)
+    }
+
+    /**
+     * The invite-funding transfer spent pool notes outside the balance
+     * service's own write paths ([ShieldedBalanceService.noteExternalShieldedSpendBroadcast]
+     * contract). Best-effort and NonCancellable — the spend already happened.
+     */
+    private suspend fun markPoolSpent() = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast() }
+            .onFailure { log.warn("pool-spend balance stale-mark failed; the 60s loop will catch up", it) }
     }
 
     private suspend fun isEnabled(): Boolean = try {

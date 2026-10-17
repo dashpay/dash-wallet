@@ -1270,6 +1270,9 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     private fun tearDownReadyState() = synchronized(readyMonitor) {
+        // Status FIRST: clearing the latch makes observeShieldedBalance() emit
+        // ZERO, which a READY observer would briefly take as a known balance.
+        _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
         readyWalletIdHex.value = null
         readyGeneration.set(NO_GENERATION)
         syncStatusJob?.cancel()
