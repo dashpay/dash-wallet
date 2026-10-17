@@ -21,7 +21,14 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.junit.Assert.assertEquals
@@ -783,6 +790,88 @@ class SdkL1SendServiceTest {
         // Garbage parses as DUAL_RUNNING; a config read failure is contained.
         assertFalse(service(readySource(), enabled = false, cutoverState = "garbage").cutoverCommitted())
         assertFalse(service(readySource(), enabled = null).cutoverCommitted())
+    }
+
+    /**
+     * A config whose [DashPayConfig.CUTOVER_STATE] observations behave as
+     * [subscriptions] says, by subscription number. `observe` is modelled as
+     * the real `BaseConfig` serves it: a failed read is rescued as an absent
+     * key (`null`) and the flow then ends.
+     */
+    private fun observedConfig(subscriptions: (Int) -> kotlinx.coroutines.flow.Flow<String?>): DashPayConfig {
+        val count = java.util.concurrent.atomic.AtomicInteger()
+        return mockk {
+            coEvery { get(DashPayConfig.CUTOVER_STATE) } returns "CUT_OVER"
+            every { observePreservingErrors(DashPayConfig.CUTOVER_STATE) } answers {
+                subscriptions(count.getAndIncrement())
+            }
+            every { observe(DashPayConfig.CUTOVER_STATE) } answers {
+                subscriptions(count.getAndIncrement())
+                    .catch { e -> if (e is java.io.IOException) emit(null) else throw e }
+            }
+        }
+    }
+
+    private fun cutoverFlowService(config: DashPayConfig) =
+        SdkL1SendService(source = readySource(), dashPayConfig = config, isValidAddress = { true })
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun cutoverCommittedFlow_aFailedObservation_isUnknown_notNotCommitted_andIsRetried() = runTest {
+        // PR #1608 review: the first observation of a CUT_OVER install fails.
+        // It used to read as "not committed" and end the flow — a send screen
+        // then kept that fabricated false and refused every SDK dry run.
+        val config = observedConfig { n ->
+            if (n == 0) flow { throw java.io.IOException("preferences unreadable") } else flowOf("CUT_OVER")
+        }
+        val values = cutoverFlowService(config).cutoverCommittedFlow().toList()
+
+        assertEquals("unknown, then the persisted committed state", listOf(null, true), values)
+        assertEquals("retried after the first backoff", 1_000L, currentTime)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun cutoverCommittedFlow_backsOff_andResetsTheBackoffAfterASuccessfulRead() = runTest {
+        // Three failures (1 s, 2 s, 4 s), a success that later fails (the
+        // backoff restarts at 1 s), then a success.
+        val config = observedConfig { n ->
+            when (n) {
+                0, 1, 2 -> flow { throw java.io.IOException("preferences unreadable") }
+                3 -> flow {
+                    emit("CUT_OVER")
+                    throw java.io.IOException("preferences unreadable")
+                }
+                else -> flowOf("CUT_OVER")
+            }
+        }
+        val values = cutoverFlowService(config).cutoverCommittedFlow().toList()
+
+        assertEquals(listOf(null, true, null, true), values)
+        assertEquals(1_000L + 2_000L + 4_000L + 1_000L, currentTime)
+        assertFalse("a failed read never reads as not committed", values.contains(false))
+    }
+
+    @Test
+    fun cutoverCommittedOrThrow_anUnreadableState_throws_anAbsentOneIsNotCommitted() = runBlocking {
+        val unreadable = cutoverFlowService(observedConfig { flow { throw java.io.IOException("unreadable") } })
+        try {
+            unreadable.cutoverCommittedOrThrow()
+            fail("an unreadable state must not read as an answer")
+        } catch (expected: java.io.IOException) {
+        }
+        assertTrue(cutoverFlowService(observedConfig { flowOf("CUT_OVER") }).cutoverCommittedOrThrow())
+        assertTrue(cutoverFlowService(observedConfig { flowOf("SETTLED") }).cutoverCommittedOrThrow())
+        assertFalse(cutoverFlowService(observedConfig { flowOf(null) }).cutoverCommittedOrThrow())
+        assertFalse(cutoverFlowService(observedConfig { flowOf("DUAL_RUNNING") }).cutoverCommittedOrThrow())
+    }
+
+    @Test
+    fun cutoverObserveRetryDelay_doublesFromOneSecond_cappedAtThirty() {
+        assertEquals(
+            listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 30_000L, 30_000L, 30_000L),
+            listOf(0, 1, 2, 3, 4, 5, 6, 1_000).map { SdkL1SendService.cutoverObserveRetryDelayMs(it) }
+        )
     }
 
     @Test

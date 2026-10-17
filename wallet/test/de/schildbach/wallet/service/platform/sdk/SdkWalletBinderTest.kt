@@ -191,6 +191,25 @@ class SdkWalletBinderTest {
             return onProvision(walletIdHex)
         }
 
+        /** The sweep-free contact fetch ([DashSdkService.discoverDashPayContactRequests]). */
+        var contactFetchCalls = 0
+        var onContactFetch: suspend (String, ByteArray) -> Boolean = { _, _ -> true }
+        override suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean {
+            contactFetchCalls++
+            return onContactFetch(walletIdHex, identityId)
+        }
+
+        /**
+         * The SDK store's contact requests ([DashSdkService.readDashPayContactRequests]);
+         * default empty, matching the default empty [FakeContactRequestDirectory].
+         */
+        var storedContactRequests: StoredDashPayContactRequests? =
+            StoredDashPayContactRequests(emptySet(), emptySet(), emptySet())
+        override suspend fun readDashPayContactRequests(
+            walletIdHex: String,
+            ownerIdentityId: ByteArray
+        ): StoredDashPayContactRequests? = storedContactRequests
+
         var drainCalls = 0
         var lastDrainWalletId: String? = null
         var onDrain: suspend (String) -> DashPayContactDrainReport = { _ ->
@@ -243,6 +262,17 @@ class SdkWalletBinderTest {
             walletId: ByteArray
         ) {
             storeKeyCalls++
+        }
+    }
+
+    /** What Platform holds of our contact requests, read without the SDK. */
+    private class FakeContactRequestDirectory(
+        var onPlatform: () -> ContactRequestCounterparties = { ContactRequestCounterparties(emptySet(), emptySet()) }
+    ) : PlatformContactRequestDirectory {
+        var calls = 0
+        override suspend fun counterparties(identityId: ByteArray): ContactRequestCounterparties {
+            calls++
+            return onPlatform()
         }
     }
 
@@ -350,6 +380,7 @@ class SdkWalletBinderTest {
         owedRescanWatchIntervalMs: Long = 5L,
         deviceProvablyLocked: () -> Boolean = { false },
         reportNonFatal: (Throwable) -> Unit = {},
+        contactRequests: PlatformContactRequestDirectory = FakeContactRequestDirectory(),
         processToken: String = "test-process",
         backfillRetryDelayMs: Long = 1L,
         scope: CoroutineScope
@@ -368,6 +399,7 @@ class SdkWalletBinderTest {
         owedRescanWatchIntervalMs = owedRescanWatchIntervalMs,
         deviceProvablyLocked = deviceProvablyLocked,
         reportNonFatal = reportNonFatal,
+        contactRequestDirectory = contactRequests,
         processToken = processToken,
         backfillRetryDelayMs = backfillRetryDelayMs
     )
@@ -1512,6 +1544,442 @@ class SdkWalletBinderTest {
         b.join()
 
         assertEquals(1, sdk.provisionCalls)
+    }
+
+    @Test
+    fun contactDiscovery_completedOnlyByASweepThatSyncedAnIdentityWithoutErrors() = runBlocking {
+        val sdk = readySdk()
+        var report = DashPayContactProvisionReport(
+            bound = true, syncSuccess = 0, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+        )
+        sdk.onProvision = { _ -> report }
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertFalse("no sweep yet", binder.contactDiscoveryCompleted(walletId))
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("no identity synced", binder.contactDiscoveryCompleted(walletId))
+
+        report = report.copy(syncSuccess = 1, syncErrors = 1)
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("an identity's sweep failed", binder.contactDiscoveryCompleted(walletId))
+
+        report = report.copy(syncSuccess = 1, syncErrors = 0)
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertFalse("another wallet", binder.contactDiscoveryCompleted("ff".repeat(32)))
+
+        binder.resetForWalletRecreation()
+        assertFalse("the re-created wallet's store starts empty", binder.contactDiscoveryCompleted(walletId))
+    }
+
+    @Test
+    fun contactDiscovery_aSweepThatStartedBeforeAWalletRecreation_doesNotMarkTheNewStore() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock)
+        sdk.onProvision = { _ ->
+            // The wallet is re-created while the sweep is answering for the old store.
+            binder.resetForWalletRecreation()
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.provisionCalls)
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+    }
+
+    // ── Contact discovery when the backfill gate skips the sweep (PR #1608 review, round 12) ──
+
+    /**
+     * Backfill coverage already recorded (an upgraded wallet, or a recovery
+     * restarted after its backfill finished): the gate skips the sweep on
+     * every pass, the drain registers nothing new, so no sweep ever runs in
+     * this process.
+     */
+    private fun coveredGate() = FakeBackfillGate(shouldRun = false).apply { persistedCoverage = true }
+
+    @Test
+    fun contactDiscovery_gateSkipsTheSweep_confirmedByAFetchWithoutTheSweep() = runBlocking {
+        val sdk = readySdk()
+        var fetchedFor: Pair<String, ByteArray>? = null
+        sdk.onContactFetch = { wallet, identity ->
+            fetchedFor = wallet to identity
+            true
+        }
+        val gate = coveredGate()
+        val binder = binder(sdk, backfillGate = gate, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertEquals("no sweep, so no rewind", 0, sdk.provisionCalls)
+        assertEquals(1, sdk.contactFetchCalls)
+        assertEquals(walletId, fetchedFor?.first)
+        assertTrue(Identifier.from(userId).toBuffer().contentEquals(fetchedFor?.second))
+        assertEquals("the drain still runs, after the fetch", 1, sdk.drainCalls)
+        assertTrue("coverage untouched", gate.persistedCoverage)
+
+        // Once confirmed, later passes do not fetch again.
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals(1, sdk.contactFetchCalls)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun contactDiscovery_gateSkipsTheSweep_aFailedFetch_failsClosed_andTheNextPassRetries() = runBlocking {
+        val sdk = readySdk()
+        var outcome: () -> Boolean = { throw IllegalStateException("Platform unreachable") }
+        sdk.onContactFetch = { _, _ -> outcome() }
+        val binder = binder(sdk, backfillGate = coveredGate(), scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("the fetch threw", binder.contactDiscoveryCompleted(walletId))
+        assertEquals("the drain still runs", 1, sdk.drainCalls)
+
+        outcome = { false }
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("the wallet or identity was not loaded", binder.contactDiscoveryCompleted(walletId))
+
+        outcome = { true }
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertEquals(3, sdk.contactFetchCalls)
+        assertEquals(0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun contactDiscovery_gateSkipsTheSweep_aFetchAnsweringForARecreatedWallet_isIgnored() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, backfillGate = coveredGate(), scope = this)
+        binder.bindIfEnabled(unlock)
+        sdk.onContactFetch = { _, _ ->
+            binder.resetForWalletRecreation()
+            true
+        }
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+    }
+
+    @Test
+    fun recoveredWallet_existingCoverage_noHistoryMarker_drainRegistersNothing_paidHistoryBecomesKnown() = runBlocking {
+        // The round-12 blocker end to end: backfill coverage already recorded,
+        // no paid-history marker, a drain that registers nothing, every contact
+        // account registered and covered and the scan through the tip. The
+        // only missing piece was discovery, which only a sweep confirmed — and
+        // the gate never lets one run — so contact payments were refused forever.
+        val sdk = readySdk()
+        val binder = binder(sdk, backfillGate = coveredGate(), scope = this)
+        binder.bindIfEnabled(unlock)
+        val contactHex = "ab".repeat(32)
+        fun uncovered(walletId: String) = de.schildbach.wallet.service.platform.sdk.contactHistoryUncoveredBecause(
+            discoveryCompleted = binder.contactDiscoveryCompleted(walletId),
+            sentRequestContacts = setOf(contactHex),
+            requestFloors = mapOf(contactHex to 1_500L),
+            birthHeight = 1_000L,
+            receivalAccounts = listOf(contactHex to 0),
+            coverSet = mapOf((contactHex to 0) to 999L)
+        )
+        val chain = object : ContactPaymentChainView {
+            override fun walletId(): String = walletId
+            override suspend fun scanState(walletId: String) =
+                ContactChainScanState(tipHeight = 2_000L, processedHeight = 2_000L, scanSettled = true)
+            override suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String) =
+                uncovered(walletId)
+            override fun paysAddress(address: org.bitcoinj.core.Address): Boolean = false
+        }
+        val params = org.bitcoinj.params.TestNet3Params.get()
+        val pool = List(2) { org.bitcoinj.core.Address.fromKey(params, org.bitcoinj.core.ECKey()) }
+        val reference = 0x1234
+        val paid = PaidContactAddressStore(file = null)
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ ->
+                SdkContactSendingAccount(
+                    incomingRequestFound = true,
+                    paymentChannelBroken = false,
+                    externalAccountReference = reference,
+                    addresses = pool.mapIndexed { i, a -> SdkContactPoolAddress(a.toBase58(), i, i == 0, poolTypeTag = 2) }
+                )
+            },
+            dashjNextAddress = { _, _ -> null },
+            dashjMarkUsed = { _, _, _ -> null },
+            params = params,
+            paidAddresses = paid,
+            chain = chain
+        )
+        val target = ContactPaymentTarget(userId, Identifier.from(ByteArray(32) { 2 }).toString(), reference)
+        assertEquals("the SDK's contact discovery has not finished", uncovered(walletId))
+        assertNull(provider.nextAddress(target))
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(0, sdk.provisionCalls)
+        assertNull(uncovered(walletId))
+        assertEquals(pool[1], provider.nextAddress(target)?.address)
+        assertTrue(paid.paidHistoryKnown(walletId))
+    }
+
+    // ── Discovery checked against Platform (PR #1608 review, round 13) ──
+
+    private val contactA = "ab".repeat(32)
+    private val contactB = "bc".repeat(32)
+
+    /** Platform: we sent a request to A, and received one from A and one from B. */
+    private fun platformWithContacts() = FakeContactRequestDirectory {
+        ContactRequestCounterparties(sentTo = setOf(contactA), receivedFrom = setOf(contactA, contactB))
+    }
+
+    /**
+     * What the SDK's fetch leaves in its store: the received requests always;
+     * the sent one only when [sentFetchFails] is false. The SDK returns
+     * normally either way — `sync_contact_requests` reports a failed SENT
+     * fetch only in a `ContactSyncReport` the pinned Kotlin SDK does not expose.
+     */
+    private fun FakeSdkService.ingest(sentFetchFails: Boolean) {
+        storedContactRequests = StoredDashPayContactRequests(
+            outgoing = if (sentFetchFails) emptySet() else setOf(contactA),
+            incoming = setOf(contactA, contactB),
+            ignored = emptySet()
+        )
+    }
+
+    @Test
+    fun contactDiscovery_aSweepWhoseSentFetchFailed_isNotConfirmed_untilTheStoreHoldsEveryRequest() = runBlocking {
+        val sdk = readySdk()
+        sdk.storedContactRequests = StoredDashPayContactRequests(emptySet(), emptySet(), emptySet())
+        var sentFetchFails = true
+        sdk.onProvision = { _ ->
+            sdk.ingest(sentFetchFails)
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        val platform = platformWithContacts()
+        val binder = binder(sdk, contactRequests = platform, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("the sweep answered, but the sent request is missing", binder.contactDiscoveryCompleted(walletId))
+
+        sentFetchFails = false
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertEquals(2, platform.calls)
+
+        // Confirmed: later sweeps do not read Platform again.
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals(2, platform.calls)
+        assertEquals(3, sdk.provisionCalls)
+    }
+
+    @Test
+    fun contactDiscovery_gateSkipsTheSweep_aFetchWhoseSentHalfFailed_isNotConfirmed() = runBlocking {
+        val sdk = readySdk()
+        sdk.storedContactRequests = StoredDashPayContactRequests(emptySet(), emptySet(), emptySet())
+        var sentFetchFails = true
+        sdk.onContactFetch = { _, _ ->
+            sdk.ingest(sentFetchFails)
+            true
+        }
+        val binder = binder(sdk, backfillGate = coveredGate(), contactRequests = platformWithContacts(), scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+
+        sentFetchFails = false
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertEquals(2, sdk.contactFetchCalls)
+        assertEquals("no sweep, so no rewind", 0, sdk.provisionCalls)
+    }
+
+    @Test
+    fun contactDiscovery_aReceivedRequestMissingFromTheStore_isNotConfirmed_unlessItsSenderIsIgnored() = runBlocking {
+        val sdk = readySdk()
+        sdk.storedContactRequests = StoredDashPayContactRequests(
+            outgoing = setOf(contactA), incoming = setOf(contactA), ignored = emptySet()
+        )
+        sdk.onProvision = { _ ->
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        val binder = binder(sdk, contactRequests = platformWithContacts(), scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse("B's request is not stored", binder.contactDiscoveryCompleted(walletId))
+
+        // The SDK does not store an ignored sender's requests.
+        sdk.storedContactRequests = sdk.storedContactRequests?.copy(ignored = setOf(contactB))
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+    }
+
+    @Test
+    fun contactDiscovery_platformOrStoreUnreadable_failsClosed_andTheSweepStillRuns() = runBlocking {
+        val sdk = readySdk()
+        sdk.onProvision = { _ ->
+            sdk.ingest(sentFetchFails = false)
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        var platformAnswer: () -> ContactRequestCounterparties = { throw IllegalStateException("DAPI unreachable") }
+        val platform = FakeContactRequestDirectory { platformAnswer() }
+        val binder = binder(sdk, contactRequests = platform, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals("the sweep still runs", 1, sdk.provisionCalls)
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+
+        platformAnswer = { ContactRequestCounterparties(setOf(contactA), setOf(contactA, contactB)) }
+        sdk.onProvision = { _ ->
+            sdk.storedContactRequests = null // the SDK's store cannot be read
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+
+        sdk.onProvision = { _ ->
+            sdk.ingest(sentFetchFails = false)
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+    }
+
+    @Test
+    fun contactDiscovery_withoutAPlatformDirectory_isNeverConfirmed() = runBlocking {
+        val sdk = readySdk()
+        sdk.onProvision = { _ ->
+            DashPayContactProvisionReport(
+                bound = true, syncSuccess = 1, syncErrors = 0, pendingBefore = 0, drainScheduled = false
+            )
+        }
+        val binder = binder(sdk, contactRequests = PlatformContactRequestDirectory.UNAVAILABLE, scope = this)
+        binder.bindIfEnabled(unlock)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+
+        assertEquals(1, sdk.provisionCalls)
+        assertFalse(binder.contactDiscoveryCompleted(walletId))
+    }
+
+    @Test
+    fun recoveredWallet_receivedDiscoverySucceeds_sentDiscoveryFails_contactPaymentsStayRefused() = runBlocking {
+        // The round-13 blocker end to end. After a recovery the SDK's fetch
+        // ingests the received requests but its fetch of the SENT ones fails,
+        // and it still returns normally. The store then lists neither the
+        // request we sent to A nor A's receiving account, so the coverage
+        // check — which only asks for an account per stored sent request —
+        // passed without that account, and A's earlier payments to us could
+        // be missing from the SDK's transaction store.
+        val sdk = readySdk()
+        sdk.storedContactRequests = StoredDashPayContactRequests(emptySet(), emptySet(), emptySet())
+        var sentFetchFails = true
+        sdk.onContactFetch = { _, _ ->
+            sdk.ingest(sentFetchFails)
+            true
+        }
+        val binder = binder(sdk, backfillGate = coveredGate(), contactRequests = platformWithContacts(), scope = this)
+        binder.bindIfEnabled(unlock)
+        var receivalAccounts = emptyList<Pair<String, Int>>()
+        var coverSet = emptyMap<Pair<String, Int>, Long>()
+        fun uncovered(walletId: String) = de.schildbach.wallet.service.platform.sdk.contactHistoryUncoveredBecause(
+            discoveryCompleted = binder.contactDiscoveryCompleted(walletId),
+            sentRequestContacts = sdk.storedContactRequests?.outgoing.orEmpty(),
+            requestFloors = mapOf(contactA to 1_500L, contactB to 1_500L),
+            birthHeight = 1_000L,
+            receivalAccounts = receivalAccounts,
+            coverSet = coverSet
+        )
+        val chain = object : ContactPaymentChainView {
+            override fun walletId(): String = walletId
+            override suspend fun scanState(walletId: String) =
+                ContactChainScanState(tipHeight = 2_000L, processedHeight = 2_000L, scanSettled = true)
+            override suspend fun contactHistoryUncoveredBecause(walletId: String, ourUserId: String) =
+                uncovered(walletId)
+            override fun paysAddress(address: org.bitcoinj.core.Address): Boolean = false
+        }
+        val params = org.bitcoinj.params.TestNet3Params.get()
+        val pool = List(2) { org.bitcoinj.core.Address.fromKey(params, org.bitcoinj.core.ECKey()) }
+        val reference = 0x1234
+        val paid = PaidContactAddressStore(file = null)
+        val provider = ContactPaymentAddressProvider(
+            cutoverCommitted = { true },
+            sdkAccountReader = { _, _ ->
+                SdkContactSendingAccount(
+                    incomingRequestFound = true,
+                    paymentChannelBroken = false,
+                    externalAccountReference = reference,
+                    addresses = pool.mapIndexed { i, a -> SdkContactPoolAddress(a.toBase58(), i, i == 0, poolTypeTag = 2) }
+                )
+            },
+            dashjNextAddress = { _, _ -> null },
+            dashjMarkUsed = { _, _, _ -> null },
+            params = params,
+            paidAddresses = paid,
+            chain = chain
+        )
+        val target = ContactPaymentTarget(userId, Identifier.from(ByteArray(32) { 2 }).toString(), reference)
+
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertEquals("the SDK's contact discovery has not finished", uncovered(walletId))
+        assertNull(provider.nextAddress(target))
+        assertFalse(paid.paidHistoryKnown(walletId))
+
+        // A later pass fetches the sent request too: discovery is confirmed,
+        // and coverage now asks for A's receiving account.
+        sentFetchFails = false
+        binder.provisionContactAccountsIfEnabled(force = true)
+        assertTrue(binder.contactDiscoveryCompleted(walletId))
+        assertEquals("1 contact(s) we sent a request to have no receiving account registered", uncovered(walletId))
+        assertNull(provider.nextAddress(target))
+
+        // Registered and backfilled from before its request: known.
+        receivalAccounts = listOf(contactA to 0)
+        coverSet = mapOf((contactA to 0) to 999L)
+        assertNull(uncovered(walletId))
+        assertEquals(pool[1], provider.nextAddress(target)?.address)
+        assertTrue(paid.paidHistoryKnown(walletId))
+    }
+
+    @Test
+    fun contactDiscoveryUnverifiedBecause_comparesBothDirections() {
+        val onPlatform = ContactRequestCounterparties(sentTo = setOf(contactA), receivedFrom = setOf(contactA, contactB))
+        val complete = StoredDashPayContactRequests(setOf(contactA), setOf(contactA, contactB), emptySet())
+        assertNull(contactDiscoveryUnverifiedBecause(onPlatform, complete))
+        assertNull(
+            "extra local rows are fine (sent since Platform was read)",
+            contactDiscoveryUnverifiedBecause(onPlatform, complete.copy(outgoing = setOf(contactA, contactB)))
+        )
+        assertEquals(
+            "1 sent request(s) on Platform missing from the SDK's store",
+            contactDiscoveryUnverifiedBecause(onPlatform, complete.copy(outgoing = emptySet()))
+        )
+        assertEquals(
+            "1 sent request(s) and 1 received request(s) on Platform missing from the SDK's store",
+            contactDiscoveryUnverifiedBecause(onPlatform, complete.copy(outgoing = emptySet(), incoming = setOf(contactA)))
+        )
+        assertNull(
+            "an ignored sender's request is not stored",
+            contactDiscoveryUnverifiedBecause(onPlatform, complete.copy(incoming = setOf(contactA), ignored = setOf(contactB)))
+        )
     }
 
     // ── DIP-15 coreHeight-backfill gate wiring ──────────────────────────
