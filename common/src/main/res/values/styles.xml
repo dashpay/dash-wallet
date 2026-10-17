@@ -1213,7 +1213,15 @@
         <item name="android:tint">@color/content_primary</item>
     </style>
 
-    <style name="OffsetDialog" parent="Theme.Design.Light.BottomSheetDialog">
+    <!--
+      ~ Only the parent differs between light and dark: Theme.Design.Light.BottomSheetDialog and
+      ~ Theme.Design.BottomSheetDialog carry identical items and differ solely in their AppCompat
+      ~ colour palette (textColorPrimary, colorControlNormal/Activated). Keep every <item> on
+      ~ OffsetDialog below so the two configurations cannot drift apart; see values-night/styles.xml.
+      -->
+    <style name="Base.OffsetDialog" parent="Theme.Design.Light.BottomSheetDialog" />
+
+    <style name="OffsetDialog" parent="Base.OffsetDialog">
         <item name="colorControlHighlight">@color/button_ripple_color</item>
     </style>
 
