@@ -29,9 +29,11 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -103,7 +105,22 @@ class PendingDirectPaymentVerifierTest {
         metadataProvider = mockk(relaxed = true)
         coEvery { metadataProvider.forgetTransaction(any()) } returns true
         config = mockk(relaxed = true)
-        coEvery { config.getAllOrThrow() } returns emptyList()
+        // Behaves like the store by default: what a quarantine or a release writes, later reads
+        // see, until it is removed. A release only writes a record that is still stored. Tests
+        // that need a particular store stub these again.
+        val stored = java.util.concurrent.CopyOnWriteArrayList<PendingDirectPayment>()
+        coEvery { config.add(any(), any()) } answers {
+            val payment = firstArg<PendingDirectPayment>()
+            stored.removeIf { it.txId == payment.txId }
+            stored.add(payment)
+            Unit
+        }
+        coEvery { config.remove(any()) } answers {
+            val txId = firstArg<Sha256Hash>()
+            stored.removeIf { it.txId == txId }
+            mockk(relaxed = true)
+        }
+        coEvery { config.getAllOrThrow() } answers { stored.toList() }
 
         val wipeListener = slot<suspend () -> Unit>()
         every { walletData.attachOnWalletWipedListener(capture(wipeListener)) } answers { }
@@ -1520,6 +1537,70 @@ class PendingDirectPaymentVerifierTest {
         assertFalse("no watch for a resolved payment", verifier.isTracked(tx.txId))
         tx.inputs.forEach { assertFalse("its inputs are not locked again", wallet.isLockedOutput(it.outpoint)) }
         assertFalse(verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `a scan holding a stale snapshot does not watch or lock a payment cancelled since`() = runBlocking {
+        // review 4302333212: the scan read T1, then a POST that definitely never left cancelled
+        // T1's quarantine, and the removal landed; the scan then went on to lock T1's inputs and
+        // start a new watch, whose release would later write the record back
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+
+        val snapshotRead = CompletableDeferred<Unit>()
+        val proceed = CompletableDeferred<Unit>()
+        verifier.afterRestoreSnapshotRead = {
+            snapshotRead.complete(Unit)
+            proceed.await()
+        }
+        verifier.resume()
+        withTimeout(5_000) { snapshotRead.await() }
+
+        verifier.cancelQuarantine(tx)
+        assertTrue("the record was removed", stored.isEmpty())
+
+        proceed.complete(Unit)
+        withTimeout(5_000) { verifier.awaitRestored() }
+
+        assertFalse("no watch for a cancelled payment", verifier.isTracked(tx.txId))
+        tx.inputs.forEach { assertFalse("its inputs are not locked again", wallet.isLockedOutput(it.outpoint)) }
+        assertTrue("nothing recreated the record", stored.isEmpty())
+    }
+
+    @Test
+    fun `a watch releasing a payment cancelled under it does not write the record back`() = runBlocking {
+        // the sibling of review 4302333212: the watch was already inside release(), past its last
+        // cancellation check, when a POST that definitely never left cancelled the quarantine;
+        // its write of the abandoned record then recreated what the cancellation had removed
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        goOnlineAndSynced()
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+
+        val reached = CompletableDeferred<Unit>()
+        val proceed = CompletableDeferred<Unit>()
+        val resumed = CompletableDeferred<Unit>()
+        verifier.beforeReleaseWrite = {
+            reached.complete(Unit)
+            // a write already under way: cancelling the watch does not stop it at this point
+            withContext(NonCancellable) { proceed.await() }
+            resumed.complete(Unit)
+        }
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        withTimeout(5_000) { reached.await() }
+
+        verifier.cancelQuarantine(tx)
+        assertTrue("the record was removed", stored.isEmpty())
+
+        proceed.complete(Unit)
+        withTimeout(5_000) { resumed.await() }
+        delay(300)
+
+        assertTrue("the release must not write the record back", stored.isEmpty())
+        assertFalse(verifier.isTracked(tx.txId))
+        coVerify(exactly = 0) { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
     }
 
     @Test

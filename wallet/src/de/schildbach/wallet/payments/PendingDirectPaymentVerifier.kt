@@ -32,7 +32,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -137,6 +139,18 @@ class PendingDirectPaymentVerifier @Inject constructor(
      */
     @VisibleForTesting internal var afterRemovalQueueDrained: suspend () -> Unit = {}
 
+    /**
+     * Test seam: runs in a recovery scan right after it has read the stored payments, before it
+     * applies them: the window in which a payment can be settled under the scan's feet.
+     */
+    @VisibleForTesting internal var afterRestoreSnapshotRead: suspend () -> Unit = {}
+
+    /**
+     * Test seam: runs in a watch's release right before it records the payment as abandoned: the
+     * window in which the payment can be settled under the watch's feet.
+     */
+    @VisibleForTesting internal var beforeReleaseWrite: suspend () -> Unit = {}
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val scanMutex = Mutex()
 
@@ -189,6 +203,21 @@ class PendingDirectPaymentVerifier @Inject constructor(
      */
     private val settleMutex = Mutex()
     private val claimMutex = Mutex()
+
+    /**
+     * Serializes settling a stored record (cancelling its quarantine, or finishing it once committed
+     * or invalidated) with a recovery scan applying its snapshot of that record. The scan reads every
+     * record first and applies them later; without this, a record settled in between was locked and
+     * watched again from the stale copy, and that watch's release later wrote the record back
+     * (review 4302333212). The scan re-reads each record under this lock before applying it.
+     *
+     * A watch's release takes it too, to write the abandoned record only while that record is
+     * still stored and unsettled.
+     *
+     * Innermost: taken after [scanMutex] or [settleMutex], never before them. While holding it,
+     * only [jobsMutex] (through [track]) is taken.
+     */
+    private val recordMutex = Mutex()
 
     init {
         // A pending payment belongs to the wallet that made it, but this is a singleton: its
@@ -373,6 +402,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 // and silently drops entries it cannot decode, either of which would report every
                 // outpoint as free to spend.
                 val pending = config.getAllOrThrow()
+                afterRestoreSnapshotRead()
                 if (pending.isEmpty()) {
                     return@restore
                 }
@@ -397,30 +427,11 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     }
                     try {
                         val tx = Transaction(wallet.params, payment.txBytes)
-
-                        if (payment.watchExpired) {
-                            // Polling stopped long ago (a record from before released payments
-                            // were watched until resolved). If ordinary syncing has since found the
-                            // transaction, attribute it and let the record go; otherwise watch it
-                            // again like any released payment, until it is seen or invalidated.
-                            val arrived = wallet.getTransaction(tx.txId)
-                                ?: tx.takeIf { engineObservation(tx.txId) == EngineObservation.OBSERVED }
-                            if (arrived != null) {
-                                log.info("transaction {} arrived after its watch expired", tx.txId)
-                                commit(arrived, payment, wallet)
-                            } else {
-                                track(tx, payment, wallet)
-                            }
-                            continue
+                        // Outside the lock: committing finishes the record, which takes it.
+                        restoreRecord(payment, tx, wallet)?.let { (arrived, current) ->
+                            log.info("transaction {} arrived after its watch expired", tx.txId)
+                            commit(arrived, current, wallet)
                         }
-
-                        // An abandoned payment keeps its watch but not its locks: the inputs were
-                        // already released, and re-locking outputs the user may since have spent
-                        // would be wrong. The watch continues so a late broadcast is still caught.
-                        if (!payment.abandoned && !isTracked(tx.txId)) {
-                            lockInputs(wallet, tx)
-                        }
-                        track(tx, payment, wallet)
                     } catch (e: Exception) {
                         // Keep the record. Failing to deserialize, lock or track says nothing
                         // about whether the merchant received the payment, and dropping it
@@ -441,6 +452,49 @@ class PendingDirectPaymentVerifier @Inject constructor(
         if (failed) {
             throw IllegalStateException("some pending direct payments could not be restored")
         }
+    }
+
+    /**
+     * Applies the scan's [snapshot] of one record, under [recordMutex] and from the record as it is
+     * stored NOW: one settled since the snapshot was read is gone (or awaiting its removal) and is
+     * left alone, so its inputs are not locked and no watch is started for it again.
+     *
+     * @return the arrived transaction and the record to commit it with, for a watch-expired record
+     *   whose transaction has since been seen; the caller commits it once the lock is released.
+     */
+    private suspend fun restoreRecord(
+        snapshot: PendingDirectPayment,
+        tx: Transaction,
+        wallet: Wallet
+    ): Pair<Transaction, PendingDirectPayment>? = recordMutex.withLock {
+        val payment = config.getAllOrThrow().firstOrNull { it.txId == snapshot.txId }
+        if (payment == null || payment.txId in pendingRemovals) {
+            log.info("pending payment {} was settled while the scan ran; not restoring it", snapshot.txId)
+            return@withLock null
+        }
+
+        if (payment.watchExpired) {
+            // Polling stopped long ago (a record from before released payments were watched until
+            // resolved). If ordinary syncing has since found the transaction, attribute it and let
+            // the record go; otherwise watch it again like any released payment, until it is seen
+            // or invalidated.
+            val arrived = wallet.getTransaction(tx.txId)
+                ?: tx.takeIf { engineObservation(tx.txId) == EngineObservation.OBSERVED }
+            if (arrived != null) {
+                return@withLock arrived to payment
+            }
+            track(tx, payment, wallet)
+            return@withLock null
+        }
+
+        // An abandoned payment keeps its watch but not its locks: the inputs were already
+        // released, and re-locking outputs the user may since have spent would be wrong. The
+        // watch continues so a late broadcast is still caught.
+        if (!payment.abandoned && !isTracked(tx.txId)) {
+            lockInputs(wallet, tx)
+        }
+        track(tx, payment, wallet)
+        null
     }
 
     fun isTracked(txId: Sha256Hash): Boolean = jobs[txId]?.isActive == true
@@ -592,10 +646,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * acknowledged broadcast) or frees it (a request that never left), and does that itself.
      */
     suspend fun cancelQuarantine(tx: Transaction) {
-        jobs.remove(tx.txId)?.cancel()
-        reservations.remove(tx.txId)
-        walletData.wallet?.let { unlockInputs(it, tx) }
-        removeRecord(tx.txId)
+        // Under the scan's per-record lock: a scan holding an older read of this record must not
+        // lock and watch it again once it is gone (review 4302333212).
+        recordMutex.withLock {
+            jobs.remove(tx.txId)?.cancel()
+            reservations.remove(tx.txId)
+            walletData.wallet?.let { unlockInputs(it, tx) }
+            removeRecord(tx.txId)
+        }
         log.info("quarantine cancelled for {}, its outcome is known", tx.txId)
     }
 
@@ -718,7 +776,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                     ) {
                         // Frees the inputs, but the order stays and so does this watch: silence
                         // for the grace period is not proof the payment never reached the payee.
-                        current = release(tx, current, origin)
+                        current = release(tx, current, origin) ?: return null
                     }
                 }
                 // A released payment is never discarded for age: silence, however long, does not
@@ -828,9 +886,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * relay the transaction, so one that withholds it could otherwise have the records deleted
      * and then broadcast.
      *
-     * @return the payment as now stored, marked abandoned
+     * @return the payment as now stored, marked abandoned, or null when it was settled meanwhile and
+     *   the watch has nothing left to do
      */
-    private suspend fun release(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): PendingDirectPayment {
+    private suspend fun release(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): PendingDirectPayment? {
         log.warn(
             "possibly-sent tx {} has not been seen on the network while connected and synced; " +
                 "releasing its inputs but keeping the order and watching for a late broadcast",
@@ -842,11 +901,27 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // leave a stored payment claiming to be live while its inputs are already free and may
         // have been respent, and the next resume() would lock them again and re-verify it.
         val abandoned = payment.copy(abandoned = true)
-        try {
-            config.add(abandoned) { stillOwnedBy(origin) }
-        } catch (e: Exception) {
-            log.error("could not record the release of {}, keeping it locked and pending", tx.txId, e)
-            throw e
+        beforeReleaseWrite()
+        // Under the lock settlement takes, and only for a payment still unsettled: cancelling the
+        // watch is a request, so one already this far would otherwise write back the record a
+        // cancellation or a commit has just removed, blocking its invoice again.
+        val written = recordMutex.withLock {
+            currentCoroutineContext().ensureActive()
+            val stored = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
+            if (stored == null || tx.txId in pendingRemovals) {
+                log.info("possibly-sent tx {} was settled while its release was under way; not releasing it", tx.txId)
+                return@withLock false
+            }
+            try {
+                config.add(abandoned) { stillOwnedBy(origin) }
+            } catch (e: Exception) {
+                log.error("could not record the release of {}, keeping it locked and pending", tx.txId, e)
+                throw e
+            }
+            true
+        }
+        if (!written) {
+            return null
         }
 
         // Past this point the stored payment says abandoned, so a restart will not lock these
@@ -1000,9 +1075,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     private suspend fun finish(payment: PendingDirectPayment) {
-        // Settled either way: the watch ends here even when the removal has to be retried.
-        removeRecord(payment.txId)
-        jobs.remove(payment.txId)
+        // Settled either way: the watch ends here even when the removal has to be retried. Under
+        // the scan's per-record lock, like cancelQuarantine: a scan applying an older read must
+        // find the record gone, not an untracked record to lock and watch again.
+        recordMutex.withLock {
+            removeRecord(payment.txId)
+            jobs.remove(payment.txId)
+        }
     }
 
     /**
