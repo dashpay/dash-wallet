@@ -28,8 +28,8 @@ import org.robolectric.annotation.Config
 /**
  * Host-JVM tests for the mixed-funds detector's pure pieces: the
  * CoinJoin-row parse of the `accountBalances` JSON snapshot
- * ([parseCoinJoinConfirmedDuffs]) and the SDK/dashj source merge
- * ([mergedMixedFundsDuffs]).
+ * ([parseCoinJoinConfirmedDuffs]) and the cutover-aware SDK/dashj source
+ * selection ([mixedFundsDuffs]).
  *
  * Robolectric runner: the parser uses `org.json`, which the plain
  * unit-test android.jar stubs out (returnDefaultValues would silently
@@ -54,6 +54,11 @@ class CoinJoinFundsMigrationServiceTest {
         "userIdentityId":"${"00".repeat(32)}","friendIdentityId":"${"00".repeat(32)}",
         "confirmed":$confirmed,"unconfirmed":0,"immature":0,
         "locked":0,"keysUsed":0,"keysTotal":40,"derivationPath":null}"""
+
+    @Test
+    fun promptHardSuppression_isDisabledForCutoverRecovery() {
+        assertEquals(false, MIXED_FUNDS_PROMPT_HARD_SUPPRESSED)
+    }
 
     // ── parseCoinJoinConfirmedDuffs ───────────────────────────────────
 
@@ -108,30 +113,48 @@ class CoinJoinFundsMigrationServiceTest {
         assertNull(parseCoinJoinConfirmedDuffs("{\"an\":\"object, not an array\"}"))
     }
 
-    // ── mergedMixedFundsDuffs ─────────────────────────────────────────
+    // ── mixedFundsDuffs ───────────────────────────────────────────────
 
     @Test
-    fun merge_bothUnknown_isUnknown() {
-        assertNull(mergedMixedFundsDuffs(null, null))
+    fun preCutover_bothUnknown_isUnknown() {
+        assertNull(mixedFundsDuffs(false, null, null))
     }
 
     @Test
-    fun merge_takesTheMaxAndTreatsAnUnknownSourceAsZero() {
-        // The restore-with-mixed-funds bug: dashj (held, never synced)
-        // reads 0 while the SDK sees the funds — the SDK figure must win.
-        assertEquals(150_000_000L, mergedMixedFundsDuffs(150_000_000L, 0L))
-        assertEquals(150_000_000L, mergedMixedFundsDuffs(150_000_000L, null))
-        // Pre-cutover: the SDK is not started (unknown) and dashj is the
-        // authority.
-        assertEquals(150_000_000L, mergedMixedFundsDuffs(null, 150_000_000L))
-        // Both readable: max.
-        assertEquals(200L, mergedMixedFundsDuffs(100L, 200L))
-        assertEquals(200L, mergedMixedFundsDuffs(200L, 100L))
+    fun preCutover_takesTheMaxAndTreatsAnUnknownSourceAsZero() {
+        assertEquals(150_000_000L, mixedFundsDuffs(false, 150_000_000L, 0L))
+        assertEquals(150_000_000L, mixedFundsDuffs(false, 150_000_000L, null))
+        // The SDK is passive (unknown) pre-cutover and dashj is the authority.
+        assertEquals(150_000_000L, mixedFundsDuffs(false, null, 150_000_000L))
+        assertEquals(200L, mixedFundsDuffs(false, 100L, 200L))
+        assertEquals(200L, mixedFundsDuffs(false, 200L, 100L))
     }
 
     @Test
-    fun merge_bothZero_isZeroNotUnknown() {
-        assertEquals(0L, mergedMixedFundsDuffs(0L, 0L))
+    fun preCutover_bothZero_isZeroNotUnknown() {
+        assertEquals(0L, mixedFundsDuffs(false, 0L, 0L))
+    }
+
+    @Test
+    fun postCutover_staleDashjBalanceIsIgnoredWhenSdkReadsZero() {
+        // Field bug: an UPGRADED wallet's held dashj engine is frozen at its
+        // pre-cutover snapshot (57 DASH mixed) while the SDK — the live
+        // engine — sees the coins already shielded from another device.
+        assertEquals(0L, mixedFundsDuffs(true, 0L, 5_734_663_282L))
+    }
+
+    @Test
+    fun postCutover_usesTheSdkAmountAlone() {
+        assertEquals(150_000_000L, mixedFundsDuffs(true, 150_000_000L, 0L))
+        assertEquals(150_000_000L, mixedFundsDuffs(true, 150_000_000L, null))
+        // Never the larger stale dashj figure.
+        assertEquals(100L, mixedFundsDuffs(true, 100L, 200L))
+    }
+
+    @Test
+    fun postCutover_unreadableSdkIsUnknownEvenWithDashjFunds() {
+        assertNull(mixedFundsDuffs(true, null, 5_734_663_282L))
+        assertNull(mixedFundsDuffs(true, null, null))
     }
 
     // ── the in-flight marker (format/parse/expiry) ────────────────────
@@ -158,6 +181,14 @@ class CoinJoinFundsMigrationServiceTest {
             5L
         )
         assertEquals("SHIELD|1760000000000|5", formatInFlightMigration(marker))
+    }
+
+    @Test
+    fun inFlightMarker_definitiveFailureRoundTripsAndOlderFormStaysUnfailed() {
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1_760_000_000_000L, 5L, failed = true)
+        assertEquals("SHIELD|1760000000000|5|failed", formatInFlightMigration(marker))
+        assertEquals(marker, parseInFlightMigration(formatInFlightMigration(marker)))
+        assertEquals(false, parseInFlightMigration("SHIELD|1760000000000|5")?.failed)
     }
 
     @Test

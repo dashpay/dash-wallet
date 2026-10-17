@@ -17,18 +17,22 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.database.dao.InstantSendLockDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.TransactionOutput
@@ -108,22 +112,22 @@ fun coinJoinBalanceOrNull(wallet: Wallet): Coin? =
 internal const val ACCOUNT_TYPE_TAG_COIN_JOIN = 1
 
 /**
- * TEMPORARY kill-switch for the mixed-funds migration prompt — see the
- * suppression note at the top of [CoinJoinFundsMigrationService.shouldPrompt]
- * for why it is on and the two conditions for turning it back off. Checked by
- * both the prompt gate and the dialog's own
+ * Emergency kill-switch for the mixed-funds migration prompt. Keep this false
+ * in production: cutover builds otherwise count CoinJoin funds in the header
+ * while leaving them unreachable from normal sends, with no in-app recovery
+ * path. Checked by both the prompt gate and the dialog's own
  * [de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment.showOnce],
- * so no code path can show the sheet while this is true.
+ * so setting it true suppresses every sheet entry point.
  */
-const val MIXED_FUNDS_PROMPT_HARD_SUPPRESSED = true
+const val MIXED_FUNDS_PROMPT_HARD_SUPPRESSED = false
 
 /**
  * The SDK engine's CONFIRMED balance of the DIP-9 CoinJoin account 0 from
  * the `accountBalances` JSON snapshot, in duffs — or null when it cannot be
  * affirmatively read (null/empty/malformed input, or no CoinJoin index-0 row
- * in the snapshot). Null means "unknown", NOT "none" — the caller merges it
- * with the dashj read and only a source that affirmatively reports a
- * positive balance may trigger the prompt.
+ * in the snapshot). Null means "unknown", NOT "none" — see
+ * [mixedFundsDuffs]: post-cutover it is the only source (null → no prompt);
+ * pre-cutover it is merged with the dashj read.
  *
  * Index 0 ONLY, deliberately: both migrations can move only that account's
  * coins (the shield's `fundingPath` is [coinJoinAccountPath] — account 0 —
@@ -151,21 +155,31 @@ internal fun parseCoinJoinConfirmedDuffs(accountBalancesJson: String?): Long? {
 }
 
 /**
- * Merge the two detector sources into the mixed-funds figure, in duffs —
- * or null when NEITHER source could be read (both unknown → nothing to
- * trust, fail closed). When at least one source answered, the result is the
- * MAX of the two (an unreadable source counts as 0): dashj is authoritative
- * pre-cutover and reads 0/unknown on a post-cutover restore (the held
- * engine never syncs), while the SDK is authoritative post-cutover and
- * unstarted (null) pre-cutover — the max is therefore always the live
- * engine's view, and a positive figure always comes from a source that
- * affirmatively reported it.
+ * The mixed-funds figure to offer, in duffs, from the two detector sources —
+ * or null when nothing trustworthy could be read (fail closed: no prompt).
+ *
+ * POST-CUTOVER ([cutoverCommitted] = true) the SDK engine is the ONLY
+ * authority and [dashjDuffs] is ignored outright. The held dashj engine is
+ * frozen at its pre-cutover snapshot and never syncs again, so its CoinJoin
+ * balance is stale the moment those coins move: an UPGRADED wallet keeps
+ * reporting its pre-cutover mixed balance forever, even after the coins were
+ * shielded/spent from another device or by the SDK itself (field bug: SDK
+ * coinjoin=0 but dashj 57 DASH → a "Move your mixed coins" sheet that could
+ * never be acted on). A RESTORED wallet's held dashj reads 0 instead — also
+ * not information. An unreadable SDK balance (null) therefore yields null,
+ * never a dashj fallback.
+ *
+ * PRE-CUTOVER the historical merge is kept: when at least one source
+ * answered, the MAX of the two (an unreadable source counts as 0); dashj is
+ * the live L1 engine there and the SDK is passive (usually unstarted/null),
+ * so the max is the live engine's view and a positive figure always comes
+ * from a source that affirmatively reported it. Null when NEITHER answered.
  */
-internal fun mergedMixedFundsDuffs(sdkConfirmedDuffs: Long?, dashjDuffs: Long?): Long? =
-    if (sdkConfirmedDuffs == null && dashjDuffs == null) {
-        null
-    } else {
-        maxOf(sdkConfirmedDuffs ?: 0L, dashjDuffs ?: 0L)
+internal fun mixedFundsDuffs(cutoverCommitted: Boolean, sdkConfirmedDuffs: Long?, dashjDuffs: Long?): Long? =
+    when {
+        cutoverCommitted -> sdkConfirmedDuffs
+        sdkConfirmedDuffs == null && dashjDuffs == null -> null
+        else -> maxOf(sdkConfirmedDuffs ?: 0L, dashjDuffs ?: 0L)
     }
 
 /**
@@ -192,6 +206,28 @@ private const val COIN_JOIN_FOREIGN_BUCKET = -2
 internal fun BlockchainState?.isSyncedEnoughForMixedFundsCheck(): Boolean =
     this != null && isSynced()
 
+/** The SDK's signer could not read the seed because the device is locked. */
+private const val SIGNER_LOCKED_MESSAGE = "mnemonic resolver failed with code 3"
+
+/**
+ * Was this pre-broadcast failure the Keystore refusing the wallet seed while
+ * the device is locked? That is temporary — the same step succeeds once the
+ * user unlocks — unlike every other [SdkWriteResult.NotBroadcast], which ends
+ * the attempt. Observed live (MO-1099): the drain into a shield asset lock
+ * ran minutes after the user's tap, by which time the phone had locked.
+ */
+internal fun isSignerLockedFailure(result: SdkWriteResult.NotBroadcast): Boolean {
+    val cause = result.cause ?: return false
+    if (isKeystoreDenial(cause)) return true
+    var t: Throwable? = cause
+    var depth = 0
+    while (t != null && depth++ < 8) {
+        if (t.message?.contains(SIGNER_LOCKED_MESSAGE) == true) return true
+        t = t.cause
+    }
+    return false
+}
+
 // ── The migration service ─────────────────────────────────────────────
 
 /** Which of the two migrations was attempted. */
@@ -215,12 +251,19 @@ enum class MixedFundsMigrationAction {
  * death; the marker — not the sheet — is what carries the state.
  *
  * @param baselineShieldedDuffs the shielded balance at broadcast time; the
- *   SHIELD completion signal is the balance exceeding it. 0 for COMBINE.
+ *   SHIELD completion signal is the balance exceeding it once the CoinJoin
+ *   account has been drained. 0 for COMBINE.
+ * @param failed a later stage of a consolidated migration failed
+ *   DEFINITIVELY (nothing submitted; every consolidation transaction settled,
+ *   no asset lock uncertain). Not progress: the watcher stands down, the UI
+ *   presents the failure with its fallback, and the user's next
+ *   (authenticated) move drops the record before spending afresh.
  */
 data class InFlightMixedFundsMigration(
     val action: MixedFundsMigrationAction,
     val startedAtMillis: Long,
-    val baselineShieldedDuffs: Long
+    val baselineShieldedDuffs: Long,
+    val failed: Boolean = false
 ) {
     /**
      * The result never became visible within the honesty window — stop
@@ -236,9 +279,12 @@ data class InFlightMixedFundsMigration(
  */
 const val MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS = 30L * 60L * 1000L
 
-/** `ACTION|startedAtMillis|baselineShieldedDuffs` — the persisted form. */
+/** `ACTION|startedAtMillis|baselineShieldedDuffs[|failed]` — the persisted form. */
 internal fun formatInFlightMigration(marker: InFlightMixedFundsMigration): String =
-    "${marker.action.name}|${marker.startedAtMillis}|${marker.baselineShieldedDuffs}"
+    "${marker.action.name}|${marker.startedAtMillis}|${marker.baselineShieldedDuffs}" +
+        if (marker.failed) "|$IN_FLIGHT_FAILED_FLAG" else ""
+
+private const val IN_FLIGHT_FAILED_FLAG = "failed"
 
 /**
  * Parse the persisted marker, or null when absent/blank (cleared) or
@@ -248,11 +294,11 @@ internal fun formatInFlightMigration(marker: InFlightMixedFundsMigration): Strin
 internal fun parseInFlightMigration(raw: String?): InFlightMixedFundsMigration? {
     if (raw.isNullOrBlank()) return null
     val parts = raw.split('|')
-    if (parts.size != 3) return null
+    if (parts.size != 3 && !(parts.size == 4 && parts[3] == IN_FLIGHT_FAILED_FLAG)) return null
     val action = MixedFundsMigrationAction.entries.firstOrNull { it.name == parts[0] } ?: return null
     val startedAt = parts[1].toLongOrNull() ?: return null
     val baseline = parts[2].toLongOrNull() ?: return null
-    return InFlightMixedFundsMigration(action, startedAt, baseline)
+    return InFlightMixedFundsMigration(action, startedAt, baseline, failed = parts.size == 4)
 }
 
 /** What the user chose, and how it went. */
@@ -286,8 +332,9 @@ enum class MixedFundsMigrationOutcome {
  *
  * Both operations are SINGLE-SOURCE-ACCOUNT transactions. Neither ever unions
  * CoinJoin UTXOs with BIP44 UTXOs — the design that was rejected in review for
- * "silently crossing privacy domains". Option A keeps the coins private (they
- * land in the shielded pool); option B does not, and the UI says so.
+ * "silently crossing privacy domains". Consolidation publicly links its inputs,
+ * including when its destination stays in the CoinJoin account. The shielded
+ * destination protects subsequent activity; the choice text explains the linkage.
  *
  * ## The `fundingPath` format, and how it was verified
  *
@@ -318,23 +365,40 @@ class CoinJoinFundsMigrationService @Inject constructor(
     private val blockchainStateProvider: BlockchainStateProvider,
     private val dashPayConfig: DashPayConfig,
     private val dashSdkService: DashSdkService,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
+    private val instantSendLockDao: InstantSendLockDao
 ) {
     /** The in-flight completion watcher — see [startInFlightWatcherIfNeeded]. */
     private var inFlightWatcherJob: Job? = null
+    private val migrationMutex = Mutex()
+
+    /**
+     * How many in-flight markers the watcher cleared because the result was
+     * VERIFIED visible (this process). The marker also disappears for other
+     * reasons — a definitive rejection, a reconciled interrupted intent — so
+     * the UI counts a cleared marker as success only when this advanced.
+     */
+    @Volatile
+    var verifiedLandings: Int = 0
+        private set
+
     /**
      * The mixed-funds balance to offer to migrate, or null when there is
      * nothing to do — no readable source, a zero balance, or an L1 view too
      * stale to trust.
      *
-     * TWO detector sources, merged by [mergedMixedFundsDuffs] (max):
-     * - the SDK engine's CoinJoin account 0 confirmed balance
-     *   ([sdkCoinJoinConfirmedDuffs]) — the AUTHORITATIVE view post-cutover,
-     *   where the held dashj wallet never syncs and therefore reads an empty
-     *   `m/9'` UTXO set on any freshly restored wallet (the live bug this
-     *   dual-source detector fixes: restore-with-mixed-funds never prompted);
-     * - the held dashj wallet's CoinJoin keychain ([coinJoinBalanceOrNull]) —
-     *   correct pre-cutover, harmless 0/unknown after it.
+     * Source selection by [mixedFundsDuffs]:
+     * - POST-CUTOVER: the SDK engine's CoinJoin account 0 confirmed balance
+     *   ([sdkCoinJoinConfirmedDuffs]) ALONE. The held dashj wallet is frozen
+     *   at its pre-cutover snapshot — stale on an upgraded wallet whose coins
+     *   moved since (e.g. shielded from another device), empty on a restored
+     *   one — so it is not even read. SDK unreadable → null (no prompt).
+     * - PRE-CUTOVER: max of the SDK read (normally unknown — the engine is
+     *   passive) and the live dashj CoinJoin keychain ([coinJoinBalanceOrNull]).
+     *
+     * This is the single source for the prompt gate ([shouldPrompt]), the
+     * sheet's offered amount (MixedFundsMigrationViewModel) and the Tools
+     * entry, so a prompt is never raised over an amount the sheet cannot show.
      *
      * Never throws: any failure reads as "nothing to migrate", so a broken
      * probe can only under-prompt, never mis-prompt.
@@ -346,16 +410,29 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 log.debug("mixed-funds probe skipped: L1 view not current enough to trust")
                 return@withContext null
             }
+            // cutoverCommitted() fails closed (false) on a read error, which
+            // selects the pre-cutover merge — the conservative pre-cutover
+            // gate in shouldPrompt() then refuses a fresh prompt anyway.
+            val cutoverCommitted = sdkL1SendService.cutoverCommitted()
             val sdkDuffs = sdkCoinJoinConfirmedDuffs()
-            @Suppress("DEPRECATION")
-            val dashjDuffs = walletData.wallet?.let { coinJoinBalanceOrNull(it) }?.value
-            val duffs = mergedMixedFundsDuffs(sdkDuffs, dashjDuffs) ?: return@withContext null
+            val dashjDuffs = if (cutoverCommitted) {
+                null // frozen pre-cutover snapshot — never authoritative here
+            } else {
+                @Suppress("DEPRECATION")
+                walletData.wallet?.let { coinJoinBalanceOrNull(it) }?.value
+            }
+            val duffs = mixedFundsDuffs(cutoverCommitted, sdkDuffs, dashjDuffs)
+            if (duffs == null) {
+                log.debug("mixed-funds probe: no readable source (cutoverCommitted={})", cutoverCommitted)
+                return@withContext null
+            }
             if (duffs > 0L) {
                 log.info(
-                    "mixed funds detected by {}: sdk={} duffs, dashj={} duffs",
+                    "mixed funds detected by {}: sdk={} duffs, dashj={} duffs, cutoverCommitted={}",
                     if ((sdkDuffs ?: 0L) >= duffs) "the SDK engine" else "the dashj wallet",
                     sdkDuffs,
-                    dashjDuffs
+                    dashjDuffs,
+                    cutoverCommitted
                 )
             }
             Coin.valueOf(duffs).takeIf { it.isPositive }
@@ -412,17 +489,16 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * before the flag lands.
      */
     suspend fun shouldPrompt(): Boolean {
-        // TEMPORARY HARD SUPPRESSION (Brian, 2026-08-11): never show the
-        // mixed-funds prompt — no logic, no exceptions. The COMBINE drain it
-        // offers produced a committed-but-never-propagated transaction in the
-        // field (mainnet tx 0a884b1d…, ~75.6 DASH stuck on a permanent
-        // "Sending" row; funds safe but wallet wedged), so the prompt must
-        // not offer it to anyone. Re-enable ONLY after (1) the current
-        // mainnet field test completes AND (2) the drain fee/broadcast fixes
-        // land and pass a fresh testnet-wallet round. Flip
-        // [MIXED_FUNDS_PROMPT_HARD_SUPPRESSED] to false to restore the
-        // normal gating below (which is left intact and still unit-tested).
+        // Emergency brake only. The normal gating below must run in cutover
+        // builds so wallets whose header balance includes CoinJoin-account
+        // funds have an in-app way to make those coins spendable again.
         if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
+        if (restorePendingShieldMigration()) return true
+        // A FRESH prompt is post-cutover recovery only: pre-cutover dashj
+        // still owns L1 and can spend the CoinJoin account itself. An
+        // in-flight migration (above) is still presented regardless.
+        // cutoverCommitted() fails closed (false) on a read error.
+        if (!sdkL1SendService.cutoverCommitted()) return false
         val alreadyHandled = try {
             dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {
@@ -461,7 +537,53 @@ class CoinJoinFundsMigrationService @Inject constructor(
             log.debug("mixed-funds prompt suppressed: neither migration path is operable yet")
             return false
         }
-        return mixedFundsToMigrate() != null
+        val amount = mixedFundsToMigrate() ?: return false
+        val deferred = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS)
+        return deferred == null || amount.value > deferred
+    }
+
+    suspend fun deferMigration(amount: Coin) {
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS, amount.value)
+    }
+
+    /** Continue the persisted consolidation stage, or resume the existing asset lock. */
+    suspend fun retryPendingMigration(): MixedFundsMigrationOutcome {
+        if (!restorePendingShieldMigration() && !adoptPendingCoinJoinShield()) {
+            return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
+        val marker = inFlightMigration() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        // A definitive failure has nothing to resume; only a fresh move may follow it.
+        if (marker.failed) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        val hasConsolidation = !dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()
+        if (marker.action != MixedFundsMigrationAction.SHIELD && !hasConsolidation) {
+            return MixedFundsMigrationOutcome.UNCONFIRMED
+        }
+        // A user-requested retry gets a fresh observation window, retaining
+        // the original balance baseline and the SDK's existing lock.
+        dashPayConfig.set(
+            DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
+            formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis()))
+        )
+        inFlightWatcherJob?.cancelAndJoin()
+        inFlightWatcherJob = null
+        startInFlightWatcherIfNeeded()
+        // An explicit retry gets its own resume attempt even when the
+        // automatic per-process budget is spent (the lock stays tracked; this
+        // never builds a new one).
+        val resumed = if (marker.action == MixedFundsMigrationAction.SHIELD) {
+            shieldedBalanceService.resumePendingWalletShieldsOnUserRequest()
+        } else {
+            0
+        }
+        if (hasConsolidation) {
+            return MixedFundsMigrationOutcome.STARTED
+        }
+        return if (resumed > 0) {
+            startInFlightWatcherIfNeeded()
+            MixedFundsMigrationOutcome.STARTED
+        } else {
+            MixedFundsMigrationOutcome.UNCONFIRMED
+        }
     }
 
     /**
@@ -483,29 +605,72 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /**
      * OPTION A — shield the mixed funds.
      *
-     * Locks [amount] from the CoinJoin account ONLY (SDK `fundingPath`) and
-     * shields it to the wallet's own Orchard address. The caller passes the
-     * balance from [mixedFundsToMigrate] minus [L1_FEE_RESERVE_DUFFS]; the
-     * engine's LargestFirst selection then has to reach for every CoinJoin
-     * UTXO to cover it, and whatever the fee leaves over returns to BIP44 as
-     * change — so the CoinJoin account still ends up empty.
+     * Consolidates large CoinJoin accounts within their own address pool before
+     * draining into the wallet's Orchard address. [amount] is the UI estimate;
+     * the SDK computes the actual lock value after fees.
      */
-    suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome {
+    suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome = migrationMutex.withLock {
+        if (!releaseFailedMigrationLocked()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (resumeOrAdoptPendingMigrationLocked()) return MixedFundsMigrationOutcome.STARTED
+        if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+            return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
+        val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
+            ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (snapshot.coins.isEmpty()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (snapshot.needsConsolidation) {
+            val destination = snapshot.destination ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            if (snapshot.batchAmount() <= 0L) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            saveConsolidation(CoinJoinConsolidationState(snapshot.walletId, destination))
+            markInFlight(MixedFundsMigrationAction.SHIELD)
+            return MixedFundsMigrationOutcome.STARTED
+        }
+        // Save the recovery presentation before the native call, which may
+        // wait for finality indefinitely or outlive this process. The journal
+        // says whether the native call was reached: `preparing` left behind by
+        // a dead process proves nothing was submitted (see
+        // [reconcileInterruptedDirectShield]); `submitted` never does.
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, DIRECT_SHIELD_PREPARING)
+        markInFlight(MixedFundsMigrationAction.SHIELD, startWatcher = false)
         val path = coinJoinAccountPath(walletData.networkParameters)
         log.info("mixed-funds migration: shielding {} from {}", amount, path)
-        val result = shieldedBalanceService.shieldMixedFundsFromWallet(amount, path)
-        return finish(MixedFundsMigrationAction.SHIELD, result.toOutcome())
+        val result = shieldedBalanceService.shieldMixedFundsFromWallet(amount, path) {
+            dashPayConfig.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, DIRECT_SHIELD_SUBMITTED)
+        }
+        val outcome = result.toOutcome()
+        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+            clearInFlightMigration()
+        } else {
+            // Something is (or may be) out — e.g. an existing CoinJoin lock
+            // answered without reaching the native call. Never reconcile it away.
+            try {
+                dashPayConfig.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, DIRECT_SHIELD_SUBMITTED)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("failed to record the direct shield as submitted", t)
+            }
+        }
+        return finish(MixedFundsMigrationAction.SHIELD, outcome, markerAlreadyRecorded = true)
     }
 
     /**
      * OPTION B — combine the mixed funds into the unmixed (BIP44) balance.
      *
-     * A single-account CoinJoin → BIP44 drain to a FRESH receive address of
-     * this same wallet. Keeps the funds spendable on L1 and DE-MIXES them:
+     * Consolidates oversized accounts in 500-input batches, then drains to a
+     * fresh BIP44 address saved for this migration. Keeps the funds spendable on L1 and DE-MIXES them:
      * the transaction publicly links the previously mixed coins to the
      * destination address.
      */
-    suspend fun combineIntoUnmixedBalance(): MixedFundsMigrationOutcome {
+    suspend fun combineIntoUnmixedBalance(): MixedFundsMigrationOutcome = migrationMutex.withLock {
+        if (!releaseFailedMigrationLocked()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (resumeOrAdoptPendingMigrationLocked()) return MixedFundsMigrationOutcome.STARTED
+        if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+            return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
+        val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
+            ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (snapshot.coins.isEmpty() || snapshot.batchAmount() <= 0L) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (!snapshot.drain && snapshot.destination == null) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         val destination = try {
             // A FRESH address, not the current one: reusing an address the
             // user has already published would link the mixed coins to it.
@@ -532,15 +697,18 @@ class CoinJoinFundsMigrationService @Inject constructor(
             log.warn("mixed-funds migration: could not derive an own receive address", t)
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
-        log.info("mixed-funds migration: draining the CoinJoin account to an own BIP44 address")
-        val result = sdkL1SendService.drainCoinJoinAccountTo(destination)
-        return finish(MixedFundsMigrationAction.COMBINE, result.toOutcome())
+        saveConsolidation(CoinJoinConsolidationState(
+            snapshot.walletId, snapshot.destination ?: destination, regularDestination = destination
+        ))
+        markInFlight(MixedFundsMigrationAction.COMBINE)
+        return MixedFundsMigrationOutcome.STARTED
     }
 
     /** Record the migration as handled unless it provably did nothing. */
     private suspend fun finish(
         action: MixedFundsMigrationAction,
-        outcome: MixedFundsMigrationOutcome
+        outcome: MixedFundsMigrationOutcome,
+        markerAlreadyRecorded: Boolean = false
     ): MixedFundsMigrationOutcome {
         if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
             // Nothing was spent — leave the flag unset so the prompt returns
@@ -559,7 +727,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             // marker failure must not disturb the migration outcome (worst
             // case is the old behavior — no resumed processing sheet).
             try {
-                markInFlight(action)
+                if (!markerAlreadyRecorded && inFlightMigration() == null) markInFlight(action)
+                else startInFlightWatcherIfNeeded()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("failed to persist the in-flight mixed-funds marker", t)
@@ -577,6 +746,137 @@ class CoinJoinFundsMigrationService @Inject constructor(
     }
 
     // ── The in-flight (post-broadcast) window ─────────────────────────
+
+    /**
+     * Resume a migration THIS FLOW recorded: the in-flight marker, or a saved
+     * consolidation stage. Both are written only after the user chose a move,
+     * so this is safe on the automatic paths (startup prompt, resume after
+     * unlock, Tools) — it never starts a migration the user did not choose.
+     * A pending CoinJoin-funded lock with no record is NOT adopted here
+     * (MO-1099: a restored wallet's lock showed up as "moving your coins"
+     * with no tap); see [adoptPendingCoinJoinShield].
+     */
+    suspend fun restorePendingShieldMigration(): Boolean {
+        // Reconcile only when no migration step is running in this process:
+        // a held mutex may be a direct shield between its journal write and
+        // the native call.
+        if (migrationMutex.tryLock()) {
+            try {
+                reconcileInterruptedDirectShield()
+            } finally {
+                migrationMutex.unlock()
+            }
+        }
+        return restorePendingMigrationRecord()
+    }
+
+    private suspend fun restorePendingMigrationRecord(): Boolean {
+        if (inFlightMigration() != null) {
+            startInFlightWatcherIfNeeded()
+            return true
+        }
+        val consolidation = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
+        if (!consolidation.isNullOrBlank()) {
+            markInFlight(CoinJoinConsolidationState.decode(consolidation).action)
+            return true
+        }
+        return false
+    }
+
+    /**
+     * USER-ACTION paths only (shield, combine, Restart). Recovers older
+     * interrupted shields that predate the early marker write: a pending
+     * CoinJoin-funded shield is enough to block either migration, since its
+     * reserved inputs may still appear in the confirmed account balance, so
+     * the user's move adopts it as its progress instead of spending again.
+     * Unrelated BIP44 shield locks are not migration progress.
+     */
+    private suspend fun adoptPendingCoinJoinShield(): Boolean {
+        if (!shieldedBalanceService.ensureShieldedReady()) return false
+        if ((shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: 0) <= 0) return false
+        markInFlight(MixedFundsMigrationAction.SHIELD)
+        log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
+        return true
+    }
+
+    /**
+     * Drop a DEFINITIVELY failed consolidated migration
+     * ([InFlightMixedFundsMigration.failed]) so the user may choose again —
+     * either destination. Recorded only when nothing was submitted, every
+     * consolidation transaction had settled and no CoinJoin-funded lock was
+     * pending; this re-checks what it can (the stage still reads READY and,
+     * when the shielded runtime answers, no CoinJoin-funded lock is pending)
+     * and keeps the record on any doubt.
+     *
+     * @return false when a failed record is present and was kept: the caller
+     *   must not spend.
+     */
+    suspend fun releaseFailedMigration(): Boolean = migrationMutex.withLock { releaseFailedMigrationLocked() }
+
+    /** Caller holds [migrationMutex]. See [releaseFailedMigration]. */
+    private suspend fun releaseFailedMigrationLocked(): Boolean {
+        try {
+            val marker = inFlightMigration() ?: return true
+            if (!marker.failed) return true
+            val raw = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
+            if (!raw.isNullOrBlank() && CoinJoinConsolidationState.decode(raw).phase != CoinJoinConsolidationState.READY) {
+                return false
+            }
+            if (shieldedBalanceService.ensureShieldedReady() &&
+                shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
+            ) {
+                return false
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not release a failed mixed-funds migration; keeping its record", t)
+            return false
+        }
+        log.info("mixed-funds migration: releasing a definitively failed attempt for a new choice")
+        clearInFlightMigration()
+        return true
+    }
+
+    /** Caller holds [migrationMutex]. */
+    private suspend fun resumeOrAdoptPendingMigrationLocked(): Boolean {
+        reconcileInterruptedDirectShield()
+        return restorePendingMigrationRecord() || adoptPendingCoinJoinShield()
+    }
+
+    /**
+     * A DIRECT shield whose process died after recording its intent but
+     * before reaching the native funding call left a SHIELD marker that no
+     * transaction backs: nothing to watch, and it blocks both moves. Drop it
+     * — but only on affirmative evidence of non-submission: the journal still
+     * reads `preparing` (written before the marker; upgraded to `submitted`
+     * right before the native call), no consolidation stage is recorded, and
+     * the SDK tracks no pending CoinJoin-funded lock. Anything else (journal
+     * `submitted`/absent/unreadable, runtime not ready, lock count unknown)
+     * keeps the marker. Caller must hold [migrationMutex].
+     *
+     * @return true when the marker was dropped.
+     */
+    private suspend fun reconcileInterruptedDirectShield(): Boolean {
+        try {
+            val marker = inFlightMigration() ?: return false
+            if (marker.action != MixedFundsMigrationAction.SHIELD) return false
+            if (dashPayConfig.get(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) != DIRECT_SHIELD_PREPARING) return false
+            if (!dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()) return false
+            if (!shieldedBalanceService.ensureShieldedReady()) return false
+            if (shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0) return false
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not reconcile an interrupted mixed-funds shield; keeping its marker", t)
+            return false
+        }
+        log.info("mixed-funds migration: the shield was interrupted before submission; clearing its marker")
+        synchronized(this) {
+            inFlightWatcherJob?.cancel()
+            inFlightWatcherJob = null
+        }
+        clearInFlightMigration()
+        return true
+    }
 
     /**
      * The persisted in-flight migration, or null when none is pending —
@@ -597,22 +897,70 @@ class CoinJoinFundsMigrationService @Inject constructor(
             .map { parseInFlightMigration(it) }
 
     /**
-     * Drop the marker. Called by the watcher when the result became visible,
-     * and by the UI when the user acknowledges (dismisses) the TIMED-OUT
-     * presentation — a marker past [MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS] is
-     * deliberately NOT auto-cleared, so the "could not confirm" guidance is
-     * shown at least once before it stops re-appearing.
+     * Drop the marker together with its consolidation stage and journal.
+     * Called only when nothing is (or may still be) pending: the watcher
+     * after a VERIFIED landing, a definitive rejection, a reconciled
+     * interrupted intent, a released definitive failure. Never for an
+     * uncertain migration — closing the "could not confirm" guidance
+     * acknowledges it instead ([acknowledgeUnconfirmedMigration]), keeping
+     * the record so nothing in flight is ever rebuilt.
      */
     suspend fun clearInFlightMigration() {
         try {
+            dashPayConfig.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, "")
             dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, "")
+            dashPayConfig.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, "")
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("failed to clear the in-flight mixed-funds marker", t)
         }
     }
 
-    private suspend fun markInFlight(action: MixedFundsMigrationAction) {
+    /**
+     * The user closed the "could not confirm" guidance of the current
+     * (non-failed) marker: stop re-presenting it automatically
+     * ([shouldPresentPrompt]) — WITHOUT dropping the marker or its
+     * consolidation stage, which still block a fresh spend and keep the
+     * migration resumable from Tools. A later window (Try again, a
+     * signer-locked retry) has a new start time and is presented again.
+     */
+    suspend fun acknowledgeUnconfirmedMigration() {
+        try {
+            val marker = inFlightMigration() ?: return
+            if (marker.failed) return
+            dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT, marker.startedAtMillis)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to acknowledge the unconfirmed mixed-funds migration", t)
+        }
+    }
+
+    /**
+     * Should an AUTOMATIC trigger (startup, resume after unlock) present the
+     * sheet? A persisted marker does — processing, failure, or not-yet-seen
+     * guidance — unless the user already closed this window's "could not
+     * confirm" guidance ([acknowledgeUnconfirmedMigration]); otherwise
+     * [shouldPrompt] decides. Tools opens the sheet regardless.
+     */
+    suspend fun shouldPresentPrompt(): Boolean {
+        if (MIXED_FUNDS_PROMPT_HARD_SUPPRESSED) return false
+        // Same reconcile/restore as [shouldPrompt], so a stale interrupted
+        // intent is dropped before it can be presented.
+        if (restorePendingShieldMigration()) {
+            val marker = inFlightMigration() ?: return true
+            if (marker.failed) return true
+            val acknowledgedAt = try {
+                dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                null
+            }
+            return acknowledgedAt != marker.startedAtMillis
+        }
+        return shouldPrompt()
+    }
+
+    private suspend fun markInFlight(action: MixedFundsMigrationAction, startWatcher: Boolean = true) {
         val baseline = if (action == MixedFundsMigrationAction.SHIELD) {
             // The shielded balance the credit must EXCEED to count as
             // landed. Read live (the note store has not credited the shield
@@ -630,17 +978,22 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val marker = InFlightMixedFundsMigration(action, System.currentTimeMillis(), baseline)
         dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker))
         log.info("mixed-funds migration in flight: {} (baseline {} duffs)", action, baseline)
-        startInFlightWatcherIfNeeded()
+        if (startWatcher) startInFlightWatcherIfNeeded()
     }
 
     /**
      * Start (idempotently) the watcher that clears the in-flight marker once
      * the migration's RESULT is user-visible:
      *
-     * - SHIELD — the shielded balance credit lands:
+     * - SHIELD — the CoinJoin funds moved AND the shielded credit lands: the
+     *   CoinJoin account reads affirmatively EMPTY (as for COMBINE), no
+     *   CoinJoin-funded lock is still pending
+     *   ([ShieldedBalanceService.pendingCoinJoinShieldLockCount] == 0), and
      *   [ShieldedBalanceService.observeShieldedBalance] emits a balance above
      *   the marker's baseline (the flow emits `Dash.ZERO`/the pre-credit
-     *   figure until then, so a runtime rebind can never fake a completion);
+     *   figure until then, so a runtime rebind can never fake a completion).
+     *   The balance alone is not enough — an unrelated BIP44 shield landing
+     *   would raise it while the CoinJoin coins stay put;
      * - COMBINE — the CoinJoin account reads EMPTY in the SDK's own
      *   `accountBalances` snapshot ([parseCoinJoinConfirmedDuffs] == 0,
      *   affirmatively): the drain consumed the account and its coins are now
@@ -665,41 +1018,292 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
                     log.warn("the in-flight mixed-funds watcher stopped", t)
+                    expireMigration()
                 }
             }
         }
     }
 
     private suspend fun watchInFlightMigration() {
-        val marker = inFlightMigration() ?: return
-        val remainingMs = marker.startedAtMillis + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - System.currentTimeMillis()
-        if (remainingMs <= 0L) {
-            log.info("in-flight mixed-funds migration ({}) already past the honesty window", marker.action)
+        while (true) {
+            val marker = inFlightMigration() ?: return
+            // A definitive failure is not progress: nothing to watch or continue.
+            if (marker.failed) return
+            val remainingMs = marker.startedAtMillis + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - System.currentTimeMillis()
+            if (remainingMs <= 0L) {
+                log.info("in-flight mixed-funds migration ({}) already past the honesty window", marker.action)
+                return
+            }
+            var signerLocked = false
+            val landed = withTimeoutOrNull(remainingMs) {
+                when (continueConsolidation()) {
+                    ConsolidationStep.STOPPED -> return@withTimeoutOrNull false
+                    ConsolidationStep.SIGNER_LOCKED -> {
+                        signerLocked = true
+                        return@withTimeoutOrNull false
+                    }
+                    ConsolidationStep.PROCEED -> Unit
+                }
+                awaitMigrationResult(marker)
+                true
+            } ?: false
+            if (signerLocked) {
+                // MO-1099: a consolidation or shield step had to sign while the
+                // phone was locked, and the Keystore refused the seed. Nothing
+                // was broadcast, so this is not a failure: wait and retry the
+                // same step until the device is unlocked. Each retry restarts
+                // the honesty window — the sheet keeps its processing state
+                // instead of reporting an unconfirmed transfer that never
+                // existed.
+                log.info(
+                    "mixed-funds migration ({}): signing needs the device unlocked; retrying in {} s",
+                    marker.action, SIGNER_LOCKED_RETRY_MS / 1000L
+                )
+                delay(SIGNER_LOCKED_RETRY_MS)
+                val current = inFlightMigration() ?: return
+                dashPayConfig.set(
+                    DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
+                    formatInFlightMigration(current.copy(startedAtMillis = System.currentTimeMillis()))
+                )
+                continue
+            }
+            if (landed) {
+                log.info("mixed-funds migration ({}) result is now visible; clearing the in-flight marker", marker.action)
+                verifiedLandings++
+                clearInFlightMigration()
+            } else {
+                log.warn(
+                    "mixed-funds migration ({}) result did not become visible within {} min",
+                    marker.action,
+                    MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS / 60_000L
+                )
+            }
             return
         }
-        val landed = withTimeoutOrNull(remainingMs) {
-            when (marker.action) {
-                MixedFundsMigrationAction.SHIELD ->
-                    shieldedBalanceService.observeShieldedBalance()
-                        .first { it.duffs > marker.baselineShieldedDuffs }
-                MixedFundsMigrationAction.COMBINE ->
-                    while (sdkCoinJoinConfirmedDuffs() != 0L) {
-                        delay(IN_FLIGHT_POLL_MS)
-                    }
+    }
+
+    /** Suspends until the [marker]'s migration result is user-visible. */
+    private suspend fun awaitMigrationResult(marker: InFlightMixedFundsMigration) {
+        when (marker.action) {
+            MixedFundsMigrationAction.SHIELD -> {
+                // The CoinJoin funds must have actually moved: the account
+                // reads empty and no CoinJoin-funded lock is still pending.
+                // A rising shielded balance alone could be an unrelated
+                // BIP44 shield landing.
+                while (sdkCoinJoinConfirmedDuffs() != 0L ||
+                    !shieldedBalanceService.ensureShieldedReady() ||
+                    shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
+                ) {
+                    delay(IN_FLIGHT_POLL_MS)
+                }
+                shieldedBalanceService.observeShieldedBalance()
+                    .first { it.duffs > marker.baselineShieldedDuffs }
             }
-            true
-        } ?: false
-        if (landed) {
-            log.info("mixed-funds migration ({}) result is now visible; clearing the in-flight marker", marker.action)
-            clearInFlightMigration()
-        } else {
-            log.warn(
-                "mixed-funds migration ({}) result did not become visible within {} min",
-                marker.action,
-                MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS / 60_000L
-            )
+            MixedFundsMigrationAction.COMBINE ->
+                while (sdkCoinJoinConfirmedDuffs() != 0L) {
+                    delay(IN_FLIGHT_POLL_MS)
+                }
         }
     }
+
+    private suspend fun saveConsolidation(state: CoinJoinConsolidationState) {
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, state.encode())
+    }
+
+    /** What [continueConsolidation] left for the watcher to do. */
+    private enum class ConsolidationStep {
+        /** The persisted stages are done: wait for the migration's result. */
+        PROCEED,
+        /** Stopped for good (wrong wallet, nothing left, definitive failure). */
+        STOPPED,
+        /** A step could not sign because the device is locked; retry it later. */
+        SIGNER_LOCKED
+    }
+
+    /** A persisted txid is written before broadcast; an uncertain send is only observed, never rebuilt. */
+    private suspend fun continueConsolidation(): ConsolidationStep {
+        val raw = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
+        if (raw.isNullOrBlank()) return ConsolidationStep.PROCEED // Legacy/direct asset-lock recovery.
+        var state = CoinJoinConsolidationState.decode(raw)
+        while (true) {
+            dashSdkService.ensureStarted()
+            val activeWallet = dashSdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()
+            if (activeWallet != state.walletId) return ConsolidationStep.STOPPED
+            if (state.phase == CoinJoinConsolidationState.SHIELDING ||
+                state.phase == CoinJoinConsolidationState.SHIELD_PREPARING
+            ) {
+                if (!shieldedBalanceService.ensureShieldedReady()) {
+                    delay(IN_FLIGHT_POLL_MS)
+                    continue
+                }
+                val pending = shieldedBalanceService.pendingCoinJoinShieldLockCount()
+                if (pending == null) { delay(IN_FLIGHT_POLL_MS); continue }
+                if (pending > 0) {
+                    if (state.phase != CoinJoinConsolidationState.SHIELDING) {
+                        state = state.copy(phase = CoinJoinConsolidationState.SHIELDING)
+                        saveConsolidation(state)
+                    }
+                    shieldedBalanceService.resumePendingWalletShields()
+                    return ConsolidationStep.PROCEED
+                }
+                if (state.phase == CoinJoinConsolidationState.SHIELD_PREPARING) {
+                    // Interrupted before the native funding call was reached
+                    // (SHIELDING is written right before it): nothing was
+                    // submitted, so the drain may be prepared again from a
+                    // clean, settled snapshot.
+                    state = state.copy(phase = CoinJoinConsolidationState.READY)
+                    saveConsolidation(state)
+                    continue
+                }
+                // SHIELDING with no CoinJoin-funded lock row: the funding call
+                // was reached, and a missing row does not prove nothing was
+                // broadcast (the SDK persists asynchronously). Never build
+                // another drain; keep watching for the lock row (resumed
+                // above) or the spend to settle, and let the honesty window
+                // expire into the "could not confirm" guidance otherwise.
+                val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
+                if (snapshot != null && snapshot.coins.isEmpty()) return ConsolidationStep.PROCEED
+                delay(IN_FLIGHT_POLL_MS)
+                continue
+            }
+            if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+                delay(IN_FLIGHT_POLL_MS)
+                continue
+            }
+            if (state.phase == CoinJoinConsolidationState.WAITING || state.phase == CoinJoinConsolidationState.TRANSFERRING) {
+                val tx = dashSdkService.databaseOrNull()?.transactionDao()
+                    ?.getByTxid(Utils.HEX.decode(state.txid).reversedArray())
+                // The mirror never records an InstantSend lock (context goes
+                // 0 -> 3 at block time), so the app-persisted lock is the
+                // pre-block finality evidence.
+                if (tx == null || (tx.context !in 1..3 && !hasPersistedInstantLock(state.txid))) {
+                    delay(IN_FLIGHT_POLL_MS)
+                    continue
+                }
+            }
+            val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
+            if (state.phase == CoinJoinConsolidationState.TRANSFERRING) {
+                if (snapshot != null && snapshot.coins.isEmpty()) return ConsolidationStep.PROCEED
+                // The final transaction is settled; wait for the engine and
+                // persistence to agree that its CoinJoin inputs are spent.
+                delay(IN_FLIGHT_POLL_MS)
+                continue
+            }
+            if (snapshot == null || snapshot.coins.isEmpty()) {
+                delay(IN_FLIGHT_POLL_MS)
+                continue
+            }
+            if (state.phase == CoinJoinConsolidationState.WAITING) {
+                // Finality and the updated UTXO set must both have reached Room.
+                val txid = Utils.HEX.decode(state.txid).reversedArray()
+                if (snapshot.coins.none { it.txid?.contentEquals(txid) == true && it.address == state.destination }) {
+                    delay(IN_FLIGHT_POLL_MS)
+                    continue
+                }
+                state = state.copy(phase = CoinJoinConsolidationState.READY, txid = "")
+                saveConsolidation(state)
+            }
+            if (state.action == MixedFundsMigrationAction.SHIELD && !snapshot.needsConsolidation) {
+                if (!shieldedBalanceService.ensureShieldedReady()) {
+                    delay(IN_FLIGHT_POLL_MS)
+                    continue
+                }
+                // Only a CoinJoin-funded lock is this migration's pending work;
+                // an unrelated BIP44 shield lock is left to the regular sweep
+                // and must not stand in for the drain.
+                val pending = shieldedBalanceService.pendingCoinJoinShieldLockCount()
+                if (pending == null) { delay(IN_FLIGHT_POLL_MS); continue }
+                if (pending > 0) {
+                    state = state.copy(phase = CoinJoinConsolidationState.SHIELDING)
+                    saveConsolidation(state)
+                    shieldedBalanceService.resumePendingWalletShields()
+                    return ConsolidationStep.PROCEED
+                }
+                state = state.copy(phase = CoinJoinConsolidationState.SHIELD_PREPARING)
+                saveConsolidation(state)
+                val result = shieldedBalanceService.shieldMixedFundsFromWallet(
+                    Dash.valueOf(snapshot.coins.sumOf { it.amount }), coinJoinAccountPath(walletData.networkParameters)
+                ) {
+                    // Right before the native call: from here a lock may be out.
+                    state = state.copy(phase = CoinJoinConsolidationState.SHIELDING)
+                    saveConsolidation(state)
+                }
+                if (result is SdkWriteResult.NotBroadcast) {
+                    saveConsolidation(state.copy(phase = CoinJoinConsolidationState.READY))
+                    if (isSignerLockedFailure(result)) return ConsolidationStep.SIGNER_LOCKED
+                    // Definitive, with every consolidation settled and no lock
+                    // pending: offer the choice again (incl. the wallet-balance
+                    // fallback) instead of "could not confirm".
+                    failMigration()
+                    return ConsolidationStep.STOPPED
+                }
+                if (state.phase != CoinJoinConsolidationState.SHIELDING) {
+                    // Answered without reaching the native call (an existing
+                    // CoinJoin lock): still not proof of non-submission.
+                    state = state.copy(phase = CoinJoinConsolidationState.SHIELDING)
+                    saveConsolidation(state)
+                }
+                return ConsolidationStep.PROCEED
+            }
+            val amount = snapshot.batchAmount()
+            if (amount <= 0L) { failMigration(); return ConsolidationStep.STOPPED }
+            val finalTransfer = state.action == MixedFundsMigrationAction.COMBINE && snapshot.drain
+            val destination = if (finalTransfer) state.regularDestination else state.destination
+            val result = sdkL1SendService.consolidateCoinJoin(destination, amount, snapshot.drain) { bytes ->
+                val txid = validateCoinJoinConsolidation(bytes, snapshot, destination, walletData.networkParameters,
+                    minimumInputs = if (finalTransfer) 1 else 2)
+                state = state.copy(phase = if (finalTransfer) CoinJoinConsolidationState.TRANSFERRING
+                    else CoinJoinConsolidationState.WAITING, txid = txid)
+                saveConsolidation(state)
+                log.info("CoinJoin consolidation prepared: {} ({} available inputs)", txid, snapshot.coins.size)
+            }
+            if (result is SdkWriteResult.NotBroadcast) {
+                state = state.copy(phase = CoinJoinConsolidationState.READY, txid = "")
+                saveConsolidation(state)
+                if (isSignerLockedFailure(result)) return ConsolidationStep.SIGNER_LOCKED
+                failMigration()
+                return ConsolidationStep.STOPPED
+            }
+            // Ambiguous without a prepared txid cannot safely start another build.
+            if (state.phase !in setOf(CoinJoinConsolidationState.WAITING, CoinJoinConsolidationState.TRANSFERRING)) {
+                expireMigration(); return ConsolidationStep.STOPPED
+            }
+            delay(IN_FLIGHT_POLL_MS)
+        }
+    }
+
+    private suspend fun expireMigration() {
+        val marker = inFlightMigration() ?: return
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
+            formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1)))
+    }
+
+    /** Record a DEFINITIVE failure of a consolidated migration — see [InFlightMixedFundsMigration.failed]. */
+    private suspend fun failMigration() {
+        val marker = inFlightMigration() ?: return
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker.copy(failed = true)))
+    }
+
+    /**
+     * The subset of [txids] (lowercase display hex) with an app-persisted
+     * InstantSend lock. A read failure answers none: the stage then waits for
+     * a block, as before, and never advances on missing evidence.
+     */
+    private suspend fun persistedInstantLocks(txids: Collection<String>): Set<String> {
+        if (txids.isEmpty()) return emptySet()
+        return try {
+            txids.chunked(PERSISTED_LOCK_QUERY_CHUNK)
+                .flatMap { instantSendLockDao.getLockedTxIds(it) }
+                .mapTo(HashSet()) { it.lowercase() }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("persisted InstantSend lock read failed; waiting for a block instead", t)
+            emptySet()
+        }
+    }
+
+    private suspend fun hasPersistedInstantLock(txid: String): Boolean =
+        txid.lowercase().let { it in persistedInstantLocks(listOf(it)) }
 
     private fun SdkWriteResult<*>.toOutcome(): MixedFundsMigrationOutcome = when (this) {
         is SdkWriteResult.Broadcast -> MixedFundsMigrationOutcome.STARTED
@@ -724,10 +1328,20 @@ class CoinJoinFundsMigrationService @Inject constructor(
          */
         private const val BASELINE_READ_TIMEOUT_MS = 5_000L
 
+        /** Keeps each persisted IS-lock lookup under SQLite's 999-variable cap. */
+        private const val PERSISTED_LOCK_QUERY_CHUNK = 500
+
         /**
          * COMBINE completion poll cadence — the `accountBalances` snapshot
          * has no push feed, so the watcher re-reads it on this interval.
          */
         private const val IN_FLIGHT_POLL_MS = 15_000L
+
+        /** How often a step blocked by a locked device is retried. */
+        private const val SIGNER_LOCKED_RETRY_MS = 30_000L
+
+        /** [DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE] values. */
+        internal const val DIRECT_SHIELD_PREPARING = "preparing"
+        internal const val DIRECT_SHIELD_SUBMITTED = "submitted"
     }
 }

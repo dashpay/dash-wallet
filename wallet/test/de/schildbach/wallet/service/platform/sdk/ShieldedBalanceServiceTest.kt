@@ -271,6 +271,21 @@ class ShieldedBalanceServiceTest {
             onFund()
         }
 
+        var accountFundCalls = 0
+
+        override suspend fun fundFromAssetLockFromAccount(
+            walletId: ByteArray,
+            recipientRaw43: ByteArray,
+            amountDuffs: Long,
+            fundingPath: String
+        ) {
+            accountFundCalls++
+            broadcastCalls++
+            lastFundRecipient = recipientRaw43
+            lastFundAmountDuffs = amountDuffs
+            onFund()
+        }
+
         override suspend fun resumeFundFromAssetLock(
             walletId: ByteArray,
             outPointTxid: ByteArray,
@@ -1668,6 +1683,87 @@ class ShieldedBalanceServiceTest {
         assertArrayEquals(source.defaultAddress, source.lastFundRecipient)
     }
 
+    @Test
+    fun mixedFundsShield_existingLockReturnsRecoveryWithoutNewFunding() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = { listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 1, 206751800L)) }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+        assertEquals(0, source.fundCalls)
+        assertEquals(0, source.broadcastCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_coinJoinFundedLockBlocksANewDrain() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = {
+                listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 2, 206751800L, coinJoinFunded = true))
+            }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+        assertEquals(0, source.accountFundCalls)
+        assertEquals(1, service.pendingCoinJoinShieldLockCount())
+    }
+
+    @Test
+    fun mixedFundsShield_submissionCheckpointRunsOnlyRightBeforeTheFundingCall() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        var fundCallsAtCheckpoint = -1
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") {
+            fundCallsAtCheckpoint = source.accountFundCalls
+        }
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        assertEquals(0, fundCallsAtCheckpoint)
+        assertEquals(1, source.accountFundCalls)
+
+        // An existing CoinJoin lock answers without reaching the native call.
+        source.shieldLocks = {
+            listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 2, 206751800L, coinJoinFunded = true))
+        }
+        var checkpointed = false
+        service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") { checkpointed = true }
+        assertFalse(checkpointed)
+        assertEquals(1, source.accountFundCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_failedSubmissionCheckpointSubmitsNothing() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") {
+            throw java.io.IOException("disk full")
+        }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.accountFundCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_unrelatedBip44LockDoesNotBlockTheDrain() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = {
+                listOf(
+                    PendingWalletShieldLock("${"ab".repeat(32)}:0", 1, 5_000_000L, coinJoinFunded = false),
+                    // A consumed CoinJoin lock is history, not pending work.
+                    PendingWalletShieldLock("${"cd".repeat(32)}:0", 4, 5_000_000L, coinJoinFunded = true)
+                )
+            }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        assertEquals(0, service.pendingCoinJoinShieldLockCount())
+        assertEquals(1, service.pendingWalletShieldLockCount())
+        assertEquals(1, source.accountFundCalls)
+        assertEquals(0, source.fundCalls)
+    }
+
     /**
      * Regression guard for the bricked-shields bug: the gate must NOT
      * consult ANY dashj comparison. A caught-up engine shields regardless
@@ -1912,6 +2008,24 @@ class ShieldedBalanceServiceTest {
 
         // 3 attempts max per process, later sweeps skip the outpoint.
         assertEquals(3, source.resumeCalls)
+    }
+
+    @Test
+    fun resumeSweep_userRequestGetsOneAttemptPastTheBudget() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        source.shieldLocks = { listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1)) }
+        source.onResume = { _, _ -> throw RuntimeException("no chainlock yet") }
+        repeat(4) { assertEquals(0, service.resumePendingWalletShields()) }
+        assertEquals(3, source.resumeCalls)
+
+        // Connectivity is back and the user taps Try again: one real attempt.
+        source.onResume = { _, _ -> }
+        assertEquals(1, service.resumePendingWalletShieldsOnUserRequest())
+        assertEquals(4, source.resumeCalls)
+        // Unattended sweeps stay capped.
+        service.resumePendingWalletShields()
+        assertEquals(4, source.resumeCalls)
     }
 
     @Test

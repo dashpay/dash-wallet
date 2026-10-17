@@ -121,6 +121,22 @@ final class CoreSendAllNative {
 
     private CoreSendAllNative() {}
 
+    static FinalizedCoreTransaction buildCoinJoinConsolidation(
+            ManagedPlatformWallet wallet, Network network, String destination,
+            long amount, boolean drain, long signer
+    ) {
+        try (CoreTransactionBuilder builder = new CoreTransactionBuilder(network)) {
+            builder.addOutput$sdk_release(destination, amount);
+            builder.setChangeAddress$sdk_release(destination);
+            builder.setSelectionStrategy$sdk_release(drain
+                    ? CoreTransactionBuilder.SelectionStrategy.ALL
+                    : CoreTransactionBuilder.SelectionStrategy.LARGEST_FIRST);
+            builder.setFeeRate$sdk_release(DRAIN_FEE_RATE_DUFFS_PER_KB);
+            return builder.finalizeAtomic$sdk_release(
+                    wallet, CoreTransactionBuilder.AccountType.COIN_JOIN, 0, signer);
+        }
+    }
+
     /**
      * Build, sign and broadcast a send-all (drain) of the POOLED
      * {@code ALL_SPENDABLE} funding set to {@code addressBase58}: all

@@ -60,6 +60,7 @@ import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
 import de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment
 import de.schildbach.wallet.ui.cutover.SdkBindPendingDialogFragment
 import de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment
+import de.schildbach.wallet.ui.migration.MixedFundsMigrationViewModel
 import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.MainActivityExt.requestDisableBatteryOptimisation
@@ -132,6 +133,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private val baseAlertDialogBuilder = BaseAlertDialogBuilder(this)
     val viewModel: MainViewModel by viewModels()
     private val inviteHandlerViewModel: InviteHandlerViewModel by viewModels()
+    private val mixedFundsMigrationViewModel: MixedFundsMigrationViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
     @Inject
@@ -791,7 +793,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         retrySdkBindPendingSheet()
 
-        if (pendingMixedFundsMigration) {
+        if (pendingMixedFundsMigration || mixedFundsMigrationViewModel.uiState.value.inProgress) {
             pendingMixedFundsMigration = false
             MixedFundsMigrationDialogFragment.showOnce(this)
         } else {

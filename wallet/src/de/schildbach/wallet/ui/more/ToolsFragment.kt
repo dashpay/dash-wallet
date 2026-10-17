@@ -23,6 +23,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -31,6 +33,8 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
+import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
+import de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment
 import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
@@ -44,6 +48,7 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -56,6 +61,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class ToolsFragment : Fragment() {
     @Inject lateinit var authManager: SecurityFunctions
+    @Inject lateinit var migrationService: CoinJoinFundsMigrationService
+    private val mixedFundsAvailable = MutableStateFlow(false)
 
     companion object {
         private val log = LoggerFactory.getLogger(ToolsFragment::class.java)
@@ -73,6 +80,7 @@ class ToolsFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 DashWalletTheme {
+                    val showMixedFunds by mixedFundsAvailable.collectAsState()
                     ToolsScreen(
                         onBackClick = { findNavController().popBackStack() },
                         onAddressBookClick = { onAddressBook() },
@@ -84,10 +92,20 @@ class ToolsFragment : Fragment() {
                         onConnectionsClick = { onConnections() },
                         onZenLedgerExport = { onZenLedgerExport() },
                         onCreditsInfoClick = { onCreditsInfo() },
-                        onBuyCredits = { onBuyCredits() }
+                        onBuyCredits = { onBuyCredits() },
+                        showMixedFunds = showMixedFunds,
+                        onMoveMixedFunds = { MixedFundsMigrationDialogFragment.showOnce(requireActivity()) }
                     )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewLifecycleOwner.lifecycleScope.launch {
+            mixedFundsAvailable.value = migrationService.restorePendingShieldMigration() ||
+                migrationService.mixedFundsToMigrate() != null
         }
     }
 

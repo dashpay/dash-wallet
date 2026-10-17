@@ -497,6 +497,38 @@ class SdkL1SendServiceTest {
         assertEquals(0, source.sendCalls)
     }
 
+    @Test
+    fun consolidateCoinJoin_bindLookupFailure_isNotBroadcast() = runBlocking {
+        val failure = IllegalStateException("bootstrap failed")
+        val source = FakeSource(boundWalletId = { throw failure })
+        val svc = SdkL1SendService(
+            source = source,
+            dashPayConfig = config(true),
+            isValidAddress = { true },
+            l1Progress = { caughtUpProgress() },
+            hasAppLockedCoinJoinOutputs = { false }
+        )
+        val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { }
+        assertEquals(SdkWriteResult.NotBroadcast("SDK bootstrap/bind lookup failed", failure), result)
+        assertEquals(1, source.boundCalls)
+        assertEquals(0, source.lockAcquisitions)
+    }
+
+    @Test
+    fun consolidateCoinJoin_walletNotBound_isNotBroadcast() = runBlocking {
+        val source = FakeSource(boundWalletId = { null })
+        val svc = SdkL1SendService(
+            source = source,
+            dashPayConfig = config(true),
+            isValidAddress = { true },
+            l1Progress = { caughtUpProgress() },
+            hasAppLockedCoinJoinOutputs = { false }
+        )
+        val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { }
+        assertEquals(SdkWriteResult.NotBroadcast("wallet not bound"), result)
+        assertEquals(0, source.lockAcquisitions)
+    }
+
     // ── The evidence gate (reuses evaluateWalletFundingGate) ─────────────
 
     @Test

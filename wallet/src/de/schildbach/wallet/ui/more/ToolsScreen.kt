@@ -75,7 +75,9 @@ fun ToolsScreen(
     onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
-    onBuyCredits: () -> Unit = {}
+    onBuyCredits: () -> Unit = {},
+    showMixedFunds: Boolean = false,
+    onMoveMixedFunds: () -> Unit = {}
 ) {
     val viewModel: ToolsViewModel = hiltViewModel()
 
@@ -97,7 +99,9 @@ fun ToolsScreen(
         onConnectionsClick = onConnectionsClick,
         onZenLedgerExport = onZenLedgerExport,
         onCreditsInfoClick = onCreditsInfoClick,
-        onBuyCredits = onBuyCredits
+        onBuyCredits = onBuyCredits,
+        showMixedFunds = showMixedFunds,
+        onMoveMixedFunds = onMoveMixedFunds
     )
 }
 
@@ -120,7 +124,9 @@ fun ToolsScreen(
     onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
-    onBuyCredits: () -> Unit = {}
+    onBuyCredits: () -> Unit = {},
+    showMixedFunds: Boolean = false,
+    onMoveMixedFunds: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
     val dashjDiagnostic by dashjDiagnosticFlow.collectAsState()
@@ -140,7 +146,9 @@ fun ToolsScreen(
         onConnectionsClick = onConnectionsClick,
         onZenLedgerExport = onZenLedgerExport,
         onCreditsInfoClick = onCreditsInfoClick,
-        onBuyCredits = onBuyCredits
+        onBuyCredits = onBuyCredits,
+        showMixedFunds = showMixedFunds,
+        onMoveMixedFunds = onMoveMixedFunds
     )
 
     // "Sync from date" prompt: raised each time the dashj-sync (diagnostic)
@@ -253,7 +261,9 @@ private fun ToolsScreenContent(
     onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
-    onBuyCredits: () -> Unit = {}
+    onBuyCredits: () -> Unit = {},
+    showMixedFunds: Boolean = false,
+    onMoveMixedFunds: () -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     Column(
@@ -325,6 +335,16 @@ private fun ToolsScreenContent(
                         title = stringResource(R.string.dash_connect_connections_title),
                         icon = R.drawable.ic_menu_connections,
                         action = onConnectionsClick
+                    )
+                }
+            }
+
+            if (showMixedFunds) {
+                Menu {
+                    MenuItem(
+                        title = stringResource(R.string.mixed_funds_migration_tools_action),
+                        icon = R.drawable.ic_menu_credits,
+                        action = onMoveMixedFunds
                     )
                 }
             }

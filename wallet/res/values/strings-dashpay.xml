@@ -778,22 +778,37 @@
          chosen operation failed. Copy is deliberately plain — no "DIP-9", no
          promised duration. The intro line names the removed feature
          ("CoinJoin") because it is the reason the user is being prompted. -->
-    <string name="mixed_funds_migration_title">Move your mixed funds</string>
+    <string name="mixed_funds_migration_title">Move your mixed coins</string>
     <!-- Intro line shown at the top of the sheet body: states plainly why the
          prompt exists. -->
     <string name="mixed_funds_migration_coinjoin_removed">The CoinJoin feature has been removed from the app.</string>
     <string name="mixed_funds_migration_message">This wallet currently holds %s mixed DASH. Choose where you would like to keep it.</string>
-    <string name="mixed_funds_migration_shield_action">Move to shielded balance</string>
-    <string name="mixed_funds_migration_shield_note">Keeps these funds private. You can transfer them out of your shielded balance at any time.</string>
-    <string name="mixed_funds_migration_combine_action">Keep it spendable in Dash</string>
+    <string name="mixed_funds_migration_shield_action">Shielded balance</string>
+    <string name="mixed_funds_migration_shield_note">Move to your shielded balance. Consolidation, when needed, publicly links the coins being moved. Network and privacy fees apply.</string>
+    <string name="mixed_funds_migration_combine_action">Dash Wallet balance</string>
     <string name="mixed_funds_migration_combine_note">Adds these funds back to your regular balance. This undoes the mixing, so these funds will no longer be private.</string>
     <string name="mixed_funds_migration_in_progress">Moving your funds. Please keep the app open.</string>
     <string name="mixed_funds_migration_started">Your funds are on the way. The balance updates once the transaction confirms.</string>
-    <string name="mixed_funds_migration_shield_failed">There was a problem moving your funds. Please restart the app to try again or you can move them to your un-mixed balance.</string>
-    <string name="mixed_funds_migration_combine_failed">There was a problem moving your funds. Please restart the app to try again.</string>
+    <string name="mixed_funds_migration_shield_failed">Could not move your mixed coins to Shielded. Please try again.</string>
+    <string name="mixed_funds_migration_combine_failed">Could not move your mixed coins to your Dash Wallet balance. Please try again.</string>
     <string name="mixed_funds_migration_restart_action">Restart</string>
     <string name="mixed_funds_migration_transfer_unmixed_action">Transfer to un-mixed balance</string>
-    <string name="mixed_funds_migration_unconfirmed">We could not confirm the result. Check your balance before trying again.</string>
+    <string name="mixed_funds_migration_unconfirmed">Your transfer has not been confirmed. Recovery will continue using the existing transaction.</string>
+    <string name="mixed_funds_migration_later_action">Later</string>
+    <string name="mixed_funds_migration_done_action">Done</string>
+    <string name="mixed_funds_migration_retry_action">Try again</string>
+    <string name="mixed_funds_migration_tools_action">Move CoinJoin funds</string>
+    <string name="mixed_funds_migration_shield_success">Your mixed coins were moved to your Shielded balance. For best privacy, wait at least 2 hours before using these funds.</string>
+    <string name="mixed_funds_migration_wallet_success">Your mixed coins were moved to your Dash Wallet balance.</string>
+    <!-- Confirmation shown before either move (or a Restart of one) runs:
+         the sheet's buttons broadcast real transactions, so a stray tap must
+         not be enough. Later never asks. -->
+    <string name="mixed_funds_migration_confirm_shield_title">Move to Shielded balance?</string>
+    <string name="mixed_funds_migration_confirm_shield_message">Your mixed coins will be moved to your shielded balance. Network and privacy fees apply. This can’t be undone.</string>
+    <string name="mixed_funds_migration_confirm_combine_title">Move to Dash Wallet balance?</string>
+    <string name="mixed_funds_migration_confirm_combine_message">Your mixed coins will be added back to your regular balance. This undoes the mixing, so these funds will no longer be private. This can’t be undone.</string>
+    <string name="mixed_funds_migration_confirm_restart_title">Restart the transfer?</string>
+    <string name="mixed_funds_migration_confirm_restart_message">The wallet will try again to move your mixed coins. Network fees may apply.</string>
 
     <!-- SAFETY-NET message for the narrow race where an invitation is checked
          just as the sync state flips (the invite tile's own join_dashpay_wait
