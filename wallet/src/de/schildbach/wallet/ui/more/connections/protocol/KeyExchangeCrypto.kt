@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.more.connections.protocol
 
 import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
 import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.generators.HKDFBytesGenerator
@@ -81,6 +82,9 @@ object KeyExchangeCrypto {
 
     /** RIPEMD160(SHA256(data)) — the DApp's `hash160`. Delegates to dashj's implementation. */
     fun hash160(data: ByteArray): ByteArray = Utils.sha256hash160(data)
+
+    /** SHA256(SHA256(data)) — used as the DIP-13 derivation leaf for app ephemeral pubkeys. */
+    fun hash256(data: ByteArray): ByteArray = Sha256Hash.hashTwice(data)
 
     // ── secp256k1 helpers ────────────────────────────────────────────────────────
 

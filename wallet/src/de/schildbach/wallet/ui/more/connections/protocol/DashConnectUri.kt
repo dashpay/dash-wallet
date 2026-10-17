@@ -69,28 +69,9 @@ data class DashKeyRequest(
 }
 
 /**
- * A parsed `dash-st:` first-login key-registration request (QR #2). Holds the raw serialized
- * [IdentityUpdateTransition] bytes; semantic validation (identity ownership, key shape, and the
- * strong end-to-end derivation check) happens against the deserialized transition in the
- * repository, which is where the SDK and the login key are available.
- */
-data class DashStRequest(
-    val transitionBytes: ByteArray,
-    val network: DashConnectNetwork
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is DashStRequest) return false
-        return transitionBytes.contentEquals(other.transitionBytes) && network == other.network
-    }
-
-    override fun hashCode(): Int = 31 * transitionBytes.contentHashCode() + network.hashCode()
-}
-
-/**
- * Parsers for the two DashConnect URI schemes. Pure and Android-free.
+ * Parser for the DashConnect login URI scheme. Pure and Android-free.
  *
- * Common rules enforced for both schemes:
+ * Rules enforced:
  *  - scheme literal followed by `:` and NO `//` authority component
  *  - the `?` query separator must be present
  *  - query params `n` and `v` are both required; `v` must equal `1`
@@ -100,7 +81,6 @@ data class DashStRequest(
 object DashConnectUri {
 
     const val KEY_SCHEME = "dash-key:"
-    const val ST_SCHEME = "dash-st:"
 
     const val VERSION = 1
     const val PAYLOAD_VERSION_BYTE: Byte = 0x01
@@ -153,27 +133,8 @@ object DashConnectUri {
         return DashKeyRequest(appEphemeralPubKey, contractId, label, network)
     }
 
-    /**
-     * Parses and validates the envelope of a `dash-st:` key-registration URI and returns the raw
-     * serialized transition bytes. Structural/semantic validation of the transition itself is done
-     * by the caller (it needs the SDK + login key).
-     *
-     * @throws DashConnectUriException on a malformed envelope.
-     */
-    fun parseStRequest(uri: String): DashStRequest {
-        val (body, network) = parseEnvelope(uri, ST_SCHEME)
-        val transitionBytes = decodeBase58(body)
-        if (transitionBytes.isEmpty()) {
-            throw DashConnectUriException("dash-st transition bytes are empty")
-        }
-        return DashStRequest(transitionBytes, network)
-    }
-
     /** True if [uri] uses the `dash-key:` scheme. */
     fun isKeyUri(uri: String): Boolean = uri.startsWith(KEY_SCHEME)
-
-    /** True if [uri] uses the `dash-st:` scheme. */
-    fun isStUri(uri: String): Boolean = uri.startsWith(ST_SCHEME)
 
     // ── internals ────────────────────────────────────────────────────────────────────
 

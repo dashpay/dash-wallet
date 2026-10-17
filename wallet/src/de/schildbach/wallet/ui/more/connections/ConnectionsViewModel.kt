@@ -65,9 +65,6 @@ class ConnectionsViewModel @Inject constructor(
         /** The QR was a login request — the approve sheet should be shown. */
         object ConnectionRequested : ScanOutcome()
 
-        /** The QR was a key-registration (dash-st) request and it completed. */
-        object LoginCompleted : ScanOutcome()
-
         data class Error(val message: String?) : ScanOutcome()
     }
 
@@ -93,27 +90,19 @@ class ConnectionsViewModel @Inject constructor(
 
     /**
      * Decodes a scanned DashConnect QR code. A `dash-key:` login request builds the pending request
-     * for the approve sheet (with the wallet's OWN verified identity for display); a `dash-st:`
-     * key-registration completes immediately.
+     * for the approve sheet with the wallet's own verified identity for display.
      */
     fun onQrScanned(qrContent: String) {
         viewModelScope.launch {
             try {
-                when (val payload = repository.parseQr(qrContent)) {
-                    is DashConnectQr.Login -> {
-                        pendingLoginRequest = payload.request
-                        // Resolve BEFORE update {}: that is a compare-and-set retry loop, and
-                        // toConnectionRequest makes two Platform round trips — a CAS retry would
-                        // repeat them (and could observe different results between attempts).
-                        val request = toConnectionRequest(payload.request)
-                        _uiState.update { it.copy(pendingRequest = request) }
-                        _scanOutcome.value = ScanOutcome.ConnectionRequested
-                    }
-                    is DashConnectQr.KeyRegistration -> {
-                        repository.completeKeyRegistration(payload.request)
-                        _scanOutcome.value = ScanOutcome.LoginCompleted
-                    }
-                }
+                val payload = repository.parseQr(qrContent)
+                pendingLoginRequest = payload.request
+                // Resolve BEFORE update {}: that is a compare-and-set retry loop, and
+                // toConnectionRequest makes two Platform round trips — a CAS retry would
+                // repeat them (and could observe different results between attempts).
+                val request = toConnectionRequest(payload.request)
+                _uiState.update { it.copy(pendingRequest = request) }
+                _scanOutcome.value = ScanOutcome.ConnectionRequested
             } catch (ex: Exception) {
                 log.error("failed to process scanned DashConnect QR", ex)
                 _scanOutcome.value = ScanOutcome.Error(ex.message)

@@ -100,14 +100,6 @@ class ConnectionsFragment : Fragment() {
                             showApproveConnectionDialog()
                             viewModel.resetScanOutcome()
                         }
-                        is ConnectionsViewModel.ScanOutcome.LoginCompleted -> {
-                            Toast.makeText(
-                                requireContext(),
-                                R.string.dash_connect_login_completed,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            viewModel.resetScanOutcome()
-                        }
                         is ConnectionsViewModel.ScanOutcome.Error -> {
                             Toast.makeText(
                                 requireContext(),
