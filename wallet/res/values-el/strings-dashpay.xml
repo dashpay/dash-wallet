@@ -448,7 +448,7 @@
     <string name="request_username_username_voting_message">+ τι είναι η ψηφοφορία ονόματος χρήστη;</string>
     <string name="request_username_character_requirement">Μόνο γράμματα, αριθμοί και παύλες</string>
     <string name="request_username_character_requirement_invite_noncontested">Αριθμοί 2-9</string>
-    <string name="request_username_balance_requirement">Πρέπει να έχετε 0,25 DASH για να δημιουργήσετε αυτό το όνομα χρήστη</string>
+    <string name="request_username_balance_requirement">Πρέπει να έχετε %s DASH για να δημιουργήσετε αυτό το όνομα χρήστη</string>
     <string name="request_username_requirements_message_invite_noncontested">Το όνομα χρήστη πρέπει να πληροί ένα από τα ακόλουθα κριτήρια</string>
     <string name="request_username_requirements_message">Το όνομα χρήστη πρέπει να πληροί τα εξής κριτήρια</string>
     <string name="request_username_length_requirement">Μεταξύ 3 και 23 χαρακτήρων</string>

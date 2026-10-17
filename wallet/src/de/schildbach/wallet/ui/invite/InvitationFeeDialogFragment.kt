@@ -20,15 +20,18 @@ package de.schildbach.wallet.ui.invite
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import org.bitcoinj.core.Coin
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInvitationFeeBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -36,8 +39,9 @@ import org.dash.wallet.common.util.observe
 @AndroidEntryPoint
 class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitation_fee) {
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
-    private var selectedFee = Constants.DASH_PAY_FEE_CONTESTED
+    private var selectedFee = ContestedUsernameFees.fee
     private var spendableBalance = Coin.ZERO
+    private var protocolVersionRefreshed = false
     @OptIn(ExperimentalCoroutinesApi::class)
     private val viewModel by viewModels<InvitationFragmentViewModel>()
     private val args by navArgs<InvitationFeeDialogFragmentArgs>()
@@ -45,10 +49,11 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        protocolVersionRefreshed = false
         setMode(true)
         binding.mixButton.setOnClickListener {
             CheckPinDialog.show(requireActivity()) { pin ->
-                if (pin != null) {
+                if (pin != null && canContinue()) {
                     findNavController().navigate(
                         InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
                     )
@@ -59,7 +64,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         }
         viewModel.walletData.observeSpendableBalance().observe(viewLifecycleOwner) { walletBalance ->
             spendableBalance = walletBalance
-            binding.contestedName.isEnabled = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+            binding.contestedName.isEnabled = walletBalance >= ContestedUsernameFees.fee
             updateContinueButton()
         }
         binding.contestedName.setOnClickListener {
@@ -69,13 +74,24 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         binding.nonContestedName.setOnClickListener {
             setMode(false)
         }
+        ContestedUsernameFees.protocolVersions.observe(viewLifecycleOwner) {
+            binding.contestedName.isEnabled = spendableBalance >= ContestedUsernameFees.fee
+            setMode(binding.contestedName.isSelected)
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            // the contested fee depends on the platform protocol version
+            viewModel.refreshProtocolVersion()
+            protocolVersionRefreshed = true
+            binding.contestedName.isEnabled = spendableBalance >= ContestedUsernameFees.fee
+            setMode(binding.contestedName.isSelected)
+        }
     }
 
     private fun setMode(isContestedName: Boolean) {
         if (isContestedName) {
             binding.contestedName.isSelected = true
             binding.nonContestedName.isSelected = false
-            selectedFee = Constants.DASH_PAY_FEE_CONTESTED
+            selectedFee = ContestedUsernameFees.fee
         } else {
             binding.contestedName.isSelected = false
             binding.nonContestedName.isSelected = true
@@ -85,6 +101,9 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     }
 
     private fun updateContinueButton() {
-        binding.mixButton.isEnabled = spendableBalance >= selectedFee
+        binding.mixButton.isEnabled = canContinue()
     }
+
+    private fun canContinue(): Boolean =
+        (!binding.contestedName.isSelected || protocolVersionRefreshed) && spendableBalance >= selectedFee
 }

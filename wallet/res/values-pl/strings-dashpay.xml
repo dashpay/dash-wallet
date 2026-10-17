@@ -455,7 +455,7 @@
     <string name="request_username_username_voting_message">+ Czym jest głosowanie na nazwę użytkownika\?</string>
     <string name="request_username_character_requirement">Tylklko litery, cyfry i myślniki są dozwolone</string>
     <string name="request_username_character_requirement_invite_noncontested">Numer 2-9</string>
-    <string name="request_username_balance_requirement">Aby stworzyć tę nazwę użytkownika, musisz mieć 0,25 DASH</string>
+    <string name="request_username_balance_requirement">Aby stworzyć tę nazwę użytkownika, musisz mieć %s DASH</string>
     <string name="request_username_requirements_message_invite_noncontested">Nazwa użytkownika musi spełniać jedno z tych kryterii</string>
     <string name="request_username_requirements_message">Nazwa użytkownika musi spełniać te kryteria</string>
     <string name="request_username_length_requirement">Pomiędzy 3 a 23 znakami</string>

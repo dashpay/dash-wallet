@@ -193,7 +193,7 @@ class TopUpRepositoryImpl @Inject constructor(
         // not remove the outpoints it already chose.
         pendingPaymentVerifier.awaitRestored()
         val fee = if (Names.isUsernameContestable(username)) {
-            Constants.DASH_PAY_FEE_CONTESTED
+            ContestedUsernameFees.fee
         } else {
             Constants.DASH_PAY_FEE
         }

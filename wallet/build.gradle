@@ -227,6 +227,25 @@ if (file("../local.properties").exists()) {
     file("../local.properties").withInputStream { localProps.load(it) }
 }
 
+def sakuraSporkAddress = providers.gradleProperty("sakuraSporkAddress")
+        .getOrElse(localProps.getProperty("sakuraSporkAddress", ""))
+def sakuraCorePort = providers.gradleProperty("sakuraCorePort").getOrElse("20001").toInteger()
+def validateSakuraConfiguration = tasks.register("validateSakuraConfiguration") {
+    doLast {
+        if (sakuraSporkAddress.trim().isEmpty()) {
+            throw new GradleException("Set sakuraSporkAddress to Sakura's public spork address before building devnet")
+        }
+        if (sakuraCorePort < 1 || sakuraCorePort > 65535) {
+            throw new GradleException("sakuraCorePort must be between 1 and 65535")
+        }
+    }
+}
+tasks.configureEach {
+    if (name.startsWith("preDevnet") && name.endsWith("Build")) {
+        dependsOn(validateSakuraConfiguration)
+    }
+}
+
 // Year of the most recent commit on the current branch, used for the copyright notice.
 // Uses providers.exec so it stays compatible with the Gradle configuration cache.
 // Falls back to the current year if git is unavailable (e.g. building from a source tarball).
@@ -275,6 +294,8 @@ android {
         }
         buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
         buildConfigField("int", "COMMIT_YEAR", "$commitYear")
+        buildConfigField("String", "SAKURA_SPORK_ADDRESS", groovy.json.JsonOutput.toJson(sakuraSporkAddress))
+        buildConfigField("int", "SAKURA_CORE_PORT", sakuraCorePort.toString())
     }
 
     buildTypes {
@@ -327,16 +348,20 @@ android {
         }
         prod {
             manifest.srcFile 'prod/AndroidManifest.xml'
+            java.srcDirs += ['standard/src']
         }
         _testNet3 {
             manifest.srcFile 'testNet3/AndroidManifest.xml'
+            java.srcDirs += ['standard/src']
             res.srcDirs = ["testNet3/res"]
         }
         staging {
             res.srcDirs = ["staging/res"]
+            java.srcDirs += ['standard/src']
         }
         devnet {
             res.srcDirs = ["devnet/res"]
+            java.srcDirs += ['devnet/src']
         }
     }
     flavorDimensions "default"
@@ -423,7 +448,7 @@ android {
             buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
         devnet {
-            applicationId = "org.dash.dashpay.devnet"
+            applicationId = "org.dash.wallet.devnet"
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
             if (imgurClientId == null) {

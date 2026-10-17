@@ -448,7 +448,7 @@ Dash</b> anda</string>
     <string name="request_username_username_voting_message">+ apa itu voting nama pengguna\?</string>
     <string name="request_username_character_requirement">Hanya huruf, angka, dan tanda hubung</string>
     <string name="request_username_character_requirement_invite_noncontested">Nomor 2-9</string>
-    <string name="request_username_balance_requirement">Anda perlu memiliki 0.25 DASH untuk membuat nama pengguna ini</string>
+    <string name="request_username_balance_requirement">Anda perlu memiliki %s DASH untuk membuat nama pengguna ini</string>
     <string name="request_username_requirements_message_invite_noncontested">Nama pengguna harus memenuhi salah satu kriteria berikut</string>
     <string name="request_username_requirements_message">Nama pengguna harus memenuhi kriteria berikut</string>
     <string name="request_username_length_requirement">Antara 3 dan 23 karakter</string>
