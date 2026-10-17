@@ -182,7 +182,8 @@ class RequestUserNameViewModelTest {
     }
 
     private fun viewModel(
-        platformRepo: PlatformRepo = mockk<PlatformRepo>(relaxed = true)
+        platformRepo: PlatformRepo = mockk<PlatformRepo>(relaxed = true),
+        transparentCreation: SdkTransparentUsernameCreation = transparentUsernameCreation
     ) = RequestUserNameViewModel(
         walletApplication = walletApplication,
         identityConfig = identityConfig,
@@ -192,7 +193,7 @@ class RequestUserNameViewModelTest {
         analytics = mockk<AnalyticsService>(relaxed = true),
         topUpRepository = mockk<TopUpRepository>(relaxed = true),
         shieldedUsernameCreation = shieldedUsernameCreation,
-        transparentUsernameCreation = transparentUsernameCreation,
+        transparentUsernameCreation = transparentCreation,
         shieldedBalanceService = shieldedBalanceService,
         platformHealthProbe = platformHealthProbe,
         identityCreationStatus = IdentityCreationStatusHolder(),
@@ -383,7 +384,7 @@ class RequestUserNameViewModelTest {
         // CreateIdentityService's reuse path would reset it to NONE and start fresh legacy
         // funding, which post-cutover has no dashj asset lock to find.
         coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
-        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } just Runs
+        every { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice3"
         viewModel.identity = BlockchainIdentityData(
@@ -397,7 +398,7 @@ class RequestUserNameViewModelTest {
 
         viewModel.submit()
 
-        coVerify(exactly = 1, timeout = 5_000) {
+        verify(exactly = 1, timeout = 5_000) {
             transparentUsernameCreation.retryNameForExistingIdentity(
                 "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
                 "alice3",
@@ -425,7 +426,59 @@ class RequestUserNameViewModelTest {
         viewModel.submit()
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
-        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        verify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+    }
+
+    @Test
+    fun submit_nameRetry_handoffSurvivesTheScreenClosing() = runVmTest {
+        // Review 5556781925: the submitting flag sends the user Home and finishes this activity,
+        // which clears the view model. The name retry must still reach its worker handoff.
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val handedOff = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+        try {
+            val realCreation = SdkTransparentUsernameCreation(
+                source = mockk(relaxed = true),
+                cutoverCommitted = { true },
+                feeDuffs = { 0L },
+                handOffToLegacy = { handedOff += it },
+                // the DataStore write is slow: the screen closes while it is in flight
+                persistNameContext = { _, _, _, _ -> gate.await() },
+                executorScope = appScope
+            )
+            val viewModel = viewModel(transparentCreation = realCreation)
+            viewModel.requestedUserName = "alice3"
+            viewModel.identity = BlockchainIdentityData(
+                IdentityCreationState.USERNAME_REGISTERING,
+                "username registration did not complete (retryable): domain document rejected",
+                "alice2",
+                null,
+                "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+                false
+            )
+
+            viewModel.submit()
+            awaitReal("the submitting state that navigates home") { viewModel.uiState.value.usernameRequestSubmitting }
+            // the activity finishes: its view model is cleared
+            viewModel.viewModelScope.cancel()
+            gate.complete(Unit)
+
+            awaitReal("the worker handoff") { handedOff.isNotEmpty() }
+            assertEquals(listOf("6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr"), handedOff.toList())
+        } finally {
+            appScope.cancel()
+        }
+    }
+
+    /** Polls on real time: the work under test runs on real dispatchers, not the test scheduler. */
+    private suspend fun awaitReal(what: String, condition: () -> Boolean) {
+        kotlinx.coroutines.withContext(Dispatchers.Default) {
+            val deadline = System.currentTimeMillis() + 5_000
+            while (!condition()) {
+                if (System.currentTimeMillis() > deadline) throw AssertionError("timed out waiting for $what")
+                kotlinx.coroutines.delay(10)
+            }
+        }
     }
 
     // ── Submit-state mirroring ──────────────────────────────────────────────

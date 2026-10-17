@@ -33,6 +33,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
@@ -649,10 +650,12 @@ class SdkTransparentUsernameCreationTest {
             feeDuffs = { feeDuffs },
             handOffToLegacy = { handedOff += it },
             driveCreationState = { state, error -> states += state to error },
-            persistNameContext = { id, name, secondary, restoring -> nameContexts += listOf(id, name, secondary, restoring) }
+            persistNameContext = { id, name, secondary, restoring -> nameContexts += listOf(id, name, secondary, restoring) },
+            executorScope = this
         )
 
-        retry.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice3x")
+        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice3x"))
+        advanceUntilIdle()
 
         assertEquals(listOf(listOf(identityIdBase58, "alice3", "alice3x", true)), nameContexts)
         assertEquals("the name step, error cleared", listOf(IdentityCreationState.USERNAME_REGISTERING to null), states)

@@ -1450,8 +1450,33 @@ class SdkTransparentUsernameCreation internal constructor(
      * replaces the identity record with a fresh one at NONE and looks for a dashj asset-lock
      * transaction the SDK creation path never put in dashj's AuthenticationGroupExtension, so it
      * starts fresh legacy funding.
+     *
+     * Runs on the application scope, like [submit], and is registered with the wipe fence: the
+     * caller's screen finishes as soon as this is accepted (review 5556781925), and a retry
+     * cancelled half way, with the name context written but the worker never enqueued, would leave
+     * the user on Home with nothing submitted. Returns false, doing nothing, when there is no
+     * executor scope or a wallet wipe is in progress.
      */
-    suspend fun retryNameForExistingIdentity(identityIdBase58: String, username: String, secondaryUsername: String?) {
+    fun retryNameForExistingIdentity(identityIdBase58: String, username: String, secondaryUsername: String?): Boolean {
+        val scope = executorScope
+        if (scope == null) {
+            log.warn("name-only retry refused: no executor scope")
+            return false
+        }
+        if (secretWriteFence.isRaised) {
+            log.warn("name-only retry refused: wallet wipe in progress")
+            return false
+        }
+        // LAZY + tracked before start: the job can never run unfenced.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            retryNameNow(identityIdBase58, username, secondaryUsername)
+        }
+        secretWriteFence.track(job)
+        job.start()
+        return true
+    }
+
+    private suspend fun retryNameNow(identityIdBase58: String, username: String, secondaryUsername: String?) {
         log.info("name-only retry for existing identity {}: requesting a new DPNS name", identityIdBase58)
         persistNameContext(identityIdBase58, username, secondaryUsername, true)
         driveCreationState(IdentityCreationState.USERNAME_REGISTERING, null)
