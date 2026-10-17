@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -302,6 +303,14 @@ internal fun mapShieldedSyncStatus(
  * [statusRaw]: 0 Built, 1 Broadcast, 2 InstantSendLocked, 3 ChainLocked,
  * 4 Consumed.
  */
+/**
+ * App-neutral view of one completed shielded sync pass
+ * (`WalletSyncEvent.ShieldedResult`). [succeeded] = the pass ran and
+ * succeeded — a failed, skipped or cooldown-skipped pass is NOT evidence
+ * that a spend has settled.
+ */
+class ShieldedPassResult(val walletId: ByteArray, val succeeded: Boolean)
+
 data class PendingWalletShieldLock(
     val outPointHex: String,
     val statusRaw: Int,
@@ -366,6 +375,15 @@ interface ShieldedSource {
      * shows up right away. Best-effort — callers swallow failures.
      */
     suspend fun syncShieldedNow()
+
+    /**
+     * One event per COMPLETED shielded sync pass per wallet (the SDK's
+     * `WalletSyncEvent.ShieldedResult`) — hot, no replay. This is the
+     * settlement evidence for a local spend's reconciliation: unlike polling
+     * [isShieldedSyncing], it says whether the pass actually succeeded, and it
+     * never misses a pass that started and finished between two polls.
+     */
+    fun shieldedSyncResults(): Flow<ShieldedPassResult>
 
     /** Kick the ~30s Halo 2 proving-key build onto a background thread. Idempotent. */
     suspend fun warmUpProver()
@@ -511,6 +529,14 @@ internal class DashSdkShieldedSource(
     override suspend fun stopShieldedSync() = manager().stopShieldedSync()
 
     override suspend fun syncShieldedNow() = manager().syncShieldedNow()
+
+    override fun shieldedSyncResults(): Flow<ShieldedPassResult> = flow {
+        emitAll(
+            manager().syncEvents
+                .filterIsInstance<org.dashfoundation.dashsdk.wallet.WalletSyncEvent.ShieldedResult>()
+                .map { ShieldedPassResult(it.walletId, succeeded = it.success && !it.skipped && !it.cooldownSkip) }
+        )
+    }
 
     override suspend fun warmUpProver() = ShieldedProver.warmUp()
 
@@ -1306,7 +1332,6 @@ class ShieldedBalanceServiceImpl internal constructor(
             var seenPassInFlight = false
             var firstPassCompleted = false
             var idlePolls = 0
-            var prevInFlight = false
             // A local spend that was still reconciling when the runtime stopped
             // or the process died: restore the settlement guard BEFORE the first
             // READY can be published, so that pass is not trusted (and not
@@ -1324,6 +1349,14 @@ class ShieldedBalanceServiceImpl internal constructor(
                     _shieldedBalanceMaybeStale.value = true
                     lastPassBalanceCredits = null
                 }
+            }
+            // Settlement is driven by the SDK's per-pass RESULTS, not by polling
+            // the in-flight flag: a polled busy→idle edge cannot tell a failed
+            // pass from a successful one, and misses a pass that runs entirely
+            // between two polls. Cancelled when this loop exits, so the job
+            // completes and a later bring-up can start a fresh poller.
+            val settlementJob = launch {
+                source.shieldedSyncResults().collect { result -> onShieldedPassCompleted(result) }
             }
             while (isActive) {
                 if (readyWalletIdHex.value == null) {
@@ -1344,44 +1377,6 @@ class ShieldedBalanceServiceImpl internal constructor(
                         firstPassCompleted = true
                     }
                 }
-                // A sync pass just finished (in-flight → idle transition).
-                // Clearing the stale flag on the FIRST completed pass was not
-                // enough: a Type-20 spend's note settlement spreads across
-                // MULTIPLE passes (observed live: spent-nullifier, change
-                // note, and OVK outgoing recovery landing at three separate
-                // pass completions — the More card marched through several
-                // intermediate balances after a shielded username create;
-                // Brian, S21 2026-08-18). Require the balance to be STABLE
-                // across two consecutive completed passes before clearing —
-                // the surface holds "Syncing…" until the value stops moving.
-                if (prevInFlight && !inFlight) {
-                    val generation = reconcileMutex.withLock { reconcileGeneration }
-                    val settledCredits = runCatching {
-                        readyWalletIdHex.value?.let(::walletIdFromHex)?.let { walletId ->
-                            source.observeUnspentNotes(walletId).first().sumOf { it.value }
-                        }
-                    }.getOrNull()
-                    // Decide and apply atomically with markLocalSpendPending: a
-                    // spend that started since [generation] owns the flag, the
-                    // marker and the stability window, so this pass's reading
-                    // is dropped rather than clearing (or seeding) them.
-                    reconcileMutex.withLock {
-                        if (generation != reconcileGeneration) return@withLock
-                        if (settledCredits != null && settledCredits == lastPassBalanceCredits) {
-                            if (_shieldedBalanceMaybeStale.value) {
-                                // Settled: the durable marker goes with the flag.
-                                runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
-                                    .onFailure {
-                                        if (it is CancellationException) throw it
-                                        log.warn("failed to clear the pending shielded spend reconciliation", it)
-                                    }
-                            }
-                            _shieldedBalanceMaybeStale.value = false
-                        }
-                        lastPassBalanceCredits = settledCredits
-                    }
-                }
-                prevInFlight = inFlight
                 _shieldedSyncStatus.value = mapShieldedSyncStatus(
                     ready = true,
                     firstPassCompleted = firstPassCompleted,
@@ -1389,6 +1384,55 @@ class ShieldedBalanceServiceImpl internal constructor(
                 )
                 delay(SYNC_STATUS_POLL_INTERVAL_MS)
             }
+            settlementJob.cancel()
+        }
+    }
+
+    /**
+     * One completed shielded sync pass ([ShieldedSource.shieldedSyncResults]).
+     *
+     * Clearing the stale flag on the FIRST completed pass was not enough: a
+     * Type-20 spend's note settlement spreads across MULTIPLE passes (observed
+     * live: spent-nullifier, change note, and OVK outgoing recovery landing at
+     * three separate pass completions — the More card marched through several
+     * intermediate balances after a shielded username create; Brian, S21
+     * 2026-08-18). So a reconciliation settles only when the balance is STABLE
+     * across two consecutive SUCCESSFUL passes of the bound wallet. A failed,
+     * skipped or cooldown-skipped pass is no evidence: it breaks the streak
+     * instead of counting toward it.
+     */
+    private suspend fun onShieldedPassCompleted(result: ShieldedPassResult) {
+        val boundWalletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return
+        if (!result.walletId.contentEquals(boundWalletId)) return
+        val generation = reconcileMutex.withLock { reconcileGeneration }
+        val settledCredits = if (result.succeeded) {
+            runCatching { source.observeUnspentNotes(boundWalletId).first().sumOf { it.value } }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    null
+                }
+        } else {
+            null
+        }
+        // Decide and apply atomically with markLocalSpendPending: a spend that
+        // started since [generation] owns the flag, the marker and the
+        // stability window, so this pass's reading is dropped rather than
+        // clearing (or seeding) them.
+        reconcileMutex.withLock {
+            if (generation != reconcileGeneration) return@withLock
+            if (settledCredits != null && settledCredits == lastPassBalanceCredits) {
+                if (_shieldedBalanceMaybeStale.value) {
+                    // Settled: the durable marker goes with the flag.
+                    runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
+                        .onFailure {
+                            if (it is CancellationException) throw it
+                            log.warn("failed to clear the pending shielded spend reconciliation", it)
+                        }
+                }
+                _shieldedBalanceMaybeStale.value = false
+            }
+            // A failed/skipped pass (null) resets the streak.
+            lastPassBalanceCredits = settledCredits
         }
     }
 
@@ -1912,13 +1956,20 @@ class ShieldedBalanceServiceImpl internal constructor(
             when (classified) {
                 is SdkWriteResult.NotBroadcast ->
                     log.warn("shielded {} rejected pre-broadcast (notes released)", operation, t)
-                is SdkWriteResult.Ambiguous ->
+                is SdkWriteResult.Ambiguous -> {
                     log.error(
                         "shielded {} outcome unconfirmed — it MAY be on chain and the spent " +
                             "notes stay reserved; do NOT retry (the next shielded sync reconciles)",
                         operation,
                         t
                     )
+                    // The spend MAY have landed while the reserved notes still
+                    // count as unspent: reconcile like a broadcast spend (stale
+                    // + durable marker) so no surface trusts the pre-spend
+                    // amount, and ask for a pass. The result stays Ambiguous.
+                    markLocalSpendPending()
+                    requestImmediateShieldedSync()
+                }
                 is SdkWriteResult.Broadcast -> Unit // unreachable
             }
             classified
@@ -2004,8 +2055,26 @@ class ShieldedBalanceServiceImpl internal constructor(
     private var lastPassBalanceCredits: Long? = null
 
     override suspend fun noteExternalShieldedSpendBroadcast() {
+        // Durable invalidation now; the network refresh is fire-and-forget.
+        // syncShieldedNow() blocks for a whole network-driven pass, and the
+        // invite/username callers still hold un-persisted recovery material
+        // (e.g. an invite's one-time key) at this point — they must not wait
+        // on a slow scan before persisting it.
         markLocalSpendPending()
-        kickImmediateShieldedSync()
+        requestImmediateShieldedSync()
+    }
+
+    /**
+     * [kickImmediateShieldedSync] without making the caller wait for the pass:
+     * launched on [sweepScope]. With no scope (host unit tests) it runs inline.
+     */
+    private suspend fun requestImmediateShieldedSync() {
+        val scope = sweepScope
+        if (scope != null) {
+            scope.launch { kickImmediateShieldedSync() }
+        } else {
+            kickImmediateShieldedSync()
+        }
     }
 
     private suspend fun kickImmediateShieldedSync() {
