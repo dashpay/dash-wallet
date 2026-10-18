@@ -231,6 +231,11 @@ class PaymentProtocolViewModel @Inject constructor(
                 deferredPaymentRef.getAndSet(null)?.let {
                     sendCoinsTaskRunner.releaseDeferredPayment(it)
                 }
+                // ... nor keep a previous preview's resubmission arm (review 4305506849): a preview
+                // that finds no earlier payment would otherwise still confirm as a resubmission,
+                // fail, and strand the reservation it builds below.
+                resubmissionRef.set(null)
+                resubmissionFee = null
                 // Paid before and released unseen: arm a resubmission of that exact payment and
                 // build nothing new. A store that cannot be read builds the preview as usual; the
                 // confirm then reads it strictly and refuses.

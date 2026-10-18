@@ -226,6 +226,40 @@ class PaymentProtocolDuplicateSubmissionTest {
     }
 
     @Test
+    fun `a fresh preview after an armed resubmission sends the new payment, not the old one`() {
+        // review 4305506849: the preview released the previous reservation but kept the
+        // resubmission arm, so a re-preview that found no earlier payment still confirmed as a
+        // resubmission, failed, and stranded the reservation it had just built
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val earlier = de.schildbach.wallet.data.PendingDirectPayment(
+            earlierSubmission, byteArrayOf(1, 2, 3), "https://merchant.example/pay", "Merchant",
+            System.currentTimeMillis(), abandoned = true, feeDuffs = 1_234L
+        )
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns earlier
+        val viewModel = resubmissionViewModel(runner)
+        assertTrue(viewModel.isResubmission)
+
+        // previewed again: nothing paid before any more, so a new payment is built
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
+        coEvery { runner.findUnresolvedSubmission(any()) } returns null
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
+        viewModel.requestPaymentRequest(
+            mockk<PaymentIntent>(relaxed = true) { every { isExtendedBy(any(), any(), any()) } returns true }
+        )
+        awaitCondition("fresh preview armed") { viewModel.deferredPayment != null }
+
+        assertEquals("no longer a resubmission", false, viewModel.isResubmission)
+        assertEquals(Coin.valueOf(payment.feeDuffs), viewModel.displayFee)
+        viewModel.sendPayment()
+        awaitOutcome(viewModel)
+
+        runBlocking {
+            coVerify(exactly = 0) { runner.resubmitAbandonedPayment(any(), any()) }
+            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
+        }
+    }
+
+    @Test
     fun `a resubmission shows the fee stored with its record`() {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         val earlier = de.schildbach.wallet.data.PendingDirectPayment(
