@@ -1636,12 +1636,19 @@ class SendCoinsTaskRunner @Inject constructor(
             // record active and durable, its inputs locked, a new watch with a new grace period,
             // and fresh SDK funding blocked by the funding gate. Restoration runs first, since this
             // path skips the payment build and its barrier (review 4302741463).
-            if (!pendingPaymentVerifier.reactivateForResubmission(tx, wallet)) {
-                // settled meanwhile (restoration found it on the network): that is the result
-                wallet.getTransaction(tx.txId)?.let { return@withContext it }
-                throw IllegalStateException("the earlier payment for this request is no longer on record")
+            when (pendingPaymentVerifier.reactivateForResubmission(tx, wallet)) {
+                PendingDirectPaymentVerifier.Reactivation.REACTIVATED -> reactivated = true
+                PendingDirectPaymentVerifier.Reactivation.ALREADY_ACTIVE ->
+                    // Another resubmission made it active since this one looked it up, and left its
+                    // outcome unknown (review 4307815170). That is this attempt's outcome too;
+                    // nothing here touches the payment, so its protection stays.
+                    throw PaymentSubmissionPendingException(tx.txId.toString(), null)
+                PendingDirectPaymentVerifier.Reactivation.SETTLED -> {
+                    // settled meanwhile (restoration found it on the network): that is the result
+                    wallet.getTransaction(tx.txId)?.let { return@withContext it }
+                    throw IllegalStateException("the earlier payment for this request is no longer on record")
+                }
             }
-            reactivated = true
             val refundAddress = sdkL1SendService.refundAddressOrNull()
             val paymentMessage = PaymentProtocol.createPaymentMessage(
                 listOf(record.txBytes),
@@ -1674,7 +1681,8 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             pendingPaymentVerifier.commitAcknowledged(tx, wallet)
         } catch (e: Exception) {
-            // Nothing reached the payee this time: released again, as it was before.
+            // Nothing reached the payee this time: released again, as it was before - and only by
+            // the attempt that did the reactivating.
             if (reactivated && !mayHaveLeft) {
                 pendingPaymentVerifier.releaseUnsentResubmission(tx, wallet)
             }

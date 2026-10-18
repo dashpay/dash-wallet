@@ -690,11 +690,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * restoration is awaited here first (review 4302741463). If the request then never leaves,
      * [releaseUnsentResubmission] puts the payment back as it was.
      *
-     * @return false when the record is no longer stored as unsettled: it was settled meanwhile,
-     *   for instance committed by the restoration this ran
+     * Eligibility is decided here, under the lock, from the record as it is now (review
+     * 4307815170): the caller's lookup may be stale, and another resubmission may since have made
+     * the payment active and left it uncertain. Only a released record is reactivated; an active
+     * one is left exactly as it is.
+     *
      * @throws IllegalStateException when restoration fails or [origin] is no longer the wallet
      */
-    suspend fun reactivateForResubmission(tx: Transaction, origin: Wallet): Boolean {
+    suspend fun reactivateForResubmission(tx: Transaction, origin: Wallet): Reactivation {
         awaitRestored()
         return recordMutex.withLock {
             if (!stillOwnedBy(origin)) {
@@ -702,7 +705,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
             }
             val payment = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
             if (payment == null || tx.txId in pendingRemovals) {
-                return@withLock false
+                return@withLock Reactivation.SETTLED
+            }
+            if (!payment.abandoned && !payment.watchExpired) {
+                return@withLock Reactivation.ALREADY_ACTIVE
             }
             val active = payment.copy(abandoned = false, watchExpired = false, createdAt = System.currentTimeMillis())
             // Locked before the record says active, as a quarantine does; given back if it cannot
@@ -716,8 +722,20 @@ class PendingDirectPaymentVerifier @Inject constructor(
             }
             jobs.remove(tx.txId)?.cancel()
             track(tx, active, origin)
-            true
+            Reactivation.REACTIVATED
         }
+    }
+
+    /** What [reactivateForResubmission] found. */
+    enum class Reactivation {
+        /** Released, and now active again: this attempt owns the activation. */
+        REACTIVATED,
+
+        /** Already active: another submission has it out, its outcome unknown. Left untouched. */
+        ALREADY_ACTIVE,
+
+        /** No longer on record as unsettled: settled meanwhile. */
+        SETTLED
     }
 
     /**

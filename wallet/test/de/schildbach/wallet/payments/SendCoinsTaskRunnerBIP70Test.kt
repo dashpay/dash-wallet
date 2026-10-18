@@ -2040,6 +2040,65 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `a resubmission that looked up T1 before another left it pending never releases it`() = runBlocking {
+        // review 4307815170: B found T1 released and paused; A resubmitted it and its reply was
+        // lost (T1 active and uncertain) and gave back its claim; B then reactivated A's active
+        // record and, failing before its POST, released it again
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 15 }
+        abandonedT1For(requestHash, stored)
+        // B's lookup reads T1 released, then waits; every other read goes straight through
+        val bLookedUp = java.util.concurrent.CountDownLatch(1)
+        val resumeB = java.util.concurrent.CountDownLatch(1)
+        val reads = java.util.concurrent.atomic.AtomicInteger(0)
+        coEvery { pendingPaymentConfig.getAllOrThrow() } answers {
+            val snapshot = stored.toList()
+            if (reads.incrementAndGet() == 1) {
+                bLookedUp.countDown()
+                resumeB.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            }
+            snapshot
+        }
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        // A reaches the refund lookup first and posts; B, later, fails right there, before its POST
+        val refundLookups = java.util.concurrent.atomic.AtomicInteger(0)
+        coEvery { sdkL1SendService.refundAddressOrNull() } answers {
+            if (refundLookups.incrementAndGet() > 1) throw IllegalStateException("refund address unavailable")
+            null
+        }
+        mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR)) // A's reply is lost
+
+        val b = racingScope.async { runCatching { sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet) } }
+        try {
+            assertTrue("B looked T1 up", bLookedUp.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            try {
+                sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+                fail("A's lost reply was reported as definite")
+            } catch (e: PaymentSubmissionPendingException) {
+                assertEquals(deferredTxidHex, e.txId)
+            }
+            assertFalse("A left T1 active", stored.single().abandoned)
+        } finally {
+            resumeB.countDown()
+        }
+        val bOutcome = kotlinx.coroutines.withTimeout(10_000) { b.await() }
+
+        assertTrue("B did not go ahead: $bOutcome", bOutcome.isFailure)
+        assertFalse("A's protection was not undone", stored.single().abandoned)
+        deferredTx.inputs.forEach { assertTrue("still locked", wallet.isLockedOutput(it.outpoint)) }
+        assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
+        assertTrue(pendingPaymentVerifier.hasUnprotectedPendingPayment())
+        val refusal = bOutcome.exceptionOrNull()
+        assertTrue("reported as the payment already outstanding: $refusal", refusal is PaymentSubmissionPendingException)
+        assertEquals(1, refundLookups.get())
+    }
+
+    @Test
     fun `a resubmission that never left releases the payment again`() = runBlocking {
         val stored = storeBackedPendingPayments()
         val requestHash = ByteArray(32) { 13 }

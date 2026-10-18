@@ -2017,9 +2017,18 @@ class PendingDirectPaymentVerifierTest {
         )
         assertFalse("released: not counted by the funding gate", verifier.hasUnprotectedPendingPayment())
 
-        assertTrue(verifier.reactivateForResubmission(tx, wallet))
+        assertEquals(
+            PendingDirectPaymentVerifier.Reactivation.REACTIVATED,
+            verifier.reactivateForResubmission(tx, wallet)
+        )
 
         val active = stored.single()
+        // a stale second attempt finds it active and leaves it exactly as it is (review 4307815170)
+        assertEquals(
+            PendingDirectPaymentVerifier.Reactivation.ALREADY_ACTIVE,
+            verifier.reactivateForResubmission(tx, wallet)
+        )
+        assertEquals(active, stored.single())
         assertFalse(active.abandoned)
         assertFalse(active.watchExpired)
         assertTrue("its release grace starts over", active.createdAt > releasedAt)
