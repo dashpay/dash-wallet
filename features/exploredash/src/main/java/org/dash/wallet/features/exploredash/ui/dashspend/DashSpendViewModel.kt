@@ -352,8 +352,24 @@ class DashSpendViewModel @Inject constructor(
 
     private val _submissionState = MutableStateFlow(GiftCardSubmissionState.IDLE)
 
-    /** The wallet the claimed purchase was confirmed on ([tryStartSubmission]); taken by [payAndRecordOrder]. */
-    private val purchaseSession = java.util.concurrent.atomic.AtomicReference<WalletSession?>(null)
+    /** What the claimed purchase was confirmed with ([tryStartSubmission]); taken by [payAndRecordOrder]. */
+    private val purchaseContext = java.util.concurrent.atomic.AtomicReference<GiftCardPurchaseContext?>(null)
+
+    /**
+     * The screen state a purchase is paid and recorded with, read without suspending. The
+     * selection lives on this navigation-scoped view model and stays writable, while
+     * [payAndRecordOrder] is NonCancellable and outlives the screen that started it; reading it
+     * after any wait would attribute the payment to whatever was picked meanwhile.
+     *
+     * The provider, not the merchant's source field: those disagree for a PiggyCards order on a
+     * CTX-sourced merchant, and the provider is what GiftCardDetailsViewModel routes by.
+     */
+    private fun currentPurchaseContext() = GiftCardPurchaseContext(
+        session = sendPaymentService.currentWalletSession(),
+        provider = selectedProvider?.serviceName ?: ServiceName.CTXSpend,
+        merchantName = _giftCardMerchant.value?.name ?: "",
+        merchantIconUrl = _giftCardMerchant.value?.logoLocation
+    )
 
     /**
      * What the wallet has on disk about a payment that outlived the screen which sent it. The
@@ -427,7 +443,7 @@ class DashSpendViewModel @Inject constructor(
             return
         }
         _submissionState.value = GiftCardSubmissionState.IDLE
-        purchaseSession.set(null)
+        purchaseContext.set(null)
     }
 
     /**
@@ -447,10 +463,11 @@ class DashSpendViewModel @Inject constructor(
         val claimed = unresolvedPurchaseOnDisk.value == false &&
             _submissionState.compareAndSet(GiftCardSubmissionState.IDLE, GiftCardSubmissionState.IN_PROGRESS)
         if (claimed) {
-            // The wallet the user confirmed on, taken at the tap (review 4304575003): the order is
-            // created at the merchant, and more, before payAndRecordOrder runs, and a wipe in
-            // between must not have the replacement wallet pay for it.
-            purchaseSession.set(sendPaymentService.currentWalletSession())
+            // What the user confirmed, taken at the tap: the wallet (review 4304575003) and the
+            // provider and merchant (review 4307041834). The order is created at the merchant, and
+            // more, before payAndRecordOrder runs; neither a wipe nor a new selection in between
+            // may change who pays or how the purchase is recorded.
+            purchaseContext.set(currentPurchaseContext())
         }
         return claimed
     }
@@ -458,7 +475,7 @@ class DashSpendViewModel @Inject constructor(
     /** Gives back a claim that never reached submission, so the user can try again. */
     fun releaseUnusedSubmission() {
         if (_submissionState.compareAndSet(GiftCardSubmissionState.IN_PROGRESS, GiftCardSubmissionState.IDLE)) {
-            purchaseSession.set(null)
+            purchaseContext.set(null)
         }
     }
 
@@ -480,21 +497,22 @@ class DashSpendViewModel @Inject constructor(
         paymentUri: String,
         giftCards: List<GiftCardInfo>
     ): String {
-        // The wallet this purchase is paid from, bound before anything here can suspend (review
-        // 4304575003): the one the user confirmed on when the caller claimed at the tap
-        // ([tryStartSubmission]), else the one installed now. The lookup and the IO dispatch below
-        // both wait, and the payment service refuses the purchase, with nothing sent, once that
-        // wallet has been wiped or replaced - it never falls back to whatever is installed then.
-        val session = purchaseSession.getAndSet(null) ?: sendPaymentService.currentWalletSession()
+        // Everything this purchase is paid and recorded with, bound before anything here can
+        // suspend: what the user confirmed when the caller claimed at the tap
+        // ([tryStartSubmission]), else the screen as it is now. The lookup and the IO dispatch
+        // below both wait. The payment service refuses the purchase, with nothing sent, once its
+        // wallet has been wiped or replaced (review 4304575003), and the provider and merchant
+        // are never read again (review 4307041834).
+        val context = purchaseContext.getAndSet(null) ?: currentPurchaseContext()
         return withContext(NonCancellable) {
-            payAndRecordOrderNow(paymentUri, giftCards, session)
+            payAndRecordOrderNow(paymentUri, giftCards, context)
         }
     }
 
     private suspend fun payAndRecordOrderNow(
         paymentUri: String,
         giftCards: List<GiftCardInfo>,
-        session: WalletSession?
+        context: GiftCardPurchaseContext
     ): String {
         // Read the durable record here rather than trust the flow above: this runs on a claim that
         // may have been taken moments after the view model was built, before the store had been
@@ -514,8 +532,8 @@ class DashSpendViewModel @Inject constructor(
 
         var recordedTxId: String? = null
         return try {
-            val txId = createSendingRequestFromDashUri(paymentUri, session) { newTxId ->
-                saveGiftCardDummy(newTxId, giftCards)
+            val txId = createSendingRequestFromDashUri(paymentUri, context) { newTxId ->
+                saveGiftCardDummy(newTxId, giftCards, context.merchantName)
                 recordedTxId = newTxId
             }
             _submissionState.value = GiftCardSubmissionState.COMPLETED
@@ -541,18 +559,12 @@ class DashSpendViewModel @Inject constructor(
 
     suspend fun createSendingRequestFromDashUri(
         paymentUri: String,
-        session: WalletSession?,
+        context: GiftCardPurchaseContext,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): String = withContext(Dispatchers.IO) {
-        // Snapshot before suspending. The selection lives on the navigation-scoped view model and
-        // stays writable, while payAndRecordOrder is NonCancellable and can outlive the screen
-        // that started it. Re-reading afterwards would attribute this payment to whatever the
-        // user picked in the meantime, and overwrite the attribution recovery had got right.
-        //
-        // The provider, not the merchant's source field: those disagree for a PiggyCards order on
-        // a CTX-sourced merchant, and the provider is what GiftCardDetailsViewModel routes by.
-        val provider = selectedProvider?.serviceName ?: ServiceName.CTXSpend
-        val merchantIconUrl = _giftCardMerchant.value?.logoLocation
+        // Only the snapshot ([GiftCardPurchaseContext]) from here on, never the live selection.
+        val provider = context.provider
+        val merchantIconUrl = context.merchantIconUrl
 
         val txId = sendPaymentService.payAndGetTxId(
             paymentUri,
@@ -562,7 +574,7 @@ class DashSpendViewModel @Inject constructor(
             // so recovery can restore the expense category and merchant icon after committing.
             PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = merchantIconUrl),
             onTransactionCreated = onTransactionCreated,
-            session = session
+            session = context.session
         )
         log.info("ctx spend transaction: $txId")
         transactionMetadata.markGiftCardTransaction(TxId.wrap(txId), provider, merchantIconUrl)
@@ -808,13 +820,17 @@ class DashSpendViewModel @Inject constructor(
      * may be about to dismiss this screen, and on the payment-pending path nothing else holds the
      * order details, so losing the write would strand the purchase with no way back to the order.
      */
-    suspend fun saveGiftCardDummy(txId: String, giftCards: List<GiftCardInfo>) {
+    suspend fun saveGiftCardDummy(
+        txId: String,
+        giftCards: List<GiftCardInfo>,
+        merchantName: String = _giftCardMerchant.value?.name ?: ""
+    ) {
         log.info("saving {} dummy gift cards: {}", giftCards.size, txId)
         var index = 0
         val giftCard = giftCards.map {
             GiftCard.fromHex(
                 txId = txId,
-                merchantName = _giftCardMerchant.value?.name ?: "",
+                merchantName = merchantName,
                 price = it.fiatAmount?.toDouble() ?: 0.0,
                 merchantUrl = it.redeemUrl,
                 redeemUrlChallenge = it.redeemUrlChallenge,
@@ -1001,3 +1017,14 @@ class DashSpendViewModel @Inject constructor(
         return giftCardOrderInfo.value.values.firstOrNull() ?: 1
     }
 }
+
+/**
+ * What a gift card purchase is paid and recorded with, taken once when the user confirms: the
+ * wallet that pays ([session]) and the provider and merchant it is attributed to.
+ */
+data class GiftCardPurchaseContext(
+    val session: WalletSession?,
+    val provider: String,
+    val merchantName: String,
+    val merchantIconUrl: String?
+)

@@ -1616,19 +1616,24 @@ class SendCoinsTaskRunner @Inject constructor(
             ?: throw IllegalStateException("no earlier payment on record for this request")
         Context.propagate(wallet.context)
         val tx = Transaction(NETWORK_PARAMETERS, record.txBytes)
-        // Watched before it is posted (review 4302741463): this path skips the build and its
-        // restoration barrier, so after a restart nothing may be watching T1 yet, and an unknown
-        // outcome below must leave it watched for a late broadcast by the payee.
-        if (!pendingPaymentVerifier.ensureWatched(tx, wallet)) {
-            // settled meanwhile (restoration found it on the network): that is the result
-            wallet.getTransaction(tx.txId)?.let { return@withContext it }
-            throw IllegalStateException("the earlier payment for this request is no longer on record")
-        }
 
         pendingPaymentVerifier.claimSubmission(tx.txId, paymentRequestId, record.isGiftCardPurchase)?.let { other ->
             throw PaymentSubmissionPendingException(other.toString(), null)
         }
+        // Set once the request may have reached the payee: from then on the payment stays active.
+        var mayHaveLeft = false
+        var reactivated = false
         try {
+            // Protected again before it is posted, like a fresh quarantine (review 4307041830): its
+            // record active and durable, its inputs locked, a new watch with a new grace period,
+            // and fresh SDK funding blocked by the funding gate. Restoration runs first, since this
+            // path skips the payment build and its barrier (review 4302741463).
+            if (!pendingPaymentVerifier.reactivateForResubmission(tx, wallet)) {
+                // settled meanwhile (restoration found it on the network): that is the result
+                wallet.getTransaction(tx.txId)?.let { return@withContext it }
+                throw IllegalStateException("the earlier payment for this request is no longer on record")
+            }
+            reactivated = true
             val refundAddress = sdkL1SendService.refundAddressOrNull()
             val paymentMessage = PaymentProtocol.createPaymentMessage(
                 listOf(record.txBytes),
@@ -1643,10 +1648,12 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             try {
                 log.info("resubmitting the earlier payment {} to {}", tx.txId, requestUrl)
+                mayHaveLeft = true
                 postPaymentForAck(request, requestUrl)
             } catch (e: Exception) {
                 if (isDefinitelyNotSubmitted(e)) {
                     log.warn("resubmission of {} failed before the request could be sent", tx.txId, e)
+                    mayHaveLeft = false
                     throw e
                 }
                 log.warn("resubmission of {} failed, but it may have arrived", tx.txId, e)
@@ -1658,6 +1665,12 @@ class SendCoinsTaskRunner @Inject constructor(
                 )
             }
             pendingPaymentVerifier.commitAcknowledged(tx, wallet)
+        } catch (e: Exception) {
+            // Nothing reached the payee this time: released again, as it was before.
+            if (reactivated && !mayHaveLeft) {
+                pendingPaymentVerifier.releaseUnsentResubmission(tx, wallet)
+            }
+            throw e
         } finally {
             pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
         }

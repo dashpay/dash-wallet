@@ -269,6 +269,12 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                         submissionBlocked = state != GiftCardSubmissionState.IDLE
                     )
                 }
+                // The restrictions showLoading() applies, for a dialog rebuilt while a purchase is
+                // under way too (review 4307041834): its own flow, which would lift them, ended
+                // with the previous view, so they follow the purchase state here.
+                val purchasing = state == GiftCardSubmissionState.IN_PROGRESS
+                dialog?.setCancelable(!purchasing)
+                dialog?.setCanceledOnTouchOutside(!purchasing)
             }
         }
     }

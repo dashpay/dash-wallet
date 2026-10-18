@@ -220,7 +220,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * A watch's release takes it too, to write the abandoned record only while that record is
      * still stored and unsettled. So do a quarantine's write, the removal retry worker (which
      * re-checks that an id is still queued, review 4302741459), the scan's discard of another
-     * wallet's record, and [ensureWatched]: every write and delete of a record this class makes,
+     * wallet's record, and [reactivateForResubmission] / [releaseUnsentResubmission]: every write and delete of a record this class makes,
      * except the wipe's clear, which must never wait on a write in flight and does not need to.
      *
      * Innermost: taken after [scanMutex] or [settleMutex], never before them. While holding it,
@@ -663,17 +663,23 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     /**
-     * Makes sure the stored record of [tx] is restored and watched before [tx] is posted to the
-     * payee again (review 4302741463). A resubmission does not pass through the payment build and
-     * its restoration barrier, and after a restart nothing may have scanned yet; without a watch,
-     * an outcome left unknown by the post would leave a late broadcast by the payee uncommitted.
-     * Inputs are locked only for a record still active and not yet watched, as the scan does.
+     * Makes the released record of [tx] active again before [tx] is posted to the payee once more
+     * (review 4307041830), exactly like a fresh quarantine: the record is rewritten durably as
+     * neither abandoned nor watch-expired, with a fresh [PendingDirectPayment.createdAt] so the
+     * release grace starts over; its inputs are locked again; and its watch is replaced, since the
+     * old one holds the released state. Its SDK reservation cannot be made again for a transaction
+     * already signed, so until it resolves it counts as unprotected and the funding gate
+     * ([hasUnprotectedPendingPayment]) blocks fresh SDK funding.
+     *
+     * A resubmission does not pass through the payment build and its restoration barrier, so
+     * restoration is awaited here first (review 4302741463). If the request then never leaves,
+     * [releaseUnsentResubmission] puts the payment back as it was.
      *
      * @return false when the record is no longer stored as unsettled: it was settled meanwhile,
      *   for instance committed by the restoration this ran
      * @throws IllegalStateException when restoration fails or [origin] is no longer the wallet
      */
-    suspend fun ensureWatched(tx: Transaction, origin: Wallet): Boolean {
+    suspend fun reactivateForResubmission(tx: Transaction, origin: Wallet): Boolean {
         awaitRestored()
         return recordMutex.withLock {
             if (!stillOwnedBy(origin)) {
@@ -683,11 +689,48 @@ class PendingDirectPaymentVerifier @Inject constructor(
             if (payment == null || tx.txId in pendingRemovals) {
                 return@withLock false
             }
-            if (!payment.abandoned && !payment.watchExpired && !isTracked(tx.txId)) {
-                lockInputs(origin, tx)
+            val active = payment.copy(abandoned = false, watchExpired = false, createdAt = System.currentTimeMillis())
+            // Locked before the record says active, as a quarantine does; given back if it cannot
+            // be written, which leaves the payment released as it was.
+            lockInputs(origin, tx)
+            try {
+                config.add(active) { stillOwnedBy(origin) }
+            } catch (e: Exception) {
+                unlockInputs(origin, tx)
+                throw e
             }
-            track(tx, payment, origin)
+            jobs.remove(tx.txId)?.cancel()
+            track(tx, active, origin)
             true
+        }
+    }
+
+    /**
+     * Puts a payment reactivated by [reactivateForResubmission] back the way it was, released,
+     * once its new request definitely never left: the record durably abandoned first, then its
+     * inputs freed and its watch carried on in the released state. A record that is gone was
+     * settled meanwhile and is left alone. Never throws: a failed write keeps the payment active
+     * and locked, which errs on the protected side, and its watch releases it in due course.
+     */
+    suspend fun releaseUnsentResubmission(tx: Transaction, origin: Wallet) {
+        try {
+            recordMutex.withLock {
+                val payment = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
+                if (payment == null || tx.txId in pendingRemovals || payment.abandoned) {
+                    return@withLock
+                }
+                val released = payment.copy(abandoned = true)
+                config.add(released) { stillOwnedBy(origin) }
+                if (stillOwnedBy(origin)) {
+                    unlockInputs(origin, tx)
+                }
+                jobs.remove(tx.txId)?.cancel()
+                track(tx, released, origin)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("could not release unsent resubmission {}; it stays active and locked", tx.txId, e)
         }
     }
 

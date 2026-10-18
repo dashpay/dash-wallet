@@ -43,6 +43,7 @@ import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
@@ -79,6 +80,7 @@ class DashSpendSubmissionStateTest {
     private lateinit var sendPaymentService: SendPaymentService
     private lateinit var unresolvedPayments: UnresolvedPaymentsProvider
     private lateinit var walletDataProvider: WalletDataProvider
+    private val transactionMetadata = mockk<TransactionMetadataProvider>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -107,7 +109,7 @@ class DashSpendSubmissionStateTest {
             mockk<Configuration>(relaxed = true),
             sendPaymentService,
             mockk<DashSpendRepositoryFactory>(relaxed = true),
-            mockk<TransactionMetadataProvider>(relaxed = true),
+            transactionMetadata,
             mockk<GiftCardDao>(relaxed = true),
             mockk<GiftCardProviderDao>(relaxed = true),
             networkState,
@@ -203,6 +205,30 @@ class DashSpendSubmissionStateTest {
             // refused: nothing was sent
         }
         assertTrue("nothing was paid from the replacement wallet: $paidFrom", paidFrom.isEmpty())
+    }
+
+    @Test
+    fun `a purchase is attributed to the provider it was confirmed with`() = runBlocking {
+        // review 4307041834: a recreated dialog can be dismissed while the NonCancellable purchase
+        // waits, and another provider picked; the purchase must keep the one it was confirmed with
+        val viewModel = createViewModel()
+        viewModel.selectedProvider = GiftCardProviderType.CTX
+        coEvery { unresolvedPayments.hasUnresolvedGiftCardPurchase() } coAnswers {
+            viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+            false
+        }
+        val transaction = mockk<TxInfo>(relaxed = true)
+        every { transaction.txId } returns ZERO_TX_ID
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
+
+        viewModel.payAndRecordOrder(paymentUri, emptyList())
+
+        val ctx = GiftCardProviderType.CTX.serviceName
+        coVerify(exactly = 1) { sendPaymentService.payWithDashUrl(any(), ctx, any(), any(), any()) }
+        coVerify(exactly = 0) {
+            sendPaymentService.payWithDashUrl(any(), GiftCardProviderType.PiggyCards.serviceName, any(), any(), any())
+        }
+        coVerify(exactly = 1) { transactionMetadata.markGiftCardTransaction(any(), ctx, any()) }
     }
 
     @Test

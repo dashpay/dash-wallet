@@ -2004,6 +2004,44 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `a resubmission reactivates a released payment durably, and survives a restart`() = runBlocking {
+        // review 4307041830: posted again, T1 is protected exactly like a fresh quarantine
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        val releasedAt = System.currentTimeMillis() - 60 * 60_000L
+        stored.add(
+            PendingDirectPayment(
+                tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", releasedAt,
+                abandoned = true
+            )
+        )
+        assertFalse("released: not counted by the funding gate", verifier.hasUnprotectedPendingPayment())
+
+        assertTrue(verifier.reactivateForResubmission(tx, wallet))
+
+        val active = stored.single()
+        assertFalse(active.abandoned)
+        assertFalse(active.watchExpired)
+        assertTrue("its release grace starts over", active.createdAt > releasedAt)
+        tx.inputs.forEach { assertTrue("its inputs are locked again", wallet.isLockedOutput(it.outpoint)) }
+        assertTrue("no SDK reservation can be made again: fresh SDK funding is blocked", verifier.hasUnprotectedPendingPayment())
+        assertTrue(verifier.isTracked(tx.txId))
+
+        // a process death: the locks lived in memory, the record on disk
+        tx.inputs.forEach { wallet.unlockOutput(it.outpoint) }
+        val restarted = PendingDirectPaymentVerifier(
+            walletData, walletApplication, blockchainStateProvider, metadataProvider, config, engine
+        ).apply { pollIntervalMs = 20L }
+        withTimeout(5_000) { restarted.awaitRestored() }
+        tx.inputs.forEach { assertTrue("restored as an active payment", wallet.isLockedOutput(it.outpoint)) }
+        assertTrue(restarted.isTracked(tx.txId))
+
+        // and had the request never left, the payment goes back to released
+        verifier.releaseUnsentResubmission(tx, wallet)
+        assertTrue(stored.single().abandoned)
+    }
+
+    @Test
     fun `a removal that fails while the retry worker is retiring is still retried`() = runBlocking {
         // r4296870284: the worker found the queue empty and was about to exit, still active, when
         // another payment's removal failed; scheduling saw the active worker and started none, so

@@ -1933,6 +1933,80 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `a resubmission protects its inputs again while it is posted and after a lost reply`() = runBlocking {
+        // review 4307041830: T1 was released (inputs free, excluded from the funding gate); posting
+        // it again without renewing that let another send select T1's inputs meanwhile
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 12 }
+        abandonedT1For(requestHash, stored)
+        deferredTx.inputs.forEach { assertFalse("released before", wallet.isLockedOutput(it.outpoint)) }
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        val posted = java.util.concurrent.CountDownLatch(1)
+        val reply = java.util.concurrent.CountDownLatch(1)
+        mockWebServer.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                posted.countDown()
+                reply.await(10, java.util.concurrent.TimeUnit.SECONDS)
+                return MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR) // the reply is lost
+            }
+        }
+
+        val resubmission = racingScope.async { sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet) }
+        try {
+            assertTrue("the POST went out", posted.await(10, java.util.concurrent.TimeUnit.SECONDS))
+
+            // in flight: protected exactly like a fresh quarantine
+            assertFalse("reactivated durably", stored.single().abandoned)
+            deferredTx.inputs.forEach { assertTrue("its inputs are locked again", wallet.isLockedOutput(it.outpoint)) }
+            assertTrue("fresh SDK funding is blocked", pendingPaymentVerifier.hasUnprotectedPendingPayment())
+        } finally {
+            reply.countDown()
+        }
+        try {
+            resubmission.await()
+            fail("a resubmission with a lost reply was reported as definite")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+        assertFalse("still active after the lost reply", stored.single().abandoned)
+        deferredTx.inputs.forEach { assertTrue("still locked", wallet.isLockedOutput(it.outpoint)) }
+        assertTrue(pendingPaymentVerifier.hasUnprotectedPendingPayment())
+        assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
+    }
+
+    @Test
+    fun `a resubmission that never left releases the payment again`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 13 }
+        abandonedT1For(requestHash, stored)
+        // nothing listens here: the connection is refused, so the request definitely never left
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            "http://127.0.0.1:1/payment",
+            requestHash
+        )
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("a request that never left was reported as sent")
+        } catch (e: PaymentSubmissionPendingException) {
+            fail("a request that never left was reported as pending: $e")
+        } catch (e: Exception) {
+            assertNotNull(e)
+        }
+
+        assertTrue("released again", stored.single().abandoned)
+        deferredTx.inputs.forEach { assertFalse("its inputs are free again", wallet.isLockedOutput(it.outpoint)) }
+        assertFalse(pendingPaymentVerifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
     fun `an acknowledged resubmission after the cutover stays pending until the network shows it`() = runBlocking {
         // 3fc3cd86956b: with the reservation released and the dashj peers held, nothing here can
         // relay T1; a payee that acks without broadcasting must not produce a success screen
