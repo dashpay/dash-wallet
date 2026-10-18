@@ -1710,7 +1710,9 @@ class SendCoinsTaskRunner @Inject constructor(
         // Broadcast ourselves too (identical bytes/txid; a payee broadcast makes this a harmless
         // duplicate announce), but never release.
         val broadcast = sdkL1SendService.broadcastDeferredPayment(payment)
-        if (broadcast !is SdkWriteResult.Broadcast && sdkL1SendService.cutoverCommitted()) {
+        // Fail closed (review 4306695898): only a state read as "not committed" takes the dashj
+        // completion below; an unreadable one is treated as the SDK owning L1.
+        if (broadcast !is SdkWriteResult.Broadcast && sdkL1SendService.cutoverCommittedOrUnknown() != false) {
             log.warn(
                 "BIP70 tx {} acknowledged, but the SDK broadcast did not go out ({}); keeping it " +
                     "recorded and watched until the network shows it",

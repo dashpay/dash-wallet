@@ -1948,6 +1948,19 @@ class SdkL1SendService internal constructor(
         )
 
     /**
+     * [cutoverCommittedOrThrow] as a tri-state: null when the state cannot be read. For a decision
+     * where "unknown" must take the safe branch rather than surface as a storage error.
+     */
+    suspend fun cutoverCommittedOrUnknown(): Boolean? = try {
+        cutoverCommittedOrThrow()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to read the cutover state; it is unknown", e)
+        null
+    }
+
+    /**
      * [cutoverCommitted] as it changes (the persisted cutover state observed):
      * emits the current value, then each change.
      *

@@ -1099,8 +1099,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
             }
             throw PaymentSubmissionPendingException(tx.txId.toString(), null)
         }
-        if (engine.sdkOwnsL1()) {
-            log.info("payment {} acknowledged; nothing here can relay it, watching for it on the network", tx.txId)
+        // Fail closed (review 4306695898): finished here only when the dashj route that can relay
+        // it is known to be live. An unreadable cutover state is treated as the SDK owning L1.
+        val sdkOwnsL1 = engine.sdkOwnsL1OrUnknown()
+        if (sdkOwnsL1 != false) {
+            log.info(
+                "payment {} acknowledged; {}, watching for it on the network",
+                tx.txId,
+                if (sdkOwnsL1 == null) "the cutover state cannot be read" else "nothing here can relay it"
+            )
             track(tx, payment, origin)
             throw PaymentSubmissionPendingException(
                 tx.txId.toString(),

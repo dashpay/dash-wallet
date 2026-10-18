@@ -129,6 +129,8 @@ class PendingDirectPaymentVerifierTest {
         // bridge declines, so commits take the plain maybeCommitTx path.
         engine = mockk(relaxed = true)
         coEvery { engine.sdkOwnsL1() } returns false
+        // A readable state: the strict read agrees with whatever a test stubs for sdkOwnsL1.
+        coEvery { engine.sdkOwnsL1OrUnknown() } coAnswers { engine.sdkOwnsL1() }
         coEvery { engine.observation(any()) } returns EngineObservation.ABSENT
         every { engine.isObservationLive() } returns true
         every { engine.chainHeightUpperBound() } returns RESERVED_AT_HEIGHT

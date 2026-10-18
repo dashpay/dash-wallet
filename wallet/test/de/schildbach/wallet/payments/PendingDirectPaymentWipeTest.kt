@@ -123,6 +123,7 @@ class PendingDirectPaymentWipeTest {
             config,
             mockk<PendingPaymentEngine>(relaxed = true) {
                 coEvery { sdkOwnsL1() } returns false
+                coEvery { sdkOwnsL1OrUnknown() } returns false
                 coEvery { observation(any()) } returns EngineObservation.ABSENT
                 every { isObservationLive() } returns true
                 coEvery { bridge(any(), any(), any()) } returns null

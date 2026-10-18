@@ -170,6 +170,8 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { pendingPaymentConfig.getAllOrThrow() } returns emptyList()
         every { walletDataProvider.attachOnWalletWipedListener(any()) } answers { wipeListeners.add(firstArg()) }
         coEvery { sdkL1SendService.cutoverCommitted() } returns false
+        // A readable state: the strict read agrees with whatever a test stubs for the lenient one.
+        coEvery { sdkL1SendService.cutoverCommittedOrUnknown() } coAnswers { sdkL1SendService.cutoverCommitted() }
         // The real engine for broadcast/release/bridge, so those reach the mocked SDK services the
         // tests verify; observation answers from the mocked probe, with the engine treated as live.
         val sdkEngine = SdkPendingPaymentEngine(
@@ -782,9 +784,16 @@ class SendCoinsTaskRunnerBIP70Test {
      * group, so the record, the watch and the input locks stay and the outcome is pending.
      */
     private fun ackedButNotBroadcast(
-        outcome: de.schildbach.wallet.service.platform.sdk.SdkWriteResult<String>
+        outcome: de.schildbach.wallet.service.platform.sdk.SdkWriteResult<String>,
+        cutoverReadable: Boolean = true
     ) = runBlocking {
-        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        if (cutoverReadable) {
+            coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        } else {
+            // the SDK owns L1, but its state cannot be read: the lenient read says "not committed"
+            coEvery { sdkL1SendService.cutoverCommitted() } returns false
+            coEvery { sdkL1SendService.cutoverCommittedOrUnknown() } returns null
+        }
         val stored = storeBackedPendingPayments()
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val paymentIntent = bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
@@ -817,6 +826,49 @@ class SendCoinsTaskRunnerBIP70Test {
         }
         io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+    }
+
+    @Test
+    fun `an acknowledged first payment stays pending when the cutover state cannot be read`() {
+        // review 4306695898: the SDK owns L1, but its state cannot be read; the lenient read says
+        // "not committed" and sent the payment down the pre-cutover completion
+        ackedButNotBroadcast(
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.NotBroadcast("StaleReservationToken"),
+            cutoverReadable = false
+        )
+    }
+
+    @Test
+    fun `an acknowledged resubmission stays pending when the cutover state cannot be read`() = runBlocking {
+        coEvery { sdkL1SendService.cutoverCommitted() } returns false
+        coEvery { sdkL1SendService.cutoverCommittedOrUnknown() } returns null
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 11 }
+        abandonedT1For(requestHash, stored)
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        coEvery { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false)
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        try {
+            sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet)
+            fail("an acknowledged resubmission was finished with the cutover state unknown")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+        assertEquals("the record (and its block) stays", 1, stored.size)
+        assertTrue("watched until the network shows it", pendingPaymentVerifier.isTracked(deferredTx.txId))
+        io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
     }
 
     @Test

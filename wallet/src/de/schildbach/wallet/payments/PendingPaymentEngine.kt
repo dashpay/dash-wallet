@@ -112,6 +112,13 @@ interface PendingPaymentEngine {
     suspend fun sdkOwnsL1(): Boolean
 
     /**
+     * [sdkOwnsL1] for a decision that must fail closed: true or false when the cutover state was
+     * read, null when it could not be. [sdkOwnsL1] reads an unreadable state as "not committed",
+     * which is the unsafe answer for finishing an acknowledged payment (review 4306695898).
+     */
+    suspend fun sdkOwnsL1OrUnknown(): Boolean?
+
+    /**
      * Whether the SDK engine holds a record of [txIdHex]. The engine only records a transaction it
      * has observed on the network, and a payment the wallet has not broadcast itself can only be
      * there because the payee broadcast it. [EngineObservation.UNAVAILABLE] when that cannot be
@@ -173,6 +180,8 @@ class SdkPendingPaymentEngine @Inject constructor(
     }
 
     override suspend fun sdkOwnsL1(): Boolean = sdkL1SendService.cutoverCommitted()
+
+    override suspend fun sdkOwnsL1OrUnknown(): Boolean? = sdkL1SendService.cutoverCommittedOrUnknown()
 
     /**
      * The best chain tip the engine knows ([ShadowSyncProgress.bestKnownTipHeight]: the larger of
