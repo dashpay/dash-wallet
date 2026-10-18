@@ -1250,10 +1250,14 @@ class SendCoinsTaskRunner @Inject constructor(
 
             // The broadcast consumes the reservation, so the watch must not hold it any more.
             pendingPaymentVerifier.detachReservation(tx.txId)
-            runCatching { setReservedOutpointLocks(payment, locked = false, wallet = wallet) }
-                .onFailure { log.warn("failed to clear the mirrored reservation locks", it) }
             when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
-                is SdkWriteResult.Broadcast -> log.info("plain payment {} broadcast via the SDK", result.value)
+                is SdkWriteResult.Broadcast -> {
+                    log.info("plain payment {} broadcast via the SDK", result.value)
+                    // Spent now: the mirrored locks have done their job. Cleared only once the
+                    // broadcast went out, so an unknown outcome keeps its inputs locked.
+                    runCatching { setReservedOutpointLocks(payment, locked = false, wallet = wallet) }
+                        .onFailure { log.warn("failed to clear the mirrored reservation locks", it) }
+                }
                 is SdkWriteResult.NotBroadcast -> {
                     // Refused before reaching the network: definitively not sent.
                     pendingPaymentVerifier.cancelQuarantine(tx)
@@ -1502,7 +1506,7 @@ class SendCoinsTaskRunner @Inject constructor(
         }
         // completeAckedPayment throws Bip70AckedDisplayException when the bridge fails; the
         // quarantine then stays, holding what is needed to commit and attribute it later.
-        val sent = completeAckedPayment(payment, wallet)
+        val sent = completeAckedPayment(payment, tx, wallet)
 
         // Committed, so the outcome is certain. Apply the recovery metadata first: the
         // quarantine record is the only durable copy of it, and cancelling first would leave a
@@ -1686,24 +1690,44 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     /**
-     * The acked tail of a BIP70 submission (also the IS-lock rescue's
-     * completion): clear the mirrored locks, broadcast (tolerated — the
-     * merchant's own broadcast covers delivery), bridge into the wallet
-     * record, return the live transaction.
+     * The acked tail of a BIP70 submission: broadcast, clear the mirrored locks, bridge into the
+     * wallet record, return the live transaction.
+     *
+     * An ack proves no delivery: a payee can acknowledge without broadcasting. Before the cutover
+     * a broadcast that did not go out is tolerated, since the dashj announcement after the bridge
+     * still relays. After it, the bridge's announcement cannot relay through the held peer group,
+     * so an SDK broadcast that was refused or is unconfirmed leaves the payment exactly as it is -
+     * its record, its watch and its input locks - and reports it pending (review 4306185713), the
+     * same rule [PendingDirectPaymentVerifier.commitAcknowledged] applies to a resubmission.
+     *
+     * @throws PaymentSubmissionPendingException after the cutover when the broadcast did not go out
      */
     private suspend fun completeAckedPayment(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        tx: Transaction,
         origin: Wallet
     ): Transaction {
-        // The reservation is being consumed — the mirrored locks have
-        // done their job (the inputs are spent from here on).
+        // Broadcast ourselves too (identical bytes/txid; a payee broadcast makes this a harmless
+        // duplicate announce), but never release.
+        val broadcast = sdkL1SendService.broadcastDeferredPayment(payment)
+        if (broadcast !is SdkWriteResult.Broadcast && sdkL1SendService.cutoverCommitted()) {
+            log.warn(
+                "BIP70 tx {} acknowledged, but the SDK broadcast did not go out ({}); keeping it " +
+                    "recorded and watched until the network shows it",
+                payment.txidHex,
+                broadcast
+            )
+            // The resubmission's rule: with the SDK owning L1 this keeps (or starts) the watch and
+            // reports the payment pending. Returns only if the watch has settled it meanwhile.
+            return pendingPaymentVerifier.commitAcknowledged(tx, origin)
+        }
+
+        // Delivered (or, before the cutover, relayed by the dashj announcement below): the
+        // reservation is consumed and the mirrored locks have done their job.
         runCatching { setReservedOutpointLocks(payment, locked = false, wallet = origin) }
             .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks post-ack", it) }
 
-        // The payment IS made from the merchant's side. Broadcast
-        // ourselves too (identical bytes/txid — a merchant broadcast makes
-        // this a harmless duplicate announce), but never release.
-        when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
+        when (val result = broadcast) {
             is SdkWriteResult.Broadcast ->
                 log.info("BIP70 tx {} broadcast via the SDK", result.value)
             is SdkWriteResult.NotBroadcast ->

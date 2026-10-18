@@ -775,6 +775,62 @@ class SendCoinsTaskRunnerBIP70Test {
         assertFalse(pendingPaymentVerifier.isTracked(deferredTx.txId))
     }
 
+    /**
+     * review 4306185713: after the cutover, an acknowledged FIRST submission whose own SDK
+     * broadcast did not go out. An ack proves no delivery (the test server acks without
+     * broadcasting) and the bridge's dashj announcement cannot relay through the held peer
+     * group, so the record, the watch and the input locks stay and the outcome is pending.
+     */
+    private fun ackedButNotBroadcast(
+        outcome: de.schildbach.wallet.service.platform.sdk.SdkWriteResult<String>
+    ) = runBlocking {
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val stored = storeBackedPendingPayments()
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val paymentIntent = bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
+        val payment = deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns outcome
+        coEvery { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) } returns
+            de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
+                mockk(relaxed = true),
+                adoptedWalletInstance = false
+            )
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTACK)
+                .setBody(okio.Buffer().write(createPaymentAck("Payment accepted")))
+        )
+
+        try {
+            sendCoinsTaskRunner.sendDirectPayment(paymentIntent, "TestService")
+            fail("an acknowledged payment nobody broadcast was reported as paid")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(deferredTxidHex, e.txId)
+        }
+
+        assertEquals("the record (and its invoice block) stays", listOf(deferredTx.txId), stored.map { it.txId })
+        assertTrue("watched until the network shows it", pendingPaymentVerifier.isTracked(deferredTx.txId))
+        deferredTx.inputs.forEach {
+            assertTrue("its inputs stay locked", wallet.isLockedOutput(it.outpoint))
+        }
+        io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+    }
+
+    @Test
+    fun `an acknowledged first payment the SDK refused to broadcast stays pending after the cutover`() =
+        ackedButNotBroadcast(
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.NotBroadcast("StaleReservationToken")
+        )
+
+    @Test
+    fun `an acknowledged first payment whose SDK broadcast is unconfirmed stays pending after the cutover`() =
+        ackedButNotBroadcast(
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Ambiguous(RuntimeException("timeout"))
+        )
+
     @Test
     fun `a nacked payment stays quarantined and is reported as pending`() = runTest {
         // A nack is answered only after the payee has had the transaction, so it is no proof the
