@@ -483,7 +483,12 @@ class SdkTransparentUsernameCreation internal constructor(
      * then refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON]. Resuming a tracked lock re-consumes
      * that lock's own outputs and is never asked. Default false keeps the host-JVM tests inert.
      */
-    private val freshFundingBlocked: suspend () -> Boolean = { false }
+    private val freshFundingBlocked: suspend () -> Boolean = { false },
+    /**
+     * [cutoverCommitted] as a tri-state for a routing decision that must fail closed: null when the
+     * state cannot be read. By default it trusts [cutoverCommitted], which the host-JVM tests stub.
+     */
+    private val cutoverCommittedOrUnknown: suspend () -> Boolean? = { cutoverCommitted() }
 ) {
     @Inject
     constructor(
@@ -498,6 +503,7 @@ class SdkTransparentUsernameCreation internal constructor(
     ) : this(
         source = DashSdkTransparentUsernameSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
+        cutoverCommittedOrUnknown = { sdkL1SendService.cutoverCommittedOrUnknown() },
         // Lazy: Constants untouched at construction (inert-until-called).
         feeDuffs = { contested ->
             if (contested) Constants.DASH_PAY_FEE_CONTESTED.value else Constants.DASH_PAY_FEE.value
@@ -545,6 +551,20 @@ class SdkTransparentUsernameCreation internal constructor(
      * uses to pick this path over the dashj [CreateIdentityService] path.
      * Contained: a read failure reads as NOT committed (dashj rules).
      */
+    /**
+     * Whether the cutover is committed, or null when the state cannot be read (review
+     * 4299080469). For a routing decision where "not committed" starts the dashj identity path,
+     * which resets a registered identity or funds through the held engine: unknown must refuse.
+     */
+    suspend fun cutoverStateOrUnknown(): Boolean? = try {
+        cutoverCommittedOrUnknown()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to read the cutover state; it is unknown", e)
+        null
+    }
+
     suspend fun isCutoverCommitted(): Boolean = try {
         cutoverCommitted()
     } catch (e: Exception) {

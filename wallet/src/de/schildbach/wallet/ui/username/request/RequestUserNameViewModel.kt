@@ -1127,14 +1127,30 @@ class RequestUserNameViewModel @Inject constructor(
             // would start fresh legacy funding. Before the cutover the legacy path is master's
             // (#1567) and stays as it is.
             val existingIdentityId = identity?.userId
-            if (reuseTransaction && existingIdentityId != null && !isUsingInvite() &&
-                transparentUsernameCreation.isCutoverCommitted()
-            ) {
+            val nameOnlyCandidate = reuseTransaction && existingIdentityId != null && !isUsingInvite()
+            val freshSdkCandidate = !isUsingInvite() && !reuseTransaction &&
+                submitSource != UsernamePaymentSource.SHIELDED_BALANCE
+            // Fail closed (review 4299080469, reopened): for both of these, "not committed" starts
+            // CreateIdentityService, which resets a registered identity to NONE or funds through
+            // the dashj engine. The lenient read turns an unreadable cutover state into exactly
+            // that answer, so these read the state strictly, and an unknown one refuses the
+            // submission, starting and resetting nothing.
+            val cutover: Boolean? = if (nameOnlyCandidate || freshSdkCandidate) {
+                transparentUsernameCreation.cutoverStateOrUnknown()
+            } else {
+                false
+            }
+            if (cutover == null) {
+                log.warn("username submit refused: the cutover state cannot be read")
+                _uiState.update { it.copy(usernameSubmittedError = true) }
+                return@launch
+            }
+            if (nameOnlyCandidate && cutover) {
                 log.info("name-only retry for the existing identity (cutover committed)")
                 // Accepted means the retry runs on the application scope and survives this screen,
                 // which the submitting state closes; publish it only then.
                 val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
-                    existingIdentityId,
+                    requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
                     requestedUserName!!,
                     requestedUsernameSecondary
                 )
@@ -1143,9 +1159,7 @@ class RequestUserNameViewModel @Inject constructor(
                 }
                 return@launch
             }
-            val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
-                submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
-                transparentUsernameCreation.isCutoverCommitted()
+            val cutoverCommitted = freshSdkCandidate && cutover
             if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
             ) {
