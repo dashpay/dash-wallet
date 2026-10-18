@@ -1530,7 +1530,7 @@ class ShieldedBalanceServiceTest {
             val pollMs = ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS
             withTimeout(10_000) {
                 while (!clearEntered.isCompleted) {
-                    source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = true))
+                    source.passResults.emit(passOk())
                     delay(50)
                 }
             }
@@ -1555,6 +1555,15 @@ class ShieldedBalanceServiceTest {
     }
 
     private fun boundWalletId(): ByteArray = checkNotNull(walletIdFromHex(walletIdHex))
+
+    private fun passOk(credits: Long = 0L, walletId: ByteArray = boundWalletId()) =
+        ShieldedPassResult(walletId, ShieldedPassResult.Outcome.SUCCEEDED, credits)
+
+    private fun passFailed() =
+        ShieldedPassResult(boundWalletId(), ShieldedPassResult.Outcome.FAILED, 0L)
+
+    private fun passSkipped(credits: Long = 0L) =
+        ShieldedPassResult(boundWalletId(), ShieldedPassResult.Outcome.SKIPPED, credits)
 
     /**
      * A scoped service with a restored pending reconciliation (stale = true),
@@ -1590,13 +1599,88 @@ class ShieldedBalanceServiceTest {
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             val service = reconcilingService(source, cfg, sweepScope)
-            repeat(6) {
-                source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = false))
+            repeat(3) {
+                source.passResults.emit(passFailed())
+                delay(30)
+                source.passResults.emit(passSkipped())
                 delay(30)
             }
             delay(200)
             assertTrue(service.shieldedBalanceMaybeStale.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression: two successful results with DIFFERENT pass balances queued
+     * back-to-back while the store already reads the later one. Re-reading the
+     * store for each made them look stable; comparing the balances the passes
+     * themselves observed keeps the reconciliation pending.
+     */
+    @Test
+    fun bufferedPassesWithDifferentBalances_doNotSettle() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.notesFlow.value = listOf(note(value = 600_000_000_000L)) // store already at B
+            source.passResults.emit(passOk(credits = 1_000_000_000_000L)) // pass A
+            source.passResults.emit(passOk(credits = 600_000_000_000L)) // pass B, queued right behind
+            delay(300)
+            assertTrue("A != B: not two stable passes", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            source.passResults.emit(passOk(credits = 600_000_000_000L)) // B again: now stable
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /** A cooldown-skipped pass between two successes neither counts nor breaks the streak. */
+    @Test
+    fun aSkippedPassBetweenSuccesses_doesNotBreakTheStreak() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.passResults.emit(passOk())
+            delay(30)
+            source.passResults.emit(passSkipped())
+            delay(30)
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Stable pass balances, but the note store the surfaces display has not
+     * caught up yet: stay pending (the header would show the old figure), and
+     * settle on the next successful pass once it has.
+     */
+    @Test
+    fun stablePasses_waitForTheDisplayedStoreToCatchUp() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.notesFlow.value = listOf(note(value = 900_000_000_007L)) // store still pre-settlement (distinct low byte: the fixture's nullifier is value.toByte())
+            source.passResults.emit(passOk(credits = 500_000_000_003L))
+            delay(30)
+            source.passResults.emit(passOk(credits = 500_000_000_003L))
+            delay(300)
+            assertTrue("store not caught up", service.shieldedBalanceMaybeStale.value)
+
+            source.notesFlow.value = listOf(note(value = 500_000_000_003L))
+            source.passResults.emit(passOk(credits = 500_000_000_003L))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -1615,9 +1699,9 @@ class ShieldedBalanceServiceTest {
         try {
             val service = reconcilingService(source, cfg, sweepScope)
             assertFalse(source.syncing)
-            source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = true))
+            source.passResults.emit(passOk())
             delay(30)
-            source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = true))
+            source.passResults.emit(passOk())
             withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
             coVerify(exactly = 1) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
@@ -1633,15 +1717,15 @@ class ShieldedBalanceServiceTest {
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             val service = reconcilingService(source, cfg, sweepScope)
-            source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = true))
+            source.passResults.emit(passOk())
             delay(30)
-            source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = false))
+            source.passResults.emit(passFailed())
             delay(30)
-            source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = true))
+            source.passResults.emit(passOk())
             delay(200)
             assertTrue(service.shieldedBalanceMaybeStale.value)
 
-            source.passResults.emit(ShieldedPassResult(boundWalletId(), succeeded = true))
+            source.passResults.emit(passOk())
             withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
         } finally {
             sweepScope.cancel()
@@ -1658,7 +1742,7 @@ class ShieldedBalanceServiceTest {
             val service = reconcilingService(source, cfg, sweepScope)
             val other = checkNotNull(walletIdFromHex("cd".repeat(32)))
             repeat(4) {
-                source.passResults.emit(ShieldedPassResult(other, succeeded = true))
+                source.passResults.emit(passOk(walletId = other))
                 delay(30)
             }
             delay(200)

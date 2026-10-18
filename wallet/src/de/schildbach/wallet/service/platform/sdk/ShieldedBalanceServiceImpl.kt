@@ -305,11 +305,31 @@ internal fun mapShieldedSyncStatus(
  */
 /**
  * App-neutral view of one completed shielded sync pass
- * (`WalletSyncEvent.ShieldedResult`). [succeeded] = the pass ran and
- * succeeded — a failed, skipped or cooldown-skipped pass is NOT evidence
- * that a spend has settled.
+ * (`WalletSyncEvent.ShieldedResult`).
+ *
+ * [balanceCredits] is the balance THAT pass observed (the SDK's per-pass
+ * spendable total, credits) — settlement compares these, never a later
+ * re-read, so buffered results can't make two different passes look stable.
  */
-class ShieldedPassResult(val walletId: ByteArray, val succeeded: Boolean)
+class ShieldedPassResult(
+    val walletId: ByteArray,
+    val outcome: Outcome,
+    val balanceCredits: Long
+) {
+    enum class Outcome {
+        /** The pass walked Platform and succeeded: settlement evidence. */
+        SUCCEEDED,
+
+        /** The pass failed: breaks the stability streak. */
+        FAILED,
+
+        /**
+         * Skipped or cooldown-skipped (no Platform fetch): neither evidence nor
+         * a break — the caught-up loop emits these between real passes.
+         */
+        SKIPPED
+    }
+}
 
 data class PendingWalletShieldLock(
     val outPointHex: String,
@@ -534,7 +554,14 @@ internal class DashSdkShieldedSource(
         emitAll(
             manager().syncEvents
                 .filterIsInstance<org.dashfoundation.dashsdk.wallet.WalletSyncEvent.ShieldedResult>()
-                .map { ShieldedPassResult(it.walletId, succeeded = it.success && !it.skipped && !it.cooldownSkip) }
+                .map {
+                    val outcome = when {
+                        !it.success -> ShieldedPassResult.Outcome.FAILED
+                        it.skipped || it.cooldownSkip -> ShieldedPassResult.Outcome.SKIPPED
+                        else -> ShieldedPassResult.Outcome.SUCCEEDED
+                    }
+                    ShieldedPassResult(it.walletId, outcome, it.balance)
+                }
         )
     }
 
@@ -1396,16 +1423,23 @@ class ShieldedBalanceServiceImpl internal constructor(
      * live: spent-nullifier, change note, and OVK outgoing recovery landing at
      * three separate pass completions — the More card marched through several
      * intermediate balances after a shielded username create; Brian, S21
-     * 2026-08-18). So a reconciliation settles only when the balance is STABLE
-     * across two consecutive SUCCESSFUL passes of the bound wallet. A failed,
-     * skipped or cooldown-skipped pass is no evidence: it breaks the streak
-     * instead of counting toward it.
+     * 2026-08-18). So a reconciliation settles only when the balance THE
+     * PASSES THEMSELVES OBSERVED ([ShieldedPassResult.balanceCredits]) is
+     * STABLE across two consecutive successful passes of the bound wallet —
+     * never a re-read of the store, which a buffered pair of results would both
+     * see at the later value — AND the note store the surfaces display
+     * ([observeShieldedBalance]) has caught up to that balance. A failed pass
+     * breaks the streak; a skipped / cooldown-skipped pass (no Platform fetch)
+     * is ignored. If the store has not caught up yet the streak is kept and the
+     * next successful pass re-checks.
      */
     private suspend fun onShieldedPassCompleted(result: ShieldedPassResult) {
         val boundWalletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return
         if (!result.walletId.contentEquals(boundWalletId)) return
+        if (result.outcome == ShieldedPassResult.Outcome.SKIPPED) return
         val generation = reconcileMutex.withLock { reconcileGeneration }
-        val settledCredits = if (result.succeeded) {
+        val passCredits = result.balanceCredits.takeIf { result.outcome == ShieldedPassResult.Outcome.SUCCEEDED }
+        val displayedCredits = if (passCredits != null) {
             runCatching { source.observeUnspentNotes(boundWalletId).first().sumOf { it.value } }
                 .getOrElse {
                     if (it is CancellationException) throw it
@@ -1420,7 +1454,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         // clearing (or seeding) them.
         reconcileMutex.withLock {
             if (generation != reconcileGeneration) return@withLock
-            if (settledCredits != null && settledCredits == lastPassBalanceCredits) {
+            val stable = passCredits != null && passCredits == lastPassBalanceCredits
+            if (stable && displayedCredits == passCredits) {
                 if (_shieldedBalanceMaybeStale.value) {
                     // Settled: the durable marker goes with the flag.
                     runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
@@ -1431,8 +1466,9 @@ class ShieldedBalanceServiceImpl internal constructor(
                 }
                 _shieldedBalanceMaybeStale.value = false
             }
-            // A failed/skipped pass (null) resets the streak.
-            lastPassBalanceCredits = settledCredits
+            // A failed pass (null) resets the streak; a successful one seeds it
+            // with the balance it observed.
+            lastPassBalanceCredits = passCredits
         }
     }
 
