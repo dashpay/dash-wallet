@@ -662,6 +662,72 @@ interface SdkL1SendSource {
         destination: String, amount: Long, drain: Boolean,
         prepared: suspend (ByteArray) -> Unit
     ): String = throw UnsupportedOperationException("CoinJoin consolidation not supported")
+
+    /**
+     * Submit an ALREADY-SIGNED transaction from its consensus bytes and
+     * return its txid — the replay primitive for a CoinJoin consolidation
+     * whose native handle died with the process between its persisted
+     * `prepared` checkpoint and `ManagedCoreWallet.broadcastTransaction`.
+     * Submitting identical bytes is idempotent (same txid, same inputs).
+     *
+     * DEFERRED: the pinned SDK exposes NO raw-bytes broadcast. Its only
+     * Core broadcast entry points take a native handle —
+     * `ManagedCoreWallet.broadcastTransaction(FinalizedCoreTransaction)`
+     * (`coreWalletBroadcastSignedTransaction(coreHandle, txHandle)`), whose
+     * constructor is `internal` and minted only by `CoreTransactionBuilder`,
+     * and `ManagedPlatformWallet.broadcastSigned(token)`, whose reservation
+     * token is process-local. Needed upstream: a
+     * `ManagedCoreWallet.broadcastRawTransaction(bytes: ByteArray): String`
+     * (FFI `core_wallet_broadcast_raw_transaction`) that hands the bytes to
+     * the SPV broadcaster and registers the tx with the wallet. Until then
+     * the production source inherits this default and recovery degrades to
+     * observation only.
+     */
+    suspend fun broadcastRawTransaction(rawTx: ByteArray): String =
+        throw UnsupportedOperationException(RAW_BROADCAST_UNSUPPORTED)
+}
+
+internal const val RAW_BROADCAST_UNSUPPORTED =
+    "raw signed-transaction broadcast is not exposed by the pinned SDK"
+
+/** What replaying a persisted consolidation's signed bytes proved. */
+enum class ConsolidationReplay {
+    /** Accepted, or already known to the network (mempool / chain). */
+    SUBMITTED,
+
+    /** An input is spent by a DIFFERENT transaction: never rebuild; fail closed. */
+    CONFLICT,
+
+    /** No raw-bytes broadcast path in this SDK: observe only. */
+    UNAVAILABLE,
+
+    /** Not submitted this time (gate closed, transport error): observe and retry later. */
+    FAILED
+}
+
+/**
+ * Classify a rejection of a replayed signed transaction. Only an explicit
+ * "already known/in mempool/in chain" answer counts as submitted, and only an
+ * explicit conflict/double-spend answer as [ConsolidationReplay.CONFLICT];
+ * anything else (including the ambiguous "missing or spent inputs", which
+ * the transaction's own confirmation also produces) is [ConsolidationReplay.FAILED].
+ */
+internal fun classifyReplayFailure(t: Throwable): ConsolidationReplay {
+    if (t is UnsupportedOperationException) return ConsolidationReplay.UNAVAILABLE
+    var cause: Throwable? = t
+    var depth = 0
+    while (cause != null && depth++ < 8) {
+        val message = cause.message?.lowercase().orEmpty()
+        when {
+            "txn-already-known" in message || "txn-already-in-mempool" in message ||
+                "already in block chain" in message || "already in chain" in message ||
+                "already have transaction" in message -> return ConsolidationReplay.SUBMITTED
+            "txn-mempool-conflict" in message || "conflict" in message ||
+                "double spend" in message || "double-spend" in message -> return ConsolidationReplay.CONFLICT
+        }
+        cause = cause.cause
+    }
+    return ConsolidationReplay.FAILED
 }
 
 /** Production [SdkL1SendSource]: boots the SDK on demand. */
@@ -1554,6 +1620,34 @@ class SdkL1SendService internal constructor(
             if (t is CancellationException) throw t
             if (!preparedForBroadcast) SdkWriteResult.NotBroadcast("consolidation preparation failed", t)
             else classifyCoreSendFailure(t)
+        }
+    }
+
+    /**
+     * Re-submit the EXACT signed bytes of a persisted CoinJoin consolidation
+     * ([SdkL1SendSource.broadcastRawTransaction]) — never a rebuild. The
+     * caller has already checked that [rawTx] hashes to [expectedTxid].
+     */
+    internal suspend fun rebroadcastCoinJoinConsolidation(rawTx: ByteArray, expectedTxid: String): ConsolidationReplay {
+        if (!isEnabled() || !probeSendGate().allowed) return ConsolidationReplay.FAILED
+        return try {
+            val txid = source.broadcastRawTransaction(rawTx)
+            if (!txid.equals(expectedTxid, ignoreCase = true)) {
+                log.warn("consolidation replay answered txid {} for {}", txid, expectedTxid)
+            }
+            log.info("SDK consolidation replay: re-submitted {}", expectedTxid)
+            runCatching { onSelfSpendBroadcast() }
+            runCatching { bridgeAfterBroadcast(expectedTxid) }
+            ConsolidationReplay.SUBMITTED
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            val replay = classifyReplayFailure(t)
+            if (replay == ConsolidationReplay.UNAVAILABLE) {
+                log.error("SDK consolidation replay of {} unavailable: {}", expectedTxid, t.message)
+            } else {
+                log.warn("SDK consolidation replay of {} answered {}", expectedTxid, replay, t)
+            }
+            replay
         }
     }
 

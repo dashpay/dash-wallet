@@ -374,6 +374,13 @@ class CoinJoinFundsMigrationService @Inject constructor(
     private val migrationMutex = Mutex()
 
     /**
+     * Consolidation txids already submitted or replayed by THIS process, so
+     * the watcher replays a persisted transaction once per process (recovery
+     * after process death) and again only on the user's Try again.
+     */
+    private val replayedConsolidations: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+
+    /**
      * How many in-flight markers the watcher cleared because the result was
      * VERIFIED visible (this process). The marker also disappears for other
      * reasons — a definitive rejection, a reconciled interrupted intent — so
@@ -570,7 +577,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
             return MixedFundsMigrationOutcome.UNCONFIRMED
         }
         // A user-requested retry gets a fresh observation window, retaining
-        // the original balance baseline and the SDK's existing lock.
+        // the original balance baseline and the SDK's existing lock. A
+        // consolidation stage also gets its persisted signed bytes replayed
+        // once more ([replayConsolidationIfNeeded]) — never a rebuild.
+        replayedConsolidations.clear()
         dashPayConfig.set(
             DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
             formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis()))
@@ -1181,7 +1191,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
         SIGNER_LOCKED
     }
 
-    /** A persisted txid is written before broadcast; an uncertain send is only observed, never rebuilt. */
+    /**
+     * A persisted txid (with its signed bytes) is written before broadcast; an
+     * uncertain send is observed and its exact bytes replayed, never rebuilt.
+     */
     private suspend fun continueConsolidation(): ConsolidationStep {
         // Strict: an unreadable stage throws (the watcher stands down into the
         // "could not confirm" guidance) instead of reading as "no stage".
@@ -1240,6 +1253,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 // 0 -> 3 at block time), so the app-persisted lock is the
                 // pre-block finality evidence.
                 if (tx == null || (tx.context !in 1..3 && !hasPersistedInstantLock(state.txid))) {
+                    if (replayConsolidationIfNeeded(state) == ConsolidationReplay.CONFLICT) {
+                        // Its inputs went to a different transaction: never
+                        // rebuild; stand down into the "could not confirm" guidance.
+                        expireMigration()
+                        return ConsolidationStep.STOPPED
+                    }
                     delay(IN_FLIGHT_POLL_MS)
                     continue
                 }
@@ -1263,7 +1282,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     delay(IN_FLIGHT_POLL_MS)
                     continue
                 }
-                state = state.copy(phase = CoinJoinConsolidationState.READY, txid = "")
+                state = state.copy(phase = CoinJoinConsolidationState.READY, txid = "", rawTx = "")
                 saveConsolidation(state)
             }
             if (state.action == MixedFundsMigrationAction.SHIELD && !snapshot.needsConsolidation) {
@@ -1315,24 +1334,77 @@ class CoinJoinFundsMigrationService @Inject constructor(
             val result = sdkL1SendService.consolidateCoinJoin(destination, amount, snapshot.drain) { bytes ->
                 val txid = validateCoinJoinConsolidation(bytes, snapshot, destination, walletData.networkParameters,
                     minimumInputs = if (finalTransfer) 1 else 2)
+                // The signed bytes go into the SAME write as the txid, before
+                // broadcast: a process that dies before the native broadcast
+                // can then replay exactly this transaction.
                 state = state.copy(phase = if (finalTransfer) CoinJoinConsolidationState.TRANSFERRING
-                    else CoinJoinConsolidationState.WAITING, txid = txid)
+                    else CoinJoinConsolidationState.WAITING, txid = txid, rawTx = Utils.HEX.encode(bytes))
                 saveConsolidation(state)
                 log.info("CoinJoin consolidation prepared: {} ({} available inputs)", txid, snapshot.coins.size)
             }
             if (result is SdkWriteResult.NotBroadcast) {
-                state = state.copy(phase = CoinJoinConsolidationState.READY, txid = "")
+                state = state.copy(phase = CoinJoinConsolidationState.READY, txid = "", rawTx = "")
                 saveConsolidation(state)
                 if (isSignerLockedFailure(result)) return ConsolidationStep.SIGNER_LOCKED
                 failMigration()
                 return ConsolidationStep.STOPPED
             }
+            // Submitted by this process: no automatic replay needed here.
+            if (result is SdkWriteResult.Broadcast) replayedConsolidations.add(state.txid.lowercase())
             // Ambiguous without a prepared txid cannot safely start another build.
             if (state.phase !in setOf(CoinJoinConsolidationState.WAITING, CoinJoinConsolidationState.TRANSFERRING)) {
                 expireMigration(); return ConsolidationStep.STOPPED
             }
             delay(IN_FLIGHT_POLL_MS)
         }
+    }
+
+    /**
+     * Replay the persisted signed bytes of an unsettled WAITING/TRANSFERRING
+     * consolidation — once per process per txid (recovery after process
+     * death) and again after the user's Try again. Never rebuilds:
+     * - legacy state without bytes → nothing to replay (observation only);
+     * - bytes that do not hash to the recorded txid → refused;
+     * - an input already spent by a DIFFERENT transaction (locally, or as
+     *   the network's answer) → [ConsolidationReplay.CONFLICT];
+     * - an "already known" answer counts as submitted.
+     *
+     * @return the replay outcome, or null when nothing was attempted.
+     */
+    private suspend fun replayConsolidationIfNeeded(state: CoinJoinConsolidationState): ConsolidationReplay? {
+        val txid = state.txid.lowercase()
+        if (txid.isEmpty() || state.rawTx.isEmpty()) return null
+        if (!replayedConsolidations.add(txid)) return null
+        val bytes = state.replayBytesOrNull(walletData.networkParameters)
+        if (bytes == null) {
+            log.error("CoinJoin consolidation {}: persisted bytes do not match the txid; refusing to replay", txid)
+            return null
+        }
+        if (inputsSpentElsewhere(bytes, txid)) {
+            log.warn("CoinJoin consolidation {}: an input is spent by a different transaction; not replaying", txid)
+            return ConsolidationReplay.CONFLICT
+        }
+        log.info("CoinJoin consolidation {}: replaying the persisted signed transaction", txid)
+        return sdkL1SendService.rebroadcastCoinJoinConsolidation(bytes, txid)
+    }
+
+    /**
+     * Does the SDK store record any input of [rawTx] as spent by a
+     * transaction OTHER than [txid]? A read failure answers false: the
+     * replay itself is idempotent, and the network's conflict answer still
+     * fails closed.
+     */
+    private suspend fun inputsSpentElsewhere(rawTx: ByteArray, txid: String): Boolean = try {
+        val tx = org.bitcoinj.core.Transaction(walletData.networkParameters, rawTx)
+        val own = Utils.HEX.decode(txid).reversedArray()
+        val rows = dashSdkService.databaseOrNull()?.txoDao()
+            ?.getByOutpoints(tx.inputs.map { it.outpoint.bitcoinSerialize() })
+            .orEmpty()
+        rows.any { row -> row.spendingTxid?.let { !it.contentEquals(own) } == true }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not read the consolidation inputs' spenders", t)
+        false
     }
 
     private suspend fun expireMigration() {

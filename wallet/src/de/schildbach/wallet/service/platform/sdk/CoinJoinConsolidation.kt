@@ -17,12 +17,35 @@ internal data class CoinJoinConsolidationState(
     val destination: String,
     val phase: String = READY,
     val txid: String = "",
-    val regularDestination: String = ""
+    val regularDestination: String = "",
+    /**
+     * Hex of the signed [txid] transaction, written in the SAME checkpoint
+     * write as [txid], before broadcast, so a process that dies before the
+     * native broadcast can replay the exact bytes. Empty on states saved by
+     * older builds (observation only, as before) and outside WAITING/TRANSFERRING.
+     */
+    val rawTx: String = ""
 ) {
     val action: MixedFundsMigrationAction get() = if (regularDestination.isEmpty())
         MixedFundsMigrationAction.SHIELD else MixedFundsMigrationAction.COMBINE
     fun encode(): String = JSONObject().put("walletId", walletId).put("destination", destination)
-        .put("phase", phase).put("txid", txid).put("regularDestination", regularDestination).toString()
+        .put("phase", phase).put("txid", txid).put("regularDestination", regularDestination)
+        .apply { if (rawTx.isNotEmpty()) put("rawTx", rawTx) }.toString()
+
+    /**
+     * The persisted signed bytes for replay, or null when there are none
+     * (legacy state) or they do not hash to [txid] — never broadcast bytes
+     * that are not the recorded transaction.
+     */
+    fun replayBytesOrNull(params: NetworkParameters): ByteArray? {
+        if (rawTx.isEmpty() || txid.isEmpty()) return null
+        return try {
+            val bytes = Utils.HEX.decode(rawTx.lowercase())
+            bytes.takeIf { Transaction(params, it).txId.toString().equals(txid, ignoreCase = true) }
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     companion object {
         const val READY = "ready"
@@ -35,7 +58,8 @@ internal data class CoinJoinConsolidationState(
         fun decode(raw: String): CoinJoinConsolidationState {
             val json = JSONObject(raw)
             return CoinJoinConsolidationState(json.getString("walletId"), json.getString("destination"),
-                json.getString("phase"), json.getString("txid"), json.optString("regularDestination", ""))
+                json.getString("phase"), json.getString("txid"), json.optString("regularDestination", ""),
+                json.optString("rawTx", ""))
         }
     }
 }

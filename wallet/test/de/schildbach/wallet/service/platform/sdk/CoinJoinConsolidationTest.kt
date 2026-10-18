@@ -89,6 +89,8 @@ class CoinJoinConsolidationTest {
         val addresses = MutableStateFlow(listOf(address()))
         var engineBalance = coins.value.sumOf { it.amount }
         var storedTx: TransactionEntity? = null
+        /** What the SDK store answers for the replayed transaction's input outpoints. */
+        var inputRows = listOf<TxoEntity>()
         val shieldedBalance = MutableStateFlow(Dash.ZERO)
         var coinJoinLocks = 0
         /** Display-hex txids with app-persisted InstantSend lock evidence. */
@@ -113,6 +115,9 @@ class CoinJoinConsolidationTest {
             every { db.coreAddressDao().observeByAccount(7) } returns addresses
             every { db.txoDao().observeUnspentByWallet(any()) } returns coins
             coEvery { db.transactionDao().getByTxid(any()) } answers { storedTx }
+            coEvery { db.txoDao().getByOutpoints(any()) } answers { inputRows }
+            // The pinned SDK has no raw-bytes broadcast.
+            coEvery { send.rebroadcastCoinJoinConsolidation(any(), any()) } returns ConsolidationReplay.UNAVAILABLE
             coEvery { blockchain.getState() } returns chainState
             every { chainState.isSynced() } returns true
             coEvery { shield.ensureShieldedReady() } returns true
@@ -132,7 +137,10 @@ class CoinJoinConsolidationTest {
         val tx = transaction(f.coins.value)
         coEvery { f.send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
             arg<suspend (ByteArray) -> Unit>(3)(tx.bitcoinSerialize())
-            assertEquals(tx.txId.toString(), CoinJoinConsolidationState.decode(f.consolidation).txid)
+            val prepared = CoinJoinConsolidationState.decode(f.consolidation)
+            assertEquals(tx.txId.toString(), prepared.txid)
+            // The signed bytes are persisted in the same write, before broadcast.
+            assertEquals(Utils.HEX.encode(tx.bitcoinSerialize()), prepared.rawTx)
             SdkWriteResult.Broadcast(tx.txId.toString())
         }
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
@@ -149,6 +157,125 @@ class CoinJoinConsolidationTest {
         advanceTimeBy(15_000); runCurrent()
         coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any()) }
         coVerify(exactly = 1) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+        // Broadcast by this process: no replay; the settled stage drops the bytes.
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        assertEquals("", CoinJoinConsolidationState.decode(f.consolidation).rawTx)
+    }
+
+    private fun waitingState(tx: Transaction, raw: ByteArray = tx.bitcoinSerialize()) =
+        CoinJoinConsolidationState(walletId, destination, CoinJoinConsolidationState.WAITING,
+            tx.txId.toString(), rawTx = Utils.HEX.encode(raw)).encode()
+
+    @Test fun consolidationStateKeepsSignedBytesAndDecodesLegacyStates() {
+        val tx = transaction((0 until 3).map(::coin))
+        val state = CoinJoinConsolidationState.decode(waitingState(tx))
+        assertArrayEquals(tx.bitcoinSerialize(), state.replayBytesOrNull(params))
+        val legacy = """{"walletId":"$walletId","destination":"$destination","phase":"waiting",""" +
+            """"txid":"${tx.txId}","regularDestination":""}"""
+        val decoded = CoinJoinConsolidationState.decode(legacy)
+        assertEquals("", decoded.rawTx)
+        assertNull(decoded.replayBytesOrNull(params))
+        val other = transaction((0 until 2).map(::coin))
+        assertNull(state.copy(rawTx = Utils.HEX.encode(other.bitcoinSerialize())).replayBytesOrNull(params))
+        assertNull(state.copy(rawTx = "zz").replayBytesOrNull(params))
+    }
+
+    @Test fun replayAfterProcessDeathBroadcastsTheSameBytesOnceAndNeverRebuilds() = runTest {
+        val f = Fixture(this)
+        val tx = transaction(f.coins.value)
+        val raw = tx.bitcoinSerialize()
+        val replayed = mutableListOf<ByteArray>()
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } coAnswers {
+            replayed += firstArg<ByteArray>()
+            ConsolidationReplay.SUBMITTED
+        }
+        // Process death after the prepared checkpoint, before the native broadcast.
+        f.consolidation = waitingState(tx)
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        advanceTimeBy(60_000); runCurrent()
+        assertEquals(1, replayed.size)
+        assertArrayEquals(raw, replayed.single())
+        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(any(), tx.txId.toString()) }
+        // Try again replays the identical bytes once more and resumes observation.
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.retryPendingMigration())
+        runCurrent()
+        advanceTimeBy(30_000); runCurrent()
+        assertEquals(2, replayed.size)
+        assertArrayEquals(raw, replayed[1])
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+        // Submitted: the stage settles like any broadcast consolidation.
+        f.storedTx = TransactionEntity(tx.txId.reversedBytes, raw, context = 1)
+        val output = coin(999).copy(outpoint = TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize(),
+            txid = tx.txId.reversedBytes, amount = tx.outputs[0].value.value)
+        f.coins.value = listOf(output)
+        f.engineBalance = output.amount
+        advanceTimeBy(15_000); runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any()) }
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+        assertEquals(2, replayed.size)
+    }
+
+    @Test fun replayConflictFailsClosedWithoutRebuilding() = runTest {
+        val f = Fixture(this)
+        val tx = transaction(f.coins.value)
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } returns ConsolidationReplay.CONFLICT
+        f.consolidation = waitingState(tx)
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        assertTrue(requireNotNull(f.service.inFlightMigration()).isExpired())
+        assertEquals(CoinJoinConsolidationState.WAITING, CoinJoinConsolidationState.decode(f.consolidation).phase)
+        // Try again replays the same bytes again and still never rebuilds.
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.retryPendingMigration())
+        runCurrent()
+        advanceTimeBy(30_000); runCurrent()
+        assertTrue(requireNotNull(f.service.inFlightMigration()).isExpired())
+        coVerify(exactly = 2) { f.send.rebroadcastCoinJoinConsolidation(any(), tx.txId.toString()) }
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+        assertEquals(tx.txId.toString(), CoinJoinConsolidationState.decode(f.consolidation).txid)
+    }
+
+    @Test fun inputSpentByAnotherTransactionIsAConflictWithoutBroadcasting() = runTest {
+        val f = Fixture(this)
+        val tx = transaction(f.coins.value)
+        val other = Sha256Hash.of("other".toByteArray())
+        f.inputRows = listOf(f.coins.value.first().copy(spendingTxid = other.reversedBytes))
+        f.consolidation = waitingState(tx)
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        assertTrue(requireNotNull(f.service.inFlightMigration()).isExpired())
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+    }
+
+    @Test fun inputsSpentByTheRecordedTransactionItselfStillReplay() = runTest {
+        val f = Fixture(this)
+        val tx = transaction(f.coins.value)
+        f.inputRows = f.coins.value.map { it.copy(spendingTxid = tx.txId.reversedBytes) }
+        f.consolidation = waitingState(tx)
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(any(), tx.txId.toString()) }
+        assertFalse(requireNotNull(f.service.inFlightMigration()).isExpired())
+    }
+
+    @Test fun storedBytesThatDoNotMatchTheTxidAreNeverBroadcast() = runTest {
+        val f = Fixture(this)
+        val tx = transaction(f.coins.value)
+        val other = transaction(f.coins.value.take(2))
+        f.consolidation = waitingState(tx, other.bitcoinSerialize())
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        advanceTimeBy(30_000); runCurrent()
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+        // Observation continues as for a legacy state.
+        assertFalse(requireNotNull(f.service.inFlightMigration()).isExpired())
     }
 
     @Test fun restartWithPendingConsolidationDoesNotBuildAnotherTransaction() = runTest {
@@ -160,6 +287,8 @@ class CoinJoinConsolidationTest {
         advanceTimeBy(30_000); runCurrent()
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
         coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+        // A legacy state carries no signed bytes: observation only, as before.
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
     }
 
     @Test fun missingAddressOrIncompleteSyncCannotStartConsolidation() = runTest {

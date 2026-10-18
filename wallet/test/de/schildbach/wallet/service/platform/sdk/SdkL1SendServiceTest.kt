@@ -170,6 +170,15 @@ class SdkL1SendServiceTest {
         }
 
         override suspend fun unusedExternalAddress(walletIdHex: String): String? = externalAddress
+
+        /** Null = the interface default (no raw-bytes broadcast in the pinned SDK). */
+        var onRawBroadcast: ((ByteArray) -> String)? = null
+        val rawBroadcasts = mutableListOf<ByteArray>()
+
+        override suspend fun broadcastRawTransaction(rawTx: ByteArray): String {
+            rawBroadcasts += rawTx
+            return onRawBroadcast?.invoke(rawTx) ?: super.broadcastRawTransaction(rawTx)
+        }
     }
 
     private fun config(enabled: Boolean?, cutoverState: String? = null): DashPayConfig = mockk {
@@ -520,6 +529,57 @@ class SdkL1SendServiceTest {
         val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { }
         assertEquals(SdkWriteResult.NotBroadcast("wallet not bound"), result)
         assertEquals(0, source.lockAcquisitions)
+    }
+
+    // ── CoinJoin consolidation replay (exact persisted bytes) ────────────
+
+    private val replayBytes = byteArrayOf(1, 2, 3, 4)
+
+    @Test
+    fun rebroadcastConsolidation_submitsTheExactBytes() = runBlocking {
+        val source = readySource().apply { onRawBroadcast = { txid } }
+        val result = service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid)
+        assertEquals(ConsolidationReplay.SUBMITTED, result)
+        assertEquals(1, source.rawBroadcasts.size)
+        assertTrue(source.rawBroadcasts.single().contentEquals(replayBytes))
+        assertEquals(listOf(txid), bridgedTxids)
+        assertEquals(0, source.sendCalls)
+        assertEquals(0, source.sendAllCalls)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_alreadyKnownCountsAsSubmitted() = runBlocking {
+        for (answer in listOf("txn-already-known", "txn-already-in-mempool", "Transaction already in block chain")) {
+            val source = readySource().apply { onRawBroadcast = { throw IllegalStateException("rejected: $answer") } }
+            assertEquals(answer, ConsolidationReplay.SUBMITTED,
+                service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        }
+    }
+
+    @Test
+    fun rebroadcastConsolidation_conflictIsTerminal() = runBlocking {
+        val source = readySource().apply {
+            onRawBroadcast = { throw RuntimeException("wrapped", IllegalStateException("txn-mempool-conflict")) }
+        }
+        assertEquals(ConsolidationReplay.CONFLICT, service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        assertEquals(1, source.rawBroadcasts.size)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_withoutARawBroadcastApiIsUnavailable() = runBlocking {
+        val source = readySource()
+        assertEquals(ConsolidationReplay.UNAVAILABLE, service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        assertTrue(bridgedTxids.isEmpty())
+    }
+
+    @Test
+    fun rebroadcastConsolidation_otherFailuresAndClosedGateAreRetryable() = runBlocking {
+        val failing = readySource().apply { onRawBroadcast = { throw IllegalStateException("bad-txns-inputs-missingorspent") } }
+        assertEquals(ConsolidationReplay.FAILED, service(failing).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        val gated = readySource().apply { onRawBroadcast = { txid } }
+        assertEquals(ConsolidationReplay.FAILED,
+            service(gated, progress = { ShadowSyncProgress.IDLE }).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        assertEquals(0, gated.rawBroadcasts.size)
     }
 
     // ── The evidence gate (reuses evaluateWalletFundingGate) ─────────────
