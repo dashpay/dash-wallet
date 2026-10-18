@@ -1598,6 +1598,33 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `the funnel keeps the origin wallet when it hands a request to the SDK`() = runBlocking {
+        // review 5560810479: the typed overload saw the pre-cutover route, the cutover committed
+        // before this funnel's own route check, and the funnel handed the request to the SDK
+        // without its owner; the wallet was then replaced while the SDK bound a wallet to send from
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        val replacement = replacementWallet()
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } coAnswers {
+            every { walletDataProvider.wallet } returns replacement
+            // the service runs the caller's pre-broadcast conditions once a wallet is bound
+            arg<suspend () -> Unit>(3).invoke()
+            de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast("ab".repeat(32))
+        }
+        val request = org.bitcoinj.wallet.SendRequest.to(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("0.01")
+        )
+
+        try {
+            sendCoinsTaskRunner.sendCoins(request, originWallet = wallet)
+            fail("a payment confirmed on a replaced wallet was sent through the SDK")
+        } catch (e: IllegalStateException) {
+            assertNotNull(e)
+        }
+        io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `a session for the installed wallet names that wallet`() {
         val session = sendCoinsTaskRunner.currentWalletSession()
         assertTrue(sendCoinsTaskRunner.walletOf(session) === wallet)

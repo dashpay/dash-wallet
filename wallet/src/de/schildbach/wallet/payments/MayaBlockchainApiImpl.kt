@@ -28,6 +28,7 @@ import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
 import org.dash.wallet.integrations.maya.api.MayaWebApi
@@ -167,7 +168,10 @@ class MayaBlockchainApiImpl @Inject constructor(
     private val sdkL1SendService: SdkL1SendService,
     private val mayaWebApi: MayaWebApi,
     private val reservationLockMirror: ReservationLockMirror,
-    private val bridgedTransactionFactory: SdkBridgedTransactionFactory
+    private val bridgedTransactionFactory: SdkBridgedTransactionFactory,
+    // Resolves and re-checks the wallet a swap was confirmed on. A Provider, so this API never
+    // pins the payment service's own dependency graph.
+    private val walletPayments: javax.inject.Provider<WalletSendPaymentService>
 ) : MayaBlockchainApi {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
@@ -181,8 +185,11 @@ class MayaBlockchainApiImpl @Inject constructor(
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        session: WalletSession?
     ): ResponseResource<SwapTradeUIModel> {
+        // The wallet the swap was confirmed on, before the measurement and the quote below wait.
+        val confirmedOn = session ?: walletPayments.get().currentWalletSession()
         log.info("commitSwapTransaction($tradeId, $swapTradeUIModel")
         // A MAX sell arrives quoted at the FULL spendable balance (the UI fills
         // the amount from the balance so `maximum` can be detected by equality).
@@ -236,16 +243,24 @@ class MayaBlockchainApiImpl @Inject constructor(
             )
         )
         return if (resultSwapTrade is ResponseResource.Success) {
-            buildAndSendSwapTx(resultSwapTrade.value)
+            buildAndSendSwapTx(resultSwapTrade.value, confirmedOn)
         } else {
             resultSwapTrade
         }
     }
 
     override suspend fun buildAndSendSwapTx(
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        session: WalletSession?
     ): ResponseResource<SwapTradeUIModel> {
+        // The wallet the swap was confirmed on (review 5560810479). The SDK builds from whichever
+        // wallet is bound, so the build is bracketed: refused before it when that wallet is gone,
+        // and after it - its reservation released - when it went during the build. A wipe retires
+        // the old wallet before it unbinds anything, so a wallet still owned on both sides of the
+        // build was the bound one throughout.
+        val confirmedOn = session ?: walletPayments.get().currentWalletSession()
         try {
+            val origin = walletPayments.get().walletOf(confirmedOn)
             // memo documentation:
             //   https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
             // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
@@ -331,6 +346,11 @@ class MayaBlockchainApiImpl @Inject constructor(
                 memoBytes,
                 isMaxDeposit = swapTradeUIModel.maximum
             )
+            refusedForItsWallet(confirmedOn)?.let { refusal ->
+                // The build may have selected the replacement wallet's funds. Nothing was sent.
+                sdkL1SendService.releaseDeferredPayment(payment)
+                return refusal
+            }
 
             // Assert the deposit shape from the signed bytes BEFORE any
             // broadcast decision — a mis-shaped deposit to a Maya vault
@@ -372,6 +392,12 @@ class MayaBlockchainApiImpl @Inject constructor(
             runCatching { reservationLockMirror.setLocks(payment, locked = true) }
                 .onFailure { log.warn("failed to mirror the maya reservation into wallet locks", it) }
 
+            refusedForItsWallet(confirmedOn)?.let { refusal ->
+                runCatching { reservationLockMirror.setLocks(payment, locked = false) }
+                    .onFailure { log.warn("failed to clear the mirrored maya reservation locks", it) }
+                sdkL1SendService.releaseDeferredPayment(payment)
+                return refusal
+            }
             log.info("maya swap deposit {}: broadcasting ({} duffs to the vault)", payment.txidHex, depositDuffs)
             return when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
                 is SdkWriteResult.Broadcast -> {
@@ -390,7 +416,7 @@ class MayaBlockchainApiImpl @Inject constructor(
                     // the tx list see the deposit immediately. Non-fatal: the
                     // funds ARE sent; without the bridge the tx appears on the
                     // next display-sync tick.
-                    when (val bridged = bridgedTransactionFactory.bridge(result.value)) {
+                    when (val bridged = bridgedTransactionFactory.bridge(result.value, originWallet = origin)) {
                         is BridgedTxResult.Bridged -> Unit
                         is BridgedTxResult.NotBridged -> log.warn(
                             "maya swap deposit {} broadcast but the display bridge failed ({})",
@@ -452,6 +478,18 @@ class MayaBlockchainApiImpl @Inject constructor(
                 t.message
             )
         }
+    }
+
+    /**
+     * A failure to return when the wallet the swap was confirmed on has been wiped or replaced, or
+     * null while it is still the installed one.
+     */
+    private fun refusedForItsWallet(session: WalletSession?): ResponseResource.Failure? = try {
+        walletPayments.get().walletOf(session)
+        null
+    } catch (e: IllegalStateException) {
+        log.warn("maya swap refused: {}", e.message)
+        ResponseResource.Failure(e, false, 0, e.message)
     }
 
     /**

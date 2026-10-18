@@ -552,7 +552,8 @@ class SendCoinsTaskRunner @Inject constructor(
         return when (result) {
             is SdkWriteResult.Broadcast -> {
                 notifyBroadcast(onBroadcast, result.value)
-                when (val bridged = bridgedTransactionFactory.bridge(result.value)) {
+                // Bridged into the wallet the payment was confirmed on, never re-resolved.
+                when (val bridged = bridgedTransactionFactory.bridge(result.value, originWallet = originWallet)) {
                     is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> {
                         beforeSending?.accept(bridged.transaction)
                         bridged.transaction
@@ -1879,8 +1880,17 @@ class SendCoinsTaskRunner @Inject constructor(
                     payment.address.toBase58().take(8),
                     if (payment.sendAll) ", send-all" else ""
                 )
+                // With its owner (review 5560810479): the typed overload can have seen the
+                // pre-cutover route before the cutover committed, and the SDK binds a wallet only
+                // inside this call, so the owner is checked again right before the broadcast.
                 return@withContext sendViaSdkBridged(
-                    payment.address, payment.amount, beforeSending, payment.sendAll, onBroadcast, onNotBroadcast
+                    payment.address,
+                    payment.amount,
+                    beforeSending,
+                    payment.sendAll,
+                    onBroadcast,
+                    onNotBroadcast,
+                    originWallet = originWallet
                 )
             }
             notifyNotBroadcast(onNotBroadcast)

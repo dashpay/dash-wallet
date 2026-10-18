@@ -961,7 +961,7 @@ class SwapKitApiAggregator @Inject constructor(
                 // Maya route: DASH → Asgard vault with the swap memo as an OP_RETURN. If a Maya
                 // route ever arrives without a memo the builder fabricates "=:ASSET:DEST" and
                 // its 80-byte guard fails loudly — a recoverable error, never a silent loss.
-                blockchainApi.buildAndSendSwapTx(model)
+                blockchainApi.buildAndSendSwapTx(model, session)
             } else {
                 // NEAR Intents (or any non-Maya provider) with no memo: a plain DASH deposit to
                 // the one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using the
