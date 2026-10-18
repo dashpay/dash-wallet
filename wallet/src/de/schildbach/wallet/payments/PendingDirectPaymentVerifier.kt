@@ -158,6 +158,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
      */
     @VisibleForTesting internal var beforeReleaseWrite: suspend () -> Unit = {}
 
+    /**
+     * Test seam: runs in a watch's release once its record lock is given back, before it returns:
+     * the window in which another lifecycle step (a resubmission's reactivation) can take the lock.
+     */
+    @VisibleForTesting internal var afterReleaseLocked: suspend () -> Unit = {}
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val scanMutex = Mutex()
 
@@ -1037,6 +1043,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // Under the lock settlement takes, and only for a payment still unsettled: cancelling the
         // watch is a request, so one already this far would otherwise write back the record a
         // cancellation or a commit has just removed, blocking its invoice again.
+        //
+        // The teardown is under the same lock, atomically with the write (review 4308598488): a
+        // resubmission's reactivation takes this lock to relock the inputs and make the record
+        // active again, so unlocking after giving the lock back could undo that reactivation's
+        // locks, and a reservation still in the map after the write could be trusted by the
+        // funding gate for a record already reactivated.
+        var heldReservation: SdkDeferredPayment? = null
         val written = recordMutex.withLock {
             currentCoroutineContext().ensureActive()
             val stored = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
@@ -1050,16 +1063,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 log.error("could not record the release of {}, keeping it locked and pending", tx.txId, e)
                 throw e
             }
+            // The stored payment says abandoned now, so a restart will not lock these inputs
+            // again, only carry on watching.
+            unlockInputs(origin, tx)
+            heldReservation = reservations.remove(tx.txId)
             true
         }
+        afterReleaseLocked()
         if (!written) {
             return null
         }
-
-        // Past this point the stored payment says abandoned, so a restart will not lock these
-        // inputs again, only carry on watching.
-        unlockInputs(origin, tx)
-        reservations.remove(tx.txId)?.let { engine.release(it) }
+        // Given back to the engine outside the lock: an engine call, and no longer reachable
+        // from the funding gate once it left the map above.
+        heldReservation?.let { engine.release(it) }
         return abandoned
     }
 

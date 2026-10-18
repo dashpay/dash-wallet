@@ -2004,6 +2004,44 @@ class PendingDirectPaymentVerifierTest {
     }
 
     @Test
+    fun `a release never undoes the protection of a reactivation that overtook it`() = runBlocking {
+        // review 4308598488: release() wrote abandoned under the record lock but unlocked the
+        // inputs and dropped the reservation after giving it back; a resubmission's reactivation
+        // in between relocked T1, and the release's tail then unlocked it again
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+
+        val reached = CompletableDeferred<Unit>()
+        val proceed = CompletableDeferred<Unit>()
+        verifier.afterReleaseLocked = {
+            if (!reached.isCompleted) {
+                reached.complete(Unit)
+                // the release is past its lock and must not be stopped by the reactivation's cancel
+                withContext(NonCancellable) { proceed.await() }
+            }
+        }
+        goOnlineAndSynced()
+        withTimeout(5_000) { reached.await() }
+        assertTrue("released", stored.single().abandoned)
+
+        // a resubmission of T1 overtakes the release; its new watch gets a real grace period
+        verifier.syncedGraceMs = 60_000L
+        assertEquals(
+            PendingDirectPaymentVerifier.Reactivation.REACTIVATED,
+            verifier.reactivateForResubmission(tx, wallet)
+        )
+        proceed.complete(Unit)
+        delay(300)
+
+        assertFalse("active", stored.single().abandoned)
+        tx.inputs.forEach { assertTrue("its inputs stay locked", wallet.isLockedOutput(it.outpoint)) }
+        assertTrue("fresh SDK funding is still blocked", verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
     fun `a resubmission reactivates a released payment durably, and survives a restart`() = runBlocking {
         // review 4307041830: posted again, T1 is protected exactly like a fresh quarantine
         val (stored, _) = storeWithFlakyRemovals()
