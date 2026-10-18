@@ -371,6 +371,20 @@ class MixedFundsMigrationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Should the unlock path bring the sheet back for THIS ViewModel's state
+     * (a call running in this process, or a prompt deferred by the lock
+     * screen)? Yes — except when the sheet would show "could not confirm"
+     * guidance the user already closed for the current marker window
+     * ([CoinJoinFundsMigrationService.isUnconfirmedMigrationAcknowledged]),
+     * which the automatic paths never re-present, call running or not. A
+     * processing (not yet expired) migration and a failure always come back.
+     */
+    suspend fun shouldRepresentAfterUnlock(): Boolean {
+        if (!_uiState.value.presentation().terminalGuidance) return true
+        return !migrationService.isUnconfirmedMigrationAcknowledged()
+    }
+
     suspend fun deferMigration() {
         if (_uiState.value.inProgress || _uiState.value.awaitingResult) return
         _uiState.value.amount?.let { migrationService.deferMigration(it) }
@@ -407,15 +421,18 @@ class MixedFundsMigrationViewModel @Inject constructor(
      * persisted definitive failure is released the same way (kept — and so
      * presented again — if it cannot be proven safe). Closed "could not
      * confirm" guidance is acknowledged so it stops re-appearing on every
-     * resume. Uncertain or in-flight states are kept.
+     * resume — EVEN while the native call is still suspended: that guidance
+     * is closable precisely because the call outlives the sheet, and the
+     * acknowledgement keeps the marker (spend block and recovery intact).
+     * Uncertain or in-flight states are kept.
      */
     fun onSheetClosed() {
         val state = _uiState.value
-        if (state.inProgress) return
         if (state.presentation().terminalGuidance) {
             acknowledgeTimedOutResult()
             return
         }
+        if (state.inProgress) return
         if (state.outcome != MixedFundsMigrationOutcome.NOT_ATTEMPTED) return
         updateFacts { it.copy(callResult = null, action = if (it.marker == MarkerPhase.FAILED) it.action else null) }
         viewModelScope.launch {

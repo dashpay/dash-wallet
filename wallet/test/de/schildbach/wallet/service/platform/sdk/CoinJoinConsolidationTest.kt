@@ -96,11 +96,11 @@ class CoinJoinConsolidationTest {
         val instantSendLocks = mockk<de.schildbach.wallet.database.dao.InstantSendLockDao>()
         val service: CoinJoinFundsMigrationService
         init {
-            coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, any()) } answers { marker = secondArg() }
-            coEvery { config.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } answers { consolidation }
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } answers { consolidation }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, any()) } answers { consolidation = secondArg() }
-            coEvery { config.get(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) } answers { directPhase }
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) } answers { directPhase }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, any()) } answers { directPhase = secondArg() }
             every { sdk.walletManagerOrNull() } returns manager
             every { sdk.databaseOrNull() } returns db

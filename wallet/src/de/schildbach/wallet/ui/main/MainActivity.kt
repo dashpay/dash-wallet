@@ -788,7 +788,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         if (pendingMixedFundsMigration || mixedFundsMigrationViewModel.uiState.value.inProgress) {
             pendingMixedFundsMigration = false
-            MixedFundsMigrationDialogFragment.showOnce(this)
+            // Even with a call still running, closed "could not confirm"
+            // guidance is not re-presented automatically (the acknowledgement
+            // shouldPresentPrompt() honours applies here too).
+            lifecycleScope.launch {
+                if (mixedFundsMigrationViewModel.shouldRepresentAfterUnlock()) {
+                    MixedFundsMigrationDialogFragment.showOnce(this@MainActivity)
+                }
+            }
         } else {
             // The lock screen may have torn the mixed-funds sheet down before
             // the user chose; if no choice has been recorded yet the ViewModel

@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.service.platform.sdk
 
+import androidx.datastore.preferences.core.Preferences
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.dao.InstantSendLockDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -500,7 +501,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // cutoverCommitted() fails closed (false) on a read error.
         if (!sdkL1SendService.cutoverCommitted()) return false
         val alreadyHandled = try {
-            dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
+            readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             // Fail CLOSED on a read error: never nag when we cannot tell.
@@ -551,10 +552,20 @@ class CoinJoinFundsMigrationService @Inject constructor(
         if (!restorePendingShieldMigration() && !adoptPendingCoinJoinShield()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
-        val marker = inFlightMigration() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        // Checkpoint reads that cannot be completed resume nothing: the record
+        // (if any) stays exactly as saved.
+        val marker: InFlightMixedFundsMigration
+        val hasConsolidation: Boolean
+        try {
+            marker = inFlightMigrationOrThrow() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            hasConsolidation = !readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("mixed-funds migration checkpoint unreadable; not resuming", t)
+            return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
         // A definitive failure has nothing to resume; only a fresh move may follow it.
         if (marker.failed) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
-        val hasConsolidation = !dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()
         if (marker.action != MixedFundsMigrationAction.SHIELD && !hasConsolidation) {
             return MixedFundsMigrationOutcome.UNCONFIRMED
         }
@@ -611,7 +622,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome = migrationMutex.withLock {
         if (!releaseFailedMigrationLocked()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
-        if (resumeOrAdoptPendingMigrationLocked()) return MixedFundsMigrationOutcome.STARTED
+        when (resumeOrAdoptPendingMigrationLocked()) {
+            PendingCheck.PENDING -> return MixedFundsMigrationOutcome.STARTED
+            PendingCheck.UNREADABLE -> return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            PendingCheck.NONE -> Unit
+        }
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -663,7 +678,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     suspend fun combineIntoUnmixedBalance(): MixedFundsMigrationOutcome = migrationMutex.withLock {
         if (!releaseFailedMigrationLocked()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
-        if (resumeOrAdoptPendingMigrationLocked()) return MixedFundsMigrationOutcome.STARTED
+        when (resumeOrAdoptPendingMigrationLocked()) {
+            PendingCheck.PENDING -> return MixedFundsMigrationOutcome.STARTED
+            PendingCheck.UNREADABLE -> return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            PendingCheck.NONE -> Unit
+        }
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -727,7 +746,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             // marker failure must not disturb the migration outcome (worst
             // case is the old behavior — no resumed processing sheet).
             try {
-                if (!markerAlreadyRecorded && inFlightMigration() == null) markInFlight(action)
+                // Strict read: an unreadable marker is never overwritten.
+                if (!markerAlreadyRecorded && inFlightMigrationOrThrow() == null) markInFlight(action)
                 else startInFlightWatcherIfNeeded()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
@@ -767,20 +787,34 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 migrationMutex.unlock()
             }
         }
-        return restorePendingMigrationRecord()
+        // UNREADABLE counts as pending: "no migration" is only ever reported
+        // from checkpoint state that was actually read.
+        return restorePendingMigrationRecord() != PendingCheck.NONE
     }
 
-    private suspend fun restorePendingMigrationRecord(): Boolean {
-        if (inFlightMigration() != null) {
-            startInFlightWatcherIfNeeded()
-            return true
+    /**
+     * Whether a recorded migration is pending, read WITHOUT the config's
+     * IOException rescue: an unreadable checkpoint is [PendingCheck.UNREADABLE],
+     * never [PendingCheck.NONE] — a fresh spend must not overwrite a saved
+     * (possibly uncertain) record it could not see.
+     */
+    private suspend fun restorePendingMigrationRecord(): PendingCheck {
+        try {
+            if (inFlightMigrationOrThrow() != null) {
+                startInFlightWatcherIfNeeded()
+                return PendingCheck.PENDING
+            }
+            val consolidation = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
+            if (!consolidation.isNullOrBlank()) {
+                markInFlight(CoinJoinConsolidationState.decode(consolidation).action)
+                return PendingCheck.PENDING
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("mixed-funds migration checkpoint unreadable; treating it as pending", t)
+            return PendingCheck.UNREADABLE
         }
-        val consolidation = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
-        if (!consolidation.isNullOrBlank()) {
-            markInFlight(CoinJoinConsolidationState.decode(consolidation).action)
-            return true
-        }
-        return false
+        return PendingCheck.NONE
     }
 
     /**
@@ -816,9 +850,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /** Caller holds [migrationMutex]. See [releaseFailedMigration]. */
     private suspend fun releaseFailedMigrationLocked(): Boolean {
         try {
-            val marker = inFlightMigration() ?: return true
+            val marker = inFlightMigrationOrThrow() ?: return true
             if (!marker.failed) return true
-            val raw = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
+            val raw = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
             if (!raw.isNullOrBlank() && CoinJoinConsolidationState.decode(raw).phase != CoinJoinConsolidationState.READY) {
                 return false
             }
@@ -838,9 +872,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
     }
 
     /** Caller holds [migrationMutex]. */
-    private suspend fun resumeOrAdoptPendingMigrationLocked(): Boolean {
+    private suspend fun resumeOrAdoptPendingMigrationLocked(): PendingCheck {
         reconcileInterruptedDirectShield()
-        return restorePendingMigrationRecord() || adoptPendingCoinJoinShield()
+        val recorded = restorePendingMigrationRecord()
+        if (recorded != PendingCheck.NONE) return recorded
+        return if (adoptPendingCoinJoinShield()) PendingCheck.PENDING else PendingCheck.NONE
     }
 
     /**
@@ -858,10 +894,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     private suspend fun reconcileInterruptedDirectShield(): Boolean {
         try {
-            val marker = inFlightMigration() ?: return false
+            val marker = inFlightMigrationOrThrow() ?: return false
             if (marker.action != MixedFundsMigrationAction.SHIELD) return false
-            if (dashPayConfig.get(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) != DIRECT_SHIELD_PREPARING) return false
-            if (!dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()) return false
+            if (readCheckpoint(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) != DIRECT_SHIELD_PREPARING) return false
+            if (!readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()) return false
             if (!shieldedBalanceService.ensureShieldedReady()) return false
             if (shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0) return false
         } catch (t: Throwable) {
@@ -881,15 +917,30 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /**
      * The persisted in-flight migration, or null when none is pending —
      * never set, already completed (result visible), or cleared after its
-     * timed-out state was acknowledged. Never throws.
+     * timed-out state was acknowledged. Never throws: an unreadable marker
+     * also reads null here, so this is for PRESENTATION only. Anything that
+     * gates a spend or reports "nothing pending" uses [inFlightMigrationOrThrow].
      */
     suspend fun inFlightMigration(): InFlightMixedFundsMigration? = try {
-        parseInFlightMigration(dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT))
+        inFlightMigrationOrThrow()
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("failed to read the in-flight mixed-funds marker", t)
         null
     }
+
+    /** [inFlightMigration] that THROWS when the marker cannot be read (see [readCheckpoint]). */
+    private suspend fun inFlightMigrationOrThrow(): InFlightMixedFundsMigration? =
+        parseInFlightMigration(readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT))
+
+    /**
+     * Read a migration CHECKPOINT key, keeping "absent" (null) and "could not
+     * read" (throws) apart. [DashPayConfig.get] rescues an IOException as empty
+     * preferences, which would make a saved, possibly uncertain checkpoint look
+     * absent and authorise a fresh spend over it.
+     */
+    private suspend fun <T> readCheckpoint(key: Preferences.Key<T>): T? =
+        dashPayConfig.getPreservingErrors(key)
 
     /** Reactive mirror of [inFlightMigration] — emits null once the result lands. */
     fun observeInFlightMigration(): Flow<InFlightMixedFundsMigration?> =
@@ -926,7 +977,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     suspend fun acknowledgeUnconfirmedMigration() {
         try {
-            val marker = inFlightMigration() ?: return
+            val marker = inFlightMigrationOrThrow() ?: return
             if (marker.failed) return
             dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT, marker.startedAtMillis)
         } catch (t: Throwable) {
@@ -947,17 +998,27 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // Same reconcile/restore as [shouldPrompt], so a stale interrupted
         // intent is dropped before it can be presented.
         if (restorePendingShieldMigration()) {
-            val marker = inFlightMigration() ?: return true
-            if (marker.failed) return true
-            val acknowledgedAt = try {
-                dashPayConfig.get(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT)
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                null
-            }
-            return acknowledgedAt != marker.startedAtMillis
+            return !isUnconfirmedMigrationAcknowledged()
         }
         return shouldPrompt()
+    }
+
+    /**
+     * Has the user already closed the "could not confirm" guidance of the
+     * CURRENT marker window ([acknowledgeUnconfirmedMigration])? False for a
+     * failed marker (never acknowledged away), for no marker, and whenever
+     * the marker or acknowledgement cannot be read — the guidance is then
+     * presented rather than silently dropped. Every AUTOMATIC re-presentation
+     * path honours this, including the unlock path while a call is running.
+     */
+    suspend fun isUnconfirmedMigrationAcknowledged(): Boolean = try {
+        val marker = inFlightMigrationOrThrow()
+        marker != null && !marker.failed &&
+            readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT) == marker.startedAtMillis
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("failed to read the mixed-funds acknowledgement; presenting", t)
+        false
     }
 
     private suspend fun markInFlight(action: MixedFundsMigrationAction, startWatcher: Boolean = true) {
@@ -1122,7 +1183,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /** A persisted txid is written before broadcast; an uncertain send is only observed, never rebuilt. */
     private suspend fun continueConsolidation(): ConsolidationStep {
-        val raw = dashPayConfig.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
+        // Strict: an unreadable stage throws (the watcher stands down into the
+        // "could not confirm" guidance) instead of reading as "no stage".
+        val raw = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
         if (raw.isNullOrBlank()) return ConsolidationStep.PROCEED // Legacy/direct asset-lock recovery.
         var state = CoinJoinConsolidationState.decode(raw)
         while (true) {
@@ -1339,6 +1402,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
         /** How often a step blocked by a locked device is retried. */
         private const val SIGNER_LOCKED_RETRY_MS = 30_000L
+
+        /** Result of reading the recorded-migration checkpoint. */
+        private enum class PendingCheck { NONE, PENDING, UNREADABLE }
 
         /** [DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE] values. */
         internal const val DIRECT_SHIELD_PREPARING = "preparing"

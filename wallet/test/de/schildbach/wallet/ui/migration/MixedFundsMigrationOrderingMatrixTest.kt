@@ -35,8 +35,11 @@ import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -353,6 +356,64 @@ class MixedFundsMigrationOrderingMatrixTest {
             } finally {
                 store.clear()
             }
+        }
+    }
+
+    /**
+     * Expired guidance is closable while the native call is still suspended.
+     * Closing it then must be acknowledged (not swallowed by the running-call
+     * guard), and the unlock path must not bring it back — while a genuinely
+     * in-progress window (and a failure) still re-presents.
+     */
+    @Test
+    fun closingGuidanceDuringASuspendedCallAcknowledgesAndUnlockDoesNotRepresentIt() = runBlocking {
+        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        val markers = MutableStateFlow<InFlightMixedFundsMigration?>(null)
+        var acknowledged = false
+        coEvery { service.restorePendingShieldMigration() } answers { markers.value != null }
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.observeInFlightMigration() } returns markers
+        coEvery { service.inFlightMigration() } answers { markers.value }
+        // The native call never returns within this test.
+        coEvery { service.shieldMixedFunds(any()) } coAnswers { CompletableDeferred<MixedFundsMigrationOutcome>().await() }
+        coEvery { service.acknowledgeUnconfirmedMigration() } answers { acknowledged = true }
+        coEvery { service.isUnconfirmedMigrationAcknowledged() } answers { acknowledged }
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            model.shieldMixedFunds()
+            markers.value = pending()
+            assertTrue(model.uiState.value.inProgress)
+            assertEquals(Shown.PROCESSING, model.uiState.value.shown())
+            assertTrue("in-progress processing re-presents on unlock", model.shouldRepresentAfterUnlock())
+
+            // The honesty window passes while the call is still suspended.
+            markers.value = expired()
+            assertTrue("the call is still running", model.uiState.value.inProgress)
+            assertEquals(Shown.GUIDANCE, model.uiState.value.shown())
+            assertTrue("not yet closed: the guidance is re-presented", model.shouldRepresentAfterUnlock())
+
+            model.onSheetClosed()
+            coVerify(exactly = 1) { service.acknowledgeUnconfirmedMigration() }
+            coVerify(exactly = 0) { service.clearInFlightMigration() }
+            coVerify(exactly = 0) { service.releaseFailedMigration() }
+            assertFalse("closed guidance must not return on unlock", model.shouldRepresentAfterUnlock())
+            // The record is kept: still guidance, still blocking, still resumable.
+            assertEquals(Shown.GUIDANCE, model.uiState.value.shown())
+
+            // A new window (Try again / signer-locked retry) is in progress again: presented.
+            markers.value = pending()
+            assertEquals(Shown.PROCESSING, model.uiState.value.shown())
+            assertTrue(model.shouldRepresentAfterUnlock())
+
+            // A failure is never acknowledged away.
+            markers.value = failed()
+            model.onSheetClosed()
+            coVerify(exactly = 1) { service.acknowledgeUnconfirmedMigration() }
+            assertTrue(model.shouldRepresentAfterUnlock())
+        } finally {
+            store.clear()
         }
     }
 }

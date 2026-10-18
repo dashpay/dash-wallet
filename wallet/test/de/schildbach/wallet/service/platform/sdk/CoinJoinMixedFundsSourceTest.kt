@@ -76,9 +76,9 @@ class CoinJoinMixedFundsSourceTest {
         init {
             coEvery { send.cutoverCommitted() } returns cutover
             coEvery { shield.isWalletShieldingAvailable() } returns true
-            coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } returns ""
-            coEvery { config.get(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } returns ""
-            coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) } returns false
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } returns ""
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } returns ""
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) } returns false
             coEvery { config.get(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS) } returns null
             coEvery { config.getDashjSyncDiagnostic() } returns false
             every { sdk.walletManagerOrNull() } returns manager
