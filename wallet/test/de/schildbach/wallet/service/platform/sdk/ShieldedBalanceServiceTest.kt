@@ -1587,8 +1587,147 @@ class ShieldedBalanceServiceTest {
             while (!service.shieldedBalanceMaybeStale.value || source.passResults.subscriptionCount.value == 0) {
                 delay(10)
             }
+            awaitBarrierOpen(source)
         }
         return service
+    }
+
+    /**
+     * The fake's syncShieldedNow returns at once, so the settlement driver's
+     * barrier passes and evidence passes all complete quickly; results only
+     * count once they have.
+     */
+    private suspend fun awaitBarrierOpen(source: FakeSource, alreadyCalled: Int = 0) {
+        val passes = ShieldedBalanceServiceImpl.SETTLEMENT_BARRIER_PASSES +
+            ShieldedBalanceServiceImpl.SETTLEMENT_EVIDENCE_PASSES
+        while (source.syncNowCalls < alreadyCalled + passes) delay(10)
+        delay(50)
+    }
+
+    /**
+     * Regression (review 2026-10-18): two identical results from passes that ran
+     * BEFORE a spend are still buffered when the spend is marked. They must not
+     * settle the new reconciliation — only results after our post-spend forced
+     * passes have returned count.
+     */
+    @Test
+    fun bufferedPreSpendResults_cannotSettleANewSpend() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val barrierGate = CompletableDeferred<Unit>()
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            assertFalse(service.shieldedBalanceMaybeStale.value)
+
+            // The post-spend forced passes are held, as if still running.
+            source.onSyncNowSuspend = { barrierGate.await() }
+            withTimeout(2_000) { service.noteExternalShieldedSpendBroadcast() }
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+
+            // Two identical pre-spend results, consumed only now.
+            source.passResults.emit(passOk())
+            source.passResults.emit(passOk())
+            delay(300)
+            assertTrue("pre-spend results must not settle", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            // The post-spend passes return: from here results count.
+            source.onSyncNowSuspend = {}
+            barrierGate.complete(Unit)
+            withTimeout(5_000) { awaitBarrierOpen(source) }
+            source.passResults.emit(passOk())
+            delay(30)
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            barrierGate.complete(Unit)
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression (codex review 2026-10-18): if the durable marker can't be
+     * cleared, the reconciliation stays pending — clearing only the flag would
+     * show a balance the persister refuses to cache. The next stable pass
+     * retries the clear.
+     */
+    @Test
+    fun settlement_keepsTheFlag_whenClearingTheMarkerFails() = runBlocking {
+        val cfg = config(true)
+        var clearFails = true
+        coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
+            if (clearFails) throw IllegalStateException("datastore write failed")
+        }
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.passResults.emit(passOk())
+            delay(30)
+            source.passResults.emit(passOk())
+            withTimeout(5_000) {
+                while (true) {
+                    try {
+                        coVerify(atLeast = 1) { cfg.clearShieldedSpendReconcilePending() }
+                        break
+                    } catch (e: AssertionError) {
+                        delay(10)
+                    }
+                }
+            }
+            delay(100)
+            assertTrue("marker still set: must stay stale", service.shieldedBalanceMaybeStale.value)
+
+            clearFails = false
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression (codex review 2026-10-18): stopping the runtime cancels the
+     * settlement driver — it must not keep forcing passes against a stopped
+     * loop (or a wiped wallet). The durable marker restarts it on bring-up.
+     */
+    @Test
+    fun stop_cancelsTheSettlementDriver() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+
+            // Every forced pass fails, so the driver would retry indefinitely.
+            source.onSyncNowSuspend = { throw IllegalStateException("not ready") }
+            withTimeout(2_000) { service.noteExternalShieldedSpendBroadcast() }
+            withTimeout(5_000) { while (source.syncNowCalls == 0) delay(10) }
+
+            withTimeout(5_000) { service.stop() }
+            val callsAtStop = source.syncNowCalls
+            delay(ShieldedBalanceServiceImpl.SETTLEMENT_RETRY_BASE_MS * 4 + 200)
+            assertEquals("no forced pass after stop", callsAtStop, source.syncNowCalls)
+        } finally {
+            sweepScope.cancel()
+        }
     }
 
     /** Failed / skipped passes are no settlement evidence, however many of them complete. */

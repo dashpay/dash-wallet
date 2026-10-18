@@ -1334,6 +1334,10 @@ class ShieldedBalanceServiceImpl internal constructor(
         balancePersistJob = null
         sweepJob?.cancel()
         sweepJob = null
+        // A pending reconciliation is durable (its marker), so the next
+        // bring-up restarts the driver; it must not force passes meanwhile.
+        settlementBarrierJob?.cancel()
+        settlementBarrierJob = null
         _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
         _shieldedBalanceMaybeStale.value = false
     }
@@ -1371,11 +1375,14 @@ class ShieldedBalanceServiceImpl internal constructor(
                     false
                 }
             if (reconcilePending) {
-                reconcileMutex.withLock {
+                val generation = reconcileMutex.withLock {
                     reconcileGeneration++
                     _shieldedBalanceMaybeStale.value = true
                     lastPassBalanceCredits = null
+                    settlementBarrierPassed = false
+                    reconcileGeneration
                 }
+                startSettlementBarrier(generation)
             }
             // Settlement is driven by the SDK's per-pass RESULTS, not by polling
             // the in-flight flag: a polled busy→idle edge cannot tell a failed
@@ -1454,17 +1461,25 @@ class ShieldedBalanceServiceImpl internal constructor(
         // clearing (or seeding) them.
         reconcileMutex.withLock {
             if (generation != reconcileGeneration) return@withLock
+            // Before our post-spend forced passes have returned, a result may
+            // come from a pass that ran BEFORE the spend (buffered by the SDK):
+            // it is neither evidence nor a streak break — just dropped.
+            if (!settlementBarrierPassed) return@withLock
             val stable = passCredits != null && passCredits == lastPassBalanceCredits
             if (stable && displayedCredits == passCredits) {
-                if (_shieldedBalanceMaybeStale.value) {
-                    // Settled: the durable marker goes with the flag.
+                // Settled: the durable marker goes with the flag. If the marker
+                // can't be cleared the flag stays set — clearing it alone would
+                // show a balance the persister then refuses to cache, and the
+                // next bring-up would restore the reconciliation anyway. The
+                // streak is kept, so the next stable pass retries the clear.
+                val markerCleared = !_shieldedBalanceMaybeStale.value ||
                     runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
                         .onFailure {
                             if (it is CancellationException) throw it
                             log.warn("failed to clear the pending shielded spend reconciliation", it)
                         }
-                }
-                _shieldedBalanceMaybeStale.value = false
+                        .isSuccess
+                if (markerCleared) _shieldedBalanceMaybeStale.value = false
             }
             // A failed pass (null) resets the streak; a successful one seeds it
             // with the balance it observed.
@@ -2053,12 +2068,13 @@ class ShieldedBalanceServiceImpl internal constructor(
             // is mid-flight (suspended clearing its marker) must not clear this
             // spend's flag, marker or stability window. The new generation makes
             // that earlier decision void once it re-enters the lock.
-            reconcileMutex.withLock {
+            val generation = reconcileMutex.withLock {
                 reconcileGeneration++
                 _shieldedBalanceMaybeStale.value = true
                 // Restart the two-pass stability window: the flag must survive
                 // at least two completed passes with an unchanged balance.
                 lastPassBalanceCredits = null
+                settlementBarrierPassed = false
                 // The flag is in-memory only (false in a new process, reset by
                 // tearDownReadyState), so record the pending reconciliation
                 // durably too: drop the persisted last-known balance (a stop or
@@ -2068,6 +2084,76 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // stale, so only a settled balance makes the cache valid again.
                 runCatching { dashPayConfig.markShieldedSpendReconcilePending() }
                     .onFailure { log.warn("failed to persist the pending shielded spend reconciliation", it) }
+                reconcileGeneration
+            }
+            startSettlementBarrier(generation)
+        }
+    }
+
+    /**
+     * Whether pass results may count as settlement evidence for the current
+     * reconciliation (guarded by [reconcileMutex]). Cleared whenever one
+     * starts; set by [startSettlementBarrier] once forced passes that STARTED
+     * after it have completed.
+     *
+     * Best-effort causal fence (review 2026-10-18): `ShieldedResult` carries no
+     * pass sequence and the SDK buffers up to 256 sync events, so results from
+     * passes that ran BEFORE the spend can still be queued when it is marked.
+     * Ignoring every result until our own post-spend passes have returned
+     * drops those. Not provable — that needs SDK pass sequencing — but the
+     * stale results would have to outlive two full forced passes.
+     */
+    @Volatile
+    private var settlementBarrierPassed = true
+
+    /** The running [startSettlementBarrier] driver; replaced by each new reconciliation. */
+    @Volatile
+    private var settlementBarrierJob: Job? = null
+
+    /**
+     * Drive [generation]'s settlement: (1) the barrier — two SEQUENTIAL forced
+     * passes ([ShieldedSource.syncShieldedNow]); the second provably starts
+     * after the spend was marked, even if the first joined a pass already in
+     * flight; failures retry with backoff. Then open the barrier with a fresh
+     * stability window, and (2) force [SETTLEMENT_EVIDENCE_PASSES] more passes
+     * so evidence arrives promptly instead of waiting out the caught-up
+     * cooldown. A newer reconciliation cancels and replaces this driver.
+     * Scoped to the bound runtime: [tearDownReadyState] cancels it, and with
+     * no runtime bound nothing starts — the durable marker has the
+     * [startSyncStatusPolling] of the next bring-up restart it. With no
+     * [sweepScope] (host unit tests) nothing runs.
+     */
+    private fun startSettlementBarrier(generation: Long): Unit = synchronized(readyMonitor) {
+        val scope = sweepScope ?: return
+        settlementBarrierJob?.cancel()
+        settlementBarrierJob = null
+        if (readyWalletIdHex.value == null) return
+        settlementBarrierJob = scope.launch {
+            var completed = 0
+            var failures = 0
+            while (completed < SETTLEMENT_BARRIER_PASSES) {
+                val ok = runCatching { source.syncShieldedNow() }
+                    .onFailure { if (it is CancellationException) throw it }
+                    .isSuccess
+                if (ok) {
+                    completed++
+                } else {
+                    delay(SETTLEMENT_RETRY_BASE_MS * (1L shl minOf(failures++, 5)))
+                }
+            }
+            val opened = reconcileMutex.withLock {
+                if (generation != reconcileGeneration) return@withLock false
+                settlementBarrierPassed = true
+                lastPassBalanceCredits = null
+                true
+            }
+            if (!opened) return@launch
+            repeat(SETTLEMENT_EVIDENCE_PASSES) {
+                runCatching { source.syncShieldedNow() }
+                    .onFailure {
+                        if (it is CancellationException) throw it
+                        log.warn("post-spend evidence pass failed; the background loop will continue", it)
+                    }
             }
         }
     }
@@ -2194,5 +2280,14 @@ class ShieldedBalanceServiceImpl internal constructor(
          * shown indefinitely. At [SYNC_STATUS_POLL_INTERVAL_MS] this is ~3s.
          */
         internal const val SYNC_STATUS_SETTLE_POLLS = 6
+
+        /** Sequential forced passes that must complete after a spend before results count. */
+        internal const val SETTLEMENT_BARRIER_PASSES = 2
+
+        /** Forced passes run once the barrier opens, so settlement evidence arrives promptly. */
+        internal const val SETTLEMENT_EVIDENCE_PASSES = 2
+
+        /** Backoff base for a failed barrier pass (doubles, capped at 32x). */
+        internal const val SETTLEMENT_RETRY_BASE_MS = 1_000L
     }
 }
