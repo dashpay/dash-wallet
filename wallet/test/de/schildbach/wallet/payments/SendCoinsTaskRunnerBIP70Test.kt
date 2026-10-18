@@ -1980,6 +1980,66 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     @Test
+    fun `an overlapping resubmission of the same payment never undoes the one in flight`() = runBlocking {
+        // the edge carried forward from 4307041830: two confirmations of one invoice, from separate
+        // screens, both found T1 released and both passed the claim (it lets T1 itself through);
+        // the one that then failed before its POST released T1 while the other's POST was in flight
+        val stored = storeBackedPendingPayments()
+        val requestHash = ByteArray(32) { 14 }
+        abandonedT1For(requestHash, stored)
+        // both attempts read T1 as released before either goes on: each one's first store read is
+        // its lookup of the earlier payment, and the first two reads wait for each other
+        val lookups = java.util.concurrent.CyclicBarrier(2)
+        val reads = java.util.concurrent.atomic.AtomicInteger(0)
+        coEvery { pendingPaymentConfig.getAllOrThrow() } answers {
+            if (reads.incrementAndGet() <= 2) lookups.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            stored.toList()
+        }
+        val intent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString(),
+            requestHash
+        )
+        // whichever attempt reaches the refund lookup first is the one whose POST is held; the
+        // other fails right there, before its POST
+        val refundLookups = java.util.concurrent.atomic.AtomicInteger(0)
+        coEvery { sdkL1SendService.refundAddressOrNull() } answers {
+            if (refundLookups.incrementAndGet() > 1) throw IllegalStateException("refund address unavailable")
+            null
+        }
+        val posted = java.util.concurrent.CountDownLatch(1)
+        val reply = java.util.concurrent.CountDownLatch(1)
+        mockWebServer.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                posted.countDown()
+                reply.await(10, java.util.concurrent.TimeUnit.SECONDS)
+                return MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
+            }
+        }
+
+        val attempts = List(2) { racingScope.async { runCatching { sendCoinsTaskRunner.resubmitAbandonedPayment(intent, wallet) } } }
+        try {
+            assertTrue("one POST went out", posted.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            // the other attempt has finished by now, one way or another
+            val settled = kotlinx.coroutines.withTimeout(10_000) {
+                while (attempts.none { it.isCompleted }) kotlinx.coroutines.delay(10)
+                attempts.first { it.isCompleted }.await()
+            }
+            assertTrue("the overlapping attempt did not go ahead: $settled", settled.isFailure)
+
+            assertFalse("still active while the other POST is in flight", stored.single().abandoned)
+            deferredTx.inputs.forEach { assertTrue("still locked", wallet.isLockedOutput(it.outpoint)) }
+            assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
+            assertTrue(pendingPaymentVerifier.hasUnprotectedPendingPayment())
+        } finally {
+            reply.countDown()
+        }
+        attempts.forEach { kotlinx.coroutines.withTimeout(10_000) { it.await() } }
+        assertEquals("only one attempt reached the refund lookup", 1, refundLookups.get())
+    }
+
+    @Test
     fun `a resubmission that never left releases the payment again`() = runBlocking {
         val stored = storeBackedPendingPayments()
         val requestHash = ByteArray(32) { 13 }

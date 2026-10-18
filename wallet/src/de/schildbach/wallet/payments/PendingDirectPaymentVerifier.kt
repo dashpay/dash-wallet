@@ -124,6 +124,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val REMOVAL_RETRY_MAX_MS = 5 * 60_000L
 
         private const val REQUEST_CLAIM_PREFIX = "request:"
+        private const val RESUBMISSION_CLAIM_PREFIX = "resubmission:"
         private const val GIFT_CARD_CLAIM = "gift-card"
     }
 
@@ -628,11 +629,25 @@ class PendingDirectPaymentVerifier @Inject constructor(
     suspend fun claimSubmission(
         txId: Sha256Hash,
         paymentRequestId: String?,
-        isGiftCardPurchase: Boolean
+        isGiftCardPurchase: Boolean,
+        /**
+         * A resubmission of [txId] itself ([PendingDirectPaymentVerifier.reactivateForResubmission]):
+         * exclusive per transaction. The keys above let [txId] itself through, so two
+         * resubmissions of one T1 (confirmed from separate screens) both passed, and the one that
+         * then failed before its POST released T1 while the other's was in flight. Refused, with
+         * [txId], while another resubmission of it holds its claim.
+         */
+        resubmission: Boolean = false
     ): Sha256Hash? = claimMutex.withLock {
+        val resubmissionKey = RESUBMISSION_CLAIM_PREFIX + txId
         val keys = buildList {
             paymentRequestId?.let { add(REQUEST_CLAIM_PREFIX + it) }
             if (isGiftCardPurchase) add(GIFT_CARD_CLAIM)
+            if (resubmission) add(resubmissionKey)
+        }
+        // The other keys let txId itself through; this one does not.
+        if (resubmission && submissionClaims.containsKey(resubmissionKey)) {
+            return@withLock txId
         }
         if (keys.isEmpty()) {
             return@withLock null

@@ -1617,7 +1617,15 @@ class SendCoinsTaskRunner @Inject constructor(
         Context.propagate(wallet.context)
         val tx = Transaction(NETWORK_PARAMETERS, record.txBytes)
 
-        pendingPaymentVerifier.claimSubmission(tx.txId, paymentRequestId, record.isGiftCardPurchase)?.let { other ->
+        // Exclusive per transaction: a second resubmission of T1 is refused here with T1 as the
+        // payment outstanding, so it can never release T1 while this one's POST is in flight. Held
+        // until this one's outcome is settled (acknowledged, pending, or released again).
+        pendingPaymentVerifier.claimSubmission(
+            tx.txId,
+            paymentRequestId,
+            record.isGiftCardPurchase,
+            resubmission = true
+        )?.let { other ->
             throw PaymentSubmissionPendingException(other.toString(), null)
         }
         // Set once the request may have reached the payee: from then on the payment stays active.
