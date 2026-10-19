@@ -69,8 +69,6 @@ class UsernameDisplayTest {
 
     // ── recoveredPrimaryIsPendingDualSecondary (the Mo-972 adoption guard) ──
 
-    private val contestable: (String) -> Boolean = { Names.isUsernameContestable(it) }
-
     @Test
     fun `dual instant secondary mis-adopted as primary is detected`() {
         // The live S21 shape: requested contested primary + registered instant
@@ -82,8 +80,7 @@ class UsernameDisplayTest {
                 recordPrimary = "brimoztest",
                 recordSecondary = "brimoztest3",
                 recoveredPrimary = "br1m0ztest3",
-                normalize = normalize,
-                contestable = contestable
+                normalize = normalize
             )
         )
     }
@@ -98,8 +95,7 @@ class UsernameDisplayTest {
                 recordPrimary = "brimoztest",
                 recordSecondary = "brimoztest3",
                 recoveredPrimary = "br1m0ztest",
-                normalize = normalize,
-                contestable = contestable
+                normalize = normalize
             )
         )
     }
@@ -112,24 +108,37 @@ class UsernameDisplayTest {
                 recordPrimary = "brimoztest2",
                 recordSecondary = null,
                 recoveredPrimary = "br1m0ztest2",
-                normalize = normalize,
-                contestable = contestable
+                normalize = normalize
             )
         )
     }
 
     @Test
-    fun `a non-contestable record primary never trips the guard`() {
-        // The dual flow only ever pairs a CONTESTED primary with an instant
-        // secondary; anything else keeps the on-chain-wins adoption.
+    fun `a non-contestable requested replacement primary is kept too`() {
+        // A name-only retry after a lost or locked vote (match master): the requested replacement
+        // is the primary even when it is not contestable, and the registered instant secondary
+        // dashj adopted as "primary" must not overwrite it.
         assertEquals(
-            false,
+            true,
             recoveredPrimaryIsPendingDualSecondary(
                 recordPrimary = "somename22",
                 recordSecondary = "somename23",
                 recoveredPrimary = "s0mename23",
-                normalize = normalize,
-                contestable = contestable
+                normalize = normalize
+            )
+        )
+    }
+
+    @Test
+    fun `a registered replacement primary keeps the record primary when dashj picks the secondary`() {
+        // Both names are registered now; dashj may still call the old instant name "primary".
+        assertEquals(
+            true,
+            recoveredPrimaryIsPendingDualSecondary(
+                recordPrimary = "newname22",
+                recordSecondary = "brimoztest3",
+                recoveredPrimary = "br1m0ztest3",
+                normalize = normalize
             )
         )
     }

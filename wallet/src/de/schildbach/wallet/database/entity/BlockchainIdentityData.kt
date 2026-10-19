@@ -223,6 +223,15 @@ open class BlockchainIdentityConfig @Inject constructor(
         val REQUESTED_USERNAME_LINK = stringPreferencesKey("requested_username_link")
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
         val USERNAME_REQUESTED = stringPreferencesKey("username_requested")
+
+        /**
+         * The replacement name a name-only retry asked for on an identity that already exists on
+         * chain (a lost or locked contested name, or a name rejected after registration). Lets
+         * RestoreIdentityWorker register THIS label even when the identity already owns another
+         * name, and only this label: a plain restore never re-registers a name it did not ask for.
+         * Cleared once the restore finishes.
+         */
+        val REQUESTED_NAME_RETRY = stringPreferencesKey("requested_name_retry")
         val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
 
         /**

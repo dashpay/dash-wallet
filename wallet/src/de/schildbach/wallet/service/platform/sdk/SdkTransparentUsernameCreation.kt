@@ -476,7 +476,14 @@ class SdkTransparentUsernameCreation internal constructor(
      * registered so the wipe can cancel and join it. A fresh (lowered) fence
      * by default keeps the host-JVM tests unaffected.
      */
-    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence(),
+    /**
+     * Records [label] as the replacement a name-only retry asked for
+     * ([BlockchainIdentityConfig.REQUESTED_NAME_RETRY]) and drops the previous request's
+     * status, so the restore registers this label and the record stops reporting the old
+     * name's lost or locked vote. No-op default keeps the host-JVM tests inert.
+     */
+    private val markNameRetry: suspend (label: String) -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -515,7 +522,12 @@ class SdkTransparentUsernameCreation internal constructor(
             blockchainIdentityConfig.set(BlockchainIdentityConfig.RESTORING, restoring)
         },
         executorScope = applicationScope,
-        secretWriteFence = secretWriteFence
+        secretWriteFence = secretWriteFence,
+        markNameRetry = { label ->
+            blockchainIdentityConfig.set(BlockchainIdentityConfig.REQUESTED_NAME_RETRY, label)
+            // the lost or locked status belonged to the old name, not to this request
+            blockchainIdentityConfig.remove(BlockchainIdentityConfig.USERNAME_REQUESTED)
+        }
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -1414,6 +1426,82 @@ class SdkTransparentUsernameCreation internal constructor(
      * [SdkWriteResult.Ambiguous] when the outcome cannot be proven pre-broadcast
      * (the caller re-checks the on-chain name before re-registering).
      */
+    /**
+     * Name-only retry for an identity that is already registered on chain and only needs a
+     * (new) DPNS name: a lost or locked vote, or a rejected domain document. It never funds and
+     * never resets the identity. It records the requested name(s) against the EXISTING identity
+     * with `restoring = true`, marks the label as the replacement this restore may register even
+     * though the identity already owns a name ([markNameRetry]), puts the creation state back on
+     * the name step with the old error cleared, and hands the identity to the same name-only
+     * recovery a home-tile retry uses ([RestoreIdentityOperation] via [handOffToLegacy]). After
+     * the cutover that worker registers the requested name through
+     * [registerDpnsNameForExistingIdentity], and the requested name becomes the primary/display
+     * name while a registered instant secondary stays the secondary, as master's dashj
+     * `finishRegistration` does.
+     *
+     * The legacy CreateIdentityService reuse path must not be used for this after the cutover: it
+     * replaces the identity record with a fresh one at NONE and looks for a dashj asset-lock
+     * transaction the SDK creation path never put in dashj's AuthenticationGroupExtension, so it
+     * starts fresh legacy funding.
+     *
+     * Runs on the application scope, like [submit], and is registered with the wipe fence: the
+     * caller's screen finishes as soon as this is accepted (review 5556781925), and a retry
+     * cancelled half way, with the name context written but the worker never enqueued, would leave
+     * the user on Home with nothing submitted. Returns false, doing nothing, when there is no
+     * executor scope or a wallet wipe is in progress.
+     */
+    fun retryNameForExistingIdentity(identityIdBase58: String, username: String, secondaryUsername: String?): Boolean {
+        val scope = executorScope
+        if (scope == null) {
+            log.warn("name-only retry refused: no executor scope")
+            return false
+        }
+        if (secretWriteFence.isRaised) {
+            log.warn("name-only retry refused: wallet wipe in progress")
+            return false
+        }
+        // LAZY + tracked before start: the job can never run unfenced.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                retryNameNow(identityIdBase58, username, secondaryUsername)
+            } catch (e: CancellationException) {
+                // the wipe fence cancelling the run: nothing to record for a wallet being wiped
+                throw e
+            } catch (e: Exception) {
+                // Never out of the launch: the application scope has no handler, so an escaped
+                // exception crashes the process after the screen was told the retry started.
+                // Nothing reached the worker; record a retryable error so the retry card shows.
+                log.error("name-only retry for identity {} failed before its handoff", identityIdBase58, e)
+                recordRetryFailure(e)
+            }
+        }
+        secretWriteFence.track(job)
+        job.start()
+        return true
+    }
+
+    /** Best effort: if the state write fails as well, the failure is only logged. */
+    private suspend fun recordRetryFailure(cause: Exception) {
+        try {
+            driveCreationState(
+                IdentityCreationState.USERNAME_REGISTERING,
+                "username registration did not start (retryable): ${cause.message ?: cause.javaClass.simpleName}"
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("could not record the failed name-only retry", e)
+        }
+    }
+
+    private suspend fun retryNameNow(identityIdBase58: String, username: String, secondaryUsername: String?) {
+        log.info("name-only retry for existing identity {}: requesting a new DPNS name", identityIdBase58)
+        persistNameContext(identityIdBase58, username, secondaryUsername, true)
+        markNameRetry(username)
+        driveCreationState(IdentityCreationState.USERNAME_REGISTERING, null)
+        handOffToLegacy(identityIdBase58)
+    }
+
     suspend fun registerDpnsNameForExistingIdentity(
         identityIdBase58: String,
         label: String

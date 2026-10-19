@@ -1071,8 +1071,12 @@ class RequestUserNameViewModel @Inject constructor(
         viewModelScope.launch {
             withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
+            // If an identity was already registered but the username step failed (lost vote, locked name,
+            // or the domain document was rejected), keep the identity and only register the new name.
             val reuseTransaction = identity?.let {
-                it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+                it.usernameRequested == UsernameRequestStatus.LOCKED ||
+                    it.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
+                    (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
             } ?: false
             // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
             // dashj asset-lock funding CreateIdentityService drives fails
@@ -1090,6 +1094,27 @@ class RequestUserNameViewModel @Inject constructor(
             val submitSource = effectivePaymentSource(
                 requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
             )
+            // After the cutover an identity that already exists on chain gets ONLY its name
+            // retried: the legacy reuse path below resets it to NONE and looks for a dashj
+            // funding transaction an SDK-created identity never had, so it would start fresh
+            // legacy funding. Before the cutover the legacy path is master's and stays as it is.
+            val existingIdentityId = identity?.userId
+            if (reuseTransaction && existingIdentityId != null && !isUsingInvite() &&
+                transparentUsernameCreation.isCutoverCommitted()
+            ) {
+                log.info("name-only retry for the existing identity (cutover committed)")
+                // Accepted means the retry runs on the application scope and survives this screen,
+                // which the submitting state closes; publish it only then.
+                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
+                    existingIdentityId,
+                    requestedUserName!!,
+                    requestedUsernameSecondary
+                )
+                _uiState.update {
+                    if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
+                }
+                return@launch
+            }
             val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
                 submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
                 transparentUsernameCreation.isCutoverCommitted()
