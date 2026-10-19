@@ -207,6 +207,9 @@ interface ShieldedBalanceService {
      */
     suspend fun pendingCoinJoinShieldLockCount(): Int?
 
+    /** How many of [pendingCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null when unknown. */
+    suspend fun recoveredCoinJoinShieldLockCount(): Int?
+
     /**
      * Live unspent shielded balance, credits summed from the SDK's note
      * store and floored to [Dash]. Emits [Dash.ZERO] until

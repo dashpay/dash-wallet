@@ -759,6 +759,235 @@ class CoinJoinConsolidationTest {
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
     }
 
+    // ── Field failure (build 41): a second drain while lock A is unresolved ──
+
+    /** Lock A: a CoinJoin-funded shield lock in SDK [status]. */
+    private fun lockA(status: Int) =
+        PendingWalletShieldLock("0205203c".padEnd(64, '0') + ":0", status, 84_997_634L, coinJoinFunded = true)
+
+    /**
+     * The shielded runtime over [initial] (mutable: a test resolves or records locks), counted with the
+     * REAL [PendingWalletShieldLock] predicates; every resume fails, like the field log.
+     */
+    private fun Fixture.trackLocks(vararg initial: PendingWalletShieldLock): MutableList<PendingWalletShieldLock> {
+        val locks = initial.toMutableList()
+        coEvery { shield.pendingCoinJoinShieldLockCount() } answers { locks.count { it.pendingCoinJoinDrain } }
+        coEvery { shield.recoveredCoinJoinShieldLockCount() } answers {
+            locks.count { it.pendingCoinJoinDrain && it.statusRaw == ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN }
+        }
+        coEvery { shield.pendingWalletShieldLockCount() } answers { locks.count { it.blocksCutover } }
+        coEvery { shield.resumePendingWalletShields() } returns 0
+        coEvery { shield.resumePendingWalletShieldsOnUserRequest() } returns 0
+        return locks
+    }
+
+    /** New CoinJoin coins (SDK CoinJoin balance 1.0961976 DASH): a clean, directly shieldable snapshot. */
+    private fun Fixture.newCoinJoinCoinsArrive() {
+        coins.value = (200 until 220).map { coin(it, 5_480_988L) }
+        engineBalance = coins.value.sumOf { it.amount }
+    }
+
+    private fun Fixture.assertNoSecondDrain() {
+        assertNothingBuilt()
+        coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }
+    }
+
+    /** IS-locked (2), ChainLocked (3) and RecoveredFromChain (5) all still hold A's CoinJoin inputs. */
+    private val unresolvedLockStatuses = listOf(2, 3, 5)
+
+    @Test fun expiredAcknowledgedShieldWithAFailingLockNeverStartsASecondDrain() = runTest {
+        for (status in unresolvedLockStatuses) {
+            val f = Fixture(this)
+            f.trackLocks(lockA(status))
+            // The direct shield of A reached the native call and its window expired.
+            val startedAt = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 60_000L
+            f.marker = formatInFlightMigration(
+                InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, startedAt, 0L)
+            )
+            f.directPhase = CoinJoinFundsMigrationService.DIRECT_SHIELD_SUBMITTED
+            f.done = true
+            var acknowledgedAt: Long? = null
+            coEvery {
+                f.config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT)
+            } answers { acknowledgedAt }
+            coEvery { f.config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT, any()) } answers {
+                acknowledgedAt = secondArg()
+            }
+            assertTrue("status $status", f.expired())
+            // The user closed the "could not confirm" guidance.
+            f.service.acknowledgeUnconfirmedMigration()
+            assertEquals("status $status", startedAt, acknowledgedAt)
+            f.newCoinJoinCoinsArrive()
+            assertNotNull("status $status: the new coins are visible", f.service.mixedFundsToMigrate())
+
+            // Automatic triggers stay quiet; Tools offers the RECORDED migration.
+            assertFalse("status $status", f.service.shouldPresentPrompt())
+            assertTrue("status $status", f.service.shouldOfferInTools())
+            // Shield (sheet or Tools) and Combine: resume-as-started, never a fresh spend.
+            assertEquals("status $status", MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+            assertEquals("status $status", MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+            f.assertNoSecondDrain()
+            val kept = requireNotNull(parseInFlightMigration(f.marker))
+            assertEquals("status $status", MixedFundsMigrationAction.SHIELD, kept.action)
+            assertFalse("status $status", kept.failed)
+            assertEquals("status $status: still the uncertain window", startedAt, kept.startedAtMillis)
+            assertEquals("status $status", "", f.consolidation)
+            assertEquals("status $status", CoinJoinFundsMigrationService.DIRECT_SHIELD_SUBMITTED, f.directPhase)
+
+            // Try again: lock A's one extra resume, nothing else.
+            assertEquals("status $status", MixedFundsMigrationOutcome.UNCONFIRMED, f.service.retryPendingMigration())
+            coVerify(exactly = 1) { f.shield.resumePendingWalletShieldsOnUserRequest() }
+            runCurrent()
+            f.assertNoSecondDrain()
+            assertNotNull("status $status", f.service.inFlightMigration())
+        }
+    }
+
+    @Test fun pendingCoinJoinLockWithoutAnyRecordStillBlocksASecondDrain() = runTest {
+        for (status in unresolvedLockStatuses) {
+            val f = Fixture(this)
+            f.trackLocks(lockA(status))
+            // Marker, journal and stage cleared or lost; only lock A remains.
+            f.newCoinJoinCoinsArrive()
+            assertFalse("status $status: no record to restore", f.service.restorePendingShieldMigration())
+            if (status == ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN) {
+                // Never adopted (it may be a restored historical shield): each move
+                // resumes it once, and while it stays unresolved nothing spends and
+                // nothing is recorded — no marker, no DONE.
+                assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.shieldMixedFunds(Dash.COIN))
+                assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
+                assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
+                coVerify(exactly = 3) { f.shield.resumePendingWalletShieldsOnUserRequest() }
+                runCurrent()
+                f.assertNoSecondDrain()
+                assertEquals("", f.marker)
+                assertEquals("", f.consolidation)
+                assertNull(f.done)
+                continue
+            }
+
+            assertEquals("status $status", MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+            assertEquals("status $status", MixedFundsMigrationAction.SHIELD, f.service.inFlightMigration()?.action)
+            f.assertNoSecondDrain()
+
+            // Lost again before Combine / Try again: each adopts A instead of spending.
+            f.marker = ""
+            assertEquals("status $status", MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+            f.assertNoSecondDrain()
+            f.marker = ""
+            assertEquals("status $status", MixedFundsMigrationOutcome.UNCONFIRMED, f.service.retryPendingMigration())
+            coVerify(exactly = 1) { f.shield.resumePendingWalletShieldsOnUserRequest() }
+            runCurrent()
+            f.assertNoSecondDrain()
+            assertEquals("status $status", "", f.consolidation)
+        }
+    }
+
+    // ── Adoption: RecoveredFromChain locks are never adopted; adopted ones resolve ──
+
+    /**
+     * Restore on a second device: a historical CoinJoin shield comes back as
+     * RecoveredFromChain (5), unrecorded, while CoinJoin coins remain. Every
+     * entry point refuses without a record; once the sweep records Platform's
+     * already-consumed answer, the next move really spends.
+     */
+    @Test fun historicalRecoveredLockIsNeverAdoptedAndTheNextMoveSpendsOnceRecorded() = runTest {
+        for (entry in listOf("shield", "combine", "retry")) {
+            val f = Fixture(this)
+            val locks = f.trackLocks(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN))
+            f.newCoinJoinCoinsArrive()
+            every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+            val first = when (entry) {
+                "shield" -> f.service.shieldMixedFunds(Dash.COIN)
+                "combine" -> f.service.combineIntoUnmixedBalance()
+                else -> f.service.retryPendingMigration()
+            }
+            assertEquals(entry, MixedFundsMigrationOutcome.NOT_ATTEMPTED, first)
+            assertEquals(entry, "", f.marker)
+            assertEquals(entry, "", f.shieldInputs)
+            assertNull(entry, f.done)
+            f.assertNoSecondDrain()
+
+            // The (background) sweep records it: Platform reports it consumed.
+            locks[0] = locks[0].copy(platformConsumed = true)
+            if (entry == "combine") {
+                assertEquals(entry, MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+                assertEquals(entry, regular, CoinJoinConsolidationState.decode(f.consolidation).regularDestination)
+                runCurrent()
+                coVerify(exactly = 1) { f.send.consolidateCoinJoin(walletId, regular, any(), true, any()) }
+            } else {
+                assertEquals(entry, MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+                coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any()) }
+            }
+        }
+
+        // The tap's own resume can settle it: the same tap then spends.
+        val f = Fixture(this)
+        val locks = f.trackLocks(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN))
+        f.newCoinJoinCoinsArrive()
+        coEvery { f.shield.resumePendingWalletShieldsOnUserRequest() } answers {
+            locks[0] = locks[0].copy(platformConsumed = true)
+            0
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+        assertNotEquals(CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+    }
+
+    /**
+     * A LIVE (status 3) unrecorded CoinJoin lock is adopted and blocks every
+     * move until it resolves. Resolved without a verified credit, Try again
+     * returns to the choice — no success, no DONE — and the next move spends.
+     */
+    @Test fun adoptedLiveLockBlocksUntilResolvedThenReturnsToTheChoiceWithoutSuccess() = runTest {
+        for (next in listOf("retry", "shield")) {
+            val f = Fixture(this)
+            val locks = f.trackLocks(lockA(3))
+            f.newCoinJoinCoinsArrive()
+            assertEquals(next, MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+            assertEquals(next, CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+            assertEquals(next, MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+            assertEquals(next, MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+            assertEquals(next, MixedFundsMigrationOutcome.UNCONFIRMED, f.service.retryPendingMigration())
+            advanceTimeBy(60_000); runCurrent()
+            f.assertNoSecondDrain()
+            assertNotNull(next, f.service.inFlightMigration())
+
+            // Resolved elsewhere: no CoinJoin lock pending, no credit to us.
+            locks.clear()
+            advanceTimeBy(60_000); runCurrent()
+            assertNotNull("$next: the watcher never reports it landed", f.service.inFlightMigration())
+            if (next == "retry") {
+                assertEquals(next, MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
+                assertEquals(next, "", f.marker)
+                assertEquals(next, "", f.shieldInputs)
+                assertNull(next, f.done)
+                assertEquals(next, 0, f.service.verifiedLandings)
+                f.assertNoSecondDrain()
+            }
+            // The next move spends the remaining coins.
+            assertEquals(next, MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+            coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any()) }
+            assertEquals(next, 0, f.service.verifiedLandings)
+        }
+    }
+
+    /** An adopted lock that resolves WITH our credit is a verified landing, as before. */
+    @Test fun adoptedLockThatLandsIsAVerifiedLanding() = runTest {
+        val f = Fixture(this)
+        val locks = f.trackLocks(lockA(3))
+        f.newCoinJoinCoinsArrive()
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        runCurrent()
+        locks.clear()
+        f.shieldedBalance.value = Dash.COIN
+        advanceTimeBy(15_000); runCurrent()
+        assertEquals("", f.marker)
+        assertEquals(true, f.done)
+        assertEquals(1, f.service.verifiedLandings)
+        f.assertNoSecondDrain()
+    }
+
     @Test fun persistedInstantSendLockAdvancesConsolidationBeforeABlock() = runTest {
         val f = Fixture(this)
         val tx = transaction(f.coins.value)
@@ -1268,7 +1497,18 @@ class CoinJoinConsolidationTest {
 
     // ── Malformed persisted marker is repaired, never a dead end ─────
 
-    private val malformedMarkers = listOf("SHIELD|notanumber|0", "garbage", "SHIELD|1|2|bogus", "UNKNOWN|1|2")
+    private val malformedMarkers = listOf(
+        "SHIELD|notanumber|0", "garbage", "SHIELD|1|2|bogus", "UNKNOWN|1|2",
+        // Negative values are malformed: a -1 baseline would make a zero balance a "landing".
+        "SHIELD|${System.currentTimeMillis()}|-1", "SHIELD|-1|0"
+    )
+
+    @Test fun negativeMarkerValuesAreMalformedNeverALanding() {
+        assertNull(parseInFlightMigration("SHIELD|${System.currentTimeMillis()}|-1"))
+        assertNull(parseInFlightMigration("COMBINE|-1|0"))
+        assertNull(parseInFlightMigration("SHIELD|-1|0|failed"))
+        assertEquals(0L, parseInFlightMigration("SHIELD|0|0")?.baselineShieldedDuffs)
+    }
 
     @Test fun malformedMarkerWithoutStageIsRewrittenAsAnExpiredUncertainShield() = runTest {
         for (malformed in malformedMarkers) {
@@ -1338,6 +1578,93 @@ class CoinJoinConsolidationTest {
         runCurrent()
         advanceTimeBy(60_000); runCurrent()
         f.assertNothingBuilt()
+    }
+
+    // ── The watcher never exits silently on the SDK wallet ───────────
+
+    @Test fun unavailableSdkWalletKeepsTheWatcherPollingUntilItReturns() = runTest {
+        val f = Fixture(this)
+        val wallets = MutableStateFlow<Map<String, org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet>>(emptyMap())
+        every { f.manager.wallets } returns wallets
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        f.marker = shieldMarker()
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        advanceTimeBy(60_000); runCurrent()
+        // Unavailable: no build, no terminal state — still observing.
+        f.assertNothingBuilt()
+        assertFalse(f.expired())
+        // Back (same wallet): the recorded stage continues in the same watcher.
+        wallets.value = mapOf(walletId to mockk())
+        advanceTimeBy(15_000); runCurrent()
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(walletId, destination, any(), any(), any()) }
+    }
+
+    @Test fun reboundSdkWalletStandsDownIntoTheGuidanceAndNeverBuilds() = runTest {
+        val tx = transaction((0 until 3).map(::coin))
+        val stages = listOf(
+            CoinJoinConsolidationState(walletId, destination).encode(),
+            // An invalid stage observed by its txid takes the same terminal path.
+            rawStage("consolidating", tx.txId.toString())
+        )
+        for (stage in stages) {
+            val f = Fixture(this)
+            every { f.manager.wallets } returns MutableStateFlow(mapOf("02".repeat(32) to mockk()))
+            f.consolidation = stage
+            f.marker = shieldMarker()
+            f.service.startInFlightWatcherIfNeeded()
+            runCurrent()
+            assertTrue(stage, f.expired())
+            assertEquals(stage, f.consolidation)
+            f.assertNothingBuilt()
+        }
+    }
+
+    // ── Persisted wallet id: exactly the 32-byte id, normalised ──────
+
+    @Test fun stageWalletIdMustBeTheFull32ByteIdAndIsNormalised() {
+        val tx = transaction((0 until 3).map(::coin))
+        for (bad in listOf("01", "01".repeat(31), "01".repeat(33), "0".repeat(63))) {
+            val read = invalid(rawStage("ready", wallet = bad))
+            assertEquals(bad, "invalid walletId", read.reason)
+            assertNull(bad, read.walletId)
+            assertNull(bad, invalid(rawStage("waiting", tx.txId.toString(), wallet = bad)).observation)
+        }
+        val upper = CoinJoinConsolidationState.parse(rawStage("ready", wallet = "AB".repeat(32)))
+        assertEquals("ab".repeat(32), (upper as ConsolidationStageRead.Valid).state.walletId)
+    }
+
+    @Test fun shortWalletIdStageTakesTheInvalidStagePathNotASilentStop() = runTest {
+        val f = Fixture(this)
+        f.consolidation = rawStage("ready", wallet = "01")
+        f.marker = shieldMarker()
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        // Never continued: straight to the guidance.
+        assertTrue(f.expired())
+        f.assertNothingBuilt()
+        // Released only on proof nothing is out; then the user's move starts afresh.
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        assertEquals(walletId, CoinJoinConsolidationState.decode(f.consolidation).walletId)
+    }
+
+    // ── App-locked CoinJoin outputs: the drain cannot skip them ──────
+
+    @Test fun appLockedCoinJoinOutputRefusesBothShieldRoutesBeforeAnyRecord() = runTest {
+        for (coinCount in listOf(20, 101)) { // direct shield / consolidate first
+            val f = Fixture(this)
+            f.coins.value = (0 until coinCount).map(::coin)
+            f.engineBalance = f.coins.value.sumOf { it.amount }
+            every { f.send.coinJoinOutputsLocked() } returns true
+            assertEquals("$coinCount", MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.shieldMixedFunds(Dash.COIN))
+            assertEquals("$coinCount", "", f.marker)
+            assertEquals("$coinCount", "", f.consolidation)
+            assertEquals("$coinCount", "", f.directPhase)
+            f.assertNothingBuilt()
+            // Unlocked: the same move runs.
+            every { f.send.coinJoinOutputsLocked() } returns false
+            assertEquals("$coinCount", MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        }
     }
 
     // ── Completion tracks the RECORDED transaction, not the whole account ──

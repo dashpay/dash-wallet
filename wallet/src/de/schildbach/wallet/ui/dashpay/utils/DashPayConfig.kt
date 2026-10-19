@@ -316,6 +316,9 @@ open class DashPayConfig @Inject constructor(
          */
         val MIXED_FUNDS_SHIELD_INPUTS = stringPreferencesKey("mixed_funds_shield_inputs")
 
+        /** Shield-lock outpoints whose resume got `AssetLockAlreadyConsumed` (`PendingWalletShieldLock`). */
+        val SHIELD_LOCKS_PLATFORM_CONSUMED = stringSetPreferencesKey("shield_locks_platform_consumed")
+
         /**
          * Phase 3c of the dashj → Kotlin SDK migration
          * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS

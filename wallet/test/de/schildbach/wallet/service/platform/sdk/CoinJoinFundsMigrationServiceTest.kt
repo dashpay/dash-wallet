@@ -106,6 +106,22 @@ class CoinJoinFundsMigrationServiceTest {
     }
 
     @Test
+    fun parse_missingOrNonNumericFields_areUnknownNotZero() {
+        val cj = ACCOUNT_TYPE_TAG_COIN_JOIN
+        val bad = listOf(
+            """[{"typeTag":$cj,"index":0}]""", // confirmed missing
+            """[{"typeTag":$cj,"index":0,"confirmed":"5"}]""", // a string
+            """[{"typeTag":$cj,"index":0,"confirmed":1.5}]""", // fractional
+            """[{"typeTag":$cj,"index":0,"confirmed":null}]""",
+            """[{"typeTag":$cj,"index":0,"confirmed":-1}]""", // negative
+            """[{"typeTag":$cj,"confirmed":5}]""", // index missing
+            """[{"index":0,"confirmed":5},{"typeTag":$cj,"index":0,"confirmed":5}]""" // a row without its tag
+        )
+        for (json in bad) assertNull(json, parseCoinJoinConfirmedDuffs(json))
+        assertEquals(5L, parseCoinJoinConfirmedDuffs("""[{"typeTag":$cj,"index":0,"confirmed":5}]"""))
+    }
+
+    @Test
     fun parse_nullEmptyOrMalformed_isUnknown() {
         assertNull(parseCoinJoinConfirmedDuffs(null))
         assertNull(parseCoinJoinConfirmedDuffs(""))

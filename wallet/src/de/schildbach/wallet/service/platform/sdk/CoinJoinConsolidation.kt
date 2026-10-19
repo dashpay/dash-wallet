@@ -87,7 +87,8 @@ internal data class CoinJoinConsolidationState(
             }
             // Absent optional fields read as empty; a non-string value as null (invalid).
             fun text(name: String): String? = if (json.has(name)) json.opt(name) as? String else ""
-            val walletId = text("walletId")?.takeIf { isHex(it) }
+            // Exactly the 32-byte id, lowercase: compared literally with the manager's key.
+            val walletId = text("walletId")?.takeIf { it.length == 64 && isHex(it) }?.lowercase()
             val destination = text("destination")
             val phase = text("phase")
             val txidField = if (json.has("txid")) json.opt("txid") as? String else null

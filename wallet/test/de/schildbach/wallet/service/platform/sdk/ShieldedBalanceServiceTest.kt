@@ -315,7 +315,8 @@ class ShieldedBalanceServiceTest {
     private fun config(
         enabled: Boolean?,
         l1ShadowEnabled: Boolean = true,
-        lastBalanceDuffs: Long? = null
+        lastBalanceDuffs: Long? = null,
+        consumed: ConsumedStore = ConsumedStore()
     ): DashPayConfig = mockk {
         if (enabled == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } throws
@@ -325,6 +326,17 @@ class ShieldedBalanceServiceTest {
         }
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
         coEvery { getLastShieldedBalanceDuffs() } returns lastBalanceDuffs
+        coEvery { getPreservingErrors(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED) } answers {
+            consumed.readFailure?.let { throw it }
+            consumed.value
+        }
+        coEvery { set(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED, any()) } answers { consumed.value = secondArg() }
+    }
+
+    /** Durable stand-in for [DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED]; share one to model a restart. */
+    private class ConsumedStore {
+        var value: Set<String>? = null
+        var readFailure: Throwable? = null
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -358,22 +370,25 @@ class ShieldedBalanceServiceTest {
         enabled: Boolean? = true,
         l1ShadowEnabled: Boolean = true,
         lastBalanceDuffs: Long? = null,
+        consumed: ConsumedStore = ConsumedStore(),
         progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
         progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {},
+        hasAppLockedCoinJoinOutputs: () -> Boolean = { false },
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
         afterReadyCommitted: suspend () -> Unit = {},
         afterStopFallbackBump: suspend () -> Unit = {}
     ) = ShieldedBalanceServiceImpl(
         source = source,
-        dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs),
+        dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs, consumed),
         shieldedDbPath = { dbPath },
         displayHrp = { hrp },
         l1Progress = progress,
         l1ProgressFlow = { progressFlow },
         ensureL1SpvRunning = ensureL1SpvRunning,
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
+        hasAppLockedCoinJoinOutputs = hasAppLockedCoinJoinOutputs,
         stopLockTimeoutMs = stopLockTimeoutMs,
         afterReadyCommitted = afterReadyCommitted,
         afterStopFallbackBump = afterStopFallbackBump
@@ -1765,6 +1780,48 @@ class ShieldedBalanceServiceTest {
     }
 
     /**
+     * The native CoinJoin drain spends the whole account and cannot exclude
+     * an input: an app-locked (e.g. CrowdNode) CoinJoin output — or a check
+     * that cannot answer — refuses it before the submission checkpoint.
+     */
+    @Test
+    fun mixedFundsShield_appLockedCoinJoinOutputRefusesTheDrain() = runBlocking {
+        for (guard in listOf<() -> Boolean>({ true }, { throw IllegalStateException("wallet unavailable") })) {
+            val source = readySource()
+            val service = service(source, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = guard)
+            var checkpointed = false
+            val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") { checkpointed = true }
+            assertTrue(result is SdkWriteResult.NotBroadcast)
+            assertFalse(checkpointed)
+            assertEquals(0, source.accountFundCalls)
+            // The BIP44 shield never touches the CoinJoin account: unaffected.
+            assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.Broadcast)
+            assertEquals(1, source.fundCalls)
+        }
+
+        // A lock taken after the first check is caught right before the native call.
+        val source = readySource()
+        var checks = 0
+        val service = service(source, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = { ++checks > 1 })
+        var checkpointed = false
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") { checkpointed = true }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(2, checks)
+        assertFalse(checkpointed)
+        assertEquals(0, source.accountFundCalls)
+
+        // A pending CoinJoin lock still answers as recovery (never a NotBroadcast that drops the record).
+        val pending = readySource().apply {
+            shieldLocks = { listOf(PendingWalletShieldLock("ab".repeat(32) + ":0", 3, 1L, coinJoinFunded = true)) }
+        }
+        assertEquals(
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+            service(pending, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = { true })
+                .shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+        )
+    }
+
+    /**
      * Regression guard for the bricked-shields bug: the gate must NOT
      * consult ANY dashj comparison. A caught-up engine shields regardless
      * of how far the frozen held dashj wallet has diverged post-migration
@@ -2026,6 +2083,196 @@ class ShieldedBalanceServiceTest {
         // Unattended sweeps stay capped.
         service.resumePendingWalletShields()
         assertEquals(4, source.resumeCalls)
+    }
+
+    /**
+     * SDK `AssetLockStatus` discriminants (AssetLockEntity.statusRaw): every
+     * status but Consumed (4) is still recoverable. RecoveredFromChain (5)
+     * is what the chainlock promotion writes for a ChainLocked lock nothing
+     * live is completing — it must stay pending, not drop out of `0..3`.
+     */
+    @Test
+    fun pendingWalletShieldLock_everyStatusButConsumedIsResumable() {
+        for (status in listOf(0, 1, 2, 3, 5)) {
+            val lock = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, coinJoinFunded = true)
+            assertTrue("status $status", lock.resumable)
+            assertTrue("status $status", lock.pendingCoinJoinDrain)
+        }
+        val consumed = PendingWalletShieldLock("aa".repeat(32) + ":0", 4, 1, coinJoinFunded = true)
+        assertFalse(consumed.resumable)
+        assertFalse(consumed.pendingCoinJoinDrain)
+        // Platform reported a FINAL lock consumed: no longer pending.
+        for (status in listOf(2, 3, 5)) {
+            val reported = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, true, platformConsumed = true)
+            assertFalse("status $status", reported.resumable)
+            assertFalse("status $status", reported.pendingCoinJoinDrain)
+        }
+        // A not-yet-final lock stays pending whatever was reported.
+        assertTrue(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1, true, platformConsumed = true).resumable)
+        // Cutover evidence keeps the 0..3 semantics: 5 never blocks it.
+        assertEquals(
+            listOf(true, true, true, true, false, false),
+            (0..5).map { PendingWalletShieldLock("aa".repeat(32) + ":0", it, 1).blocksCutover }
+        )
+    }
+
+    /**
+     * Field failure (build 41): CoinJoin lock A is IS/Chain-locked (later
+     * RecoveredFromChain) but its Platform transition keeps failing, the
+     * per-process resume budget is spent, and new CoinJoin coins arrive. A
+     * second shield must not drain them: A stays a pending CoinJoin lock,
+     * blocks the drain, and only the user's Try again resumes A once more.
+     */
+    @Test
+    fun mixedFundsShield_unresolvedCoinJoinLockPastTheResumeBudgetBlocksASecondDrain() = runBlocking {
+        for (status in listOf(2, 3, 5)) {
+            val source = readySource()
+            val service = service(source, progress = { caughtUpProgress() })
+            val lockA = "02".repeat(32) + ":0"
+            source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, status, 84_997_634L, coinJoinFunded = true)) }
+            source.onResume = { _, _ -> throw RuntimeException("SDK error: cannot decode consensus error") }
+            repeat(4) { assertEquals("status $status", 0, service.resumePendingWalletShields()) }
+            assertEquals("status $status: capped at 3 attempts", 3, source.resumeCalls)
+
+            assertEquals("status $status", 1, service.pendingCoinJoinShieldLockCount())
+            // Cutover evidence: 0..3 only (a historical 5 must never block a cutover).
+            assertEquals("status $status", if (status == 5) 0 else 1, service.pendingWalletShieldLockCount())
+            assertEquals(
+                "status $status",
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+                service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+            )
+            assertEquals("status $status: no second drain", 0, source.accountFundCalls)
+            assertEquals("status $status", 0, source.fundCalls)
+
+            // Try again: lock A only, one attempt past the budget.
+            assertEquals("status $status", 0, service.resumePendingWalletShieldsOnUserRequest())
+            assertEquals("status $status", 4, source.resumeCalls)
+            assertTrue("status $status", source.resumedOutPoints.all { it.first.all { b -> b == 0x02.toByte() } })
+            assertEquals("status $status", 0, source.accountFundCalls)
+        }
+    }
+
+    /**
+     * Platform answers a status-5 CoinJoin lock's resume with the typed
+     * already-consumed signal (the SDK keeps it at 5, non-terminal): that one
+     * round trip records it durably, and it stops blocking a fresh drain and
+     * the sweep — in this process and after a restart.
+     */
+    @Test
+    fun resumeSweep_alreadyConsumedStatus5LockStopsBlockingTheDrainDurably() = runBlocking {
+        val failures = listOf<(String) -> Throwable>(
+            { DashSdkError.PlatformWallet.AssetLockAlreadyConsumed(it) },
+            // Wrapped by the JNI: matched down the cause chain.
+            { RuntimeException("resume failed", DashSdkError.PlatformWallet.AssetLockAlreadyConsumed(it)) }
+        )
+        for ((i, failure) in failures.withIndex()) {
+            for (userRequested in listOf(false, true)) {
+                val label = "failure $i, userRequested $userRequested"
+                val consumed = ConsumedStore()
+                val source = readySource()
+                val lockA = "02".repeat(32) + ":0"
+                source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, 5, 84_997_634L, coinJoinFunded = true)) }
+                source.onResume = { _, _ -> throw failure("asset lock $lockA already consumed") }
+                val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+                assertTrue(label, service.ensureShieldedReady())
+                assertEquals(label, 1, service.pendingCoinJoinShieldLockCount())
+
+                val resumed = if (userRequested) {
+                    service.resumePendingWalletShieldsOnUserRequest()
+                } else {
+                    service.resumePendingWalletShields()
+                }
+                assertEquals(label, 0, resumed)
+                assertEquals(label, setOf(lockA), consumed.value)
+                assertEquals(label, 0, service.pendingCoinJoinShieldLockCount())
+                // Not proven again on later sweeps.
+                service.resumePendingWalletShields()
+                assertEquals(label, 1, source.resumeCalls)
+
+                // A new process (fresh service, same store) reads the record.
+                val restarted = service(source, consumed = consumed, progress = { caughtUpProgress() })
+                assertTrue(label, restarted.ensureShieldedReady())
+                assertEquals(label, 0, restarted.pendingCoinJoinShieldLockCount())
+                assertEquals(label, 0, restarted.resumePendingWalletShields())
+                assertEquals(label, 1, source.resumeCalls)
+                // The user's next shield drains the new coins instead of waiting on A.
+                assertEquals(
+                    label,
+                    SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED),
+                    restarted.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+                )
+                assertEquals(label, 1, source.accountFundCalls)
+            }
+        }
+    }
+
+    /**
+     * Any other resume failure — including the untyped "already completely
+     * used" wording — proves nothing: the status-5 CoinJoin lock (e.g. live
+     * lock A, whose transition never reached Platform) keeps blocking.
+     */
+    @Test
+    fun resumeSweep_otherFailureKeepsAStatus5CoinJoinLockBlocking() = runBlocking {
+        val failures = listOf(
+            RuntimeException("SDK error: cannot decode consensus error"),
+            RuntimeException("asset lock output 0 already completely used"),
+            DashSdkError.PlatformWallet.AssetLockNotTracked("not tracked")
+        )
+        for (failure in failures) {
+            val consumed = ConsumedStore()
+            val source = readySource()
+            source.shieldLocks = {
+                listOf(PendingWalletShieldLock("02".repeat(32) + ":0", 5, 84_997_634L, coinJoinFunded = true))
+            }
+            source.onResume = { _, _ -> throw failure }
+            val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+            assertTrue(service.ensureShieldedReady())
+            assertEquals(failure.message, 0, service.resumePendingWalletShieldsOnUserRequest())
+            assertNull(failure.message, consumed.value)
+            assertEquals(failure.message, 1, service.pendingCoinJoinShieldLockCount())
+            assertEquals(
+                failure.message,
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+                service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
+            )
+            assertEquals(failure.message, 0, source.accountFundCalls)
+        }
+        // An unreadable record never unblocks a lock it may list.
+        val consumed = ConsumedStore().apply {
+            value = setOf("02".repeat(32) + ":0")
+            readFailure = java.io.IOException("unreadable preferences")
+        }
+        val source = readySource().apply {
+            shieldLocks = { listOf(PendingWalletShieldLock("02".repeat(32) + ":0", 5, 1L, coinJoinFunded = true)) }
+        }
+        val unreadable = service(source, consumed = consumed)
+        assertTrue(unreadable.ensureShieldedReady())
+        assertEquals(1, unreadable.pendingCoinJoinShieldLockCount())
+    }
+
+    /**
+     * Restore/scan rebuilds every historical chain-locked shield top-up as
+     * RecoveredFromChain (5). Those must never hold up the cutover — not even
+     * before any resume could record them consumed — while live 0..3 locks
+     * still do.
+     */
+    @Test
+    fun cutoverEvidence_historicalStatus5LocksNeverBlock() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        assertTrue(service.ensureShieldedReady())
+        source.shieldLocks = {
+            listOf(
+                PendingWalletShieldLock("aa".repeat(32) + ":0", 5, 1L, coinJoinFunded = false),
+                PendingWalletShieldLock("bb".repeat(32) + ":1", 5, 1L),
+                PendingWalletShieldLock("cc".repeat(32) + ":0", 4, 1L)
+            )
+        }
+        assertEquals(0, service.pendingWalletShieldLockCount())
+        val historical = source.shieldLocks()
+        source.shieldLocks = { historical + PendingWalletShieldLock("dd".repeat(32) + ":0", 3, 1L) }
+        assertEquals(1, service.pendingWalletShieldLockCount())
     }
 
     @Test

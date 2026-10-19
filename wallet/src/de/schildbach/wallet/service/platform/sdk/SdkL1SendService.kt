@@ -377,6 +377,22 @@ internal const val ACCOUNT_TYPE_TAG_STANDARD = 0
 internal const val STANDARD_ACCOUNT_TAG_BIP44 = 0
 internal const val STANDARD_ACCOUNT_TAG_BIP32 = 1
 
+/** A required integer field of an account-balance row; null (unknown, never 0) when missing or not an integer. */
+internal fun org.json.JSONObject.balanceRowLongOrNull(name: String): Long? =
+    when (val value = opt(name)) {
+        is Int -> value.toLong()
+        is Long -> value
+        else -> null
+    }
+
+/** [balanceRowLongOrNull] for a tag/index field. */
+internal fun org.json.JSONObject.balanceRowIntOrNull(name: String): Int? =
+    balanceRowLongOrNull(name)?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.toInt()
+
+/** A required non-negative duff amount of an account-balance row; see [balanceRowLongOrNull]. */
+internal fun org.json.JSONObject.balanceRowDuffsOrNull(name: String): Long? =
+    balanceRowLongOrNull(name)?.takeIf { it >= 0L }
+
 /**
  * The BIP44 account 0 SPENDABLE balance (`confirmed + unconfirmed` — the
  * same `WalletCoreBalance.spendable()` split the native wallet-wide
@@ -390,10 +406,13 @@ internal fun parseBip44SpendableDuffs(accountBalancesJson: String?): Long? {
         val rows = org.json.JSONArray(accountBalancesJson)
         for (i in 0 until rows.length()) {
             val row = rows.getJSONObject(i)
-            if (row.optInt("typeTag", -1) != ACCOUNT_TYPE_TAG_STANDARD) continue
-            if (row.optInt("standardTag", -1) != STANDARD_ACCOUNT_TAG_BIP44) continue
-            if (row.optInt("index", -1) != 0) continue
-            return row.optLong("confirmed", 0L) + row.optLong("unconfirmed", 0L)
+            // Missing/non-numeric fields make the snapshot unknown, never a skipped row or 0.
+            if ((row.balanceRowIntOrNull("typeTag") ?: return null) != ACCOUNT_TYPE_TAG_STANDARD) continue
+            if ((row.balanceRowIntOrNull("standardTag") ?: return null) != STANDARD_ACCOUNT_TAG_BIP44) continue
+            if ((row.balanceRowIntOrNull("index") ?: return null) != 0) continue
+            val confirmed = row.balanceRowDuffsOrNull("confirmed") ?: return null
+            val unconfirmed = row.balanceRowDuffsOrNull("unconfirmed") ?: return null
+            return Math.addExact(confirmed, unconfirmed)
         }
         null
     } catch (e: Exception) {
@@ -428,17 +447,22 @@ internal fun pooledSpendableDuffs(accountBalancesJson: String?): Long? {
         var totalDuffs = 0L
         for (i in 0 until rows.length()) {
             val row = rows.getJSONObject(i)
-            val typeTag = row.optInt("typeTag", -1)
+            // Missing/non-numeric fields make the total unknown, never a skipped row or 0.
+            val typeTag = row.balanceRowIntOrNull("typeTag") ?: return null
             val pooled = when (typeTag) {
-                ACCOUNT_TYPE_TAG_STANDARD ->
-                    row.optInt("standardTag", -1)
-                        .let { it == STANDARD_ACCOUNT_TAG_BIP44 || it == STANDARD_ACCOUNT_TAG_BIP32 } &&
-                        row.optInt("index", -1) == 0
+                ACCOUNT_TYPE_TAG_STANDARD -> {
+                    val standardTag = row.balanceRowIntOrNull("standardTag") ?: return null
+                    val index = row.balanceRowIntOrNull("index") ?: return null
+                    index == 0 &&
+                        (standardTag == STANDARD_ACCOUNT_TAG_BIP44 || standardTag == STANDARD_ACCOUNT_TAG_BIP32)
+                }
                 ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS -> true
                 else -> false
             }
             if (pooled) {
-                totalDuffs += row.optLong("confirmed", 0L) + row.optLong("unconfirmed", 0L)
+                val confirmed = row.balanceRowDuffsOrNull("confirmed") ?: return null
+                val unconfirmed = row.balanceRowDuffsOrNull("unconfirmed") ?: return null
+                totalDuffs = Math.addExact(totalDuffs, Math.addExact(confirmed, unconfirmed))
             }
         }
         totalDuffs
@@ -1285,10 +1309,7 @@ class SdkL1SendService internal constructor(
             // wallet, or an unreadable CoinJoin extension, cannot PROVE the
             // absence of locks → treated as locked (fail closed).
             @Suppress("DEPRECATION")
-            val wallet = walletData.wallet
-            wallet == null || coinJoinOutputsOrNull(wallet)?.any {
-                wallet.isLockedOutput(it.outPointFor)
-            } ?: true
+            coinJoinOutputsAppLocked(walletData.wallet)
         },
         seamOutputLockRegistry = seamOutputLockRegistry,
         onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
@@ -1607,6 +1628,9 @@ class SdkL1SendService internal constructor(
         }
     }
 
+    /** The app-locked CoinJoin output guard (fail closed), shared with the migration's shield routes. */
+    internal fun coinJoinOutputsLocked(): Boolean = runCatching { hasAppLockedCoinJoinOutputs() }.getOrDefault(true)
+
     /** The gate [consolidateCoinJoin] enforces; shared so the migration never offers a refused route. Never throws. */
     internal suspend fun coinJoinConsolidationGateOpen(): Boolean = isEnabled() && probeSendGate().allowed
 
@@ -1620,7 +1644,7 @@ class SdkL1SendService internal constructor(
         prepared: suspend (ByteArray) -> Unit
     ): SdkWriteResult<String> {
         if (!coinJoinConsolidationGateOpen()) return SdkWriteResult.NotBroadcast("funding gate closed")
-        if (runCatching { hasAppLockedCoinJoinOutputs() }.getOrDefault(true)) {
+        if (coinJoinOutputsLocked()) {
             return SdkWriteResult.NotBroadcast("CoinJoin outputs are locked")
         }
         val walletId = try {
