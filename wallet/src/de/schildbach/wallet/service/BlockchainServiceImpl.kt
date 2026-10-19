@@ -54,6 +54,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRecoveryReset
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
 import de.schildbach.wallet.WalletApplicationExt.finishWalletWipe
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -76,11 +77,13 @@ import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.RecoveryResetState
 import de.schildbach.wallet.util.FriendKeyChainLookahead
 import de.schildbach.wallet.util.ThrottledRunner
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -469,11 +472,80 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * blockstore while that instance still held its file lock
          * (OverlappingFileLockException, five failed starts on the reference
          * install on 2026-09-16).
+         *
+         * It is also the deadlock clock read by the onCreate guard: it times
+         * the continuous interval in which any destroy is pending, starting in
+         * onDestroy itself. A cleanup stuck before it claims [isCleaningUp], or
+         * while it waits for its instance's initialization, is exactly as stuck
+         * and used to read as 0 ms, so a refused start never reached
+         * [CLEANUP_DEADLOCK_EXIT_MS]. The clock clears when the last pending
+         * destroy finishes, so a finished cleanup's start time is never charged
+         * to a later one.
          */
-        private val pendingDestroys = java.util.concurrent.atomic.AtomicInteger(0)
+        private val pendingDestroys = PendingServiceCleanup()
 
         /** Whether a previous instance of this service is still tearing down. */
-        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.get() > 0
+        val isCleaningUpNow: Boolean get() = isCleaningUp.get() || pendingDestroys.isPending()
+
+        /**
+         * Plan §37: how long a previous instance's cleanup may stay unfinished
+         * before a refused start ends the PROCESS instead of only stopping
+         * itself. The periodic alarm retries every 15 minutes, so the exit
+         * lands on the first retry past this bound.
+         */
+        internal const val CLEANUP_DEADLOCK_EXIT_MS = 5 * 60_000L
+
+        /** What a start refused by an unfinished cleanup does next — see [decideOnCleanupDeadlock]. */
+        enum class CleanupDeadlockAction { STOP_SELF, EXIT_PROCESS }
+
+        /**
+         * Plan §37 (Andrei, 2026-09-22): a shutdown parked behind a native SDK
+         * call never completed, so every start for four hours logged "deadlock
+         * in onDestroy" and stopped itself — the process lived on with the
+         * engine off and nothing in it could ever recover. A cleanup that has
+         * been stuck past [CLEANUP_DEADLOCK_EXIT_MS] is not going to finish;
+         * ending the process is the only exit, and the next start (the alarm,
+         * or the user) then begins from a clean one.
+         *
+         * Never while the app is visible: the start being refused is the one
+         * the user's own foreground triggered, and exiting would close the app
+         * in their face. They get the refusal as before; the background retry
+         * gets the exit.
+         *
+         * Pure, so both axes are pinned by test.
+         */
+        @JvmStatic
+        fun decideOnCleanupDeadlock(stuckForMs: Long, appVisible: Boolean): CleanupDeadlockAction =
+            if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS && !appVisible) {
+                CleanupDeadlockAction.EXIT_PROCESS
+            } else {
+                CleanupDeadlockAction.STOP_SELF
+            }
+
+        /**
+         * The final foreground check and the exit, as ONE step on the main
+         * thread (review, 2026-09-29). Activity lifecycle callbacks, which
+         * flip [AppForegroundMonitor], run on the main thread; a check read on
+         * a background thread and acted on later could close an app that
+         * became visible in between. Here the read and the exit run in the
+         * same main-thread task, with nothing between them, so an activity
+         * start is either seen or cannot happen before the exit. Returns
+         * false when the app is visible (or the policy declines); on true the
+         * process is already ending.
+         */
+        internal suspend fun endProcessIfStillBackgrounded(
+            stuckForMs: Long,
+            appVisible: () -> Boolean,
+            exitProcess: () -> Unit,
+            mainDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate
+        ): Boolean = withContext(mainDispatcher) {
+            if (decideOnCleanupDeadlock(stuckForMs, appVisible()) == CleanupDeadlockAction.EXIT_PROCESS) {
+                exitProcess()
+                true
+            } else {
+                false
+            }
+        }
 
         /** Retries of a lock-blocked blockstore open before giving up. */
         private const val BLOCKSTORE_LOCK_RETRIES = 3
@@ -489,6 +561,201 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val onCreateCompleted = CompletableDeferred<Unit>()
+
+    internal fun refuseWalletInitialization() {
+        // Commands and teardown await this latch even when initialization is refused.
+        onCreateCompleted.complete(Unit)
+    }
+
+    /**
+     * Called synchronously by [onStartCommand], before its command coroutine.
+     * Every command coroutine awaits the same latch, so a refused normal
+     * command can resume first and stopSelf(); cleanup then cancels the
+     * wipe's coroutine. Recording the wipe here lets cleanup run it anyway.
+     */
+    internal fun recordWipeRequest(action: String?) {
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            deleteWalletFileOnShutdown = true
+        }
+    }
+
+    /**
+     * The [onCreate] gate for a backup-recovered wallet's owed reset, run
+     * before any store is opened. The reset is done HERE, not by teardown:
+     * stopSelf() does not destroy a started service while an activity is
+     * bound (MainActivity binds in onResume), so a teardown-only reset could
+     * stall with the app in the foreground.
+     *
+     * The reset is complete only when both SPV stores are gone, the
+     * databases cleared, the SDK rescan durably owed (when the SDK owns L1)
+     * and the marker actually deleted. Otherwise the failure is counted, this
+     * returns false and the caller refuses initialization so the next start
+     * retries. Only a failing database clear is waived after
+     * [RecoveryResetState.MAX_FAILED_ATTEMPTS], so the wallet can still sync;
+     * an undeleted store or an SDK rescan that could not be owed never is.
+     *
+     * @return true when initialization may proceed.
+     */
+    internal suspend fun performRecoveryReset(): Boolean {
+        log.warn("onCreate: recovered wallet owes a blockchain reset — resetting before initialization")
+        val blockstoreDir = getDir("blockstore", MODE_PRIVATE)
+        val storesDeleted = listOf(Constants.Files.BLOCKCHAIN_FILENAME, Constants.Files.HEADERS_FILENAME)
+            .map { File(blockstoreDir, it) }
+            .all { !it.exists() || it.delete() }
+        resetMNLists(false)
+        val databasesCleared = application.clearDatabasesForRecoveryReset()
+        val sdkRescanOwed = oweSdkRescanIfCutOver()
+        resetBlockchainState()
+        // The parts a stale-state reset cannot do without.
+        val requiredPartsDone = storesDeleted && sdkRescanOwed
+        if (requiredPartsDone && databasesCleared) {
+            if (application.markRecoveryResetComplete()) {
+                log.info("recovery reset complete")
+                return true
+            }
+            log.warn("recovery reset ran, but its marker could not be removed")
+        }
+        val attempts = application.recordRecoveryResetFailure()
+        if (attempts == RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+            runCatching {
+                CrashReporter.saveBackgroundTrace(
+                    IllegalStateException(
+                        "recovery reset failed $attempts times (storesDeleted=$storesDeleted, " +
+                            "databasesCleared=$databasesCleared, sdkRescanOwed=$sdkRescanOwed)"
+                    ),
+                    packageInfoProvider.packageInfo
+                )
+            }
+        }
+        if (!requiredPartsDone || attempts < RecoveryResetState.MAX_FAILED_ATTEMPTS) {
+            log.warn(
+                "recovery reset failed (attempt {}: storesDeleted={}, databasesCleared={}, sdkRescanOwed={}) — " +
+                    "the reset stays owed", attempts, storesDeleted, databasesCleared, sdkRescanOwed
+            )
+            return false
+        }
+        // Only the best-effort database clear keeps failing: waive it.
+        log.error("recovery reset: database clear failed {} times — waiving it so the wallet can sync", attempts)
+        return application.markRecoveryResetComplete()
+    }
+
+    /**
+     * The SDK half of the recovery reset: when the SDK owns L1 its filter
+     * watermark must rewind, owed durably to the next bind
+     * ([SdkWalletBinder.oweSpvRescanForReset]). True when nothing is
+     * owed (pre-cutover, dashj's store wipe is the whole reset) or the debt
+     * is recorded. A failed ownership read counts as a failure.
+     */
+    private suspend fun oweSdkRescanIfCutOver(): Boolean = try {
+        !cutoverCoordinator.sdkOwnsL1Flow().first() || sdkWalletBinder.oweSpvRescanForReset()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("recovery reset: SDK rescan could not be owed", t)
+        false
+    }
+
+    /** Tracks the newest delivered start and any owed stop, for [stopSelfIfNoNewerStart]. */
+    private val selfStopGate = SelfStopGate()
+
+    /**
+     * Called synchronously in [onStartCommand], right AFTER its foreground
+     * promotion, never before (see [SelfStopGate.onStart]).
+     */
+    internal fun recordStartCommand(startId: Int) {
+        selfStopGate.onStart(startId)
+    }
+
+    /**
+     * The service's own decision to stop. Never a bare `stopSelf()`, which
+     * the system honours even with a `startForegroundService()` start already
+     * queued: tearing the service down then crashes the process with
+     * ForegroundServiceDidNotStartInTimeException (see [SelfStopGate]). When
+     * a newer start is pending the stop is skipped and the service runs that
+     * command: an ordinary stop (idle, memory) is simply re-decided later,
+     * while a [mustStop] one stays owed and that command stops again
+     * ([handleWalletLifecycleCommand]). Safe from any thread.
+     *
+     * @return true when the system accepted the stop.
+     */
+    internal fun stopSelfIfNoNewerStart(reason: String, mustStop: Boolean = false): Boolean {
+        return selfStopGate.requestStop(
+            reason,
+            mustStop,
+            onRefused = { startId ->
+                log.warn(
+                    "stop ({}) with startId {} refused (a newer start is pending, or the service is " +
+                        "already gone){}",
+                    reason,
+                    startId,
+                    if (mustStop) " — the stop stays owed to the next command" else ""
+                )
+            }
+        ) { startId -> stopSelfResult(startId) }
+    }
+
+    /**
+     * The idle detector's stop (once a minute from [tickReceiver]). A refused
+     * stop needs no debt: a later tick stops the service if it is still idle.
+     */
+    internal fun onIdleVerdict() {
+        log.info("idling detected, stopping service")
+        stopSelfIfNoNewerStart("idle")
+    }
+
+    /** Called on Main after initialization settles, before ordinary command handling. */
+    internal fun handleWalletLifecycleCommand(action: String?): Boolean {
+        // A stop that had to happen was refused because this (newer) command
+        // was pending: stop again now that it is the newest.
+        selfStopGate.owedStopReason?.let { reason ->
+            if (action != null) {
+                log.warn("owed stop ({}) suppresses command {}", reason, action)
+            }
+            stopSelfIfNoNewerStart(reason, mustStop = true)
+            return true
+        }
+        if (action == BlockchainService.ACTION_WIPE_WALLET) {
+            recordWipeRequest(action)
+            stopSelfIfNoNewerStart("wipe wallet", mustStop = true)
+            return true
+        }
+        // Order matters: this runs on Main.
+        // 1. An instance that never initialized (refused, or its init failed)
+        //    is rejected first. Its latch is complete, but it opened no stores,
+        //    receivers or SDK resume, so a later recovery of the application
+        //    (a safe-mode retry that clears the degradation flags) must not
+        //    make it accept commands.
+        // 2. The degraded check before the wallet read: during a safe-mode
+        //    retry isWalletLoadDegraded answers without waiting, whereas the
+        //    wallet getter waits on Main for the retry's whole parse and check
+        //    (DeferredWalletLoad) and could freeze the recovery screen into an
+        //    ANR.
+        // isRecoveryResetPending is also true for a marker that cannot be
+        // inspected: no command runs until it is confirmed absent.
+        if (!initCompleted ||
+            application.isWalletLoadDegraded ||
+            application.wallet == null ||
+            application.isRecoveryResetPending
+        ) {
+            // Every later command repeats this check, so a refused stop needs no debt.
+            stopSelfIfNoNewerStart("wallet not initialized")
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Refused initialization can leave no wallet, even without a degraded-state flag.
+     * The degraded check comes before the wallet read for the same reason as in
+     * [handleWalletLifecycleCommand]: it answers without waiting during a
+     * safe-mode retry, while the wallet getter would wait for that retry's parse.
+     */
+    internal fun saveWalletOnShutdown() {
+        if (!deleteWalletFileOnShutdown && !application.isWalletLoadDegraded && application.wallet != null) {
+            propagateContext()
+            application.saveWallet()
+        }
+    }
 
     /**
      * True once [onCreate]'s init coroutine ran to its end with a wallet.
@@ -588,12 +855,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Volatile
     private var dashjCaughtUpAtMs: Long? = null
 
-    /** Last args passed to [publishDashjDiagnostic] — lets a new parity report re-publish. */
-    @Volatile
-    private var lastDiagnosticRawPercent = 0
+    /** One dashj progress sample, kept whole so a pass never reads a torn pair. */
+    private data class DashjDiagnosticSample(val rawPercent: Int, val stage: PeerGroup.SyncStage?)
 
+    /** Latest dashj progress sample — lets a new parity report or finding re-publish. */
     @Volatile
-    private var lastDiagnosticStage: PeerGroup.SyncStage? = null
+    private var lastDiagnosticSample = DashjDiagnosticSample(0, null)
+
+    /**
+     * Every diagnostic publication goes through here, so the passes never
+     * overlap and an older pass cannot overwrite a newer verdict (see
+     * [SerialRepublisher]).
+     */
+    private val dashjDiagnosticRepublisher = SerialRepublisher(
+        serviceScope,
+        onError = { e -> log.warn("dashj-sync-diagnostic: publishing the diagnostic failed", e) },
+        pass = ::runDashjDiagnosticPass
+    )
 
     /**
      * FIX 1 guard: the post-cutover identity/contacts discovery hook
@@ -726,8 +1004,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val notificationAddresses: MutableList<Address> = LinkedList()
     private val transactionsReceived = AtomicInteger()
     private val mnListDiffsReceived = AtomicInteger()
+    @Volatile
     private var serviceCreatedAt: Long = 0
     private var resetBlockchainOnShutdown = false
+    // True only when ACTION_RESET_BLOCKCHAIN durably owed an SDK replay; gates
+    // the rescan database clear (nothing else repopulates them).
+    @Volatile
+    private var sdkRescanOwedForReset = false
+    // Set on Main by onStartCommand, read by the cleanup coroutine on IO.
+    @Volatile
     private var deleteWalletFileOnShutdown = false
 
     // Settings to bypass dashj default dns seeds
@@ -738,6 +1023,44 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var syncPercentage = 0 // 0 to 100%
     private var balance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
+
+    /** When the SDK's durable height last moved; written by the tick only. */
+    private val durableHeightTracker = DurableHeightTracker()
+
+    /** Holds the sync-complete demotion while the idle rule holds the service (see the tick). */
+    private val foregroundDemotionGate = ForegroundDemotionGate { sdkHoldsService(System.currentTimeMillis()) }
+
+    /**
+     * Whether an SDK engine start that is pending ([engineStartPendingHoldsService])
+     * or in flight ([engineStartHoldsService]), or the SDK still saving the scan
+     * ([durableLagHoldsService]), holds the service now. Read from the live
+     * sources so it is current on any thread — the tick and the sync-complete
+     * demotion share this one definition. Never reads the database, and never
+     * true pre-cutover.
+     */
+    private fun sdkHoldsService(nowMs: Long): Boolean {
+        if (!dashjHeldByCutover) return false
+        if (engineStartPendingHoldsService(
+                serviceCreatedAt,
+                nowMs,
+                l1ShadowSyncService.isEngineRunning(),
+                sdkBindBlocked()
+            )
+        ) {
+            return true
+        }
+        if (engineStartHoldsService(l1ShadowSyncService.engineStartingSinceMs(), nowMs)) return true
+        val durableHeight = l1ShadowSyncService.durableSyncedHeight()
+        return durableLagHoldsService(
+            durableHeight,
+            l1ShadowSyncService.engineCommittedHeight(),
+            durableHeightTracker.msSinceChange(durableHeight, nowMs)
+        )
+    }
+
+    /** Whether the SDK bind is blocked ("SDK setup pending"): nothing can start or replay. */
+    private fun sdkBindBlocked(): Boolean =
+        ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
 
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
@@ -1203,9 +1526,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         analyticsService.logError(Exception("Blockstore memory stalled"))
                         rescheduleService()
 
-                        // Force immediate shutdown
+                        // Force immediate shutdown. Owed when refused: the
+                        // memory-failure flag above makes this branch one-shot.
                         withContext(Dispatchers.Main) {
-                            stopSelf()
+                            stopSelfIfNoNewerStart("blockstore memory stall", mustStop = true)
                         }
                     }
                 }
@@ -1232,7 +1556,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     active.await()
                     continue
                 }
-                if (pendingDestroys.get() <= 0 && !isCleaningUp.get()) break
+                if (!pendingDestroys.isPending() && !isCleaningUp.get()) break
                 delay(100)
             }
             true
@@ -1937,6 +2261,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                             dashjDiagnosticSyncState.reset()
                             lastDiagnosticParity = null
                             dashjCaughtUpAtMs = null
+                            // A pass already running may still write its
+                            // snapshot; the pass queued behind it sees the
+                            // flag off and resets again.
+                            dashjDiagnosticRepublisher.request()
                         }
 
                         if (!changed) return@withLock
@@ -1992,14 +2320,29 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private var lastSdkProgress: de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress? = null
         private var sdkSampled = false
         private val activityHistory = arrayListOf<SyncActivitySample>()
+        private val memorySampleInFlight = AtomicBoolean(false)
 
         override fun onReceive(context: Context, intent: Intent) {
             // Once a minute while the service runs, one line of process
             // memory next to the sync-activity history — the crash-loop
             // investigation needs to see native-heap/PSS growth over a
-            // session without adb access (cheap in-process reads only,
-            // getPss() is the most expensive at ~ms).
-            logMemory()
+            // session without adb access. NOT on this thread: getPss()
+            // walks /proc/self/smaps, and on the reference install's 2 GB
+            // process that held the main thread — inside this broadcast
+            // receiver — for 5 s or more, four times in one evening (plan
+            // §39.6). One sample in flight at a time; a slow one skips ticks
+            // rather than queueing behind itself.
+            if (memorySampleInFlight.compareAndSet(false, true)) {
+                serviceScope.launch {
+                    try {
+                        logMemory()
+                    } finally {
+                        memorySampleInFlight.set(false)
+                    }
+                }
+            } else {
+                log.debug("previous memory sample still running — skipping this tick's")
+            }
 
             // WHICH ENGINE'S ACTIVITY COUNTS. The detector exists to stop a
             // genuinely idle service, and its four counters were all dashj-fed.
@@ -2053,9 +2396,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
          * One per-minute memory line into wallet.log. All figures come from
          * in-process syscalls — no dumpsys, no exec: [Runtime] for the JVM
          * heap, [android.os.Debug]'s native-heap counters for the
-         * Rust/dashj allocations, and [android.os.Debug.getPss] (reads
-         * /proc/self/smaps, a few ms — fine at this cadence) for the real
-         * resident footprint the OS kills on. Never throws.
+         * Rust/dashj allocations, and [android.os.Debug.getPss] for the real
+         * resident footprint the OS kills on. `getPss` reads
+         * /proc/self/smaps, whose cost scales with the mapping count: seconds
+         * on a 2 GB replay process (§39.6), so this runs off the main thread
+         * — see the caller. Never throws.
          */
         private fun logMemory() {
             try {
@@ -2102,15 +2447,58 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // BLOCKED ("SDK setup pending", Phase 1a item 3) nothing can
             // replay, so the service is allowed to idle out — the unlock
             // receiver / foreground edge bring it back.
-            val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
+            val bindBlocked = sdkBindBlocked()
             val replaying = blockchainState?.replaying == true && !bindBlocked
-            holdWakeLockWhileReplaying(replaying)
+            // An SDK engine start in flight reports no progress, so it reads idle too.
+            // Same treatment as a replay — stay up, and hold the wake lock so the
+            // start is not dozed — but capped (see [engineStartHoldsService]).
+            val engineStartingSinceMs = if (dashjHeldByCutover) l1ShadowSyncService.engineStartingSinceMs() else 0L
+            val engineStarting = engineStartHoldsService(engineStartingSinceMs, System.currentTimeMillis())
+            // …and so does the SDK still persisting what the scan already covered.
+            val durableHeight = if (dashjHeldByCutover) l1ShadowSyncService.durableSyncedHeight() else 0L
+            val committedHeight = if (dashjHeldByCutover) l1ShadowSyncService.engineCommittedHeight() else 0L
+            val durableLagging = durableLagHoldsService(
+                durableHeight,
+                committedHeight,
+                durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
+            )
+            holdWakeLockWhileReplaying(replaying || engineStarting || durableLagging)
+            // Those two holds also keep the service in the foreground: the scan reads
+            // synced while they last, and a demoted service would be stopped anyway.
+            if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
+                blockchainState?.let { state ->
+                    log.info("SDK engine start / scan save finished — re-checking the foreground notification")
+                    updateSyncNotification(state)
+                }
+            }
 
             if (isSyncIdle(activityHistory) && replaying) {
                 log.info(
                     "idle counters, but a replay is in progress ({}%) — keeping the service alive " +
                         "until it completes",
                     blockchainState?.percentageSync
+                )
+                return
+            }
+            if (isSyncIdle(activityHistory) && engineStarting) {
+                log.info(
+                    "idle counters, but the SDK engine start begun {}s ago is still running — keeping " +
+                        "the service alive until it finishes (at most {} min)",
+                    (System.currentTimeMillis() - engineStartingSinceMs) / 1000,
+                    ENGINE_START_KEEPALIVE_MS / 60_000
+                )
+                // The zero samples of the start window must not carry over: without
+                // this the first tick after the start finishes, before the engine has
+                // reported anything, would read the full history as idle and stop.
+                activityHistory.clear()
+                return
+            }
+            if (isSyncIdle(activityHistory) && durableLagging) {
+                log.info(
+                    "idle counters, but the SDK's saved height {} is {} blocks behind the committed " +
+                        "cursor {} and still advancing — keeping the service alive so a stop does not " +
+                        "re-walk them",
+                    durableHeight, committedHeight - durableHeight, committedHeight
                 )
                 return
             }
@@ -2122,8 +2510,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
             }
             if (shouldStopForIdle(activityHistory, replaying)) {
-                log.info("idling detected, stopping service")
-                stopSelf()
+                onIdleVerdict()
             }
         }
 
@@ -2140,11 +2527,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val lock = wakeLock ?: return
             try {
                 if (replaying && !replayWakeLockHeld) {
-                    log.info("replay in progress on the SDK path — acquiring the wake lock")
+                    log.info("replay or engine start in progress on the SDK path — acquiring the wake lock")
                     lock.acquire()
                     replayWakeLockHeld = true
                 } else if (!replaying && replayWakeLockHeld) {
-                    log.info("replay complete — releasing the wake lock")
+                    log.info("replay / engine start complete — releasing the wake lock")
                     replayWakeLockHeld = false
                     if (lock.isHeld) lock.release()
                 }
@@ -2193,14 +2580,35 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         // DIAGNOSTIC (Tools toggle): while the readout is holding at 99%
         // waiting for a fresh post-catchup parity report (see
-        // publishDashjDiagnostic's freshness gate), progress callbacks alone
+        // runDashjDiagnosticPass's freshness gate), progress callbacks alone
         // can't flip it — once caught up they only fire on new blocks (minutes
         // apart). Re-publish whenever the shadow harness produces a report so
         // the 100% + verdict lands within one probe interval (~10s).
         serviceScope.launch {
             l1ShadowSyncService.latestParity.collect { report ->
                 if (report != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
-                    publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
+                    dashjDiagnosticRepublisher.request()
+                }
+            }
+        }
+
+        // Same reason, other input: MATCH now also needs a fresh
+        // transaction-level breakdown, and that run finishes on its own
+        // schedule — after the report that triggered it, and after a ledger
+        // rebuild cleared the previous one. Without this the verdict would
+        // hold at "not established" until some later report happened to
+        // change.
+        //
+        // Null is republished too: findings are cleared when a new
+        // transaction expires them or a ledger rebuild discards them, and
+        // the readout must leave MATCH at once rather than at the next
+        // report. A pass never reads absent findings as MATCH, and passes run
+        // one at a time, so an older pass that read the revoked findings
+        // cannot land after this one.
+        serviceScope.launch {
+            l1ShadowSyncService.latestBreakdownFindings.collect {
+                if (dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+                    dashjDiagnosticRepublisher.request()
                 }
             }
         }
@@ -2224,6 +2632,32 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
+
+        // Plan §36.6 (Samsung SM-S901U, 2026-09-22 17:47): the periodic restart
+        // alarm used to be armed in ONE place — onDestroy's cleanup coroutine,
+        // at its "detaching from wallet" step, which runs only after the
+        // onCreate latch and the check() mutex. A kill that lands before that
+        // step leaves the wallet with no pending alarm: the task-removal kill
+        // Android defers until a started service stops itself arrived 600 ms
+        // into that coroutine, and lowmemorykiller on a cached process gives
+        // no onDestroy at all. A fresh install has no alarm from any earlier
+        // session either. Result: 70 minutes with no relaunch on an awake,
+        // charging, battery-exempt device, and nothing that would ever change
+        // that until the user opened the app.
+        //
+        // So arm it at service start as well. The scheduler cancels and
+        // replaces its own PendingIntent, so this and the clean-stop arm are
+        // idempotent; a start delivered while the service is already running
+        // is an ordinary onStartCommand. The tier it picks follows
+        // Configuration.lastUsed, which MainActivity stamps on open — a start
+        // from the alarm or the boot receiver with the UI never opened this
+        // process still reads the last stamped value, not zero.
+        try {
+            WalletApplication.scheduleStartBlockchainService(this)
+        } catch (t: Throwable) {
+            log.warn("could not arm the periodic restart alarm at service start", t)
+        }
+
         serviceScope.launch {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
@@ -2240,17 +2674,60 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         onCreateCompleted.complete(Unit)
                     }
 
-                    // Stop the service - we cannot safely initialize with cleanup still running
+                    // Plan §37: a cleanup stuck past the bound is never going to
+                    // finish. With the app in the background, end the process so
+                    // the next start gets a clean one; stopSelf alone left the
+                    // engine off for four hours on 2026-09-22.
+                    val stuckForMs = pendingDestroys.elapsedMs(SystemClock.elapsedRealtime())
+                    if (stuckForMs >= CLEANUP_DEADLOCK_EXIT_MS) {
+                        // Logged BEFORE the decision: the visibility check and
+                        // the exit run together on the main thread, with no
+                        // logging (or anything else) between them.
+                        log.error(
+                            "The previous instance's cleanup has been stuck for {} min — ending the process " +
+                                "if the app is still in the background, so the next start begins from a " +
+                                "clean one (plan §37)",
+                            stuckForMs / 60_000
+                        )
+                        if (endProcessIfStillBackgrounded(
+                                stuckForMs,
+                                appVisible = { AppForegroundMonitor.isForeground.value },
+                                exitProcess = { Runtime.getRuntime().exit(0) }
+                            )
+                        ) {
+                            return@launch
+                        }
+                        log.error(
+                            "The app is visible, so not ending the process now — the next background start " +
+                                "will (plan §37)"
+                        )
+                    }
+
+                    // Stop the service - we cannot safely initialize with cleanup still running.
+                    // initCompleted stays false, so a refused stop is retried by the next command.
                     withContext(Dispatchers.Main) {
-                        stopSelf()
+                        stopSelfIfNoNewerStart("previous cleanup stuck")
                     }
                     return@launch
                 }
 
                 propagateContext()
                 val wallet = application.wallet
-                if (wallet == null) {
-                    log.error("onCreate: wallet is null after cleanup, service cannot continue")
+                if (wallet == null || application.isWalletLoadDegraded) {
+                    log.warn("onCreate: wallet is unavailable or degraded, service cannot continue")
+                    withContext(Dispatchers.Main) { refuseWalletInitialization() }
+                    return@launch
+                }
+                // A backup-recovered wallet still owes its reset: opening the
+                // existing stores and starting sync would expose their stale
+                // state to the transaction-stripped wallet. A marker that
+                // cannot be inspected counts as owed (fail closed), and the
+                // reset only completes once the marker is confirmed gone.
+                if (application.isRecoveryResetPending && !performRecoveryReset()) {
+                    withContext(Dispatchers.Main) {
+                        refuseWalletInitialization()
+                        stopSelfIfNoNewerStart("recovery reset failed")
+                    }
                     return@launch
                 }
                 // Phase 5d: resolve the cutover engine gate ONCE, before we
@@ -2603,7 +3080,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // ever came up from PlatformSyncService.init() (once per process,
                     // from WalletApplication). Any service teardown that stops them
                     // (release-build shutdown() -> stopSdkEngines(), reached from
-                    // onTrimMemory's low-memory stopSelf(), the idle detector, or the
+                    // onTrimMemory's low-memory stop, the idle detector, or the
                     // Android 15 FGS timeout) therefore killed L1 sync for the rest
                     // of the process: no incoming transactions, the sync UI stuck at
                     // "syncing", and sends/top-ups failing with "SPV client not
@@ -2640,7 +3117,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 // Service is in a broken state - stop it gracefully
                 handler.post {
-                    stopSelf()
+                    stopSelfIfNoNewerStart("initialization failed")
                 }
             }
         }
@@ -2756,28 +3233,41 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     /**
      * The SDK half of ACTION_RESET_BLOCKCHAIN: when the SDK owns L1
-     * (cutover committed + SDK L1 engine enabled), arm the SPV filter
-     * rescan ([SdkWalletBinder.armSpvRescanForBlockchainReset]) so the
-     * user-facing reset replays SDK history too — pre-cutover behavior is
-     * untouched (dashj's own file wipe + replay is the whole reset there,
-     * and a shadow-only SDK must not be forced through a full rescan).
-     * Never throws; a failed arm only costs the user a retried reset.
+     * (cutover committed + SDK L1 engine enabled), owe the SPV filter
+     * rescan durably ([SdkWalletBinder.oweSpvRescanForReset]) so the
+     * user-facing reset replays SDK history even when the engines stop
+     * before the in-memory rewind persists: the scan gate holds the next
+     * scan until the rewind is armed, and the debt clears only once it is
+     * durable. Pre-cutover it is a no-op (a shadow-only SDK must not be
+     * forced through a full rescan, and the dashj blockstore is no longer
+     * deleted on reset either). Never throws; returns true only when the SDK
+     * replay is owed, so the caller knows whether clearing the rescan
+     * databases is safe.
      */
-    private suspend fun armSdkRescanForResetIfCutOver() {
-        try {
-            if (!cutoverCoordinator.sdkOwnsL1Flow().first()) return
-            sdkWalletBinder.armSpvRescanForBlockchainReset()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            log.warn("SDK rescan arm for blockchain reset failed", t)
-        }
-    }
+    private suspend fun oweSdkRescanForResetIfCutOver(): Boolean =
+        BlockchainResetShutdownPolicy.oweSdkRescan(
+            sdkOwnsL1 = { cutoverCoordinator.sdkOwnsL1Flow().first() },
+            owe = { sdkWalletBinder.oweSpvRescanForReset() },
+            onFailure = { t -> log.warn("SDK rescan for blockchain reset could not be owed", t) }
+        )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        log.info(".onStartCommand($intent)")
+        // Nothing before the foreground promotion below may stop the service:
+        // this start's id is published to the self-stop gate only after it.
+        log.info(".onStartCommand($intent, startId=$startId)")
         intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
             log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
+            // A periodic fire into a running service is not a service start, so
+            // nothing else re-arms the alarm: step the cadence down here once
+            // the usage tier has moved (see PeriodicAlarmTier).
+            try {
+                if (PeriodicAlarmTier.needsRearm(reason, config.lastUsedAgo)) {
+                    log.info("ALARM-DIAG periodic tier changed since {} — re-arming", reason)
+                    WalletApplication.scheduleStartBlockchainService(this)
+                }
+            } catch (t: Throwable) {
+                log.warn("could not re-arm the periodic alarm after a tier change", t)
+            }
         }
         super.onStartCommand(intent, flags, startId)
         // MO-995 CRASH FIX — this MUST stay synchronous, before the coroutine.
@@ -2805,6 +3295,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // QA reported it as "crash on opening"; it actually fired while the app
         // sat idle, 12 hours before the wallet was next opened.
         //
+        // A second shape of the same race (12.0.0-beta 39, 06:38:49) crashed
+        // even with this call in place: the idle tick's bare stopSelf() ran
+        // while the alarm's start was already queued, and the system tore the
+        // service down with the foreground promise still open — that crashes
+        // at once, before this line runs. Hence the stop id recorded below
+        // and stopSelfIfNoNewerStart for every stop the service decides on.
+        //
         // Safe here: Android guarantees `onCreate()` has RETURNED before
         // `onStartCommand()` runs, and Hilt injects `notificationService` in
         // `super.onCreate()` (line 1833), so the notification can be built. The
@@ -2813,10 +3310,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldPromoteToForeground(intent)) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
+        // Only now, AFTER the promotion: from here on the service's own stops
+        // use this start's id (see stopSelfIfNoNewerStart). Publishing it
+        // earlier would let a stop running off Main in that window have its
+        // stopSelfResult(startId) accepted while this start's foreground
+        // promise is still open — the same crash. A stop in the window uses
+        // the previous id and is refused instead; a must-stop then stays owed
+        // to this command, whose coroutine below reads the debt after this.
+        recordStartCommand(startId)
+        recordWipeRequest(intent?.action)
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
             log.info("onCreate completed, processing onStartCommand")
+            if (withContext(Dispatchers.Main) { handleWalletLifecycleCommand(intent?.action) }) {
+                return@launch
+            }
             if (intent != null) {
                 propagateContext()
                 log.info(
@@ -2836,20 +3345,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         nm!!.cancel(Constants.NOTIFICATION_ID_COINS_RECEIVED)
                     }
                 } else if (BlockchainService.ACTION_RESET_BLOCKCHAIN == action) {
-                    log.info("will remove blockchain on service shutdown")
+                    log.info("will reset blockchain state on service shutdown")
                     resetBlockchainOnShutdown = true
-                    // Post-cutover the dashj-store wipe below is an SDK no-op
-                    // (the engine keeps its watermark and stays SYNCED — the
-                    // field reset where "nothing happened"): also arm the SDK
-                    // filter rescan so the reset actually replays SDK history.
+                    // The dashj blockstore is kept (no dashj rescan); the
+                    // reset is the SDK filter rescan owed here plus the
+                    // database/MN-list cleanup on shutdown.
                     // The arm's persist hold + the drained-predicate keep the
                     // last-known balance from being overwritten mid-replay.
-                    armSdkRescanForResetIfCutOver()
-                    stopSelf()
-                } else if (BlockchainService.ACTION_WIPE_WALLET == action) {
-                    log.info("will remove blockchain and delete walletFile on service shutdown")
-                    deleteWalletFileOnShutdown = true
-                    stopSelf()
+                    // Without an owed replay the databases are kept on
+                    // shutdown, since nothing would repopulate them.
+                    sdkRescanOwedForReset = oweSdkRescanForResetIfCutOver()
+                    if (!sdkRescanOwedForReset) {
+                        log.warn("no SDK replay owed for blockchain reset; rescan databases will be kept")
+                    }
+                    // The reset happens on shutdown, so a refused stop stays owed.
+                    // On Main, serialised with onStartCommand like the other stops.
+                    withContext(Dispatchers.Main) {
+                        stopSelfIfNoNewerStart("reset blockchain", mustStop = true)
+                    }
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
@@ -2945,7 +3458,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
-        pendingDestroys.incrementAndGet()
+        pendingDestroys.schedule(SystemClock.elapsedRealtime())
         super.onDestroy()
         // unregister receivers on the main thread, if they were registered
         // in some cases, onDestroy is called soon after onCreate and before its coroutine finishes
@@ -2996,11 +3509,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // file lock, which is the OverlappingFileLockException this counter exists to prevent.
             if (!isCleaningUp.compareAndSet(false, true)) {
                 log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
-                pendingDestroys.decrementAndGet()
+                pendingDestroys.finish()
                 cleanupMonitorJob.cancel()
                 return@launch
             }
-
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
@@ -3103,10 +3615,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
                 }
-                if (!deleteWalletFileOnShutdown) {
-                    propagateContext()
-                    application.saveWallet()
-                }
+                saveWalletOnShutdown()
                 // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
                 // onCreate it may still be null, so guard rather than assert.
                 wakeLock?.let { lock ->
@@ -3125,28 +3634,40 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         lock.release()
                     }
                 }
-                if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
-                    log.info("removing blockchain")
-                    blockChainFile?.delete()
-                    headerChainFile?.delete()
+                val shutdownPlan = BlockchainResetShutdownPolicy.plan(
+                    resetBlockchainOnShutdown = resetBlockchainOnShutdown,
+                    deleteWalletFileOnShutdown = deleteWalletFileOnShutdown,
+                    sdkRescanOwedForReset = sdkRescanOwedForReset
+                )
+                if (shutdownPlan.resetMnListsAndState) {
+                    if (shutdownPlan.deleteStores) {
+                        log.info("removing blockchain")
+                        blockChainFile?.delete()
+                        headerChainFile?.delete()
+                    } else {
+                        // Rescan keeps the dashj blockstore; only the SDK replays.
+                        log.info("resetting blockchain state (keeping dashj blockstore)")
+                    }
                     resetMNLists(false)
-                    if (deleteWalletFileOnShutdown) {
+                    if (shutdownPlan.wipeWallet) {
                         log.info("removing wallet file and app data")
                         // The Kotlin-SDK engines must be provably down before the wipe
-                        // deletes app data. DEBUG builds deliberately skip the engine
-                        // stops in platformSyncService.shutdown() above (warm-SPV
-                        // battery trade-off for testing) — this explicit stop keeps the
-                        // wipe path safe on every build type (no-op when already
-                        // stopped, as on release where shutdown() stopped them).
+                        // deletes app data. platformSyncService.shutdown() above already
+                        // stops them on every build type; this explicit stop keeps the
+                        // wipe independent of that path (a no-op when already stopped).
                         platformSyncService.stopSdkEngines()
                         // Suspends for as long as the wipe takes (nearly two
                         // minutes of SDK cleanup on a live mainnet wallet)
                         // WITHOUT blocking this dispatcher thread, which is
                         // what the old runBlocking clear did.
                         application.finishWalletWipe()
-                    } else {
+                    } else if (shutdownPlan.clearRescanDatabases) {
                         //Clear the blockchain identity
                         application.clearDatabasesForRescan()
+                    } else if (shutdownPlan.keepRescanDatabases) {
+                        // No SDK replay owed and dashj keeps its stores (no
+                        // wallet.reset()), so a clear would never be refilled.
+                        log.warn("no SDK replay owed; keeping rescan databases")
                     }
                     resetBlockchainState()
                 }
@@ -3159,9 +3680,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (checkMutex.isLocked) {
                     checkMutex.unlock()
                 }
-                isCleaningUp.set(false)
-                pendingDestroys.decrementAndGet()
                 cleanupDeferred?.complete(Unit)
+                isCleaningUp.set(false)
+                pendingDestroys.finish()
                 // Cancel the cleanup monitor since cleanup is done
                 cleanupMonitorJob.cancel()
             }
@@ -3177,7 +3698,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info("onTrimMemory({}) called", level)
         if (shouldStopForMemoryPressure(level)) {
             log.warn("memory pressure (onTrimMemory level {}), stopping service", level)
-            stopSelf()
+            // A refused stop needs no debt: a newer start is about to run, and
+            // the next trim callback or idle tick re-decides.
+            stopSelfIfNoNewerStart("memory pressure")
         }
     }
 
@@ -3185,18 +3708,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onTimeout(startId: Int, fgsType: Int) {
         log.info("onTimeoutCalled({}, {})", startId, fgsType)
         log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
-        
+
+        // Android 15 crashes a timed-out dataSync service that is still in the
+        // foreground a few seconds later (ForegroundServiceDidNotStopInTimeException).
+        // Leave the foreground FIRST: per ActiveServices (android15-release and
+        // main), stopForeground runs maybeStopFgsTimeoutLocked, which removes
+        // SERVICE_FGS_CRASH_TIMEOUT_MSG — so this alone meets the deadline.
+        // The stop itself then goes through stopSelfIfNoNewerStart like every
+        // other self-stop: a bare stopSelf() with an alarm's foreground start
+        // queued is the ForegroundServiceDidNotStartInTimeException teardown.
+        // That queued start is safe too: its startForeground() clears
+        // fgRequired before the "time limit already exhausted" refusal is
+        // thrown (caught in startForegroundAndCatch), and the owed stop then
+        // stops the service from that command.
+        // Before the timeout notification: it reuses the sync notification's id,
+        // which REMOVE would otherwise cancel.
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            foregroundService = ForegroundService.NONE
+        } catch (e: Exception) {
+            log.error("Error leaving the foreground on timeout", e)
+        }
+
         // Show notification about the timeout
         showTimeoutNotification()
-        
-        // Android 15 requires us to call stopSelf() within a few seconds
-        // when onTimeout is called for dataSync services
+
         try {
-            stopSelf()
+            stopSelfIfNoNewerStart("fgs timeout", mustStop = true)
         } catch (e: Exception) {
             log.error("Error stopping service on timeout", e)
         }
-        
+
         super.onTimeout(startId, fgsType)
     }
 
@@ -3307,9 +3849,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     /**
-     * Publish one dashj progress sample to the isolated diagnostic holder
-     * ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read the
-     * latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
+     * Record one dashj progress sample for the isolated diagnostic holder
+     * ([dashjDiagnosticSyncState]) and schedule a publication. Never blocks:
+     * the work runs in [runDashjDiagnosticPass], one pass at a time.
+     */
+    private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
+        lastDiagnosticSample = DashjDiagnosticSample(rawPercent, stage)
+        dashjDiagnosticRepublisher.request()
+    }
+
+    /**
+     * Publish the latest dashj progress sample to the isolated diagnostic
+     * holder ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read
+     * the latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
      * ([L1ShadowSyncService.latestParity]) and colour the readout
      * MATCH/BALANCE_MATCH/MISMATCH; while syncing the verdict is UNKNOWN.
      *
@@ -3324,10 +3876,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * the Tools readout shows a neutral "Verifying" instead of a percentage.
      * Logs a single SDK-vs-dashj line each time the verdict changes —
      * necessarily at/after that same moment.
+     *
+     * Runs only on [dashjDiagnosticRepublisher], so passes never overlap: the
+     * read, the verdict and the write below are one step as far as any other
+     * publication is concerned.
      */
-    private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
-        lastDiagnosticRawPercent = rawPercent
-        lastDiagnosticStage = stage
+    private suspend fun runDashjDiagnosticPass() {
+        if (!dashjSyncDiagnostic) {
+            // Turned off since this pass was requested, possibly while an
+            // earlier pass was writing. Leave the inert default behind.
+            dashjDiagnosticSyncState.reset()
+            lastDiagnosticParity = null
+            dashjCaughtUpAtMs = null
+            return
+        }
+        val (rawPercent, stage) = lastDiagnosticSample
         // The shared-row percentage is TIME-weighted (block timestamps vs the
         // clock), which wobbles non-monotonically on testnet's irregular block
         // production and under-reads badly (e.g. 52% shown at ~75% of blocks
@@ -3357,46 +3920,44 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     "dashj-sync-diagnostic: dashj chain caught up — showing 'Verifying' " +
                         "until a parity report computed against the caught-up state arrives"
                 )
+                // The harness gates its hourly breakdown on the same moment:
+                // a run started while dashj was behind produces findings this
+                // method will reject, and used to spend the slot anyway.
+                l1ShadowSyncService.dashjCaughtUp(dashjCaughtUpAtMs)
             }
         } else {
+            if (dashjCaughtUpAtMs != null) l1ShadowSyncService.dashjCaughtUp(null)
             dashjCaughtUpAtMs = null
         }
         val report = l1ShadowSyncService.latestParity.value
-        // Fresh = captured at/after the catch-up moment (same wall clock).
-        val caughtUpAtMs = dashjCaughtUpAtMs
-        val freshReport = report?.takeIf { caughtUpAtMs != null && it.timestampMs >= caughtUpAtMs }
-        val parity = if (percent >= 100 && freshReport != null) {
-            when {
-                freshReport.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
-                // Both balance comparisons agree exactly, only the tx counts
-                // differ — the funds are all accounted for on both sides.
-                freshReport.balancesMatch && freshReport.confirmedBalancesMatch ->
-                    DashjDiagnosticSyncState.Parity.BALANCE_MATCH
-                else -> DashjDiagnosticSyncState.Parity.MISMATCH
-            }.also { verdict ->
-                if (verdict != lastDiagnosticParity) {
-                    log.info(
-                        "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
-                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
-                        verdict, freshReport.sdkDuffs, freshReport.dashjDuffs,
-                        freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
-                        freshReport.sdkTxCount, freshReport.dashjTxCount
-                    )
-                }
-            }
-        } else {
-            DashjDiagnosticSyncState.Parity.UNKNOWN
+        // The findings only count while the SDK store still reads as their run
+        // read it: a change whose event was lost must not leave MATCH standing.
+        val verdict = deriveCurrentDashjDiagnosticVerdict(
+            percent,
+            report,
+            l1ShadowSyncService.latestBreakdownFindings.value,
+            dashjCaughtUpAtMs,
+            l1ShadowSyncService::breakdownFindingsStillCurrent
+        )
+        val freshReport = verdict.freshReport
+        if (verdict.parity != DashjDiagnosticSyncState.Parity.UNKNOWN &&
+            freshReport != null &&
+            verdict.parity != lastDiagnosticParity
+        ) {
+            val freshFindings = verdict.freshFindings
+            log.info(
+                "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
+                    "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={} " +
+                    "breakdown={}",
+                verdict.parity, freshReport.sdkDuffs, freshReport.dashjDuffs,
+                freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
+                freshReport.sdkTxCount, freshReport.dashjTxCount,
+                freshFindings?.let { it.reason ?: "clean (${it.valueCompared} values compared)" }
+                    ?: "not run since dashj caught up"
+            )
         }
-        lastDiagnosticParity = parity
-        // dashj itself is done but the fresh post-catchup report hasn't landed
-        // yet: hold the internal percent at 99 and flag the window so the
-        // readout shows "Verifying" — 100 and the verdict colour then appear
-        // together when the report arrives.
-        val verifying = percent >= 100 && parity == DashjDiagnosticSyncState.Parity.UNKNOWN
-        val displayPercent = if (verifying) 99 else percent
-        dashjDiagnosticSyncState.update(displayPercent, parity, stage?.name, verifying)
-        // Feed the support-log history buffer (deduplicated inside).
-        dashjDiagnosticSyncState.recordParity(displayPercent, parity, report)
+        lastDiagnosticParity = verdict.parity
+        commitDashjDiagnostic(dashjDiagnosticSyncState, percent, stage?.name, verdict, report)
     }
 
     override fun getConnectedPeers(): List<Peer> {
@@ -3430,10 +3991,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val broadcast = Intent(BlockchainService.ACTION_BLOCKCHAIN_STATE)
         broadcast.setPackage(packageName)
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null && blockchainState.bestChainDate != null) {
+        if (blockchainState != null) {
+            updateSyncNotification(blockchainState)
+        }
+        this.blockchainState = blockchainState
+        maybeRecoverIdentityPostCutover(blockchainState)
+    }
+
+    /**
+     * Show the ongoing sync notification while syncing, and leave the
+     * foreground once sync has finished — unless [foregroundDemotionGate] is
+     * holding it, in which case the tick calls this again when the hold ends.
+     */
+    private fun updateSyncNotification(blockchainState: BlockchainState) {
+        val bestChainDate = blockchainState.bestChainDate
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bestChainDate != null) {
             //Handle Ongoing notification state
             val syncing =
-                blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
+                bestChainDate.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
             // NotificationManager calls are synchronous binder IPC and this
             // observer runs on MAIN for every blockchain-state DB write — same
             // blocked-binder ANR shape as the peer-connectivity listener. Ship
@@ -3441,10 +4016,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             notificationHandler.post {
                 try {
                     if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver) {
-                        //Remove ongoing notification if blockchain sync finished
-                        stopForeground(true)
-                        foregroundService = ForegroundService.NONE
-                        nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+                        if (foregroundDemotionGate.mayDemote()) {
+                            //Remove ongoing notification if blockchain sync finished
+                            stopForeground(true)
+                            foregroundService = ForegroundService.NONE
+                            nm!!.cancel(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC)
+                        } else {
+                            log.info(
+                                "sync finished, but the SDK engine is still starting or saving the scan — " +
+                                    "staying in the foreground until it is done"
+                            )
+                        }
                     } else if (blockchainState.replaying || syncing) {
                         //Shows ongoing notification when synchronizing the blockchain
                         val notification = createNetworkSyncNotification(blockchainState)
@@ -3455,8 +4037,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
-        this.blockchainState = blockchainState
-        maybeRecoverIdentityPostCutover(blockchainState)
     }
 
     /**

@@ -52,8 +52,11 @@ class SdkDashPayWritesTest {
         var identityManaged: (String, ByteArray) -> Boolean = { _, _ -> false },
         var onSendContactRequest: (String, ByteArray, ByteArray) -> Unit = { _, _, _ -> },
         var onCreateOrUpdateProfile: (String, ByteArray, String?, String?, String?, ByteArray?, Boolean) -> Unit =
-            { _, _, _, _, _, _, _ -> }
+            { _, _, _, _, _, _, _ -> },
+        /** Fee-ledger balance read; throws by default — the writes must not care. */
+        var onIdentityCreditBalance: suspend (String) -> Long? = { error("balance read unavailable") }
     ) : SdkDashPayWriteSource {
+        var balanceCalls = 0
         var boundCalls = 0
         var managedCalls = 0
         var broadcastCalls = 0
@@ -101,6 +104,11 @@ class SdkDashPayWritesTest {
             onCreateOrUpdateProfile(
                 walletIdHex, identityId, displayName, publicMessage, avatarUrl, avatarBytes, doCreate
             )
+        }
+
+        override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
+            balanceCalls++
+            return onIdentityCreditBalance(identityIdBase58)
         }
     }
 
@@ -214,10 +222,13 @@ class SdkDashPayWritesTest {
      * MO-972: the reason must not ASSERT an expiry nobody measured. Field log
      * (2026-09-10, testnet 12000007, HONOR PTP-N49): biometric authentication
      * at 11:49:16, this failure at 11:49:17 — one second — reported as
-     * "Keystore auth window expired". On that OEM the auth-bound Keystore gate
-     * is defective, the same defect family as the false-locked master alias;
-     * the window was not the problem and the label sent diagnosis the wrong
-     * way.
+     * "Keystore auth window expired". There was no window to expire: this app
+     * runs KeySecurityPolicy.DEVICE_BOUND, which has no auth gate. What that
+     * OEM actually denies is the UNLOCKED_DEVICE_REQUIRED gate, which Android
+     * reports with the identical exception — the same defect family as the
+     * false-locked master alias. The label sent diagnosis the wrong way for
+     * weeks. Nor may it claim the opposite: legacy blobs under the old
+     * auth-gated alias reach this same arm, and for them the window is real.
      */
     @Test
     fun classify_userNotAuthenticated_doesNotClaimTheWindowExpired() {
@@ -230,7 +241,11 @@ class SdkDashPayWritesTest {
 
         assertFalse(
             "must not state an expiry as fact, got: ${result.reason}",
-            result.reason.contains("auth window expired")
+            result.reason.contains("expired")
+        )
+        assertFalse(
+            "must not deny an auth window the legacy alias does have, got: ${result.reason}",
+            result.reason.contains("no auth window")
         )
         assertTrue(
             "must still be recognisable as the auth-gate refusal, got: ${result.reason}",
@@ -242,14 +257,95 @@ class SdkDashPayWritesTest {
         )
     }
 
+    /**
+     * MO-972, the other half: dashpay/platform#4643 classifies the
+     * unlocked-device denial SDK-side, so the message that reaches us names
+     * the alias and the KeyguardManager state instead of saying "User not
+     * authenticated". Without an arm of its own this shape falls through to
+     * the generic handling and the failure gets LESS legible than before the
+     * SDK fix.
+     */
+    @Test
+    fun classify_keystoreDeviceLockedDenial_isNotBroadcastAndNamesTheGate() {
+        // Verbatim shape of KeystoreDeviceLockedException's message, as it
+        // arrives wrapped by the FFI.
+        val liveShape = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=false " +
+                "isKeyguardLocked=false (FALSE-LOCKED: device reports unlocked but " +
+                "Keystore denied — Keystore2 lock-state misreporting; retryable " +
+                "immediately)"
+        )
+
+        val result = classifyBroadcastFailure(liveShape)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(
+            "must say the device was considered locked, got: $reason",
+            reason.contains("considers the device locked")
+        )
+        assertFalse(
+            "must not blame an auth window this policy does not have, got: $reason",
+            reason.contains("auth window expired")
+        )
+        assertTrue(
+            "must carry the alias so the log says WHICH key, got: $reason",
+            reason.contains("keys.devicebound")
+        )
+        assertSame(liveShape, result.cause)
+    }
+
+    /**
+     * MO-1023: the transparent username path auto-resumes a tracked asset lock
+     * only on the FALSE-LOCKED class. The predicates must agree with the
+     * classifier's Keystore arms and tell the two lock states apart.
+     */
+    @Test
+    fun keystoreRefusalPredicates_matchTheClassifierAndSplitLockState() {
+        val falseLocked = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=false " +
+                "isKeyguardLocked=false (FALSE-LOCKED: device reports unlocked but " +
+                "Keystore denied — Keystore2 lock-state misreporting; retryable " +
+                "immediately)"
+        )
+        val genuinelyLocked = DashSdkError.PlatformWallet.Generic(
+            5000,
+            "SDK error: Protocol error: Generic Error: Keystore denied 'decrypt' on " +
+                "lock-bound alias 'org.dashfoundation.wallet.keys.devicebound' as " +
+                "device-locked; KeyguardManager at throw time: isDeviceLocked=true " +
+                "isKeyguardLocked=true (genuinely locked — retry after unlock)"
+        )
+        val unauthenticated = RuntimeException("Generic Error: User not authenticated")
+        val unrelated = RuntimeException("connection reset")
+
+        for (t in listOf(falseLocked, genuinelyLocked, unauthenticated)) {
+            assertTrue("$t must be a Keystore refusal", isKeystoreSigningRefusal(t))
+            assertTrue(
+                "the classifier must agree it is pre-broadcast: $t",
+                classifyBroadcastFailure(t) is SdkWriteResult.NotBroadcast
+            )
+        }
+        assertFalse(isKeystoreSigningRefusal(unrelated))
+
+        assertTrue(isKeystoreFalseLockedRefusal(falseLocked))
+        assertFalse("a genuinely locked device must not spin", isKeystoreFalseLockedRefusal(genuinelyLocked))
+        assertFalse("no lock-state sample → never false-locked", isKeystoreFalseLockedRefusal(unauthenticated))
+        assertFalse(isKeystoreFalseLockedRefusal(unrelated))
+    }
+
     @Test
     fun classify_keystoreAuthWindowExpiry_isNotBroadcast() {
-        // The live S22 failure: the SDK's AUTH_GATED Keystore threw
-        // UserNotAuthenticatedException while decrypting the identity key to
-        // SIGN the state transition — signing runs during transition
-        // construction, strictly before broadcast, so nothing was submitted
-        // and the dashj fallback is safe. Message-matched until platform
-        // PR #4060 (DEVICE_BOUND keys) gives this a typed error.
+        // Pre-#4643 AAR lines (denial still unclassified), plus the genuinely
+        // auth-gated paths that survive on an install predating the
+        // DEVICE_BOUND switch. Signing runs during transition construction,
+        // strictly before broadcast, so nothing was submitted and the dashj
+        // fallback is safe.
         val liveShapes = listOf<Throwable>(
             DashSdkError.PlatformWallet.Generic(
                 5000,
@@ -576,6 +672,49 @@ class SdkDashPayWritesTest {
         assertNull(publicMessage)
         assertEquals("https://a/b.png", avatarUrl)
         assertEquals(true, doCreate)
+    }
+
+    // ── Fee ledger (log-only credit snapshots) ───────────────────────────
+
+    @Test
+    fun feeLedger_snapshotsAroundABroadcastWrite() = runBlocking {
+        val balances = ArrayDeque(listOf(2_693_390_540L, 2_683_390_540L))
+        val source = readySource().apply { onIdentityCreditBalance = { balances.removeFirst() } }
+
+        val result = writes(source).sendContactRequest(ownUserId, toUserId)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(2, source.balanceCalls)
+    }
+
+    @Test
+    fun feeLedger_skipsThePostReadWhenProvablyNothingWasSubmitted() = runBlocking {
+        val source = readySource().apply {
+            onIdentityCreditBalance = { 1_000L }
+            onSendContactRequest = { _, _, _ -> throw DashSdkError.InvalidParameter("bad recipient") }
+        }
+
+        val result = writes(source).sendContactRequest(ownUserId, toUserId)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(1, source.balanceCalls)
+    }
+
+    @Test
+    fun feeLedger_readFailuresNeverChangeTheResult() = runBlocking {
+        // readySource()'s default balance read throws.
+        val source = readySource().apply {
+            onCreateOrUpdateProfile = { _, _, _, _, _, _, _ -> throw DashSdkError.NetworkError("dropped") }
+        }
+
+        val result = writes(source).createOrUpdateProfile(
+            ownUserId, "Alice", null, null,
+            avatarBytes = null, hasAvatarDigest = false, doCreate = false
+        )
+
+        assertTrue(result is SdkWriteResult.Ambiguous)
+        assertEquals(1, source.broadcastCalls)
+        assertEquals(2, source.balanceCalls)
     }
 
     // ── Accept direction (Phase 3g) ───────────────────────────────────────

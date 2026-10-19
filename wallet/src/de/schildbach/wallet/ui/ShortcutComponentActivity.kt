@@ -31,6 +31,10 @@ open class ShortcutComponentActivity : AppCompatActivity() {
 
 
     open fun finishIfNotInitialized(): Boolean {
+        // Degraded first (see LockScreenActivity.onCreate): a widget or
+        // shortcut can open this during a safe-mode retry, when reading the
+        // wallet would wait on the main thread for the retry's parse.
+        if (redirectDegradedWallet(walletApplication)) return true
         if (walletApplication.wallet == null) {
             startActivity(OnboardingActivity.createIntent(this))
             finish()

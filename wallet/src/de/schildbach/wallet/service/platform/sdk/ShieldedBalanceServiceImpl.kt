@@ -25,6 +25,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,6 +46,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
@@ -54,6 +57,7 @@ import org.dashfoundation.dashsdk.persistence.entities.ShieldedNoteEntity
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.charset.CodingErrorAction
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -763,7 +767,25 @@ class ShieldedBalanceServiceImpl internal constructor(
      * momentarily "Internal" — mirroring the transparent/invite paths. No-op
      * default keeps the host-JVM tests inert.
      */
-    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> }
+    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> },
+    /**
+     * How long [stop] waits for [lock] before tearing the Kotlin side down
+     * without it — see [stop] for the 2026-09-22 field case. Injectable so a
+     * test can exercise the bound without waiting the production five seconds.
+     */
+    private val stopLockTimeoutMs: Long = STOP_LOCK_TIMEOUT_MS,
+    /**
+     * Test seam: runs inside the bring-up, holding [lock], after ready is
+     * published and verified — the window where the thread can stall (a slow
+     * log write) with no generation check left. No-op in production.
+     */
+    private val afterReadyCommitted: suspend () -> Unit = {},
+    /**
+     * Test seam: runs in [stop]'s fallback right after its final generation
+     * bump, before the Kotlin teardown — the pause in which a newer bring-up
+     * can publish. No-op in production.
+     */
+    private val afterStopFallbackBump: suspend () -> Unit = {}
 ) : ShieldedBalanceService {
 
     @Inject
@@ -795,6 +817,49 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
     private val lock = Mutex()
+
+    /**
+     * Bumped by every [stop]. A bring-up samples it before its native calls
+     * and, on return, treats a changed value as "a stop happened while I was
+     * away": it must not start the sync loop or report ready over a teardown
+     * that already ran. The native bind cannot observe coroutine cancellation
+     * (2026-09-22: it sat inside the SDK for an hour), so this is the only
+     * signal that can reach it.
+     */
+    private val stopGeneration = AtomicInteger(0)
+
+    /**
+     * The generation of the bring-up that started or adopted the running
+     * native sync loop, or [NO_GENERATION] when none is running. Set BEFORE
+     * the native start; cleared by [stopNativeLoop]. Lets a later [stop] stop
+     * a loop even when the ready latch was never published or already cleared,
+     * and lets an owed stop tell an older runtime from a newer one.
+     */
+    private val loopOwnerGeneration = AtomicInteger(NO_GENERATION)
+
+    /** The generation of the bring-up that published the ready latch, or [NO_GENERATION]. */
+    private val readyGeneration = AtomicInteger(NO_GENERATION)
+
+    /**
+     * Makes "publish ready" and "tear ready down" atomic with respect to each
+     * other, so a teardown can decide from [readyGeneration] whether the latch
+     * it would clear belongs to a runtime older than its stop (review,
+     * 2026-09-28): a fallback that paused after its final bump must not clear
+     * the latch of a bring-up that sampled after that bump and published
+     * meanwhile. Held only for field writes — never across a suspension.
+     */
+    private val readyMonitor = Any()
+
+    /**
+     * A [stop] fallback tore the Kotlin side down without the lock and could
+     * not stop the native loop: every runtime from a generation BELOW this
+     * value still owes its stop, and the next lock holder pays it (see
+     * [stop]). [NO_GENERATION] when nothing is owed. A value, not a flag
+     * (review, 2026-09-28): a flag could not tell the runtime the stop meant
+     * from a newer bring-up that sampled after it, so paying it could tear
+     * down a legitimate runtime while that bring-up reported ready.
+     */
+    private val nativeStopOwedThrough = AtomicInteger(NO_GENERATION)
 
     /**
      * Ready latch AND the flows' switchboard: the bound SDK wallet id
@@ -832,6 +897,14 @@ class ShieldedBalanceServiceImpl internal constructor(
     /** The last-known-balance persistence collector (see [startBalancePersistence]); null until ready. */
     private var balancePersistJob: Job? = null
 
+    /**
+     * The pending wallet-shield sweep [ensureShieldedReady] launched, so a
+     * teardown can cancel it (review, 2026-09-28): a sweep that read the latch
+     * just before a stop must not go on to resume a shield after that stop.
+     * Like the two jobs above, written and cancelled only under [readyMonitor].
+     */
+    private var sweepJob: Job? = null
+
     override suspend fun lastKnownShieldedBalance(): Dash? = try {
         dashPayConfig.getLastShieldedBalanceDuffs()?.let { Dash(it) }
     } catch (t: Throwable) {
@@ -842,8 +915,17 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override suspend fun ensureShieldedReady(): Boolean {
         if (!isEnabled()) return false
-        val ready = ensureShieldedReadyInner()
-        if (ready) {
+        val readyGen = bringUpCommittedGeneration() ?: return false
+        // The collectors and the sweep start under [readyMonitor], and only
+        // while the runtime this pass committed is still the published one
+        // (review, 2026-09-28). This runs after the lock is released, so a
+        // stop can land in between; teardown takes the same monitor, so it
+        // either runs first (the generations differ and nothing starts) or
+        // after (and cancels what started here).
+        return synchronized(readyMonitor) {
+            if (readyWalletIdHex.value == null || readyGeneration.get() != readyGen) {
+                return@synchronized false
+            }
             // Begin (or keep) polling the SDK's pass-in-flight signal so the
             // UI can distinguish "still syncing" from a real zero balance.
             startSyncStatusPolling()
@@ -854,76 +936,350 @@ class ShieldedBalanceServiceImpl internal constructor(
             // Staged-retry hook: finish any interrupted shieldFromWallet
             // (stage (b) after the L1 lock broadcast) in the background.
             // Cheap when nothing is pending (one Room query); serialized
-            // with new wallet-shield writes by [walletShieldMutex].
-            sweepScope?.launch {
-                runCatching { resumePendingWalletShieldsInner() }
-                    .onFailure {
-                        if (it is CancellationException) throw it
-                        log.warn("pending wallet-shield sweep failed; will retry on the next trigger", it)
-                    }
+            // with new wallet-shield writes by [walletShieldMutex]. One at a
+            // time: a sweep still running covers this trigger too.
+            if (sweepJob?.isActive != true) {
+                sweepJob = sweepScope?.launch {
+                    runCatching { resumePendingWalletShieldsInner() }
+                        .onFailure {
+                            if (it is CancellationException) throw it
+                            log.warn("pending wallet-shield sweep failed; will retry on the next trigger", it)
+                        }
+                }
             }
+            true
         }
-        return ready
     }
 
-    private suspend fun ensureShieldedReadyInner(): Boolean {
-        return try {
-            lock.withLock {
-                if (readyWalletIdHex.value != null) return true
+    private suspend fun ensureShieldedReadyInner(): Boolean = bringUpCommittedGeneration() != null
 
-                if (!source.hasShieldedSupport()) {
-                    log.info("shielded runtime unavailable: native build has no shielded support")
-                    return false
-                }
-                val walletIdHex = source.boundWalletIdOrNull()
-                if (walletIdHex == null) {
-                    log.info("shielded runtime not started: app wallet not bound to the SDK yet")
-                    return false
-                }
-                val walletId = walletIdFromHex(walletIdHex)
-                if (walletId == null) {
-                    log.warn("shielded runtime not started: malformed SDK wallet id")
-                    return false
-                }
-
-                source.configureShielded(shieldedDbPath())
-                source.bindShielded(walletId, listOf(DEFAULT_SHIELDED_ACCOUNT))
-                if (!source.isShieldedSyncRunning()) {
-                    source.startShieldedSync()
-                }
-                // Best-effort: start building the Halo 2 proving key now so
-                // the first spend doesn't pay the ~30s warm-up on top of its
-                // own proof. Idempotent; runs on a background thread SDK-side.
-                runCatching { source.warmUpProver() }
-                    .onFailure { log.warn("shielded prover warm-up failed (spends will build it lazily)", it) }
-
-                readyWalletIdHex.value = walletIdHex
-                log.info(
-                    "shielded runtime ready on SDK wallet {}… (account {}, sync loop running)",
-                    walletIdHex.take(8), DEFAULT_SHIELDED_ACCOUNT
-                )
-                true
-            }
+    /**
+     * The bring-up under [lock]. Returns the generation of the runtime it
+     * committed (its own, or the one already published), or null when it did
+     * not commit or a stop superseded it.
+     */
+    private suspend fun bringUpCommittedGeneration(): Int? {
+        try {
+            lock.lock()
+        } catch (c: CancellationException) {
+            // Cancelled while queued, possibly AFTER the lock was already
+            // handed to us (review, 2026-09-28): Mutex's prompt-cancellation
+            // path then releases it itself, skipping [releaseLock], and a
+            // debt the previous holder could not pay (its tryLock lost to
+            // the handoff) would sit unpaid with the lock free. Pay it here.
+            handOffOwedNativeStop()
+            throw c
+        }
+        // The fence against a stop() that timed out on [lock] and tore the
+        // Kotlin side down without us (review, 2026-09-23): the generation is
+        // sampled FIRST, the moment the lock is ours — before the owed-stop
+        // drain below, whose native stop can suspend while another stop times
+        // out (review, 2026-09-28), and before hasShieldedSupport() and
+        // boundWalletIdOrNull(), which can bootstrap the SDK. A stop landing
+        // in any of those intervals must not be absorbed by a later snapshot.
+        // It is re-checked after EVERY native step, so no path can publish
+        // ready, start the collectors or the pending-shield sweep over a
+        // teardown.
+        val generation = stopGeneration.get()
+        val committed = try {
+            // A stop() that timed out while someone else held the lock may
+            // have left an older runtime's native stop owed; pay it before
+            // anything new starts.
+            drainOwedNativeStopLocked()
+            if (bringUpLocked(generation)) readyGeneration.get() else null
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("shielded bring-up failed; will retry on the next trigger", t)
-            false
+            null
+        } finally {
+            releaseLock()
+        }
+        // A stop that landed after the last check inside bringUpLocked() has
+        // been paid by releaseLock() (or will be by whoever holds the lock
+        // next); either way this pass is not the runtime any more, so the
+        // caller must not start the collectors or the sweep.
+        return committed?.takeIf { stopGeneration.get() == generation }
+    }
+
+    /** The bring-up proper; the caller holds [lock] and sampled [generation] under it. */
+    private suspend fun bringUpLocked(generation: Int): Boolean {
+        if (readyWalletIdHex.value != null) return true
+        fun superseded() = stopGeneration.get() != generation
+
+        if (!source.hasShieldedSupport()) {
+            log.info("shielded runtime unavailable: native build has no shielded support")
+            return false
+        }
+        val walletIdHex = source.boundWalletIdOrNull()
+        if (walletIdHex == null) {
+            log.info("shielded runtime not started: app wallet not bound to the SDK yet")
+            return false
+        }
+        val walletId = walletIdFromHex(walletIdHex)
+        if (walletId == null) {
+            log.warn("shielded runtime not started: malformed SDK wallet id")
+            return false
+        }
+        if (superseded()) {
+            log.info("shielded bring-up abandoned before the bind: a stop() arrived while the SDK was starting")
+            return false
+        }
+
+        source.configureShielded(shieldedDbPath())
+        source.bindShielded(walletId, listOf(DEFAULT_SHIELDED_ACCOUNT))
+        if (superseded()) {
+            log.warn(
+                "shielded bring-up returned from the native bind after a stop() had abandoned " +
+                    "it — not starting the sync loop or reporting ready; the next trigger binds afresh"
+            )
+            return false
+        }
+        // From here on a native loop is running (found or started), and
+        // stopping it is owed by whoever tears down — including a stop()
+        // whose fallback cannot reach it (see [loopOwnerGeneration]). Marked
+        // BEFORE the start, so a fallback during the start knows too.
+        if (source.isShieldedSyncRunning()) {
+            loopOwnerGeneration.set(generation)
+        } else if (!superseded()) {
+            loopOwnerGeneration.set(generation)
+            source.startShieldedSync()
+        }
+        if (superseded()) {
+            // A stop() timed out while we were inside a native step
+            // and could not reach the loop; whether we just started it
+            // or found it running, the stop's intent is "runtime down".
+            log.warn(
+                "shielded bring-up superseded by a stop() around the sync-loop start — stopping " +
+                    "the loop and not reporting ready"
+            )
+            stopNativeLoop()
+            return false
+        }
+        // Best-effort: start building the Halo 2 proving key now so
+        // the first spend doesn't pay the ~30s warm-up on top of its
+        // own proof. Idempotent; runs on a background thread SDK-side.
+        runCatching { source.warmUpProver() }
+            .onFailure {
+                if (it is CancellationException) throw it
+                log.warn("shielded prover warm-up failed (spends will build it lazily)", it)
+            }
+        // warmUpProver() suspends too (review, 2026-09-27): a stop() that
+        // times out on the lock while it is outstanding has already torn
+        // the Kotlin side down, so the fence runs once more before
+        // anything is published.
+        if (superseded()) {
+            log.warn(
+                "shielded bring-up superseded by a stop() during the prover warm-up — stopping " +
+                    "the loop and not reporting ready"
+            )
+            stopNativeLoop()
+            return false
+        }
+
+        // Publish, THEN verify. stop()'s fallback bumps the generation
+        // before it clears the latch, and runs on another thread without
+        // the lock. If its bump lands after the check above, either this
+        // verify sees it, or its clear lands after this publish and
+        // removes it. Past this verify the thread can still stall (a slow
+        // log write) with no check left; that window is covered by the
+        // owed-stop handoff in [releaseLock], not by more checks.
+        synchronized(readyMonitor) {
+            readyGeneration.set(generation)
+            readyWalletIdHex.value = walletIdHex
+        }
+        if (superseded()) {
+            synchronized(readyMonitor) {
+                if (readyGeneration.get() == generation) {
+                    readyWalletIdHex.value = null
+                    readyGeneration.set(NO_GENERATION)
+                }
+            }
+            log.warn(
+                "shielded bring-up superseded by a stop() as it published ready — withdrawing " +
+                    "it and stopping the loop"
+            )
+            stopNativeLoop()
+            return false
+        }
+        afterReadyCommitted()
+        log.info(
+            "shielded runtime ready on SDK wallet {}… (account {}, sync loop running)",
+            walletIdHex.take(8), DEFAULT_SHIELDED_ACCOUNT
+        )
+        return true
+    }
+
+    /**
+     * Tear the runtime down. Bounded: waits at most [stopLockTimeoutMs] for
+     * [lock], because the holder may be a bring-up parked inside a native SDK
+     * call that nothing can interrupt.
+     *
+     * 2026-09-22 (Andrei, SM-A536B, `12000017`): a blockchain reset cleared the
+     * ready latch, the next start's bring-up entered `bindShielded`, and the
+     * SDK parked that bind behind a resumed wallet shield waiting indefinitely
+     * for a ChainLock (plan §37). When the idle detector then stopped the
+     * service, this method waited on the lock forever, the service's
+     * `onDestroy` never finished, every later start refused itself as a
+     * "deadlock in onDestroy", and the engine stayed off for four hours. With
+     * the bound, the Kotlin side is torn down regardless; [stopGeneration]
+     * makes the abandoned bring-up inert when the SDK finally returns it.
+     *
+     * The native loop cannot be stopped from the fallback: the holder may be
+     * anywhere, including past its last generation check with the loop
+     * already running (review, 2026-09-27). So the fallback records the stop
+     * as owed ([nativeStopOwedThrough]) and hands it to the lock: whoever releases
+     * or next takes [lock] pays it. Both sides set-then-check — the fallback
+     * sets the debt and then tries the lock; a holder unlocks and then checks
+     * the debt — so one of them always sees the other. The debt carries the
+     * stop's final generation, and paying it stops only a runtime from an
+     * older generation: a bring-up that sampled after this stop is newer than
+     * it and is left running.
+     */
+    override suspend fun stop() {
+        // Before the lock: a bring-up holding it right now must see the bump
+        // when it returns.
+        stopGeneration.incrementAndGet()
+        val acquired = tryLockWithin(stopLockTimeoutMs)
+        if (!acquired) {
+            // Bump AGAIN, after giving up (review, 2026-09-24): a second
+            // bring-up queued on the lock can take it during the poll above —
+            // a queued lock() waiter wins the handoff over our tryLock — and
+            // snapshot the generation the first bump already produced. If it
+            // then outlasts this timeout, only a snapshot older than the
+            // CURRENT generation makes it decline, so the current generation
+            // must move once more before we tear down.
+            val owedThrough = stopGeneration.incrementAndGet()
+            afterStopFallbackBump()
+            log.warn(
+                "shielded stop: a bring-up has held the lock for over {}s and is inside a call that " +
+                    "cannot be cancelled — tearing the Kotlin side down without it; stopping the native " +
+                    "loop is left to whoever releases or next takes the lock (plan §37)",
+                stopLockTimeoutMs / 1000
+            )
+            // Only a runtime OLDER than this stop: a bring-up that sampled
+            // after the bump above is newer than the stop and keeps its latch
+            // (its loop is likewise spared by the owed-stop drain).
+            tearDownReadyStateOlderThan(owedThrough)
+            nativeStopOwedThrough.accumulateAndGet(owedThrough) { a, b -> maxOf(a, b) }
+            handOffOwedNativeStop()
+            return
+        }
+        try {
+            drainOwedNativeStopLocked()
+            if (readyWalletIdHex.value == null && loopOwnerGeneration.get() == NO_GENERATION) return
+            tearDownReadyState()
+            stopNativeLoop()
+        } finally {
+            releaseLock()
         }
     }
 
-    override suspend fun stop() {
-        lock.withLock {
-            if (readyWalletIdHex.value == null) return
-            readyWalletIdHex.value = null
-            syncStatusJob?.cancel()
-            syncStatusJob = null
-            balancePersistJob?.cancel()
-            balancePersistJob = null
-            _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
-            _shieldedBalanceMaybeStale.value = false
-            runCatching { source.stopShieldedSync() }
-                .onFailure { log.warn("failed to stop the shielded sync loop", it) }
+    /** Unlock [lock], then pay any native stop a timed-out [stop] left owed meanwhile. */
+    private suspend fun releaseLock() {
+        lock.unlock()
+        handOffOwedNativeStop()
+    }
+
+    /**
+     * The check half of the owed-stop handshake (see [stop]): while a stop is
+     * owed and the lock is free, take it and pay. Loops because a fallback can
+     * record a new debt while we pay and then fail its own tryLock against us.
+     * Never waits for the lock: if someone holds it, their release pays.
+     * Non-cancellable so a cancelled holder still settles before it leaves.
+     */
+    private suspend fun handOffOwedNativeStop() = withContext(NonCancellable) {
+        while (nativeStopOwedThrough.get() != NO_GENERATION && lock.tryLock()) {
+            try {
+                drainOwedNativeStopLocked()
+            } finally {
+                lock.unlock()
+            }
         }
+    }
+
+    /**
+     * Pay an owed stop against every runtime older than it; the caller holds [lock].
+     *
+     * Cancellation-safe for every entry point (review, 2026-09-28): the bring-up
+     * calls this from its caller's context (a view-model scope, say), and a
+     * cancellation there must not drop the debt with the loop still running.
+     * The native stop runs non-cancellably ([stopNativeLoop]), and the debt is
+     * cleared only after the attempt, by compare-and-set, so a newer debt
+     * recorded meanwhile survives for the next holder.
+     */
+    private suspend fun drainOwedNativeStopLocked() {
+        val owedThrough = nativeStopOwedThrough.get()
+        if (owedThrough == NO_GENERATION) return
+        tearDownReadyStateOlderThan(owedThrough)
+        val owner = loopOwnerGeneration.get()
+        if (owner != NO_GENERATION && owner < owedThrough) {
+            log.warn("shielded: stopping the sync loop a timed-out stop() could not reach")
+            stopNativeLoop()
+        }
+        nativeStopOwedThrough.compareAndSet(owedThrough, NO_GENERATION)
+    }
+
+    /**
+     * Stop the native sync loop; [loopOwnerGeneration] is cleared only once
+     * the SDK call has returned. Non-cancellable (review, 2026-09-28): the SDK
+     * dispatches the stop through `withContext(Dispatchers.IO)`, which a
+     * cancelled caller would skip, leaving the loop running with nothing left
+     * recording it. A failed stop keeps the ownership, so the next [stop]
+     * tries again instead of returning early. Callers hold [lock].
+     */
+    private suspend fun stopNativeLoop() {
+        val owner = loopOwnerGeneration.get()
+        val stopped = withContext(NonCancellable) {
+            runCatching { source.stopShieldedSync() }
+                .onFailure { log.warn("failed to stop the shielded sync loop; the next stop() retries it", it) }
+                .isSuccess
+        }
+        if (stopped) loopOwnerGeneration.compareAndSet(owner, NO_GENERATION)
+    }
+
+    /**
+     * Bounded, cancellation-safe acquisition of [lock].
+     *
+     * `withTimeoutOrNull { lock.lock() }` was wrong at the boundary (review,
+     * 2026-09-23): when a contended acquisition resumes right at the
+     * deadline, ownership can be delivered to this coroutine while the
+     * timeout still wins the completion of `withTimeoutOrNull`, which then
+     * returns null — the lock is held and nothing will ever release it.
+     * Mutex's prompt-cancellation guarantee covers the suspension, not
+     * ownership already handed to running code. On this singleton a leaked
+     * lock parks every later bring-up forever and turns every later stop
+     * into the timeout fallback. `tryLock` is non-suspending and atomic, so
+     * ownership and the return value cannot disagree; the only suspension
+     * here is the poll delay, during which nothing is held.
+     */
+    private suspend fun tryLockWithin(timeoutMs: Long): Boolean {
+        val deadlineNs = System.nanoTime() + timeoutMs * 1_000_000L
+        while (true) {
+            if (lock.tryLock()) return true
+            if (System.nanoTime() >= deadlineNs) return false
+            delay(STOP_LOCK_POLL_MS)
+        }
+    }
+
+    /** The Kotlin-side half of [stop]: the latch, the two loops, the UI flows. */
+    /** [tearDownReadyState] only when the published latch predates [generation]; atomic with publication. */
+    private fun tearDownReadyStateOlderThan(generation: Int) {
+        synchronized(readyMonitor) {
+            if (readyGeneration.get() < generation) tearDownReadyState()
+        }
+    }
+
+    private fun tearDownReadyState() = synchronized(readyMonitor) {
+        readyWalletIdHex.value = null
+        readyGeneration.set(NO_GENERATION)
+        syncStatusJob?.cancel()
+        syncStatusJob = null
+        balancePersistJob?.cancel()
+        balancePersistJob = null
+        sweepJob?.cancel()
+        sweepJob = null
+        _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
+        _shieldedBalanceMaybeStale.value = false
     }
 
     /**
@@ -1618,6 +1974,20 @@ class ShieldedBalanceServiceImpl internal constructor(
          * re-proved on every screen open. The counter resets on app start.
          */
         internal const val MAX_RESUME_ATTEMPTS_PER_PROCESS = 3
+
+        /**
+         * [stop]'s bound on waiting for the bring-up lock. Short on purpose:
+         * `BlockchainServiceImpl.onCreate` gives a previous instance's whole
+         * cleanup 15 s before refusing to start, and the SPV stop ahead of
+         * this one in that cleanup took 8 s on 2026-09-22.
+         */
+        internal const val STOP_LOCK_TIMEOUT_MS = 5_000L
+
+        /** Poll interval of [tryLockWithin]. */
+        internal const val STOP_LOCK_POLL_MS = 25L
+
+        /** "No runtime" / "nothing owed" for the generation-valued fields; below every real generation. */
+        private const val NO_GENERATION = Int.MIN_VALUE
 
         /** How often the sync-status poller samples the pass-in-flight signal. */
         internal const val SYNC_STATUS_POLL_INTERVAL_MS = 500L

@@ -97,8 +97,13 @@ public class BootstrapReceiver extends BroadcastReceiver {
 
         if (packageReplaced || bootCompleted) {
             // make sure wallet is upgraded to HD
-            if (packageReplaced)
+            if (packageReplaced) {
+                // An app update cold-starts the process in the background, so
+                // the wallet may still be loading off the main thread; the
+                // upgrade mutates it, so wait for the load to finish outright.
+                application.awaitWalletReadyForMutation();
                 maybeUpgradeWallet(walletDataProvider.getWallet());
+            }
 
             // make sure there is always a blockchain sync scheduled
             if (application.getWallet() != null) {

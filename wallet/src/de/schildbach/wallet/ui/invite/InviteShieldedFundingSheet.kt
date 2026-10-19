@@ -35,8 +35,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.DarkPreviewTheme
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.Grabber
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -101,7 +103,7 @@ fun InviteShieldedFundingSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MyTheme.Colors.backgroundPrimary, RoundedCornerShape(20.dp))
+                    .background(LocalDashColors.current.backgroundPrimary, RoundedCornerShape(20.dp))
                     .padding(horizontal = 20.dp, vertical = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -129,7 +131,7 @@ fun InviteShieldedFundingSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MyTheme.Colors.dashBlue5, RoundedCornerShape(20.dp))
+                    .background(LocalDashColors.current.dashBlue5, RoundedCornerShape(20.dp))
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.Top
@@ -143,12 +145,12 @@ fun InviteShieldedFundingSheet(
                     Text(
                         text = stringResource(R.string.shielded_privacy_tip_title),
                         style = MyTheme.Typography.BodyMediumMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = LocalDashColors.current.textPrimary
                     )
                     Text(
                         text = stringResource(R.string.invite_payment_privacy_tip_message),
                         style = MyTheme.Typography.BodyMedium,
-                        color = MyTheme.Colors.textSecondary
+                        color = LocalDashColors.current.textSecondary
                     )
                 }
             }
@@ -216,7 +218,7 @@ private fun CostRow(
     header: Boolean = false
 ) {
     val amountStyle = if (header) MyTheme.Typography.BodyMedium else MyTheme.Typography.BodyMediumMedium
-    val amountColor = if (header) MyTheme.Colors.textSecondary else MyTheme.Colors.textPrimary
+    val amountColor = if (header) LocalDashColors.current.textSecondary else LocalDashColors.current.textPrimary
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -224,7 +226,7 @@ private fun CostRow(
         Text(
             text = label,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textSecondary,
+            color = LocalDashColors.current.textSecondary,
             modifier = Modifier.weight(1.3f)
         )
         Text(
@@ -264,13 +266,13 @@ private fun SheetIntro(title: String, description: String) {
         Text(
             text = title,
             style = MyTheme.Typography.HeadlineMediumBold,
-            color = MyTheme.Colors.textPrimary,
+            color = LocalDashColors.current.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
         Text(
             text = description,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textSecondary,
+            color = LocalDashColors.current.textSecondary,
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -330,4 +332,24 @@ private fun InviteShieldedFundingCreatePrivatePreview() {
         onContinueWithoutPrivacy = {},
         onClose = {}
     )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF1E1F24, widthDp = 393, name = "Make invitation private — dark")
+@Composable
+private fun InviteShieldedFundingDarkPreview() {
+    DarkPreviewTheme {
+        InviteShieldedFundingSheet(
+            nonContestedPrivateCost = "0.03",
+            contestedPrivateCost = "0.25",
+            nonContestedStandardCost = "0.03",
+            contestedStandardCost = "0.25",
+            canShieldMinimum = true,
+            canCreatePrivateInvite = false,
+            primaryLoading = false,
+            onCreatePrivateInvite = {},
+            onShieldFirst = {},
+            onContinueWithoutPrivacy = {},
+            onClose = {}
+        )
+    }
 }

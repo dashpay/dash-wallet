@@ -586,6 +586,7 @@
     <string name="transaction_metadata_past_syncing">All transactions made up to %s are syncing</string>
     <string name="transaction_metadata_save_new_tx_title">Do you want to save unsaved transactions?</string>
     <string name="transaction_metadata_you_have_n_tx">You have %d unsaved transactions since %s</string>
+    <string name="transaction_metadata_you_have_n_unsaved_tx">You have %d unsaved transactions</string>
     <string name="transaction_metadata_save_transactions">Save unsaved transactions</string>
     <string name="transaction_metadata_continue_without_saving">Continue without saving</string>
     <string name="invitation_fee_title">Invitation Fee</string>
@@ -827,6 +828,10 @@
          it is open. -->
     <string name="sdk_bind_pending_locked_title">Unlock your phone to finish the wallet update</string>
     <string name="sdk_bind_pending_locked_message">Tap here once your phone is unlocked and the update will finish setting up. Your funds are safe, and your balance stays at its last known amount until then.</string>
+    <string name="sdk_bind_pending_sync_locked_title">Unlock your phone to sync</string>
+    <string name="sdk_bind_pending_sync_locked_message">Your wallet can only sync while your phone is unlocked. Unlock it, or tap here, to catch up. Your funds are safe.</string>
+    <string name="sdk_bind_pending_sync_other_title">Your wallet is waiting to sync</string>
+    <string name="sdk_bind_pending_sync_other_message">Tap here to open the app and finish syncing. Your funds are safe.</string>
     <string name="sdk_bind_pending_finishing_title">Finishing the wallet update…</string>
     <string name="sdk_bind_pending_finishing_message">Setting up the new sync engine. This usually takes a few seconds.</string>
     <string name="sdk_bind_problem_title">Your phone is blocking the wallet update</string>

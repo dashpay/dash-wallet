@@ -38,6 +38,9 @@ public class AnrException extends Exception {
 
     private static final Logger log = LoggerFactory.getLogger(AnrException.class);
 
+    /** The thread whose stack this exception carries; not the thread that logs it. */
+    private final transient Thread thread;
+
     /**
      * Creates a new instance
      *
@@ -45,6 +48,7 @@ public class AnrException extends Exception {
      */
     public AnrException(Thread thread) {
         super("ANR detected");
+        this.thread = thread;
 
         // Copy the Thread's stack, 
         // so the Exception seams to occure there
@@ -53,12 +57,32 @@ public class AnrException extends Exception {
     }
 
     /**
-     * Logs the current process and all its threads
+     * Logs the saved stack of the unresponsive thread. The full process map is
+     * available through {@link #printProcessMap(PrintStream)}.
      */
     public void logProcessMap() {
+        // Log only the unresponsive thread's stack, not every thread in the
+        // process. The full map was ~150 threads / ~1,000 lines per detection,
+        // repeated every 5 s while the UI thread stayed slow — 5,000 logcat
+        // lines in five minutes on 2026-09-25, which saturated logd and made
+        // the very stalls it was reporting worse (a WorkManager thread holding
+        // its scheduler lock blocked in Log.println_native; main blocked behind
+        // it; "No response to onStartJob"). The full map is still available
+        // through printProcessMap(PrintStream) for a report that wants it.
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         PrintStream ps = new PrintStream(bos);
-        this.printProcessMap(ps);
+        // Label the saved stack with the thread it was taken from: the cleanup
+        // and send monitors build and log this from their own coroutine, so
+        // Thread.currentThread() here is the monitor, not the stalled thread.
+        // No thread count: Thread.getAllStackTraces() would collect every
+        // live thread's stack just to size the map, every 5 s.
+        ps.println("Unresponsive thread:");
+        if (thread != null) {
+            this.printThread(ps, Locale.getDefault(), thread, this.getStackTrace());
+        } else {
+            // transient: absent only on a deserialized copy — print the frames unlabelled
+            this.printStack(ps, Locale.getDefault(), this.getStackTrace());
+        }
         log.info(this.getClass().getSimpleName() + " " +
                 new String(bos.toByteArray()));
     }
@@ -97,7 +121,10 @@ public class AnrException extends Exception {
                              Thread thread, StackTraceElement[] stack) {
         ps.println(String.format(l, "\t%s (%s)",
                 thread.getName(), thread.getState()));
+        printStack(ps, l, stack);
+    }
 
+    private void printStack(PrintStream ps, Locale l, StackTraceElement[] stack) {
         for (StackTraceElement element : stack) {
             ps.println(String.format(l, "\t\t%s.%s(%s:%d)",
                     element.getClassName(),

@@ -81,6 +81,7 @@ import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe
@@ -91,6 +92,7 @@ import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import de.schildbach.wallet.service.L1SyncUiStatus
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @AndroidEntryPoint
 class WalletFragment : Fragment(R.layout.home_content) {
@@ -457,9 +459,25 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 handleStakingNavigation()
             }
             ShortcutOption.TOPPER -> {
-                lifecycleScope.launch {
-                    val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
-                    requireActivity().openCustomTab(uri)
+                // The VIEW's scope, not the fragment's: forward navigation from
+                // Home keeps this fragment on the back stack (Send pops up to
+                // walletFragment INCLUSIVE=false), so a fragment-scoped coroutine
+                // would still be active and still attached when the parked read
+                // unwinds, and the guard below would pass and toast over the
+                // screen the user moved to. Destroying the view is what makes the
+                // cancellation half of that guard mean anything here.
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
+                        requireActivity().openCustomTab(uri)
+                    } catch (ex: ReceiveAddressUnavailableException) {
+                        // Same rule as the other Topper entry points: without a
+                        // safe deposit address, do not open the purchase flow.
+                        // Guarded — the read parks uncancellably, so this can run
+                        // once the fragment is gone and `requireContext()` would
+                        // throw.
+                        toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
+                    }
                 }
             }
             ShortcutOption.UPHOLD -> {

@@ -22,7 +22,15 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -45,11 +53,10 @@ import javax.inject.Singleton
 internal const val PWFFI_ERROR_INVALID_PARAMETER = 2
 internal const val PWFFI_ERROR_UNKNOWN = 99
 
-// `AddressPoolTypeTagFFI` discriminant for the SDK Room `CoreAddressEntity`
-// rows: 0 = External (receive chain). The account-tag pair for BIP44
-// account 0 lives with the consolidation helpers below
-// ([ACCOUNT_TYPE_TAG_STANDARD] / [STANDARD_ACCOUNT_TAG_BIP44]).
-internal const val ADDRESS_POOL_TAG_EXTERNAL = 0
+// The BIP44 account this wallet receives on. The app is single-account: every
+// receive/change derivation, the pooled drain's BIP44 leg and the consolidation
+// helpers below all address account 0.
+internal const val BIP44_ACCOUNT_INDEX = 0
 
 /**
  * No-double-broadcast decision table for a throwable raised by the SDK's
@@ -619,26 +626,27 @@ interface SdkL1SendSource {
 
     /**
      * The LOWEST-index unused EXTERNAL (receive-chain) address of the
-     * wallet's BIP44 account 0, read from the SDK's Room mirror of the
-     * ENGINE-maintained address pool (`core_addresses`, fed by
-     * `onPersistAccountAddressPoolEntry`) — the SDK's canonical
-     * current-address pattern (KotlinExampleApp `ReceiveAddressSheet`,
-     * iOS `nextCoreReceiveAddress`), used here as the BIP70
-     * `Payment.refund_to` source with no dashj keychain involved. Null
-     * when the account or pool rows are absent (fresh install
-     * mid-first-sync, wiped DB).
+     * wallet's BIP44 account 0, read from the ENGINE over the FFI
+     * (`core_wallet_next_receive_address` →
+     * `ManagedCoreWallet.nextReceiveAddress`) — used here as the BIP70
+     * `Payment.refund_to` source, with no dashj keychain involved. Null
+     * when the wallet is not loaded, has no BIP44 account yet, or the read
+     * fails; BIP70 makes `refund_to` optional, so the caller simply omits it.
      *
-     * UPSTREAM GAP (dashpay/platform — Kotlin parity, small): the engine
-     * ALREADY exposes this as `core_wallet_next_receive_address` in
-     * rs-platform-wallet-ffi (iOS binds it directly:
-     * `SwiftDashSDKReceiveAddressReader` → `coreWallet().nextReceiveAddress`),
-     * but no rs-unified-sdk-jni/Kotlin plumbing exists. Once ported, swap
-     * this Room read for the FFI call — same answer (lowest unused by the
-     * engine's used-set, same cold-start caveat), engine-authoritative.
-     * Neither carries an issued-marker, so per-invoice
-     * (dashj-`freshReceiveAddress`-style) handout remains a separate,
-     * later ask. Default throws: only the production source (and BIP70
-     * fakes) need it.
+     * Deliberately NOT the SDK's Room `core_addresses` mirror, which this
+     * used to read. The mirror is a projection the engine writes behind
+     * itself (`onPersistAccountAddressPoolEntry`), so it trails every
+     * used-marker by a persistence pass; the engine's own used-set is the
+     * only thing that answers "which address has nobody paid yet" at the
+     * instant we ask. (The upstream Kotlin plumbing gap noted here
+     * previously closed in the v42int21 AAR — iOS had bound the same FFI
+     * all along via `SwiftDashSDKReceiveAddressReader`.)
+     *
+     * The engine carries no ISSUED marker, only a USED one, so this is a
+     * current-address read, not a per-invoice
+     * (dashj-`freshReceiveAddress`-style) handout — see
+     * [de.schildbach.wallet.WalletApplication.freshReceiveAddress].
+     * Default throws: only the production source (and BIP70 fakes) need it.
      */
     suspend fun unusedExternalAddress(walletIdHex: String): String? =
         throw UnsupportedOperationException("address-pool reads not supported by this source")
@@ -874,24 +882,25 @@ internal class DashSdkL1SendSource(
 
     override suspend fun unusedExternalAddress(walletIdHex: String): String? {
         service.ensureStarted()
-        val database = service.databaseOrNull() ?: return null
-        val walletId = decodeHexOrNull(walletIdHex, walletIdHex.length / 2) ?: return null
-        val account = database.accountDao()
-            .getByKey(walletId, ACCOUNT_TYPE_TAG_STANDARD, 0)
-            .firstOrNull { it.standardTag == STANDARD_ACCOUNT_TAG_BIP44 }
-            ?: return null
-        val pool = database.coreAddressDao().observeByAccount(account.id).first()
-        // LOWEST-index unused entry — the SDK's canonical current-address
-        // pattern (KotlinExampleApp ReceiveAddressSheet / iOS
-        // nextCoreReceiveAddress: poolType external, !isUsed, balance 0,
-        // min addressIndex). NOTE: dashj's Receive screen issues from the
-        // same low end of this chain in Phase 1B, so refund_to will often
-        // equal the currently shown receive address — accepted address
-        // reuse; the pool has no issued-marker to coordinate the two.
-        return pool
-            .filter { it.poolTypeTag == ADDRESS_POOL_TAG_EXTERNAL && !it.isUsed && it.balance == 0L }
-            .minByOrNull { it.addressIndex }
-            ?.address
+        val manager = service.walletManagerOrNull() ?: return null
+        val wallet = manager.wallets.value[walletIdHex] ?: return null
+        // The ENGINE's own answer, not the Room mirror of it — see the
+        // interface doc. Off the caller's thread because the FFI takes the
+        // engine's wallet-manager write lock.
+        return withContext(Dispatchers.IO) {
+            try {
+                wallet.coreWallet().use { core -> core.nextReceiveAddress(BIP44_ACCOUNT_INDEX) }
+                    .takeIf { it.isNotBlank() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                log.warn(
+                    "engine next-receive-address read failed for {}…; refund_to will be omitted: {}",
+                    walletIdHex.take(8), e.message
+                )
+                null
+            }
+        }
     }
 
     override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
@@ -1162,7 +1171,8 @@ class SdkL1SendService internal constructor(
             // and no cycle (CutoverUiDataService does not depend on this
             // service). Null means "unavailable", not "zero", so fall back
             // high rather than under-reserving.
-            DashSdkCutoverUiSource(sdkService).currentSpendableUtxoCount(walletIdHex)
+            // No walker runs for this read, so no stored net can be repaired.
+            DashSdkCutoverUiSource(sdkService, onStoredNetsRepaired = {}).currentSpendableUtxoCount(walletIdHex)
                 ?: MAYA_MAX_RESERVE_MIN_INPUTS
         },
         hasAppLockedCoinJoinOutputs = {
@@ -1416,7 +1426,9 @@ class SdkL1SendService internal constructor(
      * the destination — which the calling UI must state plainly.
      *
      * [ownAddressBase58] MUST be an address of THIS wallet's unmixed BIP44
-     * account (callers derive it via `WalletData.freshReceiveAddress()`); the
+     * account (callers derive it via `WalletData.unadvertisedDestinationLive()`,
+     * a LIVE engine read on [Dispatchers.IO] — not the plain accessor, which
+     * serves a cache and would hand back an advertised address); the
      * only validation possible here is network/format.
      *
      * The floor is `1` duff: the engine overwrites the single output with
@@ -1768,12 +1780,12 @@ class SdkL1SendService internal constructor(
     }
 
     /**
-     * The BIP70 `Payment.refund_to` source, post-cutover: the lowest
-     * unused external address from the SDK's persisted address pool
-     * ([SdkL1SendSource.unusedExternalAddress]) — no dashj keychain read.
-     * Contained: null (⇒ the caller omits refund_to, which BIP70 makes
-     * optional) when the wallet is unbound, the pool rows are missing, or
-     * the read fails.
+     * The BIP70 `Payment.refund_to` source, post-cutover: the ENGINE's next
+     * unused external address, read over the FFI
+     * ([SdkL1SendSource.unusedExternalAddress]) — no dashj keychain read, and
+     * no Room address-mirror read either. Contained: null (⇒ the caller omits
+     * refund_to, which BIP70 makes optional) when the wallet is unbound, has
+     * no BIP44 account yet, or the read fails.
      */
     suspend fun refundAddressOrNull(): String? = try {
         source.boundWalletIdOrNull()?.let { source.unusedExternalAddress(it) }
@@ -1829,6 +1841,53 @@ class SdkL1SendService internal constructor(
         false
     }
 
+    /**
+     * [cutoverCommitted] for a caller that must fail closed: an unreadable
+     * state THROWS instead of reading as "not committed" (the store is read
+     * with its errors kept, [DashPayConfig.observePreservingErrors]). An absent
+     * state is still a real answer: not committed.
+     */
+    suspend fun cutoverCommittedOrThrow(): Boolean =
+        !dashjEngineMayStart(
+            CutoverState.fromStored(dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE).first())
+        )
+
+    /**
+     * [cutoverCommitted] as it changes (the persisted cutover state observed):
+     * emits the current value, then each change.
+     *
+     * `null` means UNKNOWN: the state could not be read. It is never turned
+     * into "not committed" (PR #1608 review: `observe` rescued an unreadable
+     * store as an absent key — "not committed" — and the flow then ended, so a
+     * send screen on a CUT_OVER install kept a fabricated `false` and refused
+     * every SDK dry run until it was recreated). The store is read with its
+     * errors kept ([DashPayConfig.observePreservingErrors]); a failed read
+     * emits `null` and the observation is retried with a capped backoff
+     * ([cutoverObserveRetryDelayMs]) until a read succeeds again. Callers must
+     * fail closed while it is `null`.
+     */
+    fun cutoverCommittedFlow(): Flow<Boolean?> = flow {
+        // Consecutive failed observations; reset by each successful read.
+        var failures = 0
+        emitAll(
+            // Asked for afresh on each (re)subscription.
+            flow { emitAll(dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE)) }
+                .map<String?, Boolean?> { !dashjEngineMayStart(CutoverState.fromStored(it)) }
+                .onEach { failures = 0 }
+                .retryWhen { cause, _ ->
+                    if (cause is CancellationException || cause !is Exception) {
+                        false
+                    } else {
+                        val delayMs = cutoverObserveRetryDelayMs(failures++)
+                        log.warn("failed to observe the cutover state; unknown, retrying in {} ms", delayMs, cause)
+                        emit(null)
+                        delay(delayMs)
+                        true
+                    }
+                }
+        )
+    }.distinctUntilChanged()
+
     companion object {
         private val log = LoggerFactory.getLogger(SdkL1SendService::class.java)
 
@@ -1847,5 +1906,16 @@ class SdkL1SendService internal constructor(
          * engine's `DEFAULT_MAX_OP_RETURN_BYTES`, which re-checks).
          */
         const val MAX_MAYA_MEMO_BYTES = 80
+
+        private const val CUTOVER_OBSERVE_RETRY_INITIAL_MS = 1_000L
+        private const val CUTOVER_OBSERVE_RETRY_MAX_MS = 30_000L
+
+        /**
+         * The wait before re-observing the cutover state after [failures]
+         * consecutive failed observations: 1 s, doubling, capped at 30 s.
+         */
+        internal fun cutoverObserveRetryDelayMs(failures: Int): Long =
+            (CUTOVER_OBSERVE_RETRY_INITIAL_MS shl failures.coerceIn(0, 5))
+                .coerceAtMost(CUTOVER_OBSERVE_RETRY_MAX_MS)
     }
 }

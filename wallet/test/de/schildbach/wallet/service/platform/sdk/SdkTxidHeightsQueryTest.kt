@@ -1,0 +1,247 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service.platform.sdk
+
+import android.app.Application
+import androidx.room.Room
+import org.bitcoinj.core.Sha256Hash
+import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+
+/**
+ * The parity breakdown's SDK txid set ([querySdkTxidHeights]), run against an
+ * in-memory instance of the AAR's own Room schema: the wallet's TXO funding
+ * and spending txids plus its `pending_inputs` reserved spenders (a
+ * change-less send has no TXO row of its own), each with its
+ * `transactions.blockHeight`, and nothing from another wallet.
+ *
+ * Robolectric runner: the query needs a real SQLite (Room in-memory) — the
+ * same `sdk = 29` host setup [SdkTxStoreWalkerTest] uses.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
+class SdkTxidHeightsQueryTest {
+
+    private lateinit var db: DashDatabase
+
+    private val walletId = requireNotNull(walletIdFromHex("11".repeat(32)))
+    private val otherWalletId = requireNotNull(walletIdFromHex("22".repeat(32)))
+
+    @Before
+    fun setup() {
+        db = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(),
+            DashDatabase::class.java
+        ).allowMainThreadQueries().build()
+        insertWallet(walletId)
+        insertWallet(otherWalletId)
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+    }
+
+    private fun exec(sql: String, vararg args: Any?) {
+        db.openHelper.writableDatabase.execSQL(sql, args)
+    }
+
+    private fun insertWallet(id: ByteArray) {
+        exec(
+            "INSERT INTO wallets (walletId, walletGroupId, birthHeight, syncedHeight, lastSynced, " +
+                "isImported, createdAt, lastUpdated) VALUES (?, ?, 0, 0, 0, 0, 0, 0)",
+            id,
+            id
+        )
+    }
+
+    /** Deterministic 32-byte wire txid; its first byte is [n]. */
+    private fun wire(n: Int): ByteArray = ByteArray(32).also {
+        it[0] = n.toByte()
+        it[31] = 1
+    }
+
+    /** The key [querySdkTxidHeights] uses: display order, the way dashj keys its transactions. */
+    private fun key(n: Int): Sha256Hash = Sha256Hash.wrapReversed(wire(n))
+
+    private fun insertTx(n: Int, blockHeight: Int, netAmount: Long = 0L) {
+        exec(
+            "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
+                "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
+                "netAmount, label, firstSeen, createdAt, lastUpdated) " +
+                "VALUES (?, ?, 0, ?, 0, 0, 0, 0, 'standard', 0, ?, '', 0, 0, 0)",
+            wire(n),
+            ByteArray(0),
+            blockHeight,
+            netAmount
+        )
+    }
+
+    private var outpointSeed = 1
+
+    /** A TXO of [owner] funded by tx [funding], optionally spent by tx [spending]. */
+    private fun insertTxo(owner: ByteArray, funding: Int, spending: Int? = null): ByteArray {
+        val outpoint = ByteArray(36).also {
+            it[0] = (outpointSeed++).toByte()
+            it[35] = 7
+        }
+        exec(
+            "INSERT INTO txos (outpoint, vout, amount, address, scriptPubKey, height, isCoinbase, " +
+                "isConfirmed, isInstantLocked, isLocked, isSpent, createdAt, lastUpdated, walletId, " +
+                "txid, spendingTxid, spendingInputIndex, accountId, coreAddressId) " +
+                "VALUES (?, 0, 1000, 'addr', ?, 0, 0, 1, 0, 0, ?, 0, 0, ?, ?, ?, NULL, NULL, NULL)",
+            outpoint,
+            ByteArray(0),
+            if (spending != null) 1 else 0,
+            owner,
+            wire(funding),
+            spending?.let { wire(it) }
+        )
+        return outpoint
+    }
+
+    /** A `pending_inputs` reservation as the engine writes it at broadcast. */
+    private fun insertReservation(owner: ByteArray, outpoint: ByteArray, spending: Int) {
+        exec(
+            "INSERT INTO pending_inputs (outpoint, inputIndex, spendingTxid, " +
+                "spendingTransactionTxid, walletId, createdAt) VALUES (?, 0, ?, NULL, ?, 0)",
+            outpoint,
+            wire(spending),
+            owner
+        )
+    }
+
+    @Test
+    fun theWalletsFundingSpendingAndReservedTxids_withTheirHeights_andNoOtherWallets() {
+        // A receive (900) whose output was spent (950).
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTx(2, 950, netAmount = -7_500_000L)
+        insertTxo(walletId, funding = 1, spending = 2)
+        // A receive (920) reserved by an in-flight change-less send: the send
+        // has a transactions row (no height yet) but no TXO row of its own.
+        insertTx(3, 920, netAmount = 250_000L)
+        // Height 0 AND a stored net of 0: proves a real zero is distinguishable
+        // from the null a missing transactions row produces (key 5 below).
+        insertTx(4, 0, netAmount = 0L)
+        val reserved = insertTxo(walletId, funding = 3)
+        insertReservation(walletId, reserved, spending = 4)
+        // A reservation whose spender has no transactions row: no height.
+        insertReservation(walletId, reserved, spending = 5)
+        // Another wallet's rows, and a transactions row nothing of ours refers to.
+        insertTx(6, 990)
+        val theirs = insertTxo(otherWalletId, funding = 6)
+        insertReservation(otherWalletId, theirs, spending = 7)
+        insertTx(8, 995)
+
+        assertEquals(
+            mapOf(
+                key(1) to SdkTxFacts(900, 11_000_000L),
+                key(2) to SdkTxFacts(950, -7_500_000L),
+                key(3) to SdkTxFacts(920, 250_000L),
+                key(4) to SdkTxFacts(0, 0L),
+                // Reservation whose spender has no transactions row: no height AND
+                // no stored net. The null must survive as null — read as 0 it would
+                // look like agreement in the parity comparison.
+                key(5) to SdkTxFacts(0, null)
+            ),
+            querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
+        )
+    }
+
+    @Test
+    fun anEmptyWallet_hasNoTxids() {
+        assertEquals(
+            emptyMap<Sha256Hash, SdkTxFacts>(),
+            querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
+        )
+    }
+
+    // ── The store fingerprint the diagnostic checks findings against ──
+
+    private val readable get() = db.openHelper.readableDatabase
+
+    /** The streamed fingerprint, after checking it equals the one a breakdown takes from its map. */
+    private fun fingerprint(): SdkTxStoreFingerprint {
+        val streamed = querySdkTxStoreFingerprint(readable, walletId)
+        assertEquals(
+            "the publish-time fingerprint must be the breakdown's own, for the same state",
+            fingerprintOf(querySdkTxidHeights(readable, walletId)),
+            streamed
+        )
+        return streamed
+    }
+
+    @Test
+    fun fingerprint_changesOnInsertNetUpdateConfirmationAndDelete() {
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTx(2, 0, netAmount = -7_500_000L)
+        insertTxo(walletId, funding = 1, spending = 2)
+        val start = fingerprint()
+        assertEquals(2, start.rows)
+
+        // Insert: a new receive, as the engine stores it (tx row, then its TXO).
+        insertTx(3, 0, netAmount = 250_000L)
+        insertTxo(walletId, funding = 3)
+        val inserted = fingerprint()
+        assertNotEquals("insert", start, inserted)
+
+        // Update of the stored net (what the walker's write-back does).
+        exec("UPDATE transactions SET netAmount = ? WHERE txid = ?", 250_001L, wire(3))
+        val netUpdated = fingerprint()
+        assertNotEquals("net update", inserted, netUpdated)
+
+        // Confirmation: the height moves from 0 to the block's.
+        exec("UPDATE transactions SET blockHeight = ? WHERE txid = ?", 990, wire(2))
+        val confirmed = fingerprint()
+        assertNotEquals("confirmation", netUpdated, confirmed)
+
+        // Delete: the sweep's path, a transactions row removed (its TXOs cascade).
+        exec("DELETE FROM transactions WHERE txid = ?", wire(3))
+        val deleted = fingerprint()
+        assertNotEquals("delete", confirmed, deleted)
+
+        // A reservation for an in-flight change-less send joins the set too.
+        val reserved = insertTxo(walletId, funding = 1)
+        insertReservation(walletId, reserved, spending = 9)
+        assertNotEquals("reservation", deleted, fingerprint())
+    }
+
+    @Test
+    fun fingerprint_ignoresWhatTheBreakdownDoesNotRead() {
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTxo(walletId, funding = 1)
+        val start = fingerprint()
+
+        // A label (metadata) and another wallet's history are not compared.
+        exec("UPDATE transactions SET label = 'rent' WHERE txid = ?", wire(1))
+        insertTx(6, 990, netAmount = 5L)
+        insertTxo(otherWalletId, funding = 6)
+        // A second TXO of a transaction already in the set adds no member.
+        insertTxo(walletId, funding = 1)
+
+        assertEquals(start, fingerprint())
+    }
+}

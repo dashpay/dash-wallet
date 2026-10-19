@@ -21,10 +21,15 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Utils
 import org.bitcoinj.params.DevNetParams
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
@@ -32,6 +37,7 @@ import org.dashfoundation.dashsdk.config.SdkConfig
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashfoundation.dashsdk.security.KeySecurityPolicy
 import org.dashfoundation.dashsdk.security.WalletStorage
+import org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 import org.dashfoundation.dashsdk.wallet.WalletManagerStore
 import org.slf4j.LoggerFactory
@@ -344,6 +350,89 @@ internal fun computeDashPayReceivalCoverage(
 }
 
 /**
+ * Wallet ids the wipe's removal cascade was asked to remove — the record
+ * [DashSdkServiceImpl.quiesceForWalletWipe] tombstones from, because the
+ * SDK's loaded-wallet map cannot be trusted once a removal failed halfway.
+ */
+internal class WalletWipeRemovalTargets {
+    private val ids = LinkedHashSet<String>()
+
+    fun record(walletIdHex: String) {
+        synchronized(ids) { ids += walletIdHex.lowercase() }
+    }
+
+    fun snapshot(): Set<String> = synchronized(ids) { ids.toSet() }
+
+    fun clear() {
+        synchronized(ids) { ids.clear() }
+    }
+}
+
+/**
+ * Reset Wallet's SDK stop, ALWAYS run when the runtime is up during a wipe
+ * (no "nothing loaded → leave it running" shortcut: the loaded-wallet map is
+ * emptied by the SDK's removeWallet before its fallible secret delete and
+ * tombstone, so an empty map proves neither removal nor drained persistence):
+ *
+ * 1. tombstone every id in [walletIdsHex] in the live `WalletStorage`
+ *    ([tombstone], under its private-key exclusion) — a deriver that already
+ *    holds its scalar is refused at its store, including one that fires
+ *    during the close;
+ * 2. [closeManager] — native shutdown quiesces every callback task (the
+ *    persistence deriver among them), then the persistence executor closes;
+ *    returns whether the manager reports closed;
+ * 3. [closeRest] (store / SDK handle / database), always, best-effort.
+ *
+ * A tombstone failure is logged, not fatal: the drained close is what proves
+ * quiescence. True only when [closeManager] returned true without throwing.
+ * Pure wiring (collaborators injected) — host-testable.
+ */
+internal suspend fun stopSdkRuntimeForWalletWipe(
+    walletIdsHex: Collection<String>,
+    tombstone: suspend (ByteArray) -> Unit,
+    closeManager: suspend () -> Boolean,
+    closeRest: suspend () -> Unit
+): Boolean {
+    for (hex in walletIdsHex.mapTo(LinkedHashSet()) { it.lowercase() }) {
+        val walletId = walletIdFromHex(hex)
+        if (walletId == null) {
+            sdkWipeLog.warn("wallet wipe: malformed SDK wallet id — cannot tombstone it")
+            continue
+        }
+        try {
+            tombstone(walletId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            sdkWipeLog.warn("wallet wipe: tombstoning SDK wallet {}… failed", hex.take(8), t)
+        }
+    }
+    val managerClosed = try {
+        closeManager()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        sdkWipeLog.error("wallet wipe: SDK wallet manager close failed", t)
+        false
+    }
+    try {
+        closeRest()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        sdkWipeLog.warn("wallet wipe: closing the rest of the SDK runtime failed", t)
+    }
+    if (managerClosed) {
+        sdkWipeLog.warn("wallet wipe: SDK runtime stopped and drained — no SDK-owned work can write a wallet secret")
+    } else {
+        sdkWipeLog.error("wallet wipe: SDK wallet manager could not be confirmed closed — SDK not quiescent")
+    }
+    return managerClosed
+}
+
+private val sdkWipeLog = LoggerFactory.getLogger("de.schildbach.wallet.service.platform.sdk.SdkWalletWipeStop")
+
+/**
  * Default [DashSdkService] implementation — the Phase 3 bootstrap scaffold
  * (`docs/kotlin-sdk-migration-plan.md`).
  *
@@ -387,7 +476,12 @@ internal fun computeDashPayReceivalCoverage(
 @Singleton
 class DashSdkServiceImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    @Suppress("unused") private val mnemonicProvider: PlatformMnemonicProvider
+    @Suppress("unused") private val mnemonicProvider: PlatformMnemonicProvider,
+    /**
+     * Reset Wallet's fence over every secret this service persists into
+     * [WalletStorage] (wallet create / mnemonic re-store, identity keys).
+     */
+    private val secretWriteFence: WalletSecretWriteFence
 ) : DashSdkService {
 
     /** Everything with a native or persistence footprint lives here. */
@@ -403,6 +497,13 @@ class DashSdkServiceImpl @Inject constructor(
 
     /** Serializes [bindAppWallet]'s dedup-then-create critical section. */
     private val bindLock = Mutex()
+
+    /**
+     * Wallet ids handed to [removeAppWallet] while Reset Wallet holds the
+     * fence — tombstoned by [quiesceForWalletWipe] even when they are no
+     * longer in the manager's loaded map.
+     */
+    private val wipeRemovalTargets = WalletWipeRemovalTargets()
 
     @Volatile
     private var runtime: SdkRuntime? = null
@@ -422,12 +523,36 @@ class DashSdkServiceImpl @Inject constructor(
         return armedAt != 0L && android.os.SystemClock.elapsedRealtime() - armedAt < windowMs
     }
 
+    /**
+     * Outcome of each contact-account-build drain ([drainContactCryptoQueue]),
+     * read by the balance pipeline through [dashPayAccountBuildDrainState].
+     * In-memory only, like [lastSpvRescanArmElapsedMs]: a new process drains
+     * again before it can know anything.
+     */
+    private val accountBuildDrains = AccountBuildDrainTracker(
+        deviceLocked = {
+            try {
+                context.getSystemService(android.app.KeyguardManager::class.java)?.isDeviceLocked == true
+            } catch (t: Throwable) {
+                // Unknowable reads as unlocked: the drain failure then counts as
+                // having no known temporary cause, the fail-open direction.
+                false
+            }
+        },
+        elapsedMs = { android.os.SystemClock.elapsedRealtime() }
+    )
+
+    override fun dashPayAccountBuildDrainState(walletIdHex: String): AccountBuildDrainState =
+        accountBuildDrains.state(walletIdHex)
+
     override val isStarted: Boolean
         get() = runtime != null
 
     override fun sdkOrNull(): Sdk? = runtime?.sdk
 
     override fun databaseOrNull(): DashDatabase? = runtime?.database
+
+    override fun walletStorageOrNull(): WalletStorage? = runtime?.walletStorage
 
     override fun walletManagerOrNull(): PlatformWalletManager? = runtime?.walletManager
 
@@ -437,9 +562,79 @@ class DashSdkServiceImpl @Inject constructor(
     override suspend fun ensureStarted() {
         lock.withLock {
             if (runtime == null) {
+                // Reset Wallet brought the SDK to rest before erasing its
+                // secrets: a bootstrap now would re-open a wallet manager
+                // whose persistence deriver writes keys outside the permits.
+                if (secretWriteFence.isSdkRuntimeHalted) throw WalletWipeInProgressException("SDK runtime start")
                 runtime = bootstrap()
             }
         }
+    }
+
+    override suspend fun quiesceForWalletWipe(timeoutMs: Long): Boolean {
+        // FIRST, outside the lock: a bootstrap queued behind it is refused.
+        secretWriteFence.haltSdkRuntime()
+        val result = try {
+            withTimeoutOrNull(timeoutMs) { lock.withLock { quiesceForWalletWipeLocked() } }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.error("wallet wipe: SDK runtime quiesce failed", t)
+            false
+        }
+        if (result == null) {
+            log.error("wallet wipe: SDK runtime did not come to rest within {} ms", timeoutMs)
+        }
+        return result ?: false
+    }
+
+    private suspend fun quiesceForWalletWipeLocked(): Boolean {
+        val current = runtime ?: run {
+            log.info("wallet wipe: SDK runtime not started — nothing can persist, and restarts are refused")
+            wipeRemovalTargets.clear()
+            return true
+        }
+        // Every wallet this runtime may still persist for: the loaded ones AND
+        // the ones the removal cascade was asked to remove. An empty loaded map
+        // proves neither removal nor drained persistence — the SDK's
+        // removeWallet drops its wrapper map BEFORE the fallible secret delete
+        // and its own tombstone, and the persistence handler still derives for
+        // a wallet whose Room row / changeset buffer survived that failure.
+        val loaded = current.walletManager.wallets.value.keys
+        val targets = LinkedHashSet<String>().apply {
+            loaded.forEach { add(it.lowercase()) }
+            addAll(wipeRemovalTargets.snapshot())
+        }
+        log.warn(
+            "wallet wipe: stopping the SDK runtime before the secrets erase — {} wallet(s) still loaded, " +
+                "{} wallet id(s) tombstoned in the live WalletStorage, then the wallet manager is closed and drained",
+            loaded.size,
+            targets.size
+        )
+        runtime = null
+        val closed = stopSdkRuntimeForWalletWipe(
+            walletIdsHex = targets,
+            tombstone = { walletId -> current.walletStorage.withPrivateKeyExclusion { tombstoneWallet(walletId) } },
+            // The manager's own suspending close PROPAGATES failure (closeAll
+            // swallows it): native shutdown quiesces every callback task, then
+            // the persistence executor is closed.
+            closeManager = {
+                current.walletManager.closeSuspending()
+                current.walletManager.isClosed
+            },
+            closeRest = {
+                runCatching { current.walletManagerStore.closeAll() }
+                    .onFailure { log.warn("failed to close wallet managers", it) }
+                runCatching { current.sdk.close() }
+                    .onFailure { log.warn("failed to close SDK handle", it) }
+                runCatching { current.database.close() }
+                    .onFailure { log.warn("failed to close SDK database", it) }
+            }
+        )
+        // The tombstones lived in the closed runtime's WalletStorage; the next
+        // bootstrap builds a fresh one, so nothing is carried over.
+        if (closed) wipeRemovalTargets.clear()
+        return closed
     }
 
     override suspend fun stop() {
@@ -500,6 +695,9 @@ class DashSdkServiceImpl @Inject constructor(
      * logged and no reference outlives this call.
      */
     override suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String {
+        // A wipe in progress may just have stopped the SDK and removed this
+        // wallet: neither restart it nor re-create the wallet's secrets.
+        secretWriteFence.checkOpen("SDK wallet bind")
         val mnemonic = joinMnemonicWords(seedWords)
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
@@ -536,12 +734,15 @@ class DashSdkServiceImpl @Inject constructor(
                 ).resolve(time)
             }
             val managed = try {
-                current.walletManager.createWallet(
-                    mnemonic = mnemonic,
-                    name = APP_WALLET_NAME,
-                    createDefaultAccounts = true,
-                    birthHeight = birthHeight
-                )
+                // createWallet persists the phrase into WalletStorage.
+                secretWriteFence.withSecretWritePermit("SDK wallet create") {
+                    current.walletManager.createWallet(
+                        mnemonic = mnemonic,
+                        name = APP_WALLET_NAME,
+                        createDefaultAccounts = true,
+                        birthHeight = birthHeight
+                    )
+                }
             } catch (t: Throwable) {
                 if (t is kotlinx.coroutines.CancellationException) throw t
                 // Live bug: a transient Keystore failure makes the dedup
@@ -569,7 +770,9 @@ class DashSdkServiceImpl @Inject constructor(
                             mnemonic = mnemonic,
                             hasMnemonic = { current.walletStorage.hasMnemonic(it) },
                             storeMnemonic = { id, phrase ->
-                                current.walletStorage.storeMnemonic(id, phrase)
+                                secretWriteFence.withSecretWritePermit("SDK mnemonic re-store") {
+                                    current.walletStorage.storeMnemonic(id, phrase)
+                                }
                             }
                         )
                     } catch (storeFailure: Throwable) {
@@ -613,9 +816,13 @@ class DashSdkServiceImpl @Inject constructor(
      * wallet — harmless — or runs after and re-creates cleanly).
      */
     override suspend fun removeAppWallet(walletIdHex: String) {
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        // Captured BEFORE the cascade: if the SDK's removeWallet fails after
+        // dropping its wrapper map (but before its own tombstone), only this
+        // record lets the wipe's quiesce still tombstone the wallet.
+        if (secretWriteFence.isRaised) wipeRemovalTargets.record(walletIdHex)
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
-        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         bindLock.withLock {
             if (!current.walletManager.wallets.value.containsKey(walletIdHex)) {
                 log.warn(
@@ -632,6 +839,11 @@ class DashSdkServiceImpl @Inject constructor(
                 walletIdHex.take(8)
             )
             current.walletManager.removeWallet(walletId)
+            // The re-created wallet (same deterministic id) has drained nothing yet.
+            accountBuildDrains.forget(walletIdHex)
+            // Nor been loaded from stored pools: its derivation is all in memory.
+            poolHoleCeilings.remove(walletIdHex)
+            appliedGapLimits.remove(walletIdHex)
             log.info("SDK wallet {}… removed", walletIdHex.take(8))
         }
     }
@@ -658,6 +870,10 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     override suspend fun discoverIdentities(walletIdHex: String, startIndex: Int): List<ByteArray> {
+        // Discovery folds identities into the SDK's stores, whose key
+        // auto-persist can write private keys: a wipe must wait for (and
+        // then refuse) it like any other secret write.
+        secretWriteFence.checkOpen("identity discovery")
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
         val manager = current.walletManager
@@ -668,11 +884,13 @@ class DashSdkServiceImpl @Inject constructor(
         // and never consults the resolver — the handle is passed for
         // signature completeness only. Discovered identities are folded
         // into Rust's IdentityManager and persisted via the Room bridge.
-        val found = manager.identityRegistration.discoverIdentities(
-            walletHandle = wallet.handle,
-            mnemonicResolverHandle = manager.mnemonicResolverHandle,
-            startIndex = startIndex
-        )
+        val found = secretWriteFence.withSecretWritePermit("identity discovery") {
+            manager.identityRegistration.discoverIdentities(
+                walletHandle = wallet.handle,
+                mnemonicResolverHandle = manager.mnemonicResolverHandle,
+                startIndex = startIndex
+            )
+        }
         log.info(
             "identity discovery on SDK wallet {}… (startIndex={}): {} newly-discovered identity(ies)",
             walletIdHex.take(8), startIndex, found.size
@@ -697,6 +915,7 @@ class DashSdkServiceImpl @Inject constructor(
         walletIdHex: String,
         identityId: ByteArray
     ): IdentityKeyHealReport {
+        secretWriteFence.checkOpen("identity key heal")
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
         val manager = current.walletManager
@@ -728,7 +947,9 @@ class DashSdkServiceImpl @Inject constructor(
                 manager.deriveIdentityKeyPair(walletId, identityIndex, keyIndex)
             },
             storePrivateKey = { pubkeyHex, privateKey ->
-                current.walletStorage.storePrivateKey(pubkeyHex, privateKey)
+                secretWriteFence.withSecretWritePermit("identity key heal") {
+                    current.walletStorage.storePrivateKey(pubkeyHex, privateKey)
+                }
             },
             onKeyOutcome = { keyId, outcome ->
                 log.info(
@@ -762,9 +983,13 @@ class DashSdkServiceImpl @Inject constructor(
         privateKey: ByteArray,
         walletId: ByteArray
     ) {
+        // Refuse before ensureStarted(): a wipe may just have stopped the SDK.
+        secretWriteFence.checkOpen("identity private key store")
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
-        current.walletStorage.storePrivateKey(pubkeyHex, privateKey, walletId)
+        secretWriteFence.withSecretWritePermit("identity private key store") {
+            current.walletStorage.storePrivateKey(pubkeyHex, privateKey, walletId)
+        }
     }
 
     /**
@@ -825,6 +1050,27 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
+     * See [DashSdkService.discoverDashPayContactRequests]. The wallet-level
+     * `syncContactRequests` (Rust `sync_contact_requests`) is the same fetch
+     * the sweep starts with; unlike `dashPaySyncNow` it runs no
+     * `reconcile_dashpay_rescan`, so the synced height is left alone. It throws
+     * only when not one identity's requests could be read: a failed fetch of
+     * the SENT requests, or a request it could not store, still returns
+     * normally (the SDK's `ContactSyncReport` that would say so is not exposed
+     * to Kotlin in the pinned SDK).
+     */
+    override suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val managed = current.walletManager.wallets.value[walletIdHex] ?: return false
+        // A wallet without the identity answers vacuously: nothing was fetched.
+        if (!isIdentityManaged(walletIdHex, identityId)) return false
+        managed.dashpay.syncContactRequests()
+        log.info("DashPay contact requests fetched for SDK wallet {}… without a sweep", walletIdHex.take(8))
+        return true
+    }
+
+    /**
      * See [DashSdkService.drainDashPayContactAccountBuilds]. Deliberately does
      * NOT sweep: the sweep is what rewinds the SPV synced height, and this
      * exists precisely so the queue can be drained on launches where the
@@ -852,17 +1098,19 @@ class DashSdkServiceImpl @Inject constructor(
             false
         } else {
             var allPresentWidened = true
+            val applied = HashMap<CoreTransactionBuilder.AccountType, Int>()
             managed.coreWallet().use { core ->
                 for (family in listOf(
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP44,
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.BIP32,
-                    org.dashfoundation.dashsdk.wallet.CoreTransactionBuilder.AccountType.COIN_JOIN,
+                    CoreTransactionBuilder.AccountType.BIP44,
+                    CoreTransactionBuilder.AccountType.BIP32,
+                    CoreTransactionBuilder.AccountType.COIN_JOIN,
                 )) {
                     try {
-                        core.setGapLimit(family, 0, MIGRATION_GAP_LIMIT)
+                        core.setGapLimit(family, 0, WIDENED_GAP_LIMIT)
+                        applied[family] = WIDENED_GAP_LIMIT
                         log.info(
                             "widenAddressWindows: {} account 0 gap -> {} on {}…",
-                            family, MIGRATION_GAP_LIMIT, walletIdHex.take(8)
+                            family, WIDENED_GAP_LIMIT, walletIdHex.take(8)
                         )
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
@@ -879,6 +1127,7 @@ class DashSdkServiceImpl @Inject constructor(
                     }
                 }
             }
+            recordAppliedGapLimits(walletIdHex, applied)
             allPresentWidened
         }
     } catch (e: kotlinx.coroutines.CancellationException) {
@@ -886,6 +1135,315 @@ class DashSdkServiceImpl @Inject constructor(
     } catch (e: Exception) {
         log.warn("widenAddressWindows failed: {}", e.message)
         false
+    }
+
+    /**
+     * Per wallet, the gap limit [widenAddressWindows] last set on each family
+     * in this process, so the backfill persists exactly the window the
+     * engine derived.
+     */
+    private val appliedGapLimits =
+        java.util.concurrent.ConcurrentHashMap<String, Map<CoreTransactionBuilder.AccountType, Int>>()
+
+    /** What [widenAddressWindows] set on [walletIdHex]; tests stand in for a widening with it. */
+    @androidx.annotation.VisibleForTesting
+    internal fun recordAppliedGapLimits(walletIdHex: String, applied: Map<CoreTransactionBuilder.AccountType, Int>) {
+        appliedGapLimits[walletIdHex] = applied
+    }
+
+    override suspend fun backfillAddressPoolHoles(
+        walletIdHex: String,
+        beforeFillingHoles: suspend (holes: Int) -> Boolean
+    ): AddressPoolBackfillResult? = try {
+        ensureStarted()
+        val database = runtime?.database
+        val walletId = walletIdFromHex(walletIdHex)
+        if (database == null || walletId == null) {
+            log.warn("backfillAddressPoolHoles: SDK database or wallet id {}… unavailable", walletIdHex.take(8))
+            null
+        } else {
+            val plan = withContext(Dispatchers.IO) { planAddressPoolBackfill(database, walletId, walletIdHex) }
+            if (plan.holes > 0 && !beforeFillingHoles(plan.holes)) {
+                log.warn(
+                    "backfillAddressPoolHoles on {}…: {} holes left unfilled — their rescan could not be owed",
+                    walletIdHex.take(8), plan.holes
+                )
+                null
+            } else {
+                val inserted = withContext(Dispatchers.IO) { commitAddressPoolBackfill(database, plan, walletIdHex) }
+                AddressPoolBackfillResult(inserted, plan.holes, plan.poolsRefused, plan.poolsPending)
+            }
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("backfillAddressPoolHoles failed on {}…", walletIdHex.take(8), e)
+        null
+    }
+
+    /**
+     * Per wallet, the highest index each widened pool had stored when this
+     * process first backfilled it ([SdkAddressPoolBackfill.holeCeiling]),
+     * keyed by [poolKey]. The first backfill runs right after the widening,
+     * before the scan persists anything, so this is the pool the engine
+     * loaded: only indices missing below it are holes the engine lacks. A
+     * pool with no rows then (a wallet created in this process, whose
+     * initial rows were not yet written) has no entry and so no holes; its
+     * rows are all in memory and only late to reach the database.
+     */
+    private val poolHoleCeilings = java.util.concurrent.ConcurrentHashMap<String, Map<String, Int>>()
+
+    private fun poolKey(accountType: Int, standardTag: Int, poolTypeTag: Int) =
+        "$accountType/$standardTag/$poolTypeTag"
+
+    /** One pool's rows to insert, derived and verified by [planAddressPoolBackfill]. */
+    internal class PoolWrite(
+        val accountId: Long,
+        val poolTypeTag: Int,
+        val rows: List<SdkAddressPoolBackfill.DerivedRow>,
+        val missing: Int,
+        val holes: Int,
+        val ceiling: Int
+    )
+
+    /** What [planAddressPoolBackfill] found, before anything is written. */
+    internal class AddressPoolBackfillPlan(
+        val writes: List<PoolWrite>,
+        val poolsRefused: Int,
+        val poolsPending: Int
+    ) {
+        val holes: Int get() = writes.sumOf { it.holes }
+    }
+
+    /**
+     * The read half of [backfillAddressPoolHoles]: for each widened account,
+     * plan each pool's missing rows ([SdkAddressPoolBackfill.plan]), prove the
+     * stored account key reproduces rows already there, and derive the rows
+     * to insert. Writes nothing, so the caller can owe the rescan for the
+     * holes before any of them is filled.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun planAddressPoolBackfill(
+        database: DashDatabase,
+        walletId: ByteArray,
+        walletIdHex: String
+    ): AddressPoolBackfillPlan {
+        val db = database.openHelper.writableDatabase
+        val params = Constants.NETWORK_PARAMETERS
+        val applied = appliedGapLimits[walletIdHex].orEmpty()
+        data class Account(
+            val id: Long,
+            val accountType: Int,
+            val standardTag: Int,
+            val gapLimit: Int,
+            val xpub: ByteArray?
+        )
+
+        val accounts = ArrayList<Account>()
+        db.query(
+            "SELECT id, accountType, standardTag, accountExtendedPubKeyBytes FROM accounts " +
+                "WHERE walletId = ? AND accountIndex = 0",
+            arrayOf<Any?>(walletId)
+        ).use { c ->
+            while (c.moveToNext()) {
+                val accountType = c.getInt(1)
+                val standardTag = c.getInt(2)
+                val family = widenedFamily(accountType, standardTag) ?: continue
+                // The window the widening set this process; the widest if it
+                // has not run, since persisting extra rows costs nothing.
+                val gapLimit = applied[family] ?: WIDENED_GAP_LIMIT
+                accounts.add(
+                    Account(c.getLong(0), accountType, standardTag, gapLimit, if (c.isNull(3)) null else c.getBlob(3))
+                )
+            }
+        }
+
+        val poolRows = accounts.associateWith { account ->
+            val pools = HashMap<Int, MutableList<SdkAddressPoolBackfill.StoredRow>>()
+            db.query(
+                "SELECT poolTypeTag, addressIndex, address, isUsed, derivationPath FROM core_addresses " +
+                    "WHERE accountId = ?",
+                arrayOf<Any?>(account.id)
+            ).use { c ->
+                while (c.moveToNext()) {
+                    pools.getOrPut(c.getInt(0)) { ArrayList() }.add(
+                        SdkAddressPoolBackfill.StoredRow(
+                            addressIndex = c.getInt(1),
+                            address = c.getString(2),
+                            isUsed = c.getInt(3) != 0,
+                            derivationPath = c.getString(4)
+                        )
+                    )
+                }
+            }
+            pools
+        }
+
+        val ceilings = poolHoleCeilings.getOrPut(walletIdHex) {
+            buildMap {
+                for ((account, pools) in poolRows) {
+                    for ((poolTypeTag, rows) in pools) {
+                        put(
+                            poolKey(account.accountType, account.standardTag, poolTypeTag),
+                            SdkAddressPoolBackfill.holeCeiling(rows)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Widened pools with no rows yet: the SDK has not written the new
+        // wallet's accounts or their initial addresses, so there is nothing
+        // to verify a key against or extend. The caller retries. Only the
+        // families the widening actually widened count: one the wallet does
+        // not have is skipped there and would otherwise stay pending forever.
+        val poolsPending = WIDENED_ACCOUNTS.sumOf { (accountType, standardTag) ->
+            val family = widenedFamily(accountType, standardTag)
+            if (family == null || family !in applied) return@sumOf 0
+            val account = accounts.firstOrNull { it.accountType == accountType && it.standardTag == standardTag }
+            val pools = account?.let { poolRows[it] }
+            STANDARD_POOLS.count { poolTypeTag -> pools?.get(poolTypeTag).isNullOrEmpty() }
+        }
+        if (poolsPending > 0) {
+            log.info(
+                "backfillAddressPoolHoles on {}…: {} widened pools have no stored rows yet",
+                walletIdHex.take(8), poolsPending
+            )
+        }
+
+        val writes = ArrayList<PoolWrite>()
+        var poolsRefused = 0
+        for ((account, pools) in poolRows) {
+            for ((poolTypeTag, rows) in pools) {
+                // Only the two chains of a funds account derive by index
+                // under the account key; anything else is not ours to fill.
+                if (poolTypeTag !in STANDARD_POOLS) continue
+                val ceiling = ceilings[poolKey(account.accountType, account.standardTag, poolTypeTag)] ?: -1
+                val plan = SdkAddressPoolBackfill.plan(rows, account.gapLimit, ceiling)
+                if (plan.missing.isEmpty()) continue
+
+                val accountKey = SdkAddressPoolBackfill.accountKey(account.xpub)
+                val samples = SdkAddressPoolBackfill.verificationSamples(rows)
+                val prefix = samples.firstOrNull()?.let(SdkAddressPoolBackfill::pathPrefix)
+                val chainKey = accountKey?.let {
+                    org.bitcoinj.crypto.HDKeyDerivation.deriveChildKey(
+                        it,
+                        org.bitcoinj.crypto.ChildNumber(poolTypeTag, false)
+                    )
+                }
+                if (prefix == null || chainKey == null ||
+                    samples.any { SdkAddressPoolBackfill.pathPrefix(it) != prefix } ||
+                    !SdkAddressPoolBackfill.matchesStoredRows(chainKey, samples, prefix, params)
+                ) {
+                    poolsRefused++
+                    log.error(
+                        "backfillAddressPoolHoles: account {} pool {} on {}… REFUSED — the stored account " +
+                            "key does not reproduce its stored addresses; {} missing rows left as they are",
+                        account.id, poolTypeTag, walletIdHex.take(8), plan.missing.size
+                    )
+                    continue
+                }
+                writes.add(
+                    PoolWrite(
+                        accountId = account.id,
+                        poolTypeTag = poolTypeTag,
+                        rows = plan.missing.map { SdkAddressPoolBackfill.derive(chainKey, it, prefix, params) },
+                        missing = plan.missing.size,
+                        holes = plan.holes,
+                        ceiling = ceiling
+                    )
+                )
+            }
+        }
+        return AddressPoolBackfillPlan(writes, poolsRefused, poolsPending)
+    }
+
+    /**
+     * The write half of [backfillAddressPoolHoles]: `INSERT OR IGNORE` every
+     * planned row in ONE transaction, so a failure fills no pool rather than
+     * some. Raw SQL rather than the DAO's upsert, so a row the SDK persister
+     * writes concurrently (with its real `isUsed`) always wins over ours.
+     * Returns the rows inserted.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun commitAddressPoolBackfill(
+        database: DashDatabase,
+        plan: AddressPoolBackfillPlan,
+        walletIdHex: String
+    ): Int {
+        if (plan.writes.isEmpty()) return 0
+        val db = database.openHelper.writableDatabase
+        val now = System.currentTimeMillis()
+        val insertedPerPool = IntArray(plan.writes.size)
+        db.beginTransaction()
+        try {
+            db.compileStatement(
+                "INSERT OR IGNORE INTO core_addresses (address, publicKey, poolTypeTag, addressIndex, " +
+                    "derivationPath, isUsed, firstSeenHeight, lastSeenHeight, balance, createdAt, " +
+                    "lastUpdated, accountId) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?, ?)"
+            ).use { insert ->
+                plan.writes.forEachIndexed { i, write ->
+                    for (row in write.rows) {
+                        insert.clearBindings()
+                        insert.bindString(1, row.address)
+                        insert.bindBlob(2, row.publicKey)
+                        insert.bindLong(3, write.poolTypeTag.toLong())
+                        insert.bindLong(4, row.addressIndex.toLong())
+                        insert.bindString(5, row.derivationPath)
+                        insert.bindLong(6, now)
+                        insert.bindLong(7, now)
+                        insert.bindLong(8, write.accountId)
+                        if (insert.executeInsert() != -1L) insertedPerPool[i]++
+                    }
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        plan.writes.forEachIndexed { i, write ->
+            log.info(
+                "backfillAddressPoolHoles: account {} pool {} on {}…: {} rows missing ({} of them holes " +
+                    "below index {}, stored when the wallet loaded), {} inserted",
+                write.accountId, write.poolTypeTag, walletIdHex.take(8), write.missing,
+                write.holes, write.ceiling, insertedPerPool[i]
+            )
+        }
+        return insertedPerPool.sum()
+    }
+
+    /**
+     * Same time→height mapping the bind used for this wallet's birthHeight
+     * (dashj checkpoints; the resolver contains its own failures → 0u/genesis),
+     * so the rescan floor can never sit ABOVE where the wallet's history starts.
+     */
+    private fun spvRescanBirthHeight(birthTimeSecs: Long?): UInt = sdkBirthHeightFor(birthTimeSecs) { time ->
+        BirthHeightResolver(
+            networkParameters = Constants.NETWORK_PARAMETERS,
+            openCheckpoints = { context.assets.open(Constants.Files.CHECKPOINTS_FILENAME) }
+        ).resolve(time)
+    }
+
+    override fun spvRescanTargetHeight(birthTimeSecs: Long?): Long? = try {
+        spvRescanBirthHeight(birthTimeSecs).toLong()
+    } catch (e: Exception) {
+        log.warn("spvRescanTargetHeight failed: {}", e.message)
+        null
+    }
+
+    override suspend fun durableSpvSyncedHeight(walletIdHex: String): Long? = try {
+        val database = databaseOrNull()
+        val walletId = walletIdFromHex(walletIdHex)
+        if (database == null || walletId == null) {
+            null
+        } else {
+            database.walletDao().getByWalletId(walletId)?.syncedHeight?.toLong()
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("durableSpvSyncedHeight failed on {}…: {}", walletIdHex.take(8), e.message)
+        null
     }
 
     override suspend fun armSpvRescan(walletIdHex: String, birthTimeSecs: Long?): Boolean = try {
@@ -896,16 +1454,7 @@ class DashSdkServiceImpl @Inject constructor(
             log.warn("armSpvRescan: SDK manager missing or bad wallet id {}…", walletIdHex.take(8))
             false
         } else {
-            // Same time→height mapping the bind used for this wallet's
-            // birthHeight (dashj checkpoints; resolver contains its own
-            // failures → 0u/genesis), so the rescan floor can never sit
-            // ABOVE where the wallet's history starts.
-            val birthHeight = sdkBirthHeightFor(birthTimeSecs) { time ->
-                BirthHeightResolver(
-                    networkParameters = Constants.NETWORK_PARAMETERS,
-                    openCheckpoints = { context.assets.open(Constants.Files.CHECKPOINTS_FILENAME) }
-                ).resolve(time)
-            }
+            val birthHeight = spvRescanBirthHeight(birthTimeSecs)
             manager.rescanSpvFilters(walletId, birthHeight.toInt())
             // Stamp BEFORE reporting success: the persist gate
             // (spvRescanArmedWithin) must already see the arm when the
@@ -958,21 +1507,29 @@ class DashSdkServiceImpl @Inject constructor(
         val manager = checkNotNull(runtime) { "SDK runtime missing" }.walletManager
         val queuedBefore = manager.contactCryptoPendingCount(walletId)
         if (queuedBefore == 0) {
+            accountBuildDrains.onDrainRan(walletIdHex)
             return DashPayContactDrainReport(
                 bound = true, queuedBefore = 0, drainScheduled = false, queuedAfter = 0
             )
         }
         val drainScheduled = try {
-            manager.unlockWalletFromKeystore(managed)
+            manager.unlockWalletFromKeystore(managed).also {
+                // false = a genuine watch-only wallet, which can never drain:
+                // no temporary cause, so the pinned-count rule applies.
+                accountBuildDrains.onDrainRan(walletIdHex)
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
             // Non-fatal: the next signer-present pass retries the drain;
-            // the sweep rebuilds the queue if it was lost.
+            // the sweep rebuilds the queue if it was lost. While the device is
+            // locked this is the expected Keystore refusal, and the balance
+            // pipeline keeps the figure not-final until a drain can run.
+            val deviceLocked = accountBuildDrains.onDrainDeferred(walletIdHex)
             log.warn(
                 "DashPay contact-crypto drain deferred on SDK wallet {}… " +
-                    "(seed verify / Keystore unavailable): {}",
-                walletIdHex.take(8), e.message
+                    "(seed verify / Keystore unavailable, deviceLocked={}): {}",
+                walletIdHex.take(8), deviceLocked, e.message
             )
             false
         }
@@ -1053,6 +1610,33 @@ class DashSdkServiceImpl @Inject constructor(
             )
             DashPayBackfillSignals.UNKNOWN
         }
+    }
+
+    /**
+     * See [DashSdkService.readDashPayContactRequests]. Pure Room reads via
+     * [databaseOrNull], like [readDashPayReceivalCoverage]: no [ensureStarted],
+     * no native call. Never throws (except cancellation): null means
+     * "unavailable".
+     */
+    override suspend fun readDashPayContactRequests(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): StoredDashPayContactRequests? = try {
+        databaseOrNull()?.let { database ->
+            val dao = database.dashpayDao()
+            val requests = dao.getContactRequestsByOwner(ownerIdentityId)
+            fun hex(ids: List<ByteArray>) = ids.mapTo(HashSet()) { Utils.HEX.encode(it) }
+            StoredDashPayContactRequests(
+                outgoing = hex(requests.filter { it.isOutgoing }.map { it.contactIdentityId }),
+                incoming = hex(requests.filterNot { it.isOutgoing }.map { it.contactIdentityId }),
+                ignored = hex(dao.getIgnoredSendersByOwner(ownerIdentityId).map { it.ignoredSenderId })
+            )
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to read the DashPay contact requests of SDK wallet {}…", walletIdHex.take(8), e)
+        null
     }
 
     /**
@@ -1137,16 +1721,28 @@ class DashSdkServiceImpl @Inject constructor(
 
         // 2. Storage layer — ← AppContainer construction (database,
         //    walletStorage, walletManagerStore fields). DEVICE_BOUND key
-        //    policy (#4060): this app gates wallet access with its own PIN
-        //    (SecurityGuard), so the SDK's default AUTH_GATED alias only
-        //    added a second, unwired auth layer — identity-key signing died
-        //    with "User not authenticated" outside the ~30 s post-unlock
-        //    window (observed live: contact-accept dead ends, mid-operation
-        //    signing failures). DEVICE_BOUND keys stay hardware-backed and
-        //    non-exportable but never throw UserNotAuthenticatedException.
-        //    Keys previously wrapped under the AUTH_GATED alias surface as
-        //    unhealthy and are re-derived + re-wrapped by the binder's
-        //    key-heal pass (repairIdentityKey) — no user action needed.
+        //    policy (landed upstream as dashpay/platform#4183; the #4060 PR
+        //    that proposed it was closed unmerged): this app gates wallet
+        //    access with its own PIN (SecurityGuard), so the SDK's default
+        //    AUTH_GATED alias only added a second, unwired auth layer —
+        //    identity-key signing died with "User not authenticated" outside
+        //    the ~30 s post-unlock window (observed live: contact-accept dead
+        //    ends, mid-operation signing failures). DEVICE_BOUND keys stay
+        //    hardware-backed and non-exportable, and carry no authentication
+        //    gate.
+        //
+        //    They can still throw UserNotAuthenticatedException, though — an
+        //    earlier version of this comment claimed otherwise and cost us
+        //    MO-972. The DEVICE_BOUND alias is not auth-gated but IS
+        //    lock-bound (`setUnlockedDeviceRequired`), and Android reports a
+        //    denial of THAT gate with the identical exception. On OEM builds
+        //    whose lock-state tracking is defective (HONOR PTP-N49; Google
+        //    confirmed the same on Fairphone 5/6) signing failed with "User
+        //    not authenticated" on a policy that has no auth window, and the
+        //    error was read as a timeout for weeks. dashpay/platform#4643
+        //    classifies that denial SDK-side and degrades the affected device
+        //    onto a never-lock-bound alias; SdkDashPayWrites classifies the
+        //    resulting typed message.
         var database: DashDatabase? = null
         var sdk: Sdk? = null
         try {
@@ -1221,13 +1817,33 @@ class DashSdkServiceImpl @Inject constructor(
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
 
         /**
-         * Gap limit the migration heal widens each standard account to —
-         * the Rust-side MAX_GAP_LIMIT. See
-         * [DashSdkService.widenAddressWindows] for why 1000 covers
-         * arbitrarily deep frontiers once the rescan's mark-used roll
-         * kicks in.
+         * Gap limit the widening gives each standard account (BIP44, BIP32,
+         * CoinJoin) — the Rust-side MAX_GAP_LIMIT. Restored wallets hold
+         * runs of unused addresses far past dashj's 100 lookahead (a testnet
+         * wallet's change chain has an unused run of 373), and the widening
+         * cannot know them in advance, so it takes the widest window. See
+         * [DashSdkService.widenAddressWindows].
          */
-        internal const val MIGRATION_GAP_LIMIT = 1000
+        internal const val WIDENED_GAP_LIMIT = 1000
+
+        /** `accounts.accountType` / `standardTag` of the accounts [widenAddressWindows] widens. */
+        private val WIDENED_ACCOUNTS = listOf(0 to 0, 0 to 1, 1 to 0)
+
+        /** The external (0) and internal (1) pools of a funds account. */
+        private val STANDARD_POOLS = setOf(0, 1)
+
+        /**
+         * The family [widenAddressWindows] widens for the account stored as
+         * `accounts.accountType` / `standardTag` (account 0), or null for an
+         * account it does not widen: BIP44 (type 0, tag 0), BIP32 (type 0,
+         * tag 1) and CoinJoin (type 1).
+         */
+        internal fun widenedFamily(accountType: Int, standardTag: Int): CoreTransactionBuilder.AccountType? = when {
+            accountType == 0 && standardTag == 0 -> CoreTransactionBuilder.AccountType.BIP44
+            accountType == 0 && standardTag == 1 -> CoreTransactionBuilder.AccountType.BIP32
+            accountType == 1 -> CoreTransactionBuilder.AccountType.COIN_JOIN
+            else -> null
+        }
 
         /**
          * Room-row display name stamped on the one SDK wallet bound from

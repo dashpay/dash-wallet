@@ -73,9 +73,11 @@ internal data class SdkBlockchainStateUpdate(
      */
     val bestChainDateMs: Long?,
     /**
-     * Combined headers+filters percent — same math as [shadowSyncPercent] —
-     * or null (preserve) on a transient ERROR snapshot, so a peer hiccup
-     * never regresses a previously-reported percent (dashj never did).
+     * Combined headers+filters percent over the SESSION's work — same math
+     * as [shadowSyncPercent] — or null (preserve) on a transient ERROR
+     * snapshot, so a peer hiccup never regresses a previously-reported
+     * percent (dashj never did). A new engine session measures its own
+     * work, so this legitimately restarts low on a re-walk.
      */
     val percentageSync: Int?,
     /** Masternode-list sync height, or null (unknown — preserve). */

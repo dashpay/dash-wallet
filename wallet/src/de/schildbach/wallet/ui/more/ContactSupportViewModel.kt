@@ -18,6 +18,8 @@ package de.schildbach.wallet.ui.more
 
 import android.net.Uri
 import android.os.PowerManager
+import androidx.annotation.MainThread
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.google.common.base.Charsets
@@ -32,10 +34,14 @@ import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ParityReport
+import de.schildbach.wallet.service.platform.sdk.PARITY_BREAKDOWN_REPORT_TIMEOUT_MS
+import de.schildbach.wallet.service.platform.sdk.ReportParityBreakdown
+import de.schildbach.wallet.service.platform.sdk.parityBreakdownReportSection
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.NativeLogBridge
 import de.schildbach.wallet.util.StartupBreadcrumbs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,7 +54,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
-import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
@@ -72,6 +77,7 @@ enum class ReportGenerationStatus {
     StackTrace,
     DeviceInfo,
     Packages,
+    ParityBreakdown,
     Logs,
     WalletDump,
     BackgroundTraces,
@@ -79,11 +85,23 @@ enum class ReportGenerationStatus {
     Complete
 }
 
+/**
+ * Whether the report gets `dashJ-kotlin-parity-log.txt`: the dashj sync
+ * diagnostic is on, it ran this launch (parity history exists), or a
+ * breakdown applies to this report (the cutover is committed and the user
+ * shares the application log — [ReportParityBreakdown.NOT_SHARED] is not
+ * applicable, so it never attaches the parity log on its own).
+ */
+internal fun shouldAttachParityLog(
+    diagnosticEnabled: Boolean,
+    hasParityHistory: Boolean,
+    breakdown: ReportParityBreakdown
+): Boolean = diagnosticEnabled || hasParityHistory || breakdown.applicable
+
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
-    walletDataProvider: WalletData,
     private val packageInfoProvider: PackageInfoProvider,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
     private val dashPayConfig: DashPayConfig,
@@ -116,14 +134,91 @@ class ContactSupportViewModel @Inject constructor(
         private const val LOGCAT_TIMEOUT_SECS = 20L
     }
 
-    val wallet: Wallet? = walletDataProvider.wallet
+    /**
+     * The wallet the report describes, or null. Read once when the dialog
+     * opens and again when the report is generated, so a wallet that loaded
+     * meanwhile is included. See [refreshWallet].
+     */
+    @Volatile
+    var wallet: Wallet? = null
+        private set
+
+    /** [wallet] is null because a safe-mode retry was still loading it. */
+    @Volatile
+    private var walletSkippedForRetry = false
+
+    /** The launch was degraded when [wallet] was taken (and no retry was running). */
+    @Volatile
+    private var walletLoadDegraded = false
+
     var contextualData: String? = null
     var stackTrace: String? = null
     var isCrash: Boolean = false
     private val _status = MutableStateFlow(ReportGenerationStatus.NotStarted)
     val status = _status.asStateFlow()
 
+    init {
+        refreshWallet()
+    }
+
+    /**
+     * Takes the wallet without waiting for a safe-mode retry. This view model
+     * is created on the main thread, and the recovery screen offers the report
+     * while a retry loads the wallet; reading it then waits for the retry's
+     * parse (minutes on a large wallet: an input-dispatch ANR on the main
+     * thread, a report that never comes on the IO thread). So mid-retry the
+     * report goes without the wallet sections and says why. Otherwise the
+     * wallet is read as before, which does not wait for a degraded launch: a
+     * wallet assigned before a failed publish or initialisation is exactly
+     * what a crash report needs.
+     *
+     * MAIN THREAD ONLY, which is what makes the check-then-read safe: a retry
+     * starts on the main thread (it sets the flag, then installs its gate),
+     * so no retry can start between the two reads here. Off the main thread
+     * one could, and the wallet read would then wait for the whole parse
+     * (review, #1594). Outside a retry neither read waits on the main thread:
+     * a background start's deferred load finished before the first activity
+     * was created (onActivityPreCreated), and the only other gate is a retry's.
+     * (A retry clears the flag inside its own main-thread completion, after
+     * the parse, so a read there finds the load done and does not wait.)
+     * The degraded state for the "no wallet" message is taken here for the
+     * same reason.
+     */
+    @MainThread
+    private fun refreshWallet() {
+        val retrying = application.isSafeModeRetryInProgress
+        walletSkippedForRetry = retrying
+        wallet = if (retrying) null else application.wallet
+        walletLoadDegraded = !retrying && application.isWalletLoadDegraded
+    }
+
+    /** [refreshWallet] from any caller, run on the main thread. */
+    @VisibleForTesting
+    internal suspend fun snapshotWallet() = withContext(Dispatchers.Main.immediate) {
+        refreshWallet()
+    }
+
     suspend fun createReport(
+        userIssueDescription: String,
+        collectDeviceInfo: Boolean,
+        collectInstalledPackages: Boolean,
+        collectApplicationLog: Boolean,
+        collectWalletDump: Boolean
+    ): Pair<String, ArrayList<Uri>> {
+        // A retry may have loaded the wallet since the dialog opened. Taken on
+        // the main thread, serialized with a retry's start (see refreshWallet);
+        // everything else is generated on IO.
+        snapshotWallet()
+        return generateReport(
+            userIssueDescription,
+            collectDeviceInfo,
+            collectInstalledPackages,
+            collectApplicationLog,
+            collectWalletDump
+        )
+    }
+
+    private suspend fun generateReport(
         userIssueDescription: String,
         collectDeviceInfo: Boolean,
         collectInstalledPackages: Boolean,
@@ -191,6 +286,13 @@ class ContactSupportViewModel @Inject constructor(
                 text.append(x.toString()).append('\n')
             }
         }
+
+        // A fresh dashj ↔ SDK parity breakdown for the parity log, computed
+        // BEFORE the logs are copied so its ParityBreakdown block is in the
+        // attached wallet.log too. Bounded (it falls back to the last stored
+        // result with the reason) and never fails the report. It lists txids
+        // and amounts, so only when the user shares the application log.
+        val parityBreakdown = parityBreakdownForReport(collectApplicationLog)
 
         if (collectApplicationLog) {
             _status.value = ReportGenerationStatus.Logs
@@ -411,10 +513,10 @@ class ContactSupportViewModel @Inject constructor(
         try {
             val diagnosticEnabled = dashPayConfig.getDashjSyncDiagnostic()
             val parityHistory = dashjDiagnosticSyncState.parityHistory()
-            if (diagnosticEnabled || parityHistory.isNotEmpty()) {
+            if (shouldAttachParityLog(diagnosticEnabled, parityHistory.isNotEmpty(), parityBreakdown)) {
                 val parityLogFile = File(reportDir, "dashJ-kotlin-parity-log.txt")
                 FileWriter(parityLogFile).use { writer ->
-                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory))
+                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory, parityBreakdown))
                 }
                 attachments.add(
                     FileProvider.getUriForFile(
@@ -536,12 +638,14 @@ class ContactSupportViewModel @Inject constructor(
      * The content of the `dashJ-kotlin-parity-log.txt` support-log attachment:
      * the current diagnostic state (percent + verdict), the SDK wallet's
      * unspent/total TXO counts (500-input standard-tx cap check), the latest
-     * [ParityReport] from the L1 shadow harness, and the recent parity
-     * history recorded by [DashjDiagnosticSyncState.recordParity].
+     * [ParityReport] from the L1 shadow harness, the transaction-level
+     * breakdown computed for this report ([parityBreakdownForReport]), and the
+     * recent parity history recorded by [DashjDiagnosticSyncState.recordParity].
      */
     private fun buildDashjKotlinParityLog(
         diagnosticEnabled: Boolean,
-        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>
+        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>,
+        parityBreakdown: ReportParityBreakdown
     ): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US)
         fun formatReport(r: ParityReport): String =
@@ -595,6 +699,8 @@ class ContactSupportViewModel @Inject constructor(
         text.append("\n--- latest parity report ---\n")
         text.append(latest?.let { formatReport(it) } ?: "none").append('\n')
 
+        text.append(parityBreakdownReportSection(parityBreakdown) { dateFormat.format(Date(it)) })
+
         text.append("\n--- parity history (oldest first, up to 50 entries) ---\n")
         if (parityHistory.isEmpty()) {
             text.append("none\n")
@@ -608,6 +714,30 @@ class ContactSupportViewModel @Inject constructor(
             }
         }
         return text.toString()
+    }
+
+    /**
+     * The breakdown for the parity log ([L1ShadowSyncService.parityBreakdownForReport]):
+     * waits up to [PARITY_BREAKDOWN_REPORT_TIMEOUT_MS] under its own progress
+     * step. Whatever goes wrong, the report goes on without it, with the
+     * reason.
+     *
+     * The breakdown lists txids and amounts — application-log material — so
+     * when the user unticks "Append application log" it is neither computed
+     * nor shown ([ReportParityBreakdown.NOT_SHARED]), whatever else is shared.
+     */
+    @VisibleForTesting
+    internal suspend fun parityBreakdownForReport(collectApplicationLog: Boolean): ReportParityBreakdown {
+        if (!collectApplicationLog) return ReportParityBreakdown.NOT_SHARED
+        return try {
+            _status.value = ReportGenerationStatus.ParityBreakdown
+            l1ShadowSyncService.parityBreakdownForReport()
+        } catch (x: CancellationException) {
+            throw x
+        } catch (x: Exception) {
+            log.info("problem computing the parity breakdown for the report", x)
+            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName}: ${x.message})")
+        }
     }
 
     @Throws(IOException::class)
@@ -692,7 +822,12 @@ class ContactSupportViewModel @Inject constructor(
                 Transaction.SORT_TX_BY_UPDATE_TIME
             )
             walletDump + txDump
-        } ?: "No wallet loaded"
+        } ?: when {
+            walletSkippedForRetry -> "No wallet loaded: a safe-mode retry was still loading it"
+            walletLoadDegraded ->
+                "No wallet loaded: degraded launch (the load failed, or safe mode skipped it and no retry has finished)"
+            else -> "No wallet loaded"
+        }
     }
 
     @Throws(IOException::class)

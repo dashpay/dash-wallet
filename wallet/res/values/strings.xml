@@ -81,6 +81,8 @@
     <string name="send_coins_error_generic">The payment could not be sent.</string>
     <!-- Shown when the send engine could not sign because the wallet's secure key store is locked. No funds were sent; the same payment works after unlocking. -->
     <string name="send_coins_error_signer_locked">Your wallet couldn\'t sign this payment because it is locked. No funds have left your wallet — unlock your wallet and try again.</string>
+    <!-- Shown when a payment to a DashPay contact was refused because the wallet could not save a record of the contact's payment address on this device (storage full or unreadable). No funds were sent. -->
+    <string name="send_coins_error_contact_payment_not_recorded">This payment to your contact couldn\'t be sent because your wallet couldn\'t save a record of it on this device. No funds have left your wallet. Free up storage space or restart the app, then try again.</string>
     <string name="send_coins_options_fee_category">Fee</string>
     <string name="send_coins_options_fee_category_economic">Economic</string>
     <string name="send_coins_options_fee_category_priority">Priority</string>
@@ -156,6 +158,10 @@
     <string name="transaction_row_status_sent_internally">Internal</string>
     <string name="transaction_row_shielded">Shielded</string>
     <string name="transaction_row_unshielded">Unshielded</string>
+    <!-- An AssetUnlock from Platform to this wallet that this wallet's own shielded pool did not
+         author: a Platform identity credit withdrawal (evonode reward withdrawals included) or a
+         foreign pool's payout. Shown with receive semantics. -->
+    <string name="transaction_row_unshielded_withdrawal">Unshielded Withdrawal</string>
     <string name="transaction_row_invitation">Invitation</string>
     <string name="transaction_row_status_processing">Processing</string>
     <string name="transaction_row_status_confirming">Confirming</string>
@@ -328,6 +334,7 @@
     <string name="report_issue_dialog_report">Report</string>
     <string name="wallet_recovery_from_seed_message">Your wallet file could not be read and no automatic backup was usable. Your funds are safe on the network — restore your wallet with your recovery phrase to continue.</string>
     <string name="safe_mode_startup_message">The app did not finish starting up the last few times, so this start skipped loading your wallet. Nothing has been changed or deleted. Send us a report, or try opening your wallet again.</string>
+    <string name="wallet_wipe_recovery_required">A previous wallet reset may not have finished. Wallet access is paused to protect any remaining data. Contact support for help recovering your wallet.</string>
     <string name="report_issue_dialog_collect_device_info">Append device information</string>
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>
@@ -343,6 +350,7 @@
     <string name="report_issue_dialog_status_background_traces">background traces</string>
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">finishing</string>
+    <string name="report_issue_dialog_status_parity_breakdown">wallet transaction check (up to 30 seconds)</string>
     <string name="report_transaction_history_export">Export transactions</string>
     <string name="report_transaction_history_title">CSV export</string>
     <string name="report_transaction_history_dialog_title">The full transaction history will be exported as a CSV file</string>
@@ -464,6 +472,15 @@
     <string name="battery_optimization_title">Battery optimization</string>
     <string name="battery_optimization_subtitle_optimized">Optimized</string>
     <string name="battery_optimization_subtitle_unrestricted">Unrestricted</string>
+
+    <!-- Analytics opt-out (Settings) -->
+    <string name="settings_analytics_title">Share usage data</string>
+    <!-- PLACEHOLDER COPY: needs product sign-off -->
+    <string name="settings_analytics_info_title">About usage data</string>
+    <!-- PLACEHOLDER COPY: needs product sign-off -->
+    <string name="settings_analytics_save_failed_off">Couldn\'t turn off, try again</string>
+    <string name="settings_analytics_save_failed_on">Couldn\'t turn on, try again</string>
+    <string name="settings_analytics_info_message">When this is on, Dash Wallet shares app usage events with Firebase to help us improve the app.\n\nNo amounts, balances or addresses are ever shared.\n\nYou can turn this off at any time.</string>
 
     <string name="battery_optimization_dialog_optimized_title">Let Dash Wallet run in the background?</string>
     <string name="battery_optimization_dialog_message_optimized">This app is configured to stop running after not being visible for some time.\n\nThis will result in not receiving payment notifications until the app returns to the foreground.\n\nWe recommend allowing this app to run in the background by setting battery optimization to \"Not Optimized\" or \"Unrestricted.\"\n\nDon\'t worry, we will always mind your battery usage.</string>

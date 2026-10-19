@@ -37,6 +37,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
 import javax.inject.Inject
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @HiltViewModel
 class TransferDashViewModel @Inject constructor(
@@ -262,11 +263,25 @@ class TransferDashViewModel @Inject constructor(
         // Off-main: reviewTransfer is called from a Main-thread observer, and
         // the underlying freshReceiveAddress() forces a synchronous
         // full-wallet save; the callback below still fires on Main.
+        val depositAddress = try {
+            walletDataProvider.freshReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            // Transferring from Coinbase to the held dashj chain's frozen address
+            // would deposit to an already-paid address (SR-03).
+            //
+            // Emit the EXISTING address-creation failure event, which the fragment
+            // already observes. Clearing the params event instead does not suppress
+            // it — SingleLiveEvent marks a null value pending just the same — and
+            // the fragment then forwards that null into a non-null navigation
+            // argument, crashing rather than showing the error.
+            onAddressCreationFailedCallback.call()
+            return@launch
+        }
         val sendTransactionToWalletParams = SendTransactionToWalletParams(
             dashValue,
             Constants.DASH_CURRENCY,
             UUID.randomUUID().toString(),
-            walletDataProvider.freshReceiveAddressStringOffMain(),
+            depositAddress,
             CoinbaseConstants.TRANSACTION_TYPE_SEND
         )
 

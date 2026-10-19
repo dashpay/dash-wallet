@@ -517,7 +517,16 @@ class CoinJoinFundsMigrationService @Inject constructor(
             // slower device with a larger wallet ~7 s — long enough that a
             // tester read it as a hang and force-quit mid-migration. The caller
             // runs on Main, so the dispatcher has to be imposed here.
-            withContext(Dispatchers.IO) { walletData.freshReceiveAddressString() }
+            //
+            // The UNADVERTISED (engine internal/change) chain. Post-cutover the
+            // dashj chain is HELD and its pointer frozen at the restore index, so
+            // the plain read would drain the mixed coins onto an address the chain
+            // has ALREADY paid (SR-03 / D-003) — and the engine's RECEIVE chain is
+            // no better here, because post-cutover its next-unused address is the
+            // one the Receive screen is advertising. Draining mixed coins to an
+            // address handed to a counterparty is precisely the linkage this
+            // destination exists to avoid. The internal chain is never handed out.
+            withContext(Dispatchers.IO) { walletData.unadvertisedDestinationLive().toBase58() }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("mixed-funds migration: could not derive an own receive address", t)

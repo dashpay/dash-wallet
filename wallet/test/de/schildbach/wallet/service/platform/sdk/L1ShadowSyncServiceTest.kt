@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.service.DashjDiagnosticSyncState.Parity
+import de.schildbach.wallet.service.deriveCurrentDashjDiagnosticVerdict
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -32,11 +34,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.NonCancellable
+import org.bitcoinj.core.Sha256Hash
 import org.dashfoundation.dashsdk.wallet.SpvSubProgress
 import org.dashfoundation.dashsdk.wallet.SpvSyncProgressData
 import org.dashfoundation.dashsdk.wallet.SpvSyncState
@@ -45,8 +49,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.nio.file.Files
 
 /**
@@ -147,7 +153,11 @@ class L1ShadowSyncServiceTest {
 
         override fun spvProgress(): Flow<SpvSyncProgressData> = progressFlow
 
-        override fun walletEventStrings(): Flow<String> = eventStrings
+        /** [FAIL_TAP] on [eventStrings] makes the tap's collect throw, as a broken feed would. */
+        override fun walletEventStrings(): Flow<String> = eventStrings.map {
+            check(it != FAIL_TAP) { "simulated wallet-event feed failure" }
+            it
+        }
 
         override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> {
             onProbe()
@@ -155,6 +165,17 @@ class L1ShadowSyncServiceTest {
         }
 
         override suspend fun sdkTxCount(walletIdHex: String): Int = sdkTxs
+
+        /** The SDK's durable `WalletEntity.syncedHeight`, and how often it was read. */
+        @Volatile var durableHeight: Long? = null
+        @Volatile var durableReads = 0
+        var onDurableRead: () -> Unit = {}
+
+        override suspend fun sdkWalletSyncedHeight(walletIdHex: String): Long? {
+            durableReads++
+            onDurableRead()
+            return durableHeight
+        }
 
         override suspend fun dashjBalanceDuffs(): Pair<Long, Long>? = dashjBalances
 
@@ -168,6 +189,39 @@ class L1ShadowSyncServiceTest {
         }
 
         override suspend fun dashjUnspentUtxos(): List<L1Utxo>? = dashjUtxos
+
+        // The parity breakdown's two inputs; null = unavailable (the seam default).
+        var sdkTxidHeights: Map<Sha256Hash, SdkTxFacts>? = null
+        var dashjFacts: DashjBreakdownFacts? = null
+        @Volatile
+        var breakdownDashjCalls = 0
+
+        /** Breakdown runs that read the SDK side; atomic for the concurrent-report test. */
+        val sdkTxidCalls = java.util.concurrent.atomic.AtomicInteger()
+
+        override suspend fun sdkTxidHeights(walletIdHex: String): Map<Sha256Hash, SdkTxFacts>? {
+            sdkTxidCalls.incrementAndGet()
+            return sdkTxidHeights
+        }
+
+        /**
+         * The durable committed wallet height the shadow seeds its cursor from; null = unknown.
+         * The same value as [durableHeight], read through the one [sdkWalletSyncedHeight] override.
+         */
+        var walletSyncedHeight: Long?
+            get() = durableHeight
+            set(value) {
+                durableHeight = value
+            }
+
+        /** Runs inside [dashjBreakdownFacts]: a gate to hold the run, or a throw. */
+        var onDashjBreakdownFacts: suspend () -> Unit = {}
+
+        override suspend fun dashjBreakdownFacts(sdkTxids: Set<Sha256Hash>): DashjBreakdownFacts? {
+            breakdownDashjCalls++
+            onDashjBreakdownFacts()
+            return dashjFacts
+        }
 
         override suspend fun clearSpvStorage() {
             clearSpvStorageCalls++
@@ -262,7 +316,12 @@ class L1ShadowSyncServiceTest {
         bringUpBudgetMs: Long = L1ShadowSyncService.BRING_UP_BUDGET_MS,
         bringUpStopJoinMs: Long = L1ShadowSyncService.BRING_UP_STOP_JOIN_MS,
         destructiveBringUpJoinMs: Long = L1ShadowSyncService.DESTRUCTIVE_BRING_UP_JOIN_MS,
-        flagGate: () -> CompletableDeferred<Unit>? = { null }
+        flagGate: () -> CompletableDeferred<Unit>? = { null },
+        scanMayAdvance: suspend (String) -> Boolean = { true },
+        scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
+        durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS,
+        breakdownStore: ParityBreakdownStore? = null,
+        contactPaidHistory: ContactPaidHistoryInvalidation = ContactPaidHistoryInvalidation.NONE
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites, cutoverState, dashjDiagnostic, flagGate),
@@ -275,7 +334,12 @@ class L1ShadowSyncServiceTest {
         recreator = recreator,
         bringUpBudgetMs = bringUpBudgetMs,
         bringUpStopJoinMs = bringUpStopJoinMs,
-        destructiveBringUpJoinMs = destructiveBringUpJoinMs
+        destructiveBringUpJoinMs = destructiveBringUpJoinMs,
+        scanMayAdvance = scanMayAdvance,
+        scanGateRetryInitialMs = scanGateRetryInitialMs,
+        durableHeightRefreshMs = durableHeightRefreshMs,
+        breakdownStore = breakdownStore,
+        contactPaidHistory = contactPaidHistory
     )
 
     /**
@@ -1245,6 +1309,119 @@ class L1ShadowSyncServiceTest {
     }
 
     /**
+     * Review, 2026-09-29: the binder's scan gate. While a failed widening's
+     * rescan debt is unrecorded the engine must not start; once the gate
+     * opens, the next start proceeds.
+     */
+    @Test
+    fun startIfEnabled_declines_whileTheScanGateHoldsTheScan() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var open = false
+        val service = service(source, scanMayAdvance = { open }, scanGateRetryInitialMs = 60_000)
+
+        assertFalse(service.startIfEnabled())
+        assertEquals("SPV never started", 0, source.startCalls)
+
+        open = true
+        assertTrue(service.startIfEnabled())
+        assertEquals(1, source.startCalls)
+        service.stop()
+    }
+
+    /**
+     * Review, 2026-09-29: a refusal must carry its own recovery. Nothing else
+     * re-invokes the start once the post-bind starter has spent itself, so the
+     * refusal schedules a retry, and the engine starts as soon as the gate
+     * opens, with no other trigger and no service recreation.
+     */
+    @Test
+    fun aScanGateRefusal_retriesTheStartOnItsOwn_untilTheGateOpens() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var gateCalls = 0
+        val service = service(source, scanMayAdvance = { ++gateCalls >= 3 }, scanGateRetryInitialMs = 20)
+
+        assertFalse(service.startIfEnabled())
+        withTimeout(5_000) { while (source.startCalls == 0) delay(10) }
+
+        assertEquals("refused twice, then the retry started it", 3, gateCalls)
+        assertEquals(1, source.startCalls)
+        service.stop()
+    }
+
+    /**
+     * Review, 2026-09-29: a stop that lands while an ordinary start is parked
+     * INSIDE the scan gate. The start then refuses and schedules its retry;
+     * that retry must carry the start's own generation, not the stop's, or it
+     * restarts SPV after the stop has completed.
+     */
+    @Test
+    fun aStopDuringTheScanGate_supersedesTheRetryItsRefusalSchedules() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gateEntered = CompletableDeferred<Unit>()
+        val gateAnswer = CompletableDeferred<Boolean>()
+        var calls = 0
+        val service = service(
+            source,
+            scanMayAdvance = {
+                if (++calls == 1) {
+                    gateEntered.complete(Unit)
+                    gateAnswer.await()
+                } else {
+                    true // recovered: any retry that ran would now start SPV
+                }
+            },
+            scanGateRetryInitialMs = 20
+        )
+
+        val start = async(Dispatchers.Default) { service.startIfEnabled() }
+        withTimeout(5_000) { gateEntered.await() }
+        val stop = async(Dispatchers.Default) { service.stop() } // bumps the generation, waits for the mutex
+        delay(100)
+
+        gateAnswer.complete(false) // the parked start refuses
+        assertFalse(start.await())
+        withTimeout(5_000) { stop.await() }
+
+        delay(300) // well past the retry delay
+        assertEquals("no retry restarted SPV after the stop", 0, source.startCalls)
+    }
+
+    /** An external stop cancels a pending scan-gate retry: the engine stays down. */
+    @Test
+    fun stop_cancelsAPendingScanGateRetry() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var open = false
+        val service = service(source, scanMayAdvance = { open }, scanGateRetryInitialMs = 50)
+
+        assertFalse(service.startIfEnabled())
+        service.stop()
+        open = true
+        delay(300)
+
+        assertEquals("the cancelled retry never started SPV", 0, source.startCalls)
+    }
+
+    /**
+     * QA D-901b: a restart that started the engine is not a recovery. It arms
+     * a verdict that only the cursor passing the stuck height can settle as
+     * recovered; the next stall decision below it settles it as not recovered.
+     */
+    @Test
+    fun stallRestart_armsAnOutcomeVerdict_insteadOfClaimingSuccess() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        service.launchStallRestart(stuckAt = 948_000L).join()
+        assertEquals(2, source.startCalls)
+
+        val verdict = service.filterStallRestartVerifier.onStallDecision(filterHeight = 948_000L, nowMs = Long.MAX_VALUE / 2)
+        assertTrue("armed by the restart", verdict is FilterStallRestartVerifier.Verdict.NotRecovered)
+        assertTrue((verdict as FilterStallRestartVerifier.Verdict.NotRecovered).sameHeight)
+        service.stop()
+    }
+
+    /**
      * The ordering the review named: the restart's own stop is parked inside
      * the native `stopSpv` when the foreground service's teardown calls
      * `stop()`. That external stop queues behind ours on the mutex and, once
@@ -1326,6 +1503,81 @@ class L1ShadowSyncServiceTest {
 
         assertEquals(1, source.startCalls)
         assertFalse(service.isShadowSpvRunning())
+    }
+
+    // ── engine-start hold: engineStartingSinceMs ───────────────────────
+
+    @Test
+    fun startMarker_spansTheStart_andIsClearedWhenItReturns() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        var seenAtStartSpv = -1L
+        source.onStart = { seenAtStartSpv = service.engineStartingSinceMs() }
+
+        assertTrue(service.startIfEnabled())
+        assertEquals(1_000_000L, seenAtStartSpv)
+        assertEquals(0L, service.engineStartingSinceMs())
+    }
+
+    @Test
+    fun startMarker_ofAQueuedStart_survivesTheEndOfTheStartBeforeIt() = runBlocking {
+        // A start that fails leaves the engine down, so the start queued on the
+        // mutex behind it runs a full start of its own. The first start's clear
+        // used to run after the lock was released, wiping the second's marker
+        // while the second was still inside its bring-up.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val firstGate = CompletableDeferred<Unit>()
+        val secondEntered = CompletableDeferred<Unit>()
+        val secondGate = CompletableDeferred<Unit>()
+        source.onStartWalletSubsystems = {
+            if (source.subsystemsCalls == 1) {
+                firstGate.await()
+            } else {
+                secondEntered.complete(Unit)
+                secondGate.await()
+            }
+            null
+        }
+        source.onStart = { if (source.startCalls == 1) throw IllegalStateException("first start fails") }
+
+        // The first start runs on this test's event loop, the second unconfined:
+        // releasing the mutex then runs the second start, up to its bring-up,
+        // before the first start's own code after the lock resumes.
+        val first = launch { service.startIfEnabled() }
+        withTimeout(5_000) { while (source.subsystemsCalls == 0) delay(5) }
+        val second = scope.async { service.startIfEnabled() }
+        delay(20) // the second start is now queued on the mutex
+        firstGate.complete(Unit)
+        withTimeout(5_000) { first.join(); secondEntered.await() }
+
+        assertEquals("the second start is in flight and owns the marker", 1_000_000L, service.engineStartingSinceMs())
+        secondGate.complete(Unit)
+        assertTrue(withTimeout(5_000) { second.await() })
+        assertEquals(0L, service.engineStartingSinceMs())
+    }
+
+    @Test
+    fun startMarker_coversTheInPlaceRestartAndTheResetRestart() = runBlocking {
+        // Both restart the SPV client without going through startIfEnabled, and
+        // its start loads the stored header chain just the same.
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val seenAtStartSpv = mutableListOf<Long>()
+        source.onStart = {
+            seenAtStartSpv += service.engineStartingSinceMs()
+            source.spvRunning = true
+        }
+        assertTrue(service.startIfEnabled())
+
+        source.spvRunning = false // stopped underneath, the latch survives
+        assertTrue(service.ensureSpvRunning())
+        assertEquals(0L, service.engineStartingSinceMs())
+
+        assertTrue(service.resetShadowState(hard = false))
+        assertEquals(0L, service.engineStartingSinceMs())
+
+        assertEquals(listOf(1_000_000L, 1_000_000L, 1_000_000L), seenAtStartSpv)
     }
 
     // ── ensureSpvRunning: the shield-from-wallet broadcast guard ───────
@@ -1876,6 +2128,52 @@ class L1ShadowSyncServiceTest {
         dashjChainHead = 1_511_575
     }
 
+    // ── durable synced height: refreshed on its own clock ─────────────
+
+    @Test
+    fun durableHeight_followsThePersisterWhileProgressStaysSynced() = runBlocking {
+        // The scan has reported SYNCED and the progress feed, change-gated,
+        // emits nothing more, while the SDK keeps persisting its watermark.
+        val source = FakeSource(boundWalletId = walletIdHex).apply { durableHeight = 2_400_000L }
+        source.progressFlow.value = synced
+        val service = service(source, durableHeightRefreshMs = 20)
+        assertTrue(service.startIfEnabled())
+        assertEquals("seeded at start", 2_400_000L, service.durableSyncedHeight())
+
+        for (height in listOf(2_410_000L, 2_420_000L, 2_430_000L)) {
+            source.durableHeight = height
+            withTimeout(5_000) { while (service.durableSyncedHeight() != height) delay(5) }
+        }
+        service.stop()
+    }
+
+    @Test
+    fun durableHeight_refreshStopsWithTheService_andALateReadIsDropped() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply { durableHeight = 2_400_000L }
+        val service = service(source, durableHeightRefreshMs = 20)
+        assertTrue(service.startIfEnabled())
+        // A refresh parked inside its read while the service stops.
+        val readEntered = CompletableDeferred<Unit>()
+        val readRelease = java.util.concurrent.CountDownLatch(1)
+        source.onDurableRead = {
+            if (!readEntered.isCompleted) {
+                readEntered.complete(Unit)
+                readRelease.await()
+            }
+        }
+        source.durableHeight = 2_500_000L
+        withTimeout(5_000) { readEntered.await() }
+
+        service.stop()
+        readRelease.countDown()
+        delay(100)
+        assertEquals("reset on stop; the late read must not land", 0L, service.durableSyncedHeight())
+
+        val readsAfterStop = source.durableReads
+        delay(100)
+        assertEquals("no refresh runs after stop", readsAfterStop, source.durableReads)
+    }
+
     @Test
     fun probeParity_inflatedMismatch_logsTheRebuildVerdict_butNeverRebuilds() = runBlocking {
         // The automatic SDK-wallet rebuild is retired (no-fallback cutover
@@ -2270,6 +2568,202 @@ class L1ShadowSyncServiceTest {
             while (source.startCalls < 2) delay(5)
         }
         assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_dropsThePaidHistoryMarkerBeforeTheSdkWalletIsRemoved() = runBlocking {
+        // PR #1608 review, round 12: the marker names the seed-derived wallet,
+        // and the re-created SDK wallet has the same id. Kept, it would vouch
+        // for the empty store that replaces the deleted one, and a payment made
+        // before (outside the paid-address file) would look unpaid.
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        var markerOnDiskWhenRemoved: Boolean? = null
+        recreator.onRemove = {
+            markerOnDiskWhenRemoved = PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex)
+        }
+        val service = service(source, recreator = recreator, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
+        assertTrue(service.startIfEnabled())
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertEquals(false, markerOnDiskWhenRemoved)
+        assertFalse(store.paidHistoryKnown(walletIdHex))
+        // The re-created wallet (same id) is not vouched for after a restart either.
+        assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusesWhenThePaidHistoryMarkerCannotBeDropped() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, contactPaidHistory = undroppablePaidHistory)
+
+        assertFalse(service.recoverByRecreatingWallet())
+
+        assertTrue(recreator.removedWalletIds.isEmpty())
+        assertFalse(recreator.events.contains("rebind"))
+    }
+
+    @Test
+    fun resetShadowState_dropsThePaidHistoryMarkerBeforeTheL1Rows_andRefusesWhenItCannot() = runBlocking {
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
+        val store = PaidContactAddressStore(paidFile)
+        var droppable = false
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var markerOnDiskWhenRowsCleared: Boolean? = null
+        source.onClearRows = {
+            markerOnDiskWhenRowsCleared = PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex)
+        }
+        val service = service(
+            source,
+            contactPaidHistory = object : ContactPaidHistoryInvalidation {
+                override suspend fun begin(walletIdHex: String) = droppable && store.beginHistoryInvalidation(walletIdHex)
+                override suspend fun end(walletIdHex: String) = !droppable || store.endHistoryInvalidation(walletIdHex)
+            }
+        )
+        assertTrue(service.startIfEnabled())
+
+        assertFalse(service.resetShadowState(hard = true))
+        assertEquals(0, source.clearL1RowsCalls)
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+
+        droppable = true
+        assertTrue(service.resetShadowState(hard = true))
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(false, markerOnDiskWhenRowsCleared)
+        assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    /** A marker that cannot be dropped: every deletion is refused. */
+    private val undroppablePaidHistory = object : ContactPaidHistoryInvalidation {
+        override suspend fun begin(walletIdHex: String) = false
+        override suspend fun end(walletIdHex: String) = false
+    }
+
+    /**
+     * A contact lookup that STARTS now: reads the marker's generation, finds
+     * the wallet processed through the tip (the old store is still there to
+     * read) and records the marker. Whether it was recorded, and whether a
+     * process exiting right after would find it on disk.
+     */
+    private fun lookupStartingNow(store: PaidContactAddressStore, paidFile: File): Pair<Boolean, Boolean> {
+        val recorded = store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration())
+        return recorded to PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex)
+    }
+
+    @Test
+    fun resetShadowState_aLookupStartingAfterTheFirstDrop_cannotRecordTheMarker_untilTheRowsAreGone() = runBlocking {
+        // PR #1608 review, round 14: a lookup that starts after the marker is
+        // dropped but before the rows are deleted reads the old rows, still
+        // through the tip. Recorded then, a process exit before the second
+        // drop (or a failed one) leaves a marker vouching for empty rows.
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var duringDeletion: Pair<Boolean, Boolean>? = null
+        source.onClearRows = { duringDeletion = lookupStartingNow(store, paidFile) }
+        val service = service(source, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
+        assertTrue(service.startIfEnabled())
+
+        assertTrue(service.resetShadowState(hard = true))
+
+        assertEquals("not recorded, nor on disk", false to false, duringDeletion)
+        assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+        // Once the reset is over, the rebuilt rows can be vouched for again.
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun resetShadowState_thatFails_reopensTheMarker() = runBlocking {
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.onClearRows = { throw IllegalStateException("Room delete failed") }
+        val service = service(source, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
+        assertTrue(service.startIfEnabled())
+
+        assertFalse(service.resetShadowState(hard = true))
+
+        assertEquals(1, source.clearL1RowsCalls)
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_aLookupStartingAfterTheFirstDrop_cannotRecordTheMarker_untilTheWalletIsGone() =
+        runBlocking {
+            val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+            PaidContactAddressStore(paidFile).markPaidHistoryKnownNow(walletIdHex)
+            val store = PaidContactAddressStore(paidFile)
+            val source = FakeSource(boundWalletId = walletIdHex)
+            val recreator = FakeRecreator()
+            var beforeRemoval: Pair<Boolean, Boolean>? = null
+            var beforeLatchReset: Pair<Boolean, Boolean>? = null
+            recreator.onRemove = { beforeRemoval = lookupStartingNow(store, paidFile) }
+            recreator.onBinderReset = { beforeLatchReset = lookupStartingNow(store, paidFile) }
+            val service = service(
+                source,
+                recreator = recreator,
+                contactPaidHistory = ContactPaidHistoryInvalidation.of { store }
+            )
+            assertTrue(service.startIfEnabled())
+
+            assertTrue(service.recoverByRecreatingWallet())
+
+            assertEquals("not recorded, nor on disk", false to false, beforeRemoval)
+            assertEquals("the discovery latch is still set", false to false, beforeLatchReset)
+            assertFalse(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+            assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        }
+
+    @Test
+    fun recoverByRecreatingWallet_thatFails_reopensTheMarker() = runBlocking {
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        recreator.onRemove = { throw IllegalStateException("native removeWallet failed") }
+        val service = service(source, recreator = recreator, contactPaidHistory = ContactPaidHistoryInvalidation.of { store })
+        assertTrue(service.startIfEnabled())
+
+        assertFalse(service.recoverByRecreatingWallet())
+
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
+        assertTrue(PaidContactAddressStore(paidFile).paidHistoryKnown(walletIdHex))
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusedBecauseTheMarkerCannotBeDropped_reopensTheMarker() = runBlocking {
+        // The store's own drop fails (unreadable file); the refusal must not
+        // hold the marker closed for the rest of the process.
+        val paidFile = dataDir.resolve(PaidContactAddressStore.FILE_NAME)
+        val store = PaidContactAddressStore(paidFile)
+        var failDrops = true
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(
+            source,
+            recreator = recreator,
+            contactPaidHistory = object : ContactPaidHistoryInvalidation {
+                override suspend fun begin(walletIdHex: String) =
+                    store.beginHistoryInvalidation(walletIdHex) && !failDrops
+                override suspend fun end(walletIdHex: String) = store.endHistoryInvalidation(walletIdHex)
+            }
+        )
+
+        assertFalse(service.recoverByRecreatingWallet())
+        assertTrue(recreator.removedWalletIds.isEmpty())
+
+        failDrops = false
+        assertTrue(store.markPaidHistoryKnown(walletIdHex, store.paidHistoryGeneration()))
     }
 
     @Test
@@ -2991,6 +3485,92 @@ class L1ShadowSyncServiceTest {
         )
     }
 
+    // ── The session's work, not the whole chain (Joel, 2026-09-25) ──────
+
+    /**
+     * The reference install's 2026-09-24 pass: the DashPay backfill rewound
+     * the filter cursor to 2,167,092 under a 2,544,483 tip. Over the whole
+     * chain that read 95.1% at the start and crept to 99.9% over three hours;
+     * over the session's own work it starts at 0 and 99.1 / 99.9 mean what
+     * they say.
+     */
+    @Test
+    fun shadowSyncPercent_measuresTheSessionsWork_notTheWholeChain() {
+        val tip = 2_544_483L
+        val floor = 2_167_092L
+        fun at(filters: Long) = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.0, tip, tip, filters, tip,
+            sessionHeaderStart = tip, sessionFilterStart = floor
+        )
+        assertEquals(0, shadowSyncPermille(at(floor)))
+        assertEquals(0, shadowSyncPercent(at(floor)))
+        // Half the 377,391 filters of work: 2,355,787.
+        assertEquals(500, shadowSyncPermille(at(floor + 188_696)))
+        assertEquals(50, shadowSyncPercent(at(floor + 188_696)))
+        // 99.1% of the work done — the tenths are the figure the header shows.
+        assertEquals(991, shadowSyncPermille(at(floor + 374_000)))
+        assertEquals(99, shadowSyncPercent(at(floor + 374_000)))
+        // Three short of the tip: inside the caught-up tolerance? No (2 blocks) — 99.9, not 100.
+        assertEquals(999, shadowSyncPermille(at(tip - 3)))
+        assertEquals(99, shadowSyncPercent(at(tip - 3)))
+        // Within tolerance: caught up, and only then 100.
+        assertEquals(1000, shadowSyncPermille(at(tip - 2)))
+        assertEquals(100, shadowSyncPercent(at(tip - 2)))
+
+        // The 27,000-block re-walk every launch pays (§38.2): 0 → 100 over
+        // the re-walk, instead of 99 the whole way.
+        val reWalk = ShadowSyncProgress(
+            ShadowSyncPhase.FILTERS, 0.0, 1_558_891, 1_558_891, 1_545_000, 1_558_891,
+            sessionHeaderStart = 1_558_891, sessionFilterStart = 1_532_171
+        )
+        assertEquals(480, shadowSyncPermille(reWalk))
+        // Whole-chain reading of the same snapshot, for the record.
+        assertEquals(995, shadowSyncPermille(reWalk.copy(sessionHeaderStart = 0, sessionFilterStart = 0)))
+
+        // No floor recorded (a fresh restore, an old snapshot): the whole-chain ratio, as before.
+        assertEquals(750, shadowSyncPermille(ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.5, 100, 100, 50, 100)))
+        // A floor above the cursor (a rewind the floor has not caught up with yet) cannot go negative.
+        assertEquals(0, shadowSyncPermille(at(floor).copy(sessionFilterStart = floor + 10_000)))
+    }
+
+    @Test
+    fun progressFeed_anchorsTheSessionAtTheLowestCursorSeen_andEveryStopResetsIt() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        val tip = 2_544_483L
+        fun filtersAt(h: Long) = syncing(
+            headers = sub(SpvSyncState.SYNCED, tip, tip),
+            filters = sub(SpvSyncState.SYNCING, h, tip)
+        )
+
+        // First snapshot reads the wallet's stored height…
+        source.progressFlow.value = filtersAt(2_277_092)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_277_092L) delay(5) }
+        assertEquals(2_277_092L, service.progress.value.sessionFilterStart)
+        assertEquals(tip, service.progress.value.sessionHeaderStart)
+        // …then the backfill rewinds the cursor below it: the floor follows.
+        source.progressFlow.value = filtersAt(2_167_092)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_167_092L) delay(5) }
+        assertEquals(2_167_092L, service.progress.value.sessionFilterStart)
+        assertEquals(0, shadowSyncPermille(service.progress.value))
+        // Progress is measured from the floor, not from 0.
+        source.progressFlow.value = filtersAt(2_355_788)
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 2_355_788L) delay(5) }
+        assertEquals(2_167_092L, service.progress.value.sessionFilterStart)
+        assertEquals(500, shadowSyncPermille(service.progress.value))
+
+        // A stop ends the session; the next one measures its own work.
+        service.stop()
+        assertEquals(0L, service.progress.value.sessionFilterStart)
+        source.progressFlow.value = SpvSyncProgressData.EMPTY // a stopped engine reports nothing
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = filtersAt(2_400_000)
+        withTimeout(5_000) { while (service.progress.value.sessionFilterStart != 2_400_000L) delay(5) }
+        assertEquals(tip, service.progress.value.sessionHeaderStart)
+        service.stop()
+    }
+
     // ── shadowSyncPercent (post-cutover home "Syncing N%" source) ─────
 
     @Test
@@ -3296,5 +3876,1223 @@ class L1ShadowSyncServiceTest {
         )
         assertEquals("the probe must not run against a frozen engine", 0, probes)
         service.stop()
+    }
+
+    // ── Transaction-level parity breakdown (service-level) ────────────
+
+    private val sharedTxid = Sha256Hash.wrap("11".repeat(32))
+    private val dashjOnlyTxid = Sha256Hash.wrap("22".repeat(32))
+
+    private fun breakdownSource() = FakeSource(boundWalletId = walletIdHex).apply {
+        // The SDK has processed every block through dashj's last block seen.
+        walletSyncedHeight = 1_000
+        sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, null))
+        dashjFacts = DashjBreakdownFacts(
+            lastBlockSeenHeight = 1_000,
+            txs = listOf(DashjTxFacts(sharedTxid, 900), DashjTxFacts(dashjOnlyTxid, 950, netDuffs = -5))
+        )
+    }
+
+    /** Re-drive SYNCED edges (each pings the parity loop) until [done] or the timeout. */
+    private suspend fun FakeSource.driveSyncedEdgesUntil(done: () -> Boolean) {
+        withTimeout(5_000) {
+            while (!done()) {
+                progressFlow.value = SpvSyncProgressData.EMPTY
+                progressFlow.value = synced
+                delay(10)
+            }
+        }
+    }
+
+    /** Start [service] and wait until its progress monitor has mapped a caught-up snapshot. */
+    private suspend fun L1ShadowSyncService.startSynced(source: FakeSource) {
+        assertTrue(startIfEnabled())
+        source.progressFlow.value = synced
+        withTimeout(5_000) {
+            while (!progress.value.synced) delay(10)
+        }
+    }
+
+    private val previouslyStored = StoredParityBreakdown(walletIdHex, 500L, "ParityBreakdown from an earlier run")
+
+    /**
+     * Equality on what the breakdown FILE can carry. `findings` is in-memory
+     * only — a breakdown restored after a restart has none — so comparing a
+     * freshly computed result against a round-tripped one must ignore it.
+     * These assertions are about WHICH breakdown is kept, not about findings.
+     */
+    private fun assertSameStored(
+        message: String? = null,
+        expected: StoredParityBreakdown?,
+        actual: StoredParityBreakdown?
+    ) {
+        val e = expected?.copy(findings = null)
+        val a = actual?.copy(findings = null)
+        if (message != null) assertEquals(message, e, a) else assertEquals(e, a)
+    }
+
+    private fun storeWithPreviousResult() =
+        ParityBreakdownStore(dataDir.resolve("breakdown.txt")).also { it.save(previouslyStored) }
+
+    @Test
+    fun heldDashj_noBackgroundRun_butAReportComputesAFreshBreakdown() = runBlocking {
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+        // Probe-loop ticks while dashj is held: no background run any more.
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(0, source.breakdownDashjCalls)
+
+        val report = service.parityBreakdownForReport()
+        assertTrue(report.applicable)
+        assertNull(report.notRefreshedReason)
+        val fresh = checkNotNull(report.stored)
+        assertTrue(fresh.text, fresh.text.startsWith("ParityBreakdown "))
+        assertTrue(fresh.text, fresh.text.contains("trigger=report dashjLastBlockSeenHeight=1000"))
+        assertTrue(fresh.text, fresh.text.contains("| shared=1"))
+        assertTrue(fresh.text, fresh.text.contains("moves-money=1 net=-5"))
+        assertEquals(1, source.breakdownDashjCalls)
+        // Kept for a later report to fall back on.
+        assertSameStored(expected = fresh, actual = ParityBreakdownStore(file).load())
+        assertSameStored(expected = fresh, actual = service.latestParityBreakdown(walletIdHex))
+        service.stop()
+    }
+
+    @Test
+    fun ledgerRebuild_discardsTheFindings_theStoredBreakdown_andTheHourlyCadence() = runBlocking {
+        // A clean sheet describes the ledger that the reset is about to
+        // delete. Carrying it across the rebuild let the diagnostic publish
+        // MATCH for a freshly rebuilt ledger nothing had yet compared.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull("the run publishes findings", service.latestBreakdownFindings.value)
+        assertTrue(file.exists())
+
+        assertTrue(service.resetShadowState(hard = true))
+
+        assertNull("findings must not survive the rebuild", service.latestBreakdownFindings.value)
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        assertNull("the stored breakdown describes the deleted ledger", ParityBreakdownStore(file).load())
+        // The cadence was reset too: once the restarted sync is caught up a
+        // fresh breakdown may run at once, instead of leaving the verdict
+        // unestablished for the rest of the hour.
+        source.driveSyncedEdgesUntil { service.progress.value.synced }
+        val after = service.parityBreakdownForReport()
+        assertNotNull(after.notRefreshedReason ?: "", after.stored)
+        assertEquals(2, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    @Test
+    fun aBreakdownRequestedMidReset_isRefused_andCannotPublishTheDeletedLedger() = runBlocking {
+        // The discard fenced the runs that existed, but the reset still had to
+        // stop SPV before deleting the rows, and the shadow read as running and
+        // caught up meanwhile. A report in that gap started a run under the new
+        // epoch that read the OLD ledger; finishing after the deletion it
+        // passed every check — clean findings for rows that were gone, and the
+        // hourly slot spent on them.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null } // the probe took the hour
+        val runsBefore = source.breakdownDashjCalls
+
+        // The reset parks in stopSpv: past its discard, before the rows go.
+        val inStop = CompletableDeferred<Unit>()
+        val stopGate = CompletableDeferred<Unit>()
+        source.onStop = {
+            inStop.complete(Unit)
+            stopGate.await()
+        }
+        // A run that got in would have read the old ledger; hold it until the rows are gone.
+        val runGate = CompletableDeferred<Unit>()
+        source.onDashjBreakdownFacts = { runGate.await() }
+        val reset = scope.async { service.resetShadowState(hard = true) }
+        withTimeout(5_000) { inStop.await() }
+        assertTrue("the reset is waiting with the old ledger still in place", service.progress.value.synced)
+
+        val report = withTimeout(5_000) { service.parityBreakdownForReport(timeoutMs = 100) }
+
+        stopGate.complete(Unit)
+        assertTrue(withTimeout(5_000) { reset.await() })
+        assertEquals(1, source.clearL1RowsCalls)
+        source.onStop = {}
+        runGate.complete(Unit) // a run admitted mid-reset would finish now, after the deletion
+        delay(100)
+
+        assertNull("nothing may publish the deleted ledger", service.latestBreakdownFindings.value)
+        assertNull("nor store it", ParityBreakdownStore(file).load())
+        assertEquals("no run may start mid-reset", runsBefore, source.breakdownDashjCalls)
+        assertEquals(ReportParityBreakdown(null, PARITY_BREAKDOWN_LEDGER_REBUILD), report)
+
+        // Reopened, with the hour still free: once the restarted sync is caught
+        // up the probe recomputes at once and its findings are published.
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls > runsBefore }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aFailedReset_reopensTheBreakdown() = runBlocking {
+        // The refusal lasts for the reset, not for the process: a reset that
+        // throws partway must not leave every later report "reset in progress".
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        source.onClearRows = { throw IllegalStateException("row delete failed") }
+
+        assertFalse(service.resetShadowState(hard = true))
+
+        source.onClearRows = {}
+        source.driveSyncedEdgesUntil { service.progress.value.synced }
+        val after = service.parityBreakdownForReport()
+        assertNull(after.notRefreshedReason, after.notRefreshedReason)
+        assertNotNull(after.stored)
+        service.stop()
+    }
+
+    @Test
+    fun aNewTransaction_expiresTheFindings_butKeepsTheStoredBreakdown() = runBlocking {
+        // The findings described a history that did not contain this
+        // transaction, so they cannot establish parity for the one that does.
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+        val computed = checkNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+        withTimeout(5_000) { while (source.eventStrings.subscriptionCount.value == 0) delay(10) }
+
+        source.eventStrings.emit(detectedDebug())
+
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value != null) delay(10) }
+        // The stored text is a timestamped account of the moment it was
+        // computed and still belongs in a support report; only the verdict's
+        // input went.
+        assertSameStored(expected = computed, actual = ParityBreakdownStore(file).load())
+        assertSameStored(expected = computed, actual = service.latestParityBreakdown(walletIdHex))
+        // And a run against the new state restores them.
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    /** A non-transaction event: once its emit returns, every event before it has been handled. */
+    private suspend fun FakeSource.awaitEventsHandled() {
+        eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 1000 }")
+    }
+
+    private suspend fun FakeSource.awaitEventTap() {
+        withTimeout(5_000) { while (eventStrings.subscriptionCount.value == 0) delay(10) }
+    }
+
+    @Test
+    fun aTransactionDuringTheFirstRun_publishesNoFindings_andDoesNotTakeTheHour() = runBlocking {
+        // The first run of the process: nothing completed yet, so there was
+        // nothing to expire, and the old early return let the run that had
+        // already read its inputs publish a clean sheet for a history that
+        // never contained the new transaction.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        val source = breakdownSource().apply {
+            onDashjBreakdownFacts = {
+                inside.complete(Unit)
+                gate.await()
+            }
+        }
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { inside.isCompleted } // the first run has read the SDK side
+
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+        gate.complete(Unit)
+
+        withTimeout(5_000) { while (service.latestParityBreakdown(walletIdHex) == null) delay(10) }
+        delay(50) // let the run's completion (cadence update) finish too
+        assertNull("a run that predates the transaction must not publish", service.latestBreakdownFindings.value)
+        assertNotNull("its text is still kept for reports", service.latestParityBreakdown(walletIdHex))
+
+        // It did not take the hour either: once the settle window is over the
+        // probe recomputes, and that run's findings are published.
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aTransactionDuringALaterRun_cannotBringTheCleanSheetBack() = runBlocking {
+        // A completed run took the hour; a second one (for a report) reads its
+        // inputs, a transaction arrives and expires the findings, and then the
+        // second run finishes. It must neither republish findings for the old
+        // history nor re-arm the hourly slot the event released.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        source.onDashjBreakdownFacts = {
+            inside.complete(Unit)
+            gate.await()
+        }
+        val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
+        withTimeout(5_000) { inside.await() }
+
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+        assertNull(service.latestBreakdownFindings.value)
+
+        gate.complete(Unit)
+        val result = withTimeout(5_000) { report.await() }
+        assertNull(result.notRefreshedReason)
+        val stored = checkNotNull(result.stored) { "the report still gets the run's text" }
+        assertSameStored(expected = stored, actual = service.latestParityBreakdown(walletIdHex))
+        delay(50) // let the run's completion (cadence update) finish too
+        assertNull("the stale run must not publish", service.latestBreakdownFindings.value)
+
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 3 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aBurstOfTransactions_extendsTheSettleWindowToTheLastOne() = runBlocking {
+        // One CoinJoin round is a burst of events. Each one moves the window,
+        // so the recompute runs once, after the burst, not partway through it.
+        val t0 = 1_000_000L
+        val clock = java.util.concurrent.atomic.AtomicLong(t0)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        val settle = L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS
+
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+        assertNull(service.latestBreakdownFindings.value)
+
+        // The second event finds nothing left to expire, but still moves the window.
+        clock.set(t0 + settle - 10_000)
+        source.eventStrings.emit(detectedDebug())
+        source.awaitEventsHandled()
+
+        clock.set(t0 + settle + 10_000) // past the first event's window, inside the second's
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("no recompute while the burst's window is open", 1, source.breakdownDashjCalls)
+
+        clock.set(t0 + 2 * settle) // past the second event's window
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        service.stop()
+    }
+
+    /** A `TransactionRecord` Debug string as it appears in a `BlockProcessed` list. */
+    private fun blockRecord(height: Int): String =
+        "TransactionRecord { txid: 0x$recordTxid, account_type: Standard { index: 0, " +
+            "standard_account_type: BIP44 }, context: InBlock(BlockInfo { height: $height }), " +
+            "direction: Incoming, net_amount: 1000000, fee: None, label: \"\" }"
+
+    /** `WalletEvent::BlockProcessed` that stores and/or confirms the record. */
+    private fun blockProcessedWithRecords(
+        inserted: Boolean = false,
+        updated: Boolean = false,
+        matured: Boolean = false,
+        height: Int = 1_200_000
+    ): String {
+        fun list(present: Boolean) = if (present) "[${blockRecord(height)}]" else "[]"
+        return "BlockProcessed { wallet_id: WalletId([205, 205, 205]), height: $height, " +
+            "chain_lock: None, inserted: ${list(inserted)}, updated: ${list(updated)}, " +
+            "matured: ${list(matured)}, " +
+            "balance: WalletCoreBalance { confirmed: 1000000, unconfirmed: 0, immature: 0, locked: 0 }, " +
+            "account_balances: {}, addresses_derived: [] }"
+    }
+
+    @Test
+    fun eventChangesTxHistory_onlyWhenABlockStoresOrConfirmsARecord() {
+        assertTrue(l1EventChangesTxHistory(blockProcessedWithRecords(inserted = true)))
+        assertTrue(l1EventChangesTxHistory(blockProcessedWithRecords(updated = true)))
+        assertTrue(l1EventChangesTxHistory(blockProcessedWithRecords(inserted = true, updated = true)))
+        // Pretty-printed `{:#?}` lists.
+        assertTrue(
+            l1EventChangesTxHistory(
+                "BlockProcessed {\n    inserted: [],\n    updated: [\n        TransactionRecord {\n" +
+                    "            txid: 0x$recordTxid,\n        },\n    ],\n    matured: [],\n}"
+            )
+        )
+        assertFalse(
+            l1EventChangesTxHistory("BlockProcessed {\n    inserted: [],\n    updated: [],\n}")
+        )
+        // Most blocks carry nothing for the wallet; chainlocked or not, they change nothing.
+        assertFalse(l1EventChangesTxHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = null)))
+        assertFalse(
+            l1EventChangesTxHistory(blockProcessedDebug(height = 1_200_000, chainLockHeight = 1_200_000))
+        )
+        // A maturing coinbase changes neither membership nor a net value.
+        assertFalse(l1EventChangesTxHistory(blockProcessedWithRecords(matured = true)))
+        // A format whose lists cannot be found must cost a recompute, not keep a stale verdict.
+        assertTrue(l1EventChangesTxHistory("BlockProcessed { wallet_id: WalletId([1]), height: 7 }"))
+        // Other variants belong to other feeds.
+        assertFalse(l1EventChangesTxHistory(detectedDebug()))
+        assertFalse(l1EventChangesTxHistory(instantLockedDebug()))
+        assertFalse(l1EventChangesTxHistory("SyncHeightAdvanced { wallet_id: WalletId([1]), height: 7 }"))
+        assertFalse(l1EventChangesTxHistory(chainLockProcessedDebug(1_200_000)))
+        assertFalse(l1EventChangesTxHistory("not an event at all"))
+    }
+
+    /** `WalletEvent::TransactionsSwept` Debug string removing [count] records. */
+    private fun transactionsSweptDebug(count: Int): String {
+        val txids = (0 until count).joinToString(", ") { "0x" + "%064x".format(it + 1) }
+        return "TransactionsSwept { wallet_id: WalletId([205, 205, 205]), txids: [$txids], " +
+            "superseded_by: 0x$recordTxid, winner_mined_height: Some(1200000), " +
+            "released_outpoints: [OutPoint { txid: 0x$inputTxid, vout: 1 }], " +
+            "balance: WalletCoreBalance { confirmed: 1000000, unconfirmed: 0, immature: 0, locked: 0 }, " +
+            "account_balances: {} }"
+    }
+
+    @Test
+    fun eventChangesTxHistory_whenASweepRemovesRecords() {
+        assertTrue(l1EventChangesTxHistory(transactionsSweptDebug(1)))
+        assertTrue(l1EventChangesTxHistory(transactionsSweptDebug(3)))
+        assertTrue(
+            l1EventChangesTxHistory(
+                "TransactionsSwept {\n    wallet_id: WalletId([1]),\n    txids: [\n        0x$recordTxid,\n    ],\n}"
+            )
+        )
+        // A sweep that removed nothing changes nothing.
+        assertFalse(l1EventChangesTxHistory(transactionsSweptDebug(0)))
+        // A format whose list cannot be found must cost a recompute.
+        assertTrue(l1EventChangesTxHistory("TransactionsSwept { wallet_id: WalletId([1]) }"))
+        // The sweep is not an instant-receive event either.
+        assertNull(parseL1TxEvent(transactionsSweptDebug(1)))
+    }
+
+    /**
+     * Review, PR #1605: a confirmation arrives as `BlockProcessed`, which the
+     * instant-receive parser drops. A breakdown that ran while a shared tx was
+     * unconfirmed on both sides left it out of the value comparison; once a
+     * block confirms it, that clean sheet no longer covers the history — and a
+     * run that read its inputs before the block must not publish either. The
+     * same holds for a `TransactionsSwept` that removed records.
+     */
+    private fun assertAnEventStopsTheFindings(historyEvent: String) {
+        var forwarded: List<L1TxEvent> = emptyList()
+        assertAHistoryChangeStopsTheFindings(
+            change = { source, _ ->
+                source.eventStrings.emit(historyEvent)
+                source.awaitEventsHandled()
+            },
+            forwardedEvents = { forwarded = it }
+        )
+        assertTrue("the instant-receive feed is unchanged", forwarded.isEmpty())
+    }
+
+    /**
+     * The shared shape of [assertAnEventStopsTheFindings]: a completed run's
+     * findings are expired by [change], a run that read its inputs before it
+     * does not publish, and a run after the settle window does. The engine
+     * events forwarded meanwhile go to [forwardedEvents].
+     */
+    private fun assertAHistoryChangeStopsTheFindings(
+        change: suspend (FakeSource, L1ShadowSyncService) -> Unit,
+        forwardedEvents: (List<L1TxEvent>) -> Unit = {}
+    ): Unit = runBlocking {
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        val forwarded = mutableListOf<L1TxEvent>()
+        val collector = scope.launch { service.txEvents.collect { forwarded += it } }
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        source.onDashjBreakdownFacts = {
+            inside.complete(Unit)
+            gate.await()
+        }
+        val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
+        withTimeout(5_000) { inside.await() }
+
+        change(source, service)
+        assertNull("the change expires the findings", service.latestBreakdownFindings.value)
+        forwardedEvents(forwarded.toList())
+
+        gate.complete(Unit)
+        val result = withTimeout(5_000) { report.await() }
+        assertNotNull("the report still gets the run's text", result.stored)
+        delay(50) // let the run's completion (cadence update) finish too
+        assertNull("a run that read its inputs before the change must not publish", service.latestBreakdownFindings.value)
+
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 3 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        collector.cancel()
+        service.stop()
+    }
+
+    @Test
+    fun aBlockThatStoresATransaction_expiresTheFindings_andFencesARunInFlight() {
+        assertAnEventStopsTheFindings(blockProcessedWithRecords(inserted = true))
+    }
+
+    @Test
+    fun aBlockThatConfirmsATransaction_expiresTheFindings_andFencesARunInFlight() {
+        assertAnEventStopsTheFindings(blockProcessedWithRecords(updated = true))
+    }
+
+    @Test
+    fun aSweepThatRemovesATransaction_expiresTheFindings_andFencesARunInFlight() {
+        assertAnEventStopsTheFindings(transactionsSweptDebug(1))
+    }
+
+    /**
+     * Review, PR #1605: the store walker's reattribution write-back rewrites
+     * stored nets — the exact column the breakdown compares — without any
+     * engine event. A run that read the wrong net before the repair must
+     * neither keep its findings nor publish them.
+     */
+    @Test
+    fun aRepairThatChangesAStoredNet_expiresTheFindings_andFencesARunInFlight() {
+        assertAHistoryChangeStopsTheFindings(change = { _, service -> service.storedNetsRepaired(1) })
+    }
+
+    @Test
+    fun aRepairAfterACompletedBreakdown_expiresTheFindings_andReleasesTheHour() = runBlocking {
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true,
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+        val computed = checkNotNull(service.latestParityBreakdown(walletIdHex))
+
+        service.storedNetsRepaired(2)
+
+        assertNull("the findings read the nets before the repair", service.latestBreakdownFindings.value)
+        // The text stays a true account of the moment it was computed.
+        assertSameStored(expected = computed, actual = service.latestParityBreakdown(walletIdHex))
+        // Not inside the settle window…
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        // …but the hour is released: past the window the probe recomputes.
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value == null) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun aRepairThatChangedNothing_leavesTheFindings() = runBlocking {
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        val findings = service.latestBreakdownFindings.value
+
+        service.storedNetsRepaired(0)
+
+        assertSame(findings, service.latestBreakdownFindings.value)
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("the hour is still taken", 1, source.breakdownDashjCalls)
+        assertSame(findings, service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
+    fun aBlockWithNoWalletTransactions_orAnEmptySweep_leavesTheFindings() = runBlocking {
+        // The engine emits one BlockProcessed per block; expiring on each would
+        // keep parity from ever being established.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = breakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        val findings = service.latestBreakdownFindings.value
+
+        source.eventStrings.emit(blockProcessedDebug(height = 1_200_000, chainLockHeight = null))
+        source.eventStrings.emit(blockProcessedDebug(height = 1_200_001, chainLockHeight = 1_200_001))
+        source.eventStrings.emit(blockProcessedWithRecords(matured = true, height = 1_200_002))
+        source.eventStrings.emit(transactionsSweptDebug(0))
+        source.awaitEventsHandled()
+
+        assertSame(findings, service.latestBreakdownFindings.value)
+        // Nor did they release the hour: no recompute on the next edges.
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        assertSame(findings, service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
+    fun walletRecreation_discardsTheFindingsToo() = runBlocking {
+        val file = dataDir.resolve("breakdown.txt")
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            recreator = FakeRecreator(),
+            breakdownStore = ParityBreakdownStore(file)
+        )
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        assertNull(service.latestBreakdownFindings.value)
+        assertNull(ParityBreakdownStore(file).load())
+        service.stop()
+    }
+
+    @Test
+    fun report_sdkNotSynced_fallsBackToTheStoredResultWithTheReason() = runBlocking {
+        val source = breakdownSource()
+        source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = storeWithPreviousResult()
+        )
+        assertTrue(service.startIfEnabled())
+
+        val report = service.parityBreakdownForReport()
+        assertEquals(ReportParityBreakdown(previouslyStored, "SDK not synced"), report)
+        assertEquals(0, source.breakdownDashjCalls)
+        service.stop()
+
+        // Nothing stored and the shadow not running: none, with the reason.
+        val fresh = service(FakeSource(), cutoverState = CutoverState.CUT_OVER.name)
+        assertEquals(ReportParityBreakdown(null, "SDK sync not running"), fresh.parityBreakdownForReport())
+    }
+
+    @Test
+    fun report_timeout_fallsBack_andTheRunFinishesInTheBackground() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val source = breakdownSource().apply { onDashjBreakdownFacts = { gate.await() } }
+        val store = storeWithPreviousResult()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
+        service.startSynced(source)
+
+        val report = service.parityBreakdownForReport(timeoutMs = 50)
+        assertEquals(ReportParityBreakdown(previouslyStored, "timed out after 0s"), report)
+
+        // A second report while it is still running joins the same run.
+        service.parityBreakdownForReport(timeoutMs = 20)
+        assertEquals(1, source.breakdownDashjCalls)
+
+        // The timed-out run was not cancelled: it completes, logs and stores.
+        gate.complete(Unit)
+        withTimeout(5_000) {
+            while (store.load() == previouslyStored) delay(10)
+        }
+        val finished = checkNotNull(store.load())
+        assertTrue(finished.text, finished.text.contains("trigger=report"))
+        assertSameStored(expected = finished, actual = service.latestParityBreakdown(walletIdHex))
+        service.stop()
+    }
+
+    @Test
+    fun report_failedRun_fallsBackWithTheReason() = runBlocking {
+        val source = breakdownSource().apply { onDashjBreakdownFacts = { throw IllegalStateException("boom") } }
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = storeWithPreviousResult()
+        )
+        service.startSynced(source)
+        assertEquals(
+            ReportParityBreakdown(previouslyStored, "failed (IllegalStateException: boom)"),
+            service.parityBreakdownForReport()
+        )
+        service.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_runsTheParityBreakdownWithTheProbeTrigger() = runBlocking {
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // the probe will not start one until dashj is up
+        source.driveSyncedEdgesUntil { service.latestParityBreakdown(walletIdHex) != null }
+        val text = checkNotNull(service.latestParityBreakdown(walletIdHex)).text
+        assertTrue(text, text.contains("trigger=probe"))
+        service.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_waitsForDashj_andAnUnusableRunDoesNotSpendTheHour() = runBlocking {
+        // D-27TA-01, found on build 33. The probe gated only on the SDK being
+        // caught up, so with dashj still downloading it ran, produced findings
+        // the verdict rejects for being older than dashj's catch-up moment, and
+        // recorded the run against the hourly cadence anyway. The readout then
+        // said "full parity not established" for up to an hour after it was —
+        // 49 and 52 minutes, measured on two wallets.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+
+        // dashj behind: the probe ticks and the breakdown does NOT start.
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("a run now could never become the verdict", 0, source.breakdownDashjCalls)
+
+        // dashj catches up at a moment LATER than anything this run can compute
+        // (nowMs is fixed at 1_000_000), so every result is unusable. The slot
+        // must stay free: a run that lost the race must not lock out the next.
+        service.dashjCaughtUp(2_000_000L)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+        val afterFirst = source.breakdownDashjCalls
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls > afterFirst }
+        service.stop()
+    }
+
+    @Test
+    fun diagnosticProbe_aUsableRunDoesTakeTheHour() = runBlocking {
+        // The other half: once the result IS one the verdict can accept, the
+        // hourly cadence must hold, or the fix would turn a wasted slot into a
+        // breakdown on every probe tick.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // well before the fixed 1_000_000 clock
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("the hour is spent, so no second run", 1, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    @Test
+    fun dashjFallingBehindAndCatchingUpAgain_releasesTheHourlySlot() = runBlocking {
+        // The other side of D-27TA-01. A good run takes the hour; dashj then
+        // falls behind and catches up again with a NEWER stamp, which makes the
+        // verdict reject those findings — and without releasing the slot no
+        // replacement may run for the rest of the hour, so the readout holds at
+        // "full parity not established" exactly as before the fix.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("the hour is spent", 1, source.breakdownDashjCalls)
+
+        // dashj drops out and comes back later than anything already computed.
+        service.dashjCaughtUp(null)
+        service.dashjCaughtUp(500_000L)
+
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 2 }
+        service.stop()
+    }
+
+    @Test
+    fun aStampThatDoesNotMoveForward_keepsTheHourlySlot() = runBlocking {
+        // The guard on the other side: re-announcing the SAME moment, or an
+        // older one, must not hand out a free run — that would turn every
+        // progress callback into a breakdown.
+        val source = breakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(500_000L)
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls >= 1 }
+
+        service.dashjCaughtUp(500_000L) // same moment: a no-op
+        service.dashjCaughtUp(400_000L) // older: must not release the slot either
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals("no second run", 1, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    @Test
+    fun noBreakdown_beforeTheCutoverWithTheDiagnosticOff() = runBlocking {
+        val source = breakdownSource()
+        // Pre-cutover, diagnostic off: the probe runs, the breakdown does not —
+        // neither in the background nor for a report.
+        val service = service(source, breakdownStore = storeWithPreviousResult())
+        service.startSynced(source)
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(ReportParityBreakdown.NOT_APPLICABLE, service.parityBreakdownForReport())
+        assertEquals(0, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    @Test
+    fun report_beforeTheCutoverWithTheDiagnosticOn_computesAFreshBreakdown() = runBlocking {
+        val source = breakdownSource()
+        val service = service(source, dashjDiagnostic = true)
+        service.startSynced(source)
+        val report = service.parityBreakdownForReport()
+        assertNull(report.notRefreshedReason)
+        assertTrue(checkNotNull(report.stored).text.contains("ParityBreakdown "))
+        service.stop()
+    }
+
+    @Test
+    fun parityBreakdown_unavailableSide_isSkippedAndBackedOff() = runBlocking {
+        val source = breakdownSource().apply { dashjFacts = null }
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, dashjDiagnostic = true)
+        assertTrue(service.startIfEnabled())
+        service.dashjCaughtUp(1L) // the probe will not start a run until dashj is up
+        source.driveSyncedEdgesUntil { source.breakdownDashjCalls > 0 }
+        repeat(5) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        // One attempt, then the retry back-off (the test clock stands still).
+        assertEquals(1, source.breakdownDashjCalls)
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        service.stop()
+    }
+
+    // ── Review fixes (#1601) ──────────────────────────────────────────
+
+    @Test
+    fun report_sdkStillProcessingTransactions_fallsBack_andKeepsTheStoredResult() = runBlocking {
+        // Caught up on the filter scan (synced), but the committed wallet
+        // height trails dashj's last block seen: transactions below it may
+        // still be on their way into the store.
+        val source = breakdownSource().apply { walletSyncedHeight = 990 }
+        val store = storeWithPreviousResult()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
+        service.startSynced(source)
+
+        val reason = "SDK still processing transactions (wallet height 990 < dashj 1000)"
+        assertEquals(ReportParityBreakdown(previouslyStored, reason), service.parityBreakdownForReport())
+        assertSameStored("the incomplete comparison must not replace the stored result", previouslyStored, store.load())
+        assertSameStored(expected = previouslyStored, actual = service.latestParityBreakdown(walletIdHex))
+
+        // With dashj's height known up front, neither side is even read.
+        source.dashjChainHead = 1_000
+        val readsBefore = source.breakdownDashjCalls
+        assertEquals(ReportParityBreakdown(previouslyStored, reason), service.parityBreakdownForReport())
+        assertEquals(readsBefore, source.breakdownDashjCalls)
+
+        // The pipeline commits through dashj's height: the next report is fresh.
+        source.eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 1000 }")
+        val report = service.parityBreakdownForReport()
+        assertNull(report.notRefreshedReason)
+        assertSameStored(expected = checkNotNull(report.stored), actual = store.load())
+        service.stop()
+    }
+
+    @Test
+    fun report_unknownWalletHeight_isNotFresh() = runBlocking {
+        val source = breakdownSource().apply { walletSyncedHeight = null }
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertEquals(
+            ReportParityBreakdown(null, "SDK still processing transactions (wallet height unknown, dashj 1000)"),
+            service.parityBreakdownForReport()
+        )
+        service.stop()
+    }
+
+    @Test
+    fun storedResult_ofAnotherWallet_isNeverShown() = runBlocking {
+        val otherWallet = "ef".repeat(32)
+        val store = ParityBreakdownStore(dataDir.resolve("breakdown.txt")).also {
+            it.save(StoredParityBreakdown(otherWallet, 500L, "ParityBreakdown of the previous wallet"))
+        }
+        val source = breakdownSource()
+        source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
+        assertTrue(service.startIfEnabled())
+
+        assertEquals(ReportParityBreakdown(null, "SDK not synced"), service.parityBreakdownForReport())
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        assertNotNull(service.latestParityBreakdown(otherWallet))
+        service.stop()
+    }
+
+    @Test
+    fun walletWipe_clearsTheStoredResult_andAnInFlightRunCannotWriteItBack() = runBlocking {
+        val file = dataDir.resolve("breakdown.txt")
+        val store = storeWithPreviousResult()
+        val gate = CompletableDeferred<Unit>()
+        val inside = CompletableDeferred<Unit>()
+        // A run that cannot be stopped in time (parked in a blocking read).
+        val source = breakdownSource().apply {
+            onDashjBreakdownFacts = {
+                inside.complete(Unit)
+                withContext(NonCancellable) { gate.await() }
+            }
+        }
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name, breakdownStore = store)
+        service.startSynced(source)
+        assertSameStored(expected = previouslyStored, actual = service.latestParityBreakdown(walletIdHex))
+
+        val report = scope.async { service.parityBreakdownForReport(timeoutMs = 5_000) }
+        withTimeout(5_000) { inside.await() }
+
+        service.clearForWalletWipe()
+        assertFalse("the wipe deletes the stored result", file.exists())
+        assertNull(service.latestParityBreakdown(walletIdHex))
+
+        gate.complete(Unit)
+        val afterWipe = withTimeout(5_000) { report.await() }
+        assertNull(afterWipe.stored)
+        assertNotNull(afterWipe.notRefreshedReason)
+        // Give a straggling write every chance to land, then check nothing did.
+        delay(50)
+        assertFalse("the run must not write the wiped wallet's result back", file.exists())
+        assertNull(service.latestParityBreakdown(walletIdHex))
+        assertNull(ParityBreakdownStore(file).load())
+        service.stop()
+    }
+
+    @Test
+    fun concurrentReports_shareOneRun() = runBlocking {
+        val inFlight = java.util.concurrent.atomic.AtomicInteger()
+        val maxInFlight = java.util.concurrent.atomic.AtomicInteger()
+        val source = breakdownSource()
+        val service = service(
+            source,
+            cutoverState = CutoverState.CUT_OVER.name,
+            breakdownStore = ParityBreakdownStore(dataDir.resolve("breakdown.txt"))
+        )
+        service.startSynced(source)
+        repeat(20) { round ->
+            val gate = CompletableDeferred<Unit>()
+            source.onDashjBreakdownFacts = {
+                maxInFlight.accumulateAndGet(inFlight.incrementAndGet(), ::maxOf)
+                try {
+                    gate.await()
+                } finally {
+                    inFlight.decrementAndGet()
+                }
+            }
+            val runsBefore = source.sdkTxidCalls.get()
+            // Many callers on real threads, racing to start the run.
+            val reports = (1..8).map {
+                async(Dispatchers.Default) { service.parityBreakdownForReport(timeoutMs = 5_000) }
+            }
+            withTimeout(5_000) { while (source.sdkTxidCalls.get() == runsBefore) delay(1) }
+            delay(20)
+            gate.complete(Unit)
+            val results = reports.map { it.await() }
+            assertEquals("round $round: never two runs at once", 1, maxInFlight.get())
+            assertTrue(
+                "round $round: every report gets a fresh result",
+                results.all { it.notRefreshedReason == null && it.stored != null }
+            )
+        }
+        service.stop()
+    }
+
+    // ── Findings anchored to the store, not to the events ─────────────
+
+    /** One shared, confirmed transaction both engines value the same: a clean sheet. */
+    private fun cleanBreakdownSource() = FakeSource(boundWalletId = walletIdHex).apply {
+        walletSyncedHeight = 1_000
+        sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, 100L))
+        dashjFacts = DashjBreakdownFacts(
+            lastBlockSeenHeight = 1_000,
+            txs = listOf(DashjTxFacts(sharedTxid, 900, netDuffs = 100L, valueKnown = true))
+        )
+    }
+
+    /** Balances and counts agree, captured after the catch-up moment [diagnosticVerdict] uses. */
+    private val fullMatchReport = ParityReport(
+        balancesMatch = true,
+        sdkDuffs = 100,
+        dashjDuffs = 100,
+        sdkTxCount = 1,
+        dashjTxCount = 1,
+        sdkSynced = true,
+        timestampMs = 1_000_000L,
+        confirmedBalancesMatch = true,
+        sdkConfirmedDuffs = 100,
+        dashjAvailableDuffs = 100
+    )
+
+    /** What a BlockchainServiceImpl diagnostic pass derives, dashj at 100 % since t=1. */
+    private suspend fun L1ShadowSyncService.diagnosticVerdict() = deriveCurrentDashjDiagnosticVerdict(
+        100,
+        fullMatchReport,
+        latestBreakdownFindings.value,
+        1L,
+        ::breakdownFindingsStillCurrent
+    )
+
+    @Test
+    fun aStoreChangeNoEventReported_cannotSupportMatch_andExpiresTheFindings() = runBlocking {
+        // The regression review asked for. Every other invalidation needs an
+        // event to reach the tap; here the SDK store changes and none does (a
+        // full SDK event buffer drops it). Before the fingerprint the clean
+        // sheet stayed, and MATCH was published for a history nothing compared.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = cleanBreakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+        assertEquals(Parity.MATCH, service.diagnosticVerdict().parity)
+
+        // The engine rewrites the shared transaction's stored net. No event.
+        source.sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, 7_781_409L))
+
+        val verdict = service.diagnosticVerdict()
+        assertEquals("the balances still agree, and nothing more is known", Parity.BALANCE_MATCH, verdict.parity)
+        assertNull(verdict.freshFindings)
+        assertNull(
+            "the findings expire, as a delivered event would have expired them",
+            service.latestBreakdownFindings.value
+        )
+
+        // Expired the way an event expires them: the settle window first…
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        // …then the hour is free, and the recompute sees the changed net.
+        clock.addAndGet(L1ShadowSyncService.PARITY_BREAKDOWN_TX_SETTLE_MS + 1)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(2, source.breakdownDashjCalls)
+        assertEquals(Parity.VALUES_DIFFER, service.diagnosticVerdict().parity)
+        service.stop()
+    }
+
+    @Test
+    fun anUnchangedStore_keepsMatch_andTheFindings() = runBlocking {
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val findings = checkNotNull(service.latestBreakdownFindings.value)
+        assertNotNull(findings.storeFingerprint)
+
+        repeat(3) {
+            assertEquals(Parity.MATCH, service.diagnosticVerdict().parity)
+        }
+        assertSame(findings, service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
+    fun anUnreadableStore_cannotSupportMatch_butKeepsTheFindings() = runBlocking {
+        // Unknown is not "unchanged". But it is not "changed" either: if the
+        // store reads the same again, the findings are still true of it.
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val findings = checkNotNull(service.latestBreakdownFindings.value)
+        val store = source.sdkTxidHeights
+
+        source.sdkTxidHeights = null
+        assertEquals(Parity.BALANCE_MATCH, service.diagnosticVerdict().parity)
+        assertSame(findings, service.latestBreakdownFindings.value)
+
+        source.sdkTxidHeights = store
+        assertEquals(Parity.MATCH, service.diagnosticVerdict().parity)
+        service.stop()
+    }
+
+    @Test
+    fun aCheckOfReplacedFindings_doesNotRevokeTheirReplacement() = runBlocking {
+        // A pass read the old findings; before its check ran, a newer run
+        // published findings for the changed store. The old ones fail the
+        // check — and must not take the new ones down with them.
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val old = checkNotNull(service.latestBreakdownFindings.value)
+        source.sdkTxidHeights = mapOf(sharedTxid to SdkTxFacts(900, 101L))
+        assertNotNull(service.parityBreakdownForReport().stored)
+        val replacement = checkNotNull(service.latestBreakdownFindings.value)
+
+        assertFalse(service.breakdownFindingsStillCurrent(old))
+        assertSame(replacement, service.latestBreakdownFindings.value)
+        assertTrue(service.breakdownFindingsStillCurrent(replacement))
+        service.stop()
+    }
+
+    @Test
+    fun aTapRestart_expiresTheFindings() = runBlocking {
+        // Stopped, the tap hears nothing (it is cancelled before SPV stops), and
+        // a start runs SPV before the tap subscribes; the feed has no replay.
+        val source = cleanBreakdownSource()
+        val service = service(source, cutoverState = CutoverState.CUT_OVER.name)
+        service.startSynced(source)
+        assertNotNull(service.parityBreakdownForReport().stored)
+        assertNotNull(service.latestBreakdownFindings.value)
+
+        service.stop()
+        source.progressFlow.value = SpvSyncProgressData.EMPTY
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+
+        assertNull(service.latestBreakdownFindings.value)
+        service.stop()
+    }
+
+    @Test
+    fun aTapFailure_expiresTheFindings_atOnce_andHoldsOffTheRecompute() = runBlocking {
+        // The tap re-collects only after a delay, and the feed has no replay:
+        // whatever happens meanwhile is never heard. The gap starts at the
+        // failure, so that is when the findings go. And a failing feed must
+        // not buy a breakdown per probe tick: the settle window holds it off.
+        val clock = java.util.concurrent.atomic.AtomicLong(1_000_000L)
+        val source = cleanBreakdownSource()
+        val service = service(
+            source,
+            nowMs = { clock.get() },
+            cutoverState = CutoverState.CUT_OVER.name,
+            dashjDiagnostic = true
+        )
+        assertTrue(service.startIfEnabled())
+        source.awaitEventTap()
+        service.dashjCaughtUp(1L)
+        source.driveSyncedEdgesUntil { service.latestBreakdownFindings.value != null }
+        assertEquals(1, source.breakdownDashjCalls)
+
+        source.eventStrings.emit(FAIL_TAP)
+
+        withTimeout(5_000) { while (service.latestBreakdownFindings.value != null) delay(10) }
+        repeat(8) {
+            source.progressFlow.value = SpvSyncProgressData.EMPTY
+            source.progressFlow.value = synced
+            delay(10)
+        }
+        assertEquals(1, source.breakdownDashjCalls)
+        service.stop()
+    }
+
+    private companion object {
+        const val FAIL_TAP = "simulated: the wallet-event feed fails here"
     }
 }

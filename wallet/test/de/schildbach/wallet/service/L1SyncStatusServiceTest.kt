@@ -22,13 +22,17 @@ import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
@@ -56,10 +60,12 @@ class L1SyncStatusServiceTest {
         mnListHeight: Long = 0,
         walletSyncedHeight: Long = 0,
         /** The SDK's three-phase mean; 0.0 = "not supplied", so only the height rule applies. */
-        overallPercent: Double = 0.0
+        overallPercent: Double = 0.0,
+        sessionHeaderStart: Long = 0,
+        sessionFilterStart: Long = 0
     ) = ShadowSyncProgress(
         phase, overallPercent, headerHeight, headerTarget, filterHeight, filterTarget, mnListHeight,
-        walletSyncedHeight
+        walletSyncedHeight, sessionHeaderStart, sessionFilterStart
     )
 
     private fun dashjState(
@@ -182,6 +188,35 @@ class L1SyncStatusServiceTest {
         )
         assertTrue(status.isSynced)
         assertEquals(100, status.percentage)
+    }
+
+    @Test
+    fun merge_carriesTenthsOnlyInTheSdkRegime_andTheLabelShowsOneDecimal() {
+        // Post-cutover: a re-walk 99.1% through its own work.
+        val sdk = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = progress(
+                filterHeight = 1_400_000 + 113_629, filterTarget = 1_514_660,
+                sessionHeaderStart = 1_514_660, sessionFilterStart = 1_400_000
+            ),
+            dashjState = dashjState(percentageSync = 42)
+        )
+        assertEquals(991, sdk.percentageTenths)
+        assertEquals(99, sdk.percentage)
+        assertEquals("99.1%", syncHeaderPercentLabel(sdk, Locale.US))
+        assertEquals("99,1%", syncHeaderPercentLabel(sdk, Locale.GERMANY))
+
+        // 99.9 stays 99.9 until the scan is caught up; caught up is "100%", never "100.0%".
+        assertEquals("99.9%", syncHeaderPercentLabel(sdk.copy(percentageTenths = 999), Locale.US))
+        assertEquals("100%", syncHeaderPercentLabel(sdk.copy(percentageTenths = 1000), Locale.US))
+        // No usable figure yet: the bare "Syncing…".
+        assertNull(syncHeaderPercentLabel(sdk.copy(percentage = 0, percentageTenths = 0), Locale.US))
+
+        // Pre-cutover: dashj's whole number, no decimal.
+        val dashj = mergeL1SyncUiStatus(sdkOwnsL1 = false, sdkProgress = progress(), dashjState = dashjState(percentageSync = 42))
+        assertNull(dashj.percentageTenths)
+        assertEquals("42%", syncHeaderPercentLabel(dashj, Locale.US))
+        assertNull(syncHeaderPercentLabel(dashj.copy(percentage = 0), Locale.US))
     }
 
     @Test
@@ -854,6 +889,276 @@ class L1SyncStatusServiceTest {
         job.cancel()
     }
 
+    // ── QA phone 2 (12.0.0-qa28): builds waiting on a locked device ──────
+
+    @Test
+    fun buildsHeldByTheLockedDevice_mapToTheirOwnVerdict() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE, dashPaySettleVerdict(status.terms.value))
+
+        status.setAccountBuildsSettled(false)
+        assertEquals(DashPaySettleVerdict.UNSETTLED, dashPaySettleVerdict(status.terms.value))
+
+        // A settled term can never be "held".
+        status.setAccountBuildsSettled(true, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+        assertFalse(status.terms.value.accountBuildsHeldByLockedDevice)
+    }
+
+    @Test
+    fun aWalletWithoutAnIdentityIsNeverHeldByTheLockedDevice() {
+        val status = DashPaySyncStatus()
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+    }
+
+    /**
+     * The phone sat locked for hours with 212 builds unable to drain. The
+     * ordinary ceiling must not run out meanwhile, or the user unlocks to the
+     * short balance reported as final.
+     */
+    @Test
+    fun aLockedDeviceHold_outlastsTheOrdinaryCeiling_butNotItsOwn() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(feed, deadlineMs = 1_000, lockedHoldMs = 50_000)
+                .collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE)
+        testScheduler.advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals("a locked-device hold is not cut short by the ordinary ceiling", false, seen.last())
+
+        testScheduler.advanceTimeBy(41_000)
+        runCurrent()
+        assertEquals("the hold has an independent backstop of its own", true, seen.last())
+        job.cancel()
+    }
+
+    /**
+     * After the unlock the drain runs and the builds start moving: the hold
+     * becomes an ordinary unsettled verdict, which must show as syncing again
+     * with a FRESH ceiling, even though an earlier ceiling had run out.
+     */
+    @Test
+    fun theDrainResumingAfterAnUnlock_reRaisesTheIndicatorWithAFreshCeiling() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(feed, deadlineMs = 1_000, lockedHoldMs = 5_000)
+                .collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(6_000)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        runCurrent()
+        assertEquals("draining builds show as syncing again", false, seen.last())
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.SETTLED)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
+    // ── Restore: builds no drain has touched yet ─────────────────────────
+
+    @Test
+    fun buildsAwaitingTheirFirstDrain_mapToTheirOwnVerdict() {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        assertEquals(DashPaySettleVerdict.AWAITING_FIRST_DRAIN, dashPaySettleVerdict(status.terms.value))
+
+        // The first drain ran; the builds are still draining.
+        status.setAccountBuildsSettled(false)
+        assertEquals(DashPaySettleVerdict.UNSETTLED, dashPaySettleVerdict(status.terms.value))
+
+        // The locked-device hold is unchanged and takes precedence.
+        status.setAccountBuildsSettled(false, heldByLockedDevice = true)
+        assertEquals(DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE, dashPaySettleVerdict(status.terms.value))
+
+        // A settled term is never "awaiting".
+        status.setAccountBuildsSettled(true, awaitingFirstDrain = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(status.terms.value))
+        assertFalse(status.terms.value.accountBuildsAwaitingFirstDrain)
+
+        // Nor is a wallet DashPay does not apply to.
+        val noIdentity = DashPaySyncStatus()
+        noIdentity.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        assertEquals(DashPaySettleVerdict.SETTLED, dashPaySettleVerdict(noIdentity.terms.value))
+
+        // A reset forgets it.
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        status.resetForWalletReset()
+        assertFalse(status.terms.value.accountBuildsAwaitingFirstDrain)
+    }
+
+    /**
+     * QA phone 2 restore: the first drain came 28 minutes after the scan
+     * caught up. The ordinary ceiling must not clear the indicator meanwhile;
+     * the hold's own clock runs only while the scan is caught up and does not
+     * restart when it briefly falls behind.
+     */
+    @Test
+    fun aFirstDrainHold_outlastsTheOrdinaryCeiling_countingOnlyCaughtUpTime() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val caughtUp = MutableStateFlow(false)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                feed, deadlineMs = 1_000, lockedHoldMs = 50_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 100_000,
+                firstDrainClockRunning = caughtUp, elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.AWAITING_FIRST_DRAIN)
+        // The scan itself: however long, none of it counts.
+        testScheduler.advanceTimeBy(20_000)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        caughtUp.value = true
+        testScheduler.advanceTimeBy(2_000)
+        runCurrent()
+        assertEquals("not cut short by the ordinary ceiling", false, seen.last())
+
+        // Falls behind for a while: paused, not reset.
+        caughtUp.value = false
+        testScheduler.advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(false, seen.last())
+
+        caughtUp.value = true
+        testScheduler.advanceTimeBy(900)
+        runCurrent()
+        assertEquals("2.9 s of caught-up time: still held", false, seen.last())
+        testScheduler.advanceTimeBy(200)
+        runCurrent()
+        assertEquals("the hold has an independent backstop of its own", true, seen.last())
+        job.cancel()
+    }
+
+    @Test
+    fun aFirstDrainHold_isBoundedInWallTimeEvenIfTheScanNeverCatchesUp() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                feed, deadlineMs = 1_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 30_000,
+                firstDrainClockRunning = MutableStateFlow(false), elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.AWAITING_FIRST_DRAIN)
+        testScheduler.advanceTimeBy(29_000)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
+    /**
+     * NOT_ATTEMPTED → RAN with the builds still unsettled: the verdict
+     * changes from the first-drain hold to ordinary UNSETTLED, which must
+     * re-raise the indicator with a FRESH ordinary ceiling even after the
+     * hold's own ceiling ran out — the drain has only just started matching
+     * contact payments.
+     */
+    @Test
+    fun theFirstDrainRunning_startsAFreshOrdinaryCeiling() = runTest {
+        val feed = MutableSharedFlow<DashPaySettleVerdict>(replay = 1)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                feed, deadlineMs = 1_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 100_000,
+                firstDrainClockRunning = MutableStateFlow(true), elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        feed.emit(DashPaySettleVerdict.AWAITING_FIRST_DRAIN)
+        testScheduler.advanceTimeBy(3_100)
+        runCurrent()
+        assertEquals("the hold's backstop ran out", true, seen.last())
+
+        feed.emit(DashPaySettleVerdict.UNSETTLED)
+        runCurrent()
+        assertEquals("the first drain ran: syncing again", false, seen.last())
+        testScheduler.advanceTimeBy(900)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(200)
+        runCurrent()
+        assertEquals("a fresh ordinary ceiling, not the expired one", true, seen.last())
+        job.cancel()
+    }
+
+    /** The same transition end to end, from the published terms. */
+    @Test
+    fun theFirstDrainRunning_fromTheTerms_reRaisesTheIndicator() = runTest {
+        val status = DashPaySyncStatus()
+        status.setApplicable(true)
+        status.contactSyncStarted()
+        status.contactSyncFinished()
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        val seen = mutableListOf<Boolean>()
+        val job = launch {
+            dashPaySyncVerdictWithDeadline(
+                status.terms.map(::dashPaySettleVerdict), deadlineMs = 1_000,
+                firstDrainHoldMs = 3_000, firstDrainWallCeilingMs = 100_000,
+                firstDrainClockRunning = MutableStateFlow(true), elapsedMs = { testScheduler.currentTime }
+            ).collect { seen += it }
+        }
+        runCurrent()
+        testScheduler.advanceTimeBy(2_000)
+        runCurrent()
+        assertEquals("past the ordinary ceiling, still held", false, seen.last())
+
+        // Republishing the same terms (60 s producer cadence) must not
+        // restart the hold's clock.
+        status.setAccountBuildsSettled(false, awaitingFirstDrain = true)
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+
+        status.setAccountBuildsSettled(false)
+        runCurrent()
+        assertEquals(false, seen.last())
+        testScheduler.advanceTimeBy(1_100)
+        runCurrent()
+        assertEquals(true, seen.last())
+        job.cancel()
+    }
+
     // ── MO-995: the filters sawtooth guard ────────────────────────────
 
     /**
@@ -1001,6 +1306,167 @@ class L1SyncStatusServiceTest {
         assertTrue(
             "target ${detail.filterTarget} must not trail height ${detail.filterHeight}",
             detail.filterTarget >= detail.filterHeight
+        )
+    }
+
+    // ── SR-22: the scan floor a user-supplied restore date leaves behind ──
+
+    /**
+     * 2015-03-29, the sentinel `DashWalletFactory.restoreWalletFromSeed`
+     * stamps on EVERY seed restore ("always the oldest possible time"), so a
+     * seed-restored wallet's own key time carries no information.
+     */
+    private val sentinelSecs = 1_427_610_960L
+
+    /** A date the user could pick on the restore screen: 2024-03-05. */
+    private val chosenDateSecs = 1_709_596_800L
+
+    /** A genuine key creation time from a protobuf backup: 2019-01-01. */
+    private val realKeyTimeSecs = 1_546_300_800L
+
+    @Test
+    fun boundedScan_flagsTheSeedRestoreThatSkippedNineYearsOfChain() {
+        // SR-22 exactly: seed restore (key time = the sentinel), user picks a
+        // date, the SDK scans only from there. Everything before it — where
+        // 85.4 of the reported 107.08 tDASH lived — was never looked at.
+        assertEquals(
+            chosenDateSecs,
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = sentinelSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_saysNothingWhenTheUserPickedNoDate() {
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = null,
+                walletEarliestKeyCreationTimeSecs = sentinelSecs
+            )
+        )
+        // A wallet restored from a protobuf backup scans from its own genuine
+        // key time. Nothing the keys could have received predates that, so the
+        // scan is COMPLETE and must not be flagged.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = null,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_followsTheSdkRuleThatAGenuineKeyTimeOverridesALaterPick() {
+        // sdkWalletBirthTimeSecs takes the MINIMUM, so a backup restore whose
+        // keys predate the chosen date is scanned in full — no warning is owed.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+        // A date EARLIER than the keys scans more than necessary, never less.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = sentinelSecs - 1,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_followsTheDashjRuleWhereTheUsersDateWinsOutright() {
+        // dashj's fresh-store checkpointing reads
+        // `getWalletCreationDate() ?: wallet.earliestKeyCreationTime` — no
+        // minimum — so the SAME inputs that are safe under the SDK skip real
+        // history here, and the status must say so.
+        assertEquals(
+            chosenDateSecs,
+            boundedScanStartSecs(
+                sdkOwnsL1 = false,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = false,
+                configuredCreationDateSecs = null,
+                walletEarliestKeyCreationTimeSecs = realKeyTimeSecs
+            )
+        )
+    }
+
+    @Test
+    fun boundedScan_claimsNothingBeforeTheWalletHasLoaded() {
+        // Every cold start spends its first moments with no wallet. A verdict
+        // taken then would be a guess in one direction or the other; take none.
+        assertNull(
+            boundedScanStartSecs(
+                sdkOwnsL1 = true,
+                configuredCreationDateSecs = chosenDateSecs,
+                walletEarliestKeyCreationTimeSecs = null
+            )
+        )
+    }
+
+    @Test
+    fun status_carriesTheScanFloorWithoutWithholdingTheSyncedGate() {
+        // The gate stays open — a bounded scan that has caught up IS usable,
+        // and permanently disabling sends/shortcuts would be the worse bug.
+        // What changes is only what the UI is allowed to CLAIM.
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_514_659),
+            dashjState = null,
+            scanStartDateSecs = chosenDateSecs
+        )
+        assertTrue(status.isSynced)
+        assertTrue(status.isFullySynced)
+        assertTrue(status.isPartialScan)
+        assertEquals(chosenDateSecs, status.scanStartDateSecs)
+    }
+
+    @Test
+    fun status_isNotPartialOnAnOrdinaryWallet() {
+        val status = mergeL1SyncUiStatus(
+            sdkOwnsL1 = true,
+            sdkProgress = progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_514_659),
+            dashjState = null
+        )
+        assertTrue(status.isSynced)
+        assertFalse(status.isPartialScan)
+        assertNull(status.scanStartDateSecs)
+    }
+
+    @Test
+    fun detail_carriesTheScanFloorInBothEngineRegimes() {
+        assertEquals(
+            chosenDateSecs,
+            mergeL1SyncDetail(
+                sdkOwnsL1 = true,
+                progress = progress(phase = ShadowSyncPhase.SYNCED, walletSyncedHeight = 1_514_659),
+                sessionChainLockHeight = 0,
+                state = null,
+                scanStartDateSecs = chosenDateSecs
+            ).scanStartDateSecs
+        )
+        assertEquals(
+            chosenDateSecs,
+            mergeL1SyncDetail(
+                sdkOwnsL1 = false,
+                progress = progress(),
+                sessionChainLockHeight = 0,
+                state = dashjState(percentageSync = 100),
+                scanStartDateSecs = chosenDateSecs
+            ).scanStartDateSecs
         )
     }
 }

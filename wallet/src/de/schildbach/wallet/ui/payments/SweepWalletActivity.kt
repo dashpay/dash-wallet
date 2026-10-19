@@ -69,8 +69,8 @@ class SweepWalletActivity: AbstractBindServiceActivity() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         binding = ActivitySweepWalletBinding.inflate(layoutInflater)
         setContentView(binding.root)

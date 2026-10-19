@@ -21,12 +21,16 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
 import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
+import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.dashfoundation.dashsdk.persistence.entities.TransactionEntity
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -109,7 +113,28 @@ data class SdkTxDetail(
  * lets the sheet fall back to [TransactionMetadata.defaultTaxCategory]
  * (Income for a receive, Expense for a send) — identical to a dashj tx.
  */
-fun SdkTxDetail.toDefaultMetadata(): TransactionMetadata = TransactionMetadata(
+fun SdkTxDetail.toDefaultMetadata(): TransactionMetadata =
+    defaultSdkTxMetadata(txIdDisplayHex, netAmountDuffs, timestampMs, isSent)
+
+/**
+ * The same default row as [SdkTxDetail.toDefaultMetadata], built from the
+ * list-shape record alone (no consensus decode, no TXO lookups). The sent/received
+ * rule matches [SdkTxDetail.isSent].
+ */
+internal fun L1TxUiRecord.toDefaultMetadata(): TransactionMetadata = defaultSdkTxMetadata(
+    txidHex,
+    netAmountDuffs,
+    timestampMs,
+    isSent = netAmountDuffs < 0 || direction != L1TxUiDirection.INCOMING
+)
+
+/** The default row both [toDefaultMetadata] forms build: no memo, no user-set category. */
+private fun defaultSdkTxMetadata(
+    txIdDisplayHex: String,
+    netAmountDuffs: Long,
+    timestampMs: Long,
+    isSent: Boolean
+): TransactionMetadata = TransactionMetadata(
     TxId.wrap(txIdDisplayHex),
     timestampMs,
     Coin.valueOf(netAmountDuffs),
@@ -142,20 +167,8 @@ internal fun buildSdkTxDetail(
 ): SdkTxDetail {
     val outputs = decoded?.outputs.orEmpty()
 
-    // Fee: the SDK-recorded fee wins; otherwise Σin−Σout, but ONLY when
-    // every input's spent value is wallet-known (a single unknown input
-    // makes the subtraction meaningless). A negative result means
-    // inconsistent data — show nothing rather than a fabricated fee.
-    val derivedFee = if (
-        decoded != null && decoded.inputs.isNotEmpty() &&
-        inputTxoValues.size == decoded.inputs.size && inputTxoValues.all { it != null }
-    ) {
-        (inputTxoValues.filterNotNull().sum() - outputs.sumOf { it.valueDuffs })
-            .takeIf { it >= 0 }
-    } else {
-        null
-    }
-    val fee = record.feeDuffs ?: derivedFee
+    // Fee: the SDK-recorded fee wins; otherwise Σin−Σout ([derivedFeeDuffs]).
+    val fee = record.feeDuffs ?: derivedFeeDuffs(decoded, inputTxoValues)
 
     val allOutputAddresses = outputs.mapNotNull { it.address }.distinct()
     val outputAddresses = when (record.direction) {
@@ -203,6 +216,108 @@ internal fun buildSdkTxDetail(
 
 private const val OP_RETURN = 0x6a.toByte()
 
+/**
+ * Σin−Σout of [decoded], but ONLY when every input's spent value is
+ * wallet-known ([inputTxoValues], parallel to `decoded.inputs`): a single
+ * unknown input makes the subtraction meaningless. A negative result means
+ * inconsistent data — null rather than a fabricated fee. Input TXO values are
+ * known before the send confirms, so this also covers a pending send whose
+ * store fee is still NULL.
+ */
+internal fun derivedFeeDuffs(decoded: DecodedTransaction?, inputTxoValues: List<Long?>): Long? =
+    if (decoded != null && decoded.inputs.isNotEmpty() &&
+        inputTxoValues.size == decoded.inputs.size && inputTxoValues.all { it != null }
+    ) {
+        (inputTxoValues.filterNotNull().sum() - decoded.outputs.sumOf { it.valueDuffs })
+            .takeIf { it >= 0 }
+    } else {
+        null
+    }
+
+/**
+ * The true signed wallet net of a transaction whose plain send/receive
+ * history row ([cachedValue], non-zero) overrides the SDK record's direction
+ * and amount in the detail sheet — so a sent amount renders the dashj way:
+ * |net| as the amount, the fee shown separately.
+ *
+ * - A receive's cached value IS its net.
+ * - A contact send's cached value is taken as the engine's signed net
+ *   ([SdkTxContactResolver.signedNetsFor]: owned outputs − owned inputs, fee
+ *   included). That is only usually right — a contact row written before the
+ *   engine net was known holds the fee-free principal — so [SdkTxDetailProvider]
+ *   uses this only when it has no walker record to read the net from.
+ * - A row still holding the record's fee-included net (cached before the fee
+ *   was known, and not yet corrected by [withoutCachedFee]) is the net too.
+ * - Every other send is cached as its principal only
+ *   ([L1TxUiRecord.sentValueWithoutFeeDuffs]): the net is −(|principal| + fee).
+ *
+ * The middle two used to be indistinguishable from the last only because the
+ * store's fee column was always NULL; once the walker persists recovered fees
+ * (D-M-01), adding the fee to them would count it twice. Pure — host-testable.
+ */
+internal fun detailSignedNet(cachedValue: Long, isContactRow: Boolean, record: L1TxUiRecord): Long = when {
+    cachedValue > 0L -> cachedValue
+    isContactRow -> cachedValue
+    cachedValue == record.netAmountDuffs -> cachedValue
+    else -> -(kotlin.math.abs(cachedValue) + (record.feeDuffs ?: 0L))
+}
+
+/**
+ * The bound SDK wallet's record for [displayHex] through [SdkTxStoreWalker.recordFor],
+ * or null when the manager is not up, no single wallet is bound, the tx is not
+ * the wallet's, or the read fails — the detail sheet then falls back to the raw
+ * store row.
+ *
+ * The lookup reattributes like any walk, so it can rewrite the stored net;
+ * [onStoredNetsRepaired] is the walker's report of that (production:
+ * [L1ShadowSyncService.storedNetsRepaired]).
+ */
+internal suspend fun boundWalletRecordOrNull(
+    sdkService: DashSdkService,
+    db: DashDatabase,
+    displayHex: String,
+    onStoredNetsRepaired: (Int) -> Unit
+): L1TxUiRecord? = try {
+    val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
+    walletId?.let {
+        withContext(Dispatchers.IO) {
+            SdkTxStoreWalker(db, it, onStoredNetsRepaired = onStoredNetsRepaired).recordFor(displayHex)
+        }
+    }
+} catch (e: CancellationException) {
+    throw e
+} catch (t: Throwable) {
+    LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+        .warn("wallet record lookup failed for {}; using the store row", displayHex, t)
+    null
+}
+
+/**
+ * Batch [boundWalletRecordOrNull]: one walker and one [SdkTxStoreWalker.recordsByHex]
+ * pass for all of [displayHexes], keyed by lowercase display hex. Empty when the
+ * manager is not up, no single wallet is bound, or the read fails. Repaired
+ * stored nets go to [onStoredNetsRepaired], as in [boundWalletRecordOrNull].
+ */
+internal suspend fun boundWalletRecordsOrEmpty(
+    sdkService: DashSdkService,
+    db: DashDatabase,
+    displayHexes: Collection<String>,
+    onStoredNetsRepaired: (Int) -> Unit
+): Map<String, L1TxUiRecord> = try {
+    val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
+    walletId?.let {
+        withContext(Dispatchers.IO) {
+            SdkTxStoreWalker(db, it, onStoredNetsRepaired = onStoredNetsRepaired).recordsByHex(displayHexes)
+        }
+    } ?: emptyMap()
+} catch (e: CancellationException) {
+    throw e
+} catch (t: Throwable) {
+    LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+        .warn("batch wallet record lookup failed for {} txid(s); using the store rows", displayHexes.size, t)
+    emptyMap()
+}
+
 /** Display-order txid hex → 32 wire-order bytes, or null when malformed. */
 internal fun displayTxIdToWireBytes(txIdDisplayHex: String): ByteArray? {
     if (txIdDisplayHex.length != 64 || !txIdDisplayHex.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
@@ -244,11 +359,40 @@ internal fun txoOutpoint(wireTxid: ByteArray, vout: Int): ByteArray =
  * mapping is covered here by [SdkTxDetailTest].
  */
 @Singleton
-class SdkTxDetailProvider @Inject constructor(
+class SdkTxDetailProvider internal constructor(
     private val sdkService: DashSdkService,
     private val txDisplayCacheDao: TxDisplayCacheDao,
-    private val assetLockKindResolver: AssetLockKindResolver
-) {
+    private val assetLockKindResolver: AssetLockKindResolver,
+    // Where the walkers below report the stored nets their reattribution
+    // rewrote; production passes [L1ShadowSyncService.storedNetsRepaired].
+    // Used only by the two defaults that build walkers.
+    onStoredNetsRepaired: (Int) -> Unit = {},
+    // Batch form of [walletRecordFor] for bulk metadata imports: one walker pass
+    // for many txids ([SdkTxStoreWalker.recordsByHex]), keyed by lowercase display hex.
+    private val walletRecordsFor: suspend (DashDatabase, Collection<String>) -> Map<String, L1TxUiRecord> =
+        { db, displayHexes -> boundWalletRecordsOrEmpty(sdkService, db, displayHexes, onStoredNetsRepaired) },
+    // The bound wallet's record for a txid as the history list sees it
+    // ([SdkTxStoreWalker.recordFor]): reattributed, with its fee recovered.
+    // Null when no wallet is bound or the tx is not the wallet's. A seam so
+    // host tests can supply the record without a Room store.
+    private val walletRecordFor: suspend (DashDatabase, String) -> L1TxUiRecord? =
+        { db, displayHex -> boundWalletRecordOrNull(sdkService, db, displayHex, onStoredNetsRepaired) }
+) : SdkTxMetadataSource {
+    @Inject
+    constructor(
+        sdkService: DashSdkService,
+        txDisplayCacheDao: TxDisplayCacheDao,
+        assetLockKindResolver: AssetLockKindResolver,
+        // Provider, as in [CutoverTxSeamService]: resolved on the first repair,
+        // so this provider adds no start-up edge to the shadow service's graph.
+        l1ShadowSyncService: javax.inject.Provider<L1ShadowSyncService>
+    ) : this(
+        sdkService,
+        txDisplayCacheDao,
+        assetLockKindResolver,
+        onStoredNetsRepaired = { count -> l1ShadowSyncService.get().storedNetsRepaired(count) }
+    )
+
     /**
      * Load the detail for [txIdDisplayHex] (display-order hex, i.e.
      * `Sha256Hash.toString()`), or null when the SDK holds no such
@@ -272,52 +416,6 @@ class SdkTxDetailProvider @Inject constructor(
         }
 
         val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
-        val baseRecord = l1TxUiRecord(
-            txidWireBytes = entity.txid,
-            netAmountDuffs = entity.netAmount,
-            feeDuffs = entity.fee,
-            contextCode = entity.context,
-            directionCode = entity.direction,
-            firstSeenSec = entity.firstSeen,
-            blockTimestampSec = entity.blockTimestamp
-        )
-
-        // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
-        // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
-        // correction. For a contact send the SDK `transactions` row surfaces only the +change
-        // (wrong direction: INCOMING / wrong amount), so whenever a plain send/receive cache row
-        // exists it is the AUTHORITATIVE direction + amount override — not only when the SDK net
-        // is 0. Absent (pre-cutover / non-SDK txs) → the SDK row stands unchanged.
-        //
-        // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
-        // service rows keep the SDK direction. Sign convention (Bug A):
-        // - INCOMING: the cached value IS the received net → use it directly.
-        // - OUTGOING: planL1TxRow writes the cached value as the PRINCIPAL only (it excludes the
-        //   fee), so reconstruct the true signed net = -(|principal| + fee) so a sent amount
-        //   renders the same way the dashj path does (|net| amount, fee shown separately).
-        val cacheEntry = txDisplayCacheDao
-            .getEntriesByIds(listOf(txIdDisplayHex.lowercase()))
-            .firstOrNull()
-        val cachedValue = cacheEntry?.valueSatoshis
-        val record = if (
-            cacheEntry != null && cachedValue != null && cachedValue != 0L &&
-            (cacheEntry.iconType == TxDisplayCacheEntry.ICON_SENT ||
-                cacheEntry.iconType == TxDisplayCacheEntry.ICON_RECEIVED)
-        ) {
-            val cachedDirection = if (cachedValue < 0) {
-                L1TxUiDirection.OUTGOING
-            } else {
-                L1TxUiDirection.INCOMING
-            }
-            val net = if (cachedDirection == L1TxUiDirection.INCOMING) {
-                cachedValue
-            } else {
-                -(kotlin.math.abs(cachedValue) + (baseRecord.feeDuffs ?: 0L))
-            }
-            baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
-        } else {
-            baseRecord
-        }
 
         val decoded = try {
             TransactionDecoder.decode(
@@ -345,6 +443,16 @@ class SdkTxDetailProvider @Inject constructor(
             txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
         }
 
+        // The fee the history list used: the store's, or — while the store still has it
+        // NULL — Σin−Σout from the wallet's input TXOs, which the walker also uses
+        // (persisted, or in memory for a pending send). See [correctedRecord].
+        val record = correctedRecord(
+            storeRecordOf(entity),
+            walletRecord = walletRecordFor(db, txIdDisplayHex.lowercase()),
+            cacheEntry = cacheEntryFor(txIdDisplayHex),
+            derivedFee = derivedFeeDuffs(decoded, inputTxos.map { it?.amount })
+        )
+
         // Classify a wallet-authored internal move as a Platform-funding asset
         // lock (upgrade / top-up / invite) so the sheet renders "sent to" + the
         // "…Fee" title instead of "moved internally to". Null for a plain move.
@@ -360,7 +468,170 @@ class SdkTxDetailProvider @Inject constructor(
         )
     }
 
+    /**
+     * The neutral record of the SDK store row [entity], without its serialized
+     * transaction. Its fee is the stored one, which may be null.
+     */
+    private fun storeRecordOf(entity: TransactionEntity): L1TxUiRecord = l1TxUiRecord(
+        txidWireBytes = entity.txid,
+        netAmountDuffs = entity.netAmount,
+        feeDuffs = entity.fee,
+        contextCode = entity.context,
+        directionCode = entity.direction,
+        firstSeenSec = entity.firstSeen,
+        blockTimestampSec = entity.blockTimestamp
+    )
+
+    /** The tx_display_cache row for [txIdDisplayHex], keyed by lowercase display hex. */
+    private suspend fun cacheEntryFor(txIdDisplayHex: String): TxDisplayCacheEntry? =
+        txDisplayCacheDao.getEntriesByIds(listOf(txIdDisplayHex.lowercase())).firstOrNull()
+
+    /**
+     * The record the history list was built from: the bound wallet's [walletRecord]
+     * when there is one, else [storeRecord] (the store row, see [storeRecordOf]),
+     * with the tx_display_cache [cacheEntry] correction applied. [derivedFee] is the
+     * Σin−Σout fee when the caller decoded the transaction, else null. Pure: the
+     * caller fetches the inputs, one at a time for the detail sheet or once per
+     * batch for a metadata import.
+     */
+    private fun correctedRecord(
+        storeRecord: L1TxUiRecord,
+        walletRecord: L1TxUiRecord?,
+        cacheEntry: TxDisplayCacheEntry?,
+        derivedFee: Long?
+    ): L1TxUiRecord {
+        // The fee the history list used: the store's, or — while the store still has it
+        // NULL — Σin−Σout from the wallet's input TXOs, which the walker also uses
+        // (persisted, or in memory for a pending send). It must be known before the
+        // cached principal is turned back into a net below, or a pending send's fee is
+        // read as 0 and its amount sent shows without it (D-M-01).
+        // The record the history list was built from: the walker's, which corrects a
+        // misattributed stored row (a contact send stored INCOMING +change becomes
+        // OUTGOING with the whole-wallet net) and carries the recovered fee, persisted
+        // or in memory for a pending send. Reading it here keeps the sheet and the
+        // list on the same net and fee (D-M-01). The raw store row is the fallback
+        // when no wallet is bound.
+        val effectiveFee = walletRecord?.feeDuffs ?: storeRecord.feeDuffs ?: derivedFee
+        val baseRecord = (walletRecord ?: storeRecord).copy(feeDuffs = effectiveFee)
+
+        // The tx_display_cache row (written by CutoverUiDataService, keyed by lowercase display
+        // hex) carries the FULL home-list correction — engine net AND the DashPay-contact
+        // correction. For a contact send the SDK `transactions` row surfaces only the +change
+        // (wrong direction: INCOMING / wrong amount), so whenever a plain send/receive cache row
+        // exists it is the AUTHORITATIVE direction + amount override — not only when the SDK net
+        // is 0. Absent (pre-cutover / non-SDK txs) → the SDK row stands unchanged.
+        //
+        // Only plain send/receive rows (iconType SENT/RECEIVED) override; INTERNAL/COINJOIN/
+        // service rows keep the SDK direction. Sign convention (Bug A):
+        // - INCOMING: the cached value IS the received net → use it directly.
+        // - OUTGOING: the walker's own net when it has one — it IS the signed net,
+        //   fee included, whatever the row holds. A cached row cannot tell a contact
+        //   send's engine net (fee included) from a fallback principal (fee excluded),
+        //   since both carry the contact identity. Without a walker record,
+        //   [detailSignedNet] reconstructs it from the row.
+        val cachedValue = cacheEntry?.valueSatoshis
+        return if (
+            cacheEntry != null && cachedValue != null && cachedValue != 0L &&
+            (cacheEntry.iconType == TxDisplayCacheEntry.ICON_SENT ||
+                cacheEntry.iconType == TxDisplayCacheEntry.ICON_RECEIVED)
+        ) {
+            val cachedDirection = if (cachedValue < 0) {
+                L1TxUiDirection.OUTGOING
+            } else {
+                L1TxUiDirection.INCOMING
+            }
+            val net = if (cachedDirection == L1TxUiDirection.OUTGOING &&
+                walletRecord != null && walletRecord.netAmountDuffs < 0L
+            ) {
+                walletRecord.netAmountDuffs
+            } else {
+                detailSignedNet(cachedValue, isContactRow = cacheEntry.contactUserId != null, baseRecord)
+            }
+            baseRecord.copy(netAmountDuffs = net, direction = cachedDirection)
+        } else {
+            baseRecord
+        }
+    }
+
+    /**
+     * [SdkTxMetadataSource]: the default metadata row for a tx the SDK store holds,
+     * from the same corrected record the history list shows.
+     *
+     * Never starts the SDK. When it is not running there is no SDK store to consult,
+     * and starting it as a side effect of a metadata lookup (for example a platform
+     * metadata sync on a wallet that has not cut over) is not this method's call.
+     * The tx-detail sheet starts it through [load] before it imports metadata.
+     *
+     * No decode, so no Σin−Σout fee. That only matters for a send with no walker
+     * record and no stored fee, whose value is then short by the fee.
+     */
+    override suspend fun defaultMetadataFor(txId: TxId): TransactionMetadata? {
+        val txIdDisplayHex = txId.toString().lowercase()
+        val wireTxid = displayTxIdToWireBytes(txIdDisplayHex) ?: return null
+        return try {
+            val db = sdkService.databaseOrNull() ?: return null
+            val entity = db.transactionDao().getByTxid(wireTxid) ?: return null
+            correctedRecord(
+                storeRecordOf(entity),
+                walletRecord = walletRecordFor(db, txIdDisplayHex),
+                cacheEntry = cacheEntryFor(txIdDisplayHex),
+                derivedFee = null
+            ).toDefaultMetadata()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("SDK store lookup for metadata of {} failed", txIdDisplayHex, e)
+            null
+        }
+    }
+
+    /**
+     * [SdkTxMetadataSource] batch form, for a platform metadata sync that imports
+     * many SDK-only transactions. Same rows as [defaultMetadataFor] per txid, but
+     * the wallet records come from one [walletRecordsFor] pass and the cache rows
+     * from chunked reads, so the wallet-wide walker work runs once per batch, not
+     * once per txid. One indexed store read per txid remains.
+     */
+    override suspend fun defaultMetadataFor(txIds: Collection<TxId>): Map<TxId, TransactionMetadata> {
+        if (txIds.isEmpty()) return emptyMap()
+        return try {
+            val db = sdkService.databaseOrNull() ?: return emptyMap()
+            val txDao = db.transactionDao()
+            // Only the payload-free record is kept per txid: an entity carries the
+            // serialized transaction, and a restore's re-merge can batch thousands.
+            val storeRecords = LinkedHashMap<String, Pair<TxId, L1TxUiRecord>>()
+            for (txId in txIds) {
+                val hex = txId.toString().lowercase()
+                val wire = displayTxIdToWireBytes(hex) ?: continue
+                txDao.getByTxid(wire)?.let { storeRecords[hex] = txId to storeRecordOf(it) }
+            }
+            if (storeRecords.isEmpty()) return emptyMap()
+
+            val walletRecords = walletRecordsFor(db, storeRecords.keys)
+            val cacheEntries = storeRecords.keys.chunked(CACHE_READ_CHUNK)
+                .flatMap { txDisplayCacheDao.getEntriesByIds(it) }
+                .associateBy { it.rowId.lowercase() }
+            storeRecords.entries.associate { (hex, txIdAndRecord) ->
+                val (txId, storeRecord) = txIdAndRecord
+                txId to correctedRecord(
+                    storeRecord,
+                    walletRecord = walletRecords[hex],
+                    cacheEntry = cacheEntries[hex],
+                    derivedFee = null
+                ).toDefaultMetadata()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("SDK store batch lookup for metadata of {} txid(s) failed", txIds.size, e)
+            emptyMap()
+        }
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+
+        /** Ids per tx_display_cache `IN (…)` read; SQLite caps bound variables at 999. */
+        private const val CACHE_READ_CHUNK = 500
     }
 }

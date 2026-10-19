@@ -168,8 +168,16 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         val minDate = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME * 1000L
         val maxDate = System.currentTimeMillis()
 
-        // Set initial date to today
+        // Open on the date already chosen, else on the EARLIEST selectable one
+        // — never on today. This dialog's confirm button is a one-tap commit,
+        // and the value it commits decides how much of the chain gets scanned:
+        // opening on today means an accidental confirm scans almost nothing and
+        // restores a fraction of the balance (SR-22). Opening on the floor makes
+        // that same accidental confirm cost sync time instead of history, which
+        // is the direction this screen's whole rule already leans ("scanning too
+        // early only costs time; scanning too late hides funds").
         val calendar = Calendar.getInstance()
+        calendar.timeInMillis = viewModel.selectedCreationDate.value?.times(1000L) ?: minDate
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH)
         val day = calendar.get(Calendar.DAY_OF_MONTH)
@@ -220,7 +228,10 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, recoveryData.pin))
                 } else {
                     // recovery that requires a blockchain rescan
-                    if (viewModel.restoreWalletFromSeed(words)) {
+                    val result = viewModel.restoreWalletFromSeed(words)
+                    if (result == SeedRestoreResult.REFUSED) {
+                        redirectDegradedWallet(walletApplication)
+                    } else if (result == SeedRestoreResult.RESTORED) {
                         startActivityForResult(
                             SetPinActivity.createIntent(
                                 walletApplication,
@@ -239,7 +250,11 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }
         } else {
-            if (viewModel.restoreWalletFromSeed(words)) {
+            val result = viewModel.restoreWalletFromSeed(words)
+            if (result == SeedRestoreResult.REFUSED) {
+                // The wipe guard latched: the degraded screen explains it.
+                redirectDegradedWallet(walletApplication)
+            } else if (result == SeedRestoreResult.RESTORED) {
                 startActivityForResult(
                     SetPinActivity.createIntent(
                         walletApplication,

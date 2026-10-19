@@ -21,7 +21,11 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import kotlinx.coroutines.CancellationException
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.evolution.AssetLockTransaction
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -311,6 +315,9 @@ class AssetLockKindResolver @Inject constructor(
             if (topUpsDao.getByTxId(sha) != null) return AssetLockKind.TOPUP
             if (invitationsDao.loadByUsername(sha) != null) return AssetLockKind.INVITE
 
+            // Set when a probe could not run for want of the active SDK wallet
+            // id: a partial verdict, like db == null, so it is never cached.
+            var walletUnknown = false
             // Durable fallback — the SDK's own asset_locks funding type, for a
             // lock the app-side records never captured (e.g. after a restore).
             val kind = when (db?.assetLockDao()?.fundingTypeForTxid(hex)) {
@@ -319,6 +326,22 @@ class AssetLockKindResolver @Inject constructor(
                 FUNDING_TYPE_TOPUP_A, FUNDING_TYPE_TOPUP_B -> AssetLockKind.TOPUP
                 FUNDING_TYPE_UPGRADE -> AssetLockKind.UPGRADE
                 else -> null
+            } ?: if (db != null && txKind == TX_TYPE_KIND_ASSET_LOCK) {
+                // Last resort, and the one a RESTORE needs: none of the records above
+                // exist for an asset lock this install did not author, so a restored
+                // wallet's identity registration and top-ups read "Internal". The
+                // credit output pays a key on one of the wallet's identity accounts —
+                // the same evidence dashj's TxResourceMapper used (the credit key's
+                // keychain), read from the SDK's own address→account derivation.
+                val walletId = activeSdkWalletIdOrNull()
+                if (walletId == null) {
+                    walletUnknown = true
+                    null
+                } else {
+                    creditAccountKind(db, hex, walletId)
+                }
+            } else {
+                null
             }
             // Negative-cache ONLY a verdict every probe could weigh in on: with
             // the SDK DB up AND this tx already recorded in the SDK `transactions`
@@ -335,8 +358,12 @@ class AssetLockKindResolver @Inject constructor(
             //     TTL lapsed. A genuine external receive is upserted into the same
             //     table (a non-null Standard kind), so it still caches normally —
             //     only the not-yet-recorded window is spared, which self-limits once
-            //     the SDK persists the row.
-            if (kind == null && db != null && txKind != null) negative.markNegative(hex)
+            //     the SDK persists the row;
+            //   • the active SDK wallet id is unknown or ambiguous (walletUnknown) —
+            //     the credit-account probe was skipped, not answered.
+            if (kind == null && db != null && txKind != null && !walletUnknown) {
+                negative.markNegative(hex)
+            }
             kind
         } catch (e: CancellationException) {
             throw e
@@ -345,6 +372,80 @@ class AssetLockKindResolver @Inject constructor(
             null
         }
     }
+
+    /**
+     * The asset-lock role implied by the accounts this asset lock's credit
+     * outputs pay ([assetLockKindForCreditAccountTypes]), or null. Credit
+     * outputs live in the special-tx payload, not the normal outputs, so they
+     * have no TXO rows; their addresses are parsed from the stored transaction
+     * and looked up in `core_addresses`, which holds every address the SDK has
+     * derived and the account it belongs to. Any failure returns null — the
+     * row keeps its plain label, never a wrong one.
+     *
+     * `core_addresses` carries no walletId, only accountId, and the SDK store
+     * can hold more than one wallet (an orphan left by an earlier restore), so
+     * the join is scoped to [walletId] through `accounts.walletId`: another
+     * wallet's identity account must not label this wallet's row.
+     */
+    private suspend fun creditAccountKind(
+        db: org.dashfoundation.dashsdk.persistence.DashDatabase,
+        displayHex: String,
+        walletId: ByteArray
+    ): AssetLockKind? = try {
+        val wireTxid = hexToBytesOrNull(displayHex)?.reversedArray()
+        if (wireTxid == null) {
+            null
+        } else {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val readable = db.openHelper.readableDatabase
+                val txBytes = readable.query(
+                    androidx.sqlite.db.SimpleSQLiteQuery(
+                        "SELECT transactionData FROM transactions WHERE txid = ?",
+                        arrayOf(wireTxid)
+                    )
+                ).use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getBlob(0) else null }
+                // An empty payload is the TXO-parent stub: nothing to parse yet.
+                val addresses = if (txBytes == null || txBytes.isEmpty()) {
+                    emptyList()
+                } else {
+                    assetLockCreditAddresses(txBytes, Constants.NETWORK_PARAMETERS)
+                }
+                if (addresses.isEmpty()) {
+                    null
+                } else {
+                    val accountTypes = HashSet<Int>()
+                    val args = ArrayList<Any?>(1 + addresses.size)
+                    args.add(walletId)
+                    args.addAll(addresses)
+                    readable.query(
+                        androidx.sqlite.db.SimpleSQLiteQuery(
+                            "SELECT DISTINCT a.accountType FROM core_addresses ca " +
+                                "JOIN accounts a ON a.id = ca.accountId " +
+                                "WHERE a.walletId = ? " +
+                                "AND ca.address IN (${addresses.joinToString(",") { "?" }})",
+                            args.toTypedArray()
+                        )
+                    ).use { c -> while (c.moveToNext()) accountTypes += c.getInt(0) }
+                    assetLockKindForCreditAccountTypes(accountTypes)
+                }
+            }
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("credit-account probe failed for {}; leaving the asset lock unclassified", displayHex, t)
+        null
+    }
+
+    /**
+     * The SDK wallet this app is bound to, as the 32-byte id the SDK tables
+     * key on, or null when it cannot be named: none loaded yet, or more than
+     * one (stale leftovers of an earlier app wallet) — the same
+     * `singleOrNull()` rule every bound-wallet lookup uses. A non-blocking
+     * snapshot; never triggers an SDK bring-up.
+     */
+    private fun activeSdkWalletIdOrNull(): ByteArray? =
+        sdkService.loadedWalletIds().singleOrNull()?.let { walletIdFromHex(it) }
 
     /**
      * Whether this AssetUnlock was authored by THIS wallet's shielded pool.
@@ -406,6 +507,46 @@ class AssetLockKindResolver @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(AssetLockKindResolver::class.java)
     }
+}
+
+/** `AccountTypeTagFFI` discriminants of the accounts an asset lock's credit output can pay. */
+private const val ACCOUNT_TYPE_IDENTITY_REGISTRATION = 2
+private const val ACCOUNT_TYPE_IDENTITY_TOP_UP = 3
+private const val ACCOUNT_TYPE_IDENTITY_TOP_UP_NOT_BOUND = 4
+private const val ACCOUNT_TYPE_IDENTITY_INVITATION = 5
+
+/**
+ * The asset-lock role for the account types its credit outputs pay — dashj's
+ * keychain-type mapping (TxResourceMapper: identity funding → "Upgrade Fee",
+ * top-up → "Topup Fee", invitation funding → "Invite Fee"). One lock funds one
+ * role, so a mix is not expected; if it happens, registration wins, then
+ * invitation, then top-up. Null when no identity account is paid (a Platform
+ * address top-up, say), so the row keeps its plain label. Pure — host-testable.
+ */
+internal fun assetLockKindForCreditAccountTypes(accountTypes: Set<Int>): AssetLockKind? = when {
+    ACCOUNT_TYPE_IDENTITY_REGISTRATION in accountTypes -> AssetLockKind.UPGRADE
+    ACCOUNT_TYPE_IDENTITY_INVITATION in accountTypes -> AssetLockKind.INVITE
+    ACCOUNT_TYPE_IDENTITY_TOP_UP in accountTypes ||
+        ACCOUNT_TYPE_IDENTITY_TOP_UP_NOT_BOUND in accountTypes -> AssetLockKind.TOPUP
+    else -> null
+}
+
+/**
+ * The addresses an asset lock's payload credit outputs pay, parsed from the
+ * raw transaction. Empty when [txBytes] is not an asset lock or does not parse.
+ * Pure — host-testable.
+ */
+internal fun assetLockCreditAddresses(txBytes: ByteArray, params: NetworkParameters): List<String> = try {
+    val tx = Transaction(params, txBytes)
+    if (!AssetLockTransaction.isAssetLockTransaction(tx)) {
+        emptyList()
+    } else {
+        AssetLockTransaction(tx).assetLockPayload.creditOutputs.mapNotNull { output ->
+            runCatching { output.scriptPubKey.getToAddress(params).toString() }.getOrNull()
+        }
+    }
+} catch (e: Exception) {
+    emptyList()
 }
 
 /**

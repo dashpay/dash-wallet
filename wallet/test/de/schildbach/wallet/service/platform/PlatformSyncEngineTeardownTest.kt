@@ -18,22 +18,22 @@ package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
-import de.schildbach.wallet_test.BuildConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
  * Host-JVM tests for the Kotlin-SDK engine teardown contract on
  * [PlatformSynchronizationService]:
  *
- * - DEBUG builds keep the L1 shadow SPV and the shielded sync loop running
- *   across the routine blockchain-service teardown ([PlatformSyncService.shutdown])
- *   — a deliberate battery trade-off so the warm SPV avoids the
- *   asset-lock islock-verification delay after every idle restart.
+ * - The routine blockchain-service teardown ([PlatformSyncService.shutdown])
+ *   stops the L1 shadow SPV and the shielded sync loop on EVERY build type.
+ *   Debug builds used to keep both running as a battery trade-off (a warm SPV
+ *   skipped the islock-verification delay after an idle restart); that left
+ *   the process alive after the app closed and masked cold-start behaviour
+ *   under test, so the exemption was removed (2026-09-25).
  * - [PlatformSyncService.stopSdkEngines] stops both engines unconditionally
  *   and failure-contained — it is the explicit stop the wallet-wipe path
  *   (BlockchainServiceImpl cleanup, before `finalizeWipe()`) relies on, so
@@ -84,16 +84,13 @@ class PlatformSyncEngineTeardownTest {
     )
 
     @Test
-    fun shutdown_debugBuildKeepsSdkEnginesRunning() = runBlocking {
-        // The debug warm-SPV contract only exists on debug builds; the unit
-        // test variant (_testNet3Debug) is one, but guard anyway so the test
-        // cannot silently assert the wrong branch on another variant.
-        assumeTrue(BuildConfig.DEBUG)
-
+    fun shutdown_stopsBothSdkEngines_onDebugBuildsToo() = runBlocking {
+        // The unit-test variant (_testNet3Debug) is a debug build, which is
+        // exactly the build type that used to be exempt.
         service().shutdown()
 
-        coVerify(exactly = 0) { l1ShadowSyncService.stop() }
-        coVerify(exactly = 0) { shieldedBalanceService.stop() }
+        coVerify(exactly = 1) { l1ShadowSyncService.stop() }
+        coVerify(exactly = 1) { shieldedBalanceService.stop() }
     }
 
     @Test

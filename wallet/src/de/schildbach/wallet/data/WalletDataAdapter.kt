@@ -83,6 +83,12 @@ class WalletDataAdapter @Inject constructor(
 
     override fun currentReceiveAddressString(): String = walletData.currentReceiveAddress().toBase58()
 
+    override fun freshReceiveAddressStringLive(): String =
+        walletData.freshReceiveAddressLive().toBase58()
+
+    override fun currentReceiveAddressStringLive(): String =
+        walletData.currentReceiveAddressLive().toBase58()
+
     override fun getWalletBalance(): Dash = walletData.getWalletBalance().toDash()
 
     override fun spendableUtxoCount(): Int = walletData.spendableUtxoCount()

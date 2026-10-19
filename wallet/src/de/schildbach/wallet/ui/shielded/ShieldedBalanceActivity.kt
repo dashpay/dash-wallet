@@ -36,6 +36,7 @@ import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import javax.inject.Inject
 
 /** Where a dismissed terminal transfer outcome leaves the flow — see [shieldedTransferExitTarget]. */
@@ -129,8 +130,8 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     private var screen = SCREEN_TRANSFER
     private var shieldFirst = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateWithWallet(savedInstanceState: Bundle?) {
+        super.onCreateWithWallet(savedInstanceState)
 
         if (!Constants.SUPPORTS_PLATFORM) {
             finish()
@@ -149,24 +150,28 @@ class ShieldedBalanceActivity : LockScreenActivity() {
         val composeView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                when (screen) {
-                    SCREEN_SEND -> ShieldedSendScreen(
-                        viewModel = sendViewModel,
-                        onBackClick = { finish() },
-                        onFinished = { finish() }
-                    )
-                    SCREEN_RECEIVE -> ShieldedReceiveScreen(
-                        onBackClick = { finish() },
-                        onCopyAddress = ::copyAddress,
-                        onShareAddress = ::shareAddress
-                    )
-                    else -> ShieldedTransferScreen(
-                        viewModel = transferViewModel,
-                        onBackClick = { finish() },
-                        onFinished = ::leaveTransferAfterOutcome,
-                        onConfirm = ::authenticateAndConfirmTransfer,
-                        onSuccess = ::navigateToMoreAfterTransfer
-                    )
+                // DashWalletTheme provides the night-aware LocalDashColors the
+                // screens and the shared components (nav bar, keypad, buttons) read.
+                DashWalletTheme {
+                    when (screen) {
+                        SCREEN_SEND -> ShieldedSendScreen(
+                            viewModel = sendViewModel,
+                            onBackClick = { finish() },
+                            onFinished = { finish() }
+                        )
+                        SCREEN_RECEIVE -> ShieldedReceiveScreen(
+                            onBackClick = { finish() },
+                            onCopyAddress = ::copyAddress,
+                            onShareAddress = ::shareAddress
+                        )
+                        else -> ShieldedTransferScreen(
+                            viewModel = transferViewModel,
+                            onBackClick = { finish() },
+                            onFinished = ::leaveTransferAfterOutcome,
+                            onConfirm = ::authenticateAndConfirmTransfer,
+                            onSuccess = ::navigateToMoreAfterTransfer
+                        )
+                    }
                 }
             }
         }
@@ -175,13 +180,14 @@ class ShieldedBalanceActivity : LockScreenActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (finishedForNoWallet) return
         if (screen == SCREEN_TRANSFER) {
             transferExecutor.setTransferUiVisible(this, true)
         }
     }
 
     override fun onPause() {
-        transferExecutor.setTransferUiVisible(this, false)
+        if (!finishedForNoWallet) transferExecutor.setTransferUiVisible(this, false)
         super.onPause()
     }
 
@@ -193,7 +199,7 @@ class ShieldedBalanceActivity : LockScreenActivity() {
      * onResume — can never clear the NEW screen's visibility.
      */
     override fun onDestroy() {
-        transferExecutor.setTransferUiVisible(this, false)
+        if (!finishedForNoWallet) transferExecutor.setTransferUiVisible(this, false)
         super.onDestroy()
     }
 
