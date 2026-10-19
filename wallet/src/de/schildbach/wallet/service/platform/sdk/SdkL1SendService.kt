@@ -667,6 +667,10 @@ interface SdkL1SendSource {
         prepared: suspend (ByteArray) -> Unit
     ): String = throw UnsupportedOperationException("CoinJoin consolidation not supported")
 
+    /** [ownDestinationAccount] for this source's database. Default throws (callers fail closed). */
+    suspend fun destinationOwner(walletIdHex: String, address: String): OwnDestinationAccount? =
+        throw UnsupportedOperationException("address ownership not supported by this source")
+
     /**
      * Submit an ALREADY-SIGNED transaction from its consensus bytes and
      * return its txid — the replay primitive for a CoinJoin consolidation
@@ -690,6 +694,8 @@ interface SdkL1SendSource {
     suspend fun broadcastRawTransaction(rawTx: ByteArray): String =
         throw UnsupportedOperationException(RAW_BROADCAST_UNSUPPORTED)
 }
+
+internal const val DESTINATION_NOT_OWNED = "consolidation destination is not the wallet's own address"
 
 internal const val RAW_BROADCAST_UNSUPPORTED =
     "raw signed-transaction broadcast is not exposed by the pinned SDK"
@@ -762,6 +768,12 @@ internal class DashSdkL1SendSource(
                 core.broadcastTransaction(finalized)
             }
         }
+    }
+
+    override suspend fun destinationOwner(walletIdHex: String, address: String): OwnDestinationAccount? {
+        service.ensureStarted()
+        val db = checkNotNull(service.databaseOrNull()) { "SDK database not open" }
+        return ownDestinationAccount(db, walletIdHex, address)
     }
 
     /**
@@ -1519,8 +1531,9 @@ class SdkL1SendService internal constructor(
      * [ownAddressBase58] MUST be an address of THIS wallet's unmixed BIP44
      * account (callers derive it via `WalletData.unadvertisedDestinationLive()`,
      * a LIVE engine read on [Dispatchers.IO] — not the plain accessor, which
-     * serves a cache and would hand back an advertised address); the
-     * only validation possible here is network/format.
+     * serves a cache and would hand back an advertised address); only
+     * network/format is validated here — [consolidateCoinJoin] also checks
+     * ownership.
      *
      * The floor is `1` duff: the engine overwrites the single output with
      * `total − fee`, and there is no deliverable to protect on a self-spend.
@@ -1594,7 +1607,11 @@ class SdkL1SendService internal constructor(
         }
     }
 
-    /** @param expectedWalletIdHex the wallet [destination] came from; any other bound wallet refuses. */
+    /**
+     * @param expectedWalletIdHex the wallet [destination] came from; any other bound wallet refuses,
+     * and so does a [destination] that wallet does not own ([SdkL1SendSource.destinationOwner],
+     * checked under the core-send lock right before the build).
+     */
     internal suspend fun consolidateCoinJoin(
         expectedWalletIdHex: String, destination: String, amount: Long, drain: Boolean,
         prepared: suspend (ByteArray) -> Unit
@@ -1615,6 +1632,7 @@ class SdkL1SendService internal constructor(
         var preparedForBroadcast = false
         return try {
             val txid = source.withCoreSendLock(walletId) {
+                checkNotNull(source.destinationOwner(walletId, destination)) { DESTINATION_NOT_OWNED }
                 source.consolidateCoinJoin(walletId, destination, amount, drain) { bytes ->
                     prepared(bytes)
                     runCatching { onSelfSpendBroadcast() }

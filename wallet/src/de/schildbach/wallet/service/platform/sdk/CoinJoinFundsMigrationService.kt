@@ -42,6 +42,8 @@ import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -674,6 +676,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // says whether the native call was reached: `preparing` left behind by
         // a dead process proves nothing was submitted (see
         // [reconcileInterruptedDirectShield]); `submitted` never does.
+        recordShieldInputs(snapshot)
         dashPayConfig.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, DIRECT_SHIELD_PREPARING)
         markInFlight(MixedFundsMigrationAction.SHIELD, startWatcher = false)
         val path = coinJoinAccountPath(walletData.networkParameters)
@@ -745,6 +748,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("mixed-funds migration: could not derive an own receive address", t)
+            return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
+        // Bind the destination to the spending SDK wallet before it is saved.
+        if (!isOwnBip44Destination(snapshot.walletId, destination)) {
+            log.warn("mixed-funds migration: the derived destination is not the SDK wallet's BIP44 address")
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
         saveConsolidation(CoinJoinConsolidationState(
@@ -911,6 +919,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             return PendingCheck.UNREADABLE
         }
         if (pending <= 0) return PendingCheck.NONE
+        // No inputs were recorded for an adopted lock: account-level check.
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, "")
         markInFlight(MixedFundsMigrationAction.SHIELD)
         log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
         return PendingCheck.PENDING
@@ -1055,6 +1065,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     suspend fun clearInFlightMigration() {
         try {
+            // First: if it fails the marker stays, so the record never outlives its migration.
+            dashPayConfig.set(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, "")
             dashPayConfig.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, "")
             dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, "")
             dashPayConfig.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, "")
@@ -1217,6 +1229,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                         signerLocked = true
                         return@withTimeoutOrNull false
                     }
+                    ConsolidationStep.SETTLED -> return@withTimeoutOrNull true
                     ConsolidationStep.PROCEED -> Unit
                 }
                 awaitMigrationResult(marker)
@@ -1272,11 +1285,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
     private suspend fun awaitMigrationResult(marker: InFlightMixedFundsMigration) {
         when (marker.action) {
             MixedFundsMigrationAction.SHIELD -> {
-                // The CoinJoin funds must have actually moved: the account
-                // reads empty and no CoinJoin-funded lock is still pending.
-                // A rising shielded balance alone could be an unrelated
-                // BIP44 shield landing.
-                while (sdkCoinJoinConfirmedDuffs() != 0L ||
+                // The CoinJoin funds must have actually moved: THIS shield's
+                // recorded inputs are spent by a shield lock (older records:
+                // the account reads empty) and no CoinJoin-funded lock is
+                // pending. A rising shielded balance alone could be an
+                // unrelated BIP44 shield landing.
+                while ((recordedShieldSettlement() ?: (sdkCoinJoinConfirmedDuffs() == 0L)) != true ||
                     !shieldedBalanceService.ensureShieldedReady() ||
                     shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
                 ) {
@@ -1285,6 +1299,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 shieldedBalanceService.observeShieldedBalance()
                     .first { it.duffs > marker.baselineShieldedDuffs }
             }
+            // Only an unstaged (older) COMBINE gets here; staged ones end in SETTLED.
             MixedFundsMigrationAction.COMBINE ->
                 while (sdkCoinJoinConfirmedDuffs() != 0L) {
                     delay(IN_FLIGHT_POLL_MS)
@@ -1296,10 +1311,85 @@ class CoinJoinFundsMigrationService @Inject constructor(
         dashPayConfig.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, state.encode())
     }
 
+    /** Before the native call: the coins this shield must spend. */
+    private suspend fun recordShieldInputs(snapshot: CoinJoinConsolidationSnapshot) {
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, encodeOutpoints(snapshot.coins.map { it.outpoint }))
+    }
+
+    /**
+     * Whether the [recordShieldInputs] coins are all spent by ONE shielded
+     * top-up lock; null when none were recorded (account-level fallback),
+     * false on any read or decode failure.
+     */
+    private suspend fun recordedShieldSettlement(): Boolean? {
+        val raw = try {
+            readCheckpoint(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("recorded shield inputs unreadable; not complete", t)
+            return false
+        }
+        if (raw.isNullOrBlank()) return null
+        return try {
+            val inputs = decodeOutpoints(raw)
+            val db = dashSdkService.databaseOrNull() ?: return false
+            val spender = soleSpender(inputs, persistedTxos(db, inputs)) ?: return false
+            db.assetLockDao().fundingTypeForTxid(Utils.HEX.encode(spender.reversedArray())) ==
+                ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not read the recorded shield inputs' spender; not complete", t)
+            false
+        }
+    }
+
+    /**
+     * [transferSettled] for the recorded final transfer, read from its signed
+     * bytes or (older stages) the stored row hashing to its txid; false on any doubt.
+     */
+    private suspend fun recordedTransferSettled(state: CoinJoinConsolidationState): Boolean {
+        return try {
+            val params = walletData.networkParameters
+            val db = dashSdkService.databaseOrNull() ?: return false
+            if (state.regularDestination.isEmpty()) return false
+            val own = Utils.HEX.decode(state.txid.lowercase()).reversedArray()
+            val bytes = state.replayBytesOrNull(params)
+                ?: db.transactionDao().getByTxid(own)?.transactionData?.takeIf {
+                    org.bitcoinj.core.Transaction(params, it).txId.toString().equals(state.txid, ignoreCase = true)
+                }
+                ?: return false
+            val tx = org.bitcoinj.core.Transaction(params, bytes)
+            val rows = persistedTxos(db, tx.inputs.map { it.outpoint.bitcoinSerialize() })
+            isOwnBip44Destination(state.walletId, state.regularDestination) &&
+                transferSettled(tx, rows, state.regularDestination, state.walletId, params) {
+                    db.txoDao().getByOutpoint(it)
+                }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not verify the final transfer's persisted settlement; not complete", t)
+            false
+        }
+    }
+
+    private suspend fun persistedTxos(db: DashDatabase, outpoints: List<ByteArray>): List<TxoEntity> =
+        outpoints.chunked(PERSISTED_LOCK_QUERY_CHUNK).flatMap { db.txoDao().getByOutpoints(it) }
+
+    /** [ownDestinationAccount] is BIP44 for wallet [walletIdHex]; false on any doubt. */
+    private suspend fun isOwnBip44Destination(walletIdHex: String, address: String): Boolean = try {
+        val db = dashSdkService.databaseOrNull()
+        db != null && ownDestinationAccount(db, walletIdHex, address) == OwnDestinationAccount.BIP44
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not read the destination's owner; refusing", t)
+        false
+    }
+
     /** What [continueConsolidation] left for the watcher to do. */
     private enum class ConsolidationStep {
         /** The persisted stages are done: wait for the migration's result. */
         PROCEED,
+        /** The recorded final transfer is proven settled: complete. */
+        SETTLED,
         /** Stopped for good (wrong wallet, nothing left, definitive failure). */
         STOPPED,
         /** A step could not sign because the device is locked; retry it later. */
@@ -1352,8 +1442,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 // another drain; keep watching for the lock row (resumed
                 // above) or the spend to settle, and let the honesty window
                 // expire into the "could not confirm" guidance otherwise.
-                val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
-                if (snapshot != null && snapshot.coins.isEmpty()) return ConsolidationStep.PROCEED
+                // Evidence: the recorded inputs spent by a shield lock (older records: an empty account).
+                val settled = recordedShieldSettlement() ?: coinJoinConsolidationSnapshot(
+                    dashSdkService, ::persistedInstantLocks
+                )?.coins?.isEmpty()
+                if (settled == true) return ConsolidationStep.PROCEED
                 delay(IN_FLIGHT_POLL_MS)
                 continue
             }
@@ -1378,14 +1471,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     continue
                 }
             }
-            val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
             if (state.phase == CoinJoinConsolidationState.TRANSFERRING) {
-                if (snapshot != null && snapshot.coins.isEmpty()) return ConsolidationStep.PROCEED
-                // The final transaction is settled; wait for the engine and
-                // persistence to agree that its CoinJoin inputs are spent.
+                // Final: complete once persistence shows ITS inputs spent by it
+                // and ITS BIP44 output. A later CoinJoin coin neither blocks it
+                // nor is stranded (a new migration from Tools moves it).
+                if (recordedTransferSettled(state)) return ConsolidationStep.SETTLED
                 delay(IN_FLIGHT_POLL_MS)
                 continue
             }
+            val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
             if (snapshot == null || snapshot.coins.isEmpty()) {
                 delay(IN_FLIGHT_POLL_MS)
                 continue
@@ -1416,6 +1510,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     shieldedBalanceService.resumePendingWalletShields()
                     return ConsolidationStep.PROCEED
                 }
+                recordShieldInputs(snapshot)
                 state = state.copy(phase = CoinJoinConsolidationState.SHIELD_PREPARING)
                 saveConsolidation(state)
                 val result = shieldedBalanceService.shieldMixedFundsFromWallet(
@@ -1448,6 +1543,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (amount <= 0L) { failMigration(); return ConsolidationStep.STOPPED }
             val finalTransfer = state.action == MixedFundsMigrationAction.COMBINE && snapshot.drain
             val destination = if (finalTransfer) state.regularDestination else state.destination
+            if (finalTransfer && !isOwnBip44Destination(state.walletId, destination)) {
+                log.warn("mixed-funds migration: the saved BIP44 destination is not this wallet's; refusing")
+                failMigration()
+                return ConsolidationStep.STOPPED
+            }
             val result = sdkL1SendService.consolidateCoinJoin(
                 state.walletId, destination, amount, snapshot.drain
             ) { bytes ->

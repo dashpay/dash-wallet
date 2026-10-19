@@ -628,7 +628,7 @@ internal class DashSdkShieldedSource(
     override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
         val db = database()
         val rows = db.assetLockDao()
-            .observeByWalletAndFundingType(walletId, SHIELDED_TOPUP_FUNDING_TYPE)
+            .observeByWalletAndFundingType(walletId, ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
             .first()
         val locks = rows.map { PendingWalletShieldLock(it.outPointHex, it.statusRaw, it.amountDuffs) }
         if (locks.none { it.resumable }) return locks
@@ -664,9 +664,6 @@ internal class DashSdkShieldedSource(
         manager().estimateShieldedFee(ShieldedProver.FeeKind.TransferOrShield, SHIELD_NUM_ACTIONS)
 
     private companion object {
-        /** `AssetLockFundingType::AssetLockShieldedAddressTopUp` discriminant. */
-        const val SHIELDED_TOPUP_FUNDING_TYPE = 5
-
         /** On-wire Orchard action count of a single-output Shield bundle. */
         const val SHIELD_NUM_ACTIONS = 2
     }

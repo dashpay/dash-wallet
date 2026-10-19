@@ -309,6 +309,14 @@ open class DashPayConfig @Inject constructor(
         val MIXED_FUNDS_DIRECT_SHIELD_PHASE = stringPreferencesKey("mixed_funds_direct_shield_phase")
 
         /**
+         * CoinJoin outpoints (comma-separated hex) a mixed-funds SHIELD recorded
+         * before its native funding call. Completion requires THESE to be spent
+         * by one shielded top-up lock, so a later CoinJoin coin never blocks it.
+         * Blank on older/adopted records, which keep the account-level check.
+         */
+        val MIXED_FUNDS_SHIELD_INPUTS = stringPreferencesKey("mixed_funds_shield_inputs")
+
+        /**
          * Phase 3c of the dashj → Kotlin SDK migration
          * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
          * username resolution/search through the Dash Platform Kotlin SDK

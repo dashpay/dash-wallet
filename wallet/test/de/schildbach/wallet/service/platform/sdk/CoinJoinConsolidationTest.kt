@@ -26,6 +26,7 @@ class CoinJoinConsolidationTest {
     private val params = TestNet3Params.get()
     private val destination = "yTb47qEBpNmgXvYYsHEN4nh8yJwa5iC4Cs"
     private val walletId = "01".repeat(32)
+    private val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
     private fun address(index: Int = 0) = CoreAddressEntity(
         destination, poolTypeTag = 0, addressIndex = index, derivationPath = "", accountId = 7L
     )
@@ -97,6 +98,23 @@ class CoinJoinConsolidationTest {
         var storedTx: TransactionEntity? = null
         /** What the SDK store answers for the replayed transaction's input outpoints. */
         var inputRows = listOf<TxoEntity>()
+        /** Persisted TXO rows by hex outpoint (spent inputs, transfer outputs); used when [inputRows] is empty. */
+        val txos = mutableMapOf<String, TxoEntity>()
+        /** [DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS]. */
+        var shieldInputs = ""
+        /** Display-hex txids the SDK tracks as shielded top-up asset locks. */
+        val shieldLocks = mutableSetOf<String>()
+        /** The SDK's persisted address table: address -> its row (owner via [accounts]). */
+        val ownedAddresses = mutableMapOf(
+            destination to CoreAddressEntity(destination, poolTypeTag = 0, addressIndex = 0, derivationPath = "", accountId = 7L),
+            regular to CoreAddressEntity(regular, poolTypeTag = 1, addressIndex = 3, derivationPath = "", accountId = 9L)
+        )
+        val accounts = mutableMapOf(
+            7L to AccountEntity(id = 7, walletId = Utils.HEX.decode(walletId), accountType = 1, accountIndex = 0,
+                accountTypeName = "CoinJoin"),
+            9L to AccountEntity(id = 9, walletId = Utils.HEX.decode(walletId), accountType = 0, accountIndex = 0,
+                accountTypeName = "BIP44")
+        )
         val shieldedBalance = MutableStateFlow(Dash.ZERO)
         var coinJoinLocks = 0
         /** Display-hex txids with app-persisted InstantSend lock evidence. */
@@ -129,7 +147,17 @@ class CoinJoinConsolidationTest {
             every { db.coreAddressDao().observeByAccount(7) } returns addresses
             every { db.txoDao().observeUnspentByWallet(any()) } returns coins
             coEvery { db.transactionDao().getByTxid(any()) } answers { storedTx }
-            coEvery { db.txoDao().getByOutpoints(any()) } answers { inputRows }
+            coEvery { db.txoDao().getByOutpoints(any()) } answers {
+                inputRows.ifEmpty { firstArg<List<ByteArray>>().mapNotNull { txos[Utils.HEX.encode(it)] } }
+            }
+            coEvery { db.txoDao().getByOutpoint(any()) } answers { txos[Utils.HEX.encode(firstArg<ByteArray>())] }
+            coEvery { db.coreAddressDao().getByAddress(any()) } answers { ownedAddresses[firstArg()] }
+            coEvery { db.accountDao().getById(any()) } answers { accounts[firstArg()] }
+            coEvery { db.assetLockDao().fundingTypeForTxid(any()) } answers {
+                if (firstArg<String>() in shieldLocks) ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP else null
+            }
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS) } answers { shieldInputs }
+            coEvery { config.set(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, any()) } answers { shieldInputs = secondArg() }
             // Post-cutover, not yet handled: a fresh move is allowed.
             coEvery { send.cutoverCommitted() } returns true
             // The pinned SDK has no raw-bytes broadcast.
@@ -368,7 +396,6 @@ class CoinJoinConsolidationTest {
 
     @Test fun regularTransferBatchesLargeAccountThenDrainsToBip44() = runTest {
         val f = Fixture(this)
-        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
         every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
         f.coins.value = (0 until 2000).map(::coin)
         f.engineBalance = f.coins.value.sumOf { it.amount }
@@ -385,6 +412,7 @@ class CoinJoinConsolidationTest {
             val output = coin(10_000 + batchSizes.size).copy(
                 outpoint = TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize(),
                 txid = tx.txId.reversedBytes, amount = tx.outputs[0].value.value)
+            if (to == regular) f.persistSettled(tx)
             f.coins.value = f.coins.value.filter { it !in selected } +
                 if (to == regular) emptyList() else listOf(output)
             f.engineBalance = f.coins.value.sumOf { it.amount }
@@ -404,13 +432,14 @@ class CoinJoinConsolidationTest {
 
     @Test fun interruptedRegularTransferKeepsDestinationAndWaitsForFinality() = runTest {
         val f = Fixture(this)
-        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
         val tx = transaction(f.coins.value, regular)
         f.consolidation = CoinJoinConsolidationState(walletId, destination,
             CoinJoinConsolidationState.TRANSFERRING, tx.txId.toString(), regular).encode()
         f.coins.value = emptyList()
         f.engineBalance = 0
         f.storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 0)
+        // Persisted, but not final yet: finality still gates completion.
+        f.persistSettled(tx)
         assertTrue(f.service.restorePendingShieldMigration())
         runCurrent()
         assertEquals(MixedFundsMigrationAction.COMBINE, f.service.inFlightMigration()?.action)
@@ -428,7 +457,6 @@ class CoinJoinConsolidationTest {
 
     @Test fun singleInputRegularTransferIsAllowedAndTracked() = runTest {
         val f = Fixture(this)
-        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
         every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
         f.coins.value = listOf(coin(0))
         f.engineBalance = f.coins.value.sumOf { it.amount }
@@ -462,7 +490,8 @@ class CoinJoinConsolidationTest {
         advanceTimeBy(60_000); runCurrent()
         assertNotNull(f.service.inFlightMigration())
 
-        // The drain is confirmed: the CoinJoin account is empty.
+        // The drain is confirmed: its recorded inputs are spent by the shield lock.
+        f.settleShieldLock()
         f.coins.value = emptyList()
         f.engineBalance = 0
         advanceTimeBy(15_000); runCurrent()
@@ -726,7 +755,6 @@ class CoinJoinConsolidationTest {
 
     @Test fun definitiveShieldFailureAfterConsolidationOffersTheWalletBalanceFallback() = runTest {
         val f = Fixture(this)
-        val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
         every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
         f.coins.value = f.coins.value.take(100)
         f.engineBalance = f.coins.value.sumOf { it.amount }
@@ -779,8 +807,6 @@ class CoinJoinConsolidationTest {
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
     }
 
-    private val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
-
     /**
      * Mirror the production source: the build skips [skipped] (still
      * reserved) coins, and a `prepared` rejection abandons it (counted) as a
@@ -805,6 +831,29 @@ class CoinJoinConsolidationTest {
         return { abandoned }
     }
 
+    /** Persist [outpoints] as spent by [spender] (wire-order txid). */
+    private fun Fixture.markSpent(outpoints: List<ByteArray>, spender: ByteArray) = outpoints.forEach { op ->
+        txos[Utils.HEX.encode(op)] = TxoEntity(op, 0, 1_000_000, destination, isSpent = true,
+            walletId = Utils.HEX.decode(walletId), spendingTxid = spender)
+    }
+
+    /** Persist [tx] as settled in the SDK store: its inputs spent BY it, its outputs as the wallet's TXOs. */
+    private fun Fixture.persistSettled(tx: Transaction) {
+        val own = tx.txId.reversedBytes
+        markSpent(tx.inputs.map { it.outpoint.bitcoinSerialize() }, own)
+        tx.outputs.forEach { output ->
+            val op = TransactionOutPoint(params, output.index.toLong(), tx.txId).bitcoinSerialize()
+            txos[Utils.HEX.encode(op)] = TxoEntity(op, output.index, output.value.value,
+                output.scriptPubKey.getToAddress(params).toString(), walletId = Utils.HEX.decode(walletId), txid = own)
+        }
+    }
+
+    /** The inputs recorded for the shield, persisted as spent by one shielded top-up lock. */
+    private fun Fixture.settleShieldLock(lockTxid: Sha256Hash = Sha256Hash.of("shield-lock".toByteArray())) {
+        markSpent(decodeOutpoints(shieldInputs), lockTxid.reversedBytes)
+        shieldLocks += lockTxid.toString()
+    }
+
     // ── Completion flag on the consolidated routes ────────────────────
 
     /** A consolidated SHIELD past its consolidation stage, the shield not yet landed. */
@@ -827,6 +876,7 @@ class CoinJoinConsolidationTest {
 
     /** The CoinJoin account drained and the shielded credit visible. */
     private fun landShield(f: Fixture) {
+        f.settleShieldLock()
         f.coins.value = emptyList()
         f.engineBalance = 0
         f.coinJoinLocks = 0
@@ -840,6 +890,7 @@ class CoinJoinConsolidationTest {
         f.engineBalance = f.coins.value.sumOf { it.amount }
         f.mockConsolidation(to = regular) { tx ->
             f.storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 0)
+            f.persistSettled(tx)
             f.coins.value = emptyList()
             f.engineBalance = 0
         }
@@ -1212,5 +1263,206 @@ class CoinJoinConsolidationTest {
         runCurrent()
         advanceTimeBy(60_000); runCurrent()
         f.assertNothingBuilt()
+    }
+
+    // ── Completion tracks the RECORDED transaction, not the whole account ──
+
+    /** A final COMBINE transfer of [spent], recorded as TRANSFERRING and final (IS-locked context). */
+    private fun Fixture.finalTransferInFlight(spent: List<TxoEntity>): Transaction {
+        val tx = transaction(spent, regular)
+        consolidation = CoinJoinConsolidationState(walletId, destination, CoinJoinConsolidationState.TRANSFERRING,
+            tx.txId.toString(), regular, Utils.HEX.encode(tx.bitcoinSerialize())).encode()
+        marker = formatInFlightMigration(
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.COMBINE, System.currentTimeMillis(), 0L)
+        )
+        storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 1)
+        coins.value = emptyList()
+        engineBalance = 0
+        return tx
+    }
+
+    @Test fun finalTransferCompletesOnlyOnceItsBip44OutputIsPersisted() = runTest {
+        val f = Fixture(this)
+        val tx = f.finalTransferInFlight((0 until 3).map(::coin))
+        // Final, inputs spent by it and the CoinJoin account empty — but the
+        // BIP44 output is not in the SDK's persisted TXOs yet.
+        f.persistSettled(tx)
+        val output = Utils.HEX.encode(TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize())
+        val persistedOutput = f.txos.remove(output)
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        // A row at that outpoint for another address does not count either.
+        f.txos[output] = persistedOutput!!.copy(address = destination)
+        advanceTimeBy(30_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        // Persisted on the destination: DONE, then cleared.
+        f.txos[output] = persistedOutput
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(true, f.done)
+        assertEquals("", f.consolidation)
+        assertEquals(1, f.service.verifiedLandings)
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
+    }
+
+    @Test fun finalTransferCompletesDespiteACoinJoinCoinReceivedAfterItWasBuilt() = runTest {
+        val f = Fixture(this)
+        val tx = f.finalTransferInFlight((0 until 3).map(::coin))
+        // A new CoinJoin coin arrives after the transfer was built: not part of it.
+        val late = coin(700)
+        f.coins.value = listOf(late)
+        f.engineBalance = late.amount
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        // Its own inputs are not yet persisted as spent by it: not complete.
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        f.persistSettled(tx)
+        advanceTimeBy(15_000); runCurrent()
+        // The recorded transaction settled: complete, without touching the late coin.
+        assertNull(f.service.inFlightMigration())
+        assertEquals(true, f.done)
+        assertEquals("", f.consolidation)
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
+        // The late coin is not stranded: Tools still offers a NEW migration, which moves it.
+        assertTrue(f.service.shouldOfferInTools())
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+        f.mockConsolidation(to = regular)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(walletId, regular, 1L, true, any()) }
+        // ... while the automatic prompt stays suppressed by the completed run.
+        f.service.clearInFlightMigration()
+        assertFalse(f.service.shouldPrompt())
+    }
+
+    @Test fun finalTransferWhoseInputWentElsewhereNeverCompletes() = runTest {
+        val f = Fixture(this)
+        val tx = f.finalTransferInFlight((0 until 3).map(::coin))
+        f.persistSettled(tx)
+        // One input is persisted as spent by a DIFFERENT transaction.
+        val first = Utils.HEX.encode(tx.inputs[0].outpoint.bitcoinSerialize())
+        f.txos[first] = f.txos.getValue(first).copy(spendingTxid = ByteArray(32) { 7 })
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        advanceTimeBy(5L * 60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        // EVERY input spent by one other transaction (its output row still present): not ours either.
+        tx.inputs.forEach { input ->
+            val key = Utils.HEX.encode(input.outpoint.bitcoinSerialize())
+            f.txos[key] = f.txos.getValue(key).copy(spendingTxid = ByteArray(32) { 7 })
+        }
+        advanceTimeBy(5L * 60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
+    }
+
+    @Test fun shieldCompletesOnItsRecordedInputsDespiteALaterCoinJoinCoin() = runTest {
+        val f = Fixture(this)
+        val spent = f.coins.value.take(3)
+        f.coins.value = spent
+        f.engineBalance = spent.sumOf { it.amount }
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) } coAnswers {
+            // Recorded BEFORE the native call: exactly the snapshot's coins.
+            assertEquals(encodeOutpoints(spent.map { it.outpoint }), f.shieldInputs)
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        runCurrent()
+        // The shield landed, and a NEW CoinJoin coin arrived meanwhile.
+        val late = coin(700)
+        f.coins.value = listOf(late)
+        f.engineBalance = late.amount
+        f.shieldedBalance.value = Dash.COIN
+        advanceTimeBy(60_000); runCurrent()
+        // The recorded inputs are not spent yet: not complete.
+        assertNotNull(f.service.inFlightMigration())
+        // Spent by one transaction that is NOT a shielded top-up lock: not complete.
+        val lock = Sha256Hash.of("shield-lock".toByteArray())
+        f.settleShieldLock(lock)
+        f.shieldLocks.clear()
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertEquals(0, f.service.verifiedLandings)
+        // Spent by the shield lock: complete, despite the late coin.
+        f.shieldLocks += lock.toString()
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(1, f.service.verifiedLandings)
+        assertEquals("", f.shieldInputs)
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+        // The late coin stays movable from Tools.
+        assertTrue(f.service.shouldOfferInTools())
+    }
+
+    @Test fun shieldWithoutRecordedInputsKeepsTheAccountLevelCheck() = runTest {
+        val f = Fixture(this)
+        // An older record: a SHIELD marker with no recorded inputs.
+        f.marker = shieldMarker()
+        f.directPhase = CoinJoinFundsMigrationService.DIRECT_SHIELD_SUBMITTED
+        f.coins.value = listOf(coin(700))
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        f.shieldedBalance.value = Dash.COIN
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+    }
+
+    // ── The BIP44 destination is bound to the building SDK wallet ──────
+
+    @Test fun combineRefusesADestinationTheSdkWalletDoesNotOwn() = runTest {
+        val f = Fixture(this)
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+        f.coins.value = (0 until 3).map(::coin)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        // The address is another wallet's BIP44 address ...
+        f.accounts[9L] = f.accounts.getValue(9L).copy(walletId = Utils.HEX.decode("02".repeat(32)))
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
+        // ... or this wallet's CoinJoin address ...
+        f.accounts[9L] = f.accounts.getValue(7L).copy(id = 9)
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
+        // ... or absent from the persisted address table: never saved, never built.
+        f.ownedAddresses.remove(regular)
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
+        assertEquals("", f.consolidation)
+        assertEquals("", f.marker)
+        f.assertNothingBuilt()
+    }
+
+    @Test fun savedDestinationNoLongerOwnedIsADefinitiveFailureBeforeBuilding() = runTest {
+        val f = Fixture(this)
+        f.coins.value = (0 until 3).map(::coin)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        f.consolidation = CoinJoinConsolidationState(walletId, destination, regularDestination = regular).encode()
+        f.ownedAddresses.remove(regular)
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        f.assertNothingBuilt()
+        assertEquals(true, f.service.inFlightMigration()?.failed)
+        assertEquals(CoinJoinConsolidationState.READY, CoinJoinConsolidationState.decode(f.consolidation).phase)
+    }
+
+    @Test fun ownDestinationAccountReadsThePersistedAddressTable() = runTest {
+        val f = Fixture(this)
+        assertEquals(OwnDestinationAccount.BIP44, ownDestinationAccount(f.db, walletId, regular))
+        assertEquals(OwnDestinationAccount.COIN_JOIN, ownDestinationAccount(f.db, walletId, destination))
+        assertNull(ownDestinationAccount(f.db, "02".repeat(32), regular))
+        f.accounts[9L] = f.accounts.getValue(9L).copy(accountIndex = 1)
+        assertNull(ownDestinationAccount(f.db, walletId, regular))
+        f.accounts[9L] = f.accounts.getValue(9L).copy(accountIndex = 0, standardTag = STANDARD_ACCOUNT_TAG_BIP32)
+        assertNull(ownDestinationAccount(f.db, walletId, regular))
+        assertNull(ownDestinationAccount(f.db, walletId, "yTsGq4wV8WF5GKLaYV2C43zrkr2sfTtysT"))
     }
 }

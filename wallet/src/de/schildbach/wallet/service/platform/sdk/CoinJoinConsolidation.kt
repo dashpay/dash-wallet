@@ -4,7 +4,9 @@ import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionOutPoint
 import org.bitcoinj.core.Utils
+import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashfoundation.dashsdk.persistence.entities.CoreAddressEntity
 import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.json.JSONObject
@@ -122,7 +124,8 @@ internal suspend fun coinJoinConsolidationSnapshot(
  * A [CoinJoinConsolidationSnapshot.drain] must spend EXACTLY the snapshot:
  * `SelectionStrategy.ALL` skips UTXOs still reserved by an earlier build
  * (until the engine TTL), and a settled partial drain would strand the rest —
- * TRANSFERRING only completes on an empty account.
+ * TRANSFERRING completes only once every input it recorded is spent by it
+ * ([transferSettled]).
  */
 internal fun validateCoinJoinConsolidation(
     raw: ByteArray, snapshot: CoinJoinConsolidationSnapshot, destination: String, params: NetworkParameters,
@@ -141,4 +144,76 @@ internal fun validateCoinJoinConsolidation(
         "Consolidation must pay only the selected CoinJoin address"
     }
     return tx.txId.toString()
+}
+
+/** `AssetLockFundingType::AssetLockShieldedAddressTopUp` discriminant. */
+internal const val ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP = 5
+
+/** Which of a wallet's own accounts holds a consolidation destination. */
+enum class OwnDestinationAccount { BIP44, COIN_JOIN }
+
+/**
+ * The account of wallet [walletIdHex] owning [address] in the SDK's PERSISTED
+ * address table — BIP44 account 0 (either chain) or CoinJoin account 0 — else
+ * null. Binds a destination derived elsewhere to the wallet the build selects
+ * by ID. Read failures propagate: callers fail closed.
+ */
+internal suspend fun ownDestinationAccount(db: DashDatabase, walletIdHex: String, address: String): OwnDestinationAccount? {
+    val row = db.coreAddressDao().getByAddress(address) ?: return null
+    if (row.poolTypeTag !in 0..1) return null
+    val account = db.accountDao().getById(row.accountId ?: return null) ?: return null
+    if (!account.walletId.contentEquals(Utils.HEX.decode(walletIdHex.lowercase())) || account.accountIndex != 0) {
+        return null
+    }
+    return when {
+        account.accountType == ACCOUNT_TYPE_TAG_STANDARD && account.standardTag == STANDARD_ACCOUNT_TAG_BIP44 ->
+            OwnDestinationAccount.BIP44
+        account.accountType == ACCOUNT_TYPE_TAG_COIN_JOIN -> OwnDestinationAccount.COIN_JOIN
+        else -> null
+    }
+}
+
+/** Persisted form of a shield's recorded inputs: comma-separated hex outpoints. */
+internal fun encodeOutpoints(outpoints: List<ByteArray>): String = outpoints.joinToString(",") { Utils.HEX.encode(it) }
+
+/** Inverse of [encodeOutpoints]; throws on a malformed record (callers fail closed). */
+internal fun decodeOutpoints(raw: String): List<ByteArray> = raw.split(',').map { hex ->
+    Utils.HEX.decode(hex.trim().lowercase()).also { require(it.size == 36) { "malformed outpoint" } }
+}
+
+/** The ONE transaction [rows] record as spending every outpoint of [inputs], else null. */
+internal fun soleSpender(inputs: List<ByteArray>, rows: List<TxoEntity>): ByteArray? {
+    if (inputs.isEmpty()) return null
+    val byOutpoint = rows.associateBy { Utils.HEX.encode(it.outpoint) }
+    var spender: ByteArray? = null
+    for (input in inputs) {
+        val row = byOutpoint[Utils.HEX.encode(input)] ?: return null
+        val link = row.spendingTxid ?: return null
+        if (!row.isSpent) return null
+        if (spender == null) spender = link else if (!spender.contentEquals(link)) return null
+    }
+    return spender
+}
+
+/**
+ * Has [tx] settled in the SDK's persisted TXOs: every input spent BY it, and
+ * every output paying [destination] persisted as wallet [walletIdHex]'s TXO
+ * ([outputRow] answers by outpoint)? Other CoinJoin coins are irrelevant.
+ */
+internal suspend fun transferSettled(
+    tx: Transaction, inputRows: List<TxoEntity>, destination: String, walletIdHex: String, params: NetworkParameters,
+    outputRow: suspend (ByteArray) -> TxoEntity?
+): Boolean {
+    val own = tx.txId.reversedBytes
+    val spender = soleSpender(tx.inputs.map { it.outpoint.bitcoinSerialize() }, inputRows) ?: return false
+    if (!spender.contentEquals(own)) return false
+    val script = org.bitcoinj.script.ScriptBuilder.createOutputScript(Address.fromBase58(params, destination)).program
+    val paid = tx.outputs.filter { it.scriptBytes.contentEquals(script) }
+    if (paid.isEmpty()) return false
+    val wallet = Utils.HEX.decode(walletIdHex.lowercase())
+    return paid.all { output ->
+        val row = outputRow(TransactionOutPoint(params, output.index.toLong(), tx.txId).bitcoinSerialize())
+        row != null && row.address == destination && row.amount == output.value.value &&
+            row.walletId.contentEquals(wallet) && row.txid?.contentEquals(own) == true
+    }
 }

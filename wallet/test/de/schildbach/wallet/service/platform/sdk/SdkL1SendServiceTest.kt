@@ -87,6 +87,17 @@ class SdkL1SendServiceTest {
         var consolidationBroadcasts = 0
         val consolidationWallets = mutableListOf<String>()
 
+        /** The persisted address table's answer: which own account holds the destination. */
+        var owner: (String, String) -> OwnDestinationAccount? = { _, _ -> OwnDestinationAccount.BIP44 }
+        val ownershipChecks = mutableListOf<Pair<String, String>>()
+        var ownershipCheckedInsideLock = false
+
+        override suspend fun destinationOwner(walletIdHex: String, address: String): OwnDestinationAccount? {
+            ownershipChecks += walletIdHex to address
+            ownershipCheckedInsideLock = insideLock
+            return owner(walletIdHex, address)
+        }
+
         override suspend fun consolidateCoinJoin(
             walletIdHex: String,
             destination: String,
@@ -586,6 +597,31 @@ class SdkL1SendServiceTest {
         val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
         assertTrue(result is SdkWriteResult.Broadcast)
         assertEquals(listOf(walletId), source.consolidationWallets)
+        // The destination was bound to that same wallet, under the build's lock.
+        assertEquals(listOf(walletId to validAddress), source.ownershipChecks)
+        assertTrue(source.ownershipCheckedInsideLock)
+    }
+
+    @Test
+    fun consolidateCoinJoin_destinationNotOwnedByTheWallet_isNotBroadcastAndNeverBuilds() = runBlocking {
+        // A valid address of ANOTHER wallet (or none in the persisted table): refuse before building.
+        val source = readySource().apply { owner = { _, _ -> null } }
+        val svc = consolidationService(source)
+        var prepared = false
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(DESTINATION_NOT_OWNED, (result as SdkWriteResult.NotBroadcast).cause?.message)
+        assertTrue(source.consolidationWallets.isEmpty())
+        assertFalse(prepared)
+    }
+
+    @Test
+    fun consolidateCoinJoin_unreadableOwnership_isNotBroadcastAndNeverBuilds() = runBlocking {
+        val source = readySource().apply { owner = { _, _ -> throw java.io.IOException("db closed") } }
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.consolidationWallets.isEmpty())
     }
 
     // ── CoinJoin consolidation replay (exact persisted bytes) ────────────
