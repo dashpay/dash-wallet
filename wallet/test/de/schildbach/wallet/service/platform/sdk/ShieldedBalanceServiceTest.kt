@@ -21,9 +21,11 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.coVerifyOrder
 import io.mockk.just
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -55,6 +57,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -350,7 +353,8 @@ class ShieldedBalanceServiceTest {
         coEvery { markShieldedSpendReconcilePending(any()) } just Runs
         coEvery { shieldedSpendReconcilePendingSinceMs() } returns null
         coEvery { clearShieldedSpendReconcilePending() } just Runs
-        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
+        every { lastShieldedBalanceCacheEpoch() } returns 0L
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -1325,6 +1329,34 @@ class ShieldedBalanceServiceTest {
         coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
     }
 
+    /**
+     * Cancelled once the SDK spend call started (thepastaclaw, c99eefff0): it
+     * may have broadcast, so the reconciliation is recorded durably before the
+     * cancellation propagates — a restart must not trust the pre-spend cache.
+     */
+    @Test
+    fun aSpendCancelledMidCall_isReconciledDurably() = runBlocking {
+        val source = readySource().apply {
+            onTransfer = { throw CancellationException("cancelled mid-proof") }
+        }
+        val cfg = config(true)
+        val service = ShieldedBalanceServiceImpl(
+            source = source,
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp }
+        )
+        try {
+            service.transferShielded(recipientAddress, Dash.COIN, null)
+            fail("the cancellation must propagate")
+        } catch (expected: CancellationException) {
+            // propagated
+        }
+
+        assertTrue(service.shieldedBalanceMaybeStale.value)
+        coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
+    }
+
     @Test
     fun definitiveNotBroadcast_isNotMarkedStale() = runBlocking {
         val source = readySource().apply {
@@ -1496,7 +1528,7 @@ class ShieldedBalanceServiceTest {
     fun afterRestart_aPendingReconcile_keepsTheFirstReadyStale_andUnpersisted() = runBlocking {
         val cfg = config(true)
         coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
-        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             // a fresh service = a new process: the in-memory flag starts false
@@ -1514,7 +1546,7 @@ class ShieldedBalanceServiceTest {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
             }
             assertTrue("first READY after restart is still reconciling", service.shieldedBalanceMaybeStale.value)
-            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) }
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) }
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
             sweepScope.cancel()
@@ -1533,7 +1565,7 @@ class ShieldedBalanceServiceTest {
         val cfg = config(true)
         // the earlier reconciliation (restored at bring-up, as after a restart)
         coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
-        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
         val clearEntered = CompletableDeferred<Unit>()
         val clearGate = CompletableDeferred<Unit>()
         coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
@@ -1877,13 +1909,13 @@ class ShieldedBalanceServiceTest {
     }
 
     /**
-     * Liveness (review 2026-10-19): a Pending row orphaned inside the window —
-     * the process died after the SDK recorded it but before the broadcast ran —
-     * never resolves. Once it is older than [SPEND_EXECUTION_HORIZON_MS] its
-     * anchor is pruned and it can no longer execute, so it stops blocking.
+     * Fail closed (thepastaclaw, c99eefff0): a row's age never releases it. A
+     * Pending row whose inputs are still unspent blocks however old it is, and
+     * stops blocking only once the SDK resolves it from protocol evidence —
+     * here, Failed after its recorded anchor was pruned.
      */
     @Test
-    fun anOrphanedPendingRow_stopsBlockingOnceItCanNoLongerExecute() = runBlocking {
+    fun anUnresolvedPendingRow_blocksWhateverItsAge_untilTheSdkFailsIt() = runBlocking {
         val cfg = config(true)
         val source = readySource()
         val start = 1_800_000_000_000L
@@ -1893,11 +1925,16 @@ class ShieldedBalanceServiceTest {
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             val service = reconcilingService(source, cfg, sweepScope, sinceMs = start - 1_000L, clock = { now.get() })
-            now.set(start + SPEND_EXECUTION_HORIZON_MS - 1)
+            now.set(start + 365L * 24 * 60 * 60 * 1000)
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits), passOk(preSpendCredits))
-            assertTrue("still within the execution horizon", service.shieldedBalanceMaybeStale.value)
+            assertTrue("an unresolved row blocks at any age", service.shieldedBalanceMaybeStale.value)
 
-            now.set(start + SPEND_EXECUTION_HORIZON_MS)
+            // Unknown (an abandoned identity debit that may still execute) blocks too
+            source.activityFlow.value = listOf(spendRow(status = 3, createdAtMs = start))
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            assertTrue("an Unknown row blocks", service.shieldedBalanceMaybeStale.value)
+
+            source.activityFlow.value = listOf(spendRow(status = 2, createdAtMs = start))
             source.passResults.emit(passOk(preSpendCredits))
             withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
         } finally {
@@ -2959,7 +2996,7 @@ class ShieldedBalanceServiceTest {
                 spentNullifiers = nullifiers, noteCmxs = cmxs
             )
         fun reflected(rows: List<ShieldedActivityEntity>, notes: List<ShieldedNoteEntity>, outgoing: List<ByteArray> = emptyList(), since: Long = 0L) =
-            shieldedSpendsReflected(rows, notes, outgoing, since, now)
+            shieldedSpendsReflected(rows, notes, outgoing, since)
         val aSpent = a.copy(isSpent = true)
 
         assertTrue(reflected(emptyList(), listOf(a, b)))
@@ -2984,10 +3021,9 @@ class ShieldedBalanceServiceTest {
         // rows before the since are ignored; at the since they count
         assertTrue(reflected(listOf(row(0, createdAtMs = now - 10, nullifiers = a.nullifier)), listOf(a), since = now - 9))
         assertFalse(reflected(listOf(row(0, createdAtMs = now - 9, nullifiers = a.nullifier)), listOf(a), since = now - 9))
-        // rows past the execution horizon can no longer execute: ignored
-        assertFalse(reflected(listOf(row(0, createdAtMs = now - SPEND_EXECUTION_HORIZON_MS + 1, nullifiers = a.nullifier)), listOf(a)))
-        assertTrue(reflected(listOf(row(0, createdAtMs = now - SPEND_EXECUTION_HORIZON_MS, nullifiers = a.nullifier)), listOf(a)))
-        // malformed lists are unreadable: closed (until they age out)
+        // Unknown (may still execute) closes it like Pending
+        assertFalse(reflected(listOf(row(3, nullifiers = a.nullifier)), listOf(a)))
+        // malformed lists are unreadable: closed
         assertFalse(reflected(listOf(row(1, nullifiers = ByteArray(33))), emptyList()))
         assertFalse(reflected(listOf(row(1, cmxs = ByteArray(31))), emptyList()))
     }

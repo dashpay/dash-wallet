@@ -153,39 +153,19 @@ private const val NOTE_KEY_BYTES = 32
 private const val ACTIVITY_STATUS_FAILED = 2
 
 /**
- * How long after its activity row was recorded a local shielded spend can
- * still execute on Platform — past this the row cannot change the balance,
- * whatever its status says, so the settlement gate stops waiting for it.
- *
- * Why it is bounded: every shielded spend proves against a recorded anchor,
- * and Platform rejects a transition whose anchor has been pruned. The SDK
- * itself relies on this — it releases a broadcast-but-unconfirmed spend's
- * reservation once its anchor is pruned (`arm_pending_release`). The anchor
- * is picked before the row is written, so it is no newer than the row.
- *
- * Derivation (pinned SDK c4a2b6e83d): anchors are retained for
- * `shielded_anchor_retention_blocks` = 1000 blocks and pruned every
- * `shielded_anchor_pruning_interval` = 100 blocks, so an anchor survives at
- * most 1100 blocks (`max_retained_shielded_anchors`). Tenderdash produces
- * at least one block per `createEmptyBlocksInterval` = 3 min even when idle
- * (dashmate defaults), so 1100 blocks take at most ~55 h. 72 h leaves a wide
- * margin. A Platform halt longer than the margin would break the
- * assumption: a still-queued spend could then execute after this bound.
- *
- * Without the bound, an orphaned Pending row — the process killed after the
- * SDK recorded it but before the broadcast ran, whose reservation lived only
- * in memory — would keep the balance "Syncing…" forever, across restarts.
- */
-internal const val SPEND_EXECUTION_HORIZON_MS = 72L * 60 * 60 * 1000
-
-/**
  * The settlement gate's store fact — pure, host-testable: every local spend
  * recorded since [sinceMs] is fully reflected in the note store.
  *
- * An activity row counts when it was created at or after [sinceMs], is not
- * Failed (a Failed op's notes legitimately stay unspent), and is younger
- * than [SPEND_EXECUTION_HORIZON_MS] at [nowMs] (an older row can no longer
- * execute). Every counted row must have:
+ * An activity row counts when it was created at or after [sinceMs] and is
+ * not Failed (a Failed op's notes legitimately stay unspent). Only the SDK's
+ * own, protocol-backed status ever releases a row — never its age: an
+ * ambiguous spend stays Pending until a scan sees its outputs (Confirmed),
+ * Platform rejects it, or its recorded anchor is pruned so it can never
+ * execute (Failed, `prefetch_stranded_release` at the pinned SDK). A row the
+ * SDK can never resolve (a shield whose outcome stayed ambiguous, an
+ * abandoned identity debit left Unknown, a spend whose process died before
+ * its anchor was recorded) keeps the gate closed: "Syncing…" is the honest
+ * state for an amount nothing can prove. Every counted row must have:
  *
  * 1. none of its `spentNullifiers` among the UNSPENT notes in [notes] — the
  *    store no longer counts the spend's inputs; and
@@ -204,20 +184,15 @@ internal const val SPEND_EXECUTION_HORIZON_MS = 72L * 60 * 60 * 1000
  * it), so its only cmx is the recipient's — never one of our notes.
  *
  * A row whose lists are not a whole number of 32-byte entries is unreadable
- * and keeps the gate closed (until it ages out).
+ * and keeps the gate closed.
  */
 internal fun shieldedSpendsReflected(
     activity: List<ShieldedActivityEntity>,
     notes: List<ShieldedNoteEntity>,
     outgoingCmxs: List<ByteArray>,
-    sinceMs: Long,
-    nowMs: Long
+    sinceMs: Long
 ): Boolean {
-    val relevant = activity.filter {
-        it.createdAtMs >= sinceMs &&
-            nowMs - it.createdAtMs < SPEND_EXECUTION_HORIZON_MS &&
-            it.status != ACTIVITY_STATUS_FAILED
-    }
+    val relevant = activity.filter { it.createdAtMs >= sinceMs && it.status != ACTIVITY_STATUS_FAILED }
     if (relevant.isEmpty()) return true
     val unspentNullifiers = notes.filter { !it.isSpent }.mapTo(HashSet()) { ByteBuffer.wrap(it.nullifier) }
     val knownCmxs = HashSet<ByteBuffer>()
@@ -951,9 +926,7 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val afterStopFallbackBump: suspend () -> Unit = {},
     /**
-     * Wall clock (Unix millis) for spend start times and the settlement
-     * gate's [SPEND_EXECUTION_HORIZON_MS] check. Injectable so a test can age
-     * a row without sleeping.
+     * Wall clock (Unix millis) for spend start times. Injectable for tests.
      */
     private val clock: () -> Long = System::currentTimeMillis
 ) : ShieldedBalanceService {
@@ -1570,7 +1543,7 @@ class ShieldedBalanceServiceImpl internal constructor(
      *    ([observeShieldedBalance]) equals that balance.
      * 3. **Spends reflected** ([shieldedSpendsReflected]): every SDK activity
      *    row created since the reconciliation started ([reconcileSinceMs]),
-     *    not Failed and not past [SPEND_EXECUTION_HORIZON_MS], has none of its
+     *    and not Failed, has none of its
      *    spent nullifiers among the unspent notes AND every one of its output
      *    cmxs in the store (as a note of ours or an OVK-recovered sent note).
      *
@@ -1599,10 +1572,10 @@ class ShieldedBalanceServiceImpl internal constructor(
      * shield-from-address, asset-lock funding): their row's cmx is the new
      * note, so a pre-shield result can no longer settle before it is stored.
      *
-     * A Pending (ambiguous) row whose inputs are still unspent keeps the flag
-     * set until the SDK resolves it (spent on Platform, or Failed) or it passes
-     * [SPEND_EXECUTION_HORIZON_MS] — after which it can no longer execute. The
-     * since relies on the device's wall clock (see [SPEND_WINDOW_SKEW_MS]).
+     * A Pending (ambiguous) or Unknown row keeps the flag set until the SDK
+     * resolves it from protocol evidence (see [shieldedSpendsReflected]); its
+     * age never does. The since relies on the device's wall clock (see
+     * [SPEND_WINDOW_SKEW_MS]) only to pick which rows belong to this spend.
      *
      * If (2) or (3) fails the streak is kept and the next successful pass
      * re-checks. Any read failure keeps the reconciliation pending.
@@ -1644,7 +1617,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                 val outgoing = readOrNull("shielded outgoing notes") {
                     source.observeOutgoingNotes(boundWalletId).first().map { it.cmx }
                 }
-                outgoing != null && shieldedSpendsReflected(activity, notes, outgoing, sinceMs, clock())
+                outgoing != null && shieldedSpendsReflected(activity, notes, outgoing, sinceMs)
             }
         }
         // Decide and apply atomically with markLocalSpendPending: a spend that
@@ -1697,6 +1670,9 @@ class ShieldedBalanceServiceImpl internal constructor(
     private fun startBalancePersistence() {
         val scope = sweepScope ?: return
         if (balancePersistJob?.isActive == true) return
+        // Read once per session, at bring-up: if another wallet is installed
+        // while this session lives, its writes are refused.
+        val cacheEpoch = dashPayConfig.lastShieldedBalanceCacheEpoch()
         balancePersistJob = scope.launch {
             var lastPersisted: Long? = null
             combine(
@@ -1723,7 +1699,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // so the write itself is conditional on the durable reconcile
                 // marker, inside one DataStore transaction — a pre-spend
                 // snapshot can never resurrect the cache.
-                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs) }
+                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs, cacheEpoch) }
                     .onSuccess { written -> if (written) lastPersisted = duffs }
                     .onFailure {
                         if (it is CancellationException) throw it
@@ -1961,7 +1937,11 @@ class ShieldedBalanceServiceImpl internal constructor(
                 }
                 SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
             } catch (t: Throwable) {
-                if (t is CancellationException) throw t
+                if (t is CancellationException) {
+                    // The staged shield may have broadcast (see runShieldedWrite).
+                    markLocalSpendPending(spendStartedAtMs)
+                    throw t
+                }
                 classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
             }
         }
@@ -2064,9 +2044,9 @@ class ShieldedBalanceServiceImpl internal constructor(
                     log.warn("pending wallet-shield lock has a malformed outpoint key; skipping")
                     continue
                 }
+                resumeAttempts[lock.outPointHex] = attempts + 1
+                val spendStartedAtMs = clock()
                 try {
-                    resumeAttempts[lock.outPointHex] = attempts + 1
-                    val spendStartedAtMs = clock()
                     source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
                     resumed++
                     log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)
@@ -2076,7 +2056,11 @@ class ShieldedBalanceServiceImpl internal constructor(
                     markLocalSpendPending(spendStartedAtMs)
                     kickImmediateShieldedSync()
                 } catch (t: Throwable) {
-                    if (t is CancellationException) throw t
+                    if (t is CancellationException) {
+                        // The resume may have broadcast (see runShieldedWrite).
+                        markLocalSpendPending(spendStartedAtMs)
+                        throw t
+                    }
                     log.warn(
                         "pending wallet-shield lock {} resume failed (attempt {}); the lock stays " +
                             "tracked and is retried later",
@@ -2200,7 +2184,12 @@ class ShieldedBalanceServiceImpl internal constructor(
             kickImmediateShieldedSync()
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
-            if (t is CancellationException) throw t
+            if (t is CancellationException) {
+                // Cancelled once the spend attempt started: the SDK may have
+                // broadcast it, so reconcile like an ambiguous outcome.
+                markLocalSpendPending(spendStartedAtMs)
+                throw t
+            }
             if (t is PreBroadcastRejection) {
                 return notBroadcast(operation, t.reason, t.cause)
             }

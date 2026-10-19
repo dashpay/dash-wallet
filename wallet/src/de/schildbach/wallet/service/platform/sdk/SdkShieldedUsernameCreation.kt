@@ -795,8 +795,18 @@ class SdkShieldedUsernameCreation internal constructor(
         val job = scope.launch(start = CoroutineStart.LAZY) {
             // Before the creation runs its SDK spend (see the stale-mark below).
             val spendStartedAtMs = System.currentTimeMillis()
-            val result = withContext(ioDispatcher) {
-                createUsernameFromShielded(username, secondaryUsername)
+            val result = try {
+                withContext(ioDispatcher) {
+                    createUsernameFromShielded(username, secondaryUsername)
+                }
+            } catch (e: CancellationException) {
+                // Cancelled mid-creation: the Type-20 spend may already have
+                // broadcast, so mark the pool stale as for Ambiguous.
+                withContext(NonCancellable) {
+                    runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast(spendStartedAtMs) }
+                        .onFailure { log.warn("cancelled-submit balance stale-mark failed", it) }
+                }
+                throw e
             }
             val outcome = when (result) {
                 is SdkWriteResult.Broadcast -> ShieldedUsernameSubmitState.Created(result.value)

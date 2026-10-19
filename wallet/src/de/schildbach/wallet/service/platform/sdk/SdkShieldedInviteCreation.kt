@@ -368,7 +368,11 @@ class SdkShieldedInviteCreation internal constructor(
             try {
                 source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
             } catch (t: Throwable) {
-                if (t is CancellationException) throw t
+                if (t is CancellationException) {
+                    // The transfer may have broadcast before it was cancelled.
+                    markPoolSpent(spendStartedAtMs)
+                    throw t
+                }
                 return@withContext when (val classified = classifyBroadcastFailure(t)) {
                     is SdkWriteResult.NotBroadcast -> {
                         log.warn("shielded invite funding rejected pre-broadcast", t)

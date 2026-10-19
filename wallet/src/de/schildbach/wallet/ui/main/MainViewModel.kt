@@ -49,6 +49,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.shieldedReadRetryDelayMs
 import de.schildbach.wallet.service.L1SyncStatusService
 import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
@@ -74,6 +75,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -610,7 +612,7 @@ class MainViewModel @Inject constructor(
      * on (`SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`). The runtime is
      * brought up at startup by [PlatformSyncService]; until it is READY the
      * persisted last-known balance stands in (see [homeShieldedBalance]);
-     * null while the amount is unknown.
+     * null while the amount is unknown, including while a read is failing.
      */
     private fun observeHomeShieldedBalance(): Flow<Dash?> =
         dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
@@ -623,10 +625,19 @@ class MainViewModel @Inject constructor(
                     combine(
                         shieldedBalanceService.observeShieldedBalance(),
                         shieldedBalanceService.shieldedSyncStatus,
-                        dashPayConfig.observe(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS),
+                        dashPayConfig.observeLastShieldedBalanceDuffs(),
                         shieldedBalanceService.shieldedBalanceMaybeStale
                     ) { live, status, cachedDuffs, maybeStale ->
                         homeShieldedBalance(status, live, cachedDuffs?.let { Dash(it) }, maybeStale)
+                    }.retryWhen { e, attempt ->
+                        // Fail closed: an unreadable shielded balance is
+                        // unknown, so the header marks it pending (instead of
+                        // ending the whole home-balance flow on a stale total)
+                        // and re-reads after a back-off.
+                        log.error("home shielded balance flow error (attempt {})", attempt, e)
+                        emit(null)
+                        delay(shieldedReadRetryDelayMs(attempt))
+                        true
                     }
                 }
             }
@@ -1047,7 +1058,8 @@ class MainViewModel @Inject constructor(
  * on, `SdkWalletBinder` binds identity-free wallets too (fund → shield →
  * create identity), so a wallet without an identity can hold shielded
  * funds. Ownership comes from the bound runtime itself — the service tears
- * its READY state down when it stops, and a wallet wipe clears the cache.
+ * its READY state down when it stops, and a wallet wipe or a newly installed
+ * wallet clears the cache.
  */
 internal fun homeShieldedBalance(
     status: ShieldedSyncStatus,

@@ -23,6 +23,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import java.io.IOException
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.junit.Assert.assertEquals
@@ -91,6 +92,52 @@ class DashPayConfigShieldedBalanceCacheTest {
         cfg.clearShieldedSpendReconcilePending()
         assertNull(cfg.shieldedSpendReconcilePendingSinceMs())
         assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L))
+        assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs())
+    }
+
+    /** A newly installed wallet never inherits the previous wallet's balance; a pending marker stays (fail closed). */
+    @Test
+    fun forgettingTheBalance_dropsOnlyTheCache() = runBlocking {
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
+        cfg.forgetLastShieldedBalance()
+        assertNull(cfg.getLastShieldedBalanceDuffs())
+
+        cfg.markShieldedSpendReconcilePending(1_000L)
+        cfg.forgetLastShieldedBalance()
+        assertEquals(1_000L, cfg.shieldedSpendReconcilePendingSinceMs())
+    }
+
+    /**
+     * Installing another wallet hides the cache synchronously — before the
+     * DataStore removal lands — and a completed removal lets the new wallet's
+     * own balance through again.
+     */
+    @Test
+    fun beginningToForget_hidesTheCacheAtOnce_untilTheRemovalCompletes() = runBlocking {
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
+        cfg.beginForgettingLastShieldedBalance()
+        assertNull(cfg.getLastShieldedBalanceDuffs())
+        assertNull(cfg.observeLastShieldedBalanceDuffs().first())
+
+        cfg.forgetLastShieldedBalance()
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L))
+        assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs())
+        assertEquals(600_000_000L, cfg.observeLastShieldedBalanceDuffs().first())
+    }
+
+    /** The replaced wallet's balance writer, still running, cannot write the cache back. */
+    @Test
+    fun aWriterFromBeforeTheNewWallet_isRefused() = runBlocking {
+        val oldSession = cfg.lastShieldedBalanceCacheEpoch()
+        cfg.beginForgettingLastShieldedBalance()
+        // the new wallet's session can start before the async removal runs;
+        // completing the removal must not fence it off too
+        val newSession = cfg.lastShieldedBalanceCacheEpoch()
+        cfg.forgetLastShieldedBalance()
+        assertFalse(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, oldSession))
+        assertNull(cfg.getLastShieldedBalanceDuffs())
+
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L, newSession))
         assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs())
     }
 

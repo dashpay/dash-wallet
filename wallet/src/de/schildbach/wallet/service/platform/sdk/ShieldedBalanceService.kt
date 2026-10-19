@@ -443,3 +443,11 @@ interface ShieldedBalanceService {
      */
     suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit>
 }
+
+/**
+ * Back-off before a balance surface re-subscribes after a shielded read
+ * failure ([attempt] counts from 0): 5 s, growing by 5 s per retry, capped at
+ * 60 s. The surface shows "Syncing…" meanwhile (fail closed) and recovers on
+ * its own once the read does.
+ */
+fun shieldedReadRetryDelayMs(attempt: Long): Long = (attempt.coerceIn(0L, 11L) + 1) * 5_000L

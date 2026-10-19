@@ -34,6 +34,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -42,6 +44,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -859,7 +862,54 @@ open class DashPayConfig @Inject constructor(
      * duffs, or null when none has ever been persisted. See
      * [LAST_SHIELDED_BALANCE_DUFFS].
      */
-    suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
+    suspend fun getLastShieldedBalanceDuffs(): Long? =
+        if (lastShieldedBalanceForgotten.value) null else get(LAST_SHIELDED_BALANCE_DUFFS)
+
+    /** [LAST_SHIELDED_BALANCE_DUFFS] as a flow, hidden like [getLastShieldedBalanceDuffs]. */
+    fun observeLastShieldedBalanceDuffs(): Flow<Long?> =
+        combine(observe(LAST_SHIELDED_BALANCE_DUFFS), lastShieldedBalanceForgotten) { duffs, forgotten ->
+            if (forgotten) null else duffs
+        }
+
+    /**
+     * Set synchronously by [beginForgettingLastShieldedBalance], cleared only
+     * once [forgetLastShieldedBalance] has durably removed the value: until
+     * then the cached balance reads as absent, so no surface can show it in
+     * the window before the DataStore edit lands. A failed removal keeps it
+     * hidden for the rest of the process (fail closed).
+     */
+    private val lastShieldedBalanceForgotten = MutableStateFlow(false)
+
+    /**
+     * Bumped by [beginForgettingLastShieldedBalance]: a balance writer whose
+     * session read an older value belongs to the wallet being replaced, and
+     * [setLastShieldedBalanceDuffsUnlessReconciling] refuses its writes.
+     */
+    private val lastShieldedBalanceCacheEpoch = AtomicLong(0L)
+
+    /** The current cache epoch; a balance writer reads it once when its session starts. */
+    fun lastShieldedBalanceCacheEpoch(): Long = lastShieldedBalanceCacheEpoch.get()
+
+    /**
+     * Hide the last-known shielded balance NOW, from any thread (another
+     * wallet is being installed), and fence off the previous wallet's balance
+     * writer; [forgetLastShieldedBalance] completes it.
+     */
+    fun beginForgettingLastShieldedBalance() {
+        lastShieldedBalanceCacheEpoch.incrementAndGet()
+        lastShieldedBalanceForgotten.value = true
+    }
+
+    /**
+     * Drop the persisted last-known shielded balance, completing
+     * [beginForgettingLastShieldedBalance] (another wallet is being
+     * installed). Does not advance the cache epoch again: a session of the
+     * NEW wallet may already have read it.
+     */
+    suspend fun forgetLastShieldedBalance() {
+        editPreferences { prefs -> prefs.remove(LAST_SHIELDED_BALANCE_DUFFS) }
+        lastShieldedBalanceForgotten.value = false
+    }
 
     /**
      * Durably record that a local shielded spend is reconciling: in ONE
@@ -890,13 +940,19 @@ open class DashPayConfig @Inject constructor(
      * so a balance sampled before a spend can never be written back after
      * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
      * and whichever lands second wins against the stale snapshot (the spend's
-     * removes it; this one sees the marker and skips). Returns whether it was
+     * removes it; this one sees the marker and skips). Also skipped when
+     * [cacheEpoch] — read by the writer when its runtime session started — is
+     * older than [lastShieldedBalanceCacheEpoch]: another wallet has been
+     * installed since, so the balance is not its. Returns whether it was
      * written.
      */
-    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long): Boolean {
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(
+        duffs: Long,
+        cacheEpoch: Long = lastShieldedBalanceCacheEpoch()
+    ): Boolean {
         var written = false
         editPreferences { prefs ->
-            if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
+            if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true && cacheEpoch == lastShieldedBalanceCacheEpoch.get()) {
                 prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
                 written = true
             }
