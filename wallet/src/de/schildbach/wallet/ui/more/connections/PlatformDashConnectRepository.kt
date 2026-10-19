@@ -52,6 +52,9 @@ class PlatformDashConnectRepository @Inject constructor(
 
     override suspend fun parseQr(qrContent: String): DashConnectQr {
         checkNetwork()
+        if (!DashConnectUri.isKeyUri(qrContent.trim())) {
+            throw DashConnectUriException("not a DashConnect QR code: $qrContent")
+        }
         val request = DashConnectUri.parseKeyRequest(qrContent.trim())
         val expected = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_TESTNET)
             DashConnectNetwork.TESTNET else DashConnectNetwork.DEVNET
@@ -100,6 +103,8 @@ class PlatformDashConnectRepository @Inject constructor(
         AppDisplay("\"${qrLabel.ifBlank { "Unknown app" }}\"", "")
 
     private fun checkNetwork() {
-        check(Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) { "App Connect is unavailable on mainnet" }
+        check(!Constants.IS_PROD_BUILD && Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) {
+            "App Connect is unavailable in production or on mainnet"
+        }
     }
 }

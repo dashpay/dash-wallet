@@ -40,7 +40,7 @@ data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
     val pendingRequest: ConnectionRequest? = null,
     /** True on mainnet where the key-exchange contract is not deployed. */
-    val featureUnavailable: Boolean = Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
+    val featureUnavailable: Boolean = Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
     val isLoading: Boolean = false,
     val error: String? = null
 )
