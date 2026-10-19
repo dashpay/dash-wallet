@@ -118,6 +118,7 @@ import de.schildbach.wallet.service.platform.sdk.CutoverDebugReadout;
 import de.schildbach.wallet.service.platform.sdk.CutoverEvidenceCollector;
 import de.schildbach.wallet.service.platform.sdk.L1ShadowDebugReset;
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService;
+import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
@@ -190,6 +191,7 @@ import de.schildbach.wallet.util.RecoveryResetState;
 import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
+import de.schildbach.wallet.util.WalletSaveTracker;
 import de.schildbach.wallet.util.WalletLoadBudget;
 import de.schildbach.wallet.util.WalletWipeState;
 import de.schildbach.wallet_test.BuildConfig;
@@ -504,12 +506,16 @@ public class WalletApplication extends MultiDexApplication
                 log.warn("no Firebase config in this build; initializing placeholder FirebaseApp");
                 FirebaseApp.initializeApp(this, new com.google.firebase.FirebaseOptions.Builder()
                         .setApplicationId("1:000000000000:android:0000000000000000000000")
-                        .setProjectId("dash-wallet-local-build")
+                        .setProjectId(AnalyticsService.PLACEHOLDER_FIREBASE_PROJECT_ID)
                         // must match Firebase's AIza[0-9A-Za-z\-_]{35} API-key format check
                         .setApiKey("AIzaSyPlaceholderLocalBuild000000000000")
                         .build());
             }
         });
+        // Apply the user's analytics choice (Settings, MO-1065) to the Firebase SDK now that
+        // FirebaseApp exists, so its automatic events (session_start, screen_view, ...) follow
+        // it even on a launch that never logs an event of ours.
+        runStartupStage(-1, "ANALYTICS_PREFERENCE", analyticsService::applyStoredSetting);
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
@@ -1101,6 +1107,9 @@ public class WalletApplication extends MultiDexApplication
         // committedWallet). Under the backup-write lock, so a write that
         // checked the previous wallet is current finishes first.
         AtomicFileWriter.runExclusive(() -> this.wallet = newWallet);
+        // Outside the lock above (a listener writes through AtomicFileWriter):
+        // what the previous wallet file held durably is not in this one.
+        reportWalletChangedToContactPayments();
         walletStateFlow.setValue(newWallet);
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
@@ -1392,7 +1401,11 @@ public class WalletApplication extends MultiDexApplication
         if (autosaveDelayMs != Constants.Files.WALLET_AUTOSAVE_DELAY_MS) {
             log.info("wallet autosave debounce raised to {} ms for a {} byte wallet file", autosaveDelayMs, walletFileSize);
         }
-        wallet.autosaveToFile(walletFile, autosaveDelayMs, TimeUnit.MILLISECONDS, null);
+        // The listener numbers each autosave (WalletSaveTracker): state dashj
+        // only makes durable on its next save — a contact payment's advanced
+        // sending key — learns from it when that save has landed.
+        wallet.autosaveToFile(walletFile, autosaveDelayMs, TimeUnit.MILLISECONDS,
+                WalletSaveTracker.APP.autosaveListener());
         final Wallet walletForMaintenance = wallet;
 
         // did blockchain rescan fail
@@ -1950,6 +1963,10 @@ public class WalletApplication extends MultiDexApplication
             wallet.addKeyChain(Constants.BIP44_PATH);
 
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
+            // The backup is an older state of the wallet: what only the lost
+            // primary held durably (a contact payment's advanced sending key)
+            // must be re-established on this one.
+            reportWalletChangedToContactPayments();
             StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_WALLET_RECOVERED_FROM_BACKUP,
                     "WALLET_RECOVERED_FROM_BACKUP");
 
@@ -2116,7 +2133,14 @@ public class WalletApplication extends MultiDexApplication
             armBackupReplacementIfUncommitted(wallet);
         }
         final Stopwatch watch = Stopwatch.createStarted();
+        // Only saves of the loaded wallet are reported to WalletSaveTracker;
+        // a replacement wallet's save says nothing about the loaded one.
+        final boolean trackSave = wallet == this.wallet;
+        final long saveSeq = trackSave ? WalletSaveTracker.APP.saveStarting() : 0L;
         wallet.saveToFile(walletFile);
+        if (trackSave) {
+            WalletSaveTracker.APP.saveCompleted(saveSeq);
+        }
         watch.stop();
         markWalletCommitted(wallet);
 
@@ -2837,11 +2861,28 @@ public class WalletApplication extends MultiDexApplication
             wallet = null;
             committedWallet = null;
         });
+        // Outside the lock above (a listener writes through AtomicFileWriter).
+        reportWalletChangedToContactPayments();
         walletStateFlow.setValue(null);
         authenticationGroupExtension = null;
         if (walletBalanceObserver != null) {
             walletBalanceObserver.close();
             walletBalanceObserver = null;
+        }
+    }
+
+    /**
+     * The app's wallet was replaced or removed: a contact payment address that
+     * only the previous wallet file recorded as passed must be re-established
+     * on the new one ({@link PaidContactAddressStore#appWalletChanged}). Call
+     * outside any {@link AtomicFileWriter} lock. Never throws — wallet setup,
+     * recovery and wipe must not fail on it.
+     */
+    private void reportWalletChangedToContactPayments() {
+        try {
+            PaidContactAddressStore.appWalletChanged(getFilesDir());
+        } catch (final Exception x) {
+            log.warn("could not report the wallet change to the paid contact addresses", x);
         }
     }
 
@@ -2851,7 +2892,10 @@ public class WalletApplication extends MultiDexApplication
         WorkManager.getInstance(this.getApplicationContext()).cancelAllWork();
         shutdownAndDeleteWallet();
         cleanupFiles();
-        config.clear();
+        // The analytics opt-out is the user's privacy choice, not wallet state:
+        // a reset must not silently turn collection back on (MO-1065). One commit,
+        // so it survives a process death mid-reset.
+        config.clearPreservingAnalytics();
     }
 
     /** Wipe phase 4c: the secrets and the last of the per-wallet preferences. */

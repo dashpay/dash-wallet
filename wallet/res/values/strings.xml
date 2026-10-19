@@ -81,6 +81,8 @@
     <string name="send_coins_error_generic">The payment could not be sent.</string>
     <!-- Shown when the send engine could not sign because the wallet's secure key store is locked. No funds were sent; the same payment works after unlocking. -->
     <string name="send_coins_error_signer_locked">Your wallet couldn\'t sign this payment because it is locked. No funds have left your wallet — unlock your wallet and try again.</string>
+    <!-- Shown when a payment to a DashPay contact was refused because the wallet could not save a record of the contact's payment address on this device (storage full or unreadable). No funds were sent. -->
+    <string name="send_coins_error_contact_payment_not_recorded">This payment to your contact couldn\'t be sent because your wallet couldn\'t save a record of it on this device. No funds have left your wallet. Free up storage space or restart the app, then try again.</string>
     <string name="send_coins_options_fee_category">Fee</string>
     <string name="send_coins_options_fee_category_economic">Economic</string>
     <string name="send_coins_options_fee_category_priority">Priority</string>
@@ -470,6 +472,15 @@
     <string name="battery_optimization_title">Battery optimization</string>
     <string name="battery_optimization_subtitle_optimized">Optimized</string>
     <string name="battery_optimization_subtitle_unrestricted">Unrestricted</string>
+
+    <!-- Analytics opt-out (Settings) -->
+    <string name="settings_analytics_title">Share usage data</string>
+    <!-- PLACEHOLDER COPY: needs product sign-off -->
+    <string name="settings_analytics_info_title">About usage data</string>
+    <!-- PLACEHOLDER COPY: needs product sign-off -->
+    <string name="settings_analytics_save_failed_off">Couldn\'t turn off, try again</string>
+    <string name="settings_analytics_save_failed_on">Couldn\'t turn on, try again</string>
+    <string name="settings_analytics_info_message">When this is on, Dash Wallet shares app usage events with Firebase to help us improve the app.\n\nNo amounts, balances or addresses are ever shared.\n\nYou can turn this off at any time.</string>
 
     <string name="battery_optimization_dialog_optimized_title">Let Dash Wallet run in the background?</string>
     <string name="battery_optimization_dialog_message_optimized">This app is configured to stop running after not being visible for some time.\n\nThis will result in not receiving payment notifications until the app returns to the foreground.\n\nWe recommend allowing this app to run in the background by setting battery optimization to \"Not Optimized\" or \"Unrestricted.\"\n\nDon\'t worry, we will always mind your battery usage.</string>

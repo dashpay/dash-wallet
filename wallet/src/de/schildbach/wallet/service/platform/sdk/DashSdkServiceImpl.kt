@@ -29,6 +29,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Utils
 import org.bitcoinj.params.DevNetParams
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
@@ -1025,6 +1026,27 @@ class DashSdkServiceImpl @Inject constructor(
     }
 
     /**
+     * See [DashSdkService.discoverDashPayContactRequests]. The wallet-level
+     * `syncContactRequests` (Rust `sync_contact_requests`) is the same fetch
+     * the sweep starts with; unlike `dashPaySyncNow` it runs no
+     * `reconcile_dashpay_rescan`, so the synced height is left alone. It throws
+     * only when not one identity's requests could be read: a failed fetch of
+     * the SENT requests, or a request it could not store, still returns
+     * normally (the SDK's `ContactSyncReport` that would say so is not exposed
+     * to Kotlin in the pinned SDK).
+     */
+    override suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val managed = current.walletManager.wallets.value[walletIdHex] ?: return false
+        // A wallet without the identity answers vacuously: nothing was fetched.
+        if (!isIdentityManaged(walletIdHex, identityId)) return false
+        managed.dashpay.syncContactRequests()
+        log.info("DashPay contact requests fetched for SDK wallet {}… without a sweep", walletIdHex.take(8))
+        return true
+    }
+
+    /**
      * See [DashSdkService.drainDashPayContactAccountBuilds]. Deliberately does
      * NOT sweep: the sweep is what rewinds the SPV synced height, and this
      * exists precisely so the queue can be drained on launches where the
@@ -1564,6 +1586,33 @@ class DashSdkServiceImpl @Inject constructor(
             )
             DashPayBackfillSignals.UNKNOWN
         }
+    }
+
+    /**
+     * See [DashSdkService.readDashPayContactRequests]. Pure Room reads via
+     * [databaseOrNull], like [readDashPayReceivalCoverage]: no [ensureStarted],
+     * no native call. Never throws (except cancellation): null means
+     * "unavailable".
+     */
+    override suspend fun readDashPayContactRequests(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): StoredDashPayContactRequests? = try {
+        databaseOrNull()?.let { database ->
+            val dao = database.dashpayDao()
+            val requests = dao.getContactRequestsByOwner(ownerIdentityId)
+            fun hex(ids: List<ByteArray>) = ids.mapTo(HashSet()) { Utils.HEX.encode(it) }
+            StoredDashPayContactRequests(
+                outgoing = hex(requests.filter { it.isOutgoing }.map { it.contactIdentityId }),
+                incoming = hex(requests.filterNot { it.isOutgoing }.map { it.contactIdentityId }),
+                ignored = hex(dao.getIgnoredSendersByOwner(ownerIdentityId).map { it.ignoredSenderId })
+            )
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to read the DashPay contact requests of SDK wallet {}…", walletIdHex.take(8), e)
+        null
     }
 
     /**

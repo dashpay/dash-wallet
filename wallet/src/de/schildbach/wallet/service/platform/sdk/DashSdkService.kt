@@ -58,6 +58,20 @@ data class IdentityKeyHealReport(
 }
 
 /**
+ * The contact requests of one identity in the SDK's store
+ * (`dashpay_contact_requests` and `dashpay_ignored_senders`), as contact
+ * identity ids in hex: the recipients of its [outgoing] requests, the senders
+ * of its [incoming] ones (established contacts have both rows), and the
+ * senders it [ignored], whose requests the SDK does not store. What
+ * [contactDiscoveryUnverifiedBecause] compares Platform against.
+ */
+data class StoredDashPayContactRequests(
+    val outgoing: Set<String>,
+    val incoming: Set<String>,
+    val ignored: Set<String>
+)
+
+/**
  * Outcome of one [DashSdkService.provisionDashPayContactAccounts] pass —
  * the DIP-15 friend-chain maintenance step that makes the SDK L1 wallet
  * derive and watch the addresses DashPay contacts pay us on.
@@ -750,6 +764,31 @@ interface DashSdkService {
     suspend fun provisionDashPayContactAccounts(walletIdHex: String): DashPayContactProvisionReport
 
     /**
+     * Contact discovery WITHOUT the sweep: fetch [identityId]'s received and
+     * sent contact requests from Platform into the SDK wallet [walletIdHex]
+     * (`Dashpay.syncContactRequests` — step 1 of
+     * [provisionDashPayContactAccounts]'s sweep only). It ingests and persists
+     * the requests and enqueues any missing account builds for the drain, but
+     * runs none of the sweep's reconciles, so it never lowers the SPV synced
+     * height. For passes the DIP-15 backfill gate keeps from sweeping, which
+     * still need discovery confirmed ([SdkWalletBinder.contactDiscoveryCompleted],
+     * PR #1608 review, round 12).
+     *
+     * True only when the wallet is loaded, manages [identityId], and the fetch
+     * answered; false when the wallet or the identity is not there. Throws when
+     * the fetch failed for every identity. A normal return does NOT prove the
+     * fetch was complete: the SDK returns normally when it ingested the
+     * received requests but could not fetch the sent ones (or could not store
+     * some), so the caller checks the store against Platform before it treats
+     * discovery as done ([contactDiscoveryUnverifiedBecause]). Default false
+     * (nothing confirmed) so fakes stay source-compatible.
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     * @param identityId our 32-byte platform identity id.
+     */
+    suspend fun discoverDashPayContactRequests(walletIdHex: String, identityId: ByteArray): Boolean = false
+
+    /**
      * Run the signer-backed drain of the DEFERRED contact-crypto queue ALONE
      * — step 2 of [provisionDashPayContactAccounts] without the sweep — and
      * observe the outcome for a bounded window so the pass can report how many
@@ -800,6 +839,22 @@ interface DashSdkService {
         walletIdHex: String,
         ownerIdentityId: ByteArray
     ): DashPayReceivalCoverage? = null
+
+    /**
+     * [ownerIdentityId]'s contact requests in the SDK's store
+     * ([StoredDashPayContactRequests]) — the rows the contact-coverage check
+     * reads ([ContactPaymentChainView.contactHistoryUncoveredBecause]). Pure
+     * Room reads through [databaseOrNull] (no [ensureStarted], no native call,
+     * no network). Null when the SDK is down or the read failed. Never throws.
+     * Default null (nothing can be verified) so fakes stay source-compatible.
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     * @param ownerIdentityId our 32-byte platform identity id.
+     */
+    suspend fun readDashPayContactRequests(
+        walletIdHex: String,
+        ownerIdentityId: ByteArray
+    ): StoredDashPayContactRequests? = null
 
     /**
      * Read-only snapshot of the two signals the app-side DIP-15 backfill

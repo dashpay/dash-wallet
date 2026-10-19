@@ -26,30 +26,44 @@ enum class HomeBackAction {
     POP_FRAGMENT,
 
     /**
-     * Back on Home with the wallet as the task root: send it to the background,
-     * like the system default for a root activity since Android 12, instead of
-     * destroying it. Reopening is then instant; auto-logout still applies on resume.
+     * Pop the nav host's back stack: a sub-screen goes back to its parent,
+     * and a bottom-nav tab (More, Payments, …) goes back to Home.
      */
-    MOVE_TASK_TO_BACK,
+    POP_NAVIGATION,
+
+    /**
+     * Back on Home with the wallet as the task root: swallow it — the wallet
+     * is neither closed nor sent to the background.
+     */
+    CONSUME,
 
     /**
      * Back on Home inside another app's task (e.g. opened from a dash: link):
-     * moving the task back would background that app, so just close.
+     * swallowing back would strand the user in the wallet, so just close and
+     * return to that app.
      */
     FINISH
 }
 
 /**
- * The bottom-nav tabs live on the nav host's back stack, which handles back
- * itself while it can pop; this decides only what reaches [MainActivity].
+ * Decides what a back press that reaches [MainActivity] does.
+ *
+ * The nav host's own back callback is NOT relied on for the tabs:
+ * [de.schildbach.wallet.ui.LockScreenActivity]'s activity-scoped callback is
+ * re-added on every start, so after the activity has been stopped once it
+ * takes priority and every back press lands here — which is how back on More
+ * used to leave the app. [navCanPop] (the nav back stack has a previous
+ * entry) covers that path.
  */
 fun homeBackAction(
     lockScreenDisplayed: Boolean,
     fragmentBackStackCount: Int,
+    navCanPop: Boolean,
     isTaskRoot: Boolean
 ): HomeBackAction = when {
     lockScreenDisplayed -> HomeBackAction.IGNORE
     fragmentBackStackCount > 0 -> HomeBackAction.POP_FRAGMENT
-    isTaskRoot -> HomeBackAction.MOVE_TASK_TO_BACK
+    navCanPop -> HomeBackAction.POP_NAVIGATION
+    isTaskRoot -> HomeBackAction.CONSUME
     else -> HomeBackAction.FINISH
 }

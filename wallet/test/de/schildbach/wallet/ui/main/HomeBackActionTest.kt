@@ -24,25 +24,34 @@ class HomeBackActionTest {
     @Test
     fun lockScreenShowing_isLeftToTheLockScreen() {
         for (count in listOf(0, 1, 3)) {
-            for (root in listOf(true, false)) {
-                assertEquals(HomeBackAction.IGNORE, homeBackAction(true, count, root))
+            for (navCanPop in listOf(true, false)) {
+                for (root in listOf(true, false)) {
+                    assertEquals(HomeBackAction.IGNORE, homeBackAction(true, count, navCanPop, root))
+                }
             }
         }
     }
 
     @Test
     fun fragmentOnTheBackStack_isPopped() {
-        assertEquals(HomeBackAction.POP_FRAGMENT, homeBackAction(false, 1, isTaskRoot = true))
-        assertEquals(HomeBackAction.POP_FRAGMENT, homeBackAction(false, 2, isTaskRoot = false))
+        assertEquals(HomeBackAction.POP_FRAGMENT, homeBackAction(false, 1, navCanPop = true, isTaskRoot = true))
+        assertEquals(HomeBackAction.POP_FRAGMENT, homeBackAction(false, 2, navCanPop = false, isTaskRoot = false))
     }
 
     @Test
-    fun home_asTaskRoot_movesTheTaskToTheBackground() {
-        assertEquals(HomeBackAction.MOVE_TASK_TO_BACK, homeBackAction(false, 0, isTaskRoot = true))
+    fun tabOrSubScreen_popsTheNavStack_backToHome() {
+        // e.g. More on top of Home: back returns to Home, never leaves the app
+        assertEquals(HomeBackAction.POP_NAVIGATION, homeBackAction(false, 0, navCanPop = true, isTaskRoot = true))
+        assertEquals(HomeBackAction.POP_NAVIGATION, homeBackAction(false, 0, navCanPop = true, isTaskRoot = false))
+    }
+
+    @Test
+    fun home_asTaskRoot_isConsumed() {
+        assertEquals(HomeBackAction.CONSUME, homeBackAction(false, 0, navCanPop = false, isTaskRoot = true))
     }
 
     @Test
     fun home_insideAnotherAppsTask_finishes() {
-        assertEquals(HomeBackAction.FINISH, homeBackAction(false, 0, isTaskRoot = false))
+        assertEquals(HomeBackAction.FINISH, homeBackAction(false, 0, navCanPop = false, isTaskRoot = false))
     }
 }

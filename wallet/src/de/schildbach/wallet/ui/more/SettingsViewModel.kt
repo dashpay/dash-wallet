@@ -22,7 +22,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -46,8 +49,19 @@ data class SettingsUIState(
     val ignoringBatteryOptimizations: Boolean = false,
     val localCurrencySymbol: String = Constants.USD_CURRENCY,
     val transactionMetadataVisible: Boolean = false,
-    val transactionMetadataSubtitle: String? = null
+    val transactionMetadataSubtitle: String? = null,
+    val analyticsEnabled: Boolean = true,
+    val analyticsAvailable: Boolean = true
 )
+
+/** A Settings analytics choice that could not be saved (one-shot; the fragment shows a Toast). */
+enum class AnalyticsSaveFailure {
+    /** The opt-out did not save: collection is off for this process only. */
+    TURNING_OFF,
+
+    /** The opt-in did not save: collection stays off. */
+    TURNING_ON
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -70,8 +84,14 @@ class SettingsViewModel @Inject constructor(
 
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
-    private val _uiState = MutableStateFlow(SettingsUIState())
+    private val _uiState = MutableStateFlow(SettingsUIState(
+            analyticsEnabled = analytics.isEnabled,
+            analyticsAvailable = analytics.isAvailable
+        ))
     val uiState: StateFlow<SettingsUIState> = _uiState.asStateFlow()
+
+    private val _analyticsSaveFailures = Channel<AnalyticsSaveFailure>(Channel.BUFFERED)
+    val analyticsSaveFailures: Flow<AnalyticsSaveFailure> = _analyticsSaveFailures.receiveAsFlow()
 
     init {
         // Initialize with current battery optimization status
@@ -118,6 +138,24 @@ class SettingsViewModel @Inject constructor(
             analytics.logEvent(event, mapOf())
         } catch (e: Exception) {
             log.error("Error logging analytics event: $event", e)
+        }
+    }
+
+    /**
+     * Saves the choice; see [AnalyticsService.setEnabled]. The switch then shows the
+     * saved value, so after a failure toggling it again retries. A failed save is
+     * reported through [analyticsSaveFailures].
+     */
+    fun setAnalyticsEnabled(enabled: Boolean) {
+        // Saved inline on the main thread on purpose: it orders every toggle across all
+        // Settings instances (closing and reopening Settings included), so the last toggle
+        // is always the last save. A one-key commit() takes milliseconds.
+        val persisted = analytics.setEnabled(enabled)
+        _uiState.update { it.copy(analyticsEnabled = analytics.isEnabled) }
+        if (!persisted) {
+            _analyticsSaveFailures.trySend(
+                if (enabled) AnalyticsSaveFailure.TURNING_ON else AnalyticsSaveFailure.TURNING_OFF
+            )
         }
     }
 

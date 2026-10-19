@@ -1783,9 +1783,18 @@ internal fun nextDeferredBuildObservation(
     )
 }
 
-/** Production [CutoverUiSource]: the live SDK Room DB, reactive. */
+/**
+ * Production [CutoverUiSource]: the live SDK Room DB, reactive.
+ *
+ * @param onStoredNetsRepaired handed to every [SdkTxStoreWalker] this source
+ *        builds: called when the walker's reattribution write-back changed
+ *        stored nets. Every source that walks the store must pass
+ *        [L1ShadowSyncService.storedNetsRepaired]; only one that never walks
+ *        it may leave the no-op.
+ */
 internal class DashSdkCutoverUiSource(
-    private val service: DashSdkService
+    private val service: DashSdkService,
+    private val onStoredNetsRepaired: (Int) -> Unit
 ) : CutoverUiSource {
 
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
@@ -2020,6 +2029,10 @@ internal class DashSdkCutoverUiSource(
      * are already in the nets they return, so signalling them would only
      * re-queue the group being re-summed — one extra full-group pass per
      * corrected page.
+     *
+     * Every walker, [reportCorrections] or not, reports changed stored nets to
+     * [onStoredNetsRepaired]: the re-sum's write moves the same column the
+     * parity breakdown compares.
      */
     private fun walker(
         db: org.dashfoundation.dashsdk.persistence.DashDatabase,
@@ -2028,6 +2041,7 @@ internal class DashSdkCutoverUiSource(
     ) = SdkTxStoreWalker(
         db,
         walletId,
+        onStoredNetsRepaired = onStoredNetsRepaired,
         onCorrectionsPersisted = if (reportCorrections) ({ correctedRecordTxids.tryEmit(it) }) else null
     )
 
@@ -2609,7 +2623,7 @@ class CutoverUiDataService internal constructor(
         sdkBindRetryService: SdkBindRetryService,
         sdkWalletBinder: SdkWalletBinder
     ) : this(
-        source = DashSdkCutoverUiSource(sdkService),
+        source = DashSdkCutoverUiSource(sdkService, l1ShadowSyncService::storedNetsRepaired),
         dashPayConfig = dashPayConfig,
         scope = scope,
         txDisplayCacheDao = txDisplayCacheDao,
@@ -5395,12 +5409,6 @@ class CutoverUiDataService internal constructor(
         }
     }
 
-    /**
-     * The reconcile lane's ticker: DELAY-FIRST, unlike [ticker] — the first
-     * full walk waits out [reconcileInitialDelayMs] (see there) and the
-     * change feed alone carries the launch window; thereafter one walk per
-     * [refreshIntervalMs] preserves the 60s convergence semantics.
-     */
     /** Full reconcile walks started by this service — the `#n` in their log lines. */
     private val reconcileWalkCount = java.util.concurrent.atomic.AtomicInteger(0)
 
@@ -5425,6 +5433,12 @@ class CutoverUiDataService internal constructor(
         if (!requested) lastLoggedTickerWalkRecords = records
     }
 
+    /**
+     * The reconcile lane's ticker: DELAY-FIRST, unlike [ticker] — the first
+     * full walk waits out [reconcileInitialDelayMs] (see there) and the
+     * change feed alone carries the launch window; thereafter one walk per
+     * [refreshIntervalMs] preserves the 60s convergence semantics.
+     */
     private fun reconcileTicker(): Flow<Unit> = flow {
         delay(reconcileInitialDelayMs)
         while (true) {

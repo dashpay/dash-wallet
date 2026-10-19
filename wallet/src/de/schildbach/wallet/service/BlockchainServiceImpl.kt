@@ -655,11 +655,68 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         false
     }
 
+    /** Tracks the newest delivered start and any owed stop, for [stopSelfIfNoNewerStart]. */
+    private val selfStopGate = SelfStopGate()
+
+    /**
+     * Called synchronously in [onStartCommand], right AFTER its foreground
+     * promotion, never before (see [SelfStopGate.onStart]).
+     */
+    internal fun recordStartCommand(startId: Int) {
+        selfStopGate.onStart(startId)
+    }
+
+    /**
+     * The service's own decision to stop. Never a bare `stopSelf()`, which
+     * the system honours even with a `startForegroundService()` start already
+     * queued: tearing the service down then crashes the process with
+     * ForegroundServiceDidNotStartInTimeException (see [SelfStopGate]). When
+     * a newer start is pending the stop is skipped and the service runs that
+     * command: an ordinary stop (idle, memory) is simply re-decided later,
+     * while a [mustStop] one stays owed and that command stops again
+     * ([handleWalletLifecycleCommand]). Safe from any thread.
+     *
+     * @return true when the system accepted the stop.
+     */
+    internal fun stopSelfIfNoNewerStart(reason: String, mustStop: Boolean = false): Boolean {
+        return selfStopGate.requestStop(
+            reason,
+            mustStop,
+            onRefused = { startId ->
+                log.warn(
+                    "stop ({}) with startId {} refused (a newer start is pending, or the service is " +
+                        "already gone){}",
+                    reason,
+                    startId,
+                    if (mustStop) " — the stop stays owed to the next command" else ""
+                )
+            }
+        ) { startId -> stopSelfResult(startId) }
+    }
+
+    /**
+     * The idle detector's stop (once a minute from [tickReceiver]). A refused
+     * stop needs no debt: a later tick stops the service if it is still idle.
+     */
+    internal fun onIdleVerdict() {
+        log.info("idling detected, stopping service")
+        stopSelfIfNoNewerStart("idle")
+    }
+
     /** Called on Main after initialization settles, before ordinary command handling. */
     internal fun handleWalletLifecycleCommand(action: String?): Boolean {
+        // A stop that had to happen was refused because this (newer) command
+        // was pending: stop again now that it is the newest.
+        selfStopGate.owedStopReason?.let { reason ->
+            if (action != null) {
+                log.warn("owed stop ({}) suppresses command {}", reason, action)
+            }
+            stopSelfIfNoNewerStart(reason, mustStop = true)
+            return true
+        }
         if (action == BlockchainService.ACTION_WIPE_WALLET) {
             recordWipeRequest(action)
-            stopSelf()
+            stopSelfIfNoNewerStart("wipe wallet", mustStop = true)
             return true
         }
         // Order matters: this runs on Main.
@@ -680,7 +737,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             application.wallet == null ||
             application.isRecoveryResetPending
         ) {
-            stopSelf()
+            // Every later command repeats this check, so a refused stop needs no debt.
+            stopSelfIfNoNewerStart("wallet not initialized")
             return true
         }
         return false
@@ -797,12 +855,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Volatile
     private var dashjCaughtUpAtMs: Long? = null
 
-    /** Last args passed to [publishDashjDiagnostic] — lets a new parity report re-publish. */
-    @Volatile
-    private var lastDiagnosticRawPercent = 0
+    /** One dashj progress sample, kept whole so a pass never reads a torn pair. */
+    private data class DashjDiagnosticSample(val rawPercent: Int, val stage: PeerGroup.SyncStage?)
 
+    /** Latest dashj progress sample — lets a new parity report or finding re-publish. */
     @Volatile
-    private var lastDiagnosticStage: PeerGroup.SyncStage? = null
+    private var lastDiagnosticSample = DashjDiagnosticSample(0, null)
+
+    /**
+     * Every diagnostic publication goes through here, so the passes never
+     * overlap and an older pass cannot overwrite a newer verdict (see
+     * [SerialRepublisher]).
+     */
+    private val dashjDiagnosticRepublisher = SerialRepublisher(
+        serviceScope,
+        onError = { e -> log.warn("dashj-sync-diagnostic: publishing the diagnostic failed", e) },
+        pass = ::runDashjDiagnosticPass
+    )
 
     /**
      * FIX 1 guard: the post-cutover identity/contacts discovery hook
@@ -1457,9 +1526,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         analyticsService.logError(Exception("Blockstore memory stalled"))
                         rescheduleService()
 
-                        // Force immediate shutdown
+                        // Force immediate shutdown. Owed when refused: the
+                        // memory-failure flag above makes this branch one-shot.
                         withContext(Dispatchers.Main) {
-                            stopSelf()
+                            stopSelfIfNoNewerStart("blockstore memory stall", mustStop = true)
                         }
                     }
                 }
@@ -2191,6 +2261,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                             dashjDiagnosticSyncState.reset()
                             lastDiagnosticParity = null
                             dashjCaughtUpAtMs = null
+                            // A pass already running may still write its
+                            // snapshot; the pass queued behind it sees the
+                            // flag off and resets again.
+                            dashjDiagnosticRepublisher.request()
                         }
 
                         if (!changed) return@withLock
@@ -2436,8 +2510,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
             }
             if (shouldStopForIdle(activityHistory, replaying)) {
-                log.info("idling detected, stopping service")
-                stopSelf()
+                onIdleVerdict()
             }
         }
 
@@ -2507,14 +2580,35 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         // DIAGNOSTIC (Tools toggle): while the readout is holding at 99%
         // waiting for a fresh post-catchup parity report (see
-        // publishDashjDiagnostic's freshness gate), progress callbacks alone
+        // runDashjDiagnosticPass's freshness gate), progress callbacks alone
         // can't flip it — once caught up they only fire on new blocks (minutes
         // apart). Re-publish whenever the shadow harness produces a report so
         // the 100% + verdict lands within one probe interval (~10s).
         serviceScope.launch {
             l1ShadowSyncService.latestParity.collect { report ->
                 if (report != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
-                    publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
+                    dashjDiagnosticRepublisher.request()
+                }
+            }
+        }
+
+        // Same reason, other input: MATCH now also needs a fresh
+        // transaction-level breakdown, and that run finishes on its own
+        // schedule — after the report that triggered it, and after a ledger
+        // rebuild cleared the previous one. Without this the verdict would
+        // hold at "not established" until some later report happened to
+        // change.
+        //
+        // Null is republished too: findings are cleared when a new
+        // transaction expires them or a ledger rebuild discards them, and
+        // the readout must leave MATCH at once rather than at the next
+        // report. A pass never reads absent findings as MATCH, and passes run
+        // one at a time, so an older pass that read the revoked findings
+        // cannot land after this one.
+        serviceScope.launch {
+            l1ShadowSyncService.latestBreakdownFindings.collect {
+                if (dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+                    dashjDiagnosticRepublisher.request()
                 }
             }
         }
@@ -2609,9 +2703,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         )
                     }
 
-                    // Stop the service - we cannot safely initialize with cleanup still running
+                    // Stop the service - we cannot safely initialize with cleanup still running.
+                    // initCompleted stays false, so a refused stop is retried by the next command.
                     withContext(Dispatchers.Main) {
-                        stopSelf()
+                        stopSelfIfNoNewerStart("previous cleanup stuck")
                     }
                     return@launch
                 }
@@ -2631,7 +2726,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (application.isRecoveryResetPending && !performRecoveryReset()) {
                     withContext(Dispatchers.Main) {
                         refuseWalletInitialization()
-                        stopSelf()
+                        stopSelfIfNoNewerStart("recovery reset failed")
                     }
                     return@launch
                 }
@@ -2985,7 +3080,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // ever came up from PlatformSyncService.init() (once per process,
                     // from WalletApplication). Any service teardown that stops them
                     // (release-build shutdown() -> stopSdkEngines(), reached from
-                    // onTrimMemory's low-memory stopSelf(), the idle detector, or the
+                    // onTrimMemory's low-memory stop, the idle detector, or the
                     // Android 15 FGS timeout) therefore killed L1 sync for the rest
                     // of the process: no incoming transactions, the sync UI stuck at
                     // "syncing", and sends/top-ups failing with "SPV client not
@@ -3022,7 +3117,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 // Service is in a broken state - stop it gracefully
                 handler.post {
-                    stopSelf()
+                    stopSelfIfNoNewerStart("initialization failed")
                 }
             }
         }
@@ -3157,7 +3252,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        log.info(".onStartCommand($intent)")
+        // Nothing before the foreground promotion below may stop the service:
+        // this start's id is published to the self-stop gate only after it.
+        log.info(".onStartCommand($intent, startId=$startId)")
         intent?.getStringExtra(START_REASON_EXTRA)?.let { reason ->
             log.info("ALARM-DIAG service started by alarm (reason={}) — a background FGS start WAS permitted", reason)
             // A periodic fire into a running service is not a service start, so
@@ -3198,6 +3295,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // QA reported it as "crash on opening"; it actually fired while the app
         // sat idle, 12 hours before the wallet was next opened.
         //
+        // A second shape of the same race (12.0.0-beta 39, 06:38:49) crashed
+        // even with this call in place: the idle tick's bare stopSelf() ran
+        // while the alarm's start was already queued, and the system tore the
+        // service down with the foreground promise still open — that crashes
+        // at once, before this line runs. Hence the stop id recorded below
+        // and stopSelfIfNoNewerStart for every stop the service decides on.
+        //
         // Safe here: Android guarantees `onCreate()` has RETURNED before
         // `onStartCommand()` runs, and Hilt injects `notificationService` in
         // `super.onCreate()` (line 1833), so the notification can be built. The
@@ -3206,6 +3310,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (shouldPromoteToForeground(intent)) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
+        // Only now, AFTER the promotion: from here on the service's own stops
+        // use this start's id (see stopSelfIfNoNewerStart). Publishing it
+        // earlier would let a stop running off Main in that window have its
+        // stopSelfResult(startId) accepted while this start's foreground
+        // promise is still open — the same crash. A stop in the window uses
+        // the previous id and is refused instead; a must-stop then stays owed
+        // to this command, whose coroutine below reads the debt after this.
+        recordStartCommand(startId)
         recordWipeRequest(intent?.action)
         serviceScope.launch {
             log.info("onStartCommand waiting for onCreate to complete...")
@@ -3246,7 +3358,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     if (!sdkRescanOwedForReset) {
                         log.warn("no SDK replay owed for blockchain reset; rescan databases will be kept")
                     }
-                    stopSelf()
+                    // The reset happens on shutdown, so a refused stop stays owed.
+                    // On Main, serialised with onStartCommand like the other stops.
+                    withContext(Dispatchers.Main) {
+                        stopSelfIfNoNewerStart("reset blockchain", mustStop = true)
+                    }
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
@@ -3582,7 +3698,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info("onTrimMemory({}) called", level)
         if (shouldStopForMemoryPressure(level)) {
             log.warn("memory pressure (onTrimMemory level {}), stopping service", level)
-            stopSelf()
+            // A refused stop needs no debt: a newer start is about to run, and
+            // the next trim callback or idle tick re-decides.
+            stopSelfIfNoNewerStart("memory pressure")
         }
     }
 
@@ -3590,18 +3708,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onTimeout(startId: Int, fgsType: Int) {
         log.info("onTimeoutCalled({}, {})", startId, fgsType)
         log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
-        
+
+        // Android 15 crashes a timed-out dataSync service that is still in the
+        // foreground a few seconds later (ForegroundServiceDidNotStopInTimeException).
+        // Leave the foreground FIRST: per ActiveServices (android15-release and
+        // main), stopForeground runs maybeStopFgsTimeoutLocked, which removes
+        // SERVICE_FGS_CRASH_TIMEOUT_MSG — so this alone meets the deadline.
+        // The stop itself then goes through stopSelfIfNoNewerStart like every
+        // other self-stop: a bare stopSelf() with an alarm's foreground start
+        // queued is the ForegroundServiceDidNotStartInTimeException teardown.
+        // That queued start is safe too: its startForeground() clears
+        // fgRequired before the "time limit already exhausted" refusal is
+        // thrown (caught in startForegroundAndCatch), and the owed stop then
+        // stops the service from that command.
+        // Before the timeout notification: it reuses the sync notification's id,
+        // which REMOVE would otherwise cancel.
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            foregroundService = ForegroundService.NONE
+        } catch (e: Exception) {
+            log.error("Error leaving the foreground on timeout", e)
+        }
+
         // Show notification about the timeout
         showTimeoutNotification()
-        
-        // Android 15 requires us to call stopSelf() within a few seconds
-        // when onTimeout is called for dataSync services
+
         try {
-            stopSelf()
+            stopSelfIfNoNewerStart("fgs timeout", mustStop = true)
         } catch (e: Exception) {
             log.error("Error stopping service on timeout", e)
         }
-        
+
         super.onTimeout(startId, fgsType)
     }
 
@@ -3712,9 +3849,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     /**
-     * Publish one dashj progress sample to the isolated diagnostic holder
-     * ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read the
-     * latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
+     * Record one dashj progress sample for the isolated diagnostic holder
+     * ([dashjDiagnosticSyncState]) and schedule a publication. Never blocks:
+     * the work runs in [runDashjDiagnosticPass], one pass at a time.
+     */
+    private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
+        lastDiagnosticSample = DashjDiagnosticSample(rawPercent, stage)
+        dashjDiagnosticRepublisher.request()
+    }
+
+    /**
+     * Publish the latest dashj progress sample to the isolated diagnostic
+     * holder ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read
+     * the latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
      * ([L1ShadowSyncService.latestParity]) and colour the readout
      * MATCH/BALANCE_MATCH/MISMATCH; while syncing the verdict is UNKNOWN.
      *
@@ -3729,10 +3876,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * the Tools readout shows a neutral "Verifying" instead of a percentage.
      * Logs a single SDK-vs-dashj line each time the verdict changes —
      * necessarily at/after that same moment.
+     *
+     * Runs only on [dashjDiagnosticRepublisher], so passes never overlap: the
+     * read, the verdict and the write below are one step as far as any other
+     * publication is concerned.
      */
-    private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
-        lastDiagnosticRawPercent = rawPercent
-        lastDiagnosticStage = stage
+    private suspend fun runDashjDiagnosticPass() {
+        if (!dashjSyncDiagnostic) {
+            // Turned off since this pass was requested, possibly while an
+            // earlier pass was writing. Leave the inert default behind.
+            dashjDiagnosticSyncState.reset()
+            lastDiagnosticParity = null
+            dashjCaughtUpAtMs = null
+            return
+        }
+        val (rawPercent, stage) = lastDiagnosticSample
         // The shared-row percentage is TIME-weighted (block timestamps vs the
         // clock), which wobbles non-monotonically on testnet's irregular block
         // production and under-reads badly (e.g. 52% shown at ~75% of blocks
@@ -3762,46 +3920,44 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     "dashj-sync-diagnostic: dashj chain caught up — showing 'Verifying' " +
                         "until a parity report computed against the caught-up state arrives"
                 )
+                // The harness gates its hourly breakdown on the same moment:
+                // a run started while dashj was behind produces findings this
+                // method will reject, and used to spend the slot anyway.
+                l1ShadowSyncService.dashjCaughtUp(dashjCaughtUpAtMs)
             }
         } else {
+            if (dashjCaughtUpAtMs != null) l1ShadowSyncService.dashjCaughtUp(null)
             dashjCaughtUpAtMs = null
         }
         val report = l1ShadowSyncService.latestParity.value
-        // Fresh = captured at/after the catch-up moment (same wall clock).
-        val caughtUpAtMs = dashjCaughtUpAtMs
-        val freshReport = report?.takeIf { caughtUpAtMs != null && it.timestampMs >= caughtUpAtMs }
-        val parity = if (percent >= 100 && freshReport != null) {
-            when {
-                freshReport.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
-                // Both balance comparisons agree exactly, only the tx counts
-                // differ — the funds are all accounted for on both sides.
-                freshReport.balancesMatch && freshReport.confirmedBalancesMatch ->
-                    DashjDiagnosticSyncState.Parity.BALANCE_MATCH
-                else -> DashjDiagnosticSyncState.Parity.MISMATCH
-            }.also { verdict ->
-                if (verdict != lastDiagnosticParity) {
-                    log.info(
-                        "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
-                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
-                        verdict, freshReport.sdkDuffs, freshReport.dashjDuffs,
-                        freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
-                        freshReport.sdkTxCount, freshReport.dashjTxCount
-                    )
-                }
-            }
-        } else {
-            DashjDiagnosticSyncState.Parity.UNKNOWN
+        // The findings only count while the SDK store still reads as their run
+        // read it: a change whose event was lost must not leave MATCH standing.
+        val verdict = deriveCurrentDashjDiagnosticVerdict(
+            percent,
+            report,
+            l1ShadowSyncService.latestBreakdownFindings.value,
+            dashjCaughtUpAtMs,
+            l1ShadowSyncService::breakdownFindingsStillCurrent
+        )
+        val freshReport = verdict.freshReport
+        if (verdict.parity != DashjDiagnosticSyncState.Parity.UNKNOWN &&
+            freshReport != null &&
+            verdict.parity != lastDiagnosticParity
+        ) {
+            val freshFindings = verdict.freshFindings
+            log.info(
+                "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
+                    "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={} " +
+                    "breakdown={}",
+                verdict.parity, freshReport.sdkDuffs, freshReport.dashjDuffs,
+                freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
+                freshReport.sdkTxCount, freshReport.dashjTxCount,
+                freshFindings?.let { it.reason ?: "clean (${it.valueCompared} values compared)" }
+                    ?: "not run since dashj caught up"
+            )
         }
-        lastDiagnosticParity = parity
-        // dashj itself is done but the fresh post-catchup report hasn't landed
-        // yet: hold the internal percent at 99 and flag the window so the
-        // readout shows "Verifying" — 100 and the verdict colour then appear
-        // together when the report arrives.
-        val verifying = percent >= 100 && parity == DashjDiagnosticSyncState.Parity.UNKNOWN
-        val displayPercent = if (verifying) 99 else percent
-        dashjDiagnosticSyncState.update(displayPercent, parity, stage?.name, verifying)
-        // Feed the support-log history buffer (deduplicated inside).
-        dashjDiagnosticSyncState.recordParity(displayPercent, parity, report)
+        lastDiagnosticParity = verdict.parity
+        commitDashjDiagnostic(dashjDiagnosticSyncState, percent, stage?.name, verdict, report)
     }
 
     override fun getConnectedPeers(): List<Peer> {

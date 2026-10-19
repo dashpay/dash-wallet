@@ -167,6 +167,22 @@ class SendSignerLockedException(message: String) : IllegalStateException(message
  * [IllegalStateException] the UI renders as a generic failure, never as
  * "not synced" and never verbatim. Pure — host-testable.
  */
+/**
+ * A failure of dashj's `completeTx` (coin selection, fee, signing). dashj's
+ * `Wallet.sendCoinsOffline` is `completeTx` then `commitTx`, so such a failure
+ * means nothing was committed or broadcast. The send-all and dust failures
+ * (`CouldNotAdjustDownwards`, `DustySendRequested`) are named although dashj
+ * declares them as [Wallet.CompletionException]s, so the classification does
+ * not hinge on that hierarchy (PR #1608 review, round 9).
+ */
+internal fun isCompleteTxFailure(e: Exception): Boolean =
+    e is InsufficientMoneyException ||
+        e is Wallet.CouldNotAdjustDownwards ||
+        e is Wallet.DustySendRequested ||
+        e is Wallet.CompletionException ||
+        e is KeyCrypterException ||
+        e is IKey.KeyIsEncryptedException
+
 fun sdkSendNotAttemptedException(reason: String): IllegalStateException =
     if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
         SendEngineNotSyncedException(
@@ -424,16 +440,30 @@ class SendCoinsTaskRunner @Inject constructor(
      * - broadcast OK but bridge failed → throw with the txid in the message.
      *   The coins ARE on the network; the wallet reconciles via the next
      *   sync, and the error text says exactly that.
+     *
+     * [onBroadcast] is told the txid as soon as the SDK reports
+     * [SdkWriteResult.Broadcast], BEFORE bridging — so a caller that must act
+     * on a payment that went out (marking a contact address paid) still does
+     * when the bridge then fails. It is ALSO called, with a null txid (the
+     * result carries none), for [SdkWriteResult.Ambiguous] just before the
+     * rethrow: the payment may have gone out, and treating a contact address
+     * as used costs at most one skipped address while not doing so risks
+     * reusing it. Never called for NotBroadcast (nothing left the wallet):
+     * [onNotBroadcast] is, just before the throw — the proof a caller needs
+     * to treat the payment as never sent.
      */
     private suspend fun sendViaSdkBridged(
         address: Address,
         amount: Coin,
         beforeSending: Consumer<Transaction>?,
-        emptyWallet: Boolean = false
+        emptyWallet: Boolean = false,
+        onBroadcast: ((txid: String?) -> Unit)? = null,
+        onNotBroadcast: (() -> Unit)? = null
     ): Transaction {
         val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet)
         return when (result) {
             is SdkWriteResult.Broadcast -> {
+                notifyBroadcast(onBroadcast, result.value)
                 when (val bridged = bridgedTransactionFactory.bridge(result.value)) {
                     is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> {
                         beforeSending?.accept(bridged.transaction)
@@ -446,9 +476,41 @@ class SendCoinsTaskRunner @Inject constructor(
                     )
                 }
             }
-            is SdkWriteResult.Ambiguous ->
+            is SdkWriteResult.Ambiguous -> {
+                // Outcome unknown: the payment may be on the network. Signal it
+                // (no txid known) so a contact address is not reused, then
+                // rethrow as before — never retried (double-pay risk).
+                notifyBroadcast(onBroadcast, txid = null)
                 throw (result.cause as? Exception ?: RuntimeException(result.cause))
-            is SdkWriteResult.NotBroadcast -> throw sdkSendNotAttemptedException(result.reason)
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                notifyNotBroadcast(onNotBroadcast)
+                throw sdkSendNotAttemptedException(result.reason)
+            }
+        }
+    }
+
+    /** Runs a caller's not-broadcast callback; never throws. */
+    private fun notifyNotBroadcast(onNotBroadcast: (() -> Unit)?) {
+        if (onNotBroadcast == null) return
+        try {
+            onNotBroadcast()
+        } catch (e: Exception) {
+            log.warn("not-broadcast callback failed", e)
+        }
+    }
+
+    /**
+     * Runs a caller's broadcast callback; its failure never turns a sent payment
+     * into a failed one. [txid] null: the send's outcome is unknown
+     * ([SdkWriteResult.Ambiguous]) — it may have been broadcast.
+     */
+    private fun notifyBroadcast(onBroadcast: ((txid: String?) -> Unit)?, txid: String?) {
+        if (onBroadcast == null) return
+        try {
+            onBroadcast(txid)
+        } catch (e: Exception) {
+            log.warn("broadcast callback failed for tx {}", txid ?: "(outcome unknown)", e)
         }
     }
 
@@ -635,6 +697,13 @@ class SendCoinsTaskRunner @Inject constructor(
      * false and the dry-run keeps its unchanged dashj `completeTx` path.
      */
     suspend fun isCutoverCommitted(): Boolean = sdkL1SendService.cutoverCommitted()
+
+    /**
+     * [isCutoverCommitted] as it changes: the current value, then each change;
+     * `null` while the state cannot be read (retried until it can — see
+     * [SdkL1SendService.cutoverCommittedFlow]). Fail closed on `null`.
+     */
+    fun observeCutoverCommitted(): kotlinx.coroutines.flow.Flow<Boolean?> = sdkL1SendService.cutoverCommittedFlow()
 
     override suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction =
         withContext(Dispatchers.IO) {
@@ -1141,9 +1210,14 @@ class SendCoinsTaskRunner @Inject constructor(
         checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
-        intendedRecipient: Address? = null
+        intendedRecipient: Address? = null,
+        onBroadcast: ((txid: String?) -> Unit)? = null,
+        onNotBroadcast: (() -> Unit)? = null
     ): Transaction = withContext(Dispatchers.IO) {
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val wallet = walletData.wallet ?: run {
+            notifyNotBroadcast(onNotBroadcast)
+            throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        }
         Context.propagate(wallet.context)
         // Phase 5d routing for direct-SendRequest callers — the MAIN send UI
         // included (it builds/signs its own request for the fee preview and
@@ -1177,9 +1251,10 @@ class SendCoinsTaskRunner @Inject constructor(
                     if (payment.sendAll) ", send-all" else ""
                 )
                 return@withContext sendViaSdkBridged(
-                    payment.address, payment.amount, beforeSending, payment.sendAll
+                    payment.address, payment.amount, beforeSending, payment.sendAll, onBroadcast, onNotBroadcast
                 )
             }
+            notifyNotBroadcast(onNotBroadcast)
             throw SendNotSdkRoutableException(
                 "cutover committed: this send is not SDK-routable (multi-recipient, unresolved " +
                     "self-send, or custom selection) and dashj cannot broadcast while held"
@@ -1198,11 +1273,13 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
 
-        if (checkBalanceConditions) {
-            checkBalanceConditions(wallet, sendRequest.tx)
-        }
-
+        // Set right before the wallet commits the transaction: a failure
+        // before it provably sent nothing ([onNotBroadcast]).
+        var committing = false
         try {
+            if (checkBalanceConditions) {
+                checkBalanceConditions(wallet, sendRequest.tx)
+            }
             log.info("sending: {}", sendRequest)
 
             if (txCompleted) {
@@ -1210,6 +1287,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 // a BIP70 merchant (e.g. CTX) may broadcast the tx to the network as soon as it
                 // receives the payment message, so our wallet can pick it up via the P2P peer
                 // group and add it to the pending pool before we reach this commit.
+                committing = true
                 if (!wallet.maybeCommitTx(sendRequest.tx)) {
                     log.info(
                         "tx was already in the wallet (likely received via network broadcast): {}",
@@ -1218,6 +1296,9 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
             } else {
                 signSendRequest(sendRequest)
+                committing = true
+                // completeTx, then commitTx: completeTx's failures (below) are
+                // still before the commit.
                 wallet.sendCoinsOffline(sendRequest)
             }
 
@@ -1229,6 +1310,7 @@ class SendCoinsTaskRunner @Inject constructor(
             log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
             log.info("  transaction: {}", transaction.toStringHex())
             walletApplication.broadcastTransaction(transaction)
+            notifyBroadcast(onBroadcast, transaction.txId.toString())
             // EVERY dashj spend of the shared UTXOs (main send UI, CrowdNode,
             // BIP70 — they all funnel through here) briefly inflates the SDK's
             // shadow view by the fee until the next mined block, exactly like
@@ -1251,6 +1333,9 @@ class SendCoinsTaskRunner @Inject constructor(
                 is KeyCrypterException -> log.info("send failed, key crypter exception: {}", ex.message)
                 is Wallet.CouldNotAdjustDownwards -> log.info("send failed, could not adjust downwards: {}", ex.message)
                 is Wallet.CompletionException -> log.info("send failed, cannot complete: {}", ex.message)
+            }
+            if (!committing || isCompleteTxFailure(ex)) {
+                notifyNotBroadcast(onNotBroadcast)
             }
             throw ex
         }
@@ -1332,8 +1417,8 @@ class SendCoinsTaskRunner @Inject constructor(
 }
 
 /**
- * The dashj send tail's analytics (SEND_TX / SEND_TX_CONTACT with the value
- * sent, identity users only) — extracted from [SendCoinsTaskRunner] so the
+ * The dashj send tail's analytics (SEND_TX / SEND_TX_CONTACT, identity users
+ * only; no amount is logged) — extracted from [SendCoinsTaskRunner] so the
  * Phase 5c.2 bridged-commit tail
  * ([de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory])
  * runs the exact same hook as the dashj path.
@@ -1346,29 +1431,14 @@ suspend fun logSendTxEvent(
     analyticsService: AnalyticsService
 ) {
     identityConfig.get(IDENTITY_ID)?.let {
-        val valueSent: Long = transaction.outputs.filter {
-            !it.isMine(wallet)
-        }.sumOf {
-            it.value.value
-        }
         val isSentToContact = try {
             identityRepository.blockchainIdentity?.getContactForTransaction(transaction) != null
         } catch (e: Exception) {
             false
         }
-        analyticsService.logEvent(
-            AnalyticsConstants.SendReceive.SEND_TX,
-            mapOf(
-                AnalyticsConstants.Parameter.VALUE to valueSent
-            )
-        )
+        analyticsService.logEvent(AnalyticsConstants.SendReceive.SEND_TX, mapOf())
         if (isSentToContact) {
-            analyticsService.logEvent(
-                AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
-                mapOf(
-                    AnalyticsConstants.Parameter.VALUE to valueSent
-                )
-            )
+            analyticsService.logEvent(AnalyticsConstants.SendReceive.SEND_TX_CONTACT, mapOf())
         }
     }
 }

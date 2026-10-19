@@ -19,6 +19,13 @@ package de.schildbach.wallet.ui.send
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
+import de.schildbach.wallet.service.platform.sdk.ContactAddressSource
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddress
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentNotRecordableException
+import de.schildbach.wallet.service.platform.sdk.ContactPaymentTarget
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.ECKey
+import org.bitcoinj.params.TestNet3Params
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -58,6 +65,21 @@ class SendFailureClassificationTest {
         assertEquals(
             SendFailureKind.SIGNER_LOCKED,
             classifySendFailure(SendSignerLockedException("SDK signer locked — retry after unlock"))
+        )
+    }
+
+    @Test
+    fun contactPaymentNotRecordable_mapsToItsOwnCopy_notGenericInternal() {
+        // Also an IllegalStateException: nothing was sent and re-resolving
+        // does not help, so it gets its own storage / restart copy.
+        val payment = ContactPaymentAddress(
+            ContactPaymentTarget("ourId", "contactId", 1),
+            Address.fromKey(TestNet3Params.get(), ECKey()),
+            ContactAddressSource.SDK
+        )
+        assertEquals(
+            SendFailureKind.CONTACT_PAYMENT_NOT_RECORDED,
+            classifySendFailure(ContactPaymentNotRecordableException(payment))
         )
     }
 
