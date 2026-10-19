@@ -77,6 +77,12 @@ class CoinJoinConsolidationTest {
         var marker = ""
         var consolidation = ""
         var directPhase = ""
+        /** Every consolidation-stage write, in order. */
+        val consolidationWrites = mutableListOf<String>()
+        /** [DashPayConfig.MIXED_FUNDS_MIGRATION_DONE]; null = never written. */
+        var done: Boolean? = null
+        /** When set, writing [done] fails with this. */
+        var doneWriteFailure: Throwable? = null
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         val send = mockk<SdkL1SendService>(relaxed = true)
         val sdk = mockk<DashSdkService>(relaxed = true)
@@ -101,9 +107,17 @@ class CoinJoinConsolidationTest {
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, any()) } answers { marker = secondArg() }
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } answers { consolidation }
-            coEvery { config.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, any()) } answers { consolidation = secondArg() }
+            coEvery { config.set(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, any()) } answers {
+                consolidation = secondArg()
+                consolidationWrites += consolidation
+            }
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) } answers { directPhase }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, any()) } answers { directPhase = secondArg() }
+            coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) } answers { done }
+            coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE, any()) } answers {
+                doneWriteFailure?.let { throw it }
+                done = secondArg()
+            }
             every { sdk.walletManagerOrNull() } returns manager
             every { sdk.databaseOrNull() } returns db
             every { manager.wallets } returns MutableStateFlow(mapOf(walletId to mockk()))
@@ -761,5 +775,268 @@ class CoinJoinConsolidationTest {
         assertEquals(true, f.service.inFlightMigration()?.failed)
         coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+    }
+
+    private val regular = "yXfXh3jFYHHxnJZVsXnPcktCENqPaAhcX1"
+
+    /**
+     * Mirror the production source: the build skips [skipped] (still
+     * reserved) coins, and a `prepared` rejection abandons it (counted) as a
+     * pre-broadcast failure; otherwise [onBroadcast] runs. Returns the
+     * abandon count.
+     */
+    private fun Fixture.mockConsolidation(
+        skipped: Int = 0, to: String = destination, onBroadcast: (Transaction) -> Unit = {}
+    ): () -> Int {
+        var abandoned = 0
+        coEvery { send.consolidateCoinJoin(any(), any(), any(), any()) } coAnswers {
+            val tx = transaction(coins.value.drop(skipped), to)
+            try {
+                arg<suspend (ByteArray) -> Unit>(3)(tx.bitcoinSerialize())
+            } catch (t: Throwable) {
+                abandoned++
+                return@coAnswers SdkWriteResult.NotBroadcast("consolidation preparation failed", t)
+            }
+            onBroadcast(tx)
+            SdkWriteResult.Broadcast(tx.txId.toString())
+        }
+        return { abandoned }
+    }
+
+    // ── Completion flag on the consolidated routes ────────────────────
+
+    /** A consolidated SHIELD past its consolidation stage, the shield not yet landed. */
+    private suspend fun TestScope.consolidatedShieldInFlight(f: Fixture) {
+        f.mockConsolidation { tx ->
+            f.storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 1)
+            val output = coin(999).copy(outpoint = TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize(),
+                txid = tx.txId.reversedBytes, amount = tx.outputs[0].value.value)
+            f.coins.value = listOf(output)
+            f.engineBalance = output.amount
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any()) }
+        // STARTED without finish(): not handled until the result is verified.
+        assertNull(f.done)
+        assertNotNull(f.service.inFlightMigration())
+    }
+
+    /** The CoinJoin account drained and the shielded credit visible. */
+    private fun landShield(f: Fixture) {
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        f.coinJoinLocks = 0
+        f.shieldedBalance.value = Dash.COIN
+    }
+
+    /** A single-input COMBINE broadcast, its transfer not yet final. */
+    private fun combineInFlight(f: Fixture) {
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+        f.coins.value = listOf(coin(0))
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        f.mockConsolidation(to = regular) { tx ->
+            f.storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 0)
+            f.coins.value = emptyList()
+            f.engineBalance = 0
+        }
+    }
+
+    @Test fun consolidatedShieldSetsTheCompletionFlagOnlyOnAVerifiedLanding() = runTest {
+        val f = Fixture(this)
+        consolidatedShieldInFlight(f)
+        landShield(f)
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(true, f.done)
+        assertEquals(1, f.service.verifiedLandings)
+        // A later CoinJoin payment is not re-offered the one-time migration:
+        // the completion flag is what answers, not an empty account.
+        coEvery { f.send.cutoverCommitted() } returns true
+        f.coins.value = listOf(coin(500))
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        assertFalse(f.service.shouldPrompt())
+        coVerify { f.config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) }
+    }
+
+    @Test fun combineSetsTheCompletionFlagOnlyOnAVerifiedLanding() = runTest {
+        val f = Fixture(this)
+        combineInFlight(f)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        // Broadcast but not final: still in flight, not handled.
+        assertEquals(MixedFundsMigrationAction.COMBINE, f.service.inFlightMigration()?.action)
+        assertNull(f.done)
+        f.storedTx = f.storedTx?.copy(context = 1)
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(true, f.done)
+        assertEquals(1, f.service.verifiedLandings)
+    }
+
+    @Test fun completionFlagWriteFailureKeepsTheMarkerUntilARetrySavesIt() = runTest {
+        val f = Fixture(this)
+        consolidatedShieldInFlight(f)
+        f.doneWriteFailure = java.io.IOException("disk full")
+        landShield(f)
+        advanceTimeBy(15_000); runCurrent()
+        // Never cleared without the flag, and not counted as a verified landing.
+        assertNotNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        assertEquals(0, f.service.verifiedLandings)
+        // The next watcher run re-verifies the landing and saves the flag first.
+        f.doneWriteFailure = null
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(true, f.done)
+        assertEquals(1, f.service.verifiedLandings)
+    }
+
+    @Test fun consolidatedShieldThatNeverLandsLeavesTheFlagUnset() = runTest {
+        val f = Fixture(this)
+        consolidatedShieldInFlight(f)
+        // The honesty window runs out: the watcher stands down without clearing.
+        advanceTimeBy(MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        assertEquals(0, f.service.verifiedLandings)
+    }
+
+    @Test fun combineThatNeverBecomesFinalLeavesTheFlagUnset() = runTest {
+        val f = Fixture(this)
+        combineInFlight(f)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        advanceTimeBy(MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 60_000); runCurrent()
+        assertEquals(MixedFundsMigrationAction.COMBINE, f.service.inFlightMigration()?.action)
+        assertNull(f.done)
+        assertEquals(0, f.service.verifiedLandings)
+    }
+
+    @Test fun definitiveFailureAndItsReleaseLeaveTheFlagUnset() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) } returns
+            SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, Exception("coin selection is short"))
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        assertEquals(true, f.service.inFlightMigration()?.failed)
+        assertNull(f.done)
+        // Releasing the failed record clears it WITHOUT a verified landing.
+        assertTrue(f.service.releaseFailedMigration())
+        assertNull(f.service.inFlightMigration())
+        assertNull(f.done)
+        assertEquals(0, f.service.verifiedLandings)
+    }
+
+    // ── A drain must spend the whole snapshot ─────────────────────────
+
+    @Test fun drainValidationRequiresEverySnapshotCoin() {
+        fun validate(spent: List<TxoEntity>, snapshot: CoinJoinConsolidationSnapshot) =
+            validateCoinJoinConsolidation(transaction(spent).bitcoinSerialize(), snapshot, destination, params)
+        val small = CoinJoinConsolidationSnapshot(walletId, (0 until 3).map(::coin), destination)
+        assertTrue(small.drain)
+        assertEquals(transaction(small.coins).txId.toString(), validate(small.coins, small))
+        // ALL skipped a still-reserved UTXO, or a repeated input pads the count.
+        assertThrows(IllegalArgumentException::class.java) { validate(small.coins.take(2), small) }
+        assertThrows(IllegalArgumentException::class.java) { validate(small.coins.take(2) + small.coins[0], small) }
+        // A non-drain batch (over the input limit) still takes a subset.
+        val large = CoinJoinConsolidationSnapshot(walletId, (0 until 501).map(::coin), destination)
+        assertFalse(large.drain)
+        assertEquals(transaction(large.coins.take(500)).txId.toString(), validate(large.coins.take(500), large))
+    }
+
+    @Test fun partialCombineDrainIsRejectedBeforeBroadcastAsADefinitiveFailure() = runTest {
+        val f = Fixture(this)
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+        f.coins.value = (0 until 3).map(::coin)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        val abandoned = f.mockConsolidation(skipped = 1, to = regular)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(regular, 1L, true, any()) }
+        assertEquals(1, abandoned())
+        // Never persisted as TRANSFERRING (nor with a txid/bytes to replay).
+        assertTrue(f.consolidationWrites.none {
+            CoinJoinConsolidationState.decode(it).phase == CoinJoinConsolidationState.TRANSFERRING
+        })
+        val stage = CoinJoinConsolidationState.decode(f.consolidation)
+        assertEquals(CoinJoinConsolidationState.READY, stage.phase)
+        assertEquals("", stage.txid)
+        // Definitive and retryable: the choice is offered again, not "could not confirm".
+        val marker = f.service.inFlightMigration()
+        assertEquals(true, marker?.failed)
+        assertEquals(false, marker?.isExpired())
+        assertNull(f.done)
+        advanceTimeBy(5L * 60_000); runCurrent()
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(any(), any(), any(), any()) }
+        // Once the reservation is gone the user's next move drains everything.
+        f.mockConsolidation(to = regular)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        assertEquals(CoinJoinConsolidationState.TRANSFERRING, CoinJoinConsolidationState.decode(f.consolidation).phase)
+        assertEquals(false, f.service.inFlightMigration()?.failed)
+    }
+
+    @Test fun partialShieldPathDrainConsolidationIsRejectedBeforeBroadcast() = runTest {
+        val f = Fixture(this)
+        // 101 coins: needs consolidation, and the consolidation is a drain.
+        val abandoned = f.mockConsolidation(skipped = 1)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        runCurrent()
+        coVerify(exactly = 1) { f.send.consolidateCoinJoin(destination, 1L, true, any()) }
+        assertEquals(1, abandoned())
+        assertTrue(f.consolidationWrites.none {
+            CoinJoinConsolidationState.decode(it).phase == CoinJoinConsolidationState.WAITING
+        })
+        assertEquals(CoinJoinConsolidationState.READY, CoinJoinConsolidationState.decode(f.consolidation).phase)
+        assertEquals(true, f.service.inFlightMigration()?.failed)
+        coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+    }
+
+    @Test fun fullShieldPathDrainConsolidationIsPersistedAndBroadcast() = runTest {
+        val f = Fixture(this)
+        val abandoned = f.mockConsolidation()
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        runCurrent()
+        assertEquals(0, abandoned())
+        val stage = CoinJoinConsolidationState.decode(f.consolidation)
+        assertEquals(CoinJoinConsolidationState.WAITING, stage.phase)
+        assertEquals(transaction(f.coins.value).txId.toString(), stage.txid)
+        assertEquals(false, f.service.inFlightMigration()?.failed)
+    }
+
+    @Test fun retryRestartsTheWatcherWithoutEverRunningTwo() = runTest {
+        val f = Fixture(this)
+        val tx = transaction(f.coins.value)
+        // An unsettled consolidation with no bytes to replay: the watcher only polls.
+        f.consolidation = CoinJoinConsolidationState(walletId, destination,
+            CoinJoinConsolidationState.WAITING, tx.txId.toString()).encode()
+        f.marker = formatInFlightMigration(InFlightMixedFundsMigration(
+            MixedFundsMigrationAction.SHIELD, System.currentTimeMillis(), 0L))
+        // Each watcher pass calls ensureStarted() once, then polls. The first
+        // watcher parks there; while the retry cancels it, a concurrent start
+        // (e.g. MainViewModel init) fires before it has finished.
+        coEvery { f.sdk.ensureStarted() } coAnswers {
+            try {
+                kotlinx.coroutines.awaitCancellation()
+            } finally {
+                f.service.startInFlightWatcherIfNeeded()
+            }
+        }
+        f.service.startInFlightWatcherIfNeeded()
+        runCurrent()
+        var passes = 0
+        coEvery { f.sdk.ensureStarted() } coAnswers { passes++ }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.retryPendingMigration())
+        runCurrent()
+        // One watcher = one pass now plus one per 15 s poll.
+        advanceTimeBy(60_000); runCurrent()
+        assertEquals("watcher passes in 60 s", 5, passes)
     }
 }

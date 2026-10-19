@@ -1681,9 +1681,8 @@ class ShieldedBalanceServiceImpl internal constructor(
                 if (fundingPath == null) {
                     source.fundFromAssetLock(walletId, recipient, amount.duffs)
                 } else {
-                    // SINGLE-ACCOUNT: every input comes from the account this
-                    // path names (the DIP-9 CoinJoin account); BIP44 coins are
-                    // never co-spent. Only change returns to BIP44 account 0.
+                    // SINGLE-ACCOUNT DRAIN of the DIP-9 CoinJoin account into
+                    // the lock: no BIP44 inputs, no transparent change.
                     source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
                 }
                 markLocalSpendPending()

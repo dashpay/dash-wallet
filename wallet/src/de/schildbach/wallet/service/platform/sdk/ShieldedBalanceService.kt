@@ -347,12 +347,10 @@ interface ShieldedBalanceService {
      * the unmixed BIP44 account — the post-upgrade "move my previously mixed
      * funds into the shielded balance" migration.
      *
-     * PRIVACY INVARIANT: this is single-account selection, NOT a union. The
-     * Rust side resolves [coinJoinAccountPath] to exactly ONE funds account
-     * and every input comes from it (`build_asset_lock_tx_from_selected_account`
-     * in `rs-platform-wallet/src/wallet/asset_lock/build.rs`); BIP44 coins are
-     * never co-spent. Only the CHANGE is routed to BIP44 account 0, because a
-     * non-Standard account cannot derive its own change.
+     * PRIVACY INVARIANT: single-account, NOT a union. The SDK's CoinJoin
+     * drain (`shieldedFundFromCoinJoinDrain`) spends every input of the ONE
+     * account [coinJoinAccountPath] names into the asset lock, with no
+     * transparent change; BIP44 coins are never co-spent.
      *
      * @param coinJoinAccountPath the ACCOUNT-LEVEL BIP32 path string, `m/`
      *   prefixed and hardened with `'` — `m/9'/5'/4'/0'` on mainnet,

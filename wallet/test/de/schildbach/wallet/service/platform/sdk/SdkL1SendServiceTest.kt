@@ -81,6 +81,27 @@ class SdkL1SendServiceTest {
             return boundWalletId()
         }
 
+        // ── CoinJoin consolidation (mirrors DashSdkL1SendSource: a throwing
+        // `prepared` abandons the finalized build, releasing its inputs) ──
+        var consolidationAbandons = 0
+        var consolidationBroadcasts = 0
+
+        override suspend fun consolidateCoinJoin(
+            destination: String,
+            amount: Long,
+            drain: Boolean,
+            prepared: suspend (ByteArray) -> Unit
+        ): String {
+            try {
+                prepared(byteArrayOf(1, 2, 3))
+            } catch (t: Throwable) {
+                consolidationAbandons++
+                throw t
+            }
+            consolidationBroadcasts++
+            return "11".repeat(32)
+        }
+
         override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
             check(!insideLock) { "core-send lock is NOT reentrant — nested acquisition would deadlock" }
             lockAcquisitions++
@@ -529,6 +550,27 @@ class SdkL1SendServiceTest {
         val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { }
         assertEquals(SdkWriteResult.NotBroadcast("wallet not bound"), result)
         assertEquals(0, source.lockAcquisitions)
+    }
+
+    @Test
+    fun consolidateCoinJoin_rejectedSignedDrain_isAbandonedAndNotBroadcast() = runBlocking {
+        // The migration rejects a partial drain inside `prepared`
+        // (validateCoinJoinConsolidation): nothing is broadcast, the build is
+        // abandoned (inputs released) and the result is a definitive
+        // pre-broadcast failure, never Ambiguous.
+        val source = readySource()
+        val rejection = IllegalArgumentException("Drain must spend every snapshot coin (spends 2 of 3)")
+        val svc = SdkL1SendService(
+            source = source,
+            dashPayConfig = config(true),
+            isValidAddress = { true },
+            l1Progress = { caughtUpProgress() },
+            hasAppLockedCoinJoinOutputs = { false }
+        )
+        val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { throw rejection }
+        assertEquals(SdkWriteResult.NotBroadcast("consolidation preparation failed", rejection), result)
+        assertEquals(1, source.consolidationAbandons)
+        assertEquals(0, source.consolidationBroadcasts)
     }
 
     // ── CoinJoin consolidation replay (exact persisted bytes) ────────────

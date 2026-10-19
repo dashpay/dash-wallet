@@ -25,7 +25,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -585,9 +584,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
             formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis()))
         )
-        inFlightWatcherJob?.cancelAndJoin()
-        inFlightWatcherJob = null
-        startInFlightWatcherIfNeeded()
+        restartInFlightWatcher()
         // An explicit retry gets its own resume attempt even when the
         // automatic per-process budget is spent (the lock stays tracked; this
         // never builds a new one).
@@ -1083,15 +1080,32 @@ class CoinJoinFundsMigrationService @Inject constructor(
     fun startInFlightWatcherIfNeeded() {
         synchronized(this) {
             if (inFlightWatcherJob?.isActive == true) return
-            inFlightWatcherJob = applicationScope.launch {
-                try {
-                    watchInFlightMigration()
-                } catch (t: Throwable) {
-                    if (t is CancellationException) throw t
-                    log.warn("the in-flight mixed-funds watcher stopped", t)
-                    expireMigration()
-                }
-            }
+            inFlightWatcherJob = launchWatcherLocked(previous = null)
+        }
+    }
+
+    /**
+     * Swap in a fresh watcher atomically (same lock as [startInFlightWatcherIfNeeded],
+     * so a concurrent start never launches a second); it joins the cancelled
+     * one first, so the two never overlap.
+     */
+    private fun restartInFlightWatcher() {
+        synchronized(this) {
+            val previous = inFlightWatcherJob
+            previous?.cancel()
+            inFlightWatcherJob = launchWatcherLocked(previous)
+        }
+    }
+
+    /** Caller holds the `this` monitor. */
+    private fun launchWatcherLocked(previous: Job?): Job = applicationScope.launch {
+        previous?.join()
+        try {
+            watchInFlightMigration()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("the in-flight mixed-funds watcher stopped", t)
+            expireMigration()
         }
     }
 
@@ -1139,6 +1153,17 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 continue
             }
             if (landed) {
+                // The consolidated routes never reach [finish]: record them
+                // as handled (like the direct shield) BEFORE dropping the
+                // record. On a failed write keep the marker; the next watcher
+                // run re-verifies and retries.
+                try {
+                    dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE, true)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("mixed-funds migration ({}): completion flag not saved; keeping marker", marker.action, t)
+                    return
+                }
                 log.info("mixed-funds migration ({}) result is now visible; clearing the in-flight marker", marker.action)
                 verifiedLandings++
                 clearInFlightMigration()
@@ -1450,10 +1475,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
         private val log = LoggerFactory.getLogger(CoinJoinFundsMigrationService::class.java)
 
         /**
-         * Headroom left unlocked so the L1 asset-lock fee has somewhere to
-         * come from. Same figure as the send-all reserve
-         * ([SEND_ALL_FEE_RESERVE_DUFFS]); whatever the fee does not consume
-         * comes back as BIP44 change, so nothing is stranded on `m/9'`.
+         * Fee headroom taken off the UI's shield ESTIMATE only (same figure
+         * as [SEND_ALL_FEE_RESERVE_DUFFS]). The SDK drains the whole account
+         * into the lock with no change, so nothing is left on `m/9'`.
          */
         const val L1_FEE_RESERVE_DUFFS = SEND_ALL_FEE_RESERVE_DUFFS
 

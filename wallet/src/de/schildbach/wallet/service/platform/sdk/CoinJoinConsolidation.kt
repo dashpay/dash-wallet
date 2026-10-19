@@ -117,6 +117,13 @@ internal suspend fun coinJoinConsolidationSnapshot(
     return CoinJoinConsolidationSnapshot(walletId, coins, unusedCoinJoinAddress(addresses, account.id))
 }
 
+/**
+ * Rejects (throws) a signed consolidation before it is persisted or broadcast.
+ * A [CoinJoinConsolidationSnapshot.drain] must spend EXACTLY the snapshot:
+ * `SelectionStrategy.ALL` skips UTXOs still reserved by an earlier build
+ * (until the engine TTL), and a settled partial drain would strand the rest —
+ * TRANSFERRING only completes on an empty account.
+ */
 internal fun validateCoinJoinConsolidation(
     raw: ByteArray, snapshot: CoinJoinConsolidationSnapshot, destination: String, params: NetworkParameters,
     minimumInputs: Int = 2
@@ -124,7 +131,11 @@ internal fun validateCoinJoinConsolidation(
     val tx = Transaction(params, raw)
     require(tx.inputs.size in minimumInputs..COIN_JOIN_CONSOLIDATION_INPUT_LIMIT) { "Unexpected consolidation input count" }
     val owned = snapshot.coins.map { Utils.HEX.encode(it.outpoint) }.toSet()
-    require(tx.inputs.all { Utils.HEX.encode(it.outpoint.bitcoinSerialize()) in owned }) { "Unexpected consolidation input" }
+    val spent = tx.inputs.map { Utils.HEX.encode(it.outpoint.bitcoinSerialize()) }
+    require(spent.all { it in owned }) { "Unexpected consolidation input" }
+    require(!snapshot.drain || (spent.size == owned.size && spent.toSet() == owned)) {
+        "Drain must spend every snapshot coin"
+    }
     val script = org.bitcoinj.script.ScriptBuilder.createOutputScript(Address.fromBase58(params, destination)).program
     require(tx.outputs.isNotEmpty() && tx.outputs.size <= 2 && tx.outputs.all { it.scriptBytes.contentEquals(script) }) {
         "Consolidation must pay only the selected CoinJoin address"
