@@ -88,6 +88,27 @@ class SdkL1SendMaxSendableParseTest {
     }
 
     @Test
+    fun spendable_missingOrNonNumericFields_areUnknownNotZero() {
+        val bip44 = """{"typeTag":0,"standardTag":0,"index":0,"confirmed":5,"unconfirmed":0}"""
+        assertEquals(5L, parseBip44SpendableDuffs("[$bip44]"))
+        assertEquals(5L, pooledSpendableDuffs("[$bip44]"))
+        val bad = listOf(
+            """{"typeTag":0,"standardTag":0,"index":0,"confirmed":5}""", // unconfirmed missing
+            """{"typeTag":0,"standardTag":0,"index":0,"confirmed":"5","unconfirmed":0}""",
+            """{"typeTag":0,"standardTag":0,"index":0,"confirmed":-5,"unconfirmed":0}""",
+            """{"typeTag":0,"index":0,"confirmed":5,"unconfirmed":0}""" // standardTag missing
+        )
+        for (row in bad) {
+            assertNull(row, parseBip44SpendableDuffs("[$row]"))
+            assertNull(row, pooledSpendableDuffs("[$row]"))
+        }
+        // A pooled receival row with a damaged amount makes the total unknown, not smaller.
+        assertNull(pooledSpendableDuffs("""[$bip44,{"typeTag":12,"index":0,"confirmed":7}]"""))
+        // A row without its tag makes the snapshot unknown.
+        assertNull(parseBip44SpendableDuffs("""[{"index":0,"confirmed":1,"unconfirmed":0},$bip44]"""))
+    }
+
+    @Test
     fun bip44Spendable_missingRowOrMalformed_isUnknownNotZero() {
         // A snapshot without a BIP44 index-0 row cannot AFFIRM the balance —
         // null (unknown), never 0, so the display falls back to the

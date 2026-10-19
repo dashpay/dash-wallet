@@ -47,6 +47,7 @@ import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
+import de.schildbach.wallet.service.platform.sdk.MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
 import de.schildbach.wallet.service.L1SyncStatusService
 import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
@@ -273,22 +274,10 @@ class MainViewModel @Inject constructor(
      * (see [recheckMixedFundsMigrationPrompt]).
      */
     /**
-     * TEMPORARY KILL SWITCH for the mixed-funds prompt.
-     *
-     * Both choices the sheet offers route through
-     * [CoinJoinFundsMigrationService.combineIntoUnmixedBalance], which takes its
-     * destination from dashj's `freshReceiveAddress()` — and that forces a
-     * SYNCHRONOUS full-wallet save on the calling thread. On the main thread,
-     * on a wallet whose save re-serializes every DashPay friend key chain, that
-     * is a multi-second freeze (~7 s measured on a 215-chain mainnet wallet,
-     * which the tester read as a hang and force-quit).
-     *
-     * Suppressing the PROMPT touches neither the migration nor its persisted
-     * state: the in-flight and done markers keep their meaning, so flipping
-     * this back to false restores the previous behaviour exactly. Remove once
-     * the address allocation is off the main thread.
+     * Mirrors the service/dialog emergency kill-switch so the startup and
+     * lock-dismiss triggers cannot diverge from the sheet's own gate.
      */
-    private val mixedFundsPromptSuppressed = true
+    private val mixedFundsPromptSuppressed = MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
 
     val showMixedFundsMigration = SingleLiveEvent<Unit>()
 
@@ -444,11 +433,10 @@ class MainViewModel @Inject constructor(
                 // A persisted IN-FLIGHT marker re-shows the sheet in its
                 // post-choice PROCESSING presentation (a broadcast whose
                 // result is not user-visible yet — e.g. the lock screen tore
-                // the sheet down during the confirmation window); otherwise
-                // the service decides whether the forced choice is due.
-                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
-                    coinJoinFundsMigrationService.shouldPrompt()
-                ) {
+                // the sheet down during the confirmation window) unless its
+                // "could not confirm" guidance was already acknowledged;
+                // otherwise the service decides whether the forced choice is due.
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
                     mixedFundsPromptShownThisSession = true
                     showMixedFundsMigration.postCall()
                 }
@@ -935,11 +923,11 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // The in-flight marker re-shows the PROCESSING presentation
-                // (a broadcast migration whose result is not visible yet);
+                // (a broadcast migration whose result is not visible yet) —
+                // but not "could not confirm" guidance the user already
+                // closed, which would otherwise return on every resume;
                 // shouldPrompt() covers the pre-decision forced choice.
-                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
-                    coinJoinFundsMigrationService.shouldPrompt()
-                ) {
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
                     mixedFundsPromptShownThisSession = true
                     showMixedFundsMigration.postCall()
                 }

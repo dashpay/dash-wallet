@@ -21,19 +21,19 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogMixedFundsMigrationBinding
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
@@ -51,12 +51,13 @@ import javax.inject.Inject
  *   which UNDOES the mixing. The sheet states that plainly (the
  *   `mixed_funds_migration_combine_note` string) rather than burying it.
  *
- * The choice is FORCED: there is no "leave it" option, and the sheet cannot
- * be dismissed by back press, outside tap, or swipe until one of the two
- * migrations has actually recorded an outcome (which is also what sets the
- * permanent latch, `DashPayConfig.MIXED_FUNDS_MIGRATION_DONE`). If the
- * activity is recreated (e.g. the lock screen engages) before a choice was
- * made, `MainViewModel` re-fires the prompt on the next opportunity.
+ * Mirrors the iOS destination sheet: Later defers the startup offer while
+ * Tools remains reachable, failures retry without restarting, and success
+ * stays visible until Done. A pending shield retries its existing lock.
+ * Each move — and Restart — asks for confirmation first; Later never does.
+ * A FRESH spend (either move, or Try again after a definitive failure) also
+ * requires PIN/biometric authentication, like every other send; resuming
+ * the transaction already in flight does not.
  *
  * AFTER a choice broadcast (STARTED), the sheet swaps to a PROCESSING
  * presentation (spinner + "your funds are on the way") that must stay
@@ -65,75 +66,87 @@ import javax.inject.Inject
  * the sheet, carries that state, so a lock-screen teardown or activity
  * recreation re-shows this sheet directly in the processing presentation
  * (`MainViewModel` re-fires the prompt while the marker is set). The sheet
- * is dismissible in that window (the marker keeps the state); when the
- * result lands the sheet briefly shows the success message and
- * auto-dismisses, and when the honesty window lapses it swaps to the
- * "could not confirm" guidance — dismissing THAT acknowledges (clears) the
- * marker.
+ * cannot be dismissed during processing. Closing terminal guidance retains
+ * the recovery marker (it is cleared only when the result becomes visible)
+ * but acknowledges it, so the automatic triggers stop re-presenting it;
+ * Tools still opens it to resume.
  */
 @AndroidEntryPoint
 class MixedFundsMigrationDialogFragment :
     OffsetDialogFragment(R.layout.dialog_mixed_funds_migration) {
 
     private val binding by viewBinding(DialogMixedFundsMigrationBinding::bind)
-    private val viewModel by viewModels<MixedFundsMigrationViewModel>()
+    // Auto-lock dismisses this fragment. Keep the spend and its UI state on
+    // the activity so unlocking can reopen progress without cancelling it.
+    private val viewModel by activityViewModels<MixedFundsMigrationViewModel>()
 
     @Inject
-    lateinit var restartService: RestartService
+    lateinit var authManager: AuthenticationManager
 
     override val expandToContent = true
-
-    /** One auto-dismiss per landed result — see the success handling below. */
-    private var autoDismissScheduled = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.shieldButton.setOnClickListener { viewModel.shieldMixedFunds() }
-        binding.combineButton.setOnClickListener { viewModel.combineIntoUnmixedBalance() }
+        // Every button that spends asks first: these broadcast real, irreversible
+        // transactions, so a stray tap (MO-1099) must not be enough. Later does not.
+        binding.shieldButton.setOnClickListener {
+            confirmThen(MixedFundsMigrationAction.SHIELD) { viewModel.shieldMixedFunds() }
+        }
+        binding.combineButton.setOnClickListener {
+            confirmThen(MixedFundsMigrationAction.COMBINE) { viewModel.combineIntoUnmixedBalance() }
+        }
 
-        // FAILURE-state actions. A failed attempt spent nothing
-        // (NOT_ATTEMPTED) and left the migration-done latch unset, so after
-        // the restart the startup prompt detects the mixed funds again and
-        // re-offers the normal choices (CoinJoinFundsMigrationService
-        // .shouldPrompt).
+        // Definitive failures can retry; pending shields resume their lock.
         binding.restartButton.setOnClickListener {
-            restartService.performRestart(requireActivity(), true)
+            val state = viewModel.uiState.value
+            // A timed-out/unconfirmed transfer resumes the existing transaction;
+            // a failed one runs its move again, so it asks that move's question
+            // (and, being a fresh spend, authenticates).
+            confirmThen(if (state.retryStartsFreshSpend()) state.attemptedAction else null) {
+                viewModel.retryMigration()
+            }
         }
         // The fallback offered when SHIELDING failed: run the existing
         // combine ("keep it spendable") migration instead.
-        binding.transferUnmixedButton.setOnClickListener { viewModel.combineIntoUnmixedBalance() }
+        binding.transferUnmixedButton.setOnClickListener {
+            confirmThen(MixedFundsMigrationAction.COMBINE) { viewModel.combineIntoUnmixedBalance() }
+        }
+        binding.closeButton.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val state = viewModel.uiState.value
+                if (state.outcome == null && !state.awaitingResult && !state.resultTimedOut && !state.resultLanded) {
+                    viewModel.deferMigration()
+                }
+                viewModel.onSheetClosed()
+                dismissAllowingStateLoss()
+            }
+        }
 
-        // FORCED choice: no back press / outside tap / swipe until one of the
-        // two migrations has recorded an outcome (see the class KDoc).
+        // Choice dismissal uses Later so it records the balance deferral.
         isCancelable = false
         dialog?.setCanceledOnTouchOutside(false)
+
+        // Re-read the offered amount on every showing: the ViewModel is
+        // activity-scoped and its first read usually ran pre-sync (null), so
+        // a stale value would leave a prompt with nothing to act on.
+        viewModel.refreshAmount()
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
                     val amount = state.amount
 
-                    // FAILURE state: an attempt ran and provably spent
-                    // nothing (NOT_ATTEMPTED). The sheet swaps to the
-                    // per-scenario error presentation — which buttons it
-                    // offers depends on WHICH action failed.
-                    val failed = state.outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED
+                    // FAILURE (NOT_ATTEMPTED, provably nothing spent), the
+                    // POST-BROADCAST processing window (this session's STARTED
+                    // or the persisted marker), and the terminal "could not
+                    // confirm" guidance — see [presentation].
+                    val presentation = state.presentation()
+                    val failed = presentation.failed
                     val shieldFailed = failed &&
                         state.attemptedAction == MixedFundsMigrationAction.SHIELD
-
-                    // POST-BROADCAST processing window: this session's
-                    // STARTED outcome or the persisted in-flight marker (a
-                    // resumed sheet after lock-screen teardown / activity
-                    // recreation). Spinner + "on the way" until the result
-                    // is user-visible.
-                    val awaiting = !state.inProgress && !state.resultLanded && !state.resultTimedOut &&
-                        (state.awaitingResult || state.outcome == MixedFundsMigrationOutcome.STARTED)
-                    val processingAny = state.inProgress || awaiting
-                    // The pre-decision presentation: the forced two-option
-                    // choice (also the UNCONFIRMED retry surface).
-                    val choiceMode = !failed && !processingAny &&
-                        !state.resultTimedOut && !state.resultLanded
+                    val processingAny = presentation.processing
+                    val choiceMode = presentation.choiceMode
 
                     binding.subtitle.text = if (amount == null) {
                         ""
@@ -145,30 +158,33 @@ class MixedFundsMigrationDialogFragment :
                     binding.subtitle.isVisible = choiceMode || failed
                     binding.coinjoinRemoved.isVisible = choiceMode || failed
 
-                    val actionable = amount != null && choiceMode
+                    // Nothing to offer: the fresh read found no mixed funds
+                    // (moved elsewhere, or the post-cutover SDK view cannot
+                    // be read). Never leave a choice sheet up whose choices
+                    // are all disabled — close without recording a deferral.
+                    if (choiceMode && state.outcome == null && state.amountChecked && amount == null &&
+                        !state.migrationPending
+                    ) {
+                        dismissAllowingStateLoss()
+                        return@collect
+                    }
+
+                    val actionable = amount != null && state.amountChecked && choiceMode
                     binding.shieldButton.isVisible = choiceMode
                     binding.shieldNote.isVisible = choiceMode
                     binding.combineButton.isVisible = choiceMode
                     binding.combineNote.isVisible = choiceMode
                     binding.shieldButton.isEnabled = actionable
                     binding.combineButton.isEnabled = actionable
-                    binding.restartButton.isVisible = failed
-                    // A failed SHIELD additionally offers the existing
-                    // combine migration as the fallback; a failed COMBINE
-                    // offers "Restart" only.
-                    binding.transferUnmixedButton.isVisible = shieldFailed
-                    // Dismissable only once a choice has actually run —
-                    // STARTED/UNCONFIRMED (and every post-broadcast
-                    // presentation: processing, landed, timed-out) mark the
-                    // migration handled; NOT_ATTEMPTED spent nothing, so the
-                    // sheet stays up on its failure buttons ("Restart"
-                    // relaunches the app; the fallback runs the combine).
-                    // Dismissing the processing sheet is fine — the marker
-                    // keeps the state, and the sheet re-shows on the next
-                    // (re)creation while it is set.
-                    isCancelable = state.outcome == MixedFundsMigrationOutcome.STARTED ||
-                        state.outcome == MixedFundsMigrationOutcome.UNCONFIRMED ||
-                        awaiting || state.resultTimedOut || state.resultLanded
+                    binding.restartButton.isVisible = presentation.showRestart
+                    binding.transferUnmixedButton.isVisible = presentation.showTransferUnmixed
+                    isCancelable = presentation.cancelable
+                    binding.closeButton.isVisible = presentation.showClose
+                    binding.closeButton.setText(when {
+                        choiceMode -> R.string.mixed_funds_migration_later_action
+                        state.resultLanded -> R.string.mixed_funds_migration_done_action
+                        else -> R.string.button_close
+                    })
 
                     binding.progressGroup.isVisible = processingAny
                     binding.progressText.setText(
@@ -183,7 +199,9 @@ class MixedFundsMigrationDialogFragment :
                         // The result landed while the sheet was up: brief
                         // success presentation, then auto-dismiss below.
                         state.resultLanded ->
-                            getString(R.string.mixed_funds_migration_started)
+                            getString(if (state.attemptedAction == MixedFundsMigrationAction.SHIELD)
+                                R.string.mixed_funds_migration_shield_success
+                            else R.string.mixed_funds_migration_wallet_success)
                         // The honesty window lapsed with no visible result:
                         // stop spinning, say so. Dismissal acknowledges.
                         state.resultTimedOut ->
@@ -203,38 +221,65 @@ class MixedFundsMigrationDialogFragment :
                     binding.errorText.isVisible = message != null
                     binding.errorText.text = message ?: ""
 
-                    if (state.resultLanded && !autoDismissScheduled) {
-                        autoDismissScheduled = true
-                        viewLifecycleOwner.lifecycleScope.launch {
-                            delay(SUCCESS_DISMISS_DELAY_MS)
-                            dismissAllowingStateLoss()
-                        }
-                    }
                 }
             }
         }
     }
 
-    override fun onDismiss(dialog: DialogInterface) {
-        // Dismissing the TIMED-OUT guidance is its acknowledgment: the
-        // marker is dropped so the sheet stops re-appearing. Every other
-        // dismissal leaves the marker alone — a still-processing migration
-        // must re-show on the next (re)creation.
-        if (viewModel.uiState.value.resultTimedOut) {
-            viewModel.acknowledgeTimedOutResult()
+    /**
+     * Back / outside tap while the sheet is cancelable (failure, terminal
+     * guidance, success) — a USER close like the Close button, so it gets
+     * the same handling: a definitive failure is released for a new choice
+     * and "could not confirm" guidance is acknowledged. A lock-screen
+     * teardown dismisses without cancelling and so changes nothing.
+     */
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
+        viewModel.onSheetClosed()
+    }
+
+    /** True while a confirmation is up, so a second tap cannot stack another. */
+    private var confirming = false
+
+    /**
+     * Ask before running [action]: [move] picks the shield or combine wording,
+     * null the generic restart wording. Runs [action] only on Confirm. A
+     * non-null [move] is a FRESH spend and additionally requires PIN/biometric
+     * authentication; a cancelled or failed authentication runs nothing. If
+     * the sheet is torn down while asking (e.g. auto-lock), the coroutine is
+     * cancelled and nothing runs.
+     */
+    private fun confirmThen(move: MixedFundsMigrationAction?, action: () -> Unit) {
+        if (confirming) return
+        confirming = true
+        val (title, message) = when (move) {
+            MixedFundsMigrationAction.SHIELD ->
+                R.string.mixed_funds_migration_confirm_shield_title to R.string.mixed_funds_migration_confirm_shield_message
+            MixedFundsMigrationAction.COMBINE ->
+                R.string.mixed_funds_migration_confirm_combine_title to R.string.mixed_funds_migration_confirm_combine_message
+            null ->
+                R.string.mixed_funds_migration_confirm_restart_title to R.string.mixed_funds_migration_confirm_restart_message
         }
-        super.onDismiss(dialog)
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val confirmed = AdaptiveDialog.create(
+                    R.drawable.ic_warning_yellow_circle,
+                    getString(title),
+                    getString(message),
+                    getString(R.string.button_cancel),
+                    getString(R.string.button_confirm)
+                ).showAsync(requireActivity())
+                if (confirmed != true) return@launch
+                if (move != null && authManager.authenticate(requireActivity()) == null) return@launch
+                action()
+            } finally {
+                confirming = false
+            }
+        }
     }
 
     companion object {
         private const val TAG = "mixed_funds_migration"
-
-        /**
-         * How long the success presentation ("your funds are on the way",
-         * spinner gone) stays up before the sheet auto-dismisses onto the
-         * now-updated balance.
-         */
-        private const val SUCCESS_DISMISS_DELAY_MS = 1_500L
 
         /**
          * Show the sheet unless it is already up. Safe to call more than once

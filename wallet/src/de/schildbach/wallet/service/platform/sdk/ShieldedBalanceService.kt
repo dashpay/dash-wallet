@@ -199,6 +199,18 @@ interface ShieldedBalanceService {
     suspend fun pendingWalletShieldLockCount(): Int?
 
     /**
+     * Like [pendingWalletShieldLockCount], but only the resumable locks that
+     * are (or may be) funded from the CoinJoin account — the mixed-funds
+     * migration's own drain. Unrelated BIP44 shield locks are excluded; a
+     * lock whose funding source cannot be determined is counted. Null when
+     * the runtime isn't ready or the locks cannot be read (UNKNOWN).
+     */
+    suspend fun pendingCoinJoinShieldLockCount(): Int?
+
+    /** How many of [pendingCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null when unknown. */
+    suspend fun recoveredCoinJoinShieldLockCount(): Int?
+
+    /**
      * Live unspent shielded balance, credits summed from the SDK's note
      * store and floored to [Dash]. Emits [Dash.ZERO] until
      * [ensureShieldedReady] succeeds.
@@ -338,22 +350,27 @@ interface ShieldedBalanceService {
      * the unmixed BIP44 account — the post-upgrade "move my previously mixed
      * funds into the shielded balance" migration.
      *
-     * PRIVACY INVARIANT: this is single-account selection, NOT a union. The
-     * Rust side resolves [coinJoinAccountPath] to exactly ONE funds account
-     * and every input comes from it (`build_asset_lock_tx_from_selected_account`
-     * in `rs-platform-wallet/src/wallet/asset_lock/build.rs`); BIP44 coins are
-     * never co-spent. Only the CHANGE is routed to BIP44 account 0, because a
-     * non-Standard account cannot derive its own change.
+     * PRIVACY INVARIANT: single-account, NOT a union. The SDK's CoinJoin
+     * drain (`shieldedFundFromCoinJoinDrain`) spends every input of the ONE
+     * account [coinJoinAccountPath] names into the asset lock, with no
+     * transparent change; BIP44 coins are never co-spent.
      *
      * @param coinJoinAccountPath the ACCOUNT-LEVEL BIP32 path string, `m/`
      *   prefixed and hardened with `'` — `m/9'/5'/4'/0'` on mainnet,
      *   `m/9'/1'/4'/0'` elsewhere. Built by
      *   [de.schildbach.wallet.service.platform.sdk.coinJoinAccountPath].
      *   A path naming no account is a clean pre-broadcast failure.
+     * @param onSubmitting invoked once every preflight has passed, immediately
+     *   before the native build+broadcast call — the caller's durable
+     *   "submission may have happened" checkpoint. Not invoked when nothing
+     *   reaches the native call (preflight rejections, an already pending
+     *   CoinJoin lock), so a caller that never saw it run knows nothing was
+     *   submitted. If it throws, nothing is submitted ([SdkWriteResult.NotBroadcast]).
      */
     suspend fun shieldMixedFundsFromWallet(
         amount: Dash,
-        coinJoinAccountPath: String
+        coinJoinAccountPath: String,
+        onSubmitting: suspend () -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome>
 
     /**
@@ -395,6 +412,14 @@ interface ShieldedBalanceService {
      *   is off, the runtime is not ready, or nothing was pending).
      */
     suspend fun resumePendingWalletShields(): Int
+
+    /**
+     * [resumePendingWalletShields] for an explicit user retry: each resumable
+     * lock gets ONE attempt even when the automatic per-process budget is
+     * exhausted (the attempt still counts against it, so unattended sweeps
+     * stay capped). Runs under the same mutex; never builds a new lock.
+     */
+    suspend fun resumePendingWalletShieldsOnUserRequest(): Int
 
     /**
      * Emits the number of locks completed each time a
