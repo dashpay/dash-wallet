@@ -67,31 +67,57 @@ class DashPayConfigShieldedBalanceCacheTest {
         assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
 
         // the spend lands first: drops the cache, sets the marker
-        cfg.markShieldedSpendReconcilePending()
+        cfg.markShieldedSpendReconcilePending(1_000L)
         // the delayed persistence write of the PRE-spend sample lands second
         assertFalse(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
         assertNull(cfg.getLastShieldedBalanceDuffs())
 
         // what a restart reads back: the cache stays gone, the marker stays set
         assertNull("the pre-spend cache must not come back", cfg.getLastShieldedBalanceDuffs())
-        assertTrue(cfg.isShieldedSpendReconcilePending())
+        assertEquals(1_000L, cfg.shieldedSpendReconcilePendingSinceMs())
     }
 
     @Test
     fun aPreSpendSnapshot_writtenBeforeTheSpend_isRemovedByIt() = runBlocking {
         // the persistence write lands first, the spend second
         assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
-        cfg.markShieldedSpendReconcilePending()
+        cfg.markShieldedSpendReconcilePending(1_000L)
         assertNull(cfg.getLastShieldedBalanceDuffs())
     }
 
     @Test
     fun afterSettlement_theSettledBalanceIsPersistedAgain() = runBlocking {
-        cfg.markShieldedSpendReconcilePending()
+        cfg.markShieldedSpendReconcilePending(1_000L)
         cfg.clearShieldedSpendReconcilePending()
-        assertFalse(cfg.isShieldedSpendReconcilePending())
+        assertNull(cfg.shieldedSpendReconcilePendingSinceMs())
         assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L))
         assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs())
+    }
+
+    /** Overlapping spends: the reconciliation keeps the EARLIEST since until it settles. */
+    @Test
+    fun overlappingSpends_keepTheEarliestSince() = runBlocking {
+        cfg.markShieldedSpendReconcilePending(2_000L)
+        cfg.markShieldedSpendReconcilePending(3_000L)
+        assertEquals(2_000L, cfg.shieldedSpendReconcilePendingSinceMs())
+        cfg.markShieldedSpendReconcilePending(1_500L)
+        assertEquals(1_500L, cfg.shieldedSpendReconcilePendingSinceMs())
+
+        // settled: marker and since go together; the next spend starts fresh
+        cfg.clearShieldedSpendReconcilePending()
+        assertNull(cfg.shieldedSpendReconcilePendingSinceMs())
+        assertNull(cfg.get(DashPayConfig.SHIELDED_SPEND_RECONCILE_SINCE_MS))
+        cfg.markShieldedSpendReconcilePending(9_000L)
+        assertEquals(9_000L, cfg.shieldedSpendReconcilePendingSinceMs())
+    }
+
+    /** A marker written by an older build has no since: every activity row counts (0), and stays so. */
+    @Test
+    fun aMarkerWithoutASince_readsAsZero_andKeepsZero() = runBlocking {
+        cfg.set(DashPayConfig.SHIELDED_SPEND_RECONCILE_PENDING, true)
+        assertEquals(0L, cfg.shieldedSpendReconcilePendingSinceMs())
+        cfg.markShieldedSpendReconcilePending(5_000L)
+        assertEquals(0L, cfg.shieldedSpendReconcilePendingSinceMs())
     }
 
     /**
@@ -104,7 +130,21 @@ class DashPayConfigShieldedBalanceCacheTest {
         every { broken.observePreservingErrors(DashPayConfig.SHIELDED_SPEND_RECONCILE_PENDING) } returns
             flow { throw IOException("unreadable") }
         try {
-            broken.isShieldedSpendReconcilePending()
+            broken.shieldedSpendReconcilePendingSinceMs()
+            fail("expected the IOException")
+        } catch (expected: IOException) {
+        }
+    }
+
+    /** Likewise for the since: an unreadable since must not read as "no cutoff known yet". */
+    @Test
+    fun anUnreadableSince_makesTheReadThrow() = runBlocking {
+        cfg.markShieldedSpendReconcilePending(1_000L)
+        val broken = spyk(cfg)
+        every { broken.observePreservingErrors(DashPayConfig.SHIELDED_SPEND_RECONCILE_SINCE_MS) } returns
+            flow { throw IOException("unreadable") }
+        try {
+            broken.shieldedSpendReconcilePendingSinceMs()
             fail("expected the IOException")
         } catch (expected: IOException) {
         }

@@ -362,6 +362,9 @@ class SdkShieldedInviteCreation internal constructor(
         val criticalResult: SdkWriteResult<InvitationLinkData> = withContext(NonCancellable) {
             // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
             // TWO notes to the same one-time address (see [inviteFundingSplit]).
+            // The start time is taken BEFORE the SDK call, which writes the
+            // spend's activity row (see noteExternalShieldedSpendBroadcast).
+            val spendStartedAtMs = System.currentTimeMillis()
             try {
                 source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
             } catch (t: Throwable) {
@@ -377,7 +380,7 @@ class SdkShieldedInviteCreation internal constructor(
                             t
                         )
                         // The transfer MAY have spent pool notes.
-                        markPoolSpent()
+                        markPoolSpent(spendStartedAtMs)
                         SdkWriteResult.Ambiguous(t)
                     }
                 }
@@ -386,7 +389,7 @@ class SdkShieldedInviteCreation internal constructor(
             // write paths: mark the shielded balance stale now, so no surface
             // (the home total, the More card) shows the pre-spend amount until
             // the next sync pass lands the spend.
-            markPoolSpent()
+            markPoolSpent(spendStartedAtMs)
 
             // Advisory scan hint; a missing height is fine (claim scans without one).
             val fundingHeight = try {
@@ -474,8 +477,8 @@ class SdkShieldedInviteCreation internal constructor(
      * service's own write paths ([ShieldedBalanceService.noteExternalShieldedSpendBroadcast]
      * contract). Best-effort and NonCancellable — the spend already happened.
      */
-    private suspend fun markPoolSpent() = withContext(NonCancellable) {
-        runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast() }
+    private suspend fun markPoolSpent(spendStartedAtMs: Long) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast(spendStartedAtMs) }
             .onFailure { log.warn("pool-spend balance stale-mark failed; the 60s loop will catch up", it) }
     }
 
