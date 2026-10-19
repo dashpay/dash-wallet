@@ -78,6 +78,24 @@ object KeyExchangeCrypto {
 
     private val secureRandom = SecureRandom()
 
+    fun encryptAppConnect(
+        slots: List<ByteArray>, walletPrivate: ByteArray, appPublic: ByteArray, ownerId: ByteArray,
+        nonce: ByteArray = ByteArray(NONCE_LENGTH).also { secureRandom.nextBytes(it) }
+    ): ByteArray {
+        require(slots.size in 1..17 && slots.all { it.size == 32 })
+        require(ownerId.size == 32 && nonce.size == NONCE_LENGTH)
+        val shared = ecdhSharedX(walletPrivate, appPublic)
+        val key = hkdfSha256(shared, KEY_EXCHANGE_HKDF_SALT, "app-connect:v2".toByteArray(), 32)
+        val plaintext = ByteArray(slots.size * 32)
+        slots.forEachIndexed { index, slot -> slot.copyInto(plaintext, index * 32) }
+        try {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(GCM_TAG_BITS, nonce))
+            cipher.updateAAD("dash:app-connect:v2".toByteArray() + hash160(appPublic) + ownerId)
+            return nonce + cipher.doFinal(plaintext)
+        } finally { wipe(shared); wipe(key); wipe(plaintext) }
+    }
+
     // ── hashing ────────────────────────────────────────────────────────────────
 
     /** RIPEMD160(SHA256(data)) — the DApp's `hash160`. Delegates to dashj's implementation. */
@@ -85,6 +103,11 @@ object KeyExchangeCrypto {
 
     /** SHA256(SHA256(data)) — used as the DIP-13 derivation leaf for app ephemeral pubkeys. */
     fun hash256(data: ByteArray): ByteArray = Sha256Hash.hashTwice(data)
+
+    fun sessionRequestLeaf(appPublic: ByteArray, bindingIndex: Int?): ByteArray {
+        require(bindingIndex == null || bindingIndex in 0..3)
+        return hash256(appPublic + (bindingIndex?.let { byteArrayOf(it.toByte()) } ?: byteArrayOf()))
+    }
 
     // ── secp256k1 helpers ────────────────────────────────────────────────────────
 

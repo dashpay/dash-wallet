@@ -592,7 +592,7 @@
     <string name="dash_connect_remove_title">Remove %1$s?</string>
     <string name="dash_connect_remove_message">The connection will be removed from this list. You can connect again at any time by scanning a new QR code.</string>
     <string name="dash_connect_confirm">Confirm</string>
-    <string name="dash_connect_testnet_only_heading">Available on testnet only</string>
+    <string name="dash_connect_testnet_only_heading">Unavailable on mainnet</string>
     <string name="dash_connect_testnet_only_message">DashConnect login is not yet available on mainnet</string>
 
 </resources>

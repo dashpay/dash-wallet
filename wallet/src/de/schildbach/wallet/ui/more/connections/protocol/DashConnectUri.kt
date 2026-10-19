@@ -48,7 +48,8 @@ data class DashKeyRequest(
     val appEphemeralPubKey: ByteArray,
     val contractId: ByteArray,
     val label: String,
-    val network: DashConnectNetwork
+    val network: DashConnectNetwork,
+    val appConnect: AppConnectRequest? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -56,7 +57,9 @@ data class DashKeyRequest(
         return appEphemeralPubKey.contentEquals(other.appEphemeralPubKey) &&
             contractId.contentEquals(other.contractId) &&
             label == other.label &&
-            network == other.network
+            network == other.network &&
+            ((appConnect == null && other.appConnect == null) || (appConnect != null && other.appConnect != null &&
+                appConnect.bytes.contentEquals(other.appConnect.bytes) && appConnect.callback == other.appConnect.callback))
     }
 
     override fun hashCode(): Int {
@@ -64,6 +67,8 @@ data class DashKeyRequest(
         result = 31 * result + contractId.contentHashCode()
         result = 31 * result + label.hashCode()
         result = 31 * result + network.hashCode()
+        result = 31 * result + (appConnect?.bytes?.contentHashCode() ?: 0)
+        result = 31 * result + (appConnect?.callback?.hashCode() ?: 0)
         return result
     }
 }
@@ -97,6 +102,19 @@ object DashConnectUri {
      * @throws DashConnectUriException on any malformed input or validation failure.
      */
     fun parseKeyRequest(uri: String): DashKeyRequest {
+        if (uri.length > 4096) throw DashConnectUriException("Connection QR is too large")
+        try {
+            if (uri.startsWith(KEY_SCHEME) && uri.contains('?')) {
+                val query = AppConnectParser.query(uri.substringAfter('?'))
+                if (query["v"] == "2") {
+                    val network = DashConnectNetwork.fromCode(query["n"])
+                        ?: throw DashConnectUriException("Unknown network")
+                    return AppConnectParser.parse(decodeBase58(uri.substringAfter(KEY_SCHEME).substringBefore('?')),
+                        network, query["cb"])
+                }
+            }
+        } catch (e: DashConnectUriException) { throw e }
+        catch (e: Exception) { throw DashConnectUriException(e.message ?: "Invalid v2 request", e) }
         val (body, network) = parseEnvelope(uri, KEY_SCHEME)
         val payload = decodeBase58(body)
 

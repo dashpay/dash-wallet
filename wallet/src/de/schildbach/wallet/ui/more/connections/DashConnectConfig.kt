@@ -79,12 +79,31 @@ open class DashConnectConfig @Inject constructor(
     companion object {
         const val PREFERENCES_NAME = "dash_connect"
         val CONNECTIONS = stringPreferencesKey("connections")
+        private val GRANTS = stringPreferencesKey("app_connect_grants_v2")
     }
 
     fun observeConnections(): Flow<List<StoredConnection>> =
         observe(CONNECTIONS).map { decode(it) }
 
     suspend fun getConnections(): List<StoredConnection> = decode(get(CONNECTIONS))
+
+    // Fail closed on corruption: losing these records would lose the ability to revoke keys.
+    suspend fun getGrants(): List<JSONObject> {
+        val raw = get(GRANTS) ?: return emptyList()
+        val array = JSONArray(raw)
+        return (0 until array.length()).map { array.getJSONObject(it) }
+    }
+
+    fun observeGrants(): Flow<List<JSONObject>> = observe(GRANTS).map { raw ->
+        if (raw == null) emptyList() else JSONArray(raw).let { array ->
+            (0 until array.length()).map { array.getJSONObject(it) }
+        }
+    }
+
+    suspend fun saveGrant(grant: JSONObject) {
+        val records = getGrants().filter { it.getString("id") != grant.getString("id") } + grant
+        set(GRANTS, JSONArray(records).toString())
+    }
 
     /** Inserts or replaces the stored connection keyed by [StoredConnection.contractId]. */
     suspend fun upsertConnection(connection: StoredConnection) {

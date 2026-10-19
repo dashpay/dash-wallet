@@ -18,6 +18,9 @@
 package de.schildbach.wallet.ui.more.connections
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -66,7 +69,19 @@ class ConnectionsFragment : Fragment() {
                     ConnectionsScreen(
                         onBackClick = { findNavController().popBackStack() },
                         onScanClick = { launchScanner() },
-                        onConnectionClick = { /* no-op: connections are managed by the QR scan and the row slider */ },
+                        onConnectionClick = { connection ->
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                try {
+                                    val details = viewModel.connectionDetails(connection)
+                                    MaterialAlertDialogBuilder(requireContext()).setTitle(connection.name)
+                                        .setMessage(details).setPositiveButton(android.R.string.ok, null)
+                                        .setNeutralButton(R.string.dash_connect_revoke) { _, _ -> viewModel.disconnect(connection) }.show()
+                                } catch (e: Exception) {
+                                    if (e is kotlinx.coroutines.CancellationException) throw e
+                                    Toast.makeText(requireContext(), e.message, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
                         onConnectionQrClick = { launchScanner() },
                         onConnectionToggle = { connection, enabled ->
                             // The switch is only ON for active connections; moving it OFF disconnects
@@ -109,6 +124,25 @@ class ConnectionsFragment : Fragment() {
                             viewModel.resetScanOutcome()
                         }
                         is ConnectionsViewModel.ScanOutcome.Idle -> Unit
+                    }
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.callbackOffer.collect { callback ->
+                    if (callback != null) {
+                        viewModel.resetCallbackOffer()
+                        val uri = Uri.parse(callback)
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(getString(R.string.dash_connect_return_title, uri.host))
+                            .setMessage(R.string.dash_connect_return_warning)
+                            .setPositiveButton(R.string.dash_connect_return_open) { _, _ ->
+                                try { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                                catch (e: android.content.ActivityNotFoundException) {
+                                    Toast.makeText(requireContext(), R.string.dash_connect_return_unavailable, Toast.LENGTH_LONG).show()
+                                }
+                            }.setNegativeButton(android.R.string.cancel, null).show()
                     }
                 }
             }

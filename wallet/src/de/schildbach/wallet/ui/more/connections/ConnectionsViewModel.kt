@@ -29,7 +29,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
 import javax.inject.Inject
 
@@ -37,7 +40,7 @@ data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
     val pendingRequest: ConnectionRequest? = null,
     /** True on mainnet where the key-exchange contract is not deployed. */
-    val featureUnavailable: Boolean = !Constants.IS_TESTNET_BUILD,
+    val featureUnavailable: Boolean = Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -76,12 +79,20 @@ class ConnectionsViewModel @Inject constructor(
 
     private val _scanOutcome = MutableStateFlow<ScanOutcome>(ScanOutcome.Idle)
     val scanOutcome: StateFlow<ScanOutcome> = _scanOutcome.asStateFlow()
+    private val _callbackOffer = MutableStateFlow<String?>(null)
+    val callbackOffer: StateFlow<String?> = _callbackOffer.asStateFlow()
 
     /** The validated login request awaiting approval; retained separately from the UI claim. */
     private var pendingLoginRequest: DashKeyRequest? = null
+    private var pendingPlan: AppConnectPlan? = null
+    private var operationInProgress = false
 
     init {
         repository.observeConnections()
+            .catch { error ->
+                log.error("Cannot read connection grant records", error)
+                _scanOutcome.value = ScanOutcome.Error("Connection records could not be read. No access has been revoked.")
+            }
             .onEach { connections ->
                 _uiState.update { it.copy(connections = connections) }
             }
@@ -93,21 +104,28 @@ class ConnectionsViewModel @Inject constructor(
      * for the approve sheet with the wallet's own verified identity for display.
      */
     fun onQrScanned(qrContent: String) {
+        if (operationInProgress || pendingLoginRequest != null) return
+        operationInProgress = true
         viewModelScope.launch {
             try {
                 val payload = repository.parseQr(qrContent)
-                pendingLoginRequest = payload.request
+                val plan = repository.prepareLogin(payload.request)
                 // Resolve BEFORE update {}: that is a compare-and-set retry loop, and
                 // toConnectionRequest makes two Platform round trips — a CAS retry would
                 // repeat them (and could observe different results between attempts).
                 val request = toConnectionRequest(payload.request)
-                _uiState.update { it.copy(pendingRequest = request) }
+                pendingLoginRequest = payload.request
+                pendingPlan = plan
+                _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
+                    grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
+                    walletIdentityId = plan?.identityId ?: request.walletIdentityId)) }
                 _scanOutcome.value = ScanOutcome.ConnectionRequested
             } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
                 log.error("failed to process scanned DashConnect QR", ex)
                 _scanOutcome.value = ScanOutcome.Error(ex.message)
                 _uiState.update { it.copy(error = ex.message) }
-            }
+            } finally { operationInProgress = false }
         }
     }
 
@@ -132,26 +150,71 @@ class ConnectionsViewModel @Inject constructor(
         _scanOutcome.value = ScanOutcome.Idle
     }
 
+    fun selectGrant(index: Int, encryption: Boolean, selected: Boolean) {
+        if (operationInProgress) return
+        val plan = pendingPlan ?: return
+        if (plan.recovering || (!encryption && index == 0)) return
+        val changed = if (encryption) plan.copy(selectedEncryption =
+            if (selected) plan.selectedEncryption + index else plan.selectedEncryption - index)
+        else plan.copy(selectedAuth = if (selected) plan.selectedAuth + index else plan.selectedAuth - index)
+        pendingPlan = changed
+        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.copy(grantChoices = changed.choices())) }
+    }
+
+    fun selectLimits(budget: Int, lifetime: Int) {
+        if (operationInProgress) return
+        val plan = pendingPlan ?: return
+        if (plan.recovering) return
+        val changed = plan.withPresets(budget, lifetime)
+        pendingPlan = changed
+        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.copy(grantChoices = changed.choices(),
+            budgetPreset = budget, lifetimePreset = lifetime)) }
+    }
+
     fun approvePendingRequest() {
+        if (operationInProgress) return
         val request = pendingLoginRequest ?: return
+        val plan = pendingPlan
+        operationInProgress = true
         viewModelScope.launch {
             _approveResult.value = ApproveResult.Loading
             try {
-                val connection = repository.approveLogin(request)
+                val connection = repository.approvePreparedLogin(request, plan)
                 pendingLoginRequest = null
+                pendingPlan = null
                 _uiState.update { it.copy(pendingRequest = null) }
                 _approveResult.value = ApproveResult.Success(connection)
+                offerCallback(request, "ok")
             } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
                 log.error("failed to approve DashConnect login", ex)
                 _approveResult.value = ApproveResult.Error(ex.message)
-            }
+            } finally { operationInProgress = false }
         }
     }
 
     fun denyPendingRequest() {
+        if (operationInProgress) return
+        pendingLoginRequest?.let { offerCallback(it, "declined") }
         pendingLoginRequest = null
+        pendingPlan = null
         _uiState.update { it.copy(pendingRequest = null) }
     }
+
+    private fun offerCallback(request: DashKeyRequest, status: String) {
+        request.appConnect?.callback?.let {
+            val uri = android.net.Uri.parse(it.toASCIIString())
+            val builder = uri.buildUpon().clearQuery()
+            uri.queryParameterNames.filter { name -> name != "ac" }.forEach { name ->
+                uri.getQueryParameters(name).forEach { value -> builder.appendQueryParameter(name, value) }
+            }
+            _callbackOffer.value = builder.appendQueryParameter("ac", status).build().toString()
+        }
+    }
+
+    fun resetCallbackOffer() { _callbackOffer.value = null }
+
+    suspend fun connectionDetails(connection: DAppConnection): String = repository.connectionDetails(connection.id, connection.scope)
 
     fun resetApproveResult() {
         _approveResult.value = ApproveResult.Idle
@@ -159,14 +222,22 @@ class ConnectionsViewModel @Inject constructor(
 
     fun disconnect(connection: DAppConnection) {
         viewModelScope.launch {
-            repository.disconnect(connection.id)
+            try { repository.disconnect(connection.id, connection.scope) }
+            catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _scanOutcome.value = ScanOutcome.Error(e.message)
+            }
         }
     }
 
     /** Cancels a pending login or removes an old connection so the user can start over. */
     fun removeConnection(connection: DAppConnection) {
         viewModelScope.launch {
-            repository.removeConnection(connection.id)
+            try { repository.removeConnection(connection.id, connection.scope) }
+            catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _scanOutcome.value = ScanOutcome.Error(e.message)
+            }
         }
     }
 }

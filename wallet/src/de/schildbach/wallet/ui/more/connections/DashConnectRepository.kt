@@ -48,7 +48,8 @@ data class DAppConnection(
     val url: String,
     val status: ConnectionStatus,
     /** Millis since epoch of the last status change. */
-    val updatedAt: Long
+    val updatedAt: Long,
+    val scope: String? = null
 )
 
 /**
@@ -68,7 +69,12 @@ data class ConnectionRequest(
     /** The wallet user's own DashPay username (verified, resolved locally). */
     val walletUsername: String,
     /** The wallet user's own identity id, Base58-encoded (verified). */
-    val walletIdentityId: String
+    val walletIdentityId: String,
+    val permissionText: String = "",
+    val grantChoices: List<GrantChoice> = emptyList(),
+    val recovering: Boolean = false,
+    val budgetPreset: Int = 0,
+    val lifetimePreset: Int = 0
 )
 
 /**
@@ -103,21 +109,20 @@ interface DashConnectRepository {
     /** Decodes and validates a scanned QR into a login request. */
     suspend fun parseQr(qrContent: String): DashConnectQr
 
-    /**
-     * Approves a `dash-key:` login request: derives the login key, encrypts it against the app's
-     * ephemeral key, and publishes (or replaces) the `loginKeyResponse` document on the
-     * key-exchange contract. Returns the resulting connection.
-     */
+    /** Legacy/mock entry point. The real repository requires explicit prepared consent. */
     suspend fun approveLogin(request: DashKeyRequest): DAppConnection
 
-    suspend fun disconnect(connectionId: String)
+    suspend fun prepareLogin(request: DashKeyRequest): AppConnectPlan? = null
 
-    /**
-     * Removes the local connection record so the user can start the login flow over.
-     * Any published `loginKeyResponse` document is left on Platform — a future login
-     * replaces it (unique index on owner + contract).
-     */
-    suspend fun removeConnection(connectionId: String)
+    suspend fun approvePreparedLogin(request: DashKeyRequest, plan: AppConnectPlan?): DAppConnection =
+        approveLogin(request)
+
+    suspend fun disconnect(connectionId: String, scope: String? = null)
+
+    suspend fun connectionDetails(connectionId: String, scope: String? = null): String = ""
+
+    /** Revoke before removal; the real repository retains the public grant audit record. */
+    suspend fun removeConnection(connectionId: String, scope: String? = null)
 
     /**
      * The wallet's own DPNS username in display form (the `label`, e.g. "John.Doe"), resolved from
@@ -169,7 +174,7 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
         return connection
     }
 
-    override suspend fun disconnect(connectionId: String) {
+    override suspend fun disconnect(connectionId: String, scope: String?) {
         connections.value = connections.value.map {
             if (it.id == connectionId) {
                 it.copy(status = ConnectionStatus.DISCONNECTED, updatedAt = System.currentTimeMillis())
@@ -179,7 +184,7 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
         }
     }
 
-    override suspend fun removeConnection(connectionId: String) {
+    override suspend fun removeConnection(connectionId: String, scope: String?) {
         connections.value = connections.value.filter { it.id != connectionId }
     }
 

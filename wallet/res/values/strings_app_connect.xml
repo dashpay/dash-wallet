@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_connect_revoke">Revoke Access</string>
+    <string name="dash_connect_budget_requested">Requested budgets (capped at 5 DASH)</string>
+    <string name="dash_connect_budget_cap">Budgeted keys: %1$s DASH maximum</string>
+    <string name="dash_connect_expiry_requested">Requested expiry (up to 1 year)</string>
+    <string name="dash_connect_days">%1$d days maximum</string>
+    <string name="dash_connect_return_title">Return to %1$s?</string>
+    <string name="dash_connect_return_warning">This return address was supplied by the app. Open it only if you recognize the website.</string>
+    <string name="dash_connect_return_open">Open Website</string>
+    <string name="dash_connect_return_unavailable">No browser is available to open this address.</string>
+</resources>
