@@ -22,13 +22,15 @@ import org.bitcoinj.core.Coin
 
 /**
  * Platform protocol version at/after which the v4.2 contested-username fee
- * cut (MO-1069) is active on the network.
+ * cut (MO-1069) is active on the network. Also the floor at which
+ * [ProtocolVersionLatch] trusts a remembered version when a live read fails.
  */
-private const val CONTESTED_FEE_PROTOCOL_VERSION = 14
+internal const val CONTESTED_FEE_PROTOCOL_VERSION = 14
 
 /**
- * Thrown by [ContestedUsernameFees.resolved] when the live protocol-version
- * read returns null: at funding time an unknown version must not silently
+ * Thrown by [ContestedUsernameFees.resolved] when the protocol-version read
+ * returns null (the live query failed and the network was never seen at
+ * protocol >= 14): at funding time an unknown version must not silently
  * select a fee, because the older fee is the HIGHER one.
  */
 class ProtocolVersionUnavailableException :
@@ -53,6 +55,18 @@ class ProtocolVersionUnavailableException :
  *    let a lower successful quote be followed by a higher actual funding
  *    whenever the second lookup fails; every funding service already turns a
  *    throwing fee resolver into a refusal the user can retry.
+ *
+ * The quote and the funding are separate reads, on separate code paths, and
+ * each may be answered by a different DAPI node. A node lagging behind the
+ * v4.2 activation would answer 13 after the quote saw 14, and the funding
+ * would then spend the LEGACY 0.25 DASH after the user approved 0.15 DASH.
+ * [DashSdkService.currentProtocolVersion] closes that gap with
+ * [ProtocolVersionLatch]: Platform protocol activation is one-way, so the
+ * version served is never lower than the highest one this network was ever
+ * seen at, and once any quote has seen 14 no funding path can compute the
+ * higher LEGACY fee — even when its own live read fails. The opposite
+ * divergence (a quote at 13, funding at 14) spends LESS than approved, which
+ * is safe.
  */
 data class ContestedUsernameFees(val contested: Coin, val contestedName: Coin) {
     companion object {

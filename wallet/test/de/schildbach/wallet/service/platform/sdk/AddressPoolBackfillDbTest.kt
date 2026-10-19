@@ -86,7 +86,8 @@ class AddressPoolBackfillDbTest {
         service = DashSdkServiceImpl(
             context = mockk<Context>(relaxed = true),
             mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
-            secretWriteFence = WalletSecretWriteFence()
+            secretWriteFence = WalletSecretWriteFence(),
+            protocolVersionLatch = inMemoryProtocolVersionLatch()
         )
         exec(
             "INSERT INTO wallets (walletId, walletGroupId, birthHeight, syncedHeight, lastSynced, " +
