@@ -34,6 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -881,8 +882,14 @@ open class DashPayConfig @Inject constructor(
         return written
     }
 
-    /** Whether a local shielded spend is still reconciling. See [SHIELDED_SPEND_RECONCILE_PENDING]. */
-    suspend fun isShieldedSpendReconcilePending(): Boolean = get(SHIELDED_SPEND_RECONCILE_PENDING) == true
+    /**
+     * Whether a local shielded spend is still reconciling. See
+     * [SHIELDED_SPEND_RECONCILE_PENDING]. Read via [observePreservingErrors]:
+     * an unreadable store THROWS instead of reading as "not pending", so the
+     * caller can fail closed.
+     */
+    suspend fun isShieldedSpendReconcilePending(): Boolean =
+        observePreservingErrors(SHIELDED_SPEND_RECONCILE_PENDING).first() == true
 
     /** The pending spend has settled. See [SHIELDED_SPEND_RECONCILE_PENDING]. */
     suspend fun clearShieldedSpendReconcilePending() = remove(SHIELDED_SPEND_RECONCILE_PENDING)

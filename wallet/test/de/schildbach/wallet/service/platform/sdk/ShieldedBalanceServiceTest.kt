@@ -1606,9 +1606,11 @@ class ShieldedBalanceServiceTest {
 
     /**
      * Regression (review 2026-10-18): two identical results from passes that ran
-     * BEFORE a spend are still buffered when the spend is marked. They must not
-     * settle the new reconciliation — only results after our post-spend forced
-     * passes have returned count.
+     * BEFORE a spend, consumed while its forced passes are still running, must
+     * not settle the new reconciliation. This covers only results the collector
+     * meets before the fence opens — the fence can't reject buffered pre-spend
+     * results met after it (needs SDK pass sequencing; see
+     * settlementBarrierPassed).
      */
     @Test
     fun bufferedPreSpendResults_cannotSettleANewSpend() = runBlocking {
@@ -1726,6 +1728,84 @@ class ShieldedBalanceServiceTest {
             delay(ShieldedBalanceServiceImpl.SETTLEMENT_RETRY_BASE_MS * 4 + 200)
             assertEquals("no forced pass after stop", callsAtStop, source.syncNowCalls)
         } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression (thepastaclaw review 2026-10-18): an unreadable reconcile
+     * marker on restart counts as PENDING — fail closed — not as "no spend".
+     */
+    @Test
+    fun afterRestart_anUnreadableMarker_isTreatedAsPending() = runBlocking {
+        val cfg = config(true)
+        coEvery { cfg.isShieldedSpendReconcilePending() } throws java.io.IOException("unreadable")
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = readySource(),
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(10_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
+            }
+            assertTrue("an unknown marker must keep the balance stale", service.shieldedBalanceMaybeStale.value)
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Smoke test (thepastaclaw review 2026-10-18): two overlapping spends still
+     * end with an open fence that settles. The fix — each driver starts under
+     * the reconcile mutex, so an older start can't cancel a newer driver — has
+     * no window left to force deterministically, so this doesn't pin the old
+     * race; it guards the outcome.
+     */
+    @Test
+    fun overlappingSpends_theNewestDriverStillOpensTheFence() = runBlocking {
+        val cfg = config(true)
+        val markGate = CompletableDeferred<Unit>()
+        var marks = 0
+        coEvery { cfg.markShieldedSpendReconcilePending() } coAnswers {
+            if (++marks == 1) markGate.await() // the first spend pauses inside its mark
+        }
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+
+            val first = async(Dispatchers.Default) { service.noteExternalShieldedSpendBroadcast() }
+            withTimeout(5_000) { while (marks == 0) delay(10) }
+            val second = async(Dispatchers.Default) { service.noteExternalShieldedSpendBroadcast() }
+            delay(50)
+            markGate.complete(Unit)
+            withTimeout(5_000) { first.await(); second.await() }
+            assertEquals(2, marks)
+
+            // No "fence open" signal to wait on (the syncNow count includes the
+            // cancelled driver's calls), so keep feeding stable passes: results
+            // before the fence opens are dropped, two after it settle.
+            withTimeout(5_000) {
+                while (service.shieldedBalanceMaybeStale.value) {
+                    source.passResults.emit(passOk())
+                    delay(30)
+                }
+            }
+        } finally {
+            markGate.complete(Unit)
             sweepScope.cancel()
         }
     }

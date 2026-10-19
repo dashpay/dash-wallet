@@ -18,13 +18,18 @@
 package de.schildbach.wallet.ui.dashpay.utils
 
 import android.app.Application
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
+import java.io.IOException
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -87,5 +92,21 @@ class DashPayConfigShieldedBalanceCacheTest {
         assertFalse(cfg.isShieldedSpendReconcilePending())
         assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L))
         assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs())
+    }
+
+    /**
+     * An unreadable store must THROW from the marker read, not read as "not
+     * pending" ([BaseConfig]'s `data` rescues IOException as empty preferences).
+     */
+    @Test
+    fun anUnreadableStore_makesTheMarkerReadThrow() = runBlocking {
+        val broken = spyk(cfg)
+        every { broken.observePreservingErrors(DashPayConfig.SHIELDED_SPEND_RECONCILE_PENDING) } returns
+            flow { throw IOException("unreadable") }
+        try {
+            broken.isShieldedSpendReconcilePending()
+            fail("expected the IOException")
+        } catch (expected: IOException) {
+        }
     }
 }
