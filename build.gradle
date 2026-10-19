@@ -37,7 +37,10 @@ buildscript {
         // (SingleContractDocumentType) into the map handed to Cbor, which has
         // no converter for it -> IllegalArgumentException("No converter for ...").
         // It calls this.toObject() first. Cbor.kt itself is unchanged.
-        dppVersion = "5.0.0-SNAPSHOT"
+        // Pinned to the exact timestamped build of 5.0.0-SNAPSHOT (dash-sdk-java,
+        // -kotlin and -android all published 20261016.200955-3), not the moving
+        // -SNAPSHOT name; switch to the 5.0.0 release once it is published.
+        dppVersion = "5.0.0-20261016.200955-3"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
