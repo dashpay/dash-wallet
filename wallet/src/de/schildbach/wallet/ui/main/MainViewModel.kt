@@ -48,6 +48,9 @@ import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
 import de.schildbach.wallet.service.platform.sdk.MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.shieldedReadRetryDelayMs
 import de.schildbach.wallet.service.L1SyncStatusService
 import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
@@ -68,10 +71,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -79,6 +84,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
@@ -137,7 +143,8 @@ class MainViewModel @Inject constructor(
     l1SyncStatusService: L1SyncStatusService,
     private val contactRequestNotificationService: ContactRequestNotificationService,
     private val swapProvider: DispatchingSwapProvider,
-    sdkBindRetryService: de.schildbach.wallet.service.platform.sdk.SdkBindRetryService
+    sdkBindRetryService: de.schildbach.wallet.service.platform.sdk.SdkBindRetryService,
+    private val shieldedBalanceService: ShieldedBalanceService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
 
@@ -209,6 +216,23 @@ class MainViewModel @Inject constructor(
     private val _totalBalance = MutableLiveData<Coin>()
     val totalBalance: LiveData<Coin>
         get() = _totalBalance
+
+    /**
+     * The home-screen header balance ONLY: the transparent (L1) total plus
+     * the shielded balance. Every other screen keeps showing the L1-only
+     * [totalBalance] / `observeTotalBalance()`.
+     */
+    private val _homeBalance = MutableLiveData<Coin>()
+    val homeBalance: LiveData<Coin>
+        get() = _homeBalance
+
+    /**
+     * True while [homeBalance] is missing the shielded part because it is not
+     * known yet (see [homeShieldedBalance]) — the home header keeps its
+     * "Syncing balance" indicator on until it arrives.
+     */
+    private val _homeShieldedPending = MutableStateFlow(false)
+    val homeShieldedPending: StateFlow<Boolean> = _homeShieldedPending.asStateFlow()
 
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
@@ -469,6 +493,16 @@ class MainViewModel @Inject constructor(
             .catch { e -> log.error("total balance flow error", e) }
             .launchIn(viewModelScope)
 
+        // Home header only: L1 total + shielded balance.
+        walletData.observeTotalBalance()
+            .combine(observeHomeShieldedBalance()) { transparent, shielded ->
+                _homeShieldedPending.value = shielded == null
+                transparent.add(Coin.valueOf((shielded ?: Dash.ZERO).duffs))
+            }
+            .onEach { _homeBalance.value = it }
+            .catch { e -> log.error("home balance flow error", e) }
+            .launchIn(viewModelScope)
+
         walletUIConfig
             .observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
@@ -560,6 +594,42 @@ class MainViewModel @Inject constructor(
     fun logError(ex: Exception, details: String) {
         analytics.logError(ex, details)
     }
+
+    /**
+     * The shielded part of [homeBalance]: zero unless the shielded feature is
+     * on (`SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`). The runtime is
+     * brought up at startup by [PlatformSyncService]; until it is READY the
+     * persisted last-known balance stands in (see [homeShieldedBalance]);
+     * null while the amount is unknown, including while a read is failing.
+     */
+    private fun observeHomeShieldedBalance(): Flow<Dash?> =
+        dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
+            .map { Constants.SUPPORTS_PLATFORM && it == true }
+            .distinctUntilChanged()
+            .flatMapLatest { enabled ->
+                if (!enabled) {
+                    flowOf(Dash.ZERO)
+                } else {
+                    combine(
+                        shieldedBalanceService.observeShieldedBalance(),
+                        shieldedBalanceService.shieldedSyncStatus,
+                        dashPayConfig.observeLastShieldedBalanceDuffs(),
+                        shieldedBalanceService.shieldedBalanceMaybeStale
+                    ) { live, status, cachedDuffs, maybeStale ->
+                        homeShieldedBalance(status, live, cachedDuffs?.let { Dash(it) }, maybeStale)
+                    }.retryWhen { e, attempt ->
+                        // Fail closed: an unreadable shielded balance is
+                        // unknown, so the header marks it pending (instead of
+                        // ending the whole home-balance flow on a stale total)
+                        // and re-reads after a back-off.
+                        log.error("home shielded balance flow error (attempt {})", attempt, e)
+                        emit(null)
+                        delay(shieldedReadRetryDelayMs(attempt))
+                        true
+                    }
+                }
+            }
+            .distinctUntilChanged()
 
     fun triggerHideBalance() {
         _temporaryHideBalance.value = !hideBalance.value
@@ -958,6 +1028,37 @@ class MainViewModel @Inject constructor(
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
+}
+
+/**
+ * The shielded amount the home header adds to the L1 total — pure and
+ * host-testable. `observeShieldedBalance()` reads `Dash.ZERO` until the
+ * runtime is READY and during a re-scan, so only a READY balance is used
+ * live; otherwise the persisted last-known (READY) balance stands in, and
+ * with no cache the amount is unknown (null).
+ *
+ * After a local shielded spend ([balanceMaybeStale]) the amount is unknown
+ * until the service clears the flag (the note balance has settled) — even
+ * while READY: once the first pass completes the status stays READY through
+ * later sync passes, so READY alone does not mean the spend has settled.
+ *
+ * Platform identity is deliberately NOT consulted: with the shielded flag
+ * on, `SdkWalletBinder` binds identity-free wallets too (fund → shield →
+ * create identity), so a wallet without an identity can hold shielded
+ * funds. Ownership comes from the bound runtime itself — the service tears
+ * its READY state down when it stops, and a wallet wipe or a newly installed
+ * wallet clears the cache.
+ */
+internal fun homeShieldedBalance(
+    status: ShieldedSyncStatus,
+    live: Dash,
+    cached: Dash?,
+    balanceMaybeStale: Boolean
+): Dash? = when {
+    balanceMaybeStale -> null
+    status == ShieldedSyncStatus.READY -> live
+    cached != null -> cached
+    else -> null
 }
 
 /**

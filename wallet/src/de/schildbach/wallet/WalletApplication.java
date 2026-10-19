@@ -1089,6 +1089,9 @@ public class WalletApplication extends MultiDexApplication
             log.warn("refusing to install a created or restored wallet: a wipe marker is on disk");
             return false;
         }
+        // The last-known shielded balance belongs to whichever wallet ran
+        // before; it must not stand in for this one's.
+        WalletApplicationExt.INSTANCE.forgetShieldedBalanceForNewWallet(this);
         awaitDeferredWalletLoadForMutation();
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,

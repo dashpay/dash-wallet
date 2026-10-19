@@ -266,8 +266,14 @@ interface ShieldedBalanceService {
      * pre-spend amount until the next 60-second pass (observed live:
      * the shielded balance held the old value for up to a minute after a
      * shielded-funded username submit — Brian, S21 2026-08-18).
+     *
+     * [spendStartedAtMs] is `System.currentTimeMillis()` captured BEFORE the
+     * caller invoked its SDK spend: the SDK writes the spend's activity row
+     * (with its spent nullifiers) during that call, and settlement only
+     * trusts a balance once every such row created since then is reflected
+     * in the note store (see `ShieldedBalanceServiceImpl.onShieldedPassCompleted`).
      */
-    suspend fun noteExternalShieldedSpendBroadcast()
+    suspend fun noteExternalShieldedSpendBroadcast(spendStartedAtMs: Long)
 
     /**
      * True when the wallet holds an ANCHORED (confirmed, `blockHeight > 0`)
@@ -462,3 +468,11 @@ interface ShieldedBalanceService {
      */
     suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit>
 }
+
+/**
+ * Back-off before a balance surface re-subscribes after a shielded read
+ * failure ([attempt] counts from 0): 5 s, growing by 5 s per retry, capped at
+ * 60 s. The surface shows "Syncing…" meanwhile (fail closed) and recovers on
+ * its own once the read does.
+ */
+fun shieldedReadRetryDelayMs(attempt: Long): Long = (attempt.coerceIn(0L, 11L) + 1) * 5_000L

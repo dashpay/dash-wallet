@@ -34,6 +34,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -41,6 +44,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -826,6 +830,27 @@ open class DashPayConfig @Inject constructor(
          * above (e.g. [TRANSACTION_METADATA_LAST_PAST_SAVE]).
          */
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
+
+        /**
+         * A local shielded spend is still reconciling (its note settlement can
+         * span several sync passes). Set together with removing
+         * [LAST_SHIELDED_BALANCE_DUFFS]; cleared only once the balance has
+         * settled. Survives a runtime stop and process death so the next
+         * bring-up restores the settlement guard instead of trusting the first
+         * READY pass.
+         */
+        val SHIELDED_SPEND_RECONCILE_PENDING = booleanPreferencesKey("shielded_spend_reconcile_pending")
+
+        /**
+         * Wall-clock lower bound (Unix millis, skew allowance already
+         * subtracted) of the EARLIEST local shielded spend still reconciling —
+         * the SDK activity rows created at or after it are the spends whose
+         * input notes must be spent in the store before the balance may
+         * settle. Written and removed together with
+         * [SHIELDED_SPEND_RECONCILE_PENDING]; a marker without it (written by
+         * an older build) reads as 0, i.e. every row counts.
+         */
+        val SHIELDED_SPEND_RECONCILE_SINCE_MS = longPreferencesKey("shielded_spend_reconcile_since_ms")
     }
 
     // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
@@ -881,10 +906,121 @@ open class DashPayConfig @Inject constructor(
      * duffs, or null when none has ever been persisted. See
      * [LAST_SHIELDED_BALANCE_DUFFS].
      */
-    suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
+    suspend fun getLastShieldedBalanceDuffs(): Long? =
+        if (lastShieldedBalanceForgotten.value) null else get(LAST_SHIELDED_BALANCE_DUFFS)
 
-    /** Persist the last trustworthy shielded balance (duffs). See [LAST_SHIELDED_BALANCE_DUFFS]. */
-    suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
+    /** [LAST_SHIELDED_BALANCE_DUFFS] as a flow, hidden like [getLastShieldedBalanceDuffs]. */
+    fun observeLastShieldedBalanceDuffs(): Flow<Long?> =
+        combine(observe(LAST_SHIELDED_BALANCE_DUFFS), lastShieldedBalanceForgotten) { duffs, forgotten ->
+            if (forgotten) null else duffs
+        }
+
+    /**
+     * Set synchronously by [beginForgettingLastShieldedBalance], cleared only
+     * once [forgetLastShieldedBalance] has durably removed the value: until
+     * then the cached balance reads as absent, so no surface can show it in
+     * the window before the DataStore edit lands. A failed removal keeps it
+     * hidden for the rest of the process (fail closed).
+     */
+    private val lastShieldedBalanceForgotten = MutableStateFlow(false)
+
+    /**
+     * Bumped by [beginForgettingLastShieldedBalance]: a balance writer whose
+     * session read an older value belongs to the wallet being replaced, and
+     * [setLastShieldedBalanceDuffsUnlessReconciling] refuses its writes.
+     */
+    private val lastShieldedBalanceCacheEpoch = AtomicLong(0L)
+
+    /** The current cache epoch; a balance writer reads it once when its session starts. */
+    fun lastShieldedBalanceCacheEpoch(): Long = lastShieldedBalanceCacheEpoch.get()
+
+    /**
+     * Hide the last-known shielded balance NOW, from any thread (another
+     * wallet is being installed), and fence off the previous wallet's balance
+     * writer; [forgetLastShieldedBalance] completes it.
+     */
+    fun beginForgettingLastShieldedBalance() {
+        lastShieldedBalanceCacheEpoch.incrementAndGet()
+        lastShieldedBalanceForgotten.value = true
+    }
+
+    /**
+     * Drop the persisted last-known shielded balance, completing
+     * [beginForgettingLastShieldedBalance] (another wallet is being
+     * installed). Does not advance the cache epoch again: a session of the
+     * NEW wallet may already have read it.
+     */
+    suspend fun forgetLastShieldedBalance() {
+        editPreferences { prefs -> prefs.remove(LAST_SHIELDED_BALANCE_DUFFS) }
+        lastShieldedBalanceForgotten.value = false
+    }
+
+    /**
+     * Durably record that a local shielded spend is reconciling: in ONE
+     * transaction, drop the last-known balance, set
+     * [SHIELDED_SPEND_RECONCILE_PENDING] and record [sinceMs] as
+     * [SHIELDED_SPEND_RECONCILE_SINCE_MS], so a runtime stop or process death
+     * before the balance settles can neither bring the pre-spend amount back
+     * nor lose the pending settlement. Overlapping spends keep the EARLIEST
+     * since: the first spend's activity row must still be checked until the
+     * whole reconciliation settles. A marker already set without a since
+     * (older build) keeps 0 — every row counts.
+     */
+    suspend fun markShieldedSpendReconcilePending(sinceMs: Long) = editPreferences { prefs ->
+        prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
+        val alreadyPending = prefs[SHIELDED_SPEND_RECONCILE_PENDING] == true
+        val existingSince = prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS]
+        prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
+        prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS] = when {
+            !alreadyPending -> sinceMs
+            existingSince == null -> 0L
+            else -> minOf(existingSince, sinceMs)
+        }
+    }
+
+    /**
+     * Persist [duffs] as the last-known shielded balance UNLESS a local spend
+     * is reconciling — checked in the same DataStore transaction as the write,
+     * so a balance sampled before a spend can never be written back after
+     * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
+     * and whichever lands second wins against the stale snapshot (the spend's
+     * removes it; this one sees the marker and skips). Also skipped when
+     * [cacheEpoch] — read by the writer when its runtime session started — is
+     * older than [lastShieldedBalanceCacheEpoch]: another wallet has been
+     * installed since, so the balance is not its. Returns whether it was
+     * written.
+     */
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(
+        duffs: Long,
+        cacheEpoch: Long = lastShieldedBalanceCacheEpoch()
+    ): Boolean {
+        var written = false
+        editPreferences { prefs ->
+            if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true && cacheEpoch == lastShieldedBalanceCacheEpoch.get()) {
+                prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
+                written = true
+            }
+        }
+        return written
+    }
+
+    /**
+     * The since ([SHIELDED_SPEND_RECONCILE_SINCE_MS]) of the local shielded
+     * spend reconciliation still pending, or null when none is pending. A
+     * pending marker with no since reads as 0 (every activity row counts).
+     * Read via [observePreservingErrors]: an unreadable store THROWS instead
+     * of reading as "not pending", so the caller can fail closed.
+     */
+    suspend fun shieldedSpendReconcilePendingSinceMs(): Long? {
+        if (observePreservingErrors(SHIELDED_SPEND_RECONCILE_PENDING).first() != true) return null
+        return observePreservingErrors(SHIELDED_SPEND_RECONCILE_SINCE_MS).first() ?: 0L
+    }
+
+    /** The pending spend has settled: removes the marker and its since together. */
+    suspend fun clearShieldedSpendReconcilePending() = editPreferences { prefs ->
+        prefs.remove(SHIELDED_SPEND_RECONCILE_PENDING)
+        prefs.remove(SHIELDED_SPEND_RECONCILE_SINCE_MS)
+    }
 
     /**
      * Whether the dashj-sync DIAGNOSTIC toggle is on (see

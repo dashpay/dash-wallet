@@ -397,6 +397,31 @@ object WalletApplicationExt {
     }
 
     /**
+     * Forget the last-known shielded balance when [WalletApplication.setWallet]
+     * installs a created or restored wallet: the cache is one install-wide
+     * value, and the wallet it was persisted for is not the one being
+     * installed, so it must never stand in for the new wallet's balance.
+     * Until the new runtime is READY the surfaces show "Syncing…" instead.
+     *
+     * The cache is hidden synchronously, before the new wallet is installed;
+     * the durable removal is fire-and-forget (the restore-from-file caller is
+     * on the MAIN thread) and lands long before the wallet is first saved at
+     * the PIN step — a process death before that leaves no wallet to show it
+     * for. Never throws.
+     */
+    fun WalletApplication.forgetShieldedBalanceForNewWallet() {
+        dashPayConfig.beginForgettingLastShieldedBalance()
+        startupHousekeepingScope.launch {
+            try {
+                dashPayConfig.forgetLastShieldedBalance()
+            } catch (t: Throwable) {
+                rethrowCancellation(t)
+                log.warn("failed to forget the previous wallet's shielded balance", t)
+            }
+        }
+    }
+
+    /**
      * POST-RECOVERY guard (called from [WalletApplication.restoreWalletFromBackup]
      * after a successful key-backup restore): if the Tools "dashj sync
      * (diagnostic)" toggle is ON, force it OFF, breadcrumb it, and show a

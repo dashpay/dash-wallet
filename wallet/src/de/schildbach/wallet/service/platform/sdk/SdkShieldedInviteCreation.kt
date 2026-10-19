@@ -362,10 +362,17 @@ class SdkShieldedInviteCreation internal constructor(
         val criticalResult: SdkWriteResult<InvitationLinkData> = withContext(NonCancellable) {
             // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
             // TWO notes to the same one-time address (see [inviteFundingSplit]).
+            // The start time is taken BEFORE the SDK call, which writes the
+            // spend's activity row (see noteExternalShieldedSpendBroadcast).
+            val spendStartedAtMs = System.currentTimeMillis()
             try {
                 source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
             } catch (t: Throwable) {
-                if (t is CancellationException) throw t
+                if (t is CancellationException) {
+                    // The transfer may have broadcast before it was cancelled.
+                    markPoolSpent(spendStartedAtMs)
+                    throw t
+                }
                 return@withContext when (val classified = classifyBroadcastFailure(t)) {
                     is SdkWriteResult.NotBroadcast -> {
                         log.warn("shielded invite funding rejected pre-broadcast", t)
@@ -376,10 +383,17 @@ class SdkShieldedInviteCreation internal constructor(
                             "shielded invite funding outcome unconfirmed — the note MAY exist; do NOT retry",
                             t
                         )
+                        // The transfer MAY have spent pool notes.
+                        markPoolSpent(spendStartedAtMs)
                         SdkWriteResult.Ambiguous(t)
                     }
                 }
             }
+            // The transfer spent pool notes outside the balance service's own
+            // write paths: mark the shielded balance stale now, so no surface
+            // (the home total, the More card) shows the pre-spend amount until
+            // the next sync pass lands the spend.
+            markPoolSpent(spendStartedAtMs)
 
             // Advisory scan hint; a missing height is fine (claim scans without one).
             val fundingHeight = try {
@@ -460,6 +474,16 @@ class SdkShieldedInviteCreation internal constructor(
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded invite not created ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)
+    }
+
+    /**
+     * The invite-funding transfer spent pool notes outside the balance
+     * service's own write paths ([ShieldedBalanceService.noteExternalShieldedSpendBroadcast]
+     * contract). Best-effort and NonCancellable — the spend already happened.
+     */
+    private suspend fun markPoolSpent(spendStartedAtMs: Long) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast(spendStartedAtMs) }
+            .onFailure { log.warn("pool-spend balance stale-mark failed; the 60s loop will catch up", it) }
     }
 
     private suspend fun isEnabled(): Boolean = try {

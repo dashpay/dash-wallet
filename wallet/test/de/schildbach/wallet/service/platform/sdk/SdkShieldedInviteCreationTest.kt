@@ -29,6 +29,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +43,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -429,6 +431,26 @@ class SdkShieldedInviteCreationTest {
         val result = service(source = source)
             .createShieldedInvite("alice", "Alice", "", contested = false)
         assertTrue(result is SdkWriteResult.Ambiguous)
+    }
+
+    /** Cancelled inside the SDK transfer: it may have broadcast, so the pool is marked stale first. */
+    @Test
+    fun fundingCancelledMidCall_marksThePoolStale_beforePropagating() = runTest {
+        val source = happySource()
+        coEvery {
+            source.fundNotesToRaw43(any(), any(), any())
+        } throws CancellationException("cancelled mid-proof")
+        val balance = balanceService().apply {
+            coEvery { noteExternalShieldedSpendBroadcast(any()) } just Runs
+        }
+        try {
+            service(source = source, balance = balance)
+                .createShieldedInvite("alice", "Alice", "", contested = false)
+            fail("the cancellation must propagate")
+        } catch (expected: CancellationException) {
+            // propagated
+        }
+        coVerify(exactly = 1) { balance.noteExternalShieldedSpendBroadcast(any()) }
     }
 
     @Test
