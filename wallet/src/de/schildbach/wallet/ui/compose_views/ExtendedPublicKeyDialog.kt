@@ -1,19 +1,23 @@
 package de.schildbach.wallet.ui.compose_views
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
@@ -68,14 +72,22 @@ private fun ExtendedPublicKeyContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         qrBitmap?.let { bitmap ->
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(colors.textPrimary, BlendMode.SrcIn),
+            // Always dark modules on a white quiet zone, whatever the app
+            // theme: the bitmap has no margin and many scanners reject an
+            // inverted (light-on-dark) code.
+            Box(
                 modifier = Modifier
                     .padding(vertical = 30.dp)
-                    .size(180.dp)
-            )
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .padding(12.dp)
+            ) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+                    modifier = Modifier.size(156.dp)
+                )
+            }
         }
 
         FeatureTopText(
