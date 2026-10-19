@@ -481,7 +481,12 @@ class DashSdkServiceImpl @Inject constructor(
      * Reset Wallet's fence over every secret this service persists into
      * [WalletStorage] (wallet create / mnemonic re-store, identity keys).
      */
-    private val secretWriteFence: WalletSecretWriteFence
+    private val secretWriteFence: WalletSecretWriteFence,
+    /**
+     * Holds [currentProtocolVersion] monotonic per network (MO-1069 quote/fund
+     * agreement). Construction-inert: it reads its persisted mark lazily.
+     */
+    private val protocolVersionLatch: ProtocolVersionLatch
 ) : DashSdkService {
 
     /** Everything with a native or persistence footprint lives here. */
@@ -658,6 +663,37 @@ class DashSdkServiceImpl @Inject constructor(
         ensureStarted()
         val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
         return sdk.dpns.resolve(name)
+    }
+
+    /**
+     * See [DashSdkService.currentProtocolVersion] for the full contract.
+     * Always a live `sdk.system.refreshProtocolVersion()` read — the live
+     * value is NOT cached across calls. A process can span network activation
+     * (this runtime outlives [de.schildbach.wallet.service.platform.PlatformSyncService]
+     * .stopSdkEngines(), which only stops the sync engines, not this
+     * service), so a value read before activation must never be served
+     * again after it. The live read then passes through [protocolVersionLatch],
+     * which only ever holds the answer UP (a lagging node can't report a
+     * version older than one already seen on this network); a newer live
+     * version wins immediately. A query failure surfaces as the latched
+     * version when the network is known to run the current fee protocol,
+     * otherwise as null — "unknown, fall back to the older behavior", never a
+     * particular version.
+     */
+    override suspend fun currentProtocolVersion(): Int? =
+        protocolVersionLatch.latch(liveProtocolVersion())
+
+    private suspend fun liveProtocolVersion(): Int? {
+        return try {
+            ensureStarted()
+            val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
+            sdk.system.refreshProtocolVersion()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("currentProtocolVersion: refreshProtocolVersion failed; live version unknown", e)
+            null
+        }
     }
 
     /**

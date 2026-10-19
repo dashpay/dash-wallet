@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.invite
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
 import de.schildbach.wallet.service.platform.sdk.dashToCredits
@@ -39,15 +40,31 @@ import org.junit.Test
  * for the CURRENTLY selected kind. Fix F is still pinned: a private invite
  * gates on the shielded pool, not the (now-low) L1 balance, and a mid-sync
  * pool balance is never trusted.
+ *
+ * MO-1069: both functions now take the L1 contested fee as a resolved
+ * [Coin] parameter instead of reading the raw contested-fee constant
+ * directly, since the real fee is protocol-gated
+ * ([ContestedUsernameFees]) — the caller (the fee dialog) resolves it live
+ * and passes it in. [contestedFee] here is a fixed test fixture
+ * ([ContestedUsernameFees.CURRENT]'s value); the gate/requirement ARITHMETIC
+ * under test does not depend on which protocol era it came from.
  */
 class InviteFeeGateTest {
+
+    private val contestedFee: Coin = ContestedUsernameFees.CURRENT.contested
 
     // ---- requirement per source + selected kind ----
 
     @Test
     fun `requirement is the L1 fee for a standard invite`() {
-        assertEquals(Constants.DASH_PAY_FEE, inviteFeeRequirement(shielded = false, contestedSelected = false))
-        assertEquals(Constants.DASH_PAY_FEE_CONTESTED, inviteFeeRequirement(shielded = false, contestedSelected = true))
+        assertEquals(
+            Constants.DASH_PAY_FEE,
+            inviteFeeRequirement(shielded = false, contestedSelected = false, contestedFee = contestedFee)
+        )
+        assertEquals(
+            contestedFee,
+            inviteFeeRequirement(shielded = false, contestedSelected = true, contestedFee = contestedFee)
+        )
     }
 
     @Test
@@ -56,9 +73,17 @@ class InviteFeeGateTest {
         // notes (unlike the Type-20 exit, whose fee is metered out of the
         // denomination), so the HOLD requirement — and the "you need at least
         // X" insufficiency copy — is denomination + margin. The tiles/confirm
-        // screen still DISPLAY the bare 0.03/0.25 denomination.
-        assertEquals(Coin.parseCoin("0.033"), inviteFeeRequirement(shielded = true, contestedSelected = false))
-        assertEquals(Coin.parseCoin("0.253"), inviteFeeRequirement(shielded = true, contestedSelected = true))
+        // screen still DISPLAY the bare 0.03/0.25 denomination. The shielded
+        // branch ignores [contestedFee] (it uses the fixed Type-20 exit
+        // denominations), so its value here is irrelevant to the result.
+        assertEquals(
+            Coin.parseCoin("0.033"),
+            inviteFeeRequirement(shielded = true, contestedSelected = false, contestedFee = contestedFee)
+        )
+        assertEquals(
+            Coin.parseCoin("0.253"),
+            inviteFeeRequirement(shielded = true, contestedSelected = true, contestedFee = contestedFee)
+        )
     }
 
     @Test
@@ -71,7 +96,7 @@ class InviteFeeGateTest {
         // fails the build instead of letting the UI advertise/gate amounts the
         // mint no longer produces (the 0.1/0.3-vs-0.03/0.25 regression).
         for (contested in listOf(false, true)) {
-            val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+            val fee = if (contested) contestedFee else Constants.DASH_PAY_FEE
             val mintedCredits = shieldedInviteDenominationCredits(dashToCredits(Dash(fee.value)))
             val required = Coin.valueOf(
                 creditsToDash(mintedCredits!! + SHIELDED_INVITE_FEE_MARGIN_CREDITS).duffs
@@ -79,7 +104,7 @@ class InviteFeeGateTest {
             assertEquals(
                 "UI requirement (contested=$contested) diverged from the minted denomination + margin",
                 required,
-                inviteFeeRequirement(shielded = true, contestedSelected = contested)
+                inviteFeeRequirement(shielded = true, contestedSelected = contested, contestedFee = contestedFee)
             )
         }
     }
@@ -100,13 +125,13 @@ class InviteFeeGateTest {
 
     @Test
     fun `L1 continue enabled once the wallet holds the selected fee`() {
-        assertTrue(gate(shielded = false, l1 = Constants.DASH_PAY_FEE_CONTESTED, contestedSelected = true))
+        assertTrue(gate(shielded = false, l1 = contestedFee, contestedSelected = true))
         assertTrue(gate(shielded = false, l1 = Constants.DASH_PAY_FEE, contestedSelected = false))
     }
 
     @Test
     fun `L1 with only the non-contested fee disables continue for the contested selection`() {
-        val balance = Constants.DASH_PAY_FEE // 0.03 <= balance < 0.25
+        val balance = Constants.DASH_PAY_FEE // 0.03 <= balance < contestedFee
         assertFalse("contested selection unaffordable", gate(shielded = false, l1 = balance, contestedSelected = true))
         assertTrue("non-contested selection affordable", gate(shielded = false, l1 = balance, contestedSelected = false))
     }
@@ -122,7 +147,8 @@ class InviteFeeGateTest {
                 l1Balance = Coin.ZERO,
                 shieldedReady = false,
                 shieldedBalance = Coin.parseCoin("1.0"),
-                contestedSelected = true
+                contestedSelected = true,
+                contestedFee = contestedFee
             )
         )
     }
@@ -135,7 +161,8 @@ class InviteFeeGateTest {
                 l1Balance = Coin.ZERO,
                 shieldedReady = true,
                 shieldedBalance = Coin.parseCoin("0.253"), // 0.25 denomination + 0.003 margin
-                contestedSelected = true
+                contestedSelected = true,
+                contestedFee = contestedFee
             )
         )
     }
@@ -152,7 +179,8 @@ class InviteFeeGateTest {
                 l1Balance = Coin.ZERO,
                 shieldedReady = true,
                 shieldedBalance = Coin.parseCoin("0.25"),
-                contestedSelected = true
+                contestedSelected = true,
+                contestedFee = contestedFee
             )
         )
         assertFalse(
@@ -162,7 +190,8 @@ class InviteFeeGateTest {
                 l1Balance = Coin.ZERO,
                 shieldedReady = true,
                 shieldedBalance = Coin.parseCoin("0.03"),
-                contestedSelected = false
+                contestedSelected = false,
+                contestedFee = contestedFee
             )
         )
     }
@@ -172,11 +201,17 @@ class InviteFeeGateTest {
         val balance = Coin.parseCoin("0.20") // 0.033 <= balance < 0.253
         assertFalse(
             "contested needs 0.253",
-            inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = true)
+            inviteFeeGate(
+                true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance,
+                contestedSelected = true, contestedFee = contestedFee
+            )
         )
         assertTrue(
             "non-contested needs only 0.033",
-            inviteFeeGate(true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance, contestedSelected = false)
+            inviteFeeGate(
+                true, Coin.ZERO, shieldedReady = true, shieldedBalance = balance,
+                contestedSelected = false, contestedFee = contestedFee
+            )
         )
     }
 
@@ -186,6 +221,7 @@ class InviteFeeGateTest {
             l1Balance = l1,
             shieldedReady = false,
             shieldedBalance = Coin.ZERO,
-            contestedSelected = contestedSelected
+            contestedSelected = contestedSelected,
+            contestedFee = contestedFee
         )
 }

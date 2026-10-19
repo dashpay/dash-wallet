@@ -55,7 +55,8 @@ class DashSdkServiceImplTest {
     private fun newService() = DashSdkServiceImpl(
         context = mockk<Context>(relaxed = true),
         mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
-        secretWriteFence = WalletSecretWriteFence()
+        secretWriteFence = WalletSecretWriteFence(),
+        protocolVersionLatch = inMemoryProtocolVersionLatch()
     )
 
     @Test
@@ -88,7 +89,8 @@ class DashSdkServiceImplTest {
         val service = DashSdkServiceImpl(
             context = mockk<Context>(relaxed = true),
             mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
-            secretWriteFence = fence
+            secretWriteFence = fence,
+            protocolVersionLatch = inMemoryProtocolVersionLatch()
         )
 
         assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
@@ -107,7 +109,8 @@ class DashSdkServiceImplTest {
         val service = DashSdkServiceImpl(
             context = mockk<Context>(relaxed = true),
             mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
-            secretWriteFence = fence
+            secretWriteFence = fence,
+            protocolVersionLatch = inMemoryProtocolVersionLatch()
         )
         assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
 
