@@ -3,12 +3,14 @@ package de.schildbach.wallet.service.platform.sdk
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutPoint
 import org.bitcoinj.core.Utils
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashfoundation.dashsdk.persistence.entities.CoreAddressEntity
 import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
+import org.json.JSONException
 import org.json.JSONObject
 
 internal const val COIN_JOIN_ASSET_LOCK_INPUT_LIMIT = 100
@@ -60,14 +62,109 @@ internal data class CoinJoinConsolidationState(
         /** The shield funding call was reached: a lock may be out, never build another. */
         const val SHIELDING = "shielding"
         const val TRANSFERRING = "transferring"
-        fun decode(raw: String): CoinJoinConsolidationState {
-            val json = JSONObject(raw)
-            return CoinJoinConsolidationState(json.getString("walletId"), json.getString("destination"),
-                json.getString("phase"), json.getString("txid"), json.optString("regularDestination", ""),
-                json.optString("rawTx", ""))
+
+        private val PHASES = setOf(READY, WAITING, SHIELD_PREPARING, SHIELDING, TRANSFERRING)
+        private val TX_PHASES = setOf(WAITING, TRANSFERRING)
+        private val SHIELD_PHASES = setOf(SHIELD_PREPARING, SHIELDING)
+
+        /** A valid stage, else throws [InvalidConsolidationStageException]; see [parse]. */
+        fun decode(raw: String): CoinJoinConsolidationState = when (val read = parse(raw)) {
+            is ConsolidationStageRead.Valid -> read.state
+            is ConsolidationStageRead.Invalid -> throw InvalidConsolidationStageException(read)
         }
+
+        /**
+         * Parse and validate a stage in any format this flow has written
+         * (`regularDestination` and `rawTx` were added later, so may be absent).
+         * Any other phase or field combination is [ConsolidationStageRead.Invalid]
+         * — never continued or coerced to READY.
+         */
+        fun parse(raw: String): ConsolidationStageRead {
+            val json = try {
+                JSONObject(raw)
+            } catch (e: JSONException) {
+                return ConsolidationStageRead.Invalid("unparseable", MixedFundsMigrationAction.SHIELD, null, null, null)
+            }
+            // Absent optional fields read as empty; a non-string value as null (invalid).
+            fun text(name: String): String? = if (json.has(name)) json.opt(name) as? String else ""
+            val walletId = text("walletId")?.takeIf { isHex(it) }
+            val destination = text("destination")
+            val phase = text("phase")
+            val txidField = if (json.has("txid")) json.opt("txid") as? String else null
+            val regularDestination = text("regularDestination")
+            val rawTx = text("rawTx")
+            val action = if (regularDestination.isNullOrEmpty()) {
+                MixedFundsMigrationAction.SHIELD
+            } else {
+                MixedFundsMigrationAction.COMBINE
+            }
+            val txid = txidField?.takeIf { it.length == 64 && isHex(it) }?.lowercase()
+            val bytesMatch = txid != null && !rawTx.isNullOrEmpty() && rawTxHashesTo(rawTx, txid)
+            val problem = when {
+                walletId == null -> "invalid walletId"
+                destination.isNullOrEmpty() -> "missing destination"
+                regularDestination == null || rawTx == null -> "malformed field"
+                phase !in PHASES -> "unknown phase '$phase'"
+                txidField == null -> "missing txid field"
+                phase in TX_PHASES && txid == null -> "$phase without a txid"
+                phase in TX_PHASES && rawTx.isNotEmpty() && !bytesMatch -> "signed bytes do not hash to the txid"
+                phase == TRANSFERRING && regularDestination.isEmpty() -> "transfer without its BIP44 destination"
+                phase in SHIELD_PHASES && regularDestination.isNotEmpty() -> "shield phase on a COMBINE stage"
+                phase !in TX_PHASES && (txidField.isNotEmpty() || rawTx.isNotEmpty()) -> "$phase with a recorded tx"
+                else -> null
+            }
+            if (problem == null) {
+                // Every check above passed, so none of these is null.
+                return ConsolidationStageRead.Valid(
+                    CoinJoinConsolidationState(
+                        checkNotNull(walletId), checkNotNull(destination), checkNotNull(phase), txid.orEmpty(),
+                        checkNotNull(regularDestination), checkNotNull(rawTx)
+                    )
+                )
+            }
+            val observation = if (walletId != null && txid != null) {
+                CoinJoinConsolidationState(
+                    walletId, destination.orEmpty(), if (phase == TRANSFERRING) TRANSFERRING else WAITING, txid,
+                    regularDestination.orEmpty(), rawTx.takeIf { bytesMatch }.orEmpty()
+                )
+            } else {
+                null
+            }
+            return ConsolidationStageRead.Invalid(problem, action, walletId, txid, observation)
+        }
+
+        /** Non-empty, even-length hex. No regex: rawTx runs to ~150K chars (ICU backtracking limits). */
+        private fun isHex(s: String): Boolean =
+            s.isNotEmpty() && s.length % 2 == 0 && s.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+
+        private fun rawTxHashesTo(rawTx: String, txid: String): Boolean = isHex(rawTx) &&
+            Sha256Hash.wrapReversed(Sha256Hash.hashTwice(Utils.HEX.decode(rawTx.lowercase()))).toString() == txid
     }
 }
+
+/** What a persisted consolidation stage reads as — see [CoinJoinConsolidationState.parse]. */
+internal sealed interface ConsolidationStageRead {
+    data class Valid(val state: CoinJoinConsolidationState) : ConsolidationStageRead
+
+    /**
+     * Never continued or built from.
+     *
+     * @param action for presentation only, never to spend.
+     * @param walletId / [txid] the recorded values when well formed, else null.
+     * @param observation the recorded tx to observe/replay (bytes kept only if
+     *   they hash to it); null without a usable txid and wallet.
+     */
+    data class Invalid(
+        val reason: String,
+        val action: MixedFundsMigrationAction,
+        val walletId: String?,
+        val txid: String?,
+        val observation: CoinJoinConsolidationState?
+    ) : ConsolidationStageRead
+}
+
+internal class InvalidConsolidationStageException(val read: ConsolidationStageRead.Invalid) :
+    IllegalStateException("invalid consolidation stage: ${read.reason}")
 
 internal fun unusedCoinJoinAddress(rows: List<CoreAddressEntity>, accountId: Long): String? =
     rows.filter { it.accountId == accountId && it.poolTypeTag == 0 && !it.isUsed && it.balance == 0L }

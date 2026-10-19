@@ -583,17 +583,26 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // Checkpoint reads that cannot be completed resume nothing: the record
         // (if any) stays exactly as saved.
         val marker: InFlightMixedFundsMigration
-        val hasConsolidation: Boolean
+        val stage: ConsolidationStageRead?
         try {
             marker = inFlightMigrationOrThrow() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
-            hasConsolidation = !readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()
+            stage = readStage()
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("mixed-funds migration checkpoint unreadable; not resuming", t)
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
+        val hasConsolidation = stage != null
         // A definitive failure has nothing to resume; only a fresh move may follow it.
         if (marker.failed) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        if (stage is ConsolidationStageRead.Invalid) {
+            // Released on proof; else a usable txid is observed again (below), anything else stays expired.
+            if (migrationMutex.withLock { releaseInvalidStageLocked() }) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            if (stage.observation == null) {
+                expireMigration()
+                return MixedFundsMigrationOutcome.UNCONFIRMED
+            }
+        }
         if (marker.action != MixedFundsMigrationAction.SHIELD && !hasConsolidation) {
             return MixedFundsMigrationOutcome.UNCONFIRMED
         }
@@ -856,7 +865,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             }
             val consolidation = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
             if (!consolidation.isNullOrBlank()) {
-                markInFlight(CoinJoinConsolidationState.decode(consolidation).action)
+                markStageInFlight(CoinJoinConsolidationState.parse(consolidation))
                 return PendingCheck.PENDING
             }
         } catch (malformed: MalformedMigrationMarkerException) {
@@ -890,17 +899,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
         } else {
             val stage = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
             if (!stage.isNullOrBlank()) {
-                val action = CoinJoinConsolidationState.decode(stage).action
-                log.warn("mixed-funds migration: malformed marker; recreating it from the saved {} stage", action)
-                markInFlight(action)
+                val read = CoinJoinConsolidationState.parse(stage)
+                log.warn("mixed-funds migration: malformed marker; recreating it from the saved stage")
+                markStageInFlight(read)
             } else {
                 log.warn("mixed-funds migration: malformed marker with no stage; recording it as an uncertain shield")
-                val recovery = InFlightMixedFundsMigration(
-                    MixedFundsMigrationAction.SHIELD,
-                    System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1,
-                    0L
-                )
-                dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(recovery))
+                markExpired(MixedFundsMigrationAction.SHIELD)
             }
             PendingCheck.PENDING
         }
@@ -946,25 +950,33 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * shielded runtime affirmatively reports no CoinJoin-funded lock pending)
      * and keeps the record on any doubt, including an unavailable runtime.
      *
+     * An INVALID stage is released only on [invalidStageReleasable], failed marker or not.
+     *
      * @return false when a failed record is present and was kept: the caller
-     *   must not spend.
+     *   must not spend. A kept invalid stage under a non-failed marker returns
+     *   true: the caller's restore reports it PENDING, so nothing spends.
      */
     suspend fun releaseFailedMigration(): Boolean = migrationMutex.withLock { releaseFailedMigrationLocked() }
 
     /** Caller holds [migrationMutex]. See [releaseFailedMigration]. */
     private suspend fun releaseFailedMigrationLocked(): Boolean {
         try {
-            val marker = inFlightMigrationOrThrow() ?: return true
-            if (!marker.failed) return true
-            val raw = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
-            if (!raw.isNullOrBlank() && CoinJoinConsolidationState.decode(raw).phase != CoinJoinConsolidationState.READY) {
-                return false
-            }
-            // Release only on a CONFIRMED zero.
-            if (!shieldedBalanceService.ensureShieldedReady() ||
-                shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
-            ) {
-                return false
+            val marker = inFlightMigrationOrThrow()
+            val stage = readStage()
+            if (stage is ConsolidationStageRead.Invalid) {
+                if (!invalidStageReleasable(stage)) return marker?.failed != true
+                log.info("mixed-funds migration: releasing an invalid stage ({}); nothing is out", stage.reason)
+            } else {
+                if (marker == null || !marker.failed) return true
+                if (stage is ConsolidationStageRead.Valid && stage.state.phase != CoinJoinConsolidationState.READY) {
+                    return false
+                }
+                // Release only on a CONFIRMED zero.
+                if (!shieldedBalanceService.ensureShieldedReady() ||
+                    shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
+                ) {
+                    return false
+                }
             }
         } catch (malformed: MalformedMigrationMarkerException) {
             // Not a failed record: the caller's restore repairs it under the same lock.
@@ -975,8 +987,70 @@ class CoinJoinFundsMigrationService @Inject constructor(
             return false
         }
         log.info("mixed-funds migration: releasing a definitively failed attempt for a new choice")
-        clearInFlightMigration()
+        dropRecord()
         return true
+    }
+
+    /** The saved stage, or null when none; throws when unreadable. */
+    private suspend fun readStage(): ConsolidationStageRead? =
+        readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)?.takeIf { it.isNotBlank() }
+            ?.let { CoinJoinConsolidationState.parse(it) }
+
+    /**
+     * Stop the watcher, then clear the record: a still-running watcher of the
+     * dropped record must neither delay nor act on a new migration's marker.
+     */
+    private suspend fun dropRecord() {
+        synchronized(this) {
+            inFlightWatcherJob?.cancel()
+            inFlightWatcherJob = null
+        }
+        clearInFlightMigration()
+    }
+
+    /**
+     * Proof that an INVALID stage left nothing out: synced, no pending
+     * CoinJoin-funded lock, a full settled snapshot matching the engine balance
+     * for the stage's wallet, and any recorded txid final. Doubt keeps the record.
+     */
+    private suspend fun invalidStageReleasable(stage: ConsolidationStageRead.Invalid): Boolean = try {
+        blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+            shieldedBalanceService.ensureShieldedReady() &&
+            shieldedBalanceService.pendingCoinJoinShieldLockCount() == 0 &&
+            coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks).let { snapshot ->
+                snapshot != null && (stage.walletId == null || stage.walletId == snapshot.walletId)
+            } &&
+            (stage.txid == null || recordedTxFinal(stage.txid))
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not prove an invalid consolidation stage left nothing out; keeping it", t)
+        false
+    }
+
+    /** Caller holds [migrationMutex]: re-reads the stage, dropping it only if still invalid and provably releasable. */
+    private suspend fun releaseInvalidStageLocked(): Boolean {
+        val stage = try {
+            readStage()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("consolidation stage unreadable; keeping the record", t)
+            return false
+        }
+        if (stage !is ConsolidationStageRead.Invalid || !invalidStageReleasable(stage)) return false
+        log.info("mixed-funds migration: releasing an invalid stage ({}); nothing is out", stage.reason)
+        dropRecord()
+        return true
+    }
+
+    /**
+     * The SDK store holds [txid] mined/chain-locked, or with app-persisted
+     * InstantSend lock evidence (the mirror never records one: context goes 0 -> 3 at block time).
+     */
+    private suspend fun recordedTxFinal(txid: String): Boolean {
+        val tx = dashSdkService.databaseOrNull()?.transactionDao()
+            ?.getByTxid(Utils.HEX.decode(txid.lowercase()).reversedArray())
+            ?: return false
+        return tx.context in 1..3 || hasPersistedInstantLock(txid)
     }
 
     /** Caller holds [migrationMutex]. */
@@ -1014,11 +1088,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             return false
         }
         log.info("mixed-funds migration: the shield was interrupted before submission; clearing its marker")
-        synchronized(this) {
-            inFlightWatcherJob?.cancel()
-            inFlightWatcherJob = null
-        }
-        clearInFlightMigration()
+        dropRecord()
         return true
     }
 
@@ -1139,6 +1209,27 @@ class CoinJoinFundsMigrationService @Inject constructor(
         if (t is CancellationException) throw t
         log.warn("failed to read the mixed-funds acknowledgement; presenting", t)
         false
+    }
+
+    /**
+     * Recreate the marker for a saved stage. An INVALID stage with a usable txid
+     * is only observed ([observeInvalidStage]); without one its marker starts
+     * expired (the "could not confirm" guidance).
+     */
+    private suspend fun markStageInFlight(read: ConsolidationStageRead) {
+        when (read) {
+            is ConsolidationStageRead.Valid -> markInFlight(read.state.action)
+            is ConsolidationStageRead.Invalid -> {
+                log.warn("mixed-funds migration: invalid consolidation stage ({}); recovering it", read.reason)
+                if (read.observation != null) markInFlight(read.action) else markExpired(read.action)
+            }
+        }
+    }
+
+    /** An uncertain record shown straight away as "could not confirm"; no watcher. */
+    private suspend fun markExpired(action: MixedFundsMigrationAction) {
+        val marker = InFlightMixedFundsMigration(action, System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1, 0L)
+        dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker))
     }
 
     private suspend fun markInFlight(action: MixedFundsMigrationAction, startWatcher: Boolean = true) {
@@ -1386,9 +1477,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
         outpoints.chunked(PERSISTED_LOCK_QUERY_CHUNK).flatMap { db.txoDao().getByOutpoints(it) }
 
     /** [ownDestinationAccount] is BIP44 for wallet [walletIdHex]; false on any doubt. */
-    private suspend fun isOwnBip44Destination(walletIdHex: String, address: String): Boolean = try {
+    private suspend fun isOwnBip44Destination(walletIdHex: String, address: String): Boolean =
+        isOwnDestination(walletIdHex, address, OwnDestinationAccount.BIP44)
+
+    /** [ownDestinationAccount] is [expected] for wallet [walletIdHex]; false on any doubt. */
+    private suspend fun isOwnDestination(
+        walletIdHex: String, address: String, expected: OwnDestinationAccount
+    ): Boolean = try {
         val db = dashSdkService.databaseOrNull()
-        db != null && ownDestinationAccount(db, walletIdHex, address) == OwnDestinationAccount.BIP44
+        db != null && ownDestinationAccount(db, walletIdHex, address) == expected
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("could not read the destination's owner; refusing", t)
@@ -1416,7 +1513,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // "could not confirm" guidance) instead of reading as "no stage".
         val raw = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
         if (raw.isNullOrBlank()) return ConsolidationStep.PROCEED // Legacy/direct asset-lock recovery.
-        var state = CoinJoinConsolidationState.decode(raw)
+        var state = when (val read = CoinJoinConsolidationState.parse(raw)) {
+            is ConsolidationStageRead.Valid -> read.state
+            // Never continued, never built from: observe its txid, if any.
+            is ConsolidationStageRead.Invalid -> return observeInvalidStage(read)
+        }
         while (true) {
             dashSdkService.ensureStarted()
             val activeWallet = dashSdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()
@@ -1466,12 +1567,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 continue
             }
             if (state.phase == CoinJoinConsolidationState.WAITING || state.phase == CoinJoinConsolidationState.TRANSFERRING) {
-                val tx = dashSdkService.databaseOrNull()?.transactionDao()
-                    ?.getByTxid(Utils.HEX.decode(state.txid).reversedArray())
-                // The mirror never records an InstantSend lock (context goes
-                // 0 -> 3 at block time), so the app-persisted lock is the
-                // pre-block finality evidence.
-                if (tx == null || (tx.context !in 1..3 && !hasPersistedInstantLock(state.txid))) {
+                if (!recordedTxFinal(state.txid)) {
                     if (replayConsolidationIfNeeded(state) == ConsolidationReplay.CONFLICT) {
                         // Its inputs went to a different transaction: never
                         // rebuild; stand down into the "could not confirm" guidance.
@@ -1559,6 +1655,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 failMigration()
                 return ConsolidationStep.STOPPED
             }
+            // A batch stays inside the CoinJoin account: never route it to another destination class.
+            if (!finalTransfer && !isOwnDestination(state.walletId, destination, OwnDestinationAccount.COIN_JOIN)) {
+                log.warn("mixed-funds migration: the saved batch destination is not this wallet's CoinJoin address")
+                failMigration()
+                return ConsolidationStep.STOPPED
+            }
             val result = sdkL1SendService.consolidateCoinJoin(
                 state.walletId, destination, amount, snapshot.drain
             ) { bytes ->
@@ -1585,6 +1687,44 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (state.phase !in setOf(CoinJoinConsolidationState.WAITING, CoinJoinConsolidationState.TRANSFERRING)) {
                 expireMigration(); return ConsolidationStep.STOPPED
             }
+            delay(IN_FLIGHT_POLL_MS)
+        }
+    }
+
+    /**
+     * An INVALID stage is never built from or continued: only its recorded txid
+     * is observed/replayed. A proven settled transfer completes; anything else
+     * ends in the "could not confirm" guidance.
+     */
+    private suspend fun observeInvalidStage(read: ConsolidationStageRead.Invalid): ConsolidationStep {
+        val state = read.observation
+        if (state == null) {
+            expireMigration()
+            return ConsolidationStep.STOPPED
+        }
+        while (true) {
+            dashSdkService.ensureStarted()
+            val activeWallet = dashSdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()
+            if (activeWallet != state.walletId) return ConsolidationStep.STOPPED
+            if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+                delay(IN_FLIGHT_POLL_MS)
+                continue
+            }
+            if (!recordedTxFinal(state.txid)) {
+                if (replayConsolidationIfNeeded(state) == ConsolidationReplay.CONFLICT) {
+                    expireMigration()
+                    return ConsolidationStep.STOPPED
+                }
+                delay(IN_FLIGHT_POLL_MS)
+                continue
+            }
+            if (state.regularDestination.isEmpty()) {
+                expireMigration()
+                return ConsolidationStep.STOPPED
+            }
+            // Possibly the final transfer: complete only on its proven
+            // settlement (own BIP44 output persisted); the window bounds it.
+            if (recordedTransferSettled(state)) return ConsolidationStep.SETTLED
             delay(IN_FLIGHT_POLL_MS)
         }
     }
