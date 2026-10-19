@@ -660,4 +660,56 @@ class SdkTransparentUsernameCreationTest {
             transparentUsernameFeeDuffs(contested = false, sdkService = sdkService(14))
         )
     }
+
+    // --- MO-1069: the strict fee boundary inside createUsernameTransparent ---
+
+    /** Contestable label (letters only, 3–19 chars). */
+    private val contestedLabel = "alice"
+
+    /** The production `feeDuffs` wiring over a service whose protocol version is unknown. */
+    private fun creationWithUnknownProtocol(source: TransparentUsernameSource, sdkService: DashSdkService) =
+        SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { contested -> transparentUsernameFeeDuffs(contested, sdkService) },
+            handOffToLegacy = {},
+            driveCreationState = { state, _ -> creationStates += state },
+            pause = { pauses += it }
+        )
+
+    @Test
+    fun `an unknown protocol version refuses a fresh contested funding before anything is spent`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val sdkService = sdkService(null)
+
+        val result = creationWithUnknownProtocol(source, sdkService).createUsernameTransparent(contestedLabel)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        val failure = result as SdkWriteResult.NotBroadcast
+        assertEquals("username funding amount unavailable", failure.reason)
+        assertTrue(failure.cause is ProtocolVersionUnavailableException)
+        assertFalse(SdkTransparentUsernameCreation.isFundsPossiblyCommittedReason(failure.reason))
+        coVerify(exactly = 1) { sdkService.currentProtocolVersion() }
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.storeIdentityPrivateKey(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a tracked asset lock resumes without resolving a fee when the protocol version is unknown`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } returns lock
+        coEvery { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) } returns identityId
+        coEvery { source.registerDpnsName(walletIdHex, identityId, contestedLabel) } returns "$contestedLabel.dash"
+        val sdkService = sdkService(null)
+
+        val result = creationWithUnknownProtocol(source, sdkService).createUsernameTransparent(contestedLabel)
+
+        assertTrue("must be Broadcast, got $result", result is SdkWriteResult.Broadcast)
+        assertEquals(identityIdBase58, (result as SdkWriteResult.Broadcast).value.identityIdBase58)
+        // The committed lock needs no new quote: the fee is never resolved.
+        coVerify(exactly = 0) { sdkService.currentProtocolVersion() }
+        coVerify(exactly = 1) { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) }
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+    }
 }
