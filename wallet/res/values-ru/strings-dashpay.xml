@@ -456,7 +456,7 @@ Dash</b></string>
     <string name="request_username_username_voting_message">+ что такое голосование за имя пользователя\?</string>
     <string name="request_username_character_requirement">Только буквы, цифры и дефисы</string>
     <string name="request_username_character_requirement_invite_noncontested">Цифры 2-9</string>
-    <string name="request_username_balance_requirement">Чтобы создать это имя пользователя, у вас должно быть 0.25 DASH</string>
+    <string name="request_username_balance_requirement">Чтобы создать это имя пользователя, у вас должно быть %s DASH</string>
     <string name="request_username_requirements_message_invite_noncontested">Имя пользователя должно соответствовать одному из этих условий:</string>
     <string name="request_username_requirements_message">Имя пользователя должно соответствовать этим условиям:</string>
     <string name="request_username_length_requirement">От 3 до 23 символов</string>

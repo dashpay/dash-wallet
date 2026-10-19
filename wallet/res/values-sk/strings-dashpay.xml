@@ -448,7 +448,7 @@ používateľské meno</b></string>
     <string name="request_username_username_voting_message">+ čo je to hlasovanie o používateľskom mene\?</string>
     <string name="request_username_character_requirement">Iba písmená, čísla a spojovníky</string>
     <string name="request_username_character_requirement_invite_noncontested">Čísla 2-9</string>
-    <string name="request_username_balance_requirement">Na vytvorenie tohto používateľského mena potrebujete mať 0,25 DASH</string>
+    <string name="request_username_balance_requirement">Na vytvorenie tohto používateľského mena potrebujete mať %s DASH</string>
     <string name="request_username_requirements_message_invite_noncontested">Používateľské meno musí spĺňať jedno z týchto kritérií</string>
     <string name="request_username_requirements_message">Používateľské meno musí spĺňať tieto kritériá</string>
     <string name="request_username_length_requirement">Medzi 3 a 23 znakmi</string>

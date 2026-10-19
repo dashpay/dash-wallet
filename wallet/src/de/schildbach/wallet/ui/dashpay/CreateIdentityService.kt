@@ -7,6 +7,7 @@ import android.os.PowerManager
 import androidx.lifecycle.LifecycleService
 import com.google.android.gms.common.internal.Preconditions.checkState
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
@@ -405,6 +406,8 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 2: Create and send the credit funding transaction
             //
+            // the contested username fee depends on the platform protocol version
+            platformRepo.refreshProtocolVersion()
             // check to see if the funding transaction exists
             val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
             if (blockchainIdentity.assetLockTransaction == null) {
@@ -422,14 +425,14 @@ class CreateIdentityService : LifecycleService() {
                 // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
                 val balanceInfo = blockchainIdentityData.identity?.let { platformRepo.getIdentityBalance(it.id) }
                 val balanceRequirement = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                    Constants.DASH_PAY_FEE_CONTESTED
+                    ContestedUsernameFees.fee
                 } else {
                     Constants.DASH_PAY_FEE
                 }
 
                 if (balanceInfo != null && balanceInfo.balance < balanceRequirement.value * 1000) {
                     val topupValue = if (Names.isUsernameContestable(blockchainIdentityData.username!!)) {
-                        Constants.DASH_PAY_FEE_CONTESTED_NAME
+                        ContestedUsernameFees.nameFee
                     } else {
                         Constants.DASH_PAY_FEE
                     }

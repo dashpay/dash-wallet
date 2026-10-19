@@ -40,6 +40,7 @@ import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
@@ -533,6 +534,26 @@ class PlatformRepo @Inject constructor(
     suspend fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
         return withContext(Dispatchers.IO) {
             CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
+        }
+    }
+
+    /**
+     * Asks the network which Platform protocol version it runs and records it in
+     * [ContestedUsernameFees]. A failure is logged and leaves the last known version,
+     * so fees fall back to the higher, pre-v14 amounts until a refresh succeeds.
+     */
+    suspend fun refreshProtocolVersion(): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                val version = platform.client.refreshProtocolVersion()
+                ContestedUsernameFees.updateProtocolVersion(version)
+                log.info("platform protocol version: {}", version)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("unable to refresh the platform protocol version", e)
+            }
+            ContestedUsernameFees.currentProtocolVersion
         }
     }
 }

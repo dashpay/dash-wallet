@@ -22,6 +22,7 @@ import androidx.core.os.bundleOf
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.FirebaseApp
 import org.dash.wallet.common.BuildConfig
 import javax.inject.Inject
 
@@ -31,11 +32,18 @@ interface AnalyticsService {
 }
 
 class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
-    private val firebaseAnalytics = Firebase.analytics
-    private val crashlytics = Firebase.crashlytics
+    // Local debug builds can omit google-services.json.
+    private val firebaseEnabled = !BuildConfig.DEBUG || try {
+        FirebaseApp.getInstance()
+        true
+    } catch (_: IllegalStateException) {
+        false
+    }
+    private val firebaseAnalytics = if (firebaseEnabled) Firebase.analytics else null
+    private val crashlytics = if (firebaseEnabled) Firebase.crashlytics else null
 
     init {
-        crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+        crashlytics?.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
     }
 
     override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {
@@ -50,7 +58,7 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
         }
 
         try {
-            firebaseAnalytics.logEvent(event, bundleOf(*params.map { it.key.paramName to it.value }.toTypedArray()))
+            firebaseAnalytics?.logEvent(event, bundleOf(*params.map { it.key.paramName to it.value }.toTypedArray()))
         } catch (ex: Exception) {
             logError(ex)
         }
@@ -63,7 +71,7 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
             return
         }
 
-        details?.let { crashlytics.log(details) }
-        crashlytics.recordException(error)
+        details?.let { crashlytics?.log(details) }
+        crashlytics?.recordException(error)
     }
 }

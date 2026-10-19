@@ -448,7 +448,7 @@ Username</b></string>
     <string name="request_username_username_voting_message">+ ano ang pagboto ng username\?</string>
     <string name="request_username_character_requirement">Mga titik, numero at gitling lamang</string>
     <string name="request_username_character_requirement_invite_noncontested">Bilang 2-9</string>
-    <string name="request_username_balance_requirement">Kailangan mong magkaroon ng 0.25 DASH para magawa ang username na ito</string>
+    <string name="request_username_balance_requirement">Kailangan mong magkaroon ng %s DASH para magawa ang username na ito</string>
     <string name="request_username_requirements_message_invite_noncontested">Dapat matugunan ng username ang isa sa mga pamantayang ito</string>
     <string name="request_username_requirements_message">Dapat matugunan ng username ang mga pamantayang ito</string>
     <string name="request_username_length_requirement">Sa pagitan ng 3 at 23 na mga karakter</string>

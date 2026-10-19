@@ -447,7 +447,7 @@
     <string name="request_username_username_voting_message">＋ユーザー名投票とは\?</string>
     <string name="request_username_character_requirement">英字、数字、ハイフンのみ</string>
     <string name="request_username_character_requirement_invite_noncontested">2〜9の数字</string>
-    <string name="request_username_balance_requirement">このユーザー名を作成するには、0.25DASHが必要です</string>
+    <string name="request_username_balance_requirement">このユーザー名を作成するには、%sDASHが必要です</string>
     <string name="request_username_requirements_message_invite_noncontested">ユーザー名は、このいずれかの要件を満たす必要があります</string>
     <string name="request_username_requirements_message">ユーザー名は、これらの要件を全て満たす必要があります</string>
     <string name="request_username_length_requirement">3〜23文字以内</string>

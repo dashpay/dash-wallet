@@ -31,7 +31,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.OuzoDevNetParams;
+import de.schildbach.wallet.network.SakuraDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -132,7 +132,8 @@ public final class Constants {
             }
             case "devnet": {
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = OuzoDevNetParams.get();
+                NETWORK_PARAMETERS = SakuraDevNetParams.create(
+                        BuildConfig.SAKURA_SPORK_ADDRESS, BuildConfig.SAKURA_CORE_PORT);
                 String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();
                 devNetName = devNetName.substring(devNetName.indexOf("-") + 1);
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
@@ -146,7 +147,7 @@ public final class Constants {
                 SUPPORTS_CONNECT = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                org.dash.wallet.common.util.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
+                org.dash.wallet.common.util.Constants.FAUCET_URL = String.format("https://faucet.%s.networks.dash.org/", devNetName);
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v3-devnet.db");
                 break;
             }
@@ -317,9 +318,6 @@ public final class Constants {
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
-    // 2,500,000,000 credits
-    public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.25");
-    public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.20");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
 
     // 150,000,000

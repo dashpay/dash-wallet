@@ -447,7 +447,7 @@
     <string name="request_username_username_voting_message">+ رای‌گیری نام کاربری چیست</string>
     <string name="request_username_character_requirement">حرف، عدد و خط‌تیره</string>
     <string name="request_username_character_requirement_invite_noncontested">اعداد ۲ تا ۹</string>
-    <string name="request_username_balance_requirement">برا ایجاد نام کاربری باید ۰.۲۵ دش داشته باشید</string>
+    <string name="request_username_balance_requirement">برا ایجاد نام کاربری باید %s دش داشته باشید</string>
     <string name="request_username_requirements_message_invite_noncontested">نام کاربری باید یکی از معیارهای زیر را شامل شود</string>
     <string name="request_username_requirements_message">نام کاربری باید معیارهای زیر را شامل شود</string>
     <string name="request_username_length_requirement">بین ۳ تا ۲۳ کاراکتر</string>
