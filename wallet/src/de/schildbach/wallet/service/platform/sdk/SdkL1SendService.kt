@@ -658,8 +658,12 @@ interface SdkL1SendSource {
         floorDuffs: Long
     ): String = throw UnsupportedOperationException("CoinJoin drain not supported by this source")
 
+    /**
+     * Build on wallet [walletIdHex] BY ID — [destination] was derived from it,
+     * so a rebind must fail the build rather than pay another wallet's inputs there.
+     */
     suspend fun consolidateCoinJoin(
-        destination: String, amount: Long, drain: Boolean,
+        walletIdHex: String, destination: String, amount: Long, drain: Boolean,
         prepared: suspend (ByteArray) -> Unit
     ): String = throw UnsupportedOperationException("CoinJoin consolidation not supported")
 
@@ -736,11 +740,11 @@ internal class DashSdkL1SendSource(
 ) : SdkL1SendSource {
 
     override suspend fun consolidateCoinJoin(
-        destination: String, amount: Long, drain: Boolean,
+        walletIdHex: String, destination: String, amount: Long, drain: Boolean,
         prepared: suspend (ByteArray) -> Unit
     ): String = withContext(Dispatchers.IO) {
         val manager = manager()
-        val wallet = manager.wallets.value.values.single()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
         val finalized = mapNativeErrors {
             CoreSendAllNative.buildCoinJoinConsolidation(
                 wallet, toSdkNetwork(Constants.NETWORK_PARAMETERS), destination, amount,
@@ -1590,8 +1594,9 @@ class SdkL1SendService internal constructor(
         }
     }
 
+    /** @param expectedWalletIdHex the wallet [destination] came from; any other bound wallet refuses. */
     internal suspend fun consolidateCoinJoin(
-        destination: String, amount: Long, drain: Boolean,
+        expectedWalletIdHex: String, destination: String, amount: Long, drain: Boolean,
         prepared: suspend (ByteArray) -> Unit
     ): SdkWriteResult<String> {
         if (!isEnabled() || !probeSendGate().allowed) return SdkWriteResult.NotBroadcast("funding gate closed")
@@ -1604,10 +1609,13 @@ class SdkL1SendService internal constructor(
             if (t is CancellationException) throw t
             return SdkWriteResult.NotBroadcast("SDK bootstrap/bind lookup failed", t)
         }
+        if (!walletId.equals(expectedWalletIdHex, ignoreCase = true)) {
+            return SdkWriteResult.NotBroadcast("bound wallet is not the migration's wallet")
+        }
         var preparedForBroadcast = false
         return try {
             val txid = source.withCoreSendLock(walletId) {
-                source.consolidateCoinJoin(destination, amount, drain) { bytes ->
+                source.consolidateCoinJoin(walletId, destination, amount, drain) { bytes ->
                     prepared(bytes)
                     runCatching { onSelfSpendBroadcast() }
                     preparedForBroadcast = true

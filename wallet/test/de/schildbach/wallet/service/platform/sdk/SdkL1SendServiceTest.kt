@@ -85,13 +85,16 @@ class SdkL1SendServiceTest {
         // `prepared` abandons the finalized build, releasing its inputs) ──
         var consolidationAbandons = 0
         var consolidationBroadcasts = 0
+        val consolidationWallets = mutableListOf<String>()
 
         override suspend fun consolidateCoinJoin(
+            walletIdHex: String,
             destination: String,
             amount: Long,
             drain: Boolean,
             prepared: suspend (ByteArray) -> Unit
         ): String {
+            consolidationWallets += walletIdHex
             try {
                 prepared(byteArrayOf(1, 2, 3))
             } catch (t: Throwable) {
@@ -520,18 +523,20 @@ class SdkL1SendServiceTest {
         assertEquals(0, source.sendCalls)
     }
 
+    private fun consolidationService(source: FakeSource) = SdkL1SendService(
+        source = source,
+        dashPayConfig = config(true),
+        isValidAddress = { true },
+        l1Progress = { caughtUpProgress() },
+        hasAppLockedCoinJoinOutputs = { false }
+    )
+
     @Test
     fun consolidateCoinJoin_bindLookupFailure_isNotBroadcast() = runBlocking {
         val failure = IllegalStateException("bootstrap failed")
         val source = FakeSource(boundWalletId = { throw failure })
-        val svc = SdkL1SendService(
-            source = source,
-            dashPayConfig = config(true),
-            isValidAddress = { true },
-            l1Progress = { caughtUpProgress() },
-            hasAppLockedCoinJoinOutputs = { false }
-        )
-        val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { }
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
         assertEquals(SdkWriteResult.NotBroadcast("SDK bootstrap/bind lookup failed", failure), result)
         assertEquals(1, source.boundCalls)
         assertEquals(0, source.lockAcquisitions)
@@ -540,14 +545,8 @@ class SdkL1SendServiceTest {
     @Test
     fun consolidateCoinJoin_walletNotBound_isNotBroadcast() = runBlocking {
         val source = FakeSource(boundWalletId = { null })
-        val svc = SdkL1SendService(
-            source = source,
-            dashPayConfig = config(true),
-            isValidAddress = { true },
-            l1Progress = { caughtUpProgress() },
-            hasAppLockedCoinJoinOutputs = { false }
-        )
-        val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { }
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
         assertEquals(SdkWriteResult.NotBroadcast("wallet not bound"), result)
         assertEquals(0, source.lockAcquisitions)
     }
@@ -560,17 +559,33 @@ class SdkL1SendServiceTest {
         // pre-broadcast failure, never Ambiguous.
         val source = readySource()
         val rejection = IllegalArgumentException("Drain must spend every snapshot coin (spends 2 of 3)")
-        val svc = SdkL1SendService(
-            source = source,
-            dashPayConfig = config(true),
-            isValidAddress = { true },
-            l1Progress = { caughtUpProgress() },
-            hasAppLockedCoinJoinOutputs = { false }
-        )
-        val result = svc.consolidateCoinJoin(validAddress, 1L, drain = true) { throw rejection }
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { throw rejection }
         assertEquals(SdkWriteResult.NotBroadcast("consolidation preparation failed", rejection), result)
         assertEquals(1, source.consolidationAbandons)
         assertEquals(0, source.consolidationBroadcasts)
+    }
+
+    @Test
+    fun consolidateCoinJoin_differentBoundWallet_isNotBroadcastAndNeverBuilds() = runBlocking {
+        // A rebind since the migration's snapshot: never build toward its destination.
+        val source = FakeSource(boundWalletId = { "02".repeat(32) })
+        val svc = consolidationService(source)
+        var prepared = false
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+        assertEquals(SdkWriteResult.NotBroadcast("bound wallet is not the migration's wallet"), result)
+        assertTrue(source.consolidationWallets.isEmpty())
+        assertEquals(0, source.lockAcquisitions)
+        assertFalse(prepared)
+    }
+
+    @Test
+    fun consolidateCoinJoin_buildsOnTheExpectedWalletById() = runBlocking {
+        val source = readySource()
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(listOf(walletId), source.consolidationWallets)
     }
 
     // ── CoinJoin consolidation replay (exact persisted bytes) ────────────

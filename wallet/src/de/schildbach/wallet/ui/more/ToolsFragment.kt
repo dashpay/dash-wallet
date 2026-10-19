@@ -104,8 +104,7 @@ class ToolsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         viewLifecycleOwner.lifecycleScope.launch {
-            mixedFundsAvailable.value = migrationService.restorePendingShieldMigration() ||
-                migrationService.mixedFundsToMigrate() != null
+            mixedFundsAvailable.value = migrationService.shouldOfferInTools()
         }
     }
 

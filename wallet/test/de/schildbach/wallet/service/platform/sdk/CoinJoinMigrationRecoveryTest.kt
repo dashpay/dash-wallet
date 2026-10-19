@@ -81,9 +81,13 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val wallet = mockk<WalletData>(relaxed = true)
         coEvery { wallet.networkParameters } returns TestNet3Params.get()
+        // Fresh moves allowed: only the unavailable snapshot may stop this one.
+        val send = mockk<SdkL1SendService>(relaxed = true)
+        coEvery { send.cutoverCommitted() } returns true
+        coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) } returns null
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val service = CoinJoinFundsMigrationService(
-            wallet, shield, mockk(relaxed = true), mockk(relaxed = true), config,
+            wallet, shield, send, mockk(relaxed = true), config,
             mockk(relaxed = true), scope, mockk(relaxed = true)
         )
         try {
@@ -241,7 +245,7 @@ class CoinJoinMigrationRecoveryTest {
                 assertTrue("${unreadable.name}: restore must not report 'no migration'", service.restorePendingShieldMigration())
                 assertEquals(unreadable.name, MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.retryPendingMigration())
                 coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
-                coVerify(exactly = 0) { send.consolidateCoinJoin(any(), any(), any(), any()) }
+                coVerify(exactly = 0) { send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
                 coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }
                 // The saved (unseen) checkpoint is never overwritten.
                 coVerify(exactly = 0) { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, any()) }
@@ -318,7 +322,7 @@ class CoinJoinMigrationRecoveryTest {
                 assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.combineIntoUnmixedBalance())
                 assertTrue(service.restorePendingShieldMigration())
                 coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
-                coVerify(exactly = 0) { send.consolidateCoinJoin(any(), any(), any(), any()) }
+                coVerify(exactly = 0) { send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
             } finally {
                 scope.cancel()
             }

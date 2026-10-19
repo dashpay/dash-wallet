@@ -287,9 +287,9 @@ internal fun formatInFlightMigration(marker: InFlightMixedFundsMigration): Strin
 private const val IN_FLIGHT_FAILED_FLAG = "failed"
 
 /**
- * Parse the persisted marker, or null when absent/blank (cleared) or
- * malformed — an unreadable marker must never wedge the UI in a permanent
- * processing state, so it reads as "no migration in flight".
+ * Parse the persisted marker, or null when absent/blank or malformed — for
+ * PRESENTATION, so a damaged marker never wedges the UI. Spend gates use
+ * `inFlightMigrationOrThrow`, which never reads a malformed marker as absent.
  */
 internal fun parseInFlightMigration(raw: String?): InFlightMixedFundsMigration? {
     if (raw.isNullOrBlank()) return null
@@ -506,6 +506,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // in-flight migration (above) is still presented regardless.
         // cutoverCommitted() fails closed (false) on a read error.
         if (!sdkL1SendService.cutoverCommitted()) return false
+        // DONE suppresses only this automatic prompt; later coins stay movable from Tools.
         val alreadyHandled = try {
             readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) == true
         } catch (t: Throwable) {
@@ -549,13 +550,32 @@ class CoinJoinFundsMigrationService @Inject constructor(
         return deferred == null || amount.value > deferred
     }
 
+    /**
+     * Gate for a USER-STARTED fresh move (Tools entry, shield, combine):
+     * post-cutover only (pre-cutover dashj still owns L1) and only over an
+     * affirmatively read positive SDK CoinJoin balance; both fail closed.
+     * Not gated on [DashPayConfig.MIXED_FUNDS_MIGRATION_DONE]: coins that
+     * reach the CoinJoin account after a completed migration are never spent
+     * by ordinary sends, so the user must still be able to move them.
+     */
+    private suspend fun userMigrationAllowed(): Boolean =
+        sdkL1SendService.cutoverCommitted() && mixedFundsToMigrate() != null
+
+    /**
+     * Tools' "Move CoinJoin funds" entry: always for a recorded migration (so
+     * it stays resumable), otherwise [userMigrationAllowed]. Unlike
+     * [shouldPrompt] it ignores DONE, the deferral and the diagnostic toggle.
+     */
+    suspend fun shouldOfferInTools(): Boolean =
+        restorePendingShieldMigration() || userMigrationAllowed()
+
     suspend fun deferMigration(amount: Coin) {
         dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS, amount.value)
     }
 
     /** Continue the persisted consolidation stage, or resume the existing asset lock. */
     suspend fun retryPendingMigration(): MixedFundsMigrationOutcome {
-        if (!restorePendingShieldMigration() && !adoptPendingCoinJoinShield()) {
+        if (!restorePendingShieldMigration() && adoptPendingCoinJoinShield() != PendingCheck.PENDING) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
         // Checkpoint reads that cannot be completed resume nothing: the record
@@ -634,6 +654,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             PendingCheck.UNREADABLE -> return MixedFundsMigrationOutcome.NOT_ATTEMPTED
             PendingCheck.NONE -> Unit
         }
+        // Defense in depth: the same gate as the Tools entry, whatever the caller.
+        if (!userMigrationAllowed()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -690,6 +712,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             PendingCheck.UNREADABLE -> return MixedFundsMigrationOutcome.NOT_ATTEMPTED
             PendingCheck.NONE -> Unit
         }
+        // Defense in depth: the same gate as the Tools entry, whatever the caller.
+        if (!userMigrationAllowed()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
@@ -805,7 +829,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * never [PendingCheck.NONE] — a fresh spend must not overwrite a saved
      * (possibly uncertain) record it could not see.
      */
-    private suspend fun restorePendingMigrationRecord(): PendingCheck {
+    private suspend fun restorePendingMigrationRecord(lockHeld: Boolean = false): PendingCheck {
         try {
             if (inFlightMigrationOrThrow() != null) {
                 startInFlightWatcherIfNeeded()
@@ -816,12 +840,55 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 markInFlight(CoinJoinConsolidationState.decode(consolidation).action)
                 return PendingCheck.PENDING
             }
+        } catch (malformed: MalformedMigrationMarkerException) {
+            // A held mutex is a migration step, which repairs under its own lock.
+            if (!lockHeld && !migrationMutex.tryLock()) return PendingCheck.UNREADABLE
+            return try {
+                repairMalformedMarkerLocked()
+            } finally {
+                if (!lockHeld) migrationMutex.unlock()
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("mixed-funds migration checkpoint unreadable; treating it as pending", t)
             return PendingCheck.UNREADABLE
         }
         return PendingCheck.NONE
+    }
+
+    /**
+     * Rewrite a MALFORMED marker into a valid recovery form, never a rebuilt
+     * spend. Caller holds [migrationMutex]. A saved stage decides what was
+     * spent (the watcher only observes/replays its txid); with no stage it
+     * becomes an expired uncertain SHIELD, handled like an uncertain direct
+     * shield. Any read/decode failure keeps the marker (UNREADABLE).
+     */
+    private suspend fun repairMalformedMarkerLocked(): PendingCheck = try {
+        val raw = readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT)
+        if (raw.isNullOrBlank() || parseInFlightMigration(raw) != null) {
+            // Changed since the first read: re-evaluated on the next pass.
+            PendingCheck.UNREADABLE
+        } else {
+            val stage = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
+            if (!stage.isNullOrBlank()) {
+                val action = CoinJoinConsolidationState.decode(stage).action
+                log.warn("mixed-funds migration: malformed marker; recreating it from the saved {} stage", action)
+                markInFlight(action)
+            } else {
+                log.warn("mixed-funds migration: malformed marker with no stage; recording it as an uncertain shield")
+                val recovery = InFlightMixedFundsMigration(
+                    MixedFundsMigrationAction.SHIELD,
+                    System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1,
+                    0L
+                )
+                dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(recovery))
+            }
+            PendingCheck.PENDING
+        }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not repair a malformed mixed-funds marker; keeping it", t)
+        PendingCheck.UNREADABLE
     }
 
     /**
@@ -832,12 +899,21 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * the user's move adopts it as its progress instead of spending again.
      * Unrelated BIP44 shield locks are not migration progress.
      */
-    private suspend fun adoptPendingCoinJoinShield(): Boolean {
-        if (!shieldedBalanceService.ensureShieldedReady()) return false
-        if ((shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: 0) <= 0) return false
+    private suspend fun adoptPendingCoinJoinShield(): PendingCheck {
+        // Only a CONFIRMED zero authorises a fresh spend; unknown is never NONE.
+        val pending = if (shieldedBalanceService.ensureShieldedReady()) {
+            shieldedBalanceService.pendingCoinJoinShieldLockCount()
+        } else {
+            null
+        }
+        if (pending == null) {
+            log.warn("mixed-funds migration: CoinJoin-lock state unknown (runtime not ready or count unreadable)")
+            return PendingCheck.UNREADABLE
+        }
+        if (pending <= 0) return PendingCheck.NONE
         markInFlight(MixedFundsMigrationAction.SHIELD)
         log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
-        return true
+        return PendingCheck.PENDING
     }
 
     /**
@@ -845,9 +921,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * ([InFlightMixedFundsMigration.failed]) so the user may choose again —
      * either destination. Recorded only when nothing was submitted, every
      * consolidation transaction had settled and no CoinJoin-funded lock was
-     * pending; this re-checks what it can (the stage still reads READY and,
-     * when the shielded runtime answers, no CoinJoin-funded lock is pending)
-     * and keeps the record on any doubt.
+     * pending; this re-checks it (the stage still reads READY and the
+     * shielded runtime affirmatively reports no CoinJoin-funded lock pending)
+     * and keeps the record on any doubt, including an unavailable runtime.
      *
      * @return false when a failed record is present and was kept: the caller
      *   must not spend.
@@ -863,11 +939,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (!raw.isNullOrBlank() && CoinJoinConsolidationState.decode(raw).phase != CoinJoinConsolidationState.READY) {
                 return false
             }
-            if (shieldedBalanceService.ensureShieldedReady() &&
+            // Release only on a CONFIRMED zero.
+            if (!shieldedBalanceService.ensureShieldedReady() ||
                 shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
             ) {
                 return false
             }
+        } catch (malformed: MalformedMigrationMarkerException) {
+            // Not a failed record: the caller's restore repairs it under the same lock.
+            return true
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("could not release a failed mixed-funds migration; keeping its record", t)
@@ -881,9 +961,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /** Caller holds [migrationMutex]. */
     private suspend fun resumeOrAdoptPendingMigrationLocked(): PendingCheck {
         reconcileInterruptedDirectShield()
-        val recorded = restorePendingMigrationRecord()
+        val recorded = restorePendingMigrationRecord(lockHeld = true)
         if (recorded != PendingCheck.NONE) return recorded
-        return if (adoptPendingCoinJoinShield()) PendingCheck.PENDING else PendingCheck.NONE
+        return adoptPendingCoinJoinShield()
     }
 
     /**
@@ -936,9 +1016,19 @@ class CoinJoinFundsMigrationService @Inject constructor(
         null
     }
 
-    /** [inFlightMigration] that THROWS when the marker cannot be read (see [readCheckpoint]). */
-    private suspend fun inFlightMigrationOrThrow(): InFlightMixedFundsMigration? =
-        parseInFlightMigration(readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT))
+    /**
+     * [inFlightMigration] that THROWS when the marker cannot be read (see
+     * [readCheckpoint]) or is malformed — never "absent" over a damaged record.
+     */
+    private suspend fun inFlightMigrationOrThrow(): InFlightMixedFundsMigration? {
+        val raw = readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT)
+        if (raw.isNullOrBlank()) return null
+        return parseInFlightMigration(raw) ?: throw MalformedMigrationMarkerException()
+    }
+
+    /** Read but unparseable — repairable ([repairMalformedMarkerLocked]), unlike a read error. */
+    private class MalformedMigrationMarkerException :
+        IllegalStateException("malformed mixed-funds migration checkpoint")
 
     /**
      * Read a migration CHECKPOINT key, keeping "absent" (null) and "could not
@@ -1352,11 +1442,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 }
                 return ConsolidationStep.PROCEED
             }
+            // A rebind since the wallet check above must not hand another wallet's coins to this state.
+            if (snapshot.walletId != state.walletId) return ConsolidationStep.STOPPED
             val amount = snapshot.batchAmount()
             if (amount <= 0L) { failMigration(); return ConsolidationStep.STOPPED }
             val finalTransfer = state.action == MixedFundsMigrationAction.COMBINE && snapshot.drain
             val destination = if (finalTransfer) state.regularDestination else state.destination
-            val result = sdkL1SendService.consolidateCoinJoin(destination, amount, snapshot.drain) { bytes ->
+            val result = sdkL1SendService.consolidateCoinJoin(
+                state.walletId, destination, amount, snapshot.drain
+            ) { bytes ->
                 val txid = validateCoinJoinConsolidation(bytes, snapshot, destination, walletData.networkParameters,
                     minimumInputs = if (finalTransfer) 1 else 2)
                 // The signed bytes go into the SAME write as the txid, before
