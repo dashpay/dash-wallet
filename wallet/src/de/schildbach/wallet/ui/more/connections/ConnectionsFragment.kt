@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.more.connections
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -73,9 +72,9 @@ class ConnectionsFragment : Fragment() {
                             viewLifecycleOwner.lifecycleScope.launch {
                                 try {
                                     val details = viewModel.connectionDetails(connection)
-                                    MaterialAlertDialogBuilder(requireContext()).setTitle(connection.name)
-                                        .setMessage(details).setPositiveButton(android.R.string.ok, null)
-                                        .setNeutralButton(R.string.dash_connect_revoke) { _, _ -> viewModel.disconnect(connection) }.show()
+                                    val revoke = connectionDetailsDialog(requireContext(), connection.name, details)
+                                        .showAsync(requireActivity())
+                                    if (revoke == true) viewModel.disconnect(connection)
                                 } catch (e: Exception) {
                                     if (e is kotlinx.coroutines.CancellationException) throw e
                                     Toast.makeText(requireContext(), e.message, Toast.LENGTH_LONG).show()
@@ -129,20 +128,19 @@ class ConnectionsFragment : Fragment() {
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.callbackOffer.collect { callback ->
                     if (callback != null) {
                         viewModel.resetCallbackOffer()
                         val uri = Uri.parse(callback)
-                        MaterialAlertDialogBuilder(requireContext())
-                            .setTitle(getString(R.string.dash_connect_return_title, uri.host))
-                            .setMessage(R.string.dash_connect_return_warning)
-                            .setPositiveButton(R.string.dash_connect_return_open) { _, _ ->
-                                try { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
-                                catch (e: android.content.ActivityNotFoundException) {
-                                    Toast.makeText(requireContext(), R.string.dash_connect_return_unavailable, Toast.LENGTH_LONG).show()
-                                }
-                            }.setNegativeButton(android.R.string.cancel, null).show()
+                        val confirmed = connectionCallbackDialog(requireContext(), uri.host.orEmpty())
+                            .showAsync(requireActivity())
+                        if (confirmed == true) {
+                            try { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                            catch (e: android.content.ActivityNotFoundException) {
+                                Toast.makeText(requireContext(), R.string.dash_connect_return_unavailable, Toast.LENGTH_LONG).show()
+                            }
+                        }
                     }
                 }
             }
