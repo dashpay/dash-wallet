@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.Invitation
@@ -28,7 +27,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
 import de.schildbach.wallet.data.WalletData
-import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.wallet.OneTimeOrchardKey
 import org.dashj.platform.dpp.identifier.Identifier
 import kotlinx.coroutines.NonCancellable
@@ -271,14 +269,10 @@ class SdkShieldedInviteCreation internal constructor(
         dashPayConfig = dashPayConfig,
         shieldedBalanceService = shieldedBalanceService,
         invitationsDao = invitationsDao,
-        feeCredits = { contested ->
-            val fee = if (contested) {
-                ContestedUsernameFees.resolved(sdkService).contested
-            } else {
-                Constants.DASH_PAY_FEE
-            }
-            dashToCredits(Dash(fee.value))
-        },
+        // Non-strict (ContestedUsernameFees.current): the fee only selects the
+        // note denomination, identical for both contested fees — see
+        // shieldedDenominationFeeCredits.
+        feeCredits = { contested -> shieldedDenominationFeeCredits(contested, sdkService) },
         generateOneLink = { link ->
             // Bounded so a stuck AppsFlyer callback can't hang the invite;
             // any failure/timeout → null → raw deep-link fallback.

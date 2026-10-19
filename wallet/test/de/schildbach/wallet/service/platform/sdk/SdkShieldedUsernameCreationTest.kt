@@ -1455,4 +1455,41 @@ class SdkShieldedUsernameCreationTest {
         assertEquals(0x11, bytes[1].toInt() and 0xFF)
         assertEquals(0xee, bytes[31].toInt() and 0xFF)
     }
+
+    // ── MO-1069: the denomination fee input is resolved NON-strictly ──────
+
+    private fun protocolService(protocolVersion: Int?) = mockk<DashSdkService> {
+        coEvery { currentProtocolVersion() } returns protocolVersion
+    }
+
+    @Test
+    fun denominationFee_unknownProtocolVersion_fallsBackInsteadOfRefusing() = runTest {
+        // A protocol-version lookup outage must not block a shielded creation or
+        // invite claim: the fee only selects the denomination. Strict resolution
+        // (ContestedUsernameFees.resolved) would throw here.
+        val credits = shieldedDenominationFeeCredits(contested = true, sdkService = protocolService(null))
+
+        assertEquals(contestedFeeCredits, credits)
+        assertEquals(contestedDenominationCredits, chooseShieldedIdentityDenominationCredits(credits))
+    }
+
+    @Test
+    fun denominationFee_contested_selectsTheSameDenominationUnderEveryProtocolVersion() = runTest {
+        listOf(13, 14, null).forEach { version ->
+            val credits = shieldedDenominationFeeCredits(contested = true, sdkService = protocolService(version))
+            assertEquals(
+                "protocol $version",
+                contestedDenominationCredits,
+                chooseShieldedIdentityDenominationCredits(credits)
+            )
+        }
+    }
+
+    @Test
+    fun denominationFee_nonContested_isTheFixedFeeWithoutAProtocolRead() = runTest {
+        val service = protocolService(null)
+
+        assertEquals(feeCredits, shieldedDenominationFeeCredits(contested = false, sdkService = service))
+        coVerify(exactly = 0) { service.currentProtocolVersion() }
+    }
 }

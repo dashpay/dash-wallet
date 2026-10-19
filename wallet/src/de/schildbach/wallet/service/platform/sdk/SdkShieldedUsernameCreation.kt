@@ -269,6 +269,35 @@ fun shieldedIdentityFundingRequirement(fee: Dash): Dash? {
 }
 
 /**
+ * The fee input — in credits — to the shielded exit-denomination choice
+ * ([chooseShieldedIdentityDenominationCredits]) for a username of the given
+ * contested-ness: the protocol-gated contested fee for contested labels,
+ * `DASH_PAY_FEE` (0.03 DASH) otherwise. The exact lambda both
+ * [SdkShieldedUsernameCreation] and [SdkShieldedInviteCreation] wire as
+ * `feeCredits`, extracted so it is host-JVM testable.
+ *
+ * Deliberately the NON-throwing [ContestedUsernameFees.current], not the
+ * strict [ContestedUsernameFees.resolved] the transparent funding paths use.
+ * This value never becomes an amount: it only selects a denomination, and the
+ * LEGACY (0.25) and CURRENT (0.15) contested fees both round UP to the same
+ * 0.25 DASH Type-20 denomination, so the amount that leaves the shielded pool
+ * is identical either way. Strict resolution would protect nothing here and
+ * would only add a failure mode — a protocol-version lookup outage would block
+ * shielded username creation and invite claims that spend exactly the same.
+ * Routed through [ContestedUsernameFees] (rather than a raw constant) so every
+ * contested-fee read shares one source, and a future denomination-set change
+ * that splits the two fees would surface here.
+ */
+internal suspend fun shieldedDenominationFeeCredits(contested: Boolean, sdkService: DashSdkService): Long {
+    val fee = if (contested) {
+        ContestedUsernameFees.current(sdkService).contested
+    } else {
+        Constants.DASH_PAY_FEE
+    }
+    return dashToCredits(Dash(fee.value))
+}
+
+/**
  * Decode a DIP-0018 bech32m Platform address (`dash1…` / `tdash1…`) to
  * the raw 21-byte PlatformAddress STORAGE bytes (variant tag + 20-byte
  * hash) the Type-20 `fallbackAddress` FFI parameter wants. The bech32m
@@ -660,17 +689,16 @@ class SdkShieldedUsernameCreation internal constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     /**
      * Creation fee in credits for a username of the given contested-ness —
-     * [ContestedUsernameFees.resolved]'s protocol-gated contested fee (MO-1069)
+     * [ContestedUsernameFees.current]'s protocol-gated contested fee (MO-1069)
      * for contested labels, `DASH_PAY_FEE` = 0.03 DASH otherwise — the input
-     * to the denomination mapping, NOT the amount spent. Suspend: resolving
-     * the contested fee needs a live protocol-version read. Both the LEGACY
-     * (0.25) and CURRENT (0.15) contested fees round UP to the same 0.25 DASH
-     * Type-20 exit denomination ([chooseShieldedIdentityDenominationCredits]
-     * — the v13 set's smallest member covering either), so gating this input
-     * is provably invariant to the actual amount SPENT; it is still routed
-     * through [ContestedUsernameFees] (rather than the raw constant) so every
-     * contested-fee read shares one source and a future denomination-set
-     * change can't silently split them.
+     * to the denomination mapping, NOT the amount spent (production:
+     * [shieldedDenominationFeeCredits]). Suspend: resolving the contested fee
+     * needs a protocol-version read. Both the LEGACY (0.25) and CURRENT (0.15)
+     * contested fees round UP to the same 0.25 DASH Type-20 exit denomination
+     * ([chooseShieldedIdentityDenominationCredits] — the v13 set's smallest
+     * member covering either), so this input is provably invariant to the
+     * actual amount SPENT — which is why an unknown protocol version falls
+     * back instead of refusing the creation.
      */
     private val feeCredits: suspend (contested: Boolean) -> Long,
     /** HRP the fallback Platform address must decode under (`dash`/`tdash`). */
@@ -740,14 +768,7 @@ class SdkShieldedUsernameCreation internal constructor(
         dashPayConfig = dashPayConfig,
         shieldedBalanceService = shieldedBalanceService,
         // Lazy: Constants untouched at construction (inert-until-called).
-        feeCredits = { contested ->
-            val fee = if (contested) {
-                ContestedUsernameFees.resolved(sdkService).contested
-            } else {
-                Constants.DASH_PAY_FEE
-            }
-            dashToCredits(Dash(fee.value))
-        },
+        feeCredits = { contested -> shieldedDenominationFeeCredits(contested, sdkService) },
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         handOffToLegacy = { identityId ->
             RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true).enqueue()

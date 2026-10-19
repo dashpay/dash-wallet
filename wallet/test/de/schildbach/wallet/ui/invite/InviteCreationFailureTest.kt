@@ -40,7 +40,7 @@ class InviteCreationFailureTest {
     // ── An unavailable protocol version is TRANSIENT: bounded retry, not a rejection ──
     @Test
     fun protocolVersionUnavailable_isUnreachable_andRetryable() {
-        // The exact shape SdkL1InviteCreation / SdkShieldedInviteCreation return when
+        // The exact shape SdkL1InviteCreation returns when
         // ContestedUsernameFees.resolved() refuses an unknown protocol version at
         // funding time (MO-1069). It must NOT share the deterministic "invite fee
         // unavailable" reason, which latches the dialog's retry gate.
