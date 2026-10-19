@@ -24,6 +24,7 @@ import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.COMBINE
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome
+import de.schildbach.wallet.service.platform.sdk.MixedFundsRoutes
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome.NOT_ATTEMPTED
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome.STARTED
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome.UNCONFIRMED
@@ -115,7 +116,7 @@ class MixedFundsMigrationOrderingMatrixTest {
         for (row in rows) {
             val view = row.facts.reduce()
             val state = MixedFundsMigrationUIState(
-                amount = Coin.COIN, amountChecked = true,
+                amount = Coin.COIN, amountChecked = true, shieldOperable = true, combineOperable = true,
                 inProgress = view.inProgress, outcome = view.outcome, attemptedAction = view.attemptedAction,
                 awaitingResult = view.awaitingResult, resultTimedOut = view.resultTimedOut, resultLanded = view.resultLanded
             )
@@ -267,6 +268,7 @@ class MixedFundsMigrationOrderingMatrixTest {
 
     private fun runRow(row: Row): Shown {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         val markers = MutableStateFlow(row.initial)
         var landings = 0
         var completion = CompletableDeferred<MixedFundsMigrationOutcome>()
@@ -293,7 +295,7 @@ class MixedFundsMigrationOrderingMatrixTest {
                         Kind.COMBINE -> model.combineIntoUnmixedBalance()
                         Kind.RETRY -> {
                             assertEquals("${row.name}: retry is offered", Shown.GUIDANCE, model.uiState.value.shown())
-                            model.retryMigration()
+                            model.retryMigration(authenticatedMove = null)
                         }
                     }
                     is Step.Marker -> {
@@ -321,6 +323,7 @@ class MixedFundsMigrationOrderingMatrixTest {
     @Test
     fun closingTimedOutGuidanceAcknowledgesWithoutClearingTheRecord() {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         coEvery { service.restorePendingShieldMigration() } returns true
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(expired())
@@ -344,6 +347,8 @@ class MixedFundsMigrationOrderingMatrixTest {
     fun closingProcessingOrFailureDoesNotAcknowledge() {
         for (initial in listOf(pending(), failed())) {
             val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+            coEvery { service.routeAvailability() } returns
+                MixedFundsRoutes(shieldOperable = true, combineOperable = true)
             coEvery { service.restorePendingShieldMigration() } returns true
             coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
             coEvery { service.observeInFlightMigration() } returns MutableStateFlow(initial)
@@ -368,6 +373,7 @@ class MixedFundsMigrationOrderingMatrixTest {
     @Test
     fun closingGuidanceDuringASuspendedCallAcknowledgesAndUnlockDoesNotRepresentIt() = runBlocking {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         val markers = MutableStateFlow<InFlightMixedFundsMigration?>(null)
         var acknowledged = false
         coEvery { service.restorePendingShieldMigration() } answers { markers.value != null }

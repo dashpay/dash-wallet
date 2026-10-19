@@ -35,6 +35,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.core.Utils
 import org.bitcoinj.wallet.Wallet
@@ -286,8 +287,20 @@ data class InFlightMixedFundsMigration(
      * The result never became visible within the honesty window — stop
      * showing a spinner and show the "could not confirm" guidance instead.
      */
-    fun isExpired(nowMillis: Long = System.currentTimeMillis()): Boolean =
-        nowMillis - startedAtMillis > MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS
+    fun isExpired(nowMillis: Long = System.currentTimeMillis()): Boolean = remainingMillis(nowMillis) < 0L
+
+    /**
+     * What is left of the honesty window, negative once expired. Overflow-safe (compares
+     * elapsed time). A start up to [MIXED_FUNDS_START_SKEW_MS] ahead (clock jitter) counts
+     * as starting now; further ahead (clock moved back, corruption) it reads as expired.
+     */
+    fun remainingMillis(nowMillis: Long = System.currentTimeMillis()): Long {
+        // Both are non-negative (parse rejects negatives), so the subtraction cannot overflow.
+        val elapsed = nowMillis - startedAtMillis
+        if (elapsed < -MIXED_FUNDS_START_SKEW_MS) return -1L
+        return MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS -
+            elapsed.coerceIn(0L, MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 1L)
+    }
 }
 
 /**
@@ -295,6 +308,9 @@ data class InFlightMixedFundsMigration(
  * before the UI must stop spinning and be honest about not knowing.
  */
 const val MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS = 30L * 60L * 1000L
+
+/** How far ahead a marker's start may be and still count as starting now (clock jitter). */
+internal const val MIXED_FUNDS_START_SKEW_MS = 60_000L
 
 /** `ACTION|startedAtMillis|baselineShieldedDuffs[|failed]` — the persisted form. */
 internal fun formatInFlightMigration(marker: InFlightMixedFundsMigration): String =
@@ -317,6 +333,11 @@ internal fun parseInFlightMigration(raw: String?): InFlightMixedFundsMigration? 
     val startedAt = parts[1].toLongOrNull()?.takeIf { it >= 0L } ?: return null
     val baseline = parts[2].toLongOrNull()?.takeIf { it >= 0L } ?: return null
     return InFlightMixedFundsMigration(action, startedAt, baseline, failed = parts.size == 4)
+}
+
+/** Per-route availability ([CoinJoinFundsMigrationService.routeAvailability]). */
+data class MixedFundsRoutes(val shieldOperable: Boolean, val combineOperable: Boolean) {
+    val any: Boolean get() = shieldOperable || combineOperable
 }
 
 /** What the user chose, and how it went. */
@@ -655,19 +676,40 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
     }
 
+    /** Is at least ONE of the two migrations currently runnable? See [routeAvailability]. */
+    private suspend fun anyOptionOperable(): Boolean = routeAvailability().any
+
     /**
-     * Is at least ONE of the two migrations currently runnable? Both spend
-     * through the SDK engine (dashj has no CoinJoin→shielded path and cannot
-     * point the SDK builder at an account), so both are inert while the
-     * engine is not the L1 owner and the shielded funding gate is shut.
-     * Combine needs [consolidationOperable], the gate its spend enforces.
+     * Which routes can run now, so the sheet never offers one whose spend would refuse:
+     * the same gates, lock guard and snapshot preconditions the spends check. Fails closed.
      */
-    private suspend fun anyOptionOperable(): Boolean = try {
-        shieldedBalanceService.isWalletShieldingAvailable() || consolidationOperable()
-    } catch (t: Throwable) {
-        if (t is CancellationException) throw t
-        log.warn("failed to probe the migration paths; not prompting", t)
-        false
+    suspend fun routeAvailability(): MixedFundsRoutes {
+        val closed = MixedFundsRoutes(shieldOperable = false, combineOperable = false)
+        // coinJoinOutputsLocked() never throws (fail closed inside).
+        if (withContext(Dispatchers.IO) { sdkL1SendService.coinJoinOutputsLocked() }) return closed
+        val snapshot = try {
+            coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to read the CoinJoin snapshot; offering no route", t)
+            null
+        } ?: return closed
+        val shielding = try {
+            shieldedBalanceService.isWalletShieldingAvailable()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to probe the shield route; treating it as unavailable", t)
+            false
+        }
+        val gate = consolidationOperable()
+        // The same snapshot preconditions shieldMixedFunds / combineIntoUnmixedBalance check.
+        val batchable = snapshot.coins.isNotEmpty() && snapshot.batchAmount() > 0L
+        val consolidatable = gate && batchable && snapshot.destination != null
+        return MixedFundsRoutes(
+            shieldOperable = shielding && snapshot.coins.isNotEmpty() &&
+                (!snapshot.needsConsolidation || consolidatable),
+            combineOperable = gate && batchable && (snapshot.drain || snapshot.destination != null)
+        )
     }
 
     /** Post-cutover and [SdkL1SendService.coinJoinConsolidationGateOpen]; fails closed. */
@@ -771,6 +813,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
         if (!snapshot.drain && snapshot.destination == null) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         // A closed gate would turn this start into a definitive failure.
         if (!consolidationOperable()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        // So would app-locked outputs: every consolidation drain refuses them.
+        if (withContext(Dispatchers.IO) { sdkL1SendService.coinJoinOutputsLocked() }) {
+            log.warn("mixed-funds migration: the CoinJoin account holds app-locked outputs; not combining")
+            return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
         val destination = try {
             // A FRESH address, not the current one: reusing an address the
             // user has already published would link the mixed coins to it.
@@ -1079,18 +1126,29 @@ class CoinJoinFundsMigrationService @Inject constructor(
     }
 
     /**
-     * Proof that an INVALID stage left nothing out: synced, no pending
-     * CoinJoin-funded lock, a full settled snapshot matching the engine balance
-     * for the stage's wallet, and any recorded txid final. Doubt keeps the record.
+     * Proof that an INVALID stage left nothing out, for the WORST CASE its fields allow:
+     * synced, no pending CoinJoin lock, a settled snapshot of the stage's OWN wallet, and
+     * a recorded txid final and either a batch ([recordedTxIsBatch]) or a transfer settled
+     * on its BIP44 destination ([recordedTransferSettled]); without a usable txid, no tx
+     * recorded and no possible final transfer. Anything else stays blocked — reachable
+     * only from corruption, which Reset Wallet clears.
      */
     private suspend fun invalidStageReleasable(stage: ConsolidationStageRead.Invalid): Boolean = try {
-        blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+        val recorded = stage.observation
+        stage.walletId != null &&
+            (recorded != null || (!stage.unidentifiedTx && !stage.mayBeFinalTransfer)) &&
+            blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
             shieldedBalanceService.ensureShieldedReady() &&
             shieldedBalanceService.pendingCoinJoinShieldLockCount() == 0 &&
             coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks).let { snapshot ->
-                snapshot != null && (stage.walletId == null || stage.walletId == snapshot.walletId.lowercase())
+                snapshot != null && stage.walletId == snapshot.walletId.lowercase()
             } &&
-            (stage.txid == null || recordedTxFinal(stage.txid))
+            (
+                recorded == null || (
+                    recordedTxFinal(recorded.txid) &&
+                        (recordedTxIsBatch(recorded) || recordedTransferSettled(recorded))
+                    )
+                )
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("could not prove an invalid consolidation stage left nothing out; keeping it", t)
@@ -1388,7 +1446,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             val marker = inFlightMigration() ?: return
             // A definitive failure is not progress: nothing to watch or continue.
             if (marker.failed) return
-            val remainingMs = marker.startedAtMillis + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - System.currentTimeMillis()
+            val remainingMs = marker.remainingMillis()
             if (remainingMs <= 0L) {
                 log.info("in-flight mixed-funds migration ({}) already past the honesty window", marker.action)
                 return
@@ -1517,6 +1575,32 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
     }
 
+    /** The recorded tx, from its signed bytes or the stored row hashing to its txid. */
+    private suspend fun recordedTx(db: DashDatabase, state: CoinJoinConsolidationState): Transaction? {
+        val params = walletData.networkParameters
+        val own = Utils.HEX.decode(state.txid.lowercase()).reversedArray()
+        val bytes = state.replayBytesOrNull(params)
+            ?: db.transactionDao().getByTxid(own)?.transactionData?.takeIf {
+                Transaction(params, it).txId.toString().equals(state.txid, ignoreCase = true)
+            }
+            ?: return null
+        return Transaction(params, bytes)
+    }
+
+    /** Every output pays the stage wallet's CoinJoin account: a batch, never a final transfer. */
+    private suspend fun recordedTxIsBatch(state: CoinJoinConsolidationState): Boolean = try {
+        val db = dashSdkService.databaseOrNull()
+        val tx = db?.let { recordedTx(it, state) }
+        tx != null && tx.outputs.isNotEmpty() && tx.outputs.all { output ->
+            val address = output.scriptPubKey.getToAddress(walletData.networkParameters).toString()
+            ownDestinationAccount(db, state.walletId, address) == OwnDestinationAccount.COIN_JOIN
+        }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not classify the recorded consolidation tx; treating it as a possible transfer", t)
+        false
+    }
+
     /**
      * [transferSettled] for the recorded final transfer, read from its signed
      * bytes or (older stages) the stored row hashing to its txid; false on any doubt.
@@ -1526,13 +1610,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             val params = walletData.networkParameters
             val db = dashSdkService.databaseOrNull() ?: return false
             if (state.regularDestination.isEmpty()) return false
-            val own = Utils.HEX.decode(state.txid.lowercase()).reversedArray()
-            val bytes = state.replayBytesOrNull(params)
-                ?: db.transactionDao().getByTxid(own)?.transactionData?.takeIf {
-                    org.bitcoinj.core.Transaction(params, it).txId.toString().equals(state.txid, ignoreCase = true)
-                }
-                ?: return false
-            val tx = org.bitcoinj.core.Transaction(params, bytes)
+            val tx = recordedTx(db, state) ?: return false
             val rows = persistedTxos(db, tx.inputs.map { it.outpoint.bitcoinSerialize() })
             isOwnBip44Destination(state.walletId, state.regularDestination) &&
                 transferSettled(tx, rows, state.regularDestination, state.walletId, params) {
@@ -1778,8 +1856,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /**
      * An INVALID stage is never built from or continued: only its recorded txid
-     * is observed/replayed. A proven settled transfer completes; anything else
-     * ends in the "could not confirm" guidance.
+     * is observed/replayed. Only [recordedTransferSettled] completes it; anything
+     * else ends in the "could not confirm" guidance.
      */
     private suspend fun observeInvalidStage(read: ConsolidationStageRead.Invalid): ConsolidationStep {
         val state = read.observation
@@ -1804,7 +1882,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 delay(IN_FLIGHT_POLL_MS)
                 continue
             }
-            if (state.regularDestination.isEmpty()) {
+            // Nothing to complete: Try again releases it by [invalidStageReleasable]'s proof.
+            if (state.regularDestination.isEmpty() || recordedTxIsBatch(state)) {
                 expireMigration()
                 return ConsolidationStep.STOPPED
             }

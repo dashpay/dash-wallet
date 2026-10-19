@@ -29,6 +29,10 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.TransactionOutput
+import org.bitcoinj.core.Utils
+import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.dashfoundation.dashsdk.persistence.entities.AccountEntity
+import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.bitcoinj.wallet.CoinJoinExtension
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.data.entity.BlockchainState
@@ -61,7 +65,9 @@ class CoinJoinMixedFundsSourceTest {
         scope: TestScope,
         cutover: Boolean,
         sdkJson: String?,
-        dashjDuffs: Long = staleDashjDuffs
+        dashjDuffs: Long = staleDashjDuffs,
+        /** The SDK store's settled CoinJoin coin, so the routes can read a snapshot matching [sdkJson]. */
+        snapshotDuffs: Long = 150_000_000L
     ) {
         val config = mockk<DashPayConfig>(relaxed = true)
         val send = mockk<SdkL1SendService>(relaxed = true)
@@ -85,6 +91,17 @@ class CoinJoinMixedFundsSourceTest {
             every { sdk.walletManagerOrNull() } returns manager
             every { manager.wallets } returns MutableStateFlow(mapOf(walletId to mockk()))
             coEvery { manager.accountBalances(any()) } returns sdkJson
+            val db = mockk<DashDatabase>(relaxed = true)
+            every { sdk.databaseOrNull() } returns db
+            coEvery { db.accountDao().getByKey(any(), 1, 0) } returns listOf(
+                AccountEntity(id = 7, walletId = Utils.HEX.decode(walletId), accountType = 1, accountIndex = 0,
+                    accountTypeName = "CoinJoin")
+            )
+            every { db.coreAddressDao().observeByAccount(7) } returns MutableStateFlow(emptyList())
+            every { db.txoDao().observeUnspentByWallet(any()) } returns MutableStateFlow(listOf(
+                TxoEntity(ByteArray(36), 0, snapshotDuffs, "", isConfirmed = true,
+                    walletId = Utils.HEX.decode(walletId), accountId = 7L)
+            ))
             coEvery { blockchain.getState() } returns chainState
             every { chainState.isSynced() } returns true
 

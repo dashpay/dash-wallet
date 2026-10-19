@@ -102,10 +102,9 @@ class MixedFundsMigrationDialogFragment :
             val state = viewModel.uiState.value
             // A timed-out/unconfirmed transfer resumes the existing transaction;
             // a failed one runs its move again, so it asks that move's question
-            // (and, being a fresh spend, authenticates).
-            confirmThen(if (state.retryStartsFreshSpend()) state.attemptedAction else null) {
-                viewModel.retryMigration()
-            }
+            // (and, being a fresh spend, authenticates). The mode is decided once, here.
+            val move = if (state.retryStartsFreshSpend()) state.attemptedAction else null
+            confirmThen(move) { viewModel.retryMigration(authenticatedMove = move) }
         }
         // The fallback offered when SHIELDING failed: run the existing
         // combine ("keep it spendable") migration instead.
@@ -160,9 +159,11 @@ class MixedFundsMigrationDialogFragment :
 
                     // Nothing to offer: the fresh read found no mixed funds
                     // (moved elsewhere, or the post-cutover SDK view cannot
-                    // be read). Never leave a choice sheet up whose choices
-                    // are all disabled — close without recording a deferral.
-                    if (choiceMode && state.outcome == null && state.amountChecked && amount == null &&
+                    // be read), or neither route can run. Never leave a choice
+                    // sheet up whose choices are all disabled — close without
+                    // recording a deferral.
+                    val nothingRunnable = amount == null || (!state.shieldOperable && !state.combineOperable)
+                    if (choiceMode && state.outcome == null && state.amountChecked && nothingRunnable &&
                         !state.migrationPending
                     ) {
                         dismissAllowingStateLoss()
@@ -170,10 +171,11 @@ class MixedFundsMigrationDialogFragment :
                     }
 
                     val actionable = amount != null && state.amountChecked && choiceMode
-                    binding.shieldButton.isVisible = choiceMode
-                    binding.shieldNote.isVisible = choiceMode
-                    binding.combineButton.isVisible = choiceMode
-                    binding.combineNote.isVisible = choiceMode
+                    // An inoperable route is hidden: its spend would only refuse.
+                    binding.shieldButton.isVisible = presentation.showShieldChoice
+                    binding.shieldNote.isVisible = presentation.showShieldChoice
+                    binding.combineButton.isVisible = presentation.showCombineChoice
+                    binding.combineNote.isVisible = presentation.showCombineChoice
                     binding.shieldButton.isEnabled = actionable
                     binding.combineButton.isEnabled = actionable
                     binding.restartButton.isVisible = presentation.showRestart

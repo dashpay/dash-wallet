@@ -21,6 +21,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -534,13 +535,60 @@ class SdkL1SendServiceTest {
         assertEquals(0, source.sendCalls)
     }
 
-    private fun consolidationService(source: FakeSource) = SdkL1SendService(
+    private fun consolidationService(
+        source: FakeSource,
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry()
+    ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(true),
         isValidAddress = { true },
         l1Progress = { caughtUpProgress() },
-        hasAppLockedCoinJoinOutputs = { false }
+        hasAppLockedCoinJoinOutputs = { false },
+        seamOutputLockRegistry = seamRegistry
     )
+
+    /** Cancelled once the txid checkpoint is being written: the broadcast still follows, nothing is abandoned. */
+    @Test
+    fun consolidateCoinJoin_cancelledAtTheCheckpoint_stillBroadcasts() = runBlocking {
+        val source = readySource()
+        val svc = consolidationService(source)
+        var result: SdkWriteResult<String>? = null
+        lateinit var call: kotlinx.coroutines.Job
+        call = launch {
+            result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) {
+                call.cancel()
+                kotlinx.coroutines.delay(10) // the checkpoint write, suspended when cancelled
+            }
+        }
+        call.join()
+        assertEquals(1, source.consolidationBroadcasts)
+        assertEquals(0, source.consolidationAbandons)
+        assertTrue(result is SdkWriteResult.Broadcast)
+    }
+
+    /**
+     * The CoinJoin drains use the send-all union: an SDK-only output locked in
+     * the seam registry (invisible to the dashj check) refuses consolidation
+     * and the migration's shield guard, and so does a registry that cannot be read.
+     */
+    @Test
+    fun consolidateCoinJoin_seamLockedOrUnreadableRegistry_isNotBroadcastAndNeverBuilds() = runBlocking {
+        val unreadable = mockk<SeamOutputLockRegistry> {
+            every { hasAnyLocks() } throws IllegalStateException("registry unavailable")
+        }
+        val locked = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        for (registry in listOf(locked, unreadable)) {
+            val source = readySource()
+            val svc = consolidationService(source, registry)
+            assertTrue(svc.coinJoinOutputsLocked())
+            var prepared = false
+            val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+            assertEquals(SdkWriteResult.NotBroadcast("CoinJoin outputs are locked"), result)
+            assertFalse(prepared)
+            assertTrue(source.consolidationWallets.isEmpty())
+        }
+        assertFalse(consolidationService(readySource()).coinJoinOutputsLocked())
+    }
 
     @Test
     fun consolidateCoinJoin_bindLookupFailure_isNotBroadcast() = runBlocking {
@@ -572,7 +620,10 @@ class SdkL1SendServiceTest {
         val rejection = IllegalArgumentException("Drain must spend every snapshot coin (spends 2 of 3)")
         val svc = consolidationService(source)
         val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { throw rejection }
-        assertEquals(SdkWriteResult.NotBroadcast("consolidation preparation failed", rejection), result)
+        // Compared by message: crossing withContext, coroutine debug mode may rethrow a copy.
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals("consolidation preparation failed", (result as SdkWriteResult.NotBroadcast).reason)
+        assertEquals(rejection.message, result.cause?.message)
         assertEquals(1, source.consolidationAbandons)
         assertEquals(0, source.consolidationBroadcasts)
     }

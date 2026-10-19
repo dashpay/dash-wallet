@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -376,6 +377,7 @@ class ShieldedBalanceServiceTest {
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {},
         hasAppLockedCoinJoinOutputs: () -> Boolean = { false },
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
         afterReadyCommitted: suspend () -> Unit = {},
         afterStopFallbackBump: suspend () -> Unit = {}
@@ -389,6 +391,7 @@ class ShieldedBalanceServiceTest {
         ensureL1SpvRunning = ensureL1SpvRunning,
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
         hasAppLockedCoinJoinOutputs = hasAppLockedCoinJoinOutputs,
+        seamOutputLockRegistry = seamRegistry,
         stopLockTimeoutMs = stopLockTimeoutMs,
         afterReadyCommitted = afterReadyCommitted,
         afterStopFallbackBump = afterStopFallbackBump
@@ -1819,6 +1822,57 @@ class ShieldedBalanceServiceTest {
             service(pending, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = { true })
                 .shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'")
         )
+    }
+
+    /** Cancelled once the submission checkpoint is being written: the CoinJoin drain still runs. */
+    @Test
+    fun mixedFundsShield_cancelledAtTheCheckpoint_stillSubmits() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        var checkpointed = false
+        lateinit var call: kotlinx.coroutines.Job
+        call = launch {
+            service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") {
+                call.cancel()
+                delay(10) // the checkpoint write, suspended when cancelled
+                checkpointed = true
+            }
+        }
+        call.join()
+        assertTrue(checkpointed)
+        assertEquals(1, source.accountFundCalls)
+    }
+
+    /**
+     * The shield drain uses the send-all union: an SDK-only output locked in the
+     * seam registry (which the dashj check cannot see) refuses it, as does a
+     * registry that cannot be read — the BIP44 shield is unaffected.
+     */
+    @Test
+    fun mixedFundsShield_seamLockedOutputRefusesTheDrain() = runBlocking {
+        val unreadable = mockk<SeamOutputLockRegistry> {
+            every { hasAnyLocks() } throws IllegalStateException("registry unavailable")
+        }
+        val locked = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        for (registry in listOf(locked, unreadable)) {
+            val source = readySource()
+            val service = service(
+                source, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = { false },
+                seamRegistry = registry
+            )
+            var checkpointed = false
+            val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'") { checkpointed = true }
+            assertTrue(result is SdkWriteResult.NotBroadcast)
+            assertFalse(checkpointed)
+            assertEquals(0, source.accountFundCalls)
+        }
+        // No lock on either side: the same drain runs.
+        val source = readySource()
+        val result = service(source, progress = { caughtUpProgress() }).shieldMixedFundsFromWallet(
+            Dash.COIN, "m/9'/1'/4'/0'"
+        )
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(1, source.accountFundCalls)
     }
 
     /**

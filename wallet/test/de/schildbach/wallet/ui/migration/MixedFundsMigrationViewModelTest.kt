@@ -11,6 +11,7 @@ import de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome
+import de.schildbach.wallet.service.platform.sdk.MixedFundsRoutes
 import de.schildbach.wallet.util.viewModels.MainCoroutineRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,9 +32,21 @@ import org.junit.Test
 class MixedFundsMigrationViewModelTest {
     @get:Rule val coroutineRule = MainCoroutineRule()
 
+    /** A relaxed service offering [Coin.COIN] in the choice, nothing pending. */
+    private fun choiceService(
+        markers: MutableStateFlow<InFlightMixedFundsMigration?> = MutableStateFlow(null),
+        routes: MixedFundsRoutes = MixedFundsRoutes(shieldOperable = true, combineOperable = true)
+    ) = mockk<CoinJoinFundsMigrationService>(relaxed = true).also { service ->
+        coEvery { service.routeAvailability() } returns routes
+        coEvery { service.restorePendingShieldMigration() } returns false
+        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
+        coEvery { service.observeInFlightMigration() } returns markers
+    }
+
     @Test
     fun reopeningSheetDuringShieldKeepsProgressAndDoesNotSubmitAgain() = runBlocking {
         val service = mockk<CoinJoinFundsMigrationService>()
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         val completion = CompletableDeferred<MixedFundsMigrationOutcome>()
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         coEvery { service.restorePendingShieldMigration() } returns false
@@ -70,6 +83,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun restoredPendingShieldDisablesBothMigrationActions() {
         val service = mockk<CoinJoinFundsMigrationService>()
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         every { service.verifiedLandings } returns 0
         coEvery { service.restorePendingShieldMigration() } returns true
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
@@ -96,6 +110,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun shieldCreditLandingBeforeFundingReturnsShowsSuccess() = runBlocking {
         val service = mockk<CoinJoinFundsMigrationService>()
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         val completion = CompletableDeferred<MixedFundsMigrationOutcome>()
         val markers = MutableStateFlow<de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration?>(null)
         var landings = 0
@@ -126,10 +141,7 @@ class MixedFundsMigrationViewModelTest {
 
     @Test
     fun laterDefersChoiceWithoutStartingASpend() = runBlocking {
-        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
-        coEvery { service.restorePendingShieldMigration() } returns false
-        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
-        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(null)
+        val service = choiceService()
         val store = ViewModelStore()
         val model = MixedFundsMigrationViewModel(service)
         store.put("migration", model)
@@ -144,6 +156,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun timedOutShieldRetriesExistingLockOnly() {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         coEvery { service.restorePendingShieldMigration() } returns true
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
@@ -157,7 +170,7 @@ class MixedFundsMigrationViewModelTest {
         store.put("migration", model)
         try {
             assertTrue(model.uiState.value.resultTimedOut)
-            model.retryMigration()
+            model.retryMigration(authenticatedMove = null)
             coVerify(exactly = 1) { service.retryPendingMigration() }
             coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
             assertEquals(MixedFundsMigrationOutcome.UNCONFIRMED, model.uiState.value.outcome)
@@ -167,6 +180,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun timedOutRegularTransferResumesSavedMigrationOnly() {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         coEvery { service.restorePendingShieldMigration() } returns true
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
@@ -180,7 +194,7 @@ class MixedFundsMigrationViewModelTest {
         store.put("migration", model)
         try {
             assertTrue(model.uiState.value.resultTimedOut)
-            model.retryMigration()
+            model.retryMigration(authenticatedMove = null)
             coVerify(exactly = 1) { service.retryPendingMigration() }
             coVerify(exactly = 0) { service.combineIntoUnmixedBalance() }
             coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
@@ -197,6 +211,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun refreshAmountReplacesThePreSyncNullRead() {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         var available: Coin? = null
         coEvery { service.restorePendingShieldMigration() } returns false
         coEvery { service.mixedFundsToMigrate() } answers { available }
@@ -225,6 +240,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun refreshAmountFlagsAPendingMigrationSoTheSheetStaysUp() {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         coEvery { service.restorePendingShieldMigration() } returns true
         coEvery { service.mixedFundsToMigrate() } returns null
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(null)
@@ -243,6 +259,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun rejectionClearedMarkerIsNeverReportedAsSuccess() = runBlocking {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         val markers = MutableStateFlow<InFlightMixedFundsMigration?>(null)
         val completion = CompletableDeferred<MixedFundsMigrationOutcome>()
         coEvery { service.restorePendingShieldMigration() } returns false
@@ -270,6 +287,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun repeatedNullMarkerEmissionsDoNotFakeALanding() = runBlocking {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         val emissions = kotlinx.coroutines.flow.MutableSharedFlow<InFlightMixedFundsMigration?>(replay = 1)
         var landings = 0
         every { service.verifiedLandings } answers { landings }
@@ -296,6 +314,7 @@ class MixedFundsMigrationViewModelTest {
     @Test
     fun unconfirmedGuidanceIsClosableAndRetriesOnlyTheExistingTransaction() {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         coEvery { service.restorePendingShieldMigration() } returns false
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         val markers = MutableStateFlow<InFlightMixedFundsMigration?>(null)
@@ -320,7 +339,7 @@ class MixedFundsMigrationViewModelTest {
             assertFalse(shown.showTransferUnmixed)
             assertFalse(state.retryStartsFreshSpend())
 
-            model.retryMigration()
+            model.retryMigration(authenticatedMove = null)
             coVerify(exactly = 1) { service.retryPendingMigration() }
             coVerify(exactly = 1) { service.shieldMixedFunds(any()) }
         } finally { store.clear() }
@@ -346,10 +365,7 @@ class MixedFundsMigrationViewModelTest {
 
     @Test
     fun definitiveShieldFailureOffersTheWalletFallbackAndClosingReturnsToTheChoice() {
-        val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
-        coEvery { service.restorePendingShieldMigration() } returns false
-        coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
-        coEvery { service.observeInFlightMigration() } returns MutableStateFlow(null)
+        val service = choiceService()
         coEvery { service.shieldMixedFunds(any()) } returns MixedFundsMigrationOutcome.NOT_ATTEMPTED
         val store = ViewModelStore()
         val model = MixedFundsMigrationViewModel(service)
@@ -368,9 +384,109 @@ class MixedFundsMigrationViewModelTest {
         } finally { store.clear() }
     }
 
+    /**
+     * Shielding open but the Combine send gate shut: the choice offers Shield
+     * only, and a definitive shield failure offers Try again without the
+     * wallet-balance (Combine) fallback. The reverse hides Shield and a failed
+     * shield's Try again, while still offering the fallback.
+     */
+    @Test
+    fun inoperableRouteIsNeverOfferedInTheChoiceOrAsAFallback() {
+        val service = choiceService(routes = MixedFundsRoutes(shieldOperable = true, combineOperable = false))
+        coEvery { service.shieldMixedFunds(any()) } returns MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            val choice = model.uiState.value.presentation()
+            assertTrue(choice.choiceMode)
+            assertTrue(choice.showShieldChoice)
+            assertFalse(choice.showCombineChoice)
+
+            model.shieldMixedFunds()
+            val failed = model.uiState.value.presentation()
+            assertTrue(failed.failed)
+            assertTrue(failed.showRestart)
+            assertFalse(failed.showTransferUnmixed)
+
+            // The routes flip (re-read on the next showing): Combine only.
+            coEvery { service.routeAvailability() } returns
+                MixedFundsRoutes(shieldOperable = false, combineOperable = true)
+            model.refreshAmount()
+            val flipped = model.uiState.value.presentation()
+            assertTrue(flipped.failed)
+            assertFalse(flipped.showRestart)
+            assertTrue(flipped.showTransferUnmixed)
+            model.onSheetClosed()
+            val reopened = model.uiState.value.presentation()
+            assertTrue(reopened.choiceMode)
+            assertFalse(reopened.showShieldChoice)
+            assertTrue(reopened.showCombineChoice)
+
+            // An unreadable availability offers neither route.
+            coEvery { service.routeAvailability() } throws IllegalStateException("probe failed")
+            model.refreshAmount()
+            val unknown = model.uiState.value.presentation()
+            assertFalse(unknown.showShieldChoice)
+            assertFalse(unknown.showCombineChoice)
+        } finally { store.clear() }
+    }
+
+    /** A FAILED marker written later by the watcher, and its clearing, re-read the routes. */
+    @Test
+    fun laterFailedMarkerAndItsClearingUseCurrentRoutes() {
+        val markers = MutableStateFlow<InFlightMixedFundsMigration?>(null)
+        val service = choiceService(markers)
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            val now = System.currentTimeMillis()
+            markers.value = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, now, 0L)
+            // The send gate closes while the migration runs; the watcher then fails it.
+            coEvery { service.routeAvailability() } returns
+                MixedFundsRoutes(shieldOperable = true, combineOperable = false)
+            markers.value = markers.value?.copy(failed = true)
+            val failed = model.uiState.value.presentation()
+            assertTrue(failed.failed)
+            assertTrue(failed.showRestart)
+            assertFalse(failed.showTransferUnmixed)
+            // Released: the choice is offered on the routes as they are now.
+            coEvery { service.routeAvailability() } returns
+                MixedFundsRoutes(shieldOperable = false, combineOperable = true)
+            markers.value = null
+            assertFalse(model.uiState.value.shieldOperable)
+            assertTrue(model.uiState.value.combineOperable)
+        } finally { store.clear() }
+    }
+
+    /** Try again runs only in the mode the sheet confirmed: a fresh spend only when authenticated for that move. */
+    @Test
+    fun retryRunsOnlyTheConfirmedMode() {
+        val service = choiceService()
+        coEvery { service.shieldMixedFunds(any()) } returns MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            model.shieldMixedFunds()
+            assertTrue(model.uiState.value.retryStartsFreshSpend())
+            // Confirmed as a resume, or authenticated for the other move: nothing runs.
+            model.retryMigration(authenticatedMove = null)
+            model.retryMigration(authenticatedMove = MixedFundsMigrationAction.COMBINE)
+            coVerify(exactly = 1) { service.shieldMixedFunds(any()) }
+            coVerify(exactly = 0) { service.retryPendingMigration() }
+            coVerify(exactly = 0) { service.combineIntoUnmixedBalance() }
+            // Authenticated for the failed move: it runs again.
+            model.retryMigration(authenticatedMove = MixedFundsMigrationAction.SHIELD)
+            coVerify(exactly = 2) { service.shieldMixedFunds(any()) }
+        } finally { store.clear() }
+    }
+
     @Test
     fun persistedDefinitiveFailureAfterConsolidationPresentsTheFallback() {
         val service = mockk<CoinJoinFundsMigrationService>(relaxed = true)
+        coEvery { service.routeAvailability() } returns MixedFundsRoutes(shieldOperable = true, combineOperable = true)
         coEvery { service.restorePendingShieldMigration() } returns true
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         // The watcher recorded the shield's definitive failure; the sheet opens on it later.

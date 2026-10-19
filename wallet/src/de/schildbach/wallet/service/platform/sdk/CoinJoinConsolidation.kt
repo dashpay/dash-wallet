@@ -131,7 +131,15 @@ internal data class CoinJoinConsolidationState(
             } else {
                 null
             }
-            return ConsolidationStageRead.Invalid(problem, action, walletId, txid, observation)
+            // Worst case: only a COMBINE stage (destination set or unreadable) has a final
+            // transfer, recorded as TRANSFERRING — which an unknown phase may be.
+            val mayBeCombine = regularDestination == null || regularDestination.isNotEmpty()
+            val mayBeFinalTransfer = phase == TRANSFERRING || (mayBeCombine && phase !in PHASES)
+            // Something was recorded where a tx goes, but no usable txid identifies it.
+            val unidentifiedTx = txid == null && (txidField != "" || rawTx != "")
+            return ConsolidationStageRead.Invalid(
+                problem, action, walletId, txid, observation, mayBeFinalTransfer, unidentifiedTx
+            )
         }
 
         /** Non-empty, even-length hex. No regex: rawTx runs to ~150K chars (ICU backtracking limits). */
@@ -154,13 +162,17 @@ internal sealed interface ConsolidationStageRead {
      * @param walletId / [txid] the recorded values when well formed, else null.
      * @param observation the recorded tx to observe/replay (bytes kept only if
      *   they hash to it); null without a usable txid and wallet.
+     * @param mayBeFinalTransfer the stage may have recorded the final BIP44 transfer.
+     * @param unidentifiedTx a tx was recorded, but no usable txid identifies it.
      */
     data class Invalid(
         val reason: String,
         val action: MixedFundsMigrationAction,
         val walletId: String?,
         val txid: String?,
-        val observation: CoinJoinConsolidationState?
+        val observation: CoinJoinConsolidationState?,
+        val mayBeFinalTransfer: Boolean = true,
+        val unidentifiedTx: Boolean = true
     ) : ConsolidationStageRead
 }
 

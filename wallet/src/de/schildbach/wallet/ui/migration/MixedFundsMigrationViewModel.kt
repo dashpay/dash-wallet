@@ -21,9 +21,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
 import de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration
-import de.schildbach.wallet.service.platform.sdk.MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction
 import de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome
+import de.schildbach.wallet.service.platform.sdk.MixedFundsRoutes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -70,6 +70,9 @@ import javax.inject.Inject
  * @param resultLanded the result became user-visible while this sheet was
  *   observing (marker cleared): swap to the success presentation and
  *   auto-dismiss.
+ * @param shieldOperable / [combineOperable] that route's spend gate is open
+ *   ([CoinJoinFundsMigrationService.routeAvailability], read with [amount]);
+ *   an inoperable route is never offered, in the choice or as a fallback.
  */
 data class MixedFundsMigrationUIState(
     val amount: Coin? = null,
@@ -80,7 +83,9 @@ data class MixedFundsMigrationUIState(
     val attemptedAction: MixedFundsMigrationAction? = null,
     val awaitingResult: Boolean = false,
     val resultTimedOut: Boolean = false,
-    val resultLanded: Boolean = false
+    val resultLanded: Boolean = false,
+    val shieldOperable: Boolean = false,
+    val combineOperable: Boolean = false
 )
 
 /** Which parts of the sheet are shown — a pure function of [MixedFundsMigrationUIState]. */
@@ -93,6 +98,9 @@ internal data class MixedFundsSheetPresentation(
     val choiceMode: Boolean,
     /** Spinner; Close is hidden and the sheet cannot be dismissed. */
     val processing: Boolean,
+    /** The Shield / Combine choice buttons (shown disabled while the routes are read). */
+    val showShieldChoice: Boolean,
+    val showCombineChoice: Boolean,
     val showRestart: Boolean,
     val showTransferUnmixed: Boolean,
     val showClose: Boolean,
@@ -110,16 +118,25 @@ internal fun MixedFundsMigrationUIState.presentation(): MixedFundsSheetPresentat
         (awaitingResult || outcome == MixedFundsMigrationOutcome.STARTED)
     val processing = (inProgress && !terminalGuidance) || awaiting
     val choiceMode = !failed && !processing && !terminalGuidance && !resultLanded
+    // A failed move's Try again re-runs that move: offered only while its route can run.
+    val failedRouteOperable = when (attemptedAction) {
+        MixedFundsMigrationAction.SHIELD -> shieldOperable
+        MixedFundsMigrationAction.COMBINE -> combineOperable
+        null -> false
+    }
     return MixedFundsSheetPresentation(
         failed = failed,
         terminalGuidance = terminalGuidance,
         choiceMode = choiceMode,
         processing = processing,
-        // Nothing to retry while a call is still running.
-        showRestart = (failed || terminalGuidance) && !inProgress,
+        showShieldChoice = choiceMode && (!amountChecked || shieldOperable),
+        showCombineChoice = choiceMode && (!amountChecked || combineOperable),
+        // Nothing to retry while a call is still running. Guidance's Try again only resumes.
+        showRestart = (terminalGuidance || (failed && failedRouteOperable)) && !inProgress,
         // After a DEFINITIVE shield failure only — an uncertain one must not
-        // offer a second, fresh spend.
-        showTransferUnmixed = failed && attemptedAction == MixedFundsMigrationAction.SHIELD && !inProgress,
+        // offer a second, fresh spend — and only while Combine can run.
+        showTransferUnmixed = failed && attemptedAction == MixedFundsMigrationAction.SHIELD && !inProgress &&
+            combineOperable,
         showClose = !processing,
         cancelable = !processing && !choiceMode
     )
@@ -309,6 +326,8 @@ class MixedFundsMigrationViewModel @Inject constructor(
     private fun onMarker(marker: InFlightMixedFundsMigration?) {
         if (marker == null) {
             val landed = markerSet && migrationService.verifiedLandings > landingsAtObservation
+            // Cleared: the choice (or a released failure's fallback) is offered again on current routes.
+            if (markerSet) refreshRoutes()
             markerSet = false
             updateFacts { it.copy(marker = MarkerPhase.ABSENT, landed = it.landed || landed) }
             return
@@ -320,6 +339,8 @@ class MixedFundsMigrationViewModel @Inject constructor(
             marker.isExpired() -> MarkerPhase.EXPIRED
             else -> MarkerPhase.PENDING
         }
+        // A failure offers Try again and the fallback: on current routes, not the sheet's first read.
+        if (phase == MarkerPhase.FAILED && facts.marker != MarkerPhase.FAILED) refreshRoutes()
         updateFacts {
             it.copy(marker = phase, action = marker.action, markerSeenSinceCall = true, landed = false)
         }
@@ -328,7 +349,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
             // open across the window needs its own tick to stop spinning
             // honestly. Cancelled by every later emission.
             expiryJob = viewModelScope.launch {
-                delay(marker.startedAtMillis + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - System.currentTimeMillis() + 50L)
+                delay(marker.remainingMillis() + 50L)
                 val current = migrationService.inFlightMigration()
                 if (current != null && !current.failed && current.isExpired() &&
                     facts.marker == MarkerPhase.PENDING
@@ -355,8 +376,31 @@ class MixedFundsMigrationViewModel @Inject constructor(
         amountJob = viewModelScope.launch {
             val pending = migrationService.restorePendingShieldMigration()
             val amount = migrationService.mixedFundsToMigrate()
+            val routes = readRoutes()
+            // One write: the sheet must never see the amount checked without its routes.
             _uiState.value = _uiState.value.copy(amount = amount, amountChecked = true, migrationPending = pending)
+                .withRoutes(routes)
         }
+    }
+
+    private fun refreshRoutes() {
+        viewModelScope.launch { applyRoutes(readRoutes()) }
+    }
+
+    private fun applyRoutes(routes: MixedFundsRoutes) {
+        _uiState.value = _uiState.value.withRoutes(routes)
+    }
+
+    private fun MixedFundsMigrationUIState.withRoutes(routes: MixedFundsRoutes) =
+        copy(shieldOperable = routes.shieldOperable, combineOperable = routes.combineOperable)
+
+    /** [CoinJoinFundsMigrationService.routeAvailability]; both closed when it cannot be read. */
+    private suspend fun readRoutes(): MixedFundsRoutes = try {
+        migrationService.routeAvailability()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("failed to read the mixed-funds routes; offering neither", t)
+        MixedFundsRoutes(shieldOperable = false, combineOperable = false)
     }
 
     /**
@@ -390,13 +434,23 @@ class MixedFundsMigrationViewModel @Inject constructor(
         _uiState.value.amount?.let { migrationService.deferMigration(it) }
     }
 
-    fun retryMigration() {
+    /**
+     * Try again, in the mode the sheet decided once and confirmed: [authenticatedMove]
+     * null resumes; non-null is the fresh spend of that move, already authenticated.
+     * If the state now calls for anything else, nothing runs.
+     */
+    fun retryMigration(authenticatedMove: MixedFundsMigrationAction?) {
         val state = _uiState.value
         if (state.inProgress) return
         // A pending marker blocks a retry unless its terminal guidance is up
         // (an UNCONFIRMED outcome keeps the marker): that retry only resumes.
         if (state.awaitingResult && !state.presentation().terminalGuidance) return
-        if (!state.retryStartsFreshSpend()) {
+        val fresh = state.retryStartsFreshSpend()
+        if (authenticatedMove != (if (fresh) state.attemptedAction else null)) {
+            log.warn("retry mode changed under the confirmation; not retrying")
+            return
+        }
+        if (!fresh) {
             startCall(action = null) {
                 try {
                     migrationService.retryPendingMigration()
@@ -516,6 +570,8 @@ class MixedFundsMigrationViewModel @Inject constructor(
         viewModelScope.launch {
             val outcome = call()
             updateFacts { it.copy(callRunning = false, callResult = outcome) }
+            // A failure may follow a gate closing: its fallback views use fresh route availability.
+            applyRoutes(readRoutes())
         }
     }
 

@@ -1377,6 +1377,10 @@ class CoinJoinConsolidationTest {
         InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis(), 0L, failed = failed)
     )
 
+    private fun combineMarker() = formatInFlightMigration(
+        InFlightMixedFundsMigration(MixedFundsMigrationAction.COMBINE, System.currentTimeMillis(), 0L)
+    )
+
     private fun Fixture.assertNothingBuilt() {
         coVerify(exactly = 0) { send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
@@ -1636,16 +1640,22 @@ class CoinJoinConsolidationTest {
 
     @Test fun shortWalletIdStageTakesTheInvalidStagePathNotASilentStop() = runTest {
         val f = Fixture(this)
-        f.consolidation = rawStage("ready", wallet = "01")
+        val stage = rawStage("ready", wallet = "01")
+        f.consolidation = stage
         f.marker = shieldMarker()
         f.service.startInFlightWatcherIfNeeded()
         runCurrent()
         // Never continued: straight to the guidance.
         assertTrue(f.expired())
         f.assertNothingBuilt()
-        // Released only on proof nothing is out; then the user's move starts afresh.
+        // No wallet identity: the bound wallet's clean snapshot proves nothing about the
+        // stage's own wallet, so neither a fresh move nor Try again releases it.
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
-        assertEquals(walletId, CoinJoinConsolidationState.decode(f.consolidation).walletId)
+        assertEquals(MixedFundsMigrationOutcome.UNCONFIRMED, f.service.retryPendingMigration())
+        assertTrue(f.service.releaseFailedMigration())
+        assertEquals(stage, f.consolidation)
+        assertTrue(f.expired())
+        f.assertNothingBuilt()
     }
 
     // ── App-locked CoinJoin outputs: the drain cannot skip them ──────
@@ -1674,9 +1684,7 @@ class CoinJoinConsolidationTest {
         val tx = transaction(spent, regular)
         consolidation = CoinJoinConsolidationState(walletId, destination, CoinJoinConsolidationState.TRANSFERRING,
             tx.txId.toString(), regular, Utils.HEX.encode(tx.bitcoinSerialize())).encode()
-        marker = formatInFlightMigration(
-            InFlightMixedFundsMigration(MixedFundsMigrationAction.COMBINE, System.currentTimeMillis(), 0L)
-        )
+        marker = combineMarker()
         storedTx = TransactionEntity(tx.txId.reversedBytes, tx.bitcoinSerialize(), context = 1)
         coins.value = emptyList()
         engineBalance = 0
@@ -2176,6 +2184,298 @@ class CoinJoinConsolidationTest {
         assertNull(f.service.inFlightMigration())
         assertEquals("", f.consolidation)
         f.assertNothingBuilt()
+    }
+
+    /**
+     * An invalid TRANSFERRING stage (here: signed bytes that do not hash to its
+     * txid) is released only once its BIP44 destination output is persisted —
+     * a final txid with spent inputs is not enough. Without a recorded BIP44
+     * destination it is never released by proof.
+     */
+    @Test fun invalidTransferStageIsReleasedOnlyOnceItsBip44OutputIsPersisted() = runTest {
+        val f = Fixture(this)
+        val tx = transaction((0 until 3).map(::coin), regular)
+        val other = Utils.HEX.encode(transaction((3 until 5).map(::coin), regular).bitcoinSerialize())
+        val stage = rawStage("transferring", tx.txId.toString(), regular, other)
+        assertEquals("signed bytes do not hash to the txid", invalid(stage).reason)
+        f.consolidation = stage
+        f.marker = combineMarker()
+        f.store(tx)
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        f.persistSettled(tx)
+        val output = Utils.HEX.encode(TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize())
+        val persistedOutput = requireNotNull(f.txos.remove(output))
+        // Final, inputs spent by it, account empty — but the destination output is not persisted.
+        assertTrue(f.service.releaseFailedMigration())
+        assertEquals(stage, f.consolidation)
+        assertNotNull(f.service.inFlightMigration())
+        // Persisted on the destination: provably nothing is out.
+        f.txos[output] = persistedOutput
+        assertTrue(f.service.releaseFailedMigration())
+        assertEquals("", f.consolidation)
+        assertNull(f.service.inFlightMigration())
+        f.assertNothingBuilt()
+
+        // No recoverable BIP44 destination: never released, however settled it looks.
+        val noDestination = rawStage("transferring", tx.txId.toString(), "", Utils.HEX.encode(tx.bitcoinSerialize()))
+        f.consolidation = noDestination
+        f.marker = formatInFlightMigration(
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis(), 0L)
+        )
+        assertTrue(f.service.releaseFailedMigration())
+        assertEquals(noDestination, f.consolidation)
+        f.assertNothingBuilt()
+    }
+
+    /**
+     * A future start (Long.MAX_VALUE, or the clock moved back) reads as EXPIRED:
+     * "could not confirm" guidance with its action, failed flag and stage kept —
+     * never a watcher, never a repair that re-arms the stage.
+     */
+    @Test fun futureMarkerReadsAsExpiredGuidanceKeepingItsRecord() = runTest {
+        val soon = System.currentTimeMillis() + 60 * 60_000L
+        for (raw in listOf("COMBINE|${Long.MAX_VALUE}|0", "COMBINE|$soon|0|failed")) {
+            val f = Fixture(this)
+            // A definitively failed (READY) stage: re-arming it would spend without a tap.
+            val stage = CoinJoinConsolidationState(walletId, destination, regularDestination = regular).encode()
+            f.consolidation = stage
+            f.marker = raw
+            val read = requireNotNull(f.service.inFlightMigration())
+            assertEquals(raw, MixedFundsMigrationAction.COMBINE, read.action)
+            assertEquals(raw, raw.endsWith("failed"), read.failed)
+            assertTrue(raw, read.isExpired())
+            assertTrue(raw, f.service.restorePendingShieldMigration())
+            runCurrent()
+            advanceTimeBy(60_000); runCurrent()
+            assertEquals(raw, raw, f.marker)
+            assertEquals(raw, stage, f.consolidation)
+            f.assertNothingBuilt()
+        }
+    }
+
+    /**
+     * The honesty window never exceeds the timeout (plus the clock-jitter allowance before a
+     * slightly-future start), at any reading time, and its arithmetic cannot overflow.
+     */
+    @Test fun markerWindowNeverExceedsTheTimeoutAndCannotOverflow() {
+        val now = 1_700_000_000_000L
+        val t = MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS
+        val skew = MIXED_FUNDS_START_SKEW_MS
+        val starts = listOf(0L, now - 2 * t, now - t - 1, now - t, now - 1, now, now + 5, now + skew - 1,
+            now + skew, now + skew + 1, now + t, now + 86_400_000L, Long.MAX_VALUE - 1, Long.MAX_VALUE)
+        val readings = listOf(0L, now - 1, now, now + 1, now + t, now + t + 1, now + 2 * t, Long.MAX_VALUE)
+        for (start in starts) for (at in readings) {
+            val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, start, 0L)
+            val remaining = marker.remainingMillis(at)
+            val case = "start=$start at=$at"
+            assertTrue(case, remaining in -1L..t)
+            // Pending only from up to `skew` before its start until the window lapses.
+            assertEquals(case, at - start < -skew || at - start > t, marker.isExpired(at))
+            if (!marker.isExpired(at)) assertEquals(case, t - (at - start).coerceAtLeast(0L), remaining)
+        }
+        // Total wall-clock window: at most the timeout plus the allowance.
+        val ahead = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, now + skew, 0L)
+        assertFalse(ahead.isExpired(now))
+        assertFalse(ahead.isExpired(now + skew + t))
+        assertTrue(ahead.isExpired(now + skew + t + 1))
+        // A few milliseconds ahead (a backward clock step right after writing) is still pending.
+        val jitter = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, now + 5, 0L)
+        assertFalse(jitter.isExpired(now))
+        assertEquals(t, jitter.remainingMillis(now))
+        // Parsing keeps the recorded start: the record (and its acknowledgement key) is unchanged.
+        val parsed = requireNotNull(parseInFlightMigration("SHIELD|${Long.MAX_VALUE}|0"))
+        assertEquals(Long.MAX_VALUE, parsed.startedAtMillis)
+    }
+
+    /** Route availability is per route: shielding alone never makes Combine operable. */
+    @Test fun routeAvailabilityReportsEachRouteOnItsOwnGate() = runTest {
+        val f = Fixture(this)
+        coEvery { f.shield.isWalletShieldingAvailable() } returns true
+        coEvery { f.send.coinJoinConsolidationGateOpen() } returns false
+        // 101 coins must be consolidated first: with the send gate shut, Shield cannot run either.
+        assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = false), f.service.routeAvailability())
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.shieldMixedFunds(Dash.COIN))
+        // 20 coins drain directly: Shield alone is offered.
+        f.coins.value = (0 until 20).map(::coin)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        assertEquals(MixedFundsRoutes(shieldOperable = true, combineOperable = false), f.service.routeAvailability())
+        assertTrue(f.service.shouldOfferInTools())
+        // An unreadable snapshot (balance mismatch) offers neither.
+        f.engineBalance -= 1
+        coEvery { f.send.coinJoinConsolidationGateOpen() } returns true
+        assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = false), f.service.routeAvailability())
+        f.engineBalance += 1
+        coEvery { f.shield.isWalletShieldingAvailable() } throws IllegalStateException("probe failed")
+        coEvery { f.send.coinJoinConsolidationGateOpen() } returns true
+        assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = true), f.service.routeAvailability())
+        coEvery { f.send.cutoverCommitted() } returns false
+        assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = false), f.service.routeAvailability())
+    }
+
+    /** App-locked CoinJoin outputs make BOTH routes inoperable, and Combine refuses before recording anything. */
+    @Test fun appLockedCoinJoinOutputClosesBothRoutesAndCombineRecordsNothing() = runTest {
+        val f = Fixture(this)
+        coEvery { f.shield.isWalletShieldingAvailable() } returns true
+        every { f.send.coinJoinOutputsLocked() } returns true
+        assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = false), f.service.routeAvailability())
+        assertFalse(f.service.shouldOfferInTools())
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+        f.mockConsolidation(to = regular)
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
+        assertEquals("", f.marker)
+        assertEquals("", f.consolidation)
+        runCurrent()
+        f.assertNothingBuilt()
+        // Unlocked: both routes, and the same move runs.
+        every { f.send.coinJoinOutputsLocked() } returns false
+        assertEquals(MixedFundsRoutes(shieldOperable = true, combineOperable = true), f.service.routeAvailability())
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+    }
+
+    // ── Invalid stages: released / completed only on the WORST CASE their fields allow ──
+
+    private enum class RecordedTx { NONE, BATCH, TRANSFER }
+    private enum class Bytes { NONE, MATCHING, MISMATCHED }
+
+    /** One persisted invalid stage, what the store holds, and the outcomes the worst-case rule allows. */
+    private data class InvalidRow(
+        val name: String,
+        val stage: (batch: Transaction, transfer: Transaction, other: Transaction) -> String,
+        val settled: RecordedTx,
+        val outputPersisted: Boolean,
+        val released: Boolean,
+        val completed: Boolean
+    )
+
+    private fun invalidStageRows(): List<InvalidRow> {
+        val rows = mutableListOf<InvalidRow>()
+        val flags = listOf(true, false)
+        for (phase in listOf("waiting", "transferring", "consolidating")) for (recorded in RecordedTx.values())
+            for (withRegular in flags) for (bytes in Bytes.values()) for (persisted in flags) {
+                val released = when (recorded) {
+                    // Nothing identifies a tx: only a stage that recorded none and cannot be a transfer.
+                    RecordedTx.NONE -> bytes == Bytes.NONE && phase != "transferring" &&
+                        !(phase == "consolidating" && withRegular)
+                    RecordedTx.BATCH -> true
+                    RecordedTx.TRANSFER -> withRegular && persisted
+                }
+                rows += InvalidRow(
+                    "$phase/$recorded/regular=$withRegular/$bytes/persisted=$persisted",
+                    { batch, transfer, other ->
+                        val tx = if (recorded == RecordedTx.BATCH) batch else transfer
+                        rawStage(
+                            phase,
+                            if (recorded == RecordedTx.NONE) "" else tx.txId.toString(),
+                            if (withRegular) regular else "",
+                            when (bytes) {
+                                Bytes.NONE -> null
+                                Bytes.MATCHING -> Utils.HEX.encode(tx.bitcoinSerialize())
+                                Bytes.MISMATCHED -> Utils.HEX.encode(other.bitcoinSerialize())
+                            }
+                        )
+                    },
+                    if (recorded == RecordedTx.NONE) RecordedTx.TRANSFER else recorded,
+                    persisted, released,
+                    completed = recorded == RecordedTx.TRANSFER && withRegular && persisted
+                )
+            }
+        fun json(phase: Any, txid: Any, regularDestination: Any, rawTx: Any = "", wallet: String = walletId) =
+            org.json.JSONObject().put("walletId", wallet).put("destination", destination).put("phase", phase)
+                .put("txid", txid).put("regularDestination", regularDestination).put("rawTx", rawTx).toString()
+        // Unreadable BIP44 destination: a transfer cannot be proven, a batch still can.
+        rows += InvalidRow("unknown phase, unreadable destination, transfer",
+            { _, t, _ -> json("consolidating", t.txId.toString(), 7) }, RecordedTx.TRANSFER,
+            outputPersisted = true, released = false, completed = false)
+        rows += InvalidRow("unknown phase, unreadable destination, batch",
+            { b, _, _ -> json("consolidating", b.txId.toString(), 7) }, RecordedTx.BATCH,
+            outputPersisted = true, released = true, completed = false)
+        rows += InvalidRow("unknown phase, unreadable destination, no txid",
+            { _, _, _ -> json("consolidating", "", 7) }, RecordedTx.TRANSFER,
+            outputPersisted = true, released = false, completed = false)
+        rows += InvalidRow("non-string phase, transfer",
+            { _, t, _ -> json(5, t.txId.toString(), regular) }, RecordedTx.TRANSFER,
+            outputPersisted = false, released = false, completed = false)
+        // A recorded but unusable txid, or unreadable bytes: the tx cannot be identified.
+        rows += InvalidRow("malformed txid", { _, _, _ -> json("waiting", "zz".repeat(32), "") },
+            RecordedTx.TRANSFER,
+            outputPersisted = true, released = false, completed = false)
+        rows += InvalidRow("non-string txid", { _, _, _ -> json("waiting", 123, "") },
+            RecordedTx.TRANSFER,
+            outputPersisted = true, released = false, completed = false)
+        rows += InvalidRow("non-string rawTx", { _, _, _ -> json("ready", "", "", 9) },
+            RecordedTx.TRANSFER,
+            outputPersisted = true, released = false, completed = false)
+        // No wallet identity: never, even for a provable batch.
+        rows += InvalidRow("no wallet identity, batch",
+            { b, _, _ -> json("waiting", b.txId.toString(), "", wallet = "01") }, RecordedTx.BATCH,
+            outputPersisted = true, released = false, completed = false)
+        return rows
+    }
+
+    /** Sets the row up; null when its fields happen to form a VALID stage (not this table's subject). */
+    private fun Fixture.setUpInvalidRow(row: InvalidRow): String? {
+        val batch = transaction((0 until 3).map(::coin))
+        val transfer = transaction((0 until 3).map(::coin), regular)
+        val other = transaction((3 until 5).map(::coin), regular)
+        val stage = row.stage(batch, transfer, other)
+        if (CoinJoinConsolidationState.parse(stage) !is ConsolidationStageRead.Invalid) return null
+        consolidation = stage
+        marker = combineMarker()
+        // The account is drained and the recorded tx is final with its inputs spent by it.
+        val tx = if (row.settled == RecordedTx.BATCH) batch else transfer
+        store(tx)
+        coins.value = emptyList()
+        engineBalance = 0
+        persistSettled(tx)
+        if (!row.outputPersisted) {
+            txos.remove(Utils.HEX.encode(TransactionOutPoint(params, 0, tx.txId).bitcoinSerialize()))
+        }
+        return stage
+    }
+
+    @Test fun invalidStagesAreReleasedByProofOnlyForTheirWorstCase() = runTest {
+        var checked = 0
+        var releasedRows = 0
+        for (row in invalidStageRows()) {
+            val f = Fixture(this)
+            val stage = f.setUpInvalidRow(row) ?: continue
+            checked++
+            if (row.released) releasedRows++
+            assertTrue(row.name, f.service.releaseFailedMigration())
+            assertEquals(row.name, if (row.released) "" else stage, f.consolidation)
+            assertNull(row.name, f.done)
+            f.assertNothingBuilt()
+        }
+        // Both outcomes are exercised across many shapes.
+        assertTrue("$checked", checked > 60)
+        assertTrue("$releasedRows", releasedRows in 10 until checked - 10)
+    }
+
+    @Test fun invalidStageWatcherCompletesOnlyOnTheDestinationProof() = runTest {
+        var completedRows = 0
+        for (row in invalidStageRows()) {
+            val f = Fixture(this)
+            val stage = f.setUpInvalidRow(row) ?: continue
+            if (row.completed) completedRows++
+            f.service.startInFlightWatcherIfNeeded()
+            runCurrent()
+            advanceTimeBy(60_000); runCurrent()
+            if (row.completed) {
+                assertEquals(row.name, true, f.done)
+                assertEquals(row.name, "", f.consolidation)
+            } else {
+                assertNull(row.name, f.done)
+                assertEquals(row.name, stage, f.consolidation)
+                assertNotNull(row.name, f.service.inFlightMigration())
+                // A provable batch has nothing to complete: straight to the guidance.
+                if (row.settled == RecordedTx.BATCH) assertTrue(row.name, f.expired())
+            }
+            f.assertNothingBuilt()
+            f.service.clearInFlightMigration()
+            advanceTimeBy(60_000); runCurrent()
+        }
+        assertTrue("$completedRows", completedRows > 0)
     }
 
     @Test fun batchDestinationOutsideTheCoinJoinAccountIsRefusedBeforeBuilding() = runTest {

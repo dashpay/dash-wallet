@@ -22,6 +22,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -1628,8 +1629,9 @@ class SdkL1SendService internal constructor(
         }
     }
 
-    /** The app-locked CoinJoin output guard (fail closed), shared with the migration's shield routes. */
-    internal fun coinJoinOutputsLocked(): Boolean = runCatching { hasAppLockedCoinJoinOutputs() }.getOrDefault(true)
+    /** [outputsAppLocked] with the dashj side narrowed to the CoinJoin keychain; shared with the migration. */
+    internal fun coinJoinOutputsLocked(): Boolean =
+        seamOutputLockRegistry.outputsAppLocked("SDK coinJoinDrain", hasAppLockedCoinJoinOutputs)
 
     /** The gate [consolidateCoinJoin] enforces; shared so the migration never offers a refused route. Never throws. */
     internal suspend fun coinJoinConsolidationGateOpen(): Boolean = isEnabled() && probeSendGate().allowed
@@ -1660,10 +1662,14 @@ class SdkL1SendService internal constructor(
         return try {
             val txid = source.withCoreSendLock(walletId) {
                 checkNotNull(source.destinationOwner(walletId, destination)) { DESTINATION_NOT_OWNED }
-                source.consolidateCoinJoin(walletId, destination, amount, drain) { bytes ->
-                    prepared(bytes)
-                    runCatching { onSelfSpendBroadcast() }
-                    preparedForBroadcast = true
+                // Once [prepared] records the txid, the broadcast must follow: a cancellation
+                // in between would abandon a tx the stage already records as sent.
+                withContext(NonCancellable) {
+                    source.consolidateCoinJoin(walletId, destination, amount, drain) { bytes ->
+                        prepared(bytes)
+                        runCatching { onSelfSpendBroadcast() }
+                        preparedForBroadcast = true
+                    }
                 }
             }
             runCatching { onSelfSpendBroadcast() }
@@ -1747,23 +1753,8 @@ class SdkL1SendService internal constructor(
      * see. The FFI has no UTXO-exclusion API, so a sweep-scale build would
      * spend protected funds; a check failure blocks too.
      */
-    private fun hasProtectedOutputs(operation: String): Boolean {
-        val hasLockedOutputs = try {
-            hasAppLockedSpendableOutputs()
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("SDK {}: app-locked-output preflight failed; blocking (fail closed)", operation, t)
-            true
-        }
-        val hasSeamLockedOutputs = try {
-            seamOutputLockRegistry.hasAnyLocks()
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("SDK {}: seam output-lock registry read failed; blocking (fail closed)", operation, t)
-            true
-        }
-        return hasLockedOutputs || hasSeamLockedOutputs
-    }
+    private fun hasProtectedOutputs(operation: String): Boolean =
+        seamOutputLockRegistry.outputsAppLocked("SDK $operation", hasAppLockedSpendableOutputs)
 
     /**
      * The largest amount a MAYACHAIN deposit can pay a vault right now:

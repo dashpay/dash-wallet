@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -75,4 +76,28 @@ class SeamOutputLockRegistry @Inject constructor() {
     companion object {
         private val log = LoggerFactory.getLogger(SeamOutputLockRegistry::class.java)
     }
+}
+
+/**
+ * The drain-guard union (B7) every drain that cannot exclude an input uses:
+ * [dashjLocked] OR any seam lock (they carry no account). A throw from either
+ * reads as locked. An extension, so a mocked registry still runs it.
+ */
+fun SeamOutputLockRegistry.outputsAppLocked(operation: String, dashjLocked: () -> Boolean): Boolean {
+    val log = LoggerFactory.getLogger(SeamOutputLockRegistry::class.java)
+    val dashj = try {
+        dashjLocked()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("{}: app-locked-output preflight failed; blocking (fail closed)", operation, t)
+        true
+    }
+    val seam = try {
+        hasAnyLocks()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("{}: seam output-lock registry read failed; blocking (fail closed)", operation, t)
+        true
+    }
+    return dashj || seam
 }
