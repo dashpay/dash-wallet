@@ -75,6 +75,7 @@ class CoinJoinMixedFundsSourceTest {
 
         init {
             coEvery { send.cutoverCommitted() } returns cutover
+            coEvery { send.coinJoinConsolidationGateOpen() } returns true
             coEvery { shield.isWalletShieldingAvailable() } returns true
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } returns ""
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } returns ""
@@ -118,6 +119,16 @@ class CoinJoinMixedFundsSourceTest {
     fun postCutover_sdkPositive_offersTheSdkAmount() = runTest {
         val f = Fixture(this, cutover = true, sdkJson = coinJoinRow(150_000_000L))
         assertEquals(Coin.valueOf(150_000_000L), f.service.mixedFundsToMigrate())
+        assertTrue(f.service.shouldPrompt())
+    }
+
+    @Test
+    fun postCutover_closedConsolidationGateWithoutShielding_doesNotPrompt() = runTest {
+        val f = Fixture(this, cutover = true, sdkJson = coinJoinRow(150_000_000L))
+        coEvery { f.shield.isWalletShieldingAvailable() } returns false
+        coEvery { f.send.coinJoinConsolidationGateOpen() } returns false
+        assertFalse(f.service.shouldPrompt())
+        coEvery { f.send.coinJoinConsolidationGateOpen() } returns true
         assertTrue(f.service.shouldPrompt())
     }
 

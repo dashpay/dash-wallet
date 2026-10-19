@@ -14,6 +14,9 @@ import org.json.JSONObject
 internal const val COIN_JOIN_ASSET_LOCK_INPUT_LIMIT = 100
 internal const val COIN_JOIN_CONSOLIDATION_INPUT_LIMIT = 500
 
+/** A partial batch pays ≤ 2 outputs (target + change), so 3 inputs always shrink the account. */
+internal const val COIN_JOIN_BATCH_MIN_INPUTS = 3
+
 internal data class CoinJoinConsolidationState(
     val walletId: String,
     val destination: String,
@@ -77,11 +80,24 @@ internal data class CoinJoinConsolidationSnapshot(
 ) {
     val needsConsolidation: Boolean get() = coins.size > COIN_JOIN_ASSET_LOCK_INPUT_LIMIT
     val drain: Boolean get() = coins.size <= COIN_JOIN_CONSOLIDATION_INPUT_LIMIT
-    // Conservative P2PKH size allowance at 2 duffs/byte, including two outputs.
-    // The signed transaction is checked again before anything is broadcast.
-    fun batchAmount(): Long = if (drain) 1L else
-        coins.sortedByDescending { it.amount }.take(COIN_JOIN_CONSOLIDATION_INPUT_LIMIT)
-            .sumOf { it.amount } - (COIN_JOIN_CONSOLIDATION_INPUT_LIMIT * 160L + 100L) * 2L
+
+    /**
+     * The next partial batch's output amount `T`, or 0 when no batch can shrink the account.
+     *
+     * Relies on `LARGEST_FIRST` (key-wallet `accumulate_coins_with_size`): it stops at the
+     * first descending prefix `S_j ≥ T + fee(j)`. `T = max(S_m − allowance(m))` over m ≤ 500,
+     * so it stops by m inputs; requiring `T` to exceed the largest `MIN − 1` coins means it
+     * never stops sooner — no dominant coin fills a batch alone, even if the engine skips
+     * reserved coins. Each batch thus spends ≥ 3 coins for ≤ 2 outputs, so the migration ends.
+     */
+    fun batchAmount(): Long {
+        if (drain) return 1L
+        val amounts = coins.map { it.amount }.sortedDescending().take(COIN_JOIN_CONSOLIDATION_INPUT_LIMIT)
+        // Fee allowance: 160 bytes per P2PKH input + 100 bytes, at 2 duffs/byte (rechecked before broadcast).
+        val best = amounts.runningReduce(Long::plus)
+            .mapIndexed { index, sum -> sum - ((index + 1) * 160L + 100L) * 2L }.max()
+        return if (best > amounts.take(COIN_JOIN_BATCH_MIN_INPUTS - 1).sum()) best else 0L
+    }
 }
 
 /**
@@ -132,7 +148,8 @@ internal fun validateCoinJoinConsolidation(
     minimumInputs: Int = 2
 ): String {
     val tx = Transaction(params, raw)
-    require(tx.inputs.size in minimumInputs..COIN_JOIN_CONSOLIDATION_INPUT_LIMIT) { "Unexpected consolidation input count" }
+    val floor = if (snapshot.drain) minimumInputs else maxOf(minimumInputs, COIN_JOIN_BATCH_MIN_INPUTS)
+    require(tx.inputs.size in floor..COIN_JOIN_CONSOLIDATION_INPUT_LIMIT) { "Unexpected consolidation input count" }
     val owned = snapshot.coins.map { Utils.HEX.encode(it.outpoint) }.toSet()
     val spent = tx.inputs.map { Utils.HEX.encode(it.outpoint.bitcoinSerialize()) }
     require(spent.all { it in owned }) { "Unexpected consolidation input" }

@@ -1607,6 +1607,9 @@ class SdkL1SendService internal constructor(
         }
     }
 
+    /** The gate [consolidateCoinJoin] enforces; shared so the migration never offers a refused route. Never throws. */
+    internal suspend fun coinJoinConsolidationGateOpen(): Boolean = isEnabled() && probeSendGate().allowed
+
     /**
      * @param expectedWalletIdHex the wallet [destination] came from; any other bound wallet refuses,
      * and so does a [destination] that wallet does not own ([SdkL1SendSource.destinationOwner],
@@ -1616,7 +1619,7 @@ class SdkL1SendService internal constructor(
         expectedWalletIdHex: String, destination: String, amount: Long, drain: Boolean,
         prepared: suspend (ByteArray) -> Unit
     ): SdkWriteResult<String> {
-        if (!isEnabled() || !probeSendGate().allowed) return SdkWriteResult.NotBroadcast("funding gate closed")
+        if (!coinJoinConsolidationGateOpen()) return SdkWriteResult.NotBroadcast("funding gate closed")
         if (runCatching { hasAppLockedCoinJoinOutputs() }.getOrDefault(true)) {
             return SdkWriteResult.NotBroadcast("CoinJoin outputs are locked")
         }

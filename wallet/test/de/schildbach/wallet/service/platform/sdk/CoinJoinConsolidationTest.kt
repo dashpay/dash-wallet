@@ -30,18 +30,17 @@ class CoinJoinConsolidationTest {
     private fun address(index: Int = 0) = CoreAddressEntity(
         destination, poolTypeTag = 0, addressIndex = index, derivationPath = "", accountId = 7L
     )
-    private fun coin(index: Int) : TxoEntity {
+    private fun coin(index: Int, amount: Long = 1_000_000) : TxoEntity {
         val hash = Sha256Hash.of(index.toString().toByteArray())
-        return TxoEntity(TransactionOutPoint(params, 0, hash).bitcoinSerialize(), 0, 1_000_000,
+        return TxoEntity(TransactionOutPoint(params, 0, hash).bitcoinSerialize(), 0, amount,
             destination, isConfirmed = true, walletId = Utils.HEX.decode(walletId),
             txid = hash.reversedBytes, accountId = 7L)
     }
-    private fun transaction(coins: List<TxoEntity>, to: String = destination): Transaction = Transaction(params).apply {
-        coins.forEach {
-            addInput(TransactionInput(params, this, byteArrayOf(),
-                TransactionOutPoint(params, 0, Sha256Hash.wrapReversed(it.txid!!))))
-        }
-        addOutput(Coin.valueOf(coins.sumOf { it.amount } - 100_000), Address.fromBase58(params, to))
+    private fun transaction(
+        coins: List<TxoEntity>, to: String = destination, outputs: List<Long> = listOf(coins.sumOf { it.amount } - 100_000)
+    ): Transaction = Transaction(params).apply {
+        coins.forEach { addInput(TransactionInput(params, this, byteArrayOf(), TransactionOutPoint(params, it.outpoint, 0))) }
+        outputs.forEach { addOutput(Coin.valueOf(it), Address.fromBase58(params, to)) }
     }
 
     @Test fun addressSelectionExcludesUsedInternalAndForeignAccountRows() {
@@ -58,6 +57,55 @@ class CoinJoinConsolidationTest {
         assertEquals(499_839_800L, snapshot.batchAmount())
         assertFalse(snapshot.copy(coins = snapshot.coins.take(100)).needsConsolidation)
         assertTrue(snapshot.copy(coins = snapshot.coins.take(500)).drain)
+    }
+
+    /** key-wallet `LARGEST_FIRST` at 2 duffs/byte: first descending prefix reaching target + fee, change above dust. */
+    private fun largestFirstBatch(coins: List<TxoEntity>, target: Long): Transaction {
+        val selected = mutableListOf<TxoEntity>()
+        for (coin in coins.sortedByDescending { it.amount }) {
+            selected += coin
+            val total = selected.sumOf { it.amount }
+            if (total < target + 2L * (10 + 34 + 148 * selected.size)) continue
+            val change = total - target - 2L * (10 + 34 + 34 + 148 * selected.size)
+            return transaction(selected, outputs = listOf(target) + listOfNotNull(change.takeIf { it > 546 }))
+        }
+        throw AssertionError("insufficient funds for $target")
+    }
+
+    @Test fun dominantCoinNeverSatisfiesAPartialBatchAloneAndTheMigrationTerminates() {
+        // The next 499 coins sum below the old 500-input fee allowance, so the old
+        // target sat below the dominant coin: a one-input batch.
+        var coins = listOf(coin(0, 100_000_000_000L)) + (1..100).map { coin(it, 1_000L) } + (101..500).map { coin(it, 140L) }
+        var snapshot = CoinJoinConsolidationSnapshot(walletId, coins, destination)
+        assertFalse(snapshot.drain)
+        var batches = 0
+        while (!snapshot.drain) {
+            assertTrue("no batch may run forever", ++batches <= coins.size)
+            val amount = snapshot.batchAmount()
+            assertTrue(amount > 0L)
+            val tx = largestFirstBatch(coins, amount)
+            assertTrue(tx.inputs.size >= COIN_JOIN_BATCH_MIN_INPUTS)
+            assertTrue("each batch shrinks the account", tx.inputs.size > tx.outputs.size)
+            assertEquals(tx.txId.toString(),
+                validateCoinJoinConsolidation(tx.bitcoinSerialize(), snapshot, destination, params, minimumInputs = 2))
+            val spent = tx.inputs.map { Utils.HEX.encode(it.outpoint.bitcoinSerialize()) }.toSet()
+            coins = coins.filter { Utils.HEX.encode(it.outpoint) !in spent } + tx.outputs.map { output ->
+                TxoEntity(TransactionOutPoint(params, output.index.toLong(), tx.txId).bitcoinSerialize(), output.index,
+                    output.value.value, destination, isConfirmed = true, walletId = Utils.HEX.decode(walletId),
+                    txid = tx.txId.reversedBytes, accountId = 7L)
+            }
+            snapshot = snapshot.copy(coins = coins)
+        }
+        assertTrue(snapshot.drain)
+
+        // A one-input partial batch is never accepted.
+        val large = CoinJoinConsolidationSnapshot(walletId, (0 until 501).map(::coin), destination)
+        assertThrows(IllegalArgumentException::class.java) {
+            validateCoinJoinConsolidation(transaction(large.coins.take(1)).bitcoinSerialize(), large, destination, params)
+        }
+        // Coins that cannot pay their own inputs: no batch is planned.
+        val dust = CoinJoinConsolidationSnapshot(walletId, listOf(coin(0, 100_000_000_000L)) + (1..600).map { coin(it, 200L) }, destination)
+        assertEquals(0L, dust.batchAmount())
     }
 
     @Test fun signedBatchRejectsExcessInputsAndForeignOutputs() {
@@ -160,6 +208,7 @@ class CoinJoinConsolidationTest {
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, any()) } answers { shieldInputs = secondArg() }
             // Post-cutover, not yet handled: a fresh move is allowed.
             coEvery { send.cutoverCommitted() } returns true
+            coEvery { send.coinJoinConsolidationGateOpen() } returns true
             // The pinned SDK has no raw-bytes broadcast.
             coEvery { send.rebroadcastCoinJoinConsolidation(any(), any()) } returns ConsolidationReplay.UNAVAILABLE
             coEvery { blockchain.getState() } returns chainState
@@ -1133,6 +1182,32 @@ class CoinJoinConsolidationTest {
         assertEquals("", f.marker)
         assertEquals("", f.consolidation)
         f.assertNothingBuilt()
+    }
+
+    @Test fun closedConsolidationSendGateNeitherOffersNorStartsCombine() = runTest {
+        val f = Fixture(this)
+        // Post-cutover with a balance, but the send gate is shut and shielding unavailable.
+        every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
+        coEvery { f.shield.isWalletShieldingAvailable() } returns false
+        coEvery { f.send.coinJoinConsolidationGateOpen() } returns false
+        assertFalse(f.service.shouldOfferInTools())
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
+        // A large account's shield also starts with a consolidation.
+        f.coins.value = (0 until 501).map(::coin)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.shieldMixedFunds(Dash.COIN))
+        assertEquals("", f.marker)
+        assertEquals("", f.consolidation)
+        f.assertNothingBuilt()
+        // A gate read failure fails closed.
+        coEvery { f.send.coinJoinConsolidationGateOpen() } throws IllegalStateException("progress unreadable")
+        assertFalse(f.service.shouldOfferInTools())
+        // Once the gate opens, the same wallet is offered the move and it starts.
+        coEvery { f.send.coinJoinConsolidationGateOpen() } returns true
+        assertTrue(f.service.shouldOfferInTools())
+        f.coins.value = (0 until 3).map(::coin)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
     }
 
     @Test fun coinsArrivingAfterACompletedMigrationStayMovableFromTools() = runTest {

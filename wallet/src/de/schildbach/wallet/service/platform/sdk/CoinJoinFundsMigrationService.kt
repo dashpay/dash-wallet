@@ -565,11 +565,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /**
      * Tools' "Move CoinJoin funds" entry: always for a recorded migration (so
-     * it stays resumable), otherwise [userMigrationAllowed]. Unlike
+     * it stays resumable), otherwise [userMigrationAllowed] and [anyOptionOperable]. Unlike
      * [shouldPrompt] it ignores DONE, the deferral and the diagnostic toggle.
      */
     suspend fun shouldOfferInTools(): Boolean =
-        restorePendingShieldMigration() || userMigrationAllowed()
+        restorePendingShieldMigration() || (userMigrationAllowed() && anyOptionOperable())
 
     suspend fun deferMigration(amount: Coin) {
         dashPayConfig.set(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS, amount.value)
@@ -631,14 +631,22 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * through the SDK engine (dashj has no CoinJoin→shielded path and cannot
      * point the SDK builder at an account), so both are inert while the
      * engine is not the L1 owner and the shielded funding gate is shut.
-     * Conservative: [SdkL1SendService.cutoverCommitted] is a subset of the
-     * drain's own enablement rule, so this can only under-prompt.
+     * Combine needs [consolidationOperable], the gate its spend enforces.
      */
     private suspend fun anyOptionOperable(): Boolean = try {
-        shieldedBalanceService.isWalletShieldingAvailable() || sdkL1SendService.cutoverCommitted()
+        shieldedBalanceService.isWalletShieldingAvailable() || consolidationOperable()
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("failed to probe the migration paths; not prompting", t)
+        false
+    }
+
+    /** Post-cutover and [SdkL1SendService.coinJoinConsolidationGateOpen]; fails closed. */
+    private suspend fun consolidationOperable(): Boolean = try {
+        sdkL1SendService.cutoverCommitted() && sdkL1SendService.coinJoinConsolidationGateOpen()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("failed to read the consolidation send gate; treating it as closed", t)
         false
     }
 
@@ -667,6 +675,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         if (snapshot.needsConsolidation) {
             val destination = snapshot.destination ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
             if (snapshot.batchAmount() <= 0L) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            if (!consolidationOperable()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
             saveConsolidation(CoinJoinConsolidationState(snapshot.walletId, destination))
             markInFlight(MixedFundsMigrationAction.SHIELD)
             return MixedFundsMigrationOutcome.STARTED
@@ -724,6 +733,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         if (snapshot.coins.isEmpty() || snapshot.batchAmount() <= 0L) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         if (!snapshot.drain && snapshot.destination == null) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        // A closed gate would turn this start into a definitive failure.
+        if (!consolidationOperable()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         val destination = try {
             // A FRESH address, not the current one: reusing an address the
             // user has already published would link the mixed coins to it.
