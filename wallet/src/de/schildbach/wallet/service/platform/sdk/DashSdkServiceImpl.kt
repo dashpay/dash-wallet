@@ -1844,13 +1844,6 @@ class DashSdkServiceImpl @Inject constructor(
          * [refresh] (which can at most raise it further) returns at least that
          * even if its own fetch fails. A failed probe is "unknown" (null):
          * nothing was verified this time.
-         *
-         * Limit: the SDK does not adopt a verified version newer than any it
-         * knows (`maybe_update_protocol_version` drops it), so on a network past
-         * the bundled SDK a fresh process with no persisted mark still reads its
-         * previous/floor value. That prices LEGACY consistently for BOTH the
-         * quote and the funding (never more than the user approved); a mark
-         * persisted while the network was at 14 still yields CURRENT.
          */
         internal suspend fun verifiedProtocolVersion(
             probe: suspend () -> String?,
