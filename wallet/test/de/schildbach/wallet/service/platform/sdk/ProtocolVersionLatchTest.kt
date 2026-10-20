@@ -31,8 +31,9 @@ import org.junit.Test
 internal class InMemoryProtocolVersionHighWaterStore : ProtocolVersionHighWaterStore {
     val values = mutableMapOf<String, Int>()
     override fun read(networkId: String): Int? = values[networkId]
-    override fun write(networkId: String, version: Int) {
+    override fun write(networkId: String, version: Int): Boolean {
         values[networkId] = version
+        return true
     }
 }
 
@@ -124,16 +125,70 @@ class ProtocolVersionLatchTest {
     }
 
     @Test
-    fun `a failing store neither throws nor loses the in-memory latch`() = runTest {
+    fun `a throwing store does not throw and fails closed on a current-era read`() = runTest {
         val failing = object : ProtocolVersionHighWaterStore {
             override fun read(networkId: String): Int? = throw IllegalStateException("prefs unavailable")
-            override fun write(networkId: String, version: Int) = throw IllegalStateException("prefs unavailable")
+            override fun write(networkId: String, version: Int): Boolean =
+                throw IllegalStateException("prefs unavailable")
         }
         val latch = inMemoryProtocolVersionLatch(failing)
 
         assertNull(latch.latch(null))
+        assertNull("an unpersisted 14 must not be quoted: a restart could forget it", latch.latch(14))
+        assertEquals("an older version selects the LEGACY fee anyway", 13, latch.latch(13))
+    }
+
+    @Test
+    fun `a 14 the store could not persist is neither served nor remembered`() = runTest {
+        val unconfirmed = object : ProtocolVersionHighWaterStore {
+            val values = mutableMapOf<String, Int>()
+            override fun read(networkId: String): Int? = values[networkId]
+            override fun write(networkId: String, version: Int): Boolean = false
+        }
+        val latch = inMemoryProtocolVersionLatch(unconfirmed)
+
+        assertNull(latch.latch(14))
+        assertEquals("nothing stale was latched in memory", 13, latch.latch(13))
+        assertNull(latch.latch(null))
+        assertNull(unconfirmed.values["org.dash.test"])
+    }
+
+    @Test
+    fun `a later confirmed write raises the latch after an unconfirmed one`() = runTest {
+        var confirm = false
+        val flaky = object : ProtocolVersionHighWaterStore {
+            val values = mutableMapOf<String, Int>()
+            override fun read(networkId: String): Int? = values[networkId]
+            override fun write(networkId: String, version: Int): Boolean {
+                if (confirm) values[networkId] = version
+                return confirm
+            }
+        }
+        val latch = inMemoryProtocolVersionLatch(flaky)
+
+        assertNull(latch.latch(14))
+        confirm = true
         assertEquals(14, latch.latch(14))
         assertEquals(14, latch.latch(13))
+        assertEquals(14, inMemoryProtocolVersionLatch(flaky).latch(13))
+    }
+
+    @Test
+    fun `funding after an unpersisted quote at 14 refuses rather than funding the legacy fee`() {
+        val unconfirmed = object : ProtocolVersionHighWaterStore {
+            override fun read(networkId: String): Int? = null
+            override fun write(networkId: String, version: Int): Boolean = false
+        }
+        val service = sdkService(inMemoryProtocolVersionLatch(unconfirmed), 14, 14)
+
+        assertEquals(
+            "the quote falls back to LEGACY, never under-quoting the later funding",
+            ContestedUsernameFees.LEGACY,
+            runBlocking { ContestedUsernameFees.current(service) }
+        )
+        assertThrows(ProtocolVersionUnavailableException::class.java) {
+            runBlocking { ContestedUsernameFees.resolved(service) }
+        }
     }
 
     @Test

@@ -36,8 +36,12 @@ internal interface ProtocolVersionHighWaterStore {
     /** The stored high-water mark for [networkId], or null when none was ever stored. */
     fun read(networkId: String): Int?
 
-    /** Store [version] as the high-water mark for [networkId]; visible to the next [read]. */
-    fun write(networkId: String, version: Int)
+    /**
+     * Durably store [version] as the high-water mark for [networkId]. Returns
+     * true only once the value is on disk, so it survives a process kill; false
+     * (or a throw) means it may not, and the caller must not rely on it.
+     */
+    fun write(networkId: String, version: Int): Boolean
 }
 
 /**
@@ -56,11 +60,11 @@ internal class SharedPreferencesProtocolVersionHighWaterStore(
     override fun read(networkId: String): Int? =
         prefs.getInt(key(networkId), NONE).takeIf { it > 0 }
 
-    override fun write(networkId: String, version: Int) {
-        // apply(): the in-memory map is updated synchronously (the next read
-        // sees it); only the disk write is asynchronous.
-        prefs.edit().putInt(key(networkId), version).apply()
-    }
+    // commit(), not apply(): apply() only schedules the disk write, so a process
+    // killed right after a protocol-14 quote could restart with no mark. Called
+    // on the latch's IO dispatcher, and only when the mark rises (rarely).
+    override fun write(networkId: String, version: Int): Boolean =
+        prefs.edit().putInt(key(networkId), version).commit()
 
     private fun key(networkId: String) = "highest_protocol_version_$networkId"
 
@@ -99,6 +103,14 @@ internal class SharedPreferencesProtocolVersionHighWaterStore(
  *   persisting) the high-water mark when `live` is higher. A fresh activation
  *   (13 → 14) is therefore observed on the very next read, without a restart —
  *   the latch only ever refuses to go DOWN.
+ * - The mark is DURABLE before it is served: it is raised only after the store
+ *   confirms the write is on disk. A quote at 14 that a restarted process could
+ *   forget would let that process fund the LEGACY fee from a stale 13 read, so
+ *   when a version at or above [CONTESTED_FEE_PROTOCOL_VERSION] cannot be
+ *   persisted, the read is treated like a failed one (next point) — fail closed:
+ *   quotes show LEGACY and [ContestedUsernameFees.resolved] refuses to fund
+ *   until a later read persists. An unpersisted older version is still returned
+ *   as read: it selects the LEGACY fee anyway, the higher of the two.
  * - The live read failed (null): return the high-water mark ONLY when it is at
  *   or above [CONTESTED_FEE_PROTOCOL_VERSION]. A network known to run the
  *   current protocol cannot have gone back, so funding may proceed at the
@@ -134,7 +146,10 @@ class ProtocolVersionLatch internal constructor(
 
     private val lock = Any()
 
-    /** The high-water mark (0 = none); null until loaded from [store]. */
+    /**
+     * The DURABLE high-water mark (0 = none); null until loaded from [store].
+     * Only ever set to a value the store confirmed on disk (or read from it).
+     */
     @Volatile
     private var highWater: Int? = null
 
@@ -143,30 +158,40 @@ class ProtocolVersionLatch internal constructor(
      * observed on this network — see the class KDoc for the contract.
      */
     suspend fun latch(live: Int?): Int? {
-        val high = withContext(ioDispatcher) {
+        val mark = withContext(ioDispatcher) {
             if (live != null) raiseTo(live) else loaded()
         }
         return when {
-            live != null -> high
-            high >= CONTESTED_FEE_PROTOCOL_VERSION -> high
+            // Persisted (or already covered by the durable mark).
+            live != null && live <= mark -> mark
+            // Not persisted, but an older version selects the LEGACY (higher) fee anyway.
+            live != null && live < CONTESTED_FEE_PROTOCOL_VERSION -> live
+            // Unknown, or a current-era read that could not be persisted: only a
+            // durable current-era mark can vouch for the version.
+            mark >= CONTESTED_FEE_PROTOCOL_VERSION -> mark
             else -> null
         }
     }
 
-    /** The current mark, loading it from [store] on first use. Never throws. */
+    /**
+     * The durable mark, loading it from [store] on first use. Never throws; an
+     * unreadable store counts as no mark and is retried on the next call.
+     */
     private fun loaded(): Int = highWater ?: synchronized(lock) {
-        highWater ?: (readStored() ?: 0).also { highWater = it }
+        highWater ?: readStored()?.also { highWater = it } ?: 0
     }
 
-    /** Raise the mark to [version] if higher; returns the (possibly raised) mark. */
+    /**
+     * Raise the durable mark to [version] if higher and the store confirms the
+     * write; returns the durable mark afterwards (unchanged if the write failed).
+     */
     private fun raiseTo(version: Int): Int {
         val current = loaded()
         if (version <= current) return current
         return synchronized(lock) {
             val latest = highWater ?: 0
-            if (version > latest) {
+            if (version > latest && writeStored(version)) {
                 highWater = version
-                writeStored(version)
                 version
             } else {
                 latest
@@ -174,20 +199,26 @@ class ProtocolVersionLatch internal constructor(
         }
     }
 
+    /** The stored mark (0 when none was ever stored), or null when the store can't be read. */
     private fun readStored(): Int? = try {
-        store.read(networkId())
+        store.read(networkId()) ?: 0
     } catch (e: Exception) {
         log.warn("could not read the stored protocol-version high-water mark; treating it as none", e)
         null
     }
 
-    private fun writeStored(version: Int) {
-        try {
+    /** True only when the store confirmed [version] is on disk. */
+    private fun writeStored(version: Int): Boolean {
+        val persisted = try {
             store.write(networkId(), version)
         } catch (e: Exception) {
-            // The in-memory mark still holds for this process.
             log.warn("could not persist the protocol-version high-water mark {}", version, e)
+            false
         }
+        if (!persisted) {
+            log.warn("protocol-version high-water mark {} not persisted; not relying on it", version)
+        }
+        return persisted
     }
 
     companion object {
