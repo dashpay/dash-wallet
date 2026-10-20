@@ -573,6 +573,31 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun gateClosed_aggregateRuleOnly_withUnknownWalletCursor_isNotBroadcast() = runBlocking {
+        // The §34 shape: filters 2,167 short of the tip, the aggregate at
+        // 99.954% (the DISPLAY's iOS rule calls that synced), and the wallet
+        // cursor unknown, so the pipeline veto has no evidence to act on. The
+        // unscanned blocks can hold a spend of a UTXO this wallet still reads
+        // unspent; the send gate must keep the height rule.
+        val source = readySource()
+        val aggregateOnly = caughtUpProgress().copy(
+            headerHeight = 1_558_166, headerTarget = 1_558_166,
+            filterHeight = 1_555_999, filterTarget = 1_558_166, overallPercent = 0.99954,
+            walletSyncedHeight = 0
+        )
+        assertTrue("fixture must read caught up for the display", aggregateOnly.scanCaughtUpToTip)
+        assertFalse("…with no pipeline evidence", aggregateOnly.blockPipelineLagging)
+
+        val result = service(source, progress = { aggregateOnly })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains("short of the chain tip"))
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
     fun gateOpen_noDashjParityRequired() = runBlocking {
         // Regression guard for the bricked-sends bug: the gate must NOT
         // consult any dashj comparison — a caught-up engine broadcasts,

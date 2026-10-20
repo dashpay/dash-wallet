@@ -238,7 +238,11 @@ internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
  *   chain is at a known tip AND the wallet-relevant filter scan has caught
  *   up to it. Deliberately NOT phase==SYNCED (a live shadow may never
  *   report it) and NOT dashj parity (retired above); an all-zero snapshot
- *   or a filter scan short of the tip still keeps the gate closed.
+ *   or a filter scan short of the tip still keeps the gate closed;
+ * - filter scan within [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the
+ *   tip: the HEIGHT rule, even where the display's aggregate rule says
+ *   caught up;
+ * - block pipeline drained: not [ShadowSyncProgress.blockPipelineLagging].
  *
  * Wallet binding is NOT re-checked here: every caller already preflights
  * the bound wallet, and an unbound wallet cannot produce a non-IDLE
@@ -253,7 +257,24 @@ internal fun evaluateWalletFundingGate(
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
     !progress.scanCaughtUpToTip ->
         WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
-    // THIS GATE STARTS A SPEND, so it keeps the veto the DISPLAY predicate
+    // THIS GATE STARTS A SPEND, so it keeps the HEIGHT rule too.
+    // `scanCaughtUpToTip` also passes on the iOS aggregate rule, which
+    // tolerates a filter shortfall of up to 0.3% of chain height (~4,600
+    // blocks on testnet) — right for a label, wrong for funding: an unscanned
+    // block can hold a spend of a UTXO this wallet still reads unspent, or a
+    // receive the balance is missing. The pipeline-lag veto below cannot cover
+    // that gap when the wallet cursor is unknown (0), and when the cursor IS
+    // known the §34 stall parks it with the filter cursor, so that veto
+    // closes the gate there anyway. The funds-safety argument of
+    // SCAN_TIP_TOLERANCE_BLOCKS needs the scan itself within tolerance.
+    // Measured against the HIGHEST tip the snapshot knows, not headerTarget
+    // alone: dash-spv restores the header target from the last peer report
+    // at engine start, which can sit below the stored header tip until a peer
+    // raises it, while the filter target is already that stored tip.
+    maxOf(progress.bestKnownTipHeight, progress.filterTarget) - progress.filterHeight >
+        ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
+        WalletFundingGate(false, "SDK L1 filter scan is still short of the chain tip")
+    // …and it keeps the veto the DISPLAY predicate
     // dropped on 2026-09-21. `scanCaughtUpToTip` now also accepts the iOS
     // aggregate rule and no longer requires the block pipeline drained; that
     // is right for a label and wrong for funding. Matched blocks still being
