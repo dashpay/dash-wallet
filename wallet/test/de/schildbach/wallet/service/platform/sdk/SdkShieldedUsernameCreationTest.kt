@@ -53,6 +53,7 @@ class SdkShieldedUsernameCreationTest {
     // ── Fixtures ──────────────────────────────────────────────────────────
 
     private val walletIdHex = "aa".repeat(32)
+    private val ticket = ShieldedSpendTicket(ByteArray(32), 1_700_000_000_000L, 1_700_000_000_000L, emptySet(), "digest")
     private val identityId = ByteArray(32) { 7 }
     private val identityIdBase58 = Identifier.from(identityId).toString()
 
@@ -110,8 +111,8 @@ class SdkShieldedUsernameCreationTest {
             every { shieldedSyncStatus } returns statusFlow
             every { observeShieldedBalance() } returns balanceFlow
             coEvery { isFundingNoteAnchoredForDenomination(any()) } returns fundingNoteAnchored
-            coEvery { beginExternalShieldedSpend() } returns 1_700_000_000_000L
-            coEvery { endExternalShieldedSpend(any()) } just Runs
+            coEvery { beginExternalShieldedSpend(any()) } returns ticket
+            coEvery { endExternalShieldedSpend(any(), any()) } just Runs
         }
 
     private fun happySource() = mockk<ShieldedUsernameSource> {
@@ -610,9 +611,9 @@ class SdkShieldedUsernameCreationTest {
         val balance = balanceService()
         service(source = source, balance = balance).createUsernameFromShielded("alice2")
         coVerifyOrder {
-            balance.beginExternalShieldedSpend()
+            balance.beginExternalShieldedSpend(walletIdHex)
             source.createIdentityFromPool(any(), any(), any(), any(), any())
-            balance.endExternalShieldedSpend(1_700_000_000_000L)
+            balance.endExternalShieldedSpend(ticket, true)
         }
     }
 
@@ -620,7 +621,7 @@ class SdkShieldedUsernameCreationTest {
     fun anUnrecordablePoolSpend_isNotBroadcast_andNeverCreates() = runTest {
         val source = happySource()
         val balance = balanceService().apply {
-            coEvery { beginExternalShieldedSpend() } returns null
+            coEvery { beginExternalShieldedSpend(any()) } returns null
         }
         val handoff = HandoffRecorder()
 
@@ -630,7 +631,7 @@ class SdkShieldedUsernameCreationTest {
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertTrue(handoff.identities.isEmpty())
         coVerify(exactly = 0) { source.createIdentityFromPool(any(), any(), any(), any(), any()) }
-        coVerify(exactly = 0) { balance.endExternalShieldedSpend(any()) }
+        coVerify(exactly = 0) { balance.endExternalShieldedSpend(any(), any()) }
     }
 
     // ── Best-effort DPNS name / handoff resilience ────────────────────────

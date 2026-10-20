@@ -614,34 +614,17 @@ class MainViewModel @Inject constructor(
      * persisted last-known balance stands in (see [homeShieldedBalance]);
      * null while the amount is unknown, including while a read is failing.
      */
-    private fun observeHomeShieldedBalance(): Flow<Dash?> =
-        dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
-            .map { Constants.SUPPORTS_PLATFORM && it == true }
-            .distinctUntilChanged()
-            .flatMapLatest { enabled ->
-                if (!enabled) {
-                    flowOf(Dash.ZERO)
-                } else {
-                    combine(
-                        shieldedBalanceService.observeShieldedBalance(),
-                        shieldedBalanceService.shieldedSyncStatus,
-                        dashPayConfig.observeLastShieldedBalanceDuffs(),
-                        shieldedBalanceService.shieldedBalanceMaybeStale
-                    ) { live, status, cachedDuffs, maybeStale ->
-                        homeShieldedBalance(status, live, cachedDuffs?.let { Dash(it) }, maybeStale)
-                    }.retryWhen { e, attempt ->
-                        // Fail closed: an unreadable shielded balance is
-                        // unknown, so the header marks it pending (instead of
-                        // ending the whole home-balance flow on a stale total)
-                        // and re-reads after a back-off.
-                        log.error("home shielded balance flow error (attempt {})", attempt, e)
-                        emit(null)
-                        delay(shieldedReadRetryDelayMs(attempt))
-                        true
-                    }
-                }
-            }
-            .distinctUntilChanged()
+    private fun observeHomeShieldedBalance(): Flow<Dash?> = homeShieldedBalanceFlow(
+        // WITHOUT the IOException rescue: only a flag READ as disabled or
+        // unset may authorize a zero; an unreadable one is unknown.
+        enabledFlag = dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
+            .map { Constants.SUPPORTS_PLATFORM && it == true },
+        live = { shieldedBalanceService.observeShieldedBalance() },
+        status = { shieldedBalanceService.shieldedSyncStatus },
+        cachedDuffs = { dashPayConfig.observeLastShieldedBalanceDuffs() },
+        maybeStale = { shieldedBalanceService.shieldedBalanceMaybeStale },
+        onError = { e, attempt -> log.error("home shielded balance flow error (attempt {})", attempt, e) }
+    )
 
     fun triggerHideBalance() {
         _temporaryHideBalance.value = !hideBalance.value
@@ -1041,6 +1024,44 @@ class MainViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
 }
+
+/**
+ * The shielded part of the home header as a flow — host-testable: zero while
+ * [enabledFlag] reads false, otherwise [homeShieldedBalance] over the live
+ * sources; null while the amount is unknown.
+ *
+ * Fail closed: an error anywhere — the flag read included — emits null (the
+ * header marks the shielded amount pending instead of ending the whole
+ * home-balance flow on a stale total) and re-subscribes the whole branch
+ * after [retryDelayMs], so it recovers once the reads do.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal fun homeShieldedBalanceFlow(
+    enabledFlag: Flow<Boolean>,
+    live: () -> Flow<Dash>,
+    status: () -> Flow<ShieldedSyncStatus>,
+    cachedDuffs: () -> Flow<Long?>,
+    maybeStale: () -> Flow<Boolean>,
+    onError: (Throwable, Long) -> Unit,
+    retryDelayMs: (Long) -> Long = ::shieldedReadRetryDelayMs
+): Flow<Dash?> = enabledFlag
+    .distinctUntilChanged()
+    .flatMapLatest { enabled ->
+        if (!enabled) {
+            flowOf(Dash.ZERO)
+        } else {
+            combine(live(), status(), cachedDuffs(), maybeStale()) { balance, syncStatus, cached, stale ->
+                homeShieldedBalance(syncStatus, balance, cached?.let { Dash(it) }, stale)
+            }
+        }
+    }
+    .retryWhen { e, attempt ->
+        onError(e, attempt)
+        emit(null)
+        delay(retryDelayMs(attempt))
+        true
+    }
+    .distinctUntilChanged()
 
 /**
  * The shielded amount the home header adds to the L1 total — pure and

@@ -253,11 +253,14 @@ interface ShieldedBalanceService {
      * the balance stale, so every surface shows "Syncing…" instead of the
      * pre-spend amount — also after a process death mid-spend.
      *
-     * Returns the spend's start time, to pass to [endExternalShieldedSpend];
-     * or null when the record could not be written — the caller must then
-     * NOT spend (report it as not broadcast).
+     * [walletIdHex] is the SDK wallet the spend draws from; its unspent note
+     * set is recorded as the spend's settlement evidence.
+     *
+     * Returns the ticket to pass to [endExternalShieldedSpend]; or null when
+     * the record could not be written — the caller must then NOT spend
+     * (report it as not broadcast).
      */
-    suspend fun beginExternalShieldedSpend(): Long?
+    suspend fun beginExternalShieldedSpend(walletIdHex: String): ShieldedSpendTicket?
 
     /**
      * The SDK spend [beginExternalShieldedSpend] announced has returned or
@@ -267,9 +270,10 @@ interface ShieldedBalanceService {
      * waiting for it, so the balance settles within seconds instead of on the
      * next 60-second pass (observed live: the shielded balance held the old
      * value for up to a minute after a shielded-funded username submit —
-     * Brian, S21 2026-08-18).
+     * Brian, S21 2026-08-18). [mayHaveBroadcast] is false only for an outcome
+     * that definitively never broadcast; that withdraws the spend's evidence.
      */
-    suspend fun endExternalShieldedSpend(spendStartedAtMs: Long)
+    suspend fun endExternalShieldedSpend(ticket: ShieldedSpendTicket, mayHaveBroadcast: Boolean)
 
     /**
      * True when the wallet holds an ANCHORED (confirmed, `blockHeight > 0`)
@@ -459,3 +463,28 @@ interface ShieldedBalanceService {
  * its own once the read does.
  */
 fun shieldedReadRetryDelayMs(attempt: Long): Long = (attempt.coerceIn(0L, 11L) + 1) * 5_000L
+
+/**
+ * Handle of a local shielded spend begun with
+ * [ShieldedBalanceService.beginExternalShieldedSpend]: what the balance
+ * service needs to settle it.
+ */
+class ShieldedSpendTicket internal constructor(
+    internal val walletId: ByteArray,
+    /** Wall clock when the spend began (before its SDK call); [sinceMs] is this less the skew allowance. */
+    internal val startedAtMs: Long,
+    internal val sinceMs: Long,
+    /** Activity row ids present before the SDK call; null when they couldn't be read. */
+    internal val rowIdsAtBegin: Set<String>?,
+    /** Unspent-note digest before the SDK call. */
+    internal val beginDigestHex: String
+) {
+    // Both guarded by the balance service's reconcile lock.
+    /** Another spend was in flight at some point during this one. */
+    internal var overlapped: Boolean = false
+
+    /** Unspent-note digest when the SDK call returned; null while in flight. */
+    internal var endDigestHex: String? = null
+
+    internal fun evidence() = SpendEvidence(beginDigestHex, endDigestHex, overlapped)
+}

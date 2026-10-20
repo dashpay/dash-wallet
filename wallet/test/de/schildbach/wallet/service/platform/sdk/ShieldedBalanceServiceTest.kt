@@ -54,6 +54,7 @@ import org.dashfoundation.dashsdk.persistence.entities.ShieldedOutgoingNoteEntit
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -1677,10 +1678,14 @@ class ShieldedBalanceServiceTest {
         return service
     }
 
-    /** A whole external spend: recorded before the (here absent) SDK call, then ended. */
+    /**
+     * A whole external spend: recorded before the (here absent) SDK call, then
+     * ended as never broadcast — no evidence to wait for, so these tests see
+     * only the reconciliation bookkeeping (marker, since, stability window).
+     */
     private suspend fun ShieldedBalanceServiceImpl.externalSpend() {
-        val start = beginExternalShieldedSpend() ?: error("the spend could not be recorded")
-        endExternalShieldedSpend(start)
+        val ticket = beginExternalShieldedSpend(walletIdHex) ?: error("the spend could not be recorded")
+        endExternalShieldedSpend(ticket, mayHaveBroadcast = false)
     }
 
     /** Emit [results] one by one, letting the collector process each, then give it time to settle. */
@@ -1893,8 +1898,10 @@ class ShieldedBalanceServiceTest {
         val cfg = config(true)
         val source = readySource()
         source.notesFlow.value = listOf(inputNote, keptNote)
-        val row = spendRow(status = 0)
+        // The SDK records the row during the call.
+        lateinit var row: ShieldedActivityEntity
         source.onTransfer = {
+            row = spendRow(status = 0)
             source.activityFlow.value = listOf(row)
             throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed")
         }
@@ -2440,7 +2447,7 @@ class ShieldedBalanceServiceTest {
         assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.broadcastCalls)
         assertFalse(service.shieldedBalanceMaybeStale.value)
-        assertNull(service.beginExternalShieldedSpend())
+        assertNull(service.beginExternalShieldedSpend(walletIdHex))
     }
 
     /**
@@ -2456,12 +2463,12 @@ class ShieldedBalanceServiceTest {
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             val service = subscribedService(source, cfg, sweepScope)
-            val start = service.beginExternalShieldedSpend()!!
+            val ticket = service.beginExternalShieldedSpend(walletIdHex)!!
             emitPasses(source, *Array(4) { passOk(preSpendCredits) })
             assertTrue("in flight: no row yet, still stale", service.shieldedBalanceMaybeStale.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
 
-            service.endExternalShieldedSpend(start)
+            service.endExternalShieldedSpend(ticket, mayHaveBroadcast = false)
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
             withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
         } finally {
@@ -3073,6 +3080,197 @@ class ShieldedBalanceServiceTest {
         // malformed lists are unreadable: closed
         assertFalse(reflected(listOf(row(1, nullifiers = ByteArray(33))), emptyList()))
         assertFalse(reflected(listOf(row(1, cmxs = ByteArray(31))), emptyList()))
+    }
+
+    @Test
+    fun storeMovedPastSpends_decisionTable() {
+        val a = note(value = 1L, nullifierSeed = 1)
+        val b = note(value = 2L, nullifierSeed = 2)
+        val d0 = unspentNotesDigestHex(listOf(a, b))
+        val d1 = unspentNotesDigestHex(listOf(b))
+        fun moved(vararg spends: SpendEvidence, notes: List<ShieldedNoteEntity>) =
+            shieldedStoreMovedPastSpends(spends.toList(), notes)
+
+        assertTrue(shieldedStoreMovedPastSpends(emptyList(), listOf(a, b)))
+        // in flight: never
+        assertFalse(moved(SpendEvidence(d0, null, false), notes = listOf(b)))
+        // ended where it began, store unchanged: closed (order and spent notes don't matter)
+        assertFalse(moved(SpendEvidence(d0, d0, false), notes = listOf(b, a, note(9L, isSpent = true, nullifierSeed = 9))))
+        // ... until the store moves past the end
+        assertTrue(moved(SpendEvidence(d0, d0, false), notes = listOf(b)))
+        // ran alone and moved the store during its own call (e.g. an exact-amount send): open
+        assertTrue(moved(SpendEvidence(d0, d1, false), notes = listOf(b)))
+        // overlapped: the move during its call may be another spend's — closed until a later move
+        assertFalse(moved(SpendEvidence(d0, d1, true), notes = listOf(b)))
+        assertTrue(moved(SpendEvidence(d0, d1, true), notes = listOf(b, note(3L, nullifierSeed = 3))))
+        // every spend must be satisfied
+        assertFalse(moved(SpendEvidence(d0, d1, false), SpendEvidence(d0, d1, true), notes = listOf(b)))
+    }
+
+    @Test
+    fun attributableRowId_decisionTable() {
+        fun row(id: Int, kindTag: Int = 3, createdAtMs: Long = 2_000L) =
+            activity(entryId = id, direction = 1, status = 0, createdAtMs = createdAtMs).copy(kindTag = kindTag)
+        fun hex(id: Int) = ByteArray(32).also { it[0] = id.toByte() }.joinToString("") { "%02x".format(it) }
+        fun ticket(before: Set<String>? = setOf(hex(1))) = ShieldedSpendTicket(walletIdBytes, 1_500L, 1_000L, before, "d")
+
+        // the one new local-op row is the spend's own
+        assertEquals(hex(2), attributableRowId(ticket(), listOf(row(1), row(2)), emptySet()))
+        // none new, or two new: nothing to attribute
+        assertNull(attributableRowId(ticket(), listOf(row(1)), emptySet()))
+        assertNull(attributableRowId(ticket(), listOf(row(1), row(2), row(3)), emptySet()))
+        // scan-derived kinds (Received, ShieldedSpend) and rows before the since never count
+        assertNull(attributableRowId(ticket(), listOf(row(2, kindTag = 2)), emptySet()))
+        assertNull(attributableRowId(ticket(), listOf(row(2, kindTag = 7)), emptySet()))
+        // ... nor rows created before the spend's exact start, even within the skew allowance
+        assertNull(attributableRowId(ticket(), listOf(row(2, createdAtMs = 1_499L)), emptySet()))
+        assertEquals(hex(2), attributableRowId(ticket(), listOf(row(2, createdAtMs = 1_500L)), emptySet()))
+        // a row another spend claimed is not this one's
+        assertNull(attributableRowId(ticket(), listOf(row(2)), setOf(hex(2))))
+        // rows unreadable at begin, or an overlapping spend: never attributed
+        assertNull(attributableRowId(ticket(before = null), listOf(row(2)), emptySet()))
+        assertNull(attributableRowId(ticket().also { it.overlapped = true }, listOf(row(2)), emptySet()))
+    }
+
+    /**
+     * thepastaclaw (7005fe2b1): missing history must not authorize settlement.
+     * An ambiguous spend whose activity row was never persisted leaves the
+     * store at its pre-spend state; results from passes that ran before the
+     * spend match that store, yet must not settle it. Once the spend's effect
+     * reaches the store, it settles.
+     */
+    @Test
+    fun anAmbiguousSpendWithNoActivityRow_cannotSettleOnPreSpendResults() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        // the SDK swallowed the row's persistence failure: no activity row
+        source.onTransfer = { throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed") }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Ambiguous)
+
+            emitPasses(source, *Array(4) { passOk(preSpendCredits) })
+            assertTrue("pre-spend results must not settle it", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            // the spend executed: a scan marks its input spent
+            source.notesFlow.value = listOf(keptNote)
+            source.spentNotesFlow.value = listOf(inputNote.copy(isSpent = true))
+            emitPasses(source, passOk(keptNote.value), passOk(keptNote.value))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * The fresh review of the evidence rule (2026-10-20): S1 is ambiguous and
+     * its row was never persisted; S2 is then rejected definitively and its
+     * row is Failed. S2's Failed row must not release S1 — pre-S1 results
+     * still match the store, which S1 has not moved.
+     */
+    @Test
+    fun anotherSpendsFailedRow_cannotReleaseAnUnreflectedSpend() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        source.onTransfer = { throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed") }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Ambiguous)
+
+            source.onTransfer = {
+                source.activityFlow.value = listOf(spendRow(status = 2))
+                throw DashSdkError.PlatformWallet.ShieldedBroadcastFailed("relay rejected")
+            }
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.NotBroadcast)
+
+            emitPasses(source, *Array(4) { passOk(preSpendCredits) })
+            assertTrue("pre-S1 results must not settle it", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Codex review (2026-10-20): an unrelated receive moves the note store
+     * while an ambiguous spend (no row) is unresolved. Neither a stale
+     * pre-spend result (pre-receive balance) nor a fresh one (spendable
+     * balance, which excludes the still-reserved inputs) matches the store,
+     * so it does not settle.
+     */
+    @Test
+    fun anUnrelatedReceive_cannotSettleAnUnresolvedSpend() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        source.onTransfer = { throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed") }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Ambiguous)
+
+            val received = note(value = 50_000_000_000L, nullifierSeed = 7)
+            source.notesFlow.value = source.notesFlow.value + received
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            val freshSpendable = preSpendCredits + received.value - inputNote.value
+            emitPasses(source, passOk(freshSpendable), passOk(freshSpendable))
+            assertTrue("unresolved: no result matches the store", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Codex review (2026-10-20): an exact-amount send leaves no change to scan,
+     * so after its call returns the store never moves again. With its own row
+     * or — even without one — when its own finalize moved the store during the
+     * call, it must still settle.
+     */
+    @Test
+    fun anExactAmountSend_settles_withOrWithoutItsRow() = runBlocking {
+        for (withRow in listOf(true, false)) {
+            val cfg = config(true)
+            val source = readySource()
+            source.notesFlow.value = listOf(inputNote, keptNote)
+            source.onTransfer = {
+                if (withRow) source.activityFlow.value = listOf(spendRow(status = 1, withChange = false))
+                source.markInputSpent()
+            }
+            val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            try {
+                val service = subscribedService(source, cfg, sweepScope)
+                assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+                source.scanTheSpendsOutputs(withChange = false)
+                emitPasses(source, passOk(keptNote.value), passOk(keptNote.value))
+                withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+            } finally {
+                sweepScope.cancel()
+            }
+        }
+    }
+
+    /** A definitive rejection needs no evidence, so the balance settles back without a store change. */
+    @Test
+    fun aDefinitivelyRejectedSpend_withdrawsItsEvidence_andSettles() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        source.onTransfer = { throw DashSdkError.PlatformWallet.ShieldedBroadcastFailed("relay rejected") }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.NotBroadcast)
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
     }
 
     // ── Fixtures ──────────────────────────────────────────────────────────

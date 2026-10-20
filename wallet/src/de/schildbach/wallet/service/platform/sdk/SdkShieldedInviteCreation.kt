@@ -364,8 +364,9 @@ class SdkShieldedInviteCreation internal constructor(
             // TWO notes to the same one-time address (see [inviteFundingSplit]).
             // The pending reconciliation is durable before anything is submitted
             // (see ShieldedBalanceService.beginExternalShieldedSpend).
-            val spendStartedAtMs = shieldedBalanceService.beginExternalShieldedSpend()
+            val ticket = shieldedBalanceService.beginExternalShieldedSpend(walletId)
                 ?: return@withContext notBroadcast("could not record the pending shielded spend", null)
+            var mayHaveBroadcast = true
             try {
                 source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
             } catch (t: Throwable) {
@@ -373,6 +374,8 @@ class SdkShieldedInviteCreation internal constructor(
                 return@withContext when (val classified = classifyBroadcastFailure(t)) {
                     is SdkWriteResult.NotBroadcast -> {
                         log.warn("shielded invite funding rejected pre-broadcast", t)
+                        // Set before the `finally` below reads it.
+                        mayHaveBroadcast = false
                         classified
                     }
                     else -> {
@@ -386,7 +389,7 @@ class SdkShieldedInviteCreation internal constructor(
                     }
                 }
             } finally {
-                endPoolSpend(spendStartedAtMs)
+                endPoolSpend(ticket, mayHaveBroadcast)
             }
 
             // Advisory scan hint; a missing height is fine (claim scans without one).
@@ -476,8 +479,8 @@ class SdkShieldedInviteCreation internal constructor(
      * ([ShieldedBalanceService.endExternalShieldedSpend]). Best-effort and
      * NonCancellable — the spend's durable record already exists.
      */
-    private suspend fun endPoolSpend(spendStartedAtMs: Long) = withContext(NonCancellable) {
-        runCatching { shieldedBalanceService.endExternalShieldedSpend(spendStartedAtMs) }
+    private suspend fun endPoolSpend(ticket: ShieldedSpendTicket, mayHaveBroadcast: Boolean) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.endExternalShieldedSpend(ticket, mayHaveBroadcast) }
             .onFailure { log.warn("pool-spend end failed; settlement waits for the next pass", it) }
     }
 

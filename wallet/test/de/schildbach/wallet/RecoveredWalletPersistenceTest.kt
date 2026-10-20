@@ -9,6 +9,7 @@ import de.schildbach.wallet.ui.degradedScreenActions
 import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.util.SafeModeRetryWaiters
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -1276,6 +1277,32 @@ class RecoveredWalletPersistenceTest {
         // Saves of the now-committed B remove nothing more.
         setupApp.saveWallet()
         assertEquals(2, removals)
+    }
+
+    /**
+     * thepastaclaw (PR #1621, 7005fe2b1): a shutdown save of committed wallet
+     * A passes the guard (nothing to remove), then setWallet(B) lands before
+     * the write. The save must write the wallet the guard checked — A — never
+     * B, whose first save must still remove A's shielded balance first.
+     */
+    @Test
+    fun `a replacement installed mid-save is not written past the shielded-balance guard`() {
+        val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
+        setField("dashPayConfig", dashPayConfig)
+        val setupApp = setupCapableApp()
+        val replacementB = replacementWallet()
+        val keyB = replacementB.freshReceiveKey()
+        every { setupApp["forgetShieldedBalanceBeforeFirstSave"](any<Wallet>()) } answers {
+            callOriginal()
+            assertTrue(setupApp.setWallet(replacementB))
+            Unit
+        }
+
+        setupApp.saveWallet()
+
+        assertTrue("A, the wallet the guard checked, was written", readWallet(primary).isPubKeyMine(recovered.currentReceiveKey().pubKey))
+        assertFalse(readWallet(primary).isPubKeyMine(keyB.pubKey))
+        coVerify(exactly = 0) { dashPayConfig.forgetLastShieldedBalance() }
     }
 
     /**

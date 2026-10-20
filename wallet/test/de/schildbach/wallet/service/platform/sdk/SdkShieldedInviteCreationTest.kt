@@ -64,6 +64,7 @@ import org.robolectric.annotation.Config
 class SdkShieldedInviteCreationTest {
 
     private val walletIdHex = "aa".repeat(32)
+    private val ticket = ShieldedSpendTicket(ByteArray(32), 1_700_000_000_000L, 1_700_000_000_000L, emptySet(), "digest")
 
     /** 0.03 / 0.25 DASH in credits — without loading Constants. */
     private val feeCredits = 3_000_000_000L
@@ -91,8 +92,8 @@ class SdkShieldedInviteCreationTest {
         coEvery { ensureShieldedReady() } returns ready
         every { shieldedSyncStatus } returns statusFlow
         every { observeShieldedBalance() } returns balanceFlow
-        coEvery { beginExternalShieldedSpend() } returns 1_700_000_000_000L
-        coEvery { endExternalShieldedSpend(any()) } just Runs
+        coEvery { beginExternalShieldedSpend(any()) } returns ticket
+        coEvery { endExternalShieldedSpend(any(), any()) } just Runs
     }
 
     private fun happySource() = mockk<ShieldedInviteSource> {
@@ -455,9 +456,9 @@ class SdkShieldedInviteCreationTest {
             // propagated
         }
         coVerifyOrder {
-            balance.beginExternalShieldedSpend()
+            balance.beginExternalShieldedSpend(walletIdHex)
             source.fundNotesToRaw43(any(), any(), any())
-            balance.endExternalShieldedSpend(1_700_000_000_000L)
+            balance.endExternalShieldedSpend(ticket, true)
         }
     }
 
@@ -466,13 +467,13 @@ class SdkShieldedInviteCreationTest {
     fun anUnrecordableSpend_isNotBroadcast_andNeverFunds() = runTest {
         val source = happySource()
         val balance = balanceService().apply {
-            coEvery { beginExternalShieldedSpend() } returns null
+            coEvery { beginExternalShieldedSpend(any()) } returns null
         }
         val result = service(source = source, balance = balance)
             .createShieldedInvite("alice", "Alice", "", contested = false)
         assertTrue(result is SdkWriteResult.NotBroadcast)
         coVerify(exactly = 0) { source.fundNotesToRaw43(any(), any(), any()) }
-        coVerify(exactly = 0) { balance.endExternalShieldedSpend(any()) }
+        coVerify(exactly = 0) { balance.endExternalShieldedSpend(any(), any()) }
     }
 
     @Test

@@ -2047,9 +2047,12 @@ public class WalletApplication extends MultiDexApplication
     @VisibleForTesting
     void saveWallet(final boolean backupAccountedFor) {
         awaitDeferredWalletLoadForMutation();
+        // ONE read of the field: a concurrent setWallet() must not let the
+        // guard see the committed wallet and the write save the replacement.
+        final Wallet walletToSave = wallet;
         try {
-            forgetShieldedBalanceBeforeFirstSave(wallet);
-            protobufSerializeWallet(wallet, backupAccountedFor);
+            forgetShieldedBalanceBeforeFirstSave(walletToSave);
+            protobufSerializeWallet(walletToSave, backupAccountedFor);
         } catch (final IOException x) {
             throw new RuntimeException(x);
         }

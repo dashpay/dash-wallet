@@ -18,6 +18,11 @@
 package de.schildbach.wallet.ui.main
 
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -74,5 +79,57 @@ class HomeShieldedBalanceTest {
     fun `after a local spend the known-stale cache is not used`() {
         // e.g. cached 10 DASH, 4 DASH just spent, pool re-syncing
         assertNull(homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.parse("6"), Dash.parse("10"), true))
+    }
+
+    // ── homeShieldedBalanceFlow: fail closed on read errors ──────────────
+
+    private fun flowUnder(enabledFlag: kotlinx.coroutines.flow.Flow<Boolean>) = homeShieldedBalanceFlow(
+        enabledFlag = enabledFlag,
+        live = { flowOf(Dash(500L)) },
+        status = { flowOf(ShieldedSyncStatus.READY) },
+        cachedDuffs = { flowOf(null) },
+        maybeStale = { flowOf(false) },
+        onError = { _, _ -> },
+        retryDelayMs = { 0L }
+    )
+
+    /**
+     * thepastaclaw (7005fe2b1): an unreadable feature flag is unknown — never
+     * "disabled" — so the header shows pending (null), not a zero, and the
+     * branch recovers once the flag reads.
+     */
+    @Test
+    fun anUnreadableFlag_isPending_notZero_andRecovers() = runBlocking {
+        var reads = 0
+        val flag = flow {
+            if (reads++ == 0) throw java.io.IOException("datastore unreadable")
+            emit(true)
+        }
+        assertEquals(listOf(null, Dash(500L)), flowUnder(flag).take(2).toList())
+    }
+
+    @Test
+    fun aFlagReadAsDisabled_isZero() = runBlocking {
+        assertEquals(listOf(Dash.ZERO), flowUnder(flowOf(false)).take(1).toList())
+    }
+
+    @Test
+    fun aFailingLiveRead_isPending_andRecovers() = runBlocking {
+        var reads = 0
+        val result = homeShieldedBalanceFlow(
+            enabledFlag = flowOf(true),
+            live = {
+                flow {
+                    if (reads++ == 0) throw IllegalStateException("room closed")
+                    emit(Dash(700L))
+                }
+            },
+            status = { flowOf(ShieldedSyncStatus.READY) },
+            cachedDuffs = { flowOf(null) },
+            maybeStale = { flowOf(false) },
+            onError = { _, _ -> },
+            retryDelayMs = { 0L }
+        ).take(2).toList()
+        assertEquals(listOf(null, Dash(700L)), result)
     }
 }

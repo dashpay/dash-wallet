@@ -198,7 +198,7 @@ class MainViewModelTest {
     }
     private val mockDashPayConfig = mockk<DashPayConfig> {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
-        every { observe(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns MutableStateFlow(false)
+        every { observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns MutableStateFlow(false)
         coEvery { areNotificationsDisabled() } returns false
     }
 
