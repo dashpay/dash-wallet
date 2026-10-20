@@ -200,6 +200,16 @@ class SyncActivityIdleDetectorTest {
     }
 
     @Test
+    fun replayWakeLock_heldOnlyWhileTheReplayCanProgress() {
+        assertTrue(replayHoldsWakeLock(replaying = true, networkImpeded = false, filterScanWedged = false))
+        assertFalse("no replay", replayHoldsWakeLock(replaying = false, networkImpeded = false, filterScanWedged = false))
+        // Offline: the engine waits for connections, as dashj did with its peergroup stopped.
+        assertFalse("offline", replayHoldsWakeLock(replaying = true, networkImpeded = true, filterScanWedged = false))
+        // The filter-stall watchdog has spent its restarts on a wedge.
+        assertFalse("wedged", replayHoldsWakeLock(replaying = true, networkImpeded = false, filterScanWedged = true))
+    }
+
+    @Test
     fun durableLag_holdsWhileBehindAndAdvancing() {
         // The field numbers at the 22:23 stop.
         assertTrue(durableLagHoldsService(2_421_000, 2_547_694, msSinceDurableAdvanced = 60_000))

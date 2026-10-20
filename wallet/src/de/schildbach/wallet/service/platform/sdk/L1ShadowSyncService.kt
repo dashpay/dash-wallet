@@ -1306,6 +1306,29 @@ internal class FilterStallWatchdogDecider(
     private var finalBatchReportedAtMs = 0L
 
     /**
+     * True while the watchdog has STOOD DOWN on a wedge: every restart it was
+     * willing to spend is gone and the cursor is still confirmed stalled (the
+     * [Decision.EXHAUSTED] report, or a later stall past the threshold with
+     * the budget already spent). Cleared the moment the cursor moves, the scan
+     * stops being behind, or the wallet-event stream shows the engine alive.
+     * Read by the blockchain service from another thread: a wedged engine is
+     * no reason to keep the CPU awake.
+     */
+    @Volatile
+    var standingDown: Boolean = false
+        private set
+
+    /**
+     * The engine stopped. [onCheck] only runs while it is up, so without this
+     * a wedge of the previous run would still read as current after a restart,
+     * until the new run's first check. The restart budget is NOT reset: it is
+     * per process, and a re-wedge sets [standingDown] again on its own.
+     */
+    fun onEngineStopped() {
+        standingDown = false
+    }
+
+    /**
      * The threshold the last decision was taken against, and how long the
      * cursor had actually sat still. Exposed so the log can state what
      * happened instead of a constant — the two tiers mean the constant is
@@ -1376,11 +1399,13 @@ internal class FilterStallWatchdogDecider(
             // Caught up, or the target is not known yet. Nothing to stall on,
             // and the next spell of being behind must be timed from scratch.
             lastHeight = -1L
+            standingDown = false
             return Decision.NONE
         }
         if (filterHeight != lastHeight) {
             lastHeight = filterHeight
             lastAdvanceMs = nowMs
+            standingDown = false
             // A moving cursor ends the park. The final-batch report is PER
             // PARK, not per process: the next park earns its own report and
             // its own restart hold. (CodeRabbit on #1568: as a process-lifetime
@@ -1437,6 +1462,7 @@ internal class FilterStallWatchdogDecider(
         // cheap guard against the case it names; the BACKOFF above is what
         // limits the damage when a stall is one the watchdog cannot cure.
         if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < threshold) {
+            standingDown = false
             return Decision.NONE
         }
         // A CONFIRMED stall, so it is now worth asking WHICH stall — because for
@@ -1471,9 +1497,15 @@ internal class FilterStallWatchdogDecider(
             }
             !exhaustedReported -> {
                 exhaustedReported = true
+                standingDown = true
                 Decision.EXHAUSTED
             }
-            else -> Decision.NONE
+            else -> {
+                // The budget is per process: a later wedge gets no restart and
+                // no second report, but it is still a wedge.
+                standingDown = true
+                Decision.NONE
+            }
         }
     }
 
@@ -2511,6 +2543,14 @@ class L1ShadowSyncService internal constructor(
     fun lastEngineActivityMs(): Long = lastWalletEventMs
 
     /**
+     * Whether the filter-stall watchdog has stood down on a wedged filter
+     * cursor ([FilterStallWatchdogDecider.standingDown]): the replay reads as
+     * in progress, but nothing this process will do moves it. The blockchain
+     * service stops holding the CPU awake for it.
+     */
+    fun filterScanWedged(): Boolean = filterStallDecider.standingDown
+
+    /**
      * When the in-flight engine start began, on [nowMs]'s clock; 0 when no
      * start is in progress. Set once [startIfEnabled] is committed to bringing
      * the engine up (wallet bound, scan gate open) and cleared when it returns;
@@ -3254,6 +3294,7 @@ class L1ShadowSyncService internal constructor(
                 durableSyncedHeight = 0L
             }
             lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
+            filterStallDecider.onEngineStopped() // …nor its wedge (the watchdog only runs while up)
             lastStopAtMs = nowMs()
             stopCount++
             log.info(
