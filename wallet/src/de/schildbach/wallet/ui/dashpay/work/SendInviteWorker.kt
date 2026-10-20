@@ -35,6 +35,7 @@ import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
+import de.schildbach.wallet.service.platform.sdk.ProtocolVersionUnavailableException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -68,6 +69,18 @@ class SendInviteWorker @AssistedInject constructor(
          */
         fun contestedFor(storedAmountDuffs: Long, explicit: Boolean?): Boolean =
             explicit ?: (storedAmountDuffs >= ContestedUsernameFees.CURRENT.contested.value)
+
+        /**
+         * Attempts allowed for a [ProtocolVersionUnavailableException] before the invite
+         * fails for good. With WorkManager's default exponential backoff (30 s base) the
+         * retries span roughly a quarter of an hour.
+         */
+        const val MAX_PROTOCOL_VERSION_RETRIES = 5
+
+        /** Whether attempt [runAttemptCount] (0-based) retries a protocol-version outage. Pure. */
+        fun retriesProtocolVersionOutage(runAttemptCount: Int): Boolean =
+            runAttemptCount < MAX_PROTOCOL_VERSION_RETRIES
+
         private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
     }
 
@@ -122,7 +135,7 @@ class SendInviteWorker @AssistedInject constructor(
                 // The fee dialog's amount is a QUOTE; the invite is funded with the fee in
                 // effect NOW. A contested invite therefore re-resolves the live protocol
                 // version right before the asset lock is built (and refuses on an unknown
-                // one — the worker's failure is retryable), so a conservative legacy quote
+                // one — the worker retries that, see the catch below), so a conservative legacy quote
                 // or a 13→14 activation in between cannot fund more than the active fee
                 // into the recipient-controlled invitation. Non-contested invites are the
                 // fixed DASH_PAY_FEE and use the quote as-is. Reuse of an already-created
@@ -181,6 +194,19 @@ class SendInviteWorker @AssistedInject constructor(
                     KEY_USER_ID to assetLockTx.identityId.toStringBase58()
                 )
             )
+        } catch (ex: ProtocolVersionUnavailableException) {
+            // Thrown before any funding transaction is built, so nothing was spent:
+            // a transient protocol-version lookup failure. Let WorkManager retry it
+            // with backoff instead of surfacing a permanent invite failure, but stop
+            // after a bounded number of attempts so a lasting outage still reaches
+            // the UI as an error.
+            if (retriesProtocolVersionOutage(runAttemptCount)) {
+                log.info("Send Invite: protocol version unavailable (attempt {}); retrying", runAttemptCount)
+                Result.retry()
+            } else {
+                analytics.logError(ex, "Send Invite: protocol version unavailable after retries")
+                errorResult(formatExceptionMessage("send invite", ex))
+            }
         } catch (ex: Exception) {
             analytics.logError(ex, "Send Invite: failed to create invite")
             errorResult(formatExceptionMessage("send invite", ex))

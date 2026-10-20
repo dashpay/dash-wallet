@@ -44,4 +44,16 @@ class SendInviteWorkerContestedTest {
         )
         assertFalse(SendInviteWorker.contestedFor(Constants.DASH_PAY_FEE.value, explicit = null))
     }
+
+    @Test
+    fun `a protocol-version outage retries a bounded number of times`() {
+        assertTrue("the first attempt retries", SendInviteWorker.retriesProtocolVersionOutage(0))
+        assertTrue(
+            SendInviteWorker.retriesProtocolVersionOutage(SendInviteWorker.MAX_PROTOCOL_VERSION_RETRIES - 1)
+        )
+        assertFalse(
+            "a lasting outage fails the invite instead of retrying forever",
+            SendInviteWorker.retriesProtocolVersionOutage(SendInviteWorker.MAX_PROTOCOL_VERSION_RETRIES)
+        )
+    }
 }
