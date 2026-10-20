@@ -111,6 +111,11 @@ internal class SharedPreferencesProtocolVersionHighWaterStore(
  *   quotes show LEGACY and [ContestedUsernameFees.resolved] refuses to fund
  *   until a later read persists. An unpersisted older version is still returned
  *   as read: it selects the LEGACY fee anyway, the higher of the two.
+ * - An UNREADABLE store is not "no mark": a previous process may have durably
+ *   recorded 14, and treating it as absent would let a stale 13 read fund the
+ *   LEGACY fee after a CURRENT confirmation. Until the stored mark can be read
+ *   the latch returns null (fail closed, as above) and never writes, so an
+ *   older version can't overwrite a mark it could not see.
  * - The live read failed (null): return the high-water mark ONLY when it is at
  *   or above [CONTESTED_FEE_PROTOCOL_VERSION]. A network known to run the
  *   current protocol cannot have gone back, so funding may proceed at the
@@ -160,7 +165,7 @@ class ProtocolVersionLatch internal constructor(
     suspend fun latch(live: Int?): Int? {
         val mark = withContext(ioDispatcher) {
             if (live != null) raiseTo(live) else loaded()
-        }
+        } ?: return null // the stored mark can't be read: fail closed
         return when {
             // Persisted (or already covered by the durable mark).
             live != null && live <= mark -> mark
@@ -174,19 +179,21 @@ class ProtocolVersionLatch internal constructor(
     }
 
     /**
-     * The durable mark, loading it from [store] on first use. Never throws; an
-     * unreadable store counts as no mark and is retried on the next call.
+     * The durable mark (0 = confirmed absent), loading it from [store] on first
+     * use; null when the store can't be read — NOT the same as absent. Never
+     * throws; an unreadable store is retried on the next call.
      */
-    private fun loaded(): Int = highWater ?: synchronized(lock) {
-        highWater ?: readStored()?.also { highWater = it } ?: 0
+    private fun loaded(): Int? = highWater ?: synchronized(lock) {
+        highWater ?: readStored()?.also { highWater = it }
     }
 
     /**
      * Raise the durable mark to [version] if higher and the store confirms the
-     * write; returns the durable mark afterwards (unchanged if the write failed).
+     * write; returns the durable mark afterwards (unchanged if the write failed),
+     * or null — without writing — when the current mark can't be read.
      */
-    private fun raiseTo(version: Int): Int {
-        val current = loaded()
+    private fun raiseTo(version: Int): Int? {
+        val current = loaded() ?: return null
         if (version <= current) return current
         return synchronized(lock) {
             val latest = highWater ?: 0

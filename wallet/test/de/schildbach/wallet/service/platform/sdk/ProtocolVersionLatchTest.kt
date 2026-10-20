@@ -125,7 +125,7 @@ class ProtocolVersionLatchTest {
     }
 
     @Test
-    fun `a throwing store does not throw and fails closed on a current-era read`() = runTest {
+    fun `a throwing store does not throw and fails closed`() = runTest {
         val failing = object : ProtocolVersionHighWaterStore {
             override fun read(networkId: String): Int? = throw IllegalStateException("prefs unavailable")
             override fun write(networkId: String, version: Int): Boolean =
@@ -135,7 +135,47 @@ class ProtocolVersionLatchTest {
 
         assertNull(latch.latch(null))
         assertNull("an unpersisted 14 must not be quoted: a restart could forget it", latch.latch(14))
-        assertEquals("an older version selects the LEGACY fee anyway", 13, latch.latch(13))
+        assertNull("an unreadable mark may hold 14: a live 13 must not price funding", latch.latch(13))
+    }
+
+    /** A store holding [stored] whose reads throw until [readable]; records writes. */
+    private class UnreadableStore(stored: Int, private val writesSucceed: Boolean) : ProtocolVersionHighWaterStore {
+        val values = mutableMapOf("org.dash.test" to stored)
+        var readable = false
+        var writes = 0
+        override fun read(networkId: String): Int? =
+            if (readable) values[networkId] else throw IllegalStateException("prefs unavailable")
+        override fun write(networkId: String, version: Int): Boolean {
+            writes++
+            if (writesSucceed) values[networkId] = version
+            return writesSucceed
+        }
+    }
+
+    @Test
+    fun `after a restart an unreadable durable 14 and a live 13 refuse instead of overwriting`() = runTest {
+        for (writesSucceed in listOf(true, false)) {
+            val store = UnreadableStore(stored = 14, writesSucceed = writesSucceed)
+            val afterRestart = inMemoryProtocolVersionLatch(store)
+
+            assertNull("writes succeed=$writesSucceed", afterRestart.latch(13))
+            assertNull(afterRestart.latch(null))
+            assertEquals("the durable 14 is never overwritten", 14, store.values["org.dash.test"])
+            assertEquals("no write while the mark is unreadable", 0, store.writes)
+
+            store.readable = true
+            assertEquals("once readable, the durable 14 holds again", 14, afterRestart.latch(13))
+        }
+    }
+
+    @Test
+    fun `funding after a restart with an unreadable mark refuses rather than pricing from a live 13`() {
+        val service = sdkService(inMemoryProtocolVersionLatch(UnreadableStore(14, writesSucceed = true)), 13, 13)
+
+        assertEquals(ContestedUsernameFees.LEGACY, runBlocking { ContestedUsernameFees.current(service) })
+        assertThrows(ProtocolVersionUnavailableException::class.java) {
+            runBlocking { ContestedUsernameFees.resolved(service) }
+        }
     }
 
     @Test
