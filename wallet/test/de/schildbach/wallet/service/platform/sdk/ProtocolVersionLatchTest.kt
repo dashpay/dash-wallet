@@ -161,11 +161,25 @@ class ProtocolVersionLatchTest {
             assertNull("writes succeed=$writesSucceed", afterRestart.latch(13))
             assertNull(afterRestart.latch(null))
             assertEquals("the durable 14 is never overwritten", 14, store.values["org.dash.test"])
-            assertEquals("no write while the mark is unreadable", 0, store.writes)
+            assertEquals("an older version never writes over an unreadable mark", 0, store.writes)
 
             store.readable = true
             assertEquals("once readable, the durable 14 holds again", 14, afterRestart.latch(13))
         }
+    }
+
+    @Test
+    fun `a live current-era version durably replaces an unreadable mark, a failed write does not`() = runTest {
+        val healing = UnreadableStore(stored = 15, writesSucceed = true)
+        assertEquals(14, inMemoryProtocolVersionLatch(healing).latch(14))
+        assertEquals(
+            "any mark >= 14 prices CURRENT, so replacing 15 with 14 loses nothing",
+            14,
+            healing.values["org.dash.test"]
+        )
+
+        val stuck = UnreadableStore(stored = 14, writesSucceed = false)
+        assertNull("an unpersisted replacement is not served", inMemoryProtocolVersionLatch(stuck).latch(14))
     }
 
     @Test

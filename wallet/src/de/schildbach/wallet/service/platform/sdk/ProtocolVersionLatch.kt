@@ -18,22 +18,30 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
+import androidx.core.util.AtomicFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Durable storage of the highest Platform protocol version ever observed, one
- * value per network id. A seam so [ProtocolVersionLatch] is host-JVM testable
- * without Android's SharedPreferences.
+ * value per network id. A seam so [ProtocolVersionLatch] is host-JVM testable.
  */
 internal interface ProtocolVersionHighWaterStore {
-    /** The stored high-water mark for [networkId], or null when none was ever stored. */
+    /**
+     * The stored high-water mark for [networkId], or null ONLY when none was
+     * ever stored. A mark that exists but can't be read or parsed must THROW:
+     * the latch fails closed on it, and treating it as absent could let a stale
+     * older version price funding after a durable newer one.
+     */
     fun read(networkId: String): Int?
 
     /**
@@ -45,32 +53,64 @@ internal interface ProtocolVersionHighWaterStore {
 }
 
 /**
- * [ProtocolVersionHighWaterStore] in a DEDICATED SharedPreferences file — not
- * the app's default preferences, which Reset Wallet clears
- * (`Configuration.clearPreservingAnalytics`). The protocol version is a property
- * of the NETWORK, not of the wallet: a reset must not forget that the network
- * already runs a newer protocol. The file is opened lazily, on first use, so
- * constructing the store (and everything that injects it) touches no disk.
+ * [ProtocolVersionHighWaterStore] as one small [AtomicFile] per network under
+ * [directory] — a file this class reads and parses itself, so "absent" and
+ * "unreadable" stay distinct. (SharedPreferences can't keep them apart: its
+ * loader swallows an unreadable or corrupt file and serves an empty map, which
+ * reads exactly like "never stored".)
+ *
+ * - [read]: no file → null; a file that can't be opened, read or parsed →
+ *   throws.
+ * - [write]: writes through [AtomicFile] (new file + rename), fsyncs the data
+ *   itself, and reads it back before returning true —
+ *   [AtomicFile.finishWrite] only logs a failed rename, so success can't be
+ *   taken from it.
+ *
+ * Lives in `noBackupFilesDir`, outside everything Reset Wallet deletes: the
+ * protocol version is a property of the NETWORK, not of the wallet. [directory]
+ * is resolved lazily, so constructing the store touches no disk.
  */
-internal class SharedPreferencesProtocolVersionHighWaterStore(
-    context: Context
+internal class AtomicFileProtocolVersionHighWaterStore(
+    private val directory: () -> File
 ) : ProtocolVersionHighWaterStore {
-    private val prefs by lazy { context.getSharedPreferences(PREFS_FILE_NAME, Context.MODE_PRIVATE) }
 
-    override fun read(networkId: String): Int? =
-        prefs.getInt(key(networkId), NONE).takeIf { it > 0 }
+    override fun read(networkId: String): Int? {
+        val file = atomicFile(networkId)
+        val bytes = try {
+            file.readFully()
+        } catch (e: FileNotFoundException) {
+            // Absent only if there is genuinely no file; an existing one that
+            // can't be opened (e.g. permissions) is unreadable, not absent.
+            if (file.baseFile.exists()) throw e
+            return null
+        }
+        val text = String(bytes, Charsets.UTF_8).trim()
+        return text.toIntOrNull()?.takeIf { it > 0 }
+            ?: throw IOException("unparseable protocol-version mark \"$text\" in ${file.baseFile}")
+    }
 
-    // commit(), not apply(): apply() only schedules the disk write, so a process
-    // killed right after a protocol-14 quote could restart with no mark. Called
-    // on the latch's IO dispatcher, and only when the mark rises (rarely).
-    override fun write(networkId: String, version: Int): Boolean =
-        prefs.edit().putInt(key(networkId), version).commit()
+    override fun write(networkId: String, version: Int): Boolean {
+        val dir = directory()
+        if (!dir.isDirectory && !dir.mkdirs()) return false
+        val file = atomicFile(networkId)
+        val out = file.startWrite()
+        try {
+            out.write(version.toString().toByteArray(Charsets.UTF_8))
+            out.fd.sync()
+        } catch (e: IOException) {
+            file.failWrite(out)
+            throw e
+        }
+        file.finishWrite(out)
+        return read(networkId) == version
+    }
 
-    private fun key(networkId: String) = "highest_protocol_version_$networkId"
+    private fun atomicFile(networkId: String) =
+        AtomicFile(File(directory(), networkId.replace(UNSAFE_FILE_NAME_CHARS, "_")))
 
     companion object {
-        const val PREFS_FILE_NAME = "platform_protocol_version"
-        private const val NONE = 0
+        const val DIRECTORY_NAME = "platform_protocol_version"
+        private val UNSAFE_FILE_NAME_CHARS = Regex("[^A-Za-z0-9._-]")
     }
 }
 
@@ -113,9 +153,12 @@ internal class SharedPreferencesProtocolVersionHighWaterStore(
  *   as read: it selects the LEGACY fee anyway, the higher of the two.
  * - An UNREADABLE store is not "no mark": a previous process may have durably
  *   recorded 14, and treating it as absent would let a stale 13 read fund the
- *   LEGACY fee after a CURRENT confirmation. Until the stored mark can be read
- *   the latch returns null (fail closed, as above) and never writes, so an
- *   older version can't overwrite a mark it could not see.
+ *   LEGACY fee after a CURRENT confirmation. While the stored mark can't be
+ *   read the latch returns null (fail closed, as above), and an older live
+ *   version never overwrites it. A live version at or above
+ *   [CONTESTED_FEE_PROTOCOL_VERSION] may replace it (durably, as above): every
+ *   such mark prices the same CURRENT fee, so nothing the unreadable mark could
+ *   hold is lost — and a corrupt file can't refuse contested funding forever.
  * - The live read failed (null): return the high-water mark ONLY when it is at
  *   or above [CONTESTED_FEE_PROTOCOL_VERSION]. A network known to run the
  *   current protocol cannot have gone back, so funding may proceed at the
@@ -126,7 +169,7 @@ internal class SharedPreferencesProtocolVersionHighWaterStore(
  *
  * The mark is keyed by network id ([Constants.NETWORK_PARAMETERS]), so
  * mainnet, testnet and each devnet never share a value, and it survives Reset
- * Wallet ([SharedPreferencesProtocolVersionHighWaterStore]). It is never
+ * Wallet ([AtomicFileProtocolVersionHighWaterStore]). It is never
  * lowered: a devnet torn down and rebuilt under the same name at an older
  * protocol would keep the newer mark — the cost is a contested registration
  * underfunded by the fee difference (Drive rejects it; nothing is overpaid).
@@ -144,7 +187,9 @@ class ProtocolVersionLatch internal constructor(
 ) {
     @Inject
     constructor(@ApplicationContext context: Context) : this(
-        store = SharedPreferencesProtocolVersionHighWaterStore(context),
+        store = AtomicFileProtocolVersionHighWaterStore {
+            File(context.noBackupFilesDir, AtomicFileProtocolVersionHighWaterStore.DIRECTORY_NAME)
+        },
         // Lazy: Constants untouched at construction.
         networkId = { Constants.NETWORK_PARAMETERS.id }
     )
@@ -189,19 +234,21 @@ class ProtocolVersionLatch internal constructor(
 
     /**
      * Raise the durable mark to [version] if higher and the store confirms the
-     * write; returns the durable mark afterwards (unchanged if the write failed),
-     * or null — without writing — when the current mark can't be read.
+     * write; returns the durable mark afterwards (unchanged if the write failed).
+     * When the current mark can't be read, returns null unless [version] is a
+     * current-era version that durably replaces it (see the class KDoc).
      */
     private fun raiseTo(version: Int): Int? {
-        val current = loaded() ?: return null
-        if (version <= current) return current
+        val current = loaded()
+        if (current != null && version <= current) return current
+        if (current == null && version < CONTESTED_FEE_PROTOCOL_VERSION) return null
         return synchronized(lock) {
-            val latest = highWater ?: 0
-            if (version > latest && writeStored(version)) {
-                highWater = version
-                version
-            } else {
-                latest
+            val latest = highWater
+            when {
+                latest != null && version <= latest -> latest
+                // latest == null: the unreadable mark, replaced only by a current-era version.
+                writeStored(version) -> version.also { highWater = it }
+                else -> latest
             }
         }
     }
