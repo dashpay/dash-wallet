@@ -93,8 +93,12 @@ internal val SHIELDED_IDENTITY_DENOMINATIONS_CREDITS = longArrayOf(
  *   — 0.25 DASH pre-v4.2, 0.15 DASH once the network activates it) → 0.25 DASH
  *   either way (both round UP to the same member). The identity is created holding
  *   `denomination − metered fee` in credits, and a contested DPNS registration
- *   needs ~0.2 DASH (0.1 from protocol 14) of those credits for the prefunded
- *   voting balance Drive attaches to every contestable label — 0.1 cannot cover it, 0.25 can.
+ *   needs some of those credits for the prefunded voting balance Drive attaches to
+ *   every contestable label. Why 0.1 is not enough depends on the protocol era:
+ *   pre-v4.2 that voting balance is ~0.2 DASH, which 0.1 cannot cover; from
+ *   protocol 14 the voting balance is 0.1 DASH, but the 0.15 DASH contested fee
+ *   itself exceeds 0.1. In both eras 0.25 is the smallest denomination that covers
+ *   the fee.
  *   (Before v13 this resolved to 0.3, which the active set no longer accepts.)
  */
 internal fun chooseShieldedIdentityDenominationCredits(
