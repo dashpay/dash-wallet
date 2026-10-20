@@ -207,8 +207,14 @@ interface ShieldedBalanceService {
      */
     suspend fun pendingCoinJoinShieldLockCount(): Int?
 
-    /** How many of [pendingCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null when unknown. */
+    /**
+     * How many of [pendingCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null when unknown.
+     * An unknown status is pending but never counted here: it is adopted like a live `0..3` lock.
+     */
     suspend fun recoveredCoinJoinShieldLockCount(): Int?
+
+    /** Reset Wallet: the next wallet (even the same seed restored) gets a full resume budget. */
+    fun resetForWalletWipe()
 
     /**
      * Live unspent shielded balance, credits summed from the SDK's note
@@ -216,6 +222,13 @@ interface ShieldedBalanceService {
      * [ensureShieldedReady] succeeds.
      */
     fun observeShieldedBalance(): Flow<Dash>
+
+    /**
+     * The shielded balance of wallet [walletIdHex] in duffs, read once — only while the runtime
+     * is ready on THAT wallet; null when not ready, ready on another wallet, or unreadable
+     * (never the not-ready `Dash.ZERO` of [observeShieldedBalance]).
+     */
+    suspend fun readyShieldedBalanceDuffs(walletIdHex: String): Long?
 
     /**
      * Live shielded activity timeline, newest first. Emits an empty list
@@ -360,6 +373,9 @@ interface ShieldedBalanceService {
      *   `m/9'/1'/4'/0'` elsewhere. Built by
      *   [de.schildbach.wallet.service.platform.sdk.coinJoinAccountPath].
      *   A path naming no account is a clean pre-broadcast failure.
+     * @param expectedWalletIdHex the migration's SDK wallet: re-checked against the
+     *   ready wallet under the shield mutex right before the drain; a mismatch is a
+     *   [SdkWriteResult.NotBroadcast] before [onSubmitting].
      * @param onSubmitting invoked once every preflight has passed, immediately
      *   before the native build+broadcast call — the caller's durable
      *   "submission may have happened" checkpoint. Not invoked when nothing
@@ -370,6 +386,7 @@ interface ShieldedBalanceService {
     suspend fun shieldMixedFundsFromWallet(
         amount: Dash,
         coinJoinAccountPath: String,
+        expectedWalletIdHex: String,
         onSubmitting: suspend () -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome>
 

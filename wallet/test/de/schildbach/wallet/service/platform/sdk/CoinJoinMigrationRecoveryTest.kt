@@ -47,11 +47,17 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 1
         coEvery { shield.resumePendingWalletShieldsOnUserRequest() } returns 1
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
+        coEvery { shield.readyShieldedBalanceDuffs(any()) } returns 0L
         val send = mockk<SdkL1SendService>(relaxed = true)
+        // The adopted lock's baseline is read on the active SDK wallet.
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager>(relaxed = true)
+        every { manager.wallets } returns MutableStateFlow(mapOf("01".repeat(32) to mockk()))
+        val sdk = mockk<DashSdkService>(relaxed = true)
+        every { sdk.walletManagerOrNull() } returns manager
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val service = CoinJoinFundsMigrationService(
             mockk(relaxed = true), shield, send, mockk(relaxed = true), config,
-            mockk(relaxed = true), scope, mockk(relaxed = true)
+            sdk, scope, mockk(relaxed = true)
         )
         try {
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.shieldMixedFunds(Dash.COIN))
@@ -59,7 +65,7 @@ class CoinJoinMigrationRecoveryTest {
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.combineIntoUnmixedBalance())
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.retryPendingMigration())
             coVerify(exactly = 1) { shield.resumePendingWalletShieldsOnUserRequest() }
-            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
             coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }
         } finally {
             scope.cancel()
@@ -79,6 +85,7 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
+        coEvery { shield.readyShieldedBalanceDuffs(any()) } returns 0L
         val wallet = mockk<WalletData>(relaxed = true)
         coEvery { wallet.networkParameters } returns TestNet3Params.get()
         // Fresh moves allowed: only the unavailable snapshot may stop this one.
@@ -93,7 +100,7 @@ class CoinJoinMigrationRecoveryTest {
         try {
             assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.shieldMixedFunds(Dash.COIN))
             assertNull(service.inFlightMigration())
-            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+            coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
         } finally {
             scope.cancel()
         }
@@ -111,6 +118,7 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
+        coEvery { shield.readyShieldedBalanceDuffs(any()) } returns 0L
         val send = mockk<SdkL1SendService>(relaxed = true)
         coEvery { send.cutoverCommitted() } returns false
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -212,6 +220,7 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { it.ensureShieldedReady() } returns true
         coEvery { it.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { it.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
+        coEvery { it.readyShieldedBalanceDuffs(any()) } returns 0L
     }
 
     /**
@@ -244,7 +253,7 @@ class CoinJoinMigrationRecoveryTest {
                 assertEquals(unreadable.name, MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.combineIntoUnmixedBalance())
                 assertTrue("${unreadable.name}: restore must not report 'no migration'", service.restorePendingShieldMigration())
                 assertEquals(unreadable.name, MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.retryPendingMigration())
-                coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+                coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
                 coVerify(exactly = 0) { send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
                 coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }
                 // The saved (unseen) checkpoint is never overwritten.
@@ -321,7 +330,7 @@ class CoinJoinMigrationRecoveryTest {
                 assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.shieldMixedFunds(Dash.COIN))
                 assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, service.combineIntoUnmixedBalance())
                 assertTrue(service.restorePendingShieldMigration())
-                coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any()) }
+                coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
                 coVerify(exactly = 0) { send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
             } finally {
                 scope.cancel()

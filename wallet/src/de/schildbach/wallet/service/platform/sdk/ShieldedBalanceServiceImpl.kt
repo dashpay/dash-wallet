@@ -62,6 +62,7 @@ import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.charset.CodingErrorAction
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -334,16 +335,23 @@ data class PendingWalletShieldLock(
      * gets Platform's typed already-consumed answer ([platformConsumed]) — the
      * SDK keeps such a lock at 5, so without the record it would block forever.
      * A final (2, 3, 5) lock's inputs are spent on L1, so excluding it then is safe.
+     *
+     * Only `Consumed` (4) is terminal. Any status this build does not know (a
+     * newer SDK's row after a downgrade, or a corrupted one) may still own its
+     * inputs, so it stays pending (fail closed) whatever Platform reported.
      */
     val resumable: Boolean get() = when (statusRaw) {
+        ASSET_LOCK_STATUS_CONSUMED -> false
         0, 1 -> true
         2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN -> !platformConsumed
-        else -> false
+        else -> true
     }
 
     /**
-     * Cutover evidence keeps the `0..3` semantics: restore/scan rebuilds every
-     * historical shield as 5, and the SDK keeps such a lock resumable after cutover.
+     * Cutover evidence keeps the `0..3` semantics for known statuses: restore/scan
+     * rebuilds every historical shield as 5, and the SDK keeps such a lock resumable
+     * after cutover. An unknown status blocks it like `0..3`: restore never writes
+     * one, so it cannot wedge a restored wallet, and nothing proves its inputs spent.
      */
     val blocksCutover: Boolean get() = resumable && statusRaw != ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN
 
@@ -372,6 +380,9 @@ internal fun isAssetLockAlreadyConsumed(t: Throwable): Boolean {
 
 /** SDK `AssetLockStatus::RecoveredFromChain` — non-terminal (see [PendingWalletShieldLock.resumable]). */
 internal const val ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN = 5
+
+/** SDK `AssetLockStatus::Consumed` — the ONLY terminal status (see [PendingWalletShieldLock.resumable]). */
+internal const val ASSET_LOCK_STATUS_CONSUMED = 4
 
 /**
  * Classify a lock's funding source from its [inputOutpoints] (36-byte
@@ -1507,6 +1518,20 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
         }
 
+    override suspend fun readyShieldedBalanceDuffs(walletIdHex: String): Long? {
+        val ready = readyWalletIdHex.value ?: return null
+        if (!ready.equals(walletIdHex, ignoreCase = true)) return null
+        return try {
+            val walletId = walletIdFromHex(ready) ?: return null
+            creditsToDash(source.observeUnspentNotes(walletId).first().sumOf { it.value }).duffs
+                .takeIf { ready == readyWalletIdHex.value }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("ready shielded balance read failed", t)
+            null
+        }
+    }
+
     override suspend fun isFundingNoteAnchoredForDenomination(denomination: Dash): Boolean {
         // Snapshot read only — never force a bring-up here (the gate is polled
         // on every sync/balance emission). Not-ready → not anchored (fail-closed).
@@ -1568,8 +1593,16 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val walletShieldMutex = Mutex()
 
-    /** Per-process resume attempts per outpoint (each costs a ~30s proof). */
-    private val resumeAttempts = HashMap<String, Int>()
+    /**
+     * Per-process resume attempts per outpoint (each costs a ~30s proof). Replaced on
+     * [resetForWalletWipe]: a running sweep keeps counting into the map it started with.
+     */
+    @Volatile
+    private var resumeAttempts = ConcurrentHashMap<String, Int>()
+
+    override fun resetForWalletWipe() {
+        resumeAttempts = ConcurrentHashMap()
+    }
 
     override suspend fun isWalletShieldingAvailable(): Boolean =
         isEnabled() && isL1FundingFlagOn() &&
@@ -1626,9 +1659,12 @@ class ShieldedBalanceServiceImpl internal constructor(
     override suspend fun shieldMixedFundsFromWallet(
         amount: Dash,
         coinJoinAccountPath: String,
+        expectedWalletIdHex: String,
         onSubmitting: suspend () -> Unit
-    ): SdkWriteResult<ShieldFromWalletOutcome> =
-        shieldFromWalletInternal(amount, fundingPath = coinJoinAccountPath, onSubmitting = onSubmitting)
+    ): SdkWriteResult<ShieldFromWalletOutcome> = shieldFromWalletInternal(
+        amount, fundingPath = coinJoinAccountPath, expectedWalletIdHex = expectedWalletIdHex,
+        onSubmitting = onSubmitting
+    )
 
     /**
      * The one staged Type-18 pipeline behind both [shieldFromWallet]
@@ -1642,6 +1678,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     private suspend fun shieldFromWalletInternal(
         amount: Dash,
         fundingPath: String?,
+        expectedWalletIdHex: String? = null,
         onSubmitting: suspend () -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome> {
         val operation = if (fundingPath == null) "shieldFromWallet" else "shieldMixedFundsFromWallet"
@@ -1657,7 +1694,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (!ensureShieldedReadyInner()) {
             return notBroadcast(operation, "shielded runtime not ready", null)
         }
-        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex)
+        val walletIdHex = readyWalletIdHex.value
+            ?: return notBroadcast(operation, "shielded runtime not ready", null)
+        if (expectedWalletIdHex != null && !walletIdHex.equals(expectedWalletIdHex, ignoreCase = true)) {
+            return notBroadcast(operation, "the shielded runtime is bound to another wallet", null)
+        }
+        val walletId = walletIdFromHex(walletIdHex)
             ?: return notBroadcast(operation, "shielded runtime not ready", null)
 
         // Funding gate: the SDK builds the lock from its OWN SPV wallet,
@@ -1746,6 +1788,10 @@ class ShieldedBalanceServiceImpl internal constructor(
             // Re-checked right before the native drain.
             if (fundingPath != null && coinJoinOutputsLocked()) {
                 return notBroadcast(operation, "the CoinJoin account holds app-locked outputs", null)
+            }
+            // The runtime may have rebound since the preflight: spend only from the wallet checked above.
+            if (!walletIdHex.equals(readyWalletIdHex.value, ignoreCase = true)) {
+                return notBroadcast(operation, "the shielded runtime rebound to another wallet", null)
             }
 
             // The caller's durable submission checkpoint: from here on the
@@ -1870,6 +1916,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     private suspend fun resumePendingWalletShieldsInner(userRequested: Boolean = false): Int {
         val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return 0
         return walletShieldMutex.withLock {
+            val attempted = resumeAttempts
             val pending = try {
                 trackedShieldLocks(walletId).filter { it.resumable }
             } catch (t: Throwable) {
@@ -1889,7 +1936,7 @@ class ShieldedBalanceServiceImpl internal constructor(
 
             var resumed = 0
             for (lock in pending) {
-                val attempts = resumeAttempts.getOrDefault(lock.outPointHex, 0)
+                val attempts = attempted.getOrDefault(lock.outPointHex, 0)
                 // An explicit user retry gets one attempt past the budget;
                 // the counter still advances, so unattended sweeps stay capped.
                 if (attempts >= MAX_RESUME_ATTEMPTS_PER_PROCESS && !userRequested) {
@@ -1906,7 +1953,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                     continue
                 }
                 try {
-                    resumeAttempts[lock.outPointHex] = attempts + 1
+                    attempted[lock.outPointHex] = attempts + 1
                     source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
                     resumed++
                     log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)

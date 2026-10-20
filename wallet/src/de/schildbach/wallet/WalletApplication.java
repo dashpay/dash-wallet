@@ -367,6 +367,13 @@ public class WalletApplication extends MultiDexApplication
     de.schildbach.wallet.service.platform.sdk.CutoverUiDataService cutoverUiDataService;
     @Inject
     SwapTrackingService swapTrackingService;
+    @Inject
+    de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry seamOutputLockRegistry;
+    // Lazy: only reset on Reset Wallet; never constructed at startup for that.
+    @Inject
+    dagger.Lazy<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> coinJoinFundsMigrationService;
+    @Inject
+    dagger.Lazy<de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService> shieldedBalanceService;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;

@@ -230,7 +230,7 @@ internal suspend fun coinJoinConsolidationSnapshot(
     val addresses = db.coreAddressDao().observeByAccount(account.id).first()
     val owned = addresses.map { it.address }.toSet()
     val coins = db.txoDao().observeUnspentByWallet(walletBytes).first()
-        .filter { it.accountId == account.id || it.address in owned }
+        .filter { isCoinJoinAccountTxo(it, account.id, owned) }
     // Do not act on a partially persisted snapshot, an unsettled self-spend,
     // or coins already claimed by a different transaction.
     if (coins.any { it.isLocked || it.spendingTxid != null }) return null
@@ -322,24 +322,72 @@ internal fun soleSpender(inputs: List<ByteArray>, rows: List<TxoEntity>): ByteAr
     return spender
 }
 
+/** CoinJoin account-0 membership — the ONE rule for the snapshot and every proof: its account, or its address. */
+internal fun isCoinJoinAccountTxo(row: TxoEntity, accountId: Long, addresses: Set<String>): Boolean =
+    row.accountId == accountId || row.address in addresses
+
 /**
- * Has [tx] settled in the SDK's persisted TXOs: every input spent BY it, and
- * every output paying [destination] persisted as wallet [walletIdHex]'s TXO
- * ([outputRow] answers by outpoint)? Other CoinJoin coins are irrelevant.
+ * [soleSpender] of [inputs], only when EVERY input is wallet [walletIdHex]'s own CoinJoin
+ * account-0 TXO ([isCoinJoinAccountTxo]) — else null: "spent by one tx" alone holds for
+ * anyone's coins. Read failures propagate: callers fail closed.
+ */
+internal suspend fun coinJoinSoleSpender(
+    db: DashDatabase, walletIdHex: String, inputs: List<ByteArray>, rows: List<TxoEntity>
+): ByteArray? {
+    val spender = soleSpender(inputs, rows) ?: return null
+    val wallet = Utils.HEX.decode(walletIdHex.lowercase())
+    val account = db.accountDao().getByKey(wallet, ACCOUNT_TYPE_TAG_COIN_JOIN, 0).singleOrNull() ?: return null
+    val addresses = db.coreAddressDao().observeByAccount(account.id).first().map { it.address }.toSet()
+    val byOutpoint = rows.associateBy { Utils.HEX.encode(it.outpoint) }
+    return spender.takeIf {
+        inputs.all { input ->
+            val row = byOutpoint[Utils.HEX.encode(input)]
+            row != null && row.walletId.contentEquals(wallet) && isCoinJoinAccountTxo(row, account.id, addresses)
+        }
+    }
+}
+
+/** [tx] spent wallet [walletIdHex]'s own CoinJoin coins, every input ([coinJoinSoleSpender]). */
+private suspend fun spendsOwnCoinJoinCoins(
+    db: DashDatabase, walletIdHex: String, tx: Transaction, inputRows: List<TxoEntity>
+): Boolean = coinJoinSoleSpender(db, walletIdHex, tx.inputs.map { it.outpoint.bitcoinSerialize() }, inputRows)
+    ?.contentEquals(tx.txId.reversedBytes) == true
+
+/**
+ * Is [tx] a batch of wallet [walletIdHex]: it spends the wallet's own CoinJoin coins and
+ * pays only that account ([destination] when recorded)? Paying CoinJoin addresses alone
+ * proves nothing. Throws on a read failure or a non-standard output (callers fail closed).
+ */
+internal suspend fun isCoinJoinSelfSpendBatch(
+    db: DashDatabase, walletIdHex: String, destination: String, tx: Transaction, inputRows: List<TxoEntity>,
+    params: NetworkParameters
+): Boolean {
+    if (tx.outputs.isEmpty() || !spendsOwnCoinJoinCoins(db, walletIdHex, tx, inputRows)) return false
+    return tx.outputs.all { output ->
+        val address = output.scriptPubKey.getToAddress(params).toString()
+        (destination.isEmpty() || address == destination) &&
+            ownDestinationAccount(db, walletIdHex, address) == OwnDestinationAccount.COIN_JOIN
+    }
+}
+
+/**
+ * Has [tx] settled in the SDK's persisted TXOs as wallet [walletIdHex]'s CoinJoin transfer:
+ * it spends the wallet's own CoinJoin coins (a BIP44 self-send is not the migration) and
+ * every output paying [destination] is persisted as the wallet's TXO?
  */
 internal suspend fun transferSettled(
-    tx: Transaction, inputRows: List<TxoEntity>, destination: String, walletIdHex: String, params: NetworkParameters,
-    outputRow: suspend (ByteArray) -> TxoEntity?
+    db: DashDatabase, tx: Transaction, inputRows: List<TxoEntity>, destination: String, walletIdHex: String,
+    params: NetworkParameters
 ): Boolean {
+    if (!spendsOwnCoinJoinCoins(db, walletIdHex, tx, inputRows)) return false
     val own = tx.txId.reversedBytes
-    val spender = soleSpender(tx.inputs.map { it.outpoint.bitcoinSerialize() }, inputRows) ?: return false
-    if (!spender.contentEquals(own)) return false
     val script = org.bitcoinj.script.ScriptBuilder.createOutputScript(Address.fromBase58(params, destination)).program
     val paid = tx.outputs.filter { it.scriptBytes.contentEquals(script) }
     if (paid.isEmpty()) return false
     val wallet = Utils.HEX.decode(walletIdHex.lowercase())
     return paid.all { output ->
-        val row = outputRow(TransactionOutPoint(params, output.index.toLong(), tx.txId).bitcoinSerialize())
+        val outpoint = TransactionOutPoint(params, output.index.toLong(), tx.txId).bitcoinSerialize()
+        val row = db.txoDao().getByOutpoint(outpoint)
         row != null && row.address == destination && row.amount == output.value.value &&
             row.walletId.contentEquals(wallet) && row.txid?.contentEquals(own) == true
     }

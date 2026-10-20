@@ -597,6 +597,16 @@ class SdkL1SendServiceTest {
         assertFalse(consolidationService(readySource()).coinJoinOutputsLocked())
     }
 
+    /** A seam lock of a wiped wallet never blocks the next wallet's CoinJoin drain (registry is process-wide). */
+    @Test
+    fun consolidateCoinJoin_seamLockOfAWipedWallet_noLongerBlocks() = runBlocking {
+        val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        val svc = consolidationService(readySource(), registry)
+        assertTrue(svc.coinJoinOutputsLocked())
+        registry.clearForWalletWipe()
+        assertFalse(svc.coinJoinOutputsLocked())
+    }
+
     @Test
     fun consolidateCoinJoin_bindLookupFailure_isNotBroadcast() = runBlocking {
         val failure = IllegalStateException("bootstrap failed")
