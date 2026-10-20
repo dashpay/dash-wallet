@@ -727,8 +727,10 @@ class SdkTransparentUsernameCreation internal constructor(
         // asset lock a previous attempt already built or broadcast — committed funds that need
         // no new quote. So: inspect the recovery record first, resolve strictly only for the
         // fresh arm (pre-broadcast refusal retained there).
-        val amountDuffs = if (existingLock != null) {
-            0L
+        // Null on the resume arm: no fresh amount is resolved, and a placeholder
+        // would leak into the success log and the fee ledger as a 0-duff funding.
+        val amountDuffs: Long? = if (existingLock != null) {
+            null
         } else {
             try {
                 feeDuffs(contested)
@@ -811,7 +813,8 @@ class SdkTransparentUsernameCreation internal constructor(
                 } else {
                     source.registerWithWalletFunding(
                         walletIdHex = walletId,
-                        amountDuffs = amountDuffs,
+                        // Set whenever existingLock is null (see above).
+                        amountDuffs = checkNotNull(amountDuffs) { "fresh funding amount not resolved" },
                         accountIndex = ACCOUNT_INDEX,
                         identityIndex = identityIndex,
                         keys = keys
@@ -858,10 +861,10 @@ class SdkTransparentUsernameCreation internal constructor(
 
         val identityIdBase58 = Identifier.from(identityId).toString()
         log.info(
-            "transparent-funded identity created at index {} ({}…) — {} duffs, contested={}",
+            "transparent-funded identity created at index {} ({}…) — {}, contested={}",
             identityIndex,
             identityIdBase58.take(8),
-            amountDuffs,
+            amountDuffs?.let { "$it duffs" } ?: "resumed from a tracked asset lock",
             contested
         )
 
@@ -1360,7 +1363,7 @@ class SdkTransparentUsernameCreation internal constructor(
         walletId: String,
         identityIndex: Int,
         identityIdBase58: String,
-        requestedDuffs: Long
+        requestedDuffs: Long?
     ): Long? {
         val lockedDuffs = try {
             source.registrationAssetLockAmountDuffs(walletId, identityIndex)
@@ -1376,10 +1379,14 @@ class SdkTransparentUsernameCreation internal constructor(
         ) {
             source.identityCreditBalance(identityIdBase58)
         }
-        val credited = try {
-            IdentityFeeLedger.creditedCredits(lockedDuffs ?: requestedDuffs)
-        } catch (e: ArithmeticException) {
-            null
+        // No start at all on a resume whose lock amount can't be read: a guessed
+        // one would record a nonsensical (negative) IdentityCreate fee.
+        val credited = (lockedDuffs ?: requestedDuffs)?.let { duffs ->
+            try {
+                IdentityFeeLedger.creditedCredits(duffs)
+            } catch (e: ArithmeticException) {
+                null
+            }
         }
         IdentityFeeLedger.record(
             step = IdentityFeeStep.IDENTITY_CREATE,
