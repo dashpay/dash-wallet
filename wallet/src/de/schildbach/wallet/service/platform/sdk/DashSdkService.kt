@@ -921,8 +921,8 @@ interface DashSdkService {
 
     /**
      * The network's currently active Platform protocol version, from a live
-     * `SystemQueries.refreshProtocolVersion` query (a proven `getEpochsInfo`
-     * read) — the single source the contested-username fee gate (MO-1069,
+     * proven `getEpochsInfo` read (a genesis-epoch probe, then
+     * `SystemQueries.refreshProtocolVersion`) — the single source the contested-username fee gate (MO-1069,
      * [de.schildbach.wallet.service.platform.sdk.contestedUsernameFee]) and
      * any future protocol-version-gated behavior must share, so one flow can
      * never learn a different version than another.
@@ -935,9 +935,10 @@ interface DashSdkService {
      * the older, HIGHER fee in between. A newer live version is still served
      * on the very next read — the latch only refuses to go down.
      *
-     * Null when the live read fails (the SDK cannot be started or the query
-     * fails) AND the network was never seen at the current fee protocol
-     * (>= 14) — callers MUST treat null as "unknown", never as any particular
+     * Null when the live read fails (the SDK cannot be started or the proven
+     * probe fails — the SDK's refresh alone would report its cached version)
+     * AND the network was never durably seen at the current fee protocol
+     * (>= 14), or when the persisted mark can't be read — callers MUST treat null as "unknown", never as any particular
      * version. For quotes and display the safe fallback is the OLDER
      * behavior; at FUNDING time "older" means the higher fee, so a null read
      * refuses the operation instead (see

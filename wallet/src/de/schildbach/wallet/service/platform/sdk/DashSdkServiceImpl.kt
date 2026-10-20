@@ -667,7 +667,9 @@ class DashSdkServiceImpl @Inject constructor(
 
     /**
      * See [DashSdkService.currentProtocolVersion] for the full contract.
-     * Always a live `sdk.system.refreshProtocolVersion()` read — the live
+     * Always a live read — a proven epoch probe, then
+     * `sdk.system.refreshProtocolVersion()` ([verifiedProtocolVersion]: the SDK's
+     * refresh alone reports its cached version on failure) — and the live
      * value is NOT cached across calls. A process can span network activation
      * (this runtime outlives [de.schildbach.wallet.service.platform.PlatformSyncService]
      * .stopSdkEngines(), which only stops the sync engines, not this
@@ -686,7 +688,12 @@ class DashSdkServiceImpl @Inject constructor(
     private suspend fun liveProtocolVersion(): Int? = protocolVersionOrUnknown {
         ensureStarted()
         val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
-        sdk.system.refreshProtocolVersion()
+        verifiedProtocolVersion(
+            // Genesis epoch, explicit ascending start: the one proved epoch query
+            // the verifier accepts without a current-epoch hint.
+            probe = { sdk.system.epochsInfo(startEpoch = "0", count = 1, ascending = true) },
+            refresh = { sdk.system.refreshProtocolVersion() }
+        )
     }
 
     /**
@@ -1831,6 +1838,33 @@ class DashSdkServiceImpl @Inject constructor(
          * [Throwable]: unrelated fatal VM errors still propagate. Cancellation is
          * rethrown.
          */
+        /**
+         * A protocol version only a SUCCESSFUL proven query can vouch for.
+         *
+         * `Sdk::refresh_protocol_version()` swallows a failed epoch fetch and
+         * returns `Ok(<cached version>)`; in a fresh process the cache still holds
+         * the per-network floor (13), so a failed refresh on a protocol-14 network
+         * would report a confident 13 and price funding at the LEGACY fee. Its
+         * result therefore can't tell "the network says 13" from "nobody answered".
+         *
+         * So [probe] — one proven query that THROWS (or returns null) on failure —
+         * runs first. Every proof-verified response ratchets the SDK's version up
+         * from its signed metadata, so once the probe succeeds the version the
+         * SDK holds is a fresh verified reading, and [refresh] (which can at most
+         * raise it further) returns at least that even if its own fetch fails.
+         * A failed probe is "unknown" (null): nothing was verified this time.
+         */
+        internal suspend fun verifiedProtocolVersion(
+            probe: suspend () -> String?,
+            refresh: suspend () -> Int?
+        ): Int? {
+            if (probe() == null) {
+                log.warn("currentProtocolVersion: proven epoch probe returned nothing; live version unknown")
+                return null
+            }
+            return refresh()
+        }
+
         internal suspend fun protocolVersionOrUnknown(read: suspend () -> Int?): Int? = try {
             read()
         } catch (e: CancellationException) {

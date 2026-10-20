@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
+import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
@@ -59,6 +60,64 @@ class DashSdkServiceImplTest {
         secretWriteFence = WalletSecretWriteFence(),
         protocolVersionLatch = inMemoryProtocolVersionLatch()
     )
+
+    @Test
+    fun verifiedProtocolVersion_aFailedProbeIsUnknownEvenThoughRefreshWouldReportTheSeed() {
+        // The pinned SDK's refresh returns its cached version (the protocol-13
+        // floor in a fresh process) when its own fetch fails; with no durable
+        // protocol-14 mark that would price funding at the LEGACY fee.
+        var refreshed = false
+        val version = runBlocking {
+            DashSdkServiceImpl.protocolVersionOrUnknown {
+                DashSdkServiceImpl.verifiedProtocolVersion(
+                    probe = { throw IllegalStateException("Failed to fetch epochs info: DAPI unreachable") },
+                    refresh = { refreshed = true; 13 }
+                )
+            }
+        }
+
+        assertNull("an unverified seed must not be reported as the live version", version)
+        assertFalse("the refresh result is never consulted without a proven probe", refreshed)
+    }
+
+    @Test
+    fun verifiedProtocolVersion_aNullProbeIsUnknown() {
+        assertNull(runBlocking { DashSdkServiceImpl.verifiedProtocolVersion(probe = { null }, refresh = { 13 }) })
+    }
+
+    @Test
+    fun verifiedProtocolVersion_aSuccessfulProbeReturnsTheRefreshedVersion() {
+        val version = runBlocking {
+            DashSdkServiceImpl.verifiedProtocolVersion(
+                probe = { """[{"index":0,"protocol_version":1}]""" },
+                refresh = { 14 }
+            )
+        }
+
+        assertEquals(14, version)
+    }
+
+    @Test
+    fun liveRead_withAFailedProbeAndNoDurableMark_refusesFreshContestedFunding() {
+        // End to end through the latch: protocol-13 seed, no durable 14, failed probe.
+        val latch = inMemoryProtocolVersionLatch()
+        val service = mockk<DashSdkService> {
+            coEvery { currentProtocolVersion() } coAnswers {
+                latch.latch(
+                    DashSdkServiceImpl.protocolVersionOrUnknown {
+                        DashSdkServiceImpl.verifiedProtocolVersion(
+                            probe = { throw IllegalStateException("DAPI unreachable") },
+                            refresh = { 13 }
+                        )
+                    }
+                )
+            }
+        }
+
+        assertThrows(ProtocolVersionUnavailableException::class.java) {
+            runBlocking { ContestedUsernameFees.resolved(service) }
+        }
+    }
 
     @Test
     fun protocolVersionOrUnknown_mapsAMissingNativeLibraryToUnknown() {
