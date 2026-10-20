@@ -33,6 +33,8 @@ import org.json.JSONObject
 import java.math.BigInteger
 import java.text.DateFormat
 import java.util.Date
+import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.live
+import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.sameKey
 
 /** One-QR, PV14 grant lifecycle. The mutex covers approval, recovery and revocation. */
 internal class AppConnectSession(
@@ -278,20 +280,13 @@ internal class AppConnectSession(
             if (current.uniqueIdentifier == identity.id) current.identity = identity
         }
     }
-    private fun live(key: IdentityPublicKey, time: Long) = key.disabledAt == null && (key.expiresAt == null || key.expiresAt!! > time)
-    private fun sameKey(a: IdentityPublicKey, b: IdentityPublicKey, compareId: Boolean = true) =
-        (!compareId || a.id == b.id) && a.type == b.type && a.purpose == b.purpose && a.securityLevel == b.securityLevel &&
-            a.data.contentEquals(b.data) && a.readOnly == b.readOnly && a.totalBudget == b.totalBudget && a.expiresAt == b.expiresAt &&
-            a.contractBounds?.toJSON() == b.contractBounds?.toJSON()
-
     private fun decodeKeys(record: JSONObject): List<IdentityPublicKey> {
         val keys = record.getJSONArray("keys")
         return (0 until keys.length()).map { IdentityPublicKey(jsonMap(keys.getJSONObject(it))) }
     }
     private fun requireSettled(records: List<JSONObject>, identity: Identity, time: Long) {
         check(records.filter { it.optString("state") !in setOf("prepared", "disabled") }.none { record ->
-            decodeKeys(record).any { expected -> expected.purpose == Purpose.AUTHENTICATION && live(expected, time) &&
-                identity.publicKeys.none { sameKey(it, expected) } }
+            AppConnectKeyState.unresolved(AppConnectKeyState.inspect(decodeKeys(record), identity.publicKeys, time))
         }) { "Registration outcome is still unknown. Try again after it confirms; the grant record has been retained." }
     }
     private fun indices(record: JSONObject, name: String): Set<Int> = record.getJSONArray(name).let { values ->
@@ -360,29 +355,49 @@ internal class AppConnectSession(
             checkScope(scope)
             val records = matchingRecords(scope, app)
             check(records.isNotEmpty()) { "No revocable grant record for this connection" }
-            val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
-            val keyParameter = walletRepo.getWalletEncryptionKey()
-            checkScope(scope)
-            var identity = readIdentity()
-            val time = platform.client.getPlatformTime(identity.id)
-            requireSettled(records, identity, time)
-            val disable = records.flatMap { decodeKeys(it) }.filter { it.purpose == Purpose.AUTHENTICATION }
-                .mapNotNull { expected -> identity.publicKeys.firstOrNull { sameKey(it, expected) && live(it, time) }?.id }.distinct()
-            WalletSignerCallback(wallet, keyParameter).use { signer ->
-                if (disable.isNotEmpty()) {
-                    val master = signingKey(identity, SecurityLevel.MASTER, time)
-                    checkScope(scope)
-                    identity.revision++
-                    dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, identity.toNative(), KeyID(master.id),
-                        emptyList(), disable.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
-                    identity = readIdentity()
-                    check(disable.all { id -> identity.publicKeys.any { it.id == id && it.disabledAt != null } }) { "Revocation not confirmed" }
-                }
-                records.forEach { deleteResponse(identity, it, signer, scope) }
+            revokeRecords(records, scope)
+        }
+    }
+
+    suspend fun revokePrepared(request: DashKeyRequest, plan: AppConnectPlan) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            checkScope(plan.scope)
+            check(plan.requestHash == requestHash(request)) { "Approval does not match QR" }
+            val record = matchingRecords(plan.scope, Base58.encode(request.contractId))
+                .firstOrNull { it.getString("id") == "${plan.scope}:${plan.requestHash}" }
+            // Approval may have failed before it durably prepared or submitted any keys.
+            if (record != null) revokeRecords(listOf(record), plan.scope)
+        }
+    }
+
+    private suspend fun revokeRecords(records: List<JSONObject>, scope: String) {
+        val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
+        val keyParameter = walletRepo.getWalletEncryptionKey()
+        checkScope(scope)
+        var identity = readIdentity()
+        val time = platform.client.getPlatformTime(identity.id)
+        val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(
+            records.flatMap { decodeKeys(it) }, identity.publicKeys, time))
+        WalletSignerCallback(wallet, keyParameter).use { signer ->
+            if (disable.isNotEmpty()) {
+                val master = signingKey(identity, SecurityLevel.MASTER, time)
+                checkScope(scope)
+                identity.revision++
+                dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, identity.toNative(), KeyID(master.id),
+                    emptyList(), disable.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+                identity = readIdentity()
+                check(disable.all { id -> identity.publicKeys.any { it.id == id && it.disabledAt != null } }) { "Revocation not confirmed" }
             }
-            checkScope(scope)
-            rememberIdentity(identity)
-            records.forEach { config.saveGrant(it.put("state", "disabled")) }
+            records.forEach { deleteResponse(identity, it, signer, scope) }
+        }
+        checkScope(scope)
+        rememberIdentity(identity)
+        val confirmedTime = platform.client.getPlatformTime(identity.id)
+        val unresolved = records.filter { it.optString("state") !in setOf("prepared", "disabled") &&
+            AppConnectKeyState.unresolved(AppConnectKeyState.inspect(decodeKeys(it), identity.publicKeys, confirmedTime)) }
+        records.filter { it !in unresolved }.forEach { config.saveGrant(it.put("state", "disabled")) }
+        check(unresolved.isEmpty()) {
+            "Confirmed keys were revoked, but a registration outcome is still unknown. Retry to finish revocation; pending records have been retained."
         }
     }
 

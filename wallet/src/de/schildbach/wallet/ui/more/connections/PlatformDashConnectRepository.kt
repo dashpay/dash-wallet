@@ -80,6 +80,10 @@ class PlatformDashConnectRepository @Inject constructor(
         checkNetwork()
         session.disconnect(connectionId, requireNotNull(scope) { "Refresh connections before revoking access" })
     }
+    override suspend fun revokePreparedLogin(request: DashKeyRequest, plan: AppConnectPlan?) {
+        checkNetwork()
+        session.revokePrepared(request, requireNotNull(plan) { "Approval terms unavailable" })
+    }
     override suspend fun connectionDetails(connectionId: String, scope: String?): String =
         session.details(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
     override suspend fun removeConnection(connectionId: String, scope: String?) {

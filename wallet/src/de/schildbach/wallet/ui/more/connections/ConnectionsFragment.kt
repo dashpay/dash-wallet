@@ -36,7 +36,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.compose_views.createApproveConnectionDialog
+import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -111,7 +111,6 @@ class ConnectionsFragment : Fragment() {
                 viewModel.scanOutcome.collect { outcome ->
                     when (outcome) {
                         is ConnectionsViewModel.ScanOutcome.ConnectionRequested -> {
-                            showApproveConnectionDialog()
                             viewModel.resetScanOutcome()
                         }
                         is ConnectionsViewModel.ScanOutcome.Error -> {
@@ -123,6 +122,17 @@ class ConnectionsFragment : Fragment() {
                             viewModel.resetScanOutcome()
                         }
                         is ConnectionsViewModel.ScanOutcome.Idle -> Unit
+                    }
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.uiState.collect { state ->
+                    if (state.pendingRequest != null &&
+                        childFragmentManager.findFragmentByTag(APPROVAL_DIALOG) == null &&
+                        !childFragmentManager.isStateSaved) {
+                        ApproveConnectionDialog().showNow(childFragmentManager, APPROVAL_DIALOG)
                     }
                 }
             }
@@ -151,13 +161,8 @@ class ConnectionsFragment : Fragment() {
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))
     }
 
-    private fun showApproveConnectionDialog() {
-        createApproveConnectionDialog(
-            viewModel = viewModel
-        ).show(parentFragmentManager, "approve_connection_dialog")
-    }
-
     companion object {
+        private const val APPROVAL_DIALOG = "approve_connection_dialog"
         /** Matches the `scannedUri` argument in nav_home.xml. */
         const val ARG_SCANNED_URI = "scannedUri"
     }

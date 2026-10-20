@@ -42,6 +42,7 @@ data class ConnectionsUIState(
     /** True on mainnet where the key-exchange contract is not deployed. */
     val featureUnavailable: Boolean = Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
     val isLoading: Boolean = false,
+    val requiresRevocation: Boolean = false,
     val error: String? = null
 )
 
@@ -118,7 +119,9 @@ class ConnectionsViewModel @Inject constructor(
                 pendingPlan = plan
                 _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
                     grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
-                    walletIdentityId = plan?.identityId ?: request.walletIdentityId)) }
+                    walletIdentityId = plan?.identityId ?: request.walletIdentityId),
+                    requiresRevocation = plan?.recovering == true) }
+                _approveResult.value = ApproveResult.Idle
                 _scanOutcome.value = ScanOutcome.ConnectionRequested
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
@@ -151,7 +154,7 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun selectGrant(index: Int, encryption: Boolean, selected: Boolean) {
-        if (operationInProgress) return
+        if (operationInProgress || _uiState.value.requiresRevocation) return
         val plan = pendingPlan ?: return
         if (plan.recovering || (!encryption && index == 0)) return
         val changed = if (encryption) plan.copy(selectedEncryption =
@@ -162,7 +165,7 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun selectLimits(budget: Int, lifetime: Int) {
-        if (operationInProgress) return
+        if (operationInProgress || _uiState.value.requiresRevocation) return
         val plan = pendingPlan ?: return
         if (plan.recovering) return
         val changed = plan.withPresets(budget, lifetime)
@@ -176,13 +179,16 @@ class ConnectionsViewModel @Inject constructor(
         val request = pendingLoginRequest ?: return
         val plan = pendingPlan
         operationInProgress = true
+        // Once approval starts, a transport failure cannot establish that no grant was published.
+        _uiState.update { it.copy(requiresRevocation = true,
+            pendingRequest = it.pendingRequest?.copy(recovering = true)) }
         viewModelScope.launch {
             _approveResult.value = ApproveResult.Loading
             try {
                 val connection = repository.approvePreparedLogin(request, plan)
                 pendingLoginRequest = null
                 pendingPlan = null
-                _uiState.update { it.copy(pendingRequest = null) }
+                _uiState.update { it.copy(pendingRequest = null, requiresRevocation = false) }
                 _approveResult.value = ApproveResult.Success(connection)
                 offerCallback(request, "ok")
             } catch (ex: Exception) {
@@ -195,10 +201,32 @@ class ConnectionsViewModel @Inject constructor(
 
     fun denyPendingRequest() {
         if (operationInProgress) return
-        pendingLoginRequest?.let { offerCallback(it, "declined") }
+        val request = pendingLoginRequest ?: return
+        if (_uiState.value.requiresRevocation) {
+            operationInProgress = true
+            _approveResult.value = ApproveResult.Loading
+            viewModelScope.launch {
+                try {
+                    repository.revokePreparedLogin(request, pendingPlan)
+                    clearPendingRequest()
+                    offerCallback(request, "declined")
+                } catch (ex: Exception) {
+                    if (ex is CancellationException) throw ex
+                    log.error("failed to revoke pending DashConnect approval", ex)
+                    _approveResult.value = ApproveResult.Error(ex.message)
+                } finally { operationInProgress = false }
+            }
+        } else {
+            clearPendingRequest()
+            offerCallback(request, "declined")
+        }
+    }
+
+    private fun clearPendingRequest() {
         pendingLoginRequest = null
         pendingPlan = null
-        _uiState.update { it.copy(pendingRequest = null) }
+        _uiState.update { it.copy(pendingRequest = null, requiresRevocation = false) }
+        _approveResult.value = ApproveResult.Idle
     }
 
     private fun offerCallback(request: DashKeyRequest, status: String) {

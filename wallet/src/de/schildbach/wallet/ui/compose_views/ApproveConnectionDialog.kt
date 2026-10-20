@@ -41,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,58 +59,71 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
+import android.content.DialogInterface
+import android.os.Bundle
+import android.view.View
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.viewModels
+import de.schildbach.wallet_test.databinding.DialogComposeContainerBinding
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 /**
- * Creates the "Approve connection to …?" bottom sheet dialog (MO-945).
+ * Restorable approval sheet; the parent fragment owns the pending request and operation.
  *
  * Figma Node ID: 5799:51156
  */
-fun createApproveConnectionDialog(
-    viewModel: ConnectionsViewModel,
-    onDismiss: () -> Unit = {}
-): ComposeBottomSheet {
-    return ComposeBottomSheet(
-        backgroundStyle = R.style.SecondaryBackground,
-        forceExpand = true
-    ) { dialog ->
+class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_container) {
+    override val backgroundStyle = R.style.SecondaryBackground
+    override val forceExpand = true
+    private val viewModel: ConnectionsViewModel by viewModels({ requireParentFragment() })
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        isCancelable = !viewModel.uiState.value.requiresRevocation &&
+            viewModel.approveResult.value !is ConnectionsViewModel.ApproveResult.Loading
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        view.findViewById<View>(org.dash.wallet.common.R.id.collapse_button)?.setOnClickListener {
+            viewModel.denyPendingRequest()
+        }
+        DialogComposeContainerBinding.bind(view).composeContainer.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                DashWalletTheme {
+                    Box(Modifier.navigationBarsPadding()) { ApprovalContent() }
+                }
+            }
+        }
+    }
+
+    override fun onCancel(dialog: DialogInterface) {
+        viewModel.denyPendingRequest()
+        super.onCancel(dialog)
+    }
+
+    @Composable
+    private fun ApprovalContent() {
         val uiState by viewModel.uiState.collectAsState()
         val approveResult by viewModel.approveResult.collectAsState()
         val isLoading = approveResult is ConnectionsViewModel.ApproveResult.Loading
 
-        DisposableEffect(Unit) {
-            onDispose {
-                // Clear any error so a later scan doesn't open the sheet showing a stale failure.
-                viewModel.resetApproveResult()
-                viewModel.denyPendingRequest()
-                onDismiss()
-            }
-        }
-
-        LaunchedEffect(approveResult) {
-            when (approveResult) {
-                is ConnectionsViewModel.ApproveResult.Loading -> {
-                    dialog.dialog?.setCancelable(false)
-                    dialog.dialog?.setCanceledOnTouchOutside(false)
-                }
-                is ConnectionsViewModel.ApproveResult.Success -> {
-                    dialog.dismiss()
-                    viewModel.resetApproveResult()
-                }
-                is ConnectionsViewModel.ApproveResult.Error -> {
-                    // Re-enable interaction but KEEP the result: it carries the message shown
-                    // below. Retrying moves it to Loading, and dismissing clears it above —
-                    // resetting here would blank the reason before the user could read it.
-                    dialog.dialog?.setCancelable(true)
-                    dialog.dialog?.setCanceledOnTouchOutside(true)
-                }
-                is ConnectionsViewModel.ApproveResult.Idle -> Unit
-            }
+        LaunchedEffect(isLoading, uiState.requiresRevocation, uiState.pendingRequest) {
+            isCancelable = !isLoading && !uiState.requiresRevocation
+            dialog?.setCanceledOnTouchOutside(isCancelable)
+            view?.findViewById<View>(org.dash.wallet.common.R.id.collapse_button)?.isEnabled = !isLoading
+            if (uiState.pendingRequest == null) dismissAllowingStateLoss()
         }
 
         uiState.pendingRequest?.let { request ->
             ApproveConnectionContent(
                 request = request,
                 isLoading = isLoading,
+                requiresRevocation = uiState.requiresRevocation,
                 errorMessage = (approveResult as? ConnectionsViewModel.ApproveResult.Error)?.let {
                     stringResource(R.string.dash_connect_error, it.message ?: "")
                 },
@@ -123,7 +135,6 @@ fun createApproveConnectionDialog(
                 onDeny = {
                     if (!isLoading) {
                         viewModel.denyPendingRequest()
-                        dialog.dismiss()
                     }
                 },
                 onGrantChanged = viewModel::selectGrant,
@@ -142,6 +153,7 @@ fun createApproveConnectionDialog(
 internal fun ApproveConnectionContent(
     request: ConnectionRequest,
     isLoading: Boolean = false,
+    requiresRevocation: Boolean = false,
     /** Shown above the buttons when the approval failed; null while idle or in progress. */
     errorMessage: String? = null,
     onApprove: () -> Unit = {},
@@ -282,7 +294,7 @@ internal fun ApproveConnectionContent(
                 onClick = onApprove
             ),
             secondaryButton = SheetButton(
-                text = stringResource(R.string.dash_connect_deny),
+                text = stringResource(if (requiresRevocation) R.string.dash_connect_revoke_access else R.string.dash_connect_deny),
                 style = Style.TintedGray,
                 isEnabled = !isLoading,
                 onClick = onDeny

@@ -48,9 +48,18 @@ it could still confirm. A fresh QR may be needed after expiration or a key-ID
 collision. This implementation does not silently recover an expired QR by
 publishing its response in the background.
 
+After approval starts (or a persisted grant is recovered), Deny becomes Revoke
+access. A declined callback is offered only after this request's revocation
+finishes; failures retain the request and error for retry. Approved terms stay
+frozen. The approval fragment restores from saved state without treating view
+disposal as denial, including when an in-flight operation subsequently fails.
+
 Revocation disables recorded auth keys and deletes recorded responses. Shared
 encryption keys remain. Records are retained as a revocation audit trail. Legacy
 connections without key IDs remain visible but cannot claim on-chain revocation.
+Unresolved registrations do not block disabling other confirmed keys. An occupied
+key ID with different immutable fields proves that atomic registration cannot
+land; truly unresolved records remain pending rather than claiming revocation.
 Tap a connection to query its current key budgets and expiry. Callback websites
 open only after a separate, explicit host confirmation.
 
@@ -59,5 +68,7 @@ open only after a separate, explicit host confirmation.
 The focused test suite covers published parser/encryption vectors, malformed
 TLVs and labels, u64 budgets, freshness, digest separation, consent limits,
 ownership, the exact DashPay profile exception, encryption opt-in and PV14 gating.
+It also covers uncertain approval/revocation, frozen retry terms, conflicting key
+IDs, partial revocation policy, and approval fragment saved-state restoration.
 Live registration, renewal, revocation and response cleanup still require a
 funded test identity on the target network before this draft is merge-ready.

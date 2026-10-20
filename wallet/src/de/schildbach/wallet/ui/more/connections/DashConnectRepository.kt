@@ -117,6 +117,11 @@ interface DashConnectRepository {
     suspend fun approvePreparedLogin(request: DashKeyRequest, plan: AppConnectPlan?): DAppConnection =
         approveLogin(request)
 
+    /** Reconcile and revoke this request before reporting a previously attempted approval as declined. */
+    suspend fun revokePreparedLogin(request: DashKeyRequest, plan: AppConnectPlan?) {
+        error("Pending approval revocation is unavailable")
+    }
+
     suspend fun disconnect(connectionId: String, scope: String? = null)
 
     suspend fun connectionDetails(connectionId: String, scope: String? = null): String = ""
