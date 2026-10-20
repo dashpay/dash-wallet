@@ -683,17 +683,10 @@ class DashSdkServiceImpl @Inject constructor(
     override suspend fun currentProtocolVersion(): Int? =
         protocolVersionLatch.latch(liveProtocolVersion())
 
-    private suspend fun liveProtocolVersion(): Int? {
-        return try {
-            ensureStarted()
-            val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
-            sdk.system.refreshProtocolVersion()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.warn("currentProtocolVersion: refreshProtocolVersion failed; live version unknown", e)
-            null
-        }
+    private suspend fun liveProtocolVersion(): Int? = protocolVersionOrUnknown {
+        ensureStarted()
+        val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
+        sdk.system.refreshProtocolVersion()
     }
 
     /**
@@ -1827,6 +1820,28 @@ class DashSdkServiceImpl @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
+
+        /**
+         * Run a live protocol-version [read], turning any failure into null
+         * ("unknown") for [currentProtocolVersion]'s callers. That includes a
+         * [LinkageError]: [ensureStarted] bootstraps the SDK (`Sdk.initialize()`
+         * loads `libdash_sdk`), and an `UnsatisfiedLinkError` is an [Error], so
+         * without this it would escape the fee quote's LEGACY fallback and crash
+         * the username/invite UI coroutine instead. Deliberately NOT every
+         * [Throwable]: unrelated fatal VM errors still propagate. Cancellation is
+         * rethrown.
+         */
+        internal suspend fun protocolVersionOrUnknown(read: suspend () -> Int?): Int? = try {
+            read()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("currentProtocolVersion: refreshProtocolVersion failed; live version unknown", e)
+            null
+        } catch (e: LinkageError) {
+            log.warn("currentProtocolVersion: SDK native library unavailable; live version unknown", e)
+            null
+        }
 
         /**
          * Gap limit the widening gives each standard account (BIP44, BIP32,

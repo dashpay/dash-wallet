@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.params.OuzoDevNetParams
@@ -58,6 +59,31 @@ class DashSdkServiceImplTest {
         secretWriteFence = WalletSecretWriteFence(),
         protocolVersionLatch = inMemoryProtocolVersionLatch()
     )
+
+    @Test
+    fun protocolVersionOrUnknown_mapsAMissingNativeLibraryToUnknown() {
+        val version = runBlocking {
+            DashSdkServiceImpl.protocolVersionOrUnknown { throw UnsatisfiedLinkError("no dash_sdk_jni") }
+        }
+
+        assertNull("a LinkageError must fall back to unknown, not escape to the UI coroutine", version)
+    }
+
+    @Test
+    fun protocolVersionOrUnknown_mapsAQueryFailureToUnknown() {
+        assertNull(runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { error("DAPI unreachable") } })
+        assertEquals(14, runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { 14 } })
+    }
+
+    @Test
+    fun protocolVersionOrUnknown_letsOtherFatalErrorsAndCancellationThrough() {
+        assertThrows(OutOfMemoryError::class.java) {
+            runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { throw OutOfMemoryError("fatal") } }
+        }
+        assertThrows(CancellationException::class.java) {
+            runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { throw CancellationException("cancelled") } }
+        }
+    }
 
     @Test
     fun widenedGapLimit_isTheRustMax() {
