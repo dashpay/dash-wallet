@@ -923,7 +923,7 @@ interface DashSdkService {
      * The network's currently active Platform protocol version, from a live
      * proven `getEpochsInfo` read (a genesis-epoch probe, then
      * `SystemQueries.refreshProtocolVersion`) — the single source the contested-username fee gate (MO-1069,
-     * [de.schildbach.wallet.service.platform.sdk.contestedUsernameFee]) and
+     * [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees]) and
      * any future protocol-version-gated behavior must share, so one flow can
      * never learn a different version than another.
      *

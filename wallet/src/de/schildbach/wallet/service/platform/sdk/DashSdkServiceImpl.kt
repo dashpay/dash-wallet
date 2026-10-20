@@ -1829,16 +1829,6 @@ class DashSdkServiceImpl @Inject constructor(
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
 
         /**
-         * Run a live protocol-version [read], turning any failure into null
-         * ("unknown") for [currentProtocolVersion]'s callers. That includes a
-         * [LinkageError]: [ensureStarted] bootstraps the SDK (`Sdk.initialize()`
-         * loads `libdash_sdk`), and an `UnsatisfiedLinkError` is an [Error], so
-         * without this it would escape the fee quote's LEGACY fallback and crash
-         * the username/invite UI coroutine instead. Deliberately NOT every
-         * [Throwable]: unrelated fatal VM errors still propagate. Cancellation is
-         * rethrown.
-         */
-        /**
          * A protocol version only a SUCCESSFUL proven query can vouch for.
          *
          * `Sdk::refresh_protocol_version()` swallows a failed epoch fetch and
@@ -1849,10 +1839,18 @@ class DashSdkServiceImpl @Inject constructor(
          *
          * So [probe] — one proven query that THROWS (or returns null) on failure —
          * runs first. Every proof-verified response ratchets the SDK's version up
-         * from its signed metadata, so once the probe succeeds the version the
-         * SDK holds is a fresh verified reading, and [refresh] (which can at most
-         * raise it further) returns at least that even if its own fetch fails.
-         * A failed probe is "unknown" (null): nothing was verified this time.
+         * from its quorum-signed metadata, so once the probe succeeds the SDK
+         * holds at least the highest verified version it RECOGNISES, and
+         * [refresh] (which can at most raise it further) returns at least that
+         * even if its own fetch fails. A failed probe is "unknown" (null):
+         * nothing was verified this time.
+         *
+         * Limit: the SDK does not adopt a verified version newer than any it
+         * knows (`maybe_update_protocol_version` drops it), so on a network past
+         * the bundled SDK a fresh process with no persisted mark still reads its
+         * previous/floor value. That prices LEGACY consistently for BOTH the
+         * quote and the funding (never more than the user approved); a mark
+         * persisted while the network was at 14 still yields CURRENT.
          */
         internal suspend fun verifiedProtocolVersion(
             probe: suspend () -> String?,
@@ -1865,12 +1863,22 @@ class DashSdkServiceImpl @Inject constructor(
             return refresh()
         }
 
+        /**
+         * Run a live protocol-version [read], turning any failure into null
+         * ("unknown") for [currentProtocolVersion]'s callers. That includes a
+         * [LinkageError]: [ensureStarted] bootstraps the SDK (`Sdk.initialize()`
+         * loads `libdash_sdk`), and an `UnsatisfiedLinkError` is an [Error], so
+         * without this it would escape the fee quote's LEGACY fallback and crash
+         * the username/invite UI coroutine instead. Deliberately NOT every
+         * [Throwable]: unrelated fatal VM errors still propagate. Cancellation is
+         * rethrown.
+         */
         internal suspend fun protocolVersionOrUnknown(read: suspend () -> Int?): Int? = try {
             read()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("currentProtocolVersion: refreshProtocolVersion failed; live version unknown", e)
+            log.warn("currentProtocolVersion: live read failed (SDK start, epoch probe or refresh); version unknown", e)
             null
         } catch (e: LinkageError) {
             log.warn("currentProtocolVersion: SDK native library unavailable; live version unknown", e)

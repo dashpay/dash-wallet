@@ -210,7 +210,7 @@ class ProtocolVersionLatch internal constructor(
     private fun readStored(): Int? = try {
         store.read(networkId()) ?: 0
     } catch (e: Exception) {
-        log.warn("could not read the stored protocol-version high-water mark; treating it as none", e)
+        log.warn("could not read the stored protocol-version high-water mark; failing closed (version unknown until it can be read)", e)
         null
     }
 
