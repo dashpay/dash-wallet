@@ -90,7 +90,7 @@ class MixedFundsMigrationViewModelTest {
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
             de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
                 de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD,
-                System.currentTimeMillis(), 0L
+                System.currentTimeMillis()
             )
         )
         val store = ViewModelStore()
@@ -126,7 +126,7 @@ class MixedFundsMigrationViewModelTest {
             model.shieldMixedFunds()
             markers.value = de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
                 de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD,
-                System.currentTimeMillis(), 0L
+                System.currentTimeMillis()
             )
             assertTrue(model.uiState.value.awaitingResult)
             landings++ // the watcher verified the credit before clearing
@@ -161,7 +161,7 @@ class MixedFundsMigrationViewModelTest {
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
             de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
-                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD, 1L, 0L
+                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.SHIELD, 1L
             )
         )
         coEvery { service.retryPendingMigration() } returns MixedFundsMigrationOutcome.UNCONFIRMED
@@ -185,7 +185,7 @@ class MixedFundsMigrationViewModelTest {
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
             de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration(
-                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.COMBINE, 1L, 0L
+                de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationAction.COMBINE, 1L
             )
         )
         coEvery { service.retryPendingMigration() } returns MixedFundsMigrationOutcome.UNCONFIRMED
@@ -254,7 +254,7 @@ class MixedFundsMigrationViewModelTest {
     }
 
     private fun marker(action: MixedFundsMigrationAction = MixedFundsMigrationAction.SHIELD, startedAt: Long = System.currentTimeMillis()) =
-        InFlightMixedFundsMigration(action, startedAt, 0L)
+        InFlightMixedFundsMigration(action, startedAt)
 
     @Test
     fun rejectionClearedMarkerIsNeverReportedAsSuccess() = runBlocking {
@@ -442,7 +442,7 @@ class MixedFundsMigrationViewModelTest {
         store.put("migration", model)
         try {
             val now = System.currentTimeMillis()
-            markers.value = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, now, 0L)
+            markers.value = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, now)
             // The send gate closes while the migration runs; the watcher then fails it.
             coEvery { service.routeAvailability() } returns
                 MixedFundsRoutes(shieldOperable = true, combineOperable = false)
@@ -491,7 +491,7 @@ class MixedFundsMigrationViewModelTest {
         coEvery { service.mixedFundsToMigrate() } returns Coin.COIN
         // The watcher recorded the shield's definitive failure; the sheet opens on it later.
         coEvery { service.observeInFlightMigration() } returns MutableStateFlow(
-            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis(), 0L, failed = true)
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis(), failed = true)
         )
         coEvery { service.releaseFailedMigration() } returns true
         val store = ViewModelStore()

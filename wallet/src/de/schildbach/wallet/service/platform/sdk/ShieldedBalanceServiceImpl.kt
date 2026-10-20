@@ -1518,20 +1518,6 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
         }
 
-    override suspend fun readyShieldedBalanceDuffs(walletIdHex: String): Long? {
-        val ready = readyWalletIdHex.value ?: return null
-        if (!ready.equals(walletIdHex, ignoreCase = true)) return null
-        return try {
-            val walletId = walletIdFromHex(ready) ?: return null
-            creditsToDash(source.observeUnspentNotes(walletId).first().sumOf { it.value }).duffs
-                .takeIf { ready == readyWalletIdHex.value }
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("ready shielded balance read failed", t)
-            null
-        }
-    }
-
     override suspend fun isFundingNoteAnchoredForDenomination(denomination: Dash): Boolean {
         // Snapshot read only — never force a bring-up here (the gate is polled
         // on every sync/balance emission). Not-ready → not anchored (fail-closed).

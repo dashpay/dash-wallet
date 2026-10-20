@@ -47,7 +47,6 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 1
         coEvery { shield.resumePendingWalletShieldsOnUserRequest() } returns 1
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
-        coEvery { shield.readyShieldedBalanceDuffs(any()) } returns 0L
         val send = mockk<SdkL1SendService>(relaxed = true)
         // The adopted lock's baseline is read on the active SDK wallet.
         val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager>(relaxed = true)
@@ -85,7 +84,6 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
-        coEvery { shield.readyShieldedBalanceDuffs(any()) } returns 0L
         val wallet = mockk<WalletData>(relaxed = true)
         coEvery { wallet.networkParameters } returns TestNet3Params.get()
         // Fresh moves allowed: only the unavailable snapshot may stop this one.
@@ -118,7 +116,6 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
-        coEvery { shield.readyShieldedBalanceDuffs(any()) } returns 0L
         val send = mockk<SdkL1SendService>(relaxed = true)
         coEvery { send.cutoverCommitted() } returns false
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -136,8 +133,7 @@ class CoinJoinMigrationRecoveryTest {
             marker = formatInFlightMigration(
                 InFlightMixedFundsMigration(
                     MixedFundsMigrationAction.SHIELD,
-                    System.currentTimeMillis(),
-                    0L
+                    System.currentTimeMillis()
                 )
             )
             assertTrue(service.shouldPrompt())
@@ -156,8 +152,7 @@ class CoinJoinMigrationRecoveryTest {
         var marker = formatInFlightMigration(
             InFlightMixedFundsMigration(
                 MixedFundsMigrationAction.SHIELD,
-                System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1_000L,
-                0L
+                System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1_000L
             )
         )
         coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
@@ -220,7 +215,6 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { it.ensureShieldedReady() } returns true
         coEvery { it.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { it.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
-        coEvery { it.readyShieldedBalanceDuffs(any()) } returns 0L
     }
 
     /**
@@ -272,8 +266,7 @@ class CoinJoinMigrationRecoveryTest {
         val config = mockk<DashPayConfig>(relaxed = true)
         val marker = InFlightMixedFundsMigration(
             MixedFundsMigrationAction.SHIELD,
-            System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1_000L,
-            0L
+            System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1_000L
         )
         coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } returns
             formatInFlightMigration(marker)

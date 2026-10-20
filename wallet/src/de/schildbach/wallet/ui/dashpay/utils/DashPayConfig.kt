@@ -274,11 +274,11 @@ open class DashPayConfig @Inject constructor(
 
         /**
          * A mixed-funds migration that BROADCAST but whose result is not
-         * user-visible yet — `ACTION|startedAtMillis|baselineShieldedDuffs`
-         * (see [de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration]),
+         * user-visible yet — `ACTION|startedAtMillis|legacyBaseline[|failed]`, the third field
+         * ignored on read (see [de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration]),
          * blank/absent when nothing is in flight. Written alongside
          * [MIXED_FUNDS_MIGRATION_DONE] when a migration records STARTED and
-         * cleared once the result lands (the shielded credit for SHIELD, an
+         * cleared once the result is proven (the CoinJoin-funded lock consumed for SHIELD, an
          * empty SDK CoinJoin account for COMBINE). Acknowledging the
          * timed-out state does NOT clear it (see
          * [MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT]). Keeps the sheet's PROCESSING presentation

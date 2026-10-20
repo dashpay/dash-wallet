@@ -272,9 +272,10 @@ enum class MixedFundsMigrationAction {
  * processing presentation survives lock/activity-recreation and process
  * death; the marker — not the sheet — is what carries the state.
  *
- * @param baselineShieldedDuffs the shielded balance at broadcast time; the
- *   SHIELD completion signal is the balance exceeding it once the CoinJoin
- *   account has been drained. 0 for COMBINE.
+ * Completion never depends on a shielded balance (see [CoinJoinFundsMigrationService.startInFlightWatcherIfNeeded]),
+ * so the marker carries no baseline: its persisted third field is legacy, read and ignored
+ * ([parseInFlightMigration]) and always written as [LEGACY_SHIELD_BASELINE_FIELD].
+ *
  * @param failed a later stage of a consolidated migration failed
  *   DEFINITIVELY (nothing submitted; every consolidation transaction settled,
  *   no asset lock uncertain). Not progress: the watcher stands down, the UI
@@ -284,7 +285,6 @@ enum class MixedFundsMigrationAction {
 data class InFlightMixedFundsMigration(
     val action: MixedFundsMigrationAction,
     val startedAtMillis: Long,
-    val baselineShieldedDuffs: Long,
     val failed: Boolean = false
 ) {
     /**
@@ -317,14 +317,18 @@ const val MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS = 30L * 60L * 1000L
 internal const val MIXED_FUNDS_START_SKEW_MS = 60_000L
 
 /**
- * A SHIELD marker's baseline when no trustworthy pre-credit read exists (recovered once a lock
- * may be out, or from corruption): never compared with a balance; landing needs the consumed lock.
+ * The value written in the marker's legacy third (`baselineShieldedDuffs`) field. This build
+ * ignores it; older builds still read it and complete a SHIELD only once the shielded balance
+ * EXCEEDS it. No balance can exceed [Long.MAX_VALUE], so an older build reading a marker this
+ * build wrote can never complete it on a balance (it expires into "could not confirm" instead),
+ * and every older parser accepts it (unlike -1, which builds before the non-negative check
+ * would have read as "any balance lands", and later ones as malformed).
  */
-internal const val UNKNOWN_SHIELD_BASELINE = -1L
+internal const val LEGACY_SHIELD_BASELINE_FIELD = Long.MAX_VALUE
 
-/** `ACTION|startedAtMillis|baselineShieldedDuffs[|failed]` — the persisted form. */
+/** `ACTION|startedAtMillis|legacyBaseline[|failed]` — the persisted form ([LEGACY_SHIELD_BASELINE_FIELD]). */
 internal fun formatInFlightMigration(marker: InFlightMixedFundsMigration): String =
-    "${marker.action.name}|${marker.startedAtMillis}|${marker.baselineShieldedDuffs}" +
+    "${marker.action.name}|${marker.startedAtMillis}|$LEGACY_SHIELD_BASELINE_FIELD" +
         if (marker.failed) "|$IN_FLIGHT_FAILED_FLAG" else ""
 
 private const val IN_FLIGHT_FAILED_FLAG = "failed"
@@ -339,10 +343,12 @@ internal fun parseInFlightMigration(raw: String?): InFlightMixedFundsMigration? 
     val parts = raw.split('|')
     if (parts.size != 3 && !(parts.size == 4 && parts[3] == IN_FLIGHT_FAILED_FLAG)) return null
     val action = MixedFundsMigrationAction.entries.firstOrNull { it.name == parts[0] } ?: return null
-    // Negative values are malformed, except the never-compared UNKNOWN_SHIELD_BASELINE.
+    // A negative start is malformed (it would skew the honesty window).
     val startedAt = parts[1].toLongOrNull()?.takeIf { it >= 0L } ?: return null
-    val baseline = parts[2].toLongOrNull()?.takeIf { it >= 0L || it == UNKNOWN_SHIELD_BASELINE } ?: return null
-    return InFlightMixedFundsMigration(action, startedAt, baseline, failed = parts.size == 4)
+    // The legacy baseline field: any number any build wrote (0, a balance, -1, MAX) is valid and
+    // IGNORED — completion never compares a shielded balance. Only a non-number is malformed.
+    parts[2].toLongOrNull() ?: return null
+    return InFlightMixedFundsMigration(action, startedAt, failed = parts.size == 4)
 }
 
 /** Per-route availability ([CoinJoinFundsMigrationService.routeAvailability]). */
@@ -668,9 +674,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             return MixedFundsMigrationOutcome.UNCONFIRMED
         }
         // A user-requested retry gets a fresh observation window, retaining
-        // the original balance baseline and the SDK's existing lock. A
-        // consolidation stage also gets its persisted signed bytes replayed
-        // once more ([replayConsolidationIfNeeded]) — never a rebuild.
+        // the SDK's existing lock. A consolidation stage also gets its persisted
+        // signed bytes replayed once more ([replayConsolidationIfNeeded]) — never a rebuild.
         replayedConsolidations.clear()
         writeConfig(
             DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
@@ -776,9 +781,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             val destination = snapshot.destination ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
             if (snapshot.batchAmount() <= 0L) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
             if (!consolidationOperable()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
-            val baseline = trustedShieldBaseline(snapshot.walletId) ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
             saveConsolidation(CoinJoinConsolidationState(snapshot.walletId, destination))
-            markInFlight(MixedFundsMigrationAction.SHIELD, baseline)
+            markInFlight(MixedFundsMigrationAction.SHIELD)
             return MixedFundsMigrationOutcome.STARTED
         }
         // Save the recovery presentation before the native call, which may
@@ -786,10 +790,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
         // says whether the native call was reached: `preparing` left behind by
         // a dead process proves nothing was submitted (see
         // [reconcileInterruptedDirectShield]); `submitted` never does.
-        val baseline = trustedShieldBaseline(snapshot.walletId) ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         recordShieldInputs(snapshot)
         writeConfig(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, DIRECT_SHIELD_PREPARING)
-        markInFlight(MixedFundsMigrationAction.SHIELD, baseline, startWatcher = false)
+        markInFlight(MixedFundsMigrationAction.SHIELD, startWatcher = false)
         val path = coinJoinAccountPath(walletData.networkParameters)
         log.info("mixed-funds migration: shielding {} from {}", amount, path)
         val result = shieldedBalanceService.shieldMixedFundsFromWallet(amount, path, snapshot.walletId) {
@@ -880,7 +883,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         saveConsolidation(CoinJoinConsolidationState(
             snapshot.walletId, snapshot.destination ?: destination, regularDestination = destination
         ))
-        markInFlight(MixedFundsMigrationAction.COMBINE, 0L)
+        markInFlight(MixedFundsMigrationAction.COMBINE)
         return MixedFundsMigrationOutcome.STARTED
     }
 
@@ -909,12 +912,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             try {
                 // Strict read: an unreadable marker is never overwritten.
                 if (!markerAlreadyRecorded && inFlightMigrationOrThrow() == null) {
-                    val baseline = if (action == MixedFundsMigrationAction.SHIELD) {
-                        trustedShieldBaseline(activeSdkWalletOrNull()) ?: UNKNOWN_SHIELD_BASELINE
-                    } else {
-                        0L
-                    }
-                    markInFlight(action, baseline)
+                    markInFlight(action)
                 }
                 else startInFlightWatcherIfNeeded()
             } catch (t: Throwable) {
@@ -976,7 +974,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             }
             val consolidation = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
             if (!consolidation.isNullOrBlank()) {
-                if (!markStageInFlight(CoinJoinConsolidationState.parse(consolidation))) return PendingCheck.UNREADABLE
+                markStageInFlight(CoinJoinConsolidationState.parse(consolidation))
                 return PendingCheck.PENDING
             }
         } catch (malformed: MalformedMigrationMarkerException) {
@@ -1012,8 +1010,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (!stage.isNullOrBlank()) {
                 val read = CoinJoinConsolidationState.parse(stage)
                 log.warn("mixed-funds migration: malformed marker; recreating it from the saved stage")
-                // No trustworthy baseline yet: keep the malformed marker for the next pass.
-                if (markStageInFlight(read)) PendingCheck.PENDING else PendingCheck.UNREADABLE
+                markStageInFlight(read)
+                PendingCheck.PENDING
             } else {
                 log.warn("mixed-funds migration: malformed marker with no stage; recording it as an uncertain shield")
                 markExpired(MixedFundsMigrationAction.SHIELD)
@@ -1048,12 +1046,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
         if (pending <= 0) return PendingCheck.NONE
         val recovered = shieldedBalanceService.recoveredCoinJoinShieldLockCount() ?: return PendingCheck.UNREADABLE
         if (recovered >= pending) return resolveRecoveredCoinJoinLocks()
-        // Its inputs are unknown: the sentinel completes it on the lock count (plus a
-        // verified credit), not on an empty account, which new coins would prevent.
-        // The lock is still pending, so its credit has not landed: a ready read now is its baseline.
-        val baseline = trustedShieldBaseline(activeSdkWalletOrNull()) ?: return PendingCheck.UNREADABLE
+        // Its inputs are unknown: the sentinel keeps it from completing (no proof it was
+        // Consumed rather than dropped) and lets a resolved lock return to the choice.
         writeConfig(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, ADOPTED_SHIELD_INPUTS)
-        markInFlight(MixedFundsMigrationAction.SHIELD, baseline)
+        markInFlight(MixedFundsMigrationAction.SHIELD)
         log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
         return PendingCheck.PENDING
     }
@@ -1386,61 +1382,37 @@ class CoinJoinFundsMigrationService @Inject constructor(
     }
 
     /**
-     * Recreate the marker for a saved stage; false (nothing written) when its SHIELD baseline
-     * cannot be read yet. Before the shield call a fresh READY read is the baseline; once a lock
-     * may be out (SHIELDING) the credit may already count in any read, so the baseline is
-     * [UNKNOWN_SHIELD_BASELINE]. An INVALID stage with a usable txid is only observed
-     * ([observeInvalidStage]); without one its marker starts expired.
+     * Recreate the marker for a saved stage. Never refused or deferred: completion needs no
+     * balance read, only the migration's own proof. An INVALID stage with a usable txid is only
+     * observed ([observeInvalidStage]); without one its marker starts expired.
      */
-    private suspend fun markStageInFlight(read: ConsolidationStageRead): Boolean {
+    private suspend fun markStageInFlight(read: ConsolidationStageRead) {
         when (read) {
-            is ConsolidationStageRead.Valid -> {
-                val state = read.state
-                val baseline = when {
-                    state.action == MixedFundsMigrationAction.COMBINE -> 0L
-                    state.phase == CoinJoinConsolidationState.SHIELDING -> UNKNOWN_SHIELD_BASELINE
-                    else -> trustedShieldBaseline(state.walletId) ?: return false
-                }
-                markInFlight(state.action, baseline)
-            }
+            is ConsolidationStageRead.Valid -> markInFlight(read.state.action)
             is ConsolidationStageRead.Invalid -> {
                 log.warn("mixed-funds migration: invalid consolidation stage ({}); recovering it", read.reason)
                 if (read.observation != null) {
-                    markInFlight(read.action, baselineUnknownFor(read.action))
+                    markInFlight(read.action)
                 } else {
                     markExpired(read.action)
                 }
             }
         }
-        return true
     }
-
-    /** [UNKNOWN_SHIELD_BASELINE] for a SHIELD (nothing trustworthy to compare with), else 0. */
-    private fun baselineUnknownFor(action: MixedFundsMigrationAction): Long =
-        if (action == MixedFundsMigrationAction.SHIELD) UNKNOWN_SHIELD_BASELINE else 0L
 
     /** An uncertain record shown straight away as "could not confirm"; no watcher. */
     private suspend fun markExpired(action: MixedFundsMigrationAction) {
         val startedAt = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1
-        val marker = InFlightMixedFundsMigration(action, startedAt, baselineUnknownFor(action))
-        writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker))
+        writeConfig(
+            DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
+            formatInFlightMigration(InFlightMixedFundsMigration(action, startedAt))
+        )
     }
 
-    /**
-     * The shielded balance a SHIELD's credit must exceed: a READY read on [walletIdHex]
-     * ([ShieldedBalanceService.readyShieldedBalanceDuffs]), else null — never the not-ready zero.
-     */
-    private suspend fun trustedShieldBaseline(walletIdHex: String?): Long? {
-        if (walletIdHex == null || !shieldedBalanceService.ensureShieldedReady()) return null
-        return withTimeoutOrNull(BASELINE_READ_TIMEOUT_MS) {
-            shieldedBalanceService.readyShieldedBalanceDuffs(walletIdHex)
-        }
-    }
-
-    private suspend fun markInFlight(action: MixedFundsMigrationAction, baseline: Long, startWatcher: Boolean = true) {
-        val marker = InFlightMixedFundsMigration(action, System.currentTimeMillis(), baseline)
+    private suspend fun markInFlight(action: MixedFundsMigrationAction, startWatcher: Boolean = true) {
+        val marker = InFlightMixedFundsMigration(action, System.currentTimeMillis())
         writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker))
-        log.info("mixed-funds migration in flight: {} (baseline {} duffs)", action, baseline)
+        log.info("mixed-funds migration in flight: {}", action)
         if (startWatcher) startInFlightWatcherIfNeeded()
     }
 
@@ -1448,15 +1420,18 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * Start (idempotently) the watcher that clears the in-flight marker once
      * the migration's RESULT is user-visible:
      *
-     * - SHIELD — the CoinJoin funds moved AND the shielded credit lands: the
-     *   CoinJoin account reads affirmatively EMPTY (as for COMBINE), no
-     *   CoinJoin-funded lock is still pending
-     *   ([ShieldedBalanceService.pendingCoinJoinShieldLockCount] == 0), and
-     *   [ShieldedBalanceService.observeShieldedBalance] emits a balance above
-     *   the marker's baseline (the flow emits `Dash.ZERO`/the pre-credit
-     *   figure until then, so a runtime rebind can never fake a completion).
-     *   The balance alone is not enough — an unrelated BIP44 shield landing
-     *   would raise it while the CoinJoin coins stay put;
+     * - SHIELD — the migration-specific proof only, never a shielded balance:
+     *   THIS shield's recorded inputs, each the wallet's own CoinJoin coin, are
+     *   spent by ONE shielded top-up asset lock ([recordedShieldSettlement]; an
+     *   adopted lock, inputs unknown, never completes here; older records with
+     *   none: the CoinJoin account reads affirmatively EMPTY on a synced chain), AND no
+     *   CoinJoin-funded lock is still resumable
+     *   ([ShieldedBalanceService.pendingCoinJoinShieldLockCount] == 0: Consumed,
+     *   or Platform's typed already-consumed answer; an unknown status counts as
+     *   pending). The note store is not consulted: during a restore or rescan it
+     *   fills in with pre-existing notes, so no balance (or baseline) proves this
+     *   migration's credit. The sheet may therefore close before the shielded
+     *   balance shows the credit;
      * - COMBINE — the CoinJoin account reads EMPTY in the SDK's own
      *   `accountBalances` snapshot ([parseCoinJoinConfirmedDuffs] == 0,
      *   affirmatively): the drain consumed the account and its coins are now
@@ -1621,7 +1596,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     ConsolidationStep.SETTLED -> return true
                     ConsolidationStep.PROCEED -> Unit
                 }
-                awaitMigrationResult(marker)
+                awaitMigrationResult(marker.action)
                 return true
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
@@ -1631,35 +1606,86 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
     }
 
-    /** Suspends until the [marker]'s migration result is user-visible. */
-    private suspend fun awaitMigrationResult(marker: InFlightMixedFundsMigration) {
-        when (marker.action) {
-            MixedFundsMigrationAction.SHIELD -> {
-                // The CoinJoin funds must have actually moved: THIS shield's
-                // recorded inputs are spent by a shield lock (older records:
-                // the account reads empty) and no CoinJoin-funded lock is
-                // pending. A rising shielded balance alone could be an
-                // unrelated BIP44 shield landing.
-                while ((recordedShieldSettlement() ?: (sdkCoinJoinConfirmedDuffs() == 0L)) != true ||
-                    !shieldedBalanceService.ensureShieldedReady() ||
-                    shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
-                ) {
+    /** Suspends until the [action]'s migration result is proven. */
+    private suspend fun awaitMigrationResult(action: MixedFundsMigrationAction) {
+        when (action) {
+            // The migration-specific proof is the whole rule for every marker; no shielded
+            // balance is read (a restore/rescan's note sync can raise it with older notes).
+            MixedFundsMigrationAction.SHIELD ->
+                while (!shieldMigrationProven()) {
                     delay(IN_FLIGHT_POLL_MS)
                 }
-                // No trustworthy baseline: the consumed lock above is the proof; never a balance compare.
-                if (marker.baselineShieldedDuffs == UNKNOWN_SHIELD_BASELINE) return
-                // A rise on the active wallet's READY balance, never the not-ready zero or another wallet.
-                shieldedBalanceService.observeShieldedBalance().first {
-                    val ready = activeSdkWalletOrNull()?.let { shieldedBalanceService.readyShieldedBalanceDuffs(it) }
-                    ready != null && ready > marker.baselineShieldedDuffs
-                }
-            }
             // Only an unstaged (older) COMBINE gets here; staged ones end in SETTLED.
             MixedFundsMigrationAction.COMBINE ->
                 while (sdkCoinJoinConfirmedDuffs() != 0L) {
                     delay(IN_FLIGHT_POLL_MS)
                 }
         }
+    }
+
+    /**
+     * The SHIELD completion proof: THIS shield's recorded inputs are spent by ONE shielded
+     * top-up lock whose OWN row is terminal ([settlingLockTerminal]: Consumed, or Platform's
+     * typed already-consumed answer), and no CoinJoin-funded lock is resumable. Older records
+     * with no inputs: the CoinJoin account reads affirmatively empty on a synced chain.
+     *
+     * Ordered for a store wiped between reads (e.g. a wallet recreation deleting txos and
+     * asset_locks, then rebinding): the count is read FIRST, so an emptied table can only
+     * make the later settlement reads fail (the spend or the lock row is gone), never pass;
+     * the count is then re-confirmed. Any null or missing value is "not proven".
+     */
+    private suspend fun shieldMigrationProven(): Boolean {
+        if (!shieldedBalanceService.ensureShieldedReady()) return false
+        if (shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0) return false
+        val proven = when (val settlement = recordedShieldSettlement()) {
+            is ShieldSettlement.SpentBy -> settlingLockTerminal(settlement.lockTxid)
+            ShieldSettlement.Unproven -> false
+            ShieldSettlement.NotRecorded ->
+                blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+                    sdkCoinJoinConfirmedDuffs() == 0L
+        }
+        return proven && shieldedBalanceService.pendingCoinJoinShieldLockCount() == 0
+    }
+
+    /**
+     * The settling lock's own `asset_locks` row(s) on the active wallet exist and none is
+     * resumable ([PendingWalletShieldLock.resumable]: only Consumed, or a Platform
+     * already-consumed record, is terminal; an unknown status is pending). A missing row,
+     * e.g. after the table was wiped, is not proof.
+     */
+    private suspend fun settlingLockTerminal(lockTxid: String): Boolean = try {
+        val db = dashSdkService.databaseOrNull()
+        val wallet = activeSdkWalletOrNull()
+        if (db == null || wallet == null) {
+            false
+        } else {
+            val consumed = readCheckpoint(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED).orEmpty()
+            val rows = db.assetLockDao()
+                .observeByWalletAndFundingType(Utils.HEX.decode(wallet), ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
+                .first()
+                .filter { it.outPointHex.substringBefore(':').equals(lockTxid, ignoreCase = true) }
+            rows.isNotEmpty() && rows.none {
+                PendingWalletShieldLock(
+                    it.outPointHex, it.statusRaw, it.amountDuffs, platformConsumed = it.outPointHex in consumed
+                ).resumable
+            }
+        }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not read the settling shield lock's row; not complete", t)
+        false
+    }
+
+    /** What the recorded shield inputs prove ([recordedShieldSettlement]). */
+    private sealed interface ShieldSettlement {
+        /** No inputs recorded (an older record): the account-level fallback applies. */
+        data object NotRecorded : ShieldSettlement
+
+        /** Recorded, but not (yet) provably spent by one shielded top-up lock. */
+        data object Unproven : ShieldSettlement
+
+        /** Spent by the shielded top-up lock [lockTxid] (display hex). */
+        data class SpentBy(val lockTxid: String) : ShieldSettlement
     }
 
     private suspend fun saveConsolidation(state: CoinJoinConsolidationState) {
@@ -1673,31 +1699,38 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /**
      * Whether the [recordShieldInputs] coins, each the active wallet's own CoinJoin coin
-     * ([coinJoinSoleSpender]), are all spent by ONE shielded top-up lock; null when none
-     * were recorded (account-level fallback), false on any doubt.
+     * ([coinJoinSoleSpender]), are all spent by ONE shielded top-up lock, and which;
+     * [ShieldSettlement.NotRecorded] when none were recorded, [ShieldSettlement.Unproven] on any doubt.
      */
-    private suspend fun recordedShieldSettlement(): Boolean? {
+    private suspend fun recordedShieldSettlement(): ShieldSettlement {
         val raw = try {
             readCheckpoint(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("recorded shield inputs unreadable; not complete", t)
-            return false
+            return ShieldSettlement.Unproven
         }
-        if (raw.isNullOrBlank()) return null
-        // Adopted: settled once no CoinJoin lock is pending, which the caller checks.
-        if (raw == ADOPTED_SHIELD_INPUTS) return true
+        if (raw.isNullOrBlank()) return ShieldSettlement.NotRecorded
+        // Adopted: its inputs are unknown, so nothing proves the lock is Consumed rather than
+        // gone (a lock count of 0 is both). Never completed here: once resolved, the next move or
+        // Try again returns it to the choice without success ([releaseResolvedAdoptedShieldLocked]).
+        if (raw == ADOPTED_SHIELD_INPUTS) return ShieldSettlement.Unproven
         return try {
             val inputs = decodeOutpoints(raw)
-            val db = dashSdkService.databaseOrNull() ?: return false
-            val wallet = activeSdkWalletOrNull() ?: return false
-            val spender = coinJoinSoleSpender(db, wallet, inputs, persistedTxos(db, inputs)) ?: return false
-            db.assetLockDao().fundingTypeForTxid(Utils.HEX.encode(spender.reversedArray())) ==
-                ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP
+            val db = dashSdkService.databaseOrNull() ?: return ShieldSettlement.Unproven
+            val wallet = activeSdkWalletOrNull() ?: return ShieldSettlement.Unproven
+            val spender = coinJoinSoleSpender(db, wallet, inputs, persistedTxos(db, inputs))
+                ?: return ShieldSettlement.Unproven
+            val lockTxid = Utils.HEX.encode(spender.reversedArray())
+            if (db.assetLockDao().fundingTypeForTxid(lockTxid) == ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP) {
+                ShieldSettlement.SpentBy(lockTxid)
+            } else {
+                ShieldSettlement.Unproven
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("could not read the recorded shield inputs' spender; not complete", t)
-            false
+            ShieldSettlement.Unproven
         }
     }
 
@@ -1831,10 +1864,13 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 // above) or the spend to settle, and let the honesty window
                 // expire into the "could not confirm" guidance otherwise.
                 // Evidence: the recorded inputs spent by a shield lock (older records: an empty account).
-                val settled = recordedShieldSettlement() ?: coinJoinConsolidationSnapshot(
-                    dashSdkService, ::persistedInstantLocks
-                )?.coins?.isEmpty()
-                if (settled == true) return ConsolidationStep.PROCEED
+                val settled = when (recordedShieldSettlement()) {
+                    is ShieldSettlement.SpentBy -> true
+                    ShieldSettlement.Unproven -> false
+                    ShieldSettlement.NotRecorded ->
+                        coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)?.coins?.isEmpty() == true
+                }
+                if (settled) return ConsolidationStep.PROCEED
                 delay(IN_FLIGHT_POLL_MS)
                 continue
             }
@@ -2115,12 +2151,6 @@ class CoinJoinFundsMigrationService @Inject constructor(
          * into the lock with no change, so nothing is left on `m/9'`.
          */
         const val L1_FEE_RESERVE_DUFFS = SEND_ALL_FEE_RESERVE_DUFFS
-
-        /**
-         * How long the marker write may wait for a live shielded-balance
-         * read before falling back to the persisted last-READY figure.
-         */
-        private const val BASELINE_READ_TIMEOUT_MS = 5_000L
 
         /** Keeps each persisted IS-lock lookup under SQLite's 999-variable cap. */
         private const val PERSISTED_LOCK_QUERY_CHUNK = 500

@@ -224,13 +224,6 @@ interface ShieldedBalanceService {
     fun observeShieldedBalance(): Flow<Dash>
 
     /**
-     * The shielded balance of wallet [walletIdHex] in duffs, read once — only while the runtime
-     * is ready on THAT wallet; null when not ready, ready on another wallet, or unreadable
-     * (never the not-ready `Dash.ZERO` of [observeShieldedBalance]).
-     */
-    suspend fun readyShieldedBalanceDuffs(walletIdHex: String): Long?
-
-    /**
      * Live shielded activity timeline, newest first. Emits an empty list
      * until [ensureShieldedReady] succeeds. Failed entries and entries
      * with unrecognized directions are not surfaced.

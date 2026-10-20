@@ -153,11 +153,11 @@ class MixedFundsMigrationOrderingMatrixTest {
     )
 
     private fun pending(action: MixedFundsMigrationAction = SHIELD, at: Long = System.currentTimeMillis()) =
-        InFlightMixedFundsMigration(action, at, 0L)
+        InFlightMixedFundsMigration(action, at)
     private fun expired(action: MixedFundsMigrationAction = SHIELD) =
-        InFlightMixedFundsMigration(action, System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1_000L, 0L)
+        InFlightMixedFundsMigration(action, System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1_000L)
     private fun failed(action: MixedFundsMigrationAction = SHIELD) =
-        InFlightMixedFundsMigration(action, System.currentTimeMillis(), 0L, failed = true)
+        InFlightMixedFundsMigration(action, System.currentTimeMillis(), failed = true)
 
     private val call = Step.Call
     private fun mark(m: InFlightMixedFundsMigration?, landing: Boolean = false) = Step.Marker(m, landing)

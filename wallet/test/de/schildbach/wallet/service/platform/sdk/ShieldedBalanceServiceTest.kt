@@ -2254,20 +2254,6 @@ class ShieldedBalanceServiceTest {
         assertEquals(0, source.accountFundCalls)
     }
 
-    /** The ready balance is only ever the bound wallet's own: null when not ready or bound elsewhere. */
-    @Test
-    fun readyShieldedBalance_isOnlyTheBoundWalletsReadyBalance() = runBlocking {
-        val source = readySource()
-        val service = service(source, progress = { caughtUpProgress() })
-        assertNull(service.readyShieldedBalanceDuffs(walletIdHex))
-        assertTrue(service.ensureShieldedReady())
-        assertNotNull(service.readyShieldedBalanceDuffs(walletIdHex))
-        assertNotNull(service.readyShieldedBalanceDuffs(walletIdHex.uppercase()))
-        assertNull(service.readyShieldedBalanceDuffs("cd".repeat(32)))
-        service.stop()
-        assertNull(service.readyShieldedBalanceDuffs(walletIdHex))
-    }
-
     /**
      * Reset Wallet forgets the per-process resume budget: the next wallet (here the
      * same seed restored, so the same outpoint) gets its full budget, not the wiped

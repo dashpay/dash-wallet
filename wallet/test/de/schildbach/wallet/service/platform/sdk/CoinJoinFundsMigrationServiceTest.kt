@@ -178,33 +178,40 @@ class CoinJoinFundsMigrationServiceTest {
     @Test
     fun inFlightMarker_roundTripsBothActions() {
         for (action in MixedFundsMigrationAction.entries) {
-            val marker = InFlightMixedFundsMigration(
-                action = action,
-                startedAtMillis = 1_760_000_000_123L,
-                baselineShieldedDuffs = 42_000_000L
-            )
+            val marker = InFlightMixedFundsMigration(action = action, startedAtMillis = 1_760_000_000_123L)
             assertEquals(marker, parseInFlightMigration(formatInFlightMigration(marker)))
         }
     }
 
     @Test
     fun inFlightMarker_persistedFormIsStable() {
-        // The persisted form is a compatibility contract: an upgraded build
-        // must still parse a marker written by this one.
-        val marker = InFlightMixedFundsMigration(
-            MixedFundsMigrationAction.SHIELD,
-            1_760_000_000_000L,
-            5L
-        )
-        assertEquals("SHIELD|1760000000000|5", formatInFlightMigration(marker))
+        // The persisted form is a compatibility contract: older builds still read the third
+        // (legacy baseline) field and complete only once a balance EXCEEDS it, which none can.
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1_760_000_000_000L)
+        assertEquals("SHIELD|1760000000000|${Long.MAX_VALUE}", formatInFlightMigration(marker))
     }
 
     @Test
     fun inFlightMarker_definitiveFailureRoundTripsAndOlderFormStaysUnfailed() {
-        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1_760_000_000_000L, 5L, failed = true)
-        assertEquals("SHIELD|1760000000000|5|failed", formatInFlightMigration(marker))
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1_760_000_000_000L, failed = true)
+        assertEquals("SHIELD|1760000000000|${Long.MAX_VALUE}|failed", formatInFlightMigration(marker))
         assertEquals(marker, parseInFlightMigration(formatInFlightMigration(marker)))
         assertEquals(false, parseInFlightMigration("SHIELD|1760000000000|5")?.failed)
+    }
+
+    @Test
+    fun inFlightMarker_everyLegacyBaselineParsesAndIsIgnored() {
+        // 0 (older markExpired/COMBINE), a balance, -1 (UNKNOWN), other legacy numbers and MAX.
+        val legacy = listOf("0", "5", "42000000", "-1", "-2", Long.MIN_VALUE.toString(), Long.MAX_VALUE.toString())
+        for (baseline in legacy) {
+            for (failed in listOf("", "|failed")) {
+                assertEquals(
+                    "$baseline$failed",
+                    InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 123L, failed = failed.isNotEmpty()),
+                    parseInFlightMigration("SHIELD|123|$baseline$failed")
+                )
+            }
+        }
     }
 
     @Test
@@ -228,7 +235,7 @@ class CoinJoinFundsMigrationServiceTest {
     @Test
     fun inFlightMarker_expiresExactlyPastTheHonestyWindow() {
         val startedAt = 1_000_000L
-        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.COMBINE, startedAt, 0L)
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.COMBINE, startedAt)
         assertEquals(false, marker.isExpired(nowMillis = startedAt))
         assertEquals(false, marker.isExpired(nowMillis = startedAt + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS))
         assertEquals(true, marker.isExpired(nowMillis = startedAt + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 1))
