@@ -36,6 +36,8 @@ enum class DashConnectNetwork(val code: String) {
 /** Thrown when a scanned QR is not a well-formed DashConnect URI, or fails validation. */
 class DashConnectUriException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+data class DashStRequest(val transitionBytes: ByteArray, val network: DashConnectNetwork)
+
 /**
  * A parsed and fully validated `dash-key:` login request (QR #1). The [label] is
  * UNAUTHENTICATED — it is a claim by the app about itself and MUST be treated as
@@ -86,6 +88,7 @@ data class DashKeyRequest(
 object DashConnectUri {
 
     const val KEY_SCHEME = "dash-key:"
+    const val ST_SCHEME = "dash-st:"
 
     const val VERSION = 1
     const val PAYLOAD_VERSION_BYTE: Byte = 0x01
@@ -153,6 +156,26 @@ object DashConnectUri {
 
     /** True if [uri] uses the `dash-key:` scheme. */
     fun isKeyUri(uri: String): Boolean = uri.startsWith(KEY_SCHEME)
+
+    fun isStUri(uri: String): Boolean = uri.startsWith(ST_SCHEME)
+
+    fun isConnectUri(uri: String): Boolean = isKeyUri(uri) || isStUri(uri)
+
+    fun parseStRequest(uri: String): DashStRequest {
+        if (uri.length > 6144 || !isStUri(uri) || uri.startsWith("dash-st://") || '#' in uri)
+            throw DashConnectUriException("Invalid or oversized dash-st link")
+        val body = uri.substringAfter(ST_SCHEME).substringBefore('?')
+        if ('?' !in uri || body.isEmpty() || body.length > 5594)
+            throw DashConnectUriException("Invalid dash-st payload")
+        val params = try { AppConnectParser.query(uri.substringAfter('?')) }
+        catch (error: Exception) { throw DashConnectUriException("Invalid dash-st query", error) }
+        if (params["v"] != "1") throw DashConnectUriException("Unsupported dash-st version")
+        val network = DashConnectNetwork.fromCode(params["n"])
+            ?: throw DashConnectUriException("Unknown dash-st network")
+        val bytes = decodeBase58(body)
+        if (bytes.isEmpty() || bytes.size > 4096) throw DashConnectUriException("Invalid dash-st payload size")
+        return DashStRequest(bytes, network)
+    }
 
     // ── internals ────────────────────────────────────────────────────────────────────
 

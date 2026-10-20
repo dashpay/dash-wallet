@@ -63,6 +63,31 @@ land; truly unresolved records remain pending rather than claiming revocation.
 Tap a connection to query its current key budgets and expiry. Callback websites
 open only after a separate, explicit host confirmation.
 
+## Wallet Operation Links
+
+`dash-key:<payload>?n=d&v=2` and `dash-st:<payload>?n=d&v=1` are registered as
+Android browsable links and are also accepted by the wallet scanners. `n=t`
+selects testnet; the network must match the running wallet. Mainnet remains
+disabled. These are custom URI schemes, not verified HTTPS App Links, and do
+not authenticate the calling app.
+
+`dash-st:` currently accepts only a single unsigned token direct purchase.
+The native decoder rejects trailing bytes, extra operations, grouped actions,
+fee increases, signed payloads, and mismatched token IDs. Other operations,
+including legacy login key registration, are rejected; login remains one QR.
+The wallet displays the payer identity, token and contract IDs, quantity using
+proof-verified token decimals, and maximum cost in Platform credits. Approval
+rechecks the wallet/identity and denomination, then rebuilds the operation with
+a fresh nonce and the wallet's unbound CRITICAL key. Incoming bytes are never
+signed. Network fees are additional to the purchase-price ceiling.
+
+Before submission the wallet persists a scoped receipt. Neither an SDK error
+after submission starts nor an affected-state proof justifies retrying a credit
+debit. The UI reports submitted or outcome unknown, not proof of execution,
+and the same request is blocked across restarts. Denial before approval never
+signs or broadcasts anything. Tips, key revocation and limit raises via
+`dash-st:` need their own parsers and consent flows; they are not yet supported.
+
 ## Verification
 
 The focused test suite covers published parser/encryption vectors, malformed

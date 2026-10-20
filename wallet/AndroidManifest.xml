@@ -126,12 +126,13 @@
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- DashConnect: login URIs from external scanners and browsers route to the
-                 Connections screen. -->
+            <!-- DashConnect: login and wallet-operation URIs from scanners and browsers
+                 route to the Connections screen for validation and explicit approval. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <data android:scheme="dash-key" />
+                <data android:scheme="dash-st" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

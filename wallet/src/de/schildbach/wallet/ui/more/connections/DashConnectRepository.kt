@@ -109,6 +109,13 @@ interface DashConnectRepository {
     /** Decodes and validates a scanned QR into a login request. */
     suspend fun parseQr(qrContent: String): DashConnectQr
 
+    suspend fun prepareTokenPurchase(request: de.schildbach.wallet.ui.more.connections.protocol.DashStRequest): TokenPurchaseApproval =
+        error("Token purchase requests are unavailable")
+
+    suspend fun approveTokenPurchase(approval: TokenPurchaseApproval) {
+        error("Token purchase requests are unavailable")
+    }
+
     /** Legacy/mock entry point. The real repository requires explicit prepared consent. */
     suspend fun approveLogin(request: DashKeyRequest): DAppConnection
 

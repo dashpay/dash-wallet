@@ -72,6 +72,96 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.requiresRevocation)
     }
 
+    private fun purchase() = TokenPurchaseApproval(
+        de.schildbach.wallet.ui.more.connections.protocol.DashStRequest(byteArrayOf(1),
+            de.schildbach.wallet.ui.more.connections.protocol.DashConnectNetwork.DEVNET),
+        "scope", "purchase", "identity", "contract", "token", java.math.BigInteger("100"),
+        java.math.BigInteger("50000000000"), "Token", 2, byteArrayOf(1))
+
+    private fun scanPurchase() {
+        coEvery { repository.prepareTokenPurchase(any()) } returns purchase()
+        model.onQrScanned("dash-st:2?n=d&v=1")
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Test fun `operation link only prepares approval and cancel never signs`() {
+        scanPurchase()
+        assertNotNull(model.uiState.value.pendingPurchase)
+        coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+        model.dismissTokenPurchase()
+        assertNull(model.uiState.value.pendingPurchase)
+        coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+        coVerify(exactly = 0) { repository.prepareLogin(any()) }
+    }
+
+    @Test fun `purchase is single flight and an uncertain submission cannot be retried`() {
+        scanPurchase()
+        val submitted = CompletableDeferred<Unit>()
+        coEvery { repository.approveTokenPurchase(any()) } coAnswers { submitted.await() }
+        model.approveTokenPurchase()
+        dispatcher.scheduler.runCurrent()
+        model.approveTokenPurchase()
+        model.dismissTokenPurchase()
+        assertNotNull(model.uiState.value.pendingPurchase)
+        coVerify(exactly = 1) { repository.approveTokenPurchase(any()) }
+        submitted.completeExceptionally(TokenPurchaseOutcomeUnknown(IllegalStateException("Timeout")))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(TokenPurchaseStatus.OUTCOME_UNKNOWN, model.uiState.value.purchaseStatus)
+        model.approveTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approveTokenPurchase(any()) }
+        model.dismissTokenPurchase()
+        assertNull(model.uiState.value.pendingPurchase)
+    }
+
+    @Test fun `failure before submission may retry but successful submission may not`() {
+        scanPurchase()
+        coEvery { repository.approveTokenPurchase(any()) } throws IllegalStateException("Wallet locked")
+        model.approveTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(TokenPurchaseStatus.FAILED, model.uiState.value.purchaseStatus)
+        coEvery { repository.approveTokenPurchase(any()) } returns Unit
+        model.approveTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(TokenPurchaseStatus.SUBMITTED, model.uiState.value.purchaseStatus)
+        model.approveTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 2) { repository.approveTokenPurchase(any()) }
+        assertNull(model.callbackOffer.value)
+    }
+
+    @Test fun `purchase sheet restores while submitting without cancelling or duplicating the debit`() {
+        ShadowChoreographer.setPaused(true)
+        scanPurchase()
+        val submitted = CompletableDeferred<Unit>()
+        coEvery { repository.approveTokenPurchase(any()) } coAnswers { submitted.await() }
+        ApprovalTestParent.model = model
+        var controller = Robolectric.buildActivity(ApprovalTestActivity::class.java)
+        val activity = controller.setup().get()
+        val parent = ApprovalTestParent()
+        activity.supportFragmentManager.beginTransaction().add(parent, "parent").commitNow()
+        de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog().showNow(parent.childFragmentManager, "purchase")
+        model.approveTokenPurchase()
+        dispatcher.scheduler.runCurrent()
+        try {
+            val saved = android.os.Bundle()
+            ReflectionHelpers.setField(activity, "mChangingConfigurations", true)
+            controller.pause().stop().saveInstanceState(saved).destroy()
+            controller = Robolectric.buildActivity(ApprovalTestActivity::class.java).setup(saved)
+            val restoredParent = controller.get().supportFragmentManager.findFragmentByTag("parent")!!
+            val restored = restoredParent.childFragmentManager.findFragmentByTag("purchase") as
+                de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog
+            assertTrue(restored.requireDialog().isShowing)
+            assertFalse(restored.isCancelable)
+            assertEquals(TokenPurchaseStatus.SUBMITTING, model.uiState.value.purchaseStatus)
+            submitted.completeExceptionally(TokenPurchaseOutcomeUnknown(IllegalStateException("Timeout")))
+            dispatcher.scheduler.advanceUntilIdle()
+            assertTrue(restored.requireDialog().isShowing)
+            assertEquals(TokenPurchaseStatus.OUTCOME_UNKNOWN, model.uiState.value.purchaseStatus)
+            coVerify(exactly = 1) { repository.approveTokenPurchase(any()) }
+        } finally { controller.pause().stop().destroy() }
+    }
+
     @Test fun `denying untouched request does not revoke`() {
         scan()
         model.denyPendingRequest()

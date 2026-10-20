@@ -68,6 +68,19 @@ class PlatformDashConnectRepository @Inject constructor(
         return session.prepare(request)
     }
 
+    override suspend fun prepareTokenPurchase(request: de.schildbach.wallet.ui.more.connections.protocol.DashStRequest): TokenPurchaseApproval {
+        checkNetwork()
+        val expected = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_TESTNET)
+            DashConnectNetwork.TESTNET else DashConnectNetwork.DEVNET
+        check(request.network == expected) { "QR network does not match wallet network" }
+        return session.prepareTokenPurchase(request)
+    }
+
+    override suspend fun approveTokenPurchase(approval: TokenPurchaseApproval) {
+        checkNetwork()
+        session.submitTokenPurchase(approval)
+    }
+
     override suspend fun approveLogin(request: DashKeyRequest): DAppConnection =
         error("Explicit approval of prepared grant terms is required")
 

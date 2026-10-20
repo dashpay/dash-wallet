@@ -72,6 +72,72 @@ internal class AppConnectSession(
         request.appConnect?.bytes ?: (request.appEphemeralPubKey + request.contractId)
     ))
 
+    private fun nativeBytes(result: org.dashj.platform.sdk.Result_ok_Vec_u8_err_String): ByteArray = try {
+        check(result.error == null) { result.error.orEmpty() }
+        checkNotNull(result.ok)
+    } finally { result.delete() }
+
+    suspend fun prepareTokenPurchase(request: DashStRequest): TokenPurchaseApproval = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            check(platform.client.refreshProtocolVersion() >= 14) { "App Connect operations require Platform protocol version 14" }
+            val scope = scope()
+            val id = "$scope:${Base58.encode(KeyExchangeCrypto.hash256(request.transitionBytes))}"
+            check(!config.purchaseWasSubmitted(id)) { "This purchase was already submitted or its outcome is unknown. Check your balances; do not retry it." }
+            val identity = readIdentity()
+            val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk, request.transitionBytes, identity.id.toNative()))
+            val data = JSONObject(String(summary, Charsets.UTF_8))
+            checkScope(scope)
+            TokenPurchaseApproval(request.copy(transitionBytes = request.transitionBytes.copyOf()), scope, id,
+                data.getString("ownerId"), data.getString("contractId"), data.getString("tokenId"),
+                BigInteger(data.getString("amount")), BigInteger(data.getString("maximumCredits")),
+                data.getString("name").replace(Regex("[\\p{Cc}\\p{Cf}]"), "").take(80), data.getInt("decimals"), summary)
+        }
+    }
+
+    suspend fun submitTokenPurchase(approval: TokenPurchaseApproval) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            checkScope(approval.scope)
+            check(!config.purchaseWasSubmitted(approval.requestId)) { "This purchase cannot be submitted again" }
+            val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
+            val keyParameter = walletRepo.getWalletEncryptionKey()
+            checkScope(approval.scope)
+            val identity = readIdentity()
+            check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
+            val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk,
+                approval.request.transitionBytes, identity.id.toNative()))
+            check(summary.contentEquals(approval.summary)) { "Purchase terms or token metadata changed. Scan again." }
+            val key = signingKey(identity, SecurityLevel.CRITICAL, platform.client.getPlatformTime(identity.id))
+            val chain = (wallet.getKeyChainExtension(org.bitcoinj.wallet.authentication.AuthenticationGroupExtension.EXTENSION_ID)
+                as org.bitcoinj.wallet.authentication.AuthenticationGroupExtension).identityKeyChain
+                ?: error("Wallet authentication keys unavailable")
+            object : Signer() {
+                override fun sign(publicKey: ByteArray, data: ByteArray): ByteArray {
+                    val walletKey = if (publicKey.size == 20) chain.findKeyFromPubHash(publicKey)
+                        else chain.findKeyFromPubKey(publicKey)
+                    return checkNotNull(walletKey) { "Purchase signing key is not controlled by this wallet" }
+                        .signHash(Sha256Hash.twiceOf(data), keyParameter)
+                }
+            }.use { signer ->
+                val receipt = JSONObject().put("id", approval.requestId).put("scope", approval.scope)
+                    .put("ownerId", approval.ownerId).put("contractId", approval.contractId).put("tokenId", approval.tokenId)
+                    .put("amount", approval.amount.toString()).put("maximumCredits", approval.maximumCredits.toString())
+                    .put("status", "outcomeUnknown").put("updatedAt", System.currentTimeMillis())
+                // Persist before any native submission. Never automatically retry an uncertain credit debit.
+                config.savePurchase(receipt)
+                try {
+                    checkScope(approval.scope)
+                    nativeBytes(dashsdk.submitTokenPurchaseSdk(platform.rustSdk, approval.request.transitionBytes,
+                        approval.summary, identity.id.toNative(), key.toNative(), signer.nativeContext,
+                        BigInteger.valueOf(signer.signerCallback)))
+                    config.savePurchase(receipt.put("status", "submitted"))
+                } catch (error: Exception) {
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    throw TokenPurchaseOutcomeUnknown(error)
+                }
+            }
+        }
+    }
+
     suspend fun prepare(request: DashKeyRequest): AppConnectPlan = withContext(Dispatchers.IO) {
         check(Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) { "App Connect is unavailable on mainnet" }
         check(platform.client.refreshProtocolVersion() >= 14) { "App Connect requires Platform protocol version 14" }
@@ -317,7 +383,9 @@ internal class AppConnectSession(
     private fun signingKey(identity: Identity, level: SecurityLevel, time: Long): IdentityPublicKey = identity.publicKeys.firstOrNull {
         it.purpose == Purpose.AUTHENTICATION && it.securityLevel == level &&
             (level != SecurityLevel.HIGH || it.type == KeyType.ECDSA_SECP256K1) && it.contractBounds == null && live(it, time) &&
-            walletRepo.authenticationGroupExtension?.identityKeyChain?.findKeyFromPubKey(it.data) != null
+            (walletRepo.authenticationGroupExtension?.identityKeyChain?.findKeyFromPubKey(it.data) != null ||
+                (level == SecurityLevel.CRITICAL && it.type == KeyType.ECDSA_HASH160 &&
+                    walletRepo.authenticationGroupExtension?.identityKeyChain?.findKeyFromPubHash(it.data) != null))
     } ?: error("Wallet-controlled unbound $level key unavailable")
 
     private fun documentKey(identity: Identity): IdentityPublicKey =

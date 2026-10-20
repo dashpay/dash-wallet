@@ -389,9 +389,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             return
         }
         if (Intent.ACTION_VIEW == intent.action &&
-            intent.data?.scheme == "dash-key"
+            intent.data?.scheme in setOf("dash-key", "dash-st")
         ) {
-            // DashConnect login URI opened from an external scanner or browser, handled by the
+            // DashConnect login or operation URI opened from a scanner or browser, handled by the
             // Connections screen.
             val uri = intent.data.toString()
             intent.data = null // consume, so recreation doesn't navigate again

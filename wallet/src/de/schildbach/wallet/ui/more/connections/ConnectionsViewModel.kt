@@ -43,6 +43,9 @@ data class ConnectionsUIState(
     val featureUnavailable: Boolean = Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
     val isLoading: Boolean = false,
     val requiresRevocation: Boolean = false,
+    val pendingPurchase: TokenPurchaseApproval? = null,
+    val purchaseStatus: TokenPurchaseStatus = TokenPurchaseStatus.READY,
+    val purchaseError: String? = null,
     val error: String? = null
 )
 
@@ -105,10 +108,17 @@ class ConnectionsViewModel @Inject constructor(
      * for the approve sheet with the wallet's own verified identity for display.
      */
     fun onQrScanned(qrContent: String) {
-        if (operationInProgress || pendingLoginRequest != null) return
+        if (operationInProgress || pendingLoginRequest != null || _uiState.value.pendingPurchase != null) return
         operationInProgress = true
         viewModelScope.launch {
             try {
+                if (de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.isStUri(qrContent.trim())) {
+                    val purchase = repository.prepareTokenPurchase(
+                        de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.parseStRequest(qrContent.trim()))
+                    _uiState.update { it.copy(pendingPurchase = purchase,
+                        purchaseStatus = TokenPurchaseStatus.READY, purchaseError = null) }
+                    return@launch
+                }
                 val payload = repository.parseQr(qrContent)
                 val plan = repository.prepareLogin(payload.request)
                 // Resolve BEFORE update {}: that is a compare-and-set retry loop, and
@@ -151,6 +161,29 @@ class ConnectionsViewModel @Inject constructor(
 
     fun resetScanOutcome() {
         _scanOutcome.value = ScanOutcome.Idle
+    }
+
+    fun approveTokenPurchase() {
+        if (operationInProgress || _uiState.value.purchaseStatus !in setOf(TokenPurchaseStatus.READY, TokenPurchaseStatus.FAILED)) return
+        val purchase = _uiState.value.pendingPurchase ?: return
+        operationInProgress = true
+        _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTING, purchaseError = null) }
+        viewModelScope.launch {
+            try {
+                repository.approveTokenPurchase(purchase)
+                _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTED) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                log.error("failed to submit DashConnect token purchase", error)
+                _uiState.update { it.copy(purchaseStatus = if (error is TokenPurchaseOutcomeUnknown)
+                    TokenPurchaseStatus.OUTCOME_UNKNOWN else TokenPurchaseStatus.FAILED, purchaseError = error.message) }
+            } finally { operationInProgress = false }
+        }
+    }
+
+    fun dismissTokenPurchase() {
+        if (operationInProgress) return
+        _uiState.update { it.copy(pendingPurchase = null, purchaseStatus = TokenPurchaseStatus.READY, purchaseError = null) }
     }
 
     fun selectGrant(index: Int, encryption: Boolean, selected: Boolean) {

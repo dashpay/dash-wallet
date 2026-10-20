@@ -9,4 +9,13 @@
     <string name="dash_connect_return_warning">This return address was supplied by the app. Open it only if you recognize the website.</string>
     <string name="dash_connect_return_open">Open Website</string>
     <string name="dash_connect_return_unavailable">No browser is available to open this address.</string>
+    <string name="dash_st_purchase_title">Buy tokens?</string>
+    <string name="dash_st_purchase_quantity">Quantity: %1$s %2$s</string>
+    <string name="dash_st_purchase_cost">Maximum cost: %1$s DASH in Platform credits, plus network fees</string>
+    <string name="dash_st_purchase_identity">Paying identity: %1$s</string>
+    <string name="dash_st_purchase_contract">Contract: %1$s</string>
+    <string name="dash_st_purchase_token">Token ID: %1$s</string>
+    <string name="dash_st_purchase_warning">This request spends Platform credits. The link does not prove which app sent it. Token names are supplied by the contract owner.</string>
+    <string name="dash_st_purchase_approve">Approve purchase</string>
+    <string name="dash_st_purchase_submitted">Purchase submitted. Check your token and credit balances for the final result. This request cannot be submitted again.</string>
 </resources>

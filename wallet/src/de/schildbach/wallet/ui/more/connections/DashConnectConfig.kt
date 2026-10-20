@@ -21,6 +21,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.json.JSONArray
@@ -75,11 +76,13 @@ open class DashConnectConfig @Inject constructor(
     context: Context,
     walletDataProvider: WalletDataProvider
 ) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
+    private val purchaseContext = context
 
     companion object {
         const val PREFERENCES_NAME = "dash_connect"
         val CONNECTIONS = stringPreferencesKey("connections")
         private val GRANTS = stringPreferencesKey("app_connect_grants_v2")
+        private val PURCHASES = stringPreferencesKey("dash_st_purchases")
     }
 
     fun observeConnections(): Flow<List<StoredConnection>> =
@@ -104,6 +107,22 @@ open class DashConnectConfig @Inject constructor(
         val records = getGrants().filter { it.getString("id") != grant.getString("id") } + grant
         set(GRANTS, JSONArray(records).toString())
     }
+
+    suspend fun purchaseWasSubmitted(id: String): Boolean {
+        val records = purchaseReceipts()
+        return (0 until records.length()).any { records.getJSONObject(it).getString("id") == id }
+    }
+
+    suspend fun savePurchase(receipt: JSONObject) {
+        val records = purchaseReceipts()
+        val updated = (0 until records.length()).map { records.getJSONObject(it) }
+            .filter { it.getString("id") != receipt.getString("id") } + receipt
+        set(PURCHASES, JSONArray(updated).toString())
+    }
+
+    // Unlike ordinary preferences, unreadable debit receipts must never look like an empty store.
+    private suspend fun purchaseReceipts() =
+        JSONArray(purchaseContext.dataStore.data.first()[PURCHASES] ?: "[]")
 
     /** Inserts or replaces the stored connection keyed by [StoredConnection.contractId]. */
     suspend fun upsertConnection(connection: StoredConnection) {

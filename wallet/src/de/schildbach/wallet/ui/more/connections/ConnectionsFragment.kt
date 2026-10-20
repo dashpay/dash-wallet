@@ -37,6 +37,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
+import de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -134,6 +135,11 @@ class ConnectionsFragment : Fragment() {
                         !childFragmentManager.isStateSaved) {
                         ApproveConnectionDialog().showNow(childFragmentManager, APPROVAL_DIALOG)
                     }
+                    if (state.pendingPurchase != null &&
+                        childFragmentManager.findFragmentByTag(PURCHASE_DIALOG) == null &&
+                        !childFragmentManager.isStateSaved) {
+                        ApproveTokenPurchaseDialog().showNow(childFragmentManager, PURCHASE_DIALOG)
+                    }
                 }
             }
         }
@@ -163,6 +169,7 @@ class ConnectionsFragment : Fragment() {
 
     companion object {
         private const val APPROVAL_DIALOG = "approve_connection_dialog"
+        private const val PURCHASE_DIALOG = "approve_token_purchase_dialog"
         /** Matches the `scannedUri` argument in nav_home.xml. */
         const val ARG_SCANNED_URI = "scannedUri"
     }
