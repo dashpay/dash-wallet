@@ -98,6 +98,32 @@ class BindHealL1StarterTest {
     }
 
     @Test
+    fun doesNotStartL1_whenTheLifetimeThatArmedItHasEnded() = runBlocking {
+        // CodeRabbit on #1584: the kick checks its service lifetime once, then
+        // arms without suspending, so a shutdown can cancel the starter just
+        // BEFORE the arm lands. That waiter outlives the teardown, and once the
+        // cleanup flag clears a later bind heal would start L1 with no service.
+        val bound = MutableStateFlow(false)
+        var starts = 0
+        var lifetime = 0L
+        val starter = BindHealL1Starter(
+            scope = scope,
+            bindEstablished = bound,
+            serviceTearingDown = { false }, // teardown already finished
+            startL1 = { starts++; true }
+        )
+
+        val armedIn = lifetime
+        starter.cancel() // the shutdown's cancel…
+        lifetime++ // …and its lifetime bump
+        starter.arm { lifetime == armedIn } // the kick's arm, landing late
+        bound.value = true
+
+        assertEquals("a heal after the arming lifetime ended starts nothing", 0, starts)
+        assertFalse(starter.isArmed)
+    }
+
+    @Test
     fun aLaterArmReplacesAnEarlierOne() = runBlocking {
         val bound = MutableStateFlow(false)
         var starts = 0

@@ -547,6 +547,9 @@ class PlatformSynchronizationService @Inject constructor(
      * [shutdown] also cancels the kick outright.
      */
     private val serviceLifetime = AtomicLong(0)
+    // Written by the kick (init/resume), read and cancelled by shutdown and
+    // stopSdkEngines on other threads.
+    @Volatile
     private var startupKickJob: Job? = null
 
     private fun kickSdkEngines(startL1Engine: Boolean) {
@@ -591,7 +594,16 @@ class PlatformSynchronizationService @Inject constructor(
                 // Declined — most often "no wallet bound" after a failed startup
                 // bind pass. The unlock receiver and the retry ladder only bind;
                 // this is what starts L1 when they succeed (review, 2026-09-23).
-                if (started) bindHealL1Starter.cancel() else bindHealL1Starter.arm()
+                // The lifetime is re-checked here and again by the waiter after
+                // the heal: a shutdown can run between the check above and this
+                // line (startIfEnabled() has returned, and arm() does not
+                // suspend, so cancelling this kick does not stop it), and a
+                // waiter armed after the shutdown's cancel would outlive it.
+                when {
+                    started -> bindHealL1Starter.cancel()
+                    serviceLifetime.get() == lifetime ->
+                        bindHealL1Starter.arm { serviceLifetime.get() == lifetime }
+                }
             }
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the

@@ -43,7 +43,12 @@ import org.slf4j.LoggerFactory
  * L1 once through the same idempotent entry point the startup path uses.
  * [cancel] is called from the service's shutdown, so a heal that lands after
  * teardown starts nothing; [serviceTearingDown] covers the window in which
- * the shutdown has begun but not yet reached the cancel.
+ * the shutdown has begun but not yet reached the cancel. The caller's
+ * `stillCurrent` check covers the other order: an [arm] that lands AFTER the
+ * shutdown's [cancel] (the kick that armed it was past its last suspension
+ * point when the shutdown ran), whose waiter would otherwise survive the
+ * teardown and start L1 once the cleanup flag cleared, with no service.
+ * [arm] and [cancel] run on different threads, so they are serialized.
  *
  * Kept out of `PlatformSynchronizationService` so the ordering can be pinned
  * by a host test with plain flows.
@@ -56,13 +61,19 @@ internal class BindHealL1Starter(
 ) {
     private val log = LoggerFactory.getLogger(BindHealL1Starter::class.java)
 
+    @Volatile
     private var job: Job? = null
 
     /** Whether a heal is currently being waited for. */
     val isArmed: Boolean get() = job?.isActive == true
 
-    /** Arm for this service lifetime; a later arm replaces an earlier one. */
-    fun arm() {
+    /**
+     * Arm for this service lifetime; a later arm replaces an earlier one.
+     * [stillCurrent] is re-read once the bind heals: false means the service
+     * lifetime that armed this has ended, and nothing starts.
+     */
+    @Synchronized
+    fun arm(stillCurrent: () -> Boolean = { true }) {
         job?.cancel()
         job = scope.launch {
             // Nothing may escape this job. It is launched on a long-lived
@@ -74,7 +85,7 @@ internal class BindHealL1Starter(
             // true (the production feed is a StateFlow, but the seam takes any
             // Flow, and [SdkBindRetryService] already defaults one to empty).
             try {
-                awaitHealAndStart()
+                awaitHealAndStart(stillCurrent)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("SDK bind-heal wait ended abnormally; nothing was started", t)
@@ -82,8 +93,15 @@ internal class BindHealL1Starter(
         }
     }
 
-    private suspend fun awaitHealAndStart() {
+    private suspend fun awaitHealAndStart(stillCurrent: () -> Boolean) {
         bindEstablished.first { it }
+        if (!stillCurrent()) {
+            log.info(
+                "SDK bind healed after the service lifetime that waited for it ended — not starting " +
+                    "L1; the next service start kicks it"
+            )
+            return
+        }
         if (serviceTearingDown()) {
             log.info(
                 "SDK bind healed while the blockchain service is tearing down — not starting L1; " +
@@ -105,6 +123,7 @@ internal class BindHealL1Starter(
     }
 
     /** Stop waiting. Called from the service's shutdown and engine stop. */
+    @Synchronized
     fun cancel() {
         job?.cancel()
         job = null
