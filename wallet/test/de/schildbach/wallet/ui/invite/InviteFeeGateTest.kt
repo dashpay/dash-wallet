@@ -224,4 +224,18 @@ class InviteFeeGateTest {
             contestedSelected = contestedSelected,
             contestedFee = contestedFee
         )
+
+    @Test
+    fun `a contested L1 invite waits for the live fee, other kinds do not`() {
+        assertTrue(awaitingContestedInviteFee(shielded = false, contestedSelected = true, feeResolved = false))
+        assertFalse(awaitingContestedInviteFee(shielded = false, contestedSelected = true, feeResolved = true))
+        assertFalse(
+            "non-contested is the fixed fee",
+            awaitingContestedInviteFee(shielded = false, contestedSelected = false, feeResolved = false)
+        )
+        assertFalse(
+            "a private invite spends its fixed exit denomination",
+            awaitingContestedInviteFee(shielded = true, contestedSelected = true, feeResolved = false)
+        )
+    }
 }

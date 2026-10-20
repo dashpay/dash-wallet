@@ -153,6 +153,18 @@ internal fun inviteFeeGate(
 }
 
 /**
+ * True while "Continue" must wait for the live contested fee (MO-1069): an L1
+ * invite of the contested kind is approved on the confirm screen at
+ * [ContestedUsernameFees.contested], so it must not be continued on the
+ * pre-resolve LEGACY placeholder — that would have the user approve 0.25 DASH
+ * on a protocol-14 network where funding then spends 0.15. A private invite
+ * spends its fixed exit denomination (0.25 under either fee pair) and a
+ * non-contested invite the fixed fee, so neither waits. Pure.
+ */
+internal fun awaitingContestedInviteFee(shielded: Boolean, contestedSelected: Boolean, feeResolved: Boolean): Boolean =
+    !shielded && contestedSelected && !feeResolved
+
+/**
  * Why an SDK-routed invite creation failed, bucketed by what the user can DO
  * about it — the confirm dialog's error copy and retry gate both key off
  * this. Before it existed every failure collapsed into one generic "Error
@@ -273,14 +285,15 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val authExtension = platformRepo.authenticationGroupExtension!!
 
     /**
-     * Protocol-gated contested fee (MO-1069), refreshed once from a live
-     * [DashSdkService.currentProtocolVersion] read. Defaults to
-     * [ContestedUsernameFees.LEGACY] (the safe fallback for "not resolved
-     * yet") until that read lands — see [de.schildbach.wallet.ui.username
-     * .request.RequestUserNameViewModel] for the same pattern.
+     * Protocol-gated contested fee (MO-1069) from a live
+     * [DashSdkService.currentProtocolVersion] read; null while that read is in
+     * flight, so the fee dialog can tell "not resolved yet" from a resolved
+     * LEGACY ([ContestedUsernameFees.current] maps a failed read to LEGACY, so a
+     * read always resolves). The dialog shows LEGACY meanwhile but does not
+     * let a contested L1 invite continue on it ([awaitingContestedInviteFee]).
      */
-    private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
-    val contestedFees: StateFlow<ContestedUsernameFees> = _contestedFees.asStateFlow()
+    private val _contestedFees = MutableStateFlow<ContestedUsernameFees?>(null)
+    val contestedFees: StateFlow<ContestedUsernameFees?> = _contestedFees.asStateFlow()
 
     private val pubkeyHash: ByteArray
         get() = authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
@@ -563,6 +576,9 @@ open class InvitationFragmentViewModel @Inject constructor(
      * the stale one.
      */
     fun refreshContestedFees() {
+        // Unresolved again until this read lands: a value from an earlier open
+        // of the activity-scoped flow must not be approved as current.
+        _contestedFees.value = null
         viewModelScope.launch {
             _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
         }

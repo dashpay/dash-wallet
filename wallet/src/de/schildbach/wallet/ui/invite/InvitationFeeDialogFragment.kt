@@ -40,9 +40,11 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
 
     // Protocol-gated (MO-1069) — mirrors viewModel.contestedFees, refreshed
-    // by the observer in onViewCreated. Defaults to LEGACY (the safe
-    // pre-resolve fallback) until the live read lands.
+    // by the observer in onViewCreated. Shows LEGACY (the safe pre-resolve
+    // fallback) until the live read lands; [contestedFeeResolved] keeps a
+    // contested L1 invite from being continued on that placeholder.
     private var contestedFee = ContestedUsernameFees.LEGACY.contested
+    private var contestedFeeResolved = false
     private var selectedFee = contestedFee
     private var contestedSelected = true
 
@@ -80,7 +82,8 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         // ran once, on the activity's first open.
         viewModel.refreshContestedFees()
         viewModel.contestedFees.observe(viewLifecycleOwner) { fees ->
-            contestedFee = fees.contested
+            contestedFeeResolved = fees != null
+            contestedFee = (fees ?: ContestedUsernameFees.LEGACY).contested
             if (contestedSelected) selectedFee = contestedFee
             setFeeAmounts()
             applyGate()
@@ -185,9 +188,12 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
             contestedSelected = contestedSelected,
             contestedFee = contestedFee
         )
-        binding.mixButton.isEnabled = continueEnabled
-        binding.insufficientFundsMessage.isVisible = !continueEnabled
-        if (!continueEnabled) {
+        val awaitingFee = awaitingContestedInviteFee(args.shielded, contestedSelected, contestedFeeResolved)
+        binding.mixButton.isEnabled = continueEnabled && !awaitingFee
+        // Affordability is only judged against the resolved fee: the LEGACY
+        // placeholder would wrongly tell a 0.15–0.25 DASH holder they can't pay.
+        binding.insufficientFundsMessage.isVisible = !continueEnabled && !awaitingFee
+        if (!continueEnabled && !awaitingFee) {
             val required = inviteFeeRequirement(args.shielded, contestedSelected, contestedFee)
             binding.insufficientFundsMessage.text =
                 getString(R.string.invitation_cant_afford_message, required.toPlainString())
