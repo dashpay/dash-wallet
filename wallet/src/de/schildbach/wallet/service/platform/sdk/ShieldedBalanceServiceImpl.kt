@@ -1471,19 +1471,9 @@ class ShieldedBalanceServiceImpl internal constructor(
                     0L
                 }
             if (pendingSinceMs != null) {
-                reconcileMutex.withLock {
-                    reconcileGeneration++
-                    // A spend in this process may already have started a
-                    // reconciliation; keep whichever since is earlier.
-                    reconcileSinceMs = if (_shieldedBalanceMaybeStale.value) {
-                        minOf(reconcileSinceMs, pendingSinceMs)
-                    } else {
-                        pendingSinceMs
-                    }
-                    _shieldedBalanceMaybeStale.value = true
-                    lastPassBalanceCredits = null
-                    startSettlementKicks(reconcileGeneration)
-                }
+                // A spend in this process may already have started a
+                // reconciliation; restartReconciliation keeps the earlier since.
+                reconcileMutex.withLock { restartReconciliation(pendingSinceMs) }
             }
             // Settlement is driven by the SDK's per-pass RESULTS, not by polling
             // the in-flight flag: a polled busy→idle edge cannot tell a failed
@@ -1620,14 +1610,14 @@ class ShieldedBalanceServiceImpl internal constructor(
                 outgoing != null && shieldedSpendsReflected(activity, notes, outgoing, sinceMs)
             }
         }
-        // Decide and apply atomically with markLocalSpendPending: a spend that
+        // Decide and apply atomically with beginLocalSpend / endLocalSpend: a spend that
         // started since [generation] owns the flag, the marker and the
         // stability window, so this pass's reading is dropped rather than
         // clearing (or seeding) them.
         reconcileMutex.withLock {
             if (generation != reconcileGeneration) return@withLock
             val stable = passCredits != null && passCredits == lastPassBalanceCredits
-            if (stable && displayedCredits == passCredits && spendsReflected) {
+            if (stable && displayedCredits == passCredits && spendsReflected && spendsInFlight == 0) {
                 // Settled: the durable marker goes with the flag. If the marker
                 // can't be cleared the flag stays set — clearing it alone would
                 // show a balance the persister then refuses to cache, and the
@@ -1684,7 +1674,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             }.collect { (balance, status, stale) ->
                 // READY persists through post-spend sync passes, so READY
                 // alone is not settled: never persist while a local spend is
-                // reconciling (see markLocalSpendPending, which cleared the
+                // reconciling (see beginLocalSpend, which cleared the
                 // cache). Forget lastPersisted so the settled value is written
                 // even if it equals the pre-spend one.
                 if (stale) {
@@ -1906,17 +1896,24 @@ class ShieldedBalanceServiceImpl internal constructor(
 
             // The single staged attempt: (a) build+broadcast the L1 asset
             // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
+            // The pending reconciliation is durable before anything is submitted.
             val spendStartedAtMs = clock()
+            if (!beginLocalSpend(spendStartedAtMs)) {
+                return notBroadcast(operation, "could not record the pending spend", null)
+            }
             try {
-                if (fundingPath == null) {
-                    source.fundFromAssetLock(walletId, recipient, amount.duffs)
-                } else {
-                    // SINGLE-ACCOUNT: every input comes from the account this
-                    // path names (the DIP-9 CoinJoin account); BIP44 coins are
-                    // never co-spent. Only change returns to BIP44 account 0.
-                    source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+                try {
+                    if (fundingPath == null) {
+                        source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                    } else {
+                        // SINGLE-ACCOUNT: every input comes from the account this
+                        // path names (the DIP-9 CoinJoin account); BIP44 coins are
+                        // never co-spent. Only change returns to BIP44 account 0.
+                        source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+                    }
+                } finally {
+                    endLocalSpend(spendStartedAtMs)
                 }
-                markLocalSpendPending(spendStartedAtMs)
                 kickImmediateShieldedSync()
                 // Seed the funding lock's kind as SHIELD (best-effort, post-
                 // success) so the L1 asset lock renders "Shielded" on first
@@ -1937,11 +1934,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                 }
                 SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
             } catch (t: Throwable) {
-                if (t is CancellationException) {
-                    // The staged shield may have broadcast (see runShieldedWrite).
-                    markLocalSpendPending(spendStartedAtMs)
-                    throw t
-                }
+                if (t is CancellationException) throw t
                 classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
             }
         }
@@ -2044,23 +2037,29 @@ class ShieldedBalanceServiceImpl internal constructor(
                     log.warn("pending wallet-shield lock has a malformed outpoint key; skipping")
                     continue
                 }
-                resumeAttempts[lock.outPointHex] = attempts + 1
+                // The pending reconciliation is durable before the resume
+                // submits; if it can't be recorded the lock waits for a later
+                // sweep (no attempt is spent).
                 val spendStartedAtMs = clock()
+                if (!beginLocalSpend(spendStartedAtMs)) {
+                    log.warn("pending wallet-shield lock {} not resumed: the spend could not be recorded", lock.outPointHex)
+                    continue
+                }
+                resumeAttempts[lock.outPointHex] = attempts + 1
                 try {
-                    source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
+                    try {
+                        source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
+                    } finally {
+                        endLocalSpend(spendStartedAtMs)
+                    }
                     resumed++
                     log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)
                     // The direct path kicks this too — without it a shield
                     // completed via RESUME (interrupted stage (b)) sat on the
                     // ~60s tick before the balance appeared (observed live).
-                    markLocalSpendPending(spendStartedAtMs)
                     kickImmediateShieldedSync()
                 } catch (t: Throwable) {
-                    if (t is CancellationException) {
-                        // The resume may have broadcast (see runShieldedWrite).
-                        markLocalSpendPending(spendStartedAtMs)
-                        throw t
-                    }
+                    if (t is CancellationException) throw t
                     log.warn(
                         "pending wallet-shield lock {} resume failed (attempt {}); the lock stays " +
                             "tracked and is retried later",
@@ -2177,22 +2176,35 @@ class ShieldedBalanceServiceImpl internal constructor(
         // indeterminate progress; there is no per-proof progress callback).
         // The start time is taken BEFORE the SDK call: the SDK writes the
         // spend's activity row during it (see [onShieldedPassCompleted]).
+        // The pending reconciliation is durable before anything is submitted;
+        // a cancellation or any outcome after that leaves it to settlement.
         val spendStartedAtMs = clock()
-        return try {
+        if (!beginLocalSpend(spendStartedAtMs)) {
+            return notBroadcast(operation, "could not record the pending spend", null)
+        }
+        val result = try {
             block(walletId, amountCredits)
-            markLocalSpendPending(spendStartedAtMs)
-            kickImmediateShieldedSync()
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
-            if (t is CancellationException) {
-                // Cancelled once the spend attempt started: the SDK may have
-                // broadcast it, so reconcile like an ambiguous outcome.
-                markLocalSpendPending(spendStartedAtMs)
-                throw t
-            }
+            if (t is CancellationException) throw t
             if (t is PreBroadcastRejection) {
-                return notBroadcast(operation, t.reason, t.cause)
+                notBroadcast(operation, t.reason, t.cause)
+            } else {
+                classifyWriteFailure(operation, t)
             }
+        } finally {
+            endLocalSpend(spendStartedAtMs)
+        }
+        when (result) {
+            is SdkWriteResult.Broadcast -> kickImmediateShieldedSync()
+            is SdkWriteResult.Ambiguous -> requestImmediateShieldedSync()
+            is SdkWriteResult.NotBroadcast -> Unit
+        }
+        return result
+    }
+
+    /** [classifyBroadcastFailure] for [runShieldedWrite], logged. */
+    private fun classifyWriteFailure(operation: String, t: Throwable): SdkWriteResult<Unit> {
             val classified = classifyBroadcastFailure(t)
             when (classified) {
                 is SdkWriteResult.NotBroadcast ->
@@ -2205,16 +2217,13 @@ class ShieldedBalanceServiceImpl internal constructor(
                         t
                     )
                     // The spend MAY have landed while the reserved notes still
-                    // count as unspent: reconcile like a broadcast spend (stale
-                    // + durable marker) so no surface trusts the pre-spend
-                    // amount, and ask for a pass. The result stays Ambiguous.
-                    markLocalSpendPending(spendStartedAtMs)
-                    requestImmediateShieldedSync()
+                    // count as unspent: the reconciliation (stale + durable
+                    // marker) started before the call stays until settlement,
+                    // so no surface trusts the pre-spend amount.
                 }
                 is SdkWriteResult.Broadcast -> Unit // unreachable
             }
-            classified
-        }
+            return classified
     }
 
     /**
@@ -2242,55 +2251,87 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     /**
-     * Mark the last-known/cached balance STALE after a successful local
-     * spend (see [shieldedBalanceMaybeStale]): the note-store change has not
-     * landed yet, so a surface must show "Syncing…" rather than the stale
-     * amount until the reconciliation settles (in [onShieldedPassCompleted]).
-     * Only the WRITE paths call this — a plain screen-entry [syncNow] refresh
-     * must NOT mark the balance stale.
+     * Start a local spend, BEFORE its SDK call: durably record the pending
+     * reconciliation (drop the last-known balance, set the marker and its
+     * since in one DataStore transaction), then mark the balance STALE (see
+     * [shieldedBalanceMaybeStale]) and hold settlement until [endLocalSpend].
+     *
+     * Returns false — with nothing changed — when the durable record can't be
+     * written. The caller must then NOT spend: a spend whose invalidation
+     * isn't durable could, after a process death, leave the pre-spend cache
+     * trusted on the next start. Only the WRITE paths call this — a plain
+     * screen-entry [syncNow] refresh must NOT mark the balance stale.
      *
      * [spendStartedAtMs] is the wall clock captured BEFORE the SDK spend call;
      * less [SPEND_WINDOW_SKEW_MS], it becomes the reconciliation's since —
      * the earliest one when spends overlap.
      */
-    private suspend fun markLocalSpendPending(spendStartedAtMs: Long) {
-        val sinceMs = (spendStartedAtMs - SPEND_WINDOW_SKEW_MS).coerceAtLeast(0L)
-        // NonCancellable + best-effort: the spend already broadcast, so this
-        // must never turn a success into a failure for the caller.
-        withContext(NonCancellable) {
+    private suspend fun beginLocalSpend(spendStartedAtMs: Long): Boolean {
+        val sinceMs = sinceFor(spendStartedAtMs)
+        return withContext(NonCancellable) {
             // Under [reconcileMutex], like settlement completion in
             // [onShieldedPassCompleted]: a settlement for an EARLIER spend that
             // is mid-flight (suspended clearing its marker) must not clear this
             // spend's flag, marker or stability window. The new generation makes
             // that earlier decision void once it re-enters the lock.
             reconcileMutex.withLock {
-                reconcileGeneration++
-                // An unsettled earlier spend keeps its (earlier) since: its row
-                // must still be reflected before anything settles.
-                reconcileSinceMs = if (_shieldedBalanceMaybeStale.value) {
-                    minOf(reconcileSinceMs, sinceMs)
-                } else {
-                    sinceMs
-                }
-                _shieldedBalanceMaybeStale.value = true
-                // Restart the two-pass stability window: the flag must survive
-                // at least two completed passes with an unchanged balance.
-                lastPassBalanceCredits = null
                 // The flag is in-memory only (false in a new process, reset by
-                // tearDownReadyState), so record the pending reconciliation
-                // durably too: drop the persisted last-known balance (a stop or
-                // process death must not resurrect the pre-spend amount) and set
-                // the marker + since [startSyncStatusPolling] restores the guard
-                // from on the next bring-up. [startBalancePersistence] skips
+                // tearDownReadyState), so the record is durable FIRST: the
+                // marker + since [startSyncStatusPolling] restores the guard from
+                // on the next bring-up, and no last-known balance a stop or
+                // process death could resurrect. [startBalancePersistence] skips
                 // writes while stale, so only a settled balance makes the cache
                 // valid again.
-                runCatching { dashPayConfig.markShieldedSpendReconcilePending(sinceMs) }
-                    .onFailure { log.warn("failed to persist the pending shielded spend reconciliation", it) }
-                // Under the mutex, so a newer reconciliation can't start between
-                // our generation bump and our driver replacing the current one.
-                startSettlementKicks(reconcileGeneration)
+                val recorded = runCatching { dashPayConfig.markShieldedSpendReconcilePending(sinceMs) }
+                    .onFailure { log.warn("failed to record the pending shielded spend; not spending", it) }
+                    .isSuccess
+                if (recorded) {
+                    spendsInFlight++
+                    restartReconciliation(sinceMs)
+                }
+                recorded
             }
         }
+    }
+
+    /**
+     * The SDK call of a spend [beginLocalSpend] started has returned or thrown,
+     * whatever the outcome — call it from `finally`. Releases the settlement
+     * hold and restarts the stability window, so no pass that ran during the
+     * call counts. A spend that definitively never broadcast simply settles
+     * on the next stable passes (its row, if any, is Failed).
+     */
+    private suspend fun endLocalSpend(spendStartedAtMs: Long) {
+        withContext(NonCancellable) {
+            reconcileMutex.withLock {
+                spendsInFlight--
+                restartReconciliation(sinceFor(spendStartedAtMs))
+            }
+        }
+    }
+
+    private fun sinceFor(spendStartedAtMs: Long): Long = (spendStartedAtMs - SPEND_WINDOW_SKEW_MS).coerceAtLeast(0L)
+
+    /** Caller holds [reconcileMutex]: a (new or continuing) reconciliation from [sinceMs]. */
+    private fun restartReconciliation(sinceMs: Long) {
+        reconcileGeneration++
+        // An unsettled earlier spend keeps its (earlier) since: its row
+        // must still be reflected before anything settles.
+        reconcileSinceMs = if (_shieldedBalanceMaybeStale.value) {
+            minOf(reconcileSinceMs, sinceMs)
+        } else {
+            sinceMs
+        }
+        _shieldedBalanceMaybeStale.value = true
+        // Restart the two-pass stability window: the flag must survive
+        // at least two completed passes with an unchanged balance.
+        lastPassBalanceCredits = null
+        // Under the mutex, so a newer reconciliation can't start between
+        // our generation bump and our driver replacing the current one. Not
+        // while a spend is in flight: nothing can settle before its call
+        // returns, so forced passes would only compete with its proof; the
+        // last [endLocalSpend] starts the driver.
+        if (spendsInFlight == 0) startSettlementKicks(reconcileGeneration)
     }
 
     /** The running [startSettlementKicks] driver; replaced by each new reconciliation. */
@@ -2339,7 +2380,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     /**
-     * Serializes a local spend's reconciliation start ([markLocalSpendPending])
+     * Serializes a local spend's reconciliation start ([beginLocalSpend], [endLocalSpend])
      * with settlement completion in [onShieldedPassCompleted], covering the
      * in-memory flag, [reconcileSinceMs], [lastPassBalanceCredits] and the
      * durable marker together.
@@ -2361,17 +2402,30 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private var reconcileSinceMs = 0L
 
+    /**
+     * Local spends between [beginLocalSpend] and [endLocalSpend]. Settlement
+     * waits while any is in flight: the SDK writes a spend's activity row only
+     * after its ~30 s proof, so until the call returns the settlement gate
+     * could not yet see the spend. Guarded by [reconcileMutex]; in-memory only
+     * (a new process restores from the durable marker).
+     */
+    private var spendsInFlight = 0
+
     /** Balance at the last completed sync pass — see the stability rule in [onShieldedPassCompleted]. */
     @Volatile
     private var lastPassBalanceCredits: Long? = null
 
-    override suspend fun noteExternalShieldedSpendBroadcast(spendStartedAtMs: Long) {
-        // Durable invalidation now; the network refresh is fire-and-forget.
-        // syncShieldedNow() blocks for a whole network-driven pass, and the
-        // invite/username callers still hold un-persisted recovery material
-        // (e.g. an invite's one-time key) at this point — they must not wait
-        // on a slow scan before persisting it.
-        markLocalSpendPending(spendStartedAtMs)
+    override suspend fun beginExternalShieldedSpend(): Long? {
+        val spendStartedAtMs = clock()
+        return spendStartedAtMs.takeIf { beginLocalSpend(it) }
+    }
+
+    override suspend fun endExternalShieldedSpend(spendStartedAtMs: Long) {
+        endLocalSpend(spendStartedAtMs)
+        // The network refresh is fire-and-forget: syncShieldedNow() blocks for
+        // a whole network-driven pass, and the invite/username callers still
+        // hold un-persisted recovery material (e.g. an invite's one-time key)
+        // at this point — they must not wait on a slow scan before persisting it.
         requestImmediateShieldedSync()
     }
 

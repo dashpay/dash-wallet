@@ -397,28 +397,30 @@ object WalletApplicationExt {
     }
 
     /**
-     * Forget the last-known shielded balance when [WalletApplication.setWallet]
-     * installs a created or restored wallet: the cache is one install-wide
-     * value, and the wallet it was persisted for is not the one being
-     * installed, so it must never stand in for the new wallet's balance.
-     * Until the new runtime is READY the surfaces show "Syncing…" instead.
-     *
-     * The cache is hidden synchronously, before the new wallet is installed;
-     * the durable removal is fire-and-forget (the restore-from-file caller is
-     * on the MAIN thread) and lands long before the wallet is first saved at
-     * the PIN step — a process death before that leaves no wallet to show it
-     * for. Never throws.
+     * [WalletApplication.setWallet] is installing a created or restored
+     * wallet: the last-known shielded balance is one install-wide value,
+     * persisted for whichever wallet ran before, so it must never stand in
+     * for the new one's. Hidden synchronously here (no I/O — the
+     * restore-from-file caller is on the MAIN thread), together with fencing
+     * off the previous wallet's balance writer; [forgetShieldedBalanceBeforeCommit]
+     * makes it durable before the new wallet's first save, whichever path
+     * performs it. Until the new
+     * runtime is READY the surfaces show "Syncing…" instead.
      */
-    fun WalletApplication.forgetShieldedBalanceForNewWallet() {
+    fun WalletApplication.hideShieldedBalanceForNewWallet() {
         dashPayConfig.beginForgettingLastShieldedBalance()
-        startupHousekeepingScope.launch {
-            try {
-                dashPayConfig.forgetLastShieldedBalance()
-            } catch (t: Throwable) {
-                rethrowCancellation(t)
-                log.warn("failed to forget the previous wallet's shielded balance", t)
-            }
-        }
+    }
+
+    /**
+     * Durably remove the previous wallet's last-known shielded balance BEFORE
+     * a replacement wallet's first save (WalletApplication.saveWallet, by
+     * setup or an ordinary save): once the new wallet is on disk a later process loads
+     * it without passing [WalletApplication.setWallet] again, so the removal
+     * must already be durable. Blocking, like the wallet write it precedes;
+     * throws if the removal fails, so the wallet is not saved.
+     */
+    fun WalletApplication.forgetShieldedBalanceBeforeCommit() {
+        runBlocking(Dispatchers.IO) { dashPayConfig.forgetLastShieldedBalance() }
     }
 
     /**

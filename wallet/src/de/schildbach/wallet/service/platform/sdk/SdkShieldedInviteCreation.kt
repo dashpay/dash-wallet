@@ -362,17 +362,14 @@ class SdkShieldedInviteCreation internal constructor(
         val criticalResult: SdkWriteResult<InvitationLinkData> = withContext(NonCancellable) {
             // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
             // TWO notes to the same one-time address (see [inviteFundingSplit]).
-            // The start time is taken BEFORE the SDK call, which writes the
-            // spend's activity row (see noteExternalShieldedSpendBroadcast).
-            val spendStartedAtMs = System.currentTimeMillis()
+            // The pending reconciliation is durable before anything is submitted
+            // (see ShieldedBalanceService.beginExternalShieldedSpend).
+            val spendStartedAtMs = shieldedBalanceService.beginExternalShieldedSpend()
+                ?: return@withContext notBroadcast("could not record the pending shielded spend", null)
             try {
                 source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
             } catch (t: Throwable) {
-                if (t is CancellationException) {
-                    // The transfer may have broadcast before it was cancelled.
-                    markPoolSpent(spendStartedAtMs)
-                    throw t
-                }
+                if (t is CancellationException) throw t
                 return@withContext when (val classified = classifyBroadcastFailure(t)) {
                     is SdkWriteResult.NotBroadcast -> {
                         log.warn("shielded invite funding rejected pre-broadcast", t)
@@ -383,17 +380,14 @@ class SdkShieldedInviteCreation internal constructor(
                             "shielded invite funding outcome unconfirmed — the note MAY exist; do NOT retry",
                             t
                         )
-                        // The transfer MAY have spent pool notes.
-                        markPoolSpent(spendStartedAtMs)
+                        // The transfer MAY have spent pool notes: the
+                        // reconciliation begun above stays until settlement.
                         SdkWriteResult.Ambiguous(t)
                     }
                 }
+            } finally {
+                endPoolSpend(spendStartedAtMs)
             }
-            // The transfer spent pool notes outside the balance service's own
-            // write paths: mark the shielded balance stale now, so no surface
-            // (the home total, the More card) shows the pre-spend amount until
-            // the next sync pass lands the spend.
-            markPoolSpent(spendStartedAtMs)
 
             // Advisory scan hint; a missing height is fine (claim scans without one).
             val fundingHeight = try {
@@ -477,13 +471,14 @@ class SdkShieldedInviteCreation internal constructor(
     }
 
     /**
-     * The invite-funding transfer spent pool notes outside the balance
-     * service's own write paths ([ShieldedBalanceService.noteExternalShieldedSpendBroadcast]
-     * contract). Best-effort and NonCancellable — the spend already happened.
+     * The invite-funding transfer's SDK call is over (whatever its outcome):
+     * hand the reconciliation it began to settlement
+     * ([ShieldedBalanceService.endExternalShieldedSpend]). Best-effort and
+     * NonCancellable — the spend's durable record already exists.
      */
-    private suspend fun markPoolSpent(spendStartedAtMs: Long) = withContext(NonCancellable) {
-        runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast(spendStartedAtMs) }
-            .onFailure { log.warn("pool-spend balance stale-mark failed; the 60s loop will catch up", it) }
+    private suspend fun endPoolSpend(spendStartedAtMs: Long) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.endExternalShieldedSpend(spendStartedAtMs) }
+            .onFailure { log.warn("pool-spend end failed; settlement waits for the next pass", it) }
     }
 
     private suspend fun isEnabled(): Boolean = try {

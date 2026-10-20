@@ -1358,7 +1358,7 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
-    fun definitiveNotBroadcast_isNotMarkedStale() = runBlocking {
+    fun definitiveNotBroadcast_staysReconcilingUntilSettled() = runBlocking {
         val source = readySource().apply {
             onShield = { throw DashSdkError.PlatformWallet.ShieldedBroadcastFailed("relay rejected") }
         }
@@ -1370,8 +1370,10 @@ class ShieldedBalanceServiceTest {
             displayHrp = { hrp }
         )
         assertTrue(service.shieldFromCredits(Dash.COIN) is SdkWriteResult.NotBroadcast)
-        assertFalse(service.shieldedBalanceMaybeStale.value)
-        coVerify(exactly = 0) { cfg.markShieldedSpendReconcilePending(any()) }
+        // The reconciliation was recorded before the call (thepastaclaw,
+        // 7ae06b9e7); a rejected spend just settles on the next stable passes.
+        assertTrue(service.shieldedBalanceMaybeStale.value)
+        coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
     }
 
     @Test
@@ -1673,6 +1675,12 @@ class ShieldedBalanceServiceTest {
         withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
         assertFalse(service.shieldedBalanceMaybeStale.value)
         return service
+    }
+
+    /** A whole external spend: recorded before the (here absent) SDK call, then ended. */
+    private suspend fun ShieldedBalanceServiceImpl.externalSpend() {
+        val start = beginExternalShieldedSpend() ?: error("the spend could not be recorded")
+        endExternalShieldedSpend(start)
     }
 
     /** Emit [results] one by one, letting the collector process each, then give it time to settle. */
@@ -2093,7 +2101,7 @@ class ShieldedBalanceServiceTest {
 
             // Every forced pass fails, so the driver would retry indefinitely.
             source.onSyncNowSuspend = { throw IllegalStateException("not ready") }
-            withTimeout(2_000) { service.noteExternalShieldedSpendBroadcast(System.currentTimeMillis()) }
+            withTimeout(2_000) { service.externalSpend() }
             withTimeout(5_000) { while (source.syncNowCalls == 0) delay(10) }
 
             withTimeout(5_000) { service.stop() }
@@ -2160,6 +2168,7 @@ class ShieldedBalanceServiceTest {
         coEvery { cfg.markShieldedSpendReconcilePending(any()) } coAnswers {
             if (++marks == 1) markGate.await() // the first spend pauses inside its mark
         }
+        val clockMs = java.util.concurrent.atomic.AtomicLong(0L)
         val source = readySource()
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
@@ -2168,7 +2177,8 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = cfg,
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                clock = { clockMs.get() }
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
@@ -2184,9 +2194,11 @@ class ShieldedBalanceServiceTest {
             source.notesFlow.value = listOf(note(value = 0L, nullifierSeed = 1))
             source.activityFlow.value = listOf(firstSpendRow)
 
-            val first = async(Dispatchers.Default) { service.noteExternalShieldedSpendBroadcast(now - 60_000L) }
+            clockMs.set(now - 60_000L)
+            val first = async(Dispatchers.Default) { service.externalSpend() }
             withTimeout(5_000) { while (marks == 0) delay(10) }
-            val second = async(Dispatchers.Default) { service.noteExternalShieldedSpendBroadcast(now) }
+            clockMs.set(now)
+            val second = async(Dispatchers.Default) { service.externalSpend() }
             delay(50)
             markGate.complete(Unit)
             withTimeout(5_000) { first.await(); second.await() }
@@ -2379,7 +2391,7 @@ class ShieldedBalanceServiceTest {
      * — the invite flow still has to persist its one-time key afterwards.
      */
     @Test
-    fun noteExternalSpend_marksDurably_withoutWaitingForTheSyncPass() = runBlocking {
+    fun externalSpend_marksDurably_withoutWaitingForTheSyncPass() = runBlocking {
         val cfg = config(true)
         val syncGate = CompletableDeferred<Unit>()
         val source = readySource().apply { onSyncNowSuspend = { syncGate.await() } }
@@ -2390,11 +2402,12 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = cfg,
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                clock = { 1_700_000_000_000L }
             )
             assertTrue(service.ensureShieldedReady())
             // returns although syncShieldedNow is blocked
-            withTimeout(2_000) { service.noteExternalShieldedSpendBroadcast(1_700_000_000_000L) }
+            withTimeout(2_000) { service.externalSpend() }
             assertTrue(service.shieldedBalanceMaybeStale.value)
             // the since is the caller's start time less the skew allowance
             coVerify(exactly = 1) {
@@ -2408,18 +2421,52 @@ class ShieldedBalanceServiceTest {
         }
     }
 
+    /**
+     * thepastaclaw (7ae06b9e7): a spend whose invalidation can't be made
+     * durable is never submitted — after a process death the pre-spend cache
+     * would otherwise be trusted again.
+     */
     @Test
-    fun successfulSpend_staysBroadcast_whenInvalidatingTheCacheFails() = runBlocking {
+    fun aSpendWhoseRecordFails_isNotBroadcast_andNeverReachesTheSdk() = runBlocking {
         val cfg = config(true, lastBalanceDuffs = 1_000_000_000L)
         coEvery { cfg.markShieldedSpendReconcilePending(any()) } throws IllegalStateException("datastore down")
+        val source = readySource()
         val service = ShieldedBalanceServiceImpl(
-            source = readySource(),
+            source = source,
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
             displayHrp = { hrp }
         )
-        assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
-        assertTrue(service.shieldedBalanceMaybeStale.value)
+        assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.broadcastCalls)
+        assertFalse(service.shieldedBalanceMaybeStale.value)
+        assertNull(service.beginExternalShieldedSpend())
+    }
+
+    /**
+     * Settlement waits while a spend's SDK call is in flight: its activity row
+     * is written only after the proof, so stable passes during the call — the
+     * gate sees no row yet — must not settle it.
+     */
+    @Test
+    fun stablePassesDuringTheSpendCall_cannotSettleIt() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            val start = service.beginExternalShieldedSpend()!!
+            emitPasses(source, *Array(4) { passOk(preSpendCredits) })
+            assertTrue("in flight: no row yet, still stale", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            service.endExternalShieldedSpend(start)
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
     }
 
     @Test
