@@ -28,6 +28,9 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.nio.channels.FileChannel
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,7 +65,7 @@ internal interface ProtocolVersionHighWaterStore {
  * - [read]: no file → null; a file that can't be opened, read or parsed →
  *   throws.
  * - [write]: writes through [AtomicFile] (new file + rename), fsyncs the data
- *   itself, and reads it back before returning true —
+ *   and then the directory itself, and reads it back before returning true —
  *   [AtomicFile.finishWrite] only logs a failed rename, so success can't be
  *   taken from it.
  *
@@ -79,9 +82,11 @@ internal class AtomicFileProtocolVersionHighWaterStore(
         val bytes = try {
             file.readFully()
         } catch (e: FileNotFoundException) {
-            // Absent only if there is genuinely no file; an existing one that
-            // can't be opened (e.g. permissions) is unreadable, not absent.
-            if (file.baseFile.exists()) throw e
+            // Absent only if the file is CONFIRMED missing. File.exists() is also
+            // false when the path can't be looked up (EACCES/EIO on the directory),
+            // which is unreadable, not absent; Files.notExists() is true only for
+            // a confirmed ENOENT.
+            if (!Files.notExists(file.baseFile.toPath())) throw e
             return null
         }
         val text = String(bytes, Charsets.UTF_8).trim()
@@ -102,13 +107,31 @@ internal class AtomicFileProtocolVersionHighWaterStore(
             throw e
         }
         file.finishWrite(out)
+        syncDirectory(dir)
         return read(networkId) == version
+    }
+
+    /**
+     * fsync [dir] so finishWrite's rename (and, on the first write, the new
+     * entry) survives a power loss, not just a process kill — AtomicFile never
+     * syncs the directory. Best effort: the data file itself is already synced,
+     * and failing the write here on a platform that can't sync a directory
+     * would leave the latch unable to ever persist a mark (contested funding
+     * refused for good), which is worse than the narrow power-loss window.
+     */
+    private fun syncDirectory(dir: File) {
+        try {
+            FileChannel.open(dir.toPath(), StandardOpenOption.READ).use { it.force(true) }
+        } catch (e: IOException) {
+            log.warn("could not sync the protocol-version mark directory {}", dir, e)
+        }
     }
 
     private fun atomicFile(networkId: String) =
         AtomicFile(File(directory(), networkId.replace(UNSAFE_FILE_NAME_CHARS, "_")))
 
     companion object {
+        private val log = LoggerFactory.getLogger(AtomicFileProtocolVersionHighWaterStore::class.java)
         const val DIRECTORY_NAME = "platform_protocol_version"
         private val UNSAFE_FILE_NAME_CHARS = Regex("[^A-Za-z0-9._-]")
     }

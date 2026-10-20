@@ -26,6 +26,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -83,6 +84,33 @@ class AtomicFileProtocolVersionHighWaterStoreTest {
         markFile().mkdirs() // a directory where the file should be: exists, can't be read
 
         assertThrows(IOException::class.java) { store().read(network) }
+    }
+
+    @Test
+    fun `a mark whose directory cannot be searched throws instead of reading as absent`() {
+        assertTrue(store().write(network, 14))
+        assumeTrue("needs a non-root filesystem that honours permissions", dir.setExecutable(false))
+        try {
+            assumeTrue("permission change not enforced here", !File(dir, network).canRead())
+
+            assertThrows(IOException::class.java) { store().read(network) }
+        } finally {
+            dir.setExecutable(true)
+        }
+    }
+
+    @Test
+    fun `after a restart an unsearchable directory and a live 13 fail closed`() = runTest {
+        assertTrue(store().write(network, 14))
+        assumeTrue(dir.setExecutable(false))
+        try {
+            assumeTrue(!File(dir, network).canRead())
+
+            assertNull("a durable 14 may be behind the denied lookup", latch().latch(13))
+        } finally {
+            dir.setExecutable(true)
+        }
+        assertEquals("the durable 14 is intact", 14, store().read(network))
     }
 
     @Test
