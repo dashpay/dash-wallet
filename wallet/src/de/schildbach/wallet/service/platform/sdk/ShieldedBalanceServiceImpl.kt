@@ -21,6 +21,8 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.dashpay.utils.shieldedBalanceCacheOwner
+import de.schildbach.wallet.data.WalletData
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,8 +61,6 @@ import org.dashfoundation.dashsdk.persistence.entities.ShieldedOutgoingNoteEntit
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.ByteBuffer
-import java.security.MessageDigest
-import java.util.UUID
 import java.nio.charset.CodingErrorAction
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -211,106 +211,6 @@ internal fun shieldedSpendsReflected(
 private fun splitNoteKeys(bytes: ByteArray): List<ByteBuffer>? {
     if (bytes.size % NOTE_KEY_BYTES != 0) return null
     return (bytes.indices step NOTE_KEY_BYTES).map { ByteBuffer.wrap(bytes, it, NOTE_KEY_BYTES).slice() }
-}
-
-/**
- * SHA-256 (hex) of the wallet's UNSPENT note set — its nullifiers, sorted —
- * the note-store state a spend started from (see [shieldedStoreMovedPastSpends]).
- */
-internal fun unspentNotesDigestHex(notes: List<ShieldedNoteEntity>): String {
-    val sha = MessageDigest.getInstance("SHA-256")
-    notes.filter { !it.isSpent }.map { it.nullifier.toHexString() }.sorted().forEach {
-        sha.update(it.toByteArray(Charsets.US_ASCII))
-    }
-    return sha.digest().toHexString()
-}
-
-private fun ByteArray.toHexString(): String = joinToString("") { "%02x".format(it) }
-
-/**
- * One local spend's settlement evidence (see [shieldedStoreMovedPastSpends]):
- * the unspent-note digest ([unspentNotesDigestHex]) when it began and when its
- * SDK call returned (null while in flight), and whether another spend was in
- * flight at the same time.
- */
-internal data class SpendEvidence(
-    val beginDigestHex: String,
-    val endDigestHex: String?,
-    val overlapped: Boolean
-)
-
-/**
- * The settlement gate's evidence rule — pure, host-testable: the note store
- * has moved past EVERY spend of the reconciliation not covered by its own
- * activity row. A spend's evidence is satisfied once the unspent note set
- * differs from the one when its call returned — or, for a spend that ran
- * alone, once it differs from the one it started from by the time its call
- * returned (its own effect, e.g. inputs marked spent on success; this keeps
- * an exact-amount transfer, which leaves no change to scan, from waiting).
- * An overlapping spend never takes that shortcut: another spend's effect
- * during its call proves nothing about it.
- *
- * Why it is needed on top of [shieldedSpendsReflected]: that gate checks the
- * spends' activity rows, and a MISSING row proves nothing — the SDK swallows
- * a failure to persist the row, and some ops (Type-18 asset-lock funding)
- * record none until they land. The danger is a result BUFFERED from a pass
- * that ran before the spend: it reports the balance of the store the spend
- * started from, and while the store still is that set, it would match.
- * Requiring the store to have moved means missing history fails closed.
- * Fresh passes can't settle an unresolved spend either, however the store
- * moved (e.g. an unrelated receive): while its inputs stay reserved, a pass
- * reports the spendable balance WITHOUT them while the store still counts
- * them, so the two differ until the SDK resolves the spend (executed: the
- * scan marks its inputs spent; never executes: its anchor is pruned and the
- * reservation released, the store then being right as it is). No
- * other evidence (e.g. a Failed row, which can't be tied to the spend)
- * releases a spend. The evidence is in-memory: the buffered results it
- * guards against live only in this process — after a restart, the durable
- * marker and fresh, fully scanned passes decide.
- */
-internal fun shieldedStoreMovedPastSpends(
-    spends: Collection<SpendEvidence>,
-    notes: List<ShieldedNoteEntity>
-): Boolean {
-    if (spends.isEmpty()) return true
-    val current = unspentNotesDigestHex(notes)
-    return spends.all { spend ->
-        val end = spend.endDigestHex ?: return@all false
-        current != end || (!spend.overlapped && end != spend.beginDigestHex)
-    }
-}
-
-/**
- * Activity kinds only a scan derives (receives, restore-path residuals) —
- * never a local spend's own row. A scan can also derive a `Sent` (3) row,
- * but at the pinned SDK every scan-derived row has `created_at_ms` 0
- * (`derive_activity_from_scan_data`), so the start-time filter in
- * [attributableRowId] excludes those too.
- */
-private val SCAN_DERIVED_ACTIVITY_KINDS = setOf(2, 7)
-
-/**
- * The activity row [ticket]'s SDK call wrote, if it can be told apart: the
- * single row of a local-op kind that is new since the call began, created at
- * or after the spend's exact start (no skew allowance: an earlier op that
- * ended before this one began recorded its row before then, even if the row
- * reached Room late) and not claimed by another spend. Null when there is
- * none, several, or the spend overlapped another (rows can't be attributed
- * then) — the spend then stays on the store-moved rule.
- */
-internal fun attributableRowId(
-    ticket: ShieldedSpendTicket,
-    activity: List<ShieldedActivityEntity>,
-    claimed: Set<String>
-): String? {
-    val before = ticket.rowIdsAtBegin ?: return null
-    if (ticket.overlapped) return null
-    val candidates = activity
-        .filter { it.kindTag !in SCAN_DERIVED_ACTIVITY_KINDS && it.createdAtMs >= ticket.startedAtMs }
-        .map { it.entryId.toHexString() }
-        .filter { it !in before && it !in claimed }
-        .distinct()
-    return candidates.singleOrNull()
 }
 
 /** Bech32m type byte marking an Orchard payload (DIP-0018). */
@@ -1030,7 +930,13 @@ class ShieldedBalanceServiceImpl internal constructor(
     /**
      * Wall clock (Unix millis) for spend start times. Injectable for tests.
      */
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    /**
+     * The owner tag ([shieldedBalanceCacheOwner]) of the app's current wallet:
+     * the last-known balance is persisted for, and read back only by, that
+     * wallet. A fixed tag by default (tests); null means no wallet.
+     */
+    private val cacheOwner: () -> String? = { "wallet" }
 ) : ShieldedBalanceService {
 
     @Inject
@@ -1040,7 +946,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         dashPayConfig: DashPayConfig,
         l1ShadowSyncService: L1ShadowSyncService,
         applicationScope: CoroutineScope,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        walletData: WalletData
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1057,7 +964,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         sweepScope = applicationScope,
-        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
+        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
+        cacheOwner = { shieldedBalanceCacheOwner(walletData.wallet) }
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -1151,7 +1059,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     private var sweepJob: Job? = null
 
     override suspend fun lastKnownShieldedBalance(): Dash? = try {
-        dashPayConfig.getLastShieldedBalanceDuffs()?.let { Dash(it) }
+        dashPayConfig.getLastShieldedBalanceDuffs(cacheOwner())?.let { Dash(it) }
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("failed to read the last-known shielded balance; treating as absent", t)
@@ -1541,20 +1449,22 @@ class ShieldedBalanceServiceImpl internal constructor(
      * its constructed value and callers exercise [mapShieldedSyncStatus]
      * directly.
      *
-     * "First pass completed" is latched the first time we observe a pass go
-     * in-flight-then-idle. A wallet that is already caught up may never show a
-     * pass in flight, so a bounded idle settle ([SYNC_STATUS_SETTLE_POLLS]) also
-     * latches completion — during a genuine multi-block re-scan the pass stays
-     * in flight far longer than the settle window, so the placeholder is not
-     * dismissed prematurely there.
+     * "First pass completed" latches only on a SUCCESSFUL pass result for the
+     * bound wallet ([ShieldedSource.shieldedSyncResults]) delivered after this
+     * bring-up: the note store then covers the ledger, so its balance — even a
+     * genuine zero — is authoritative. A failed or skipped pass, or the
+     * in-flight flag merely going idle (which a failed pass or an unreadable
+     * flag also produce), never does: until then the status stays SYNCING and
+     * surfaces show the last-known balance or "Syncing…", never a placeholder
+     * zero.
      */
     private fun startSyncStatusPolling() {
         val scope = sweepScope ?: return
         if (syncStatusJob?.isActive == true) return
         syncStatusJob = scope.launch {
-            var seenPassInFlight = false
+            val boundWalletId = readyWalletIdHex.value?.let(::walletIdFromHex)
             var firstPassCompleted = false
-            var idlePolls = 0
+            val firstPassSucceeded = java.util.concurrent.atomic.AtomicBoolean(false)
             // A local spend that was still reconciling when the runtime stopped
             // or the process died: restore the settlement guard BEFORE the first
             // READY can be published, so that pass is not trusted (and not
@@ -1583,7 +1493,14 @@ class ShieldedBalanceServiceImpl internal constructor(
             // between two polls. Cancelled when this loop exits, so the job
             // completes and a later bring-up can start a fresh poller.
             val settlementJob = launch {
-                source.shieldedSyncResults().collect { result -> onShieldedPassCompleted(result) }
+                source.shieldedSyncResults().collect { result ->
+                    if (result.outcome == ShieldedPassResult.Outcome.SUCCEEDED &&
+                        boundWalletId != null && result.walletId.contentEquals(boundWalletId)
+                    ) {
+                        firstPassSucceeded.set(true)
+                    }
+                    onShieldedPassCompleted(result)
+                }
             }
             while (isActive) {
                 if (readyWalletIdHex.value == null) {
@@ -1595,15 +1512,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                         if (it is CancellationException) throw it
                         false
                     }
-                if (inFlight) {
-                    seenPassInFlight = true
-                    idlePolls = 0
-                } else {
-                    idlePolls++
-                    if (seenPassInFlight || idlePolls >= SYNC_STATUS_SETTLE_POLLS) {
-                        firstPassCompleted = true
-                    }
-                }
+                if (firstPassSucceeded.get()) firstPassCompleted = true
                 _shieldedSyncStatus.value = mapShieldedSyncStatus(
                     ready = true,
                     firstPassCompleted = firstPassCompleted,
@@ -1676,15 +1585,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         val boundWalletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return
         if (!result.walletId.contentEquals(boundWalletId)) return
         if (result.outcome == ShieldedPassResult.Outcome.SKIPPED) return
-        val (generation, sinceMs, unreflected) = reconcileMutex.withLock {
-            Triple(
-                reconcileGeneration,
-                reconcileSinceMs.takeIf { _shieldedBalanceMaybeStale.value },
-                // Only the bound wallet's spends: a wallet replaced in this
-                // process (Reset Wallet) leaves its evidence behind until the
-                // next settlement, and it says nothing about this wallet.
-                unreflectedSpends.filter { it.walletId.contentEquals(boundWalletId) }.map { it.evidence() }
-            )
+        val (generation, sinceMs) = reconcileMutex.withLock {
+            reconcileGeneration to reconcileSinceMs.takeIf { _shieldedBalanceMaybeStale.value }
         }
         val passCredits = result.balanceCredits.takeIf { result.outcome == ShieldedPassResult.Outcome.SUCCEEDED }
         // The displayed sum and the gate's unspent set / known cmxs come from
@@ -1716,9 +1618,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                 val outgoing = readOrNull("shielded outgoing notes") {
                     source.observeOutgoingNotes(boundWalletId).first().map { it.cmx }
                 }
-                outgoing != null &&
-                    shieldedSpendsReflected(activity, notes, outgoing, sinceMs) &&
-                    shieldedStoreMovedPastSpends(unreflected, notes)
+                outgoing != null && shieldedSpendsReflected(activity, notes, outgoing, sinceMs)
             }
         }
         // Decide and apply atomically with beginLocalSpend / endLocalSpend: a spend that
@@ -1728,7 +1628,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         reconcileMutex.withLock {
             if (generation != reconcileGeneration) return@withLock
             val stable = passCredits != null && passCredits == lastPassBalanceCredits
-            if (stable && displayedCredits == passCredits && spendsReflected && inFlightSpends.isEmpty()) {
+            if (stable && displayedCredits == passCredits && spendsReflected && spendsInFlight == 0) {
                 // Settled: the durable marker goes with the flag. If the marker
                 // can't be cleared the flag stays set — clearing it alone would
                 // show a balance the persister then refuses to cache, and the
@@ -1741,11 +1641,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                             log.warn("failed to clear the pending shielded spend reconciliation", it)
                         }
                         .isSuccess
-                if (markerCleared) {
-                    _shieldedBalanceMaybeStale.value = false
-                    claimedRowIds.clear()
-                    unreflectedSpends.clear()
-                }
+                if (markerCleared) _shieldedBalanceMaybeStale.value = false
             }
             // A failed pass (null) resets the streak; a successful one seeds it
             // with the balance it observed.
@@ -1775,9 +1671,10 @@ class ShieldedBalanceServiceImpl internal constructor(
     private fun startBalancePersistence() {
         val scope = sweepScope ?: return
         if (balancePersistJob?.isActive == true) return
-        // Read once per session, at bring-up: if another wallet is installed
-        // while this session lives, its writes are refused.
-        val cacheEpoch = dashPayConfig.lastShieldedBalanceCacheEpoch()
+        // Read once per session, at bring-up: the runtime is bound to this
+        // wallet, so its balances are tagged as this wallet's even if another
+        // is installed while the session lives (readers then reject them).
+        val owner = cacheOwner() ?: return
         balancePersistJob = scope.launch {
             var lastPersisted: Long? = null
             combine(
@@ -1804,7 +1701,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // so the write itself is conditional on the durable reconcile
                 // marker, inside one DataStore transaction — a pre-spend
                 // snapshot can never resurrect the cache.
-                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs, cacheEpoch) }
+                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs, owner) }
                     .onSuccess { written -> if (written) lastPersisted = duffs }
                     .onFailure {
                         if (it is CancellationException) throw it
@@ -2012,46 +1909,46 @@ class ShieldedBalanceServiceImpl internal constructor(
             // The single staged attempt: (a) build+broadcast the L1 asset
             // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
             // The pending reconciliation is durable before anything is submitted.
-            val ticket = beginLocalSpend(walletId)
-                ?: return notBroadcast(operation, "could not record the pending spend", null)
-            var mayHaveBroadcast = true
-            val failure = try {
-                if (fundingPath == null) {
-                    source.fundFromAssetLock(walletId, recipient, amount.duffs)
-                } else {
-                    // SINGLE-ACCOUNT: every input comes from the account this
-                    // path names (the DIP-9 CoinJoin account); BIP44 coins are
-                    // never co-spent. Only change returns to BIP44 account 0.
-                    source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+            val spendStartedAtMs = clock()
+            if (!beginLocalSpend(spendStartedAtMs)) {
+                return notBroadcast(operation, "could not record the pending spend", null)
+            }
+            try {
+                try {
+                    if (fundingPath == null) {
+                        source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                    } else {
+                        // SINGLE-ACCOUNT: every input comes from the account this
+                        // path names (the DIP-9 CoinJoin account); BIP44 coins are
+                        // never co-spent. Only change returns to BIP44 account 0.
+                        source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+                    }
+                } finally {
+                    endLocalSpend(spendStartedAtMs)
                 }
-                null
+                kickImmediateShieldedSync()
+                // Seed the funding lock's kind as SHIELD (best-effort, post-
+                // success) so the L1 asset lock renders "Shielded" on first
+                // classification instead of "Internal". The new lock is the
+                // outPointHex absent from lockedBefore; its txid part (before
+                // ':') is ALREADY display hex (AssetLockEntity keys on display),
+                // so it is the resolver's seed key directly.
+                try {
+                    source.walletShieldLocks(walletId)
+                        .map { it.outPointHex }
+                        .firstOrNull { it !in lockedBefore }
+                        ?.substringBefore(':')
+                        ?.takeIf { it.length == 64 }
+                        ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
+                }
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
-                    .also { mayHaveBroadcast = it !is SdkWriteResult.NotBroadcast }
-            } finally {
-                endLocalSpend(ticket, mayHaveBroadcast)
             }
-            if (failure != null) return failure
-            kickImmediateShieldedSync()
-            // Seed the funding lock's kind as SHIELD (best-effort, post-
-            // success) so the L1 asset lock renders "Shielded" on first
-            // classification instead of "Internal". The new lock is the
-            // outPointHex absent from lockedBefore; its txid part (before
-            // ':') is ALREADY display hex (AssetLockEntity keys on display),
-            // so it is the resolver's seed key directly.
-            try {
-                source.walletShieldLocks(walletId)
-                    .map { it.outPointHex }
-                    .firstOrNull { it !in lockedBefore }
-                    ?.substringBefore(':')
-                    ?.takeIf { it.length == 64 }
-                    ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
-            }
-            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
         }
     }
 
@@ -2155,23 +2052,17 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // The pending reconciliation is durable before the resume
                 // submits; if it can't be recorded the lock waits for a later
                 // sweep (no attempt is spent).
-                val ticket = beginLocalSpend(walletId)
-                if (ticket == null) {
+                val spendStartedAtMs = clock()
+                if (!beginLocalSpend(spendStartedAtMs)) {
                     log.warn("pending wallet-shield lock {} not resumed: the spend could not be recorded", lock.outPointHex)
                     continue
                 }
                 resumeAttempts[lock.outPointHex] = attempts + 1
                 try {
-                    var mayHaveBroadcast = true
                     try {
                         source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
-                    } catch (t: Throwable) {
-                        if (t !is CancellationException) {
-                            mayHaveBroadcast = classifyBroadcastFailure(t) !is SdkWriteResult.NotBroadcast
-                        }
-                        throw t
                     } finally {
-                        endLocalSpend(ticket, mayHaveBroadcast)
+                        endLocalSpend(spendStartedAtMs)
                     }
                     resumed++
                     log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)
@@ -2299,23 +2190,22 @@ class ShieldedBalanceServiceImpl internal constructor(
         // spend's activity row during it (see [onShieldedPassCompleted]).
         // The pending reconciliation is durable before anything is submitted;
         // a cancellation or any outcome after that leaves it to settlement.
-        val ticket = beginLocalSpend(walletId)
-            ?: return notBroadcast(operation, "could not record the pending spend", null)
-        var mayHaveBroadcast = true
+        val spendStartedAtMs = clock()
+        if (!beginLocalSpend(spendStartedAtMs)) {
+            return notBroadcast(operation, "could not record the pending spend", null)
+        }
         val result = try {
             block(walletId, amountCredits)
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            val failure = if (t is PreBroadcastRejection) {
+            if (t is PreBroadcastRejection) {
                 notBroadcast(operation, t.reason, t.cause)
             } else {
                 classifyWriteFailure(operation, t)
             }
-            mayHaveBroadcast = failure !is SdkWriteResult.NotBroadcast
-            failure
         } finally {
-            endLocalSpend(ticket, mayHaveBroadcast)
+            endLocalSpend(spendStartedAtMs)
         }
         when (result) {
             is SdkWriteResult.Broadcast -> kickImmediateShieldedSync()
@@ -2375,39 +2265,28 @@ class ShieldedBalanceServiceImpl internal constructor(
     /**
      * Start a local spend, BEFORE its SDK call: durably record the pending
      * reconciliation (drop the last-known balance, set the marker and its
-     * since in one DataStore transaction), mark the balance STALE (see
-     * [shieldedBalanceMaybeStale]), hold settlement until [endLocalSpend],
-     * and snapshot the note store and activity rows the spend starts from.
+     * since in one DataStore transaction), then mark the balance STALE (see
+     * [shieldedBalanceMaybeStale]) and hold settlement until [endLocalSpend].
      *
-     * Returns null — with nothing changed — when the note set can't be read or
-     * the durable record can't be written. The caller must then NOT spend: a
-     * spend whose invalidation isn't durable could, after a process death,
-     * leave the pre-spend cache trusted on the next start. Only the WRITE
-     * paths call this — a plain screen-entry [syncNow] refresh must NOT mark
-     * the balance stale.
+     * Returns false — with nothing changed — when the durable record can't be
+     * written. The caller must then NOT spend: a spend whose invalidation
+     * isn't durable could, after a process death, leave the pre-spend cache
+     * trusted on the next start. Only the WRITE paths call this — a plain
+     * screen-entry [syncNow] refresh must NOT mark the balance stale.
      *
-     * The ticket's since is the wall clock [clock] reads BEFORE the SDK spend
-     * call, less [SPEND_WINDOW_SKEW_MS] — the reconciliation keeps the
-     * earliest one when spends overlap.
+     * [spendStartedAtMs] is the wall clock captured BEFORE the SDK spend call;
+     * less [SPEND_WINDOW_SKEW_MS], it becomes the reconciliation's since —
+     * the earliest one when spends overlap.
      */
-    private suspend fun beginLocalSpend(walletId: ByteArray): ShieldedSpendTicket? {
-        val startedAtMs = clock()
-        val sinceMs = sinceFor(startedAtMs)
-        // Under [reconcileMutex], like settlement completion in
-        // [onShieldedPassCompleted]: a settlement for an EARLIER spend that
-        // is mid-flight (suspended clearing its marker) must not clear this
-        // spend's flag, marker or stability window. The new generation makes
-        // that earlier decision void once it re-enters the lock. The snapshots
-        // are taken under it too, so no other spend can end between them and
-        // this spend's registration (see [attributableRowId]).
+    private suspend fun beginLocalSpend(spendStartedAtMs: Long): Boolean {
+        val sinceMs = sinceFor(spendStartedAtMs)
         return withContext(NonCancellable) {
+            // Under [reconcileMutex], like settlement completion in
+            // [onShieldedPassCompleted]: a settlement for an EARLIER spend that
+            // is mid-flight (suspended clearing its marker) must not clear this
+            // spend's flag, marker or stability window. The new generation makes
+            // that earlier decision void once it re-enters the lock.
             reconcileMutex.withLock {
-                val notes = readOrNull("shielded notes") { source.observeAllNotes(walletId).first() }
-                    ?: return@withLock null
-                // The rows that exist before the call, so [endLocalSpend] can
-                // tell the one it writes; unreadable → never attributed.
-                val rowIdsAtBegin = readOrNull("shielded activity") { source.observeActivity(walletId).first() }
-                    ?.mapTo(HashSet()) { it.entryId.toHexString() }
                 // The flag is in-memory only (false in a new process, reset by
                 // tearDownReadyState), so the record is durable FIRST: the
                 // marker + since [startSyncStatusPolling] restores the guard from
@@ -2418,56 +2297,27 @@ class ShieldedBalanceServiceImpl internal constructor(
                 val recorded = runCatching { dashPayConfig.markShieldedSpendReconcilePending(sinceMs) }
                     .onFailure { log.warn("failed to record the pending shielded spend; not spending", it) }
                     .isSuccess
-                if (!recorded) return@withLock null
-                val ticket = ShieldedSpendTicket(walletId, startedAtMs, sinceMs, rowIdsAtBegin, unspentNotesDigestHex(notes))
-                // Overlapping spends' rows and store changes can't be told
-                // apart: none of them is attributed, and none takes the
-                // ran-alone shortcut (see [shieldedStoreMovedPastSpends]).
-                if (inFlightSpends.isNotEmpty()) {
-                    ticket.overlapped = true
-                    inFlightSpends.forEach { it.overlapped = true }
+                if (recorded) {
+                    spendsInFlight++
+                    restartReconciliation(sinceMs)
                 }
-                inFlightSpends += ticket
-                unreflectedSpends += ticket
-                restartReconciliation(sinceMs)
-                ticket
+                recorded
             }
         }
     }
 
     /**
      * The SDK call of a spend [beginLocalSpend] started has returned or thrown,
-     * whatever the outcome — call it from `finally`. Settles the spend's
-     * evidence, then releases the settlement hold and restarts the stability
-     * window, so no pass that ran during the call counts:
-     *
-     * - definitively never broadcast ([mayHaveBroadcast] false), or its own
-     *   activity row is identifiable ([attributableRowId] — the row gate
-     *   [shieldedSpendsReflected] covers it): no evidence is needed;
-     * - otherwise it waits on the note store ([shieldedStoreMovedPastSpends]),
-     *   which is snapshotted now. If that snapshot can't be read, the spend
-     *   counts as overlapped and as returning to the store it started from,
-     *   so only a later change to the store releases it.
+     * whatever the outcome — call it from `finally`. Releases the settlement
+     * hold and restarts the stability window, so no pass that ran during the
+     * call counts. A spend that definitively never broadcast simply settles
+     * on the next stable passes (its row, if any, is Failed).
      */
-    private suspend fun endLocalSpend(ticket: ShieldedSpendTicket, mayHaveBroadcast: Boolean) {
+    private suspend fun endLocalSpend(spendStartedAtMs: Long) {
         withContext(NonCancellable) {
             reconcileMutex.withLock {
-                val activity = if (mayHaveBroadcast) {
-                    readOrNull("shielded activity") { source.observeActivity(ticket.walletId).first() }
-                } else {
-                    null
-                }
-                val ownRowId = activity?.let { attributableRowId(ticket, it, claimedRowIds) }
-                if (!mayHaveBroadcast || ownRowId != null) {
-                    ownRowId?.let { claimedRowIds += it }
-                    unreflectedSpends -= ticket
-                } else {
-                    val notes = readOrNull("shielded notes") { source.observeAllNotes(ticket.walletId).first() }
-                    if (notes == null) ticket.overlapped = true
-                    ticket.endDigestHex = notes?.let(::unspentNotesDigestHex) ?: ticket.beginDigestHex
-                }
-                inFlightSpends -= ticket
-                restartReconciliation(ticket.sinceMs)
+                spendsInFlight--
+                restartReconciliation(sinceFor(spendStartedAtMs))
             }
         }
     }
@@ -2493,7 +2343,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // while a spend is in flight: nothing can settle before its call
         // returns, so forced passes would only compete with its proof; the
         // last [endLocalSpend] starts the driver.
-        if (inFlightSpends.isEmpty()) startSettlementKicks(reconcileGeneration)
+        if (spendsInFlight == 0) startSettlementKicks(reconcileGeneration)
     }
 
     /** The running [startSettlementKicks] driver; replaced by each new reconciliation. */
@@ -2571,36 +2421,19 @@ class ShieldedBalanceServiceImpl internal constructor(
      * could not yet see the spend. Guarded by [reconcileMutex]; in-memory only
      * (a new process restores from the durable marker).
      */
-    private val inFlightSpends = HashSet<ShieldedSpendTicket>()
-
-    /**
-     * Spends of the pending reconciliation the row gate can't cover (in
-     * flight, or ended without an identifiable row of their own): the
-     * settlement gate waits for the note store to move past each (see
-     * [shieldedStoreMovedPastSpends]). Guarded by [reconcileMutex]; cleared on
-     * settlement. In-memory on purpose: it guards against stale results
-     * buffered in this process only.
-     */
-    private val unreflectedSpends = ArrayList<ShieldedSpendTicket>()
-
-    /**
-     * Activity rows already attributed to a spend of the pending
-     * reconciliation (see [attributableRowId]), so two spends can never claim
-     * one row. Guarded by [reconcileMutex]; cleared on settlement.
-     */
-    private val claimedRowIds = HashSet<String>()
+    private var spendsInFlight = 0
 
     /** Balance at the last completed sync pass — see the stability rule in [onShieldedPassCompleted]. */
     @Volatile
     private var lastPassBalanceCredits: Long? = null
 
-    override suspend fun beginExternalShieldedSpend(walletIdHex: String): ShieldedSpendTicket? {
-        val walletId = walletIdFromHex(walletIdHex) ?: return null
-        return beginLocalSpend(walletId)
+    override suspend fun beginExternalShieldedSpend(): Long? {
+        val spendStartedAtMs = clock()
+        return spendStartedAtMs.takeIf { beginLocalSpend(it) }
     }
 
-    override suspend fun endExternalShieldedSpend(ticket: ShieldedSpendTicket, mayHaveBroadcast: Boolean) {
-        endLocalSpend(ticket, mayHaveBroadcast)
+    override suspend fun endExternalShieldedSpend(spendStartedAtMs: Long) {
+        endLocalSpend(spendStartedAtMs)
         // The network refresh is fire-and-forget: syncShieldedNow() blocks for
         // a whole network-driven pass, and the invite/username callers still
         // hold un-persisted recovery material (e.g. an invite's one-time key)
@@ -2695,13 +2528,6 @@ class ShieldedBalanceServiceImpl internal constructor(
         /** How often the sync-status poller samples the pass-in-flight signal. */
         internal const val SYNC_STATUS_POLL_INTERVAL_MS = 500L
 
-        /**
-         * Consecutive idle polls (no pass in flight) after which the runtime is
-         * considered caught up even if a pass was never observed — the
-         * already-synced-wallet fallback so the "syncing…" placeholder is not
-         * shown indefinitely. At [SYNC_STATUS_POLL_INTERVAL_MS] this is ~3s.
-         */
-        internal const val SYNC_STATUS_SETTLE_POLLS = 6
 
         /** Forced passes after a spend, so settlement evidence arrives promptly. */
         internal const val SETTLEMENT_EVIDENCE_PASSES = 2

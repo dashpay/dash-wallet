@@ -56,6 +56,7 @@ import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.dashpay.utils.shieldedBalanceCacheOwner
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.Dispatchers
@@ -621,7 +622,14 @@ class MainViewModel @Inject constructor(
             .map { Constants.SUPPORTS_PLATFORM && it == true },
         live = { shieldedBalanceService.observeShieldedBalance() },
         status = { shieldedBalanceService.shieldedSyncStatus },
-        cachedDuffs = { dashPayConfig.observeLastShieldedBalanceDuffs() },
+        // Only the CURRENT wallet's last-known balance (see
+        // DashPayConfig.LAST_SHIELDED_BALANCE_OWNER), re-checked when it changes.
+        cachedDuffs = {
+            walletData.observeWallet()
+                .map { shieldedBalanceCacheOwner(it) }
+                .distinctUntilChanged()
+                .flatMapLatest { owner -> dashPayConfig.observeLastShieldedBalanceDuffs(owner) }
+        },
         maybeStale = { shieldedBalanceService.shieldedBalanceMaybeStale },
         onError = { e, attempt -> log.error("home shielded balance flow error (attempt {})", attempt, e) }
     )

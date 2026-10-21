@@ -8,8 +8,6 @@ import de.schildbach.wallet.ui.WalletUriHandlerActivity
 import de.schildbach.wallet.ui.degradedScreenActions
 import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.util.SafeModeRetryWaiters
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -28,7 +26,6 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -60,7 +57,6 @@ class RecoveredWalletPersistenceTest {
     fun setUp() {
         Context.propagate(Constants.CONTEXT)
         app = WalletApplication()
-        setField("dashPayConfig", mockk<DashPayConfig>(relaxed = true))
         primary = File(directory.root, "wallet-protobuf")
         backup = File(directory.root, "key-backup-protobuf")
         Wallet(Constants.NETWORK_PARAMETERS).apply {
@@ -1243,66 +1239,6 @@ class RecoveredWalletPersistenceTest {
         every { launchApp.resetBlockchain() } answers { fail("must not queue a reset") }
         every { launchApp["showLoadToast"](any<String>()) } answers { }
         return launchApp
-    }
-
-    /**
-     * thepastaclaw (PR #1621): the install-wide last-known shielded balance
-     * belongs to the wallet that ran before. It is durably removed before a
-     * replacement's FIRST save, whichever save gets there first (here the
-     * shutdown save, before setup), and a removal that fails saves nothing.
-     */
-    @Test
-    fun `a replacement's first save removes the previous shielded balance first`() {
-        recovered.saveToFile(primary)
-        val primaryA = primary.readBytes()
-        val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
-        var removals = 0
-        coEvery { dashPayConfig.forgetLastShieldedBalance() } coAnswers {
-            removals++
-            assertArrayEquals("removed before the primary is written", primaryA, primary.readBytes())
-            if (removals == 1) throw java.io.IOException("datastore down")
-        }
-        setField("dashPayConfig", dashPayConfig)
-        val setupApp = setupCapableApp()
-        val replacementB = replacementWallet()
-        val keyB = replacementB.freshReceiveKey()
-        assertTrue(setupApp.setWallet(replacementB))
-
-        assertThrows(RuntimeException::class.java) { setupApp.saveWallet() }
-        assertArrayEquals("a failed removal saves nothing", primaryA, primary.readBytes())
-
-        setupApp.saveWallet()
-        assertTrue(readWallet(primary).isPubKeyMine(keyB.pubKey))
-        assertEquals(2, removals)
-        // Saves of the now-committed B remove nothing more.
-        setupApp.saveWallet()
-        assertEquals(2, removals)
-    }
-
-    /**
-     * thepastaclaw (PR #1621, 7005fe2b1): a shutdown save of committed wallet
-     * A passes the guard (nothing to remove), then setWallet(B) lands before
-     * the write. The save must write the wallet the guard checked — A — never
-     * B, whose first save must still remove A's shielded balance first.
-     */
-    @Test
-    fun `a replacement installed mid-save is not written past the shielded-balance guard`() {
-        val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
-        setField("dashPayConfig", dashPayConfig)
-        val setupApp = setupCapableApp()
-        val replacementB = replacementWallet()
-        val keyB = replacementB.freshReceiveKey()
-        every { setupApp["forgetShieldedBalanceBeforeFirstSave"](any<Wallet>()) } answers {
-            callOriginal()
-            assertTrue(setupApp.setWallet(replacementB))
-            Unit
-        }
-
-        setupApp.saveWallet()
-
-        assertTrue("A, the wallet the guard checked, was written", readWallet(primary).isPubKeyMine(recovered.currentReceiveKey().pubKey))
-        assertFalse(readWallet(primary).isPubKeyMine(keyB.pubKey))
-        coVerify(exactly = 0) { dashPayConfig.forgetLastShieldedBalance() }
     }
 
     /**

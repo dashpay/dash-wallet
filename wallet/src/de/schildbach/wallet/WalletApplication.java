@@ -1083,10 +1083,6 @@ public class WalletApplication extends MultiDexApplication
             log.warn("refusing to install a created or restored wallet: a wipe marker is on disk");
             return false;
         }
-        // The last-known shielded balance belongs to whichever wallet ran
-        // before; it must not stand in for this one's (made durable before
-        // this wallet's first save, in forgetShieldedBalanceBeforeFirstSave).
-        WalletApplicationExt.INSTANCE.hideShieldedBalanceForNewWallet(this);
         awaitDeferredWalletLoadForMutation();
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
@@ -2047,37 +2043,10 @@ public class WalletApplication extends MultiDexApplication
     @VisibleForTesting
     void saveWallet(final boolean backupAccountedFor) {
         awaitDeferredWalletLoadForMutation();
-        // ONE read of the field: a concurrent setWallet() must not let the
-        // guard see the committed wallet and the write save the replacement.
-        final Wallet walletToSave = wallet;
         try {
-            forgetShieldedBalanceBeforeFirstSave(walletToSave);
-            protobufSerializeWallet(walletToSave, backupAccountedFor);
+            protobufSerializeWallet(wallet, backupAccountedFor);
         } catch (final IOException x) {
             throw new RuntimeException(x);
-        }
-    }
-
-    /**
-     * The first save of a replacement wallet ({@link #setWallet} installed it;
-     * not yet committed) durably removes the install-wide last-known shielded
-     * balance first — by setup or by an ordinary save (e.g. the blockchain
-     * service's shutdown save), whichever gets there first. It was persisted
-     * for whichever wallet ran before, and once this primary is on disk a
-     * later launch loads it without passing setWallet (which only hides the
-     * balance in memory). If it cannot be removed, nothing is saved. A
-     * key-backup recovery ({@link #persistRecoveredWallet}) restores the same
-     * wallet and skips this.
-     */
-    private void forgetShieldedBalanceBeforeFirstSave(final Wallet wallet) throws IOException {
-        if (committedWallet == wallet) {
-            return;
-        }
-        try {
-            WalletApplicationExt.INSTANCE.forgetShieldedBalanceBeforeCommit(this);
-        } catch (final Exception x) {
-            throw new IOException("the previous wallet's shielded balance could not be removed — "
-                    + "the new wallet's primary is not saved", x);
         }
     }
 
