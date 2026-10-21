@@ -35,6 +35,7 @@ import java.text.DateFormat
 import java.util.Date
 import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.live
 import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.sameKey
+import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.sameKeyIdentity
 
 /** One-QR, PV14 grant lifecycle. The mutex covers approval, recovery and revocation. */
 internal class AppConnectSession(
@@ -286,7 +287,7 @@ internal class AppConnectSession(
                         it.optString("connection") == record.optString("connection") && it.optString("state") != "disabled"
                 }
                 val disable = oldRecords.flatMap { decodeKeys(it) }.filter { it.purpose == Purpose.AUTHENTICATION }
-                    .mapNotNull { old -> identity.publicKeys.firstOrNull { sameKey(it, old) && live(it, time) }?.id }.distinct()
+                    .mapNotNull { old -> identity.publicKeys.firstOrNull { sameKeyIdentity(it, old) && live(it, time) }?.id }.distinct()
                 requireSettled(oldRecords, identity, time)
                 WalletSignerCallback(wallet, keyParameter).use { walletSigner ->
                     object : Signer() {
@@ -484,7 +485,7 @@ internal class AppConnectSession(
             val keys = matchingRecords(scope, app).flatMap { decodeKeys(it) }
                 .filter { it.purpose == Purpose.AUTHENTICATION }.distinctBy { it.id }
             val text = keys.joinToString("\n\n") { expected ->
-                val current = identity.publicKeys.firstOrNull { sameKey(it, expected) }
+                val current = identity.publicKeys.firstOrNull { sameKeyIdentity(it, expected) }
                 when {
                     current == null -> "Key ${expected.id}: not confirmed on identity"
                     !live(current, time) -> "Key ${expected.id}: disabled or expired"

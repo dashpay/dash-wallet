@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.more.connections
 
 import android.content.Context
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -76,7 +77,7 @@ open class DashConnectConfig @Inject constructor(
     context: Context,
     walletDataProvider: WalletDataProvider
 ) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
-    private val purchaseContext = context
+    private val configContext = context
 
     companion object {
         const val PREFERENCES_NAME = "dash_connect"
@@ -90,22 +91,26 @@ open class DashConnectConfig @Inject constructor(
 
     suspend fun getConnections(): List<StoredConnection> = decode(get(CONNECTIONS))
 
-    // Fail closed on corruption: losing these records would lose the ability to revoke keys.
-    suspend fun getGrants(): List<JSONObject> {
-        val raw = get(GRANTS) ?: return emptyList()
+    // Grant records are required for revocation. Propagate read errors instead of using
+    // BaseConfig's empty-preferences fallback for ordinary settings.
+    suspend fun getGrants(): List<JSONObject> = observeGrants().first()
+
+    fun observeGrants(): Flow<List<JSONObject>> = configContext.dataStore.data.map { preferences ->
+        decodeGrants(preferences[GRANTS])
+    }
+
+    private fun decodeGrants(raw: String?): List<JSONObject> {
+        if (raw == null) return emptyList()
         val array = JSONArray(raw)
         return (0 until array.length()).map { array.getJSONObject(it) }
     }
 
-    fun observeGrants(): Flow<List<JSONObject>> = observe(GRANTS).map { raw ->
-        if (raw == null) emptyList() else JSONArray(raw).let { array ->
-            (0 until array.length()).map { array.getJSONObject(it) }
-        }
-    }
-
     suspend fun saveGrant(grant: JSONObject) {
-        val records = getGrants().filter { it.getString("id") != grant.getString("id") } + grant
-        set(GRANTS, JSONArray(records).toString())
+        configContext.dataStore.edit { preferences ->
+            val records = decodeGrants(preferences[GRANTS])
+                .filter { it.getString("id") != grant.getString("id") } + grant
+            preferences[GRANTS] = JSONArray(records).toString()
+        }
     }
 
     suspend fun purchaseWasSubmitted(id: String): Boolean {
@@ -122,7 +127,7 @@ open class DashConnectConfig @Inject constructor(
 
     // Unlike ordinary preferences, unreadable debit receipts must never look like an empty store.
     private suspend fun purchaseReceipts() =
-        JSONArray(purchaseContext.dataStore.data.first()[PURCHASES] ?: "[]")
+        JSONArray(configContext.dataStore.data.first()[PURCHASES] ?: "[]")
 
     /** Inserts or replaces the stored connection keyed by [StoredConnection.contractId]. */
     suspend fun upsertConnection(connection: StoredConnection) {

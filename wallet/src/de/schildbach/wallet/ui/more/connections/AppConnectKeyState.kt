@@ -11,17 +11,20 @@ internal object AppConnectKeyState {
     fun live(key: IdentityPublicKey, time: Long) =
         key.disabledAt == null && (key.expiresAt == null || key.expiresAt!! > time)
 
-    fun sameKey(a: IdentityPublicKey, b: IdentityPublicKey, compareId: Boolean = true) =
+    // Limits may change through IdentityKeyLimitsUpdate without changing key ownership.
+    fun sameKeyIdentity(a: IdentityPublicKey, b: IdentityPublicKey, compareId: Boolean = true) =
         (!compareId || a.id == b.id) && a.type == b.type && a.purpose == b.purpose &&
             a.securityLevel == b.securityLevel && a.data.contentEquals(b.data) && a.readOnly == b.readOnly &&
-            a.totalBudget == b.totalBudget && a.expiresAt == b.expiresAt &&
             a.contractBounds?.toJSON() == b.contractBounds?.toJSON()
+
+    fun sameKey(a: IdentityPublicKey, b: IdentityPublicKey, compareId: Boolean = true) =
+        sameKeyIdentity(a, b, compareId) && a.totalBudget == b.totalBudget && a.expiresAt == b.expiresAt
 
     fun inspect(expected: List<IdentityPublicKey>, actual: List<IdentityPublicKey>, time: Long) = expected.map { key ->
         val current = actual.firstOrNull { it.id == key.id }
         KeyState(key.id, key.purpose == Purpose.AUTHENTICATION, live(key, time), when {
             current == null -> Presence.MISSING
-            !sameKey(current, key) -> Presence.CONFLICTING
+            !sameKeyIdentity(current, key) -> Presence.CONFLICTING
             live(current, time) -> Presence.LIVE
             else -> Presence.INACTIVE
         })
