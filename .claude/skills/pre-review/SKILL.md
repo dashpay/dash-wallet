@@ -21,8 +21,9 @@ after a clean review is instant. The push gate (below) checks that cache.
    .claude/skills/pre-review/prereview.sh
    ```
    Use `run_in_background: true` and wait for it to finish. Do not poll it.
-3. If it exits 2 (not reviewed), the message says why: the Codex CLI is missing (`npm i -g @openai/codex`),
-   it is not logged in (`codex login`), or the login does not serve the model. Tell the user and stop. Do not
+3. If it exits 2 (not reviewed), the message says why: the Codex CLI is missing, it has no access to ChatGPT,
+   or the login does not serve the model. Tell the user how to set it up (`README.md` → Setup: `codex login`
+   with a ChatGPT plan, or `OPENAI_API_KEY`) and stop. Never ask for the key in the chat or write it anywhere. Do not
    review the range yourself under its name: a Claude review shares Claude's blind spots, which is why this runs
    on the bot's model.
 

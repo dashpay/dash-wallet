@@ -11,8 +11,14 @@
 #   prereview.sh --uninstall        turn it off again
 #   (as .git/hooks/pre-push)        (git)
 #
-# The gate is per clone and off by default: it needs the Codex CLI logged in (`npm i -g @openai/codex && codex login`
-# — a ChatGPT plan that serves the model, or OPENAI_API_KEY). With it on, a push to dash-wallet needs, for every
+# Access to ChatGPT (README.md, "Setup") is Codex's own login, never a key in this repository:
+#   npm i -g @openai/codex@latest, then ONE of
+#     codex login                    a ChatGPT plan (browser); `codex login --device-auth` without a browser
+#     export OPENAI_API_KEY=…        an OpenAI API key, in your shell profile (or: printenv OPENAI_API_KEY |
+#                                    codex login --with-api-key)
+#   check: codex exec --skip-git-repo-check -m gpt-6.1-sol "Reply: OK"
+#
+# The gate is per clone and off by default. With it on, a push to dash-wallet needs, for every
 # pushed commit, a cached review of a range that covers merge_base(base, commit)..commit with no blocking findings.
 # From a terminal the hook runs a missing review itself; from a non-interactive push (an agent's shell) it refuses
 # at once and says to run the review first. Reviews are cached per commit in ~/.cache/prereview/<sha>.{json,md}. The
@@ -97,9 +103,9 @@ review_locked() {
       "$mb" "$base" > "$VERDICTS/.$sha.json.$$" && mv "$VERDICTS/.$sha.json.$$" "$VERDICTS/$sha.json"
     say "${sha:0:10} has no commits over $base, nothing to review"; return 0
   fi
-  command -v codex >/dev/null || { say "the Codex CLI is not installed: npm i -g @openai/codex"; return 2; }
+  command -v codex >/dev/null || { say "the Codex CLI is not installed: npm i -g @openai/codex@latest (README.md, Setup)"; return 2; }
   codex login status >/dev/null 2>&1 || [[ -n "${OPENAI_API_KEY:-}" ]] \
-    || { say "Codex is not logged in: codex login (ChatGPT) or OPENAI_API_KEY"; return 2; }
+    || { say "Codex has no access to ChatGPT: codex login (a ChatGPT plan) or OPENAI_API_KEY (an API key); README.md, Setup"; return 2; }
   local rules="this repository's CLAUDE.md and .claude/agents/DEVELOPMENT-PATTERNS.md"
   if fetch_prompts; then
     rules="these files exactly: $PC/review-agent.md (scope, required checks, severities), $PC/review.md and \
@@ -134,7 +140,7 @@ EOF
   if [[ $rc -ne 0 || ! -s "$out" ]]; then
     say "codex failed (exit $rc):"; tail -5 "$log" >&2
     grep -q "not supported when using Codex with a ChatGPT account" "$log" && say "this login does not serve $MODEL: \
-update the CLI (npm i -g @openai/codex@latest) and log in with a ChatGPT account that has it"
+update the CLI (npm i -g @openai/codex@latest) and log in with a ChatGPT account that has it (README.md, Setup)"
     rm -f "$out" "$log"; return 2
   fi
   cat "$out"; echo
@@ -227,5 +233,5 @@ case "${1:-}" in
     is_dash_wallet "$(git -C "$repo" remote get-url origin)" || { say "origin is not dash-wallet"; exit 2; }
     review "$repo" "$(git -C "$repo" rev-parse HEAD)"
     ;;
-  *) sed -n 2,22p "$0"; exit 2 ;;
+  *) sed -n 2,29p "$0"; exit 2 ;;
 esac

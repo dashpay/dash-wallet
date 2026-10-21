@@ -116,5 +116,6 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 ## Before pushing a PR branch
 PRs are reviewed by thepastaclaw, which approves only at zero findings and re-reviews the whole range on every push.
 Run `/pre-review` (`.claude/skills/pre-review/`) on the committed branch first: the same model with the bot's
-prompts, findings verified and fixed by class. Turn on its push gate (a git pre-push hook) for a clone with
-`.claude/skills/pre-review/prereview.sh --install`.
+prompts, findings verified and fixed by class. It needs the Codex CLI with access to ChatGPT (`codex login`, or
+`OPENAI_API_KEY`; see `.claude/skills/pre-review/README.md`). Turn on its push gate (a git pre-push hook) for a
+clone with `.claude/skills/pre-review/prereview.sh --install`.
