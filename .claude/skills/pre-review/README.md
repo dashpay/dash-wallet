@@ -12,7 +12,7 @@ script only checks that one exists (`codex login status`, or `CODEX_API_KEY` in 
 the options below.
 
 ```bash
-npm i -g @openai/codex@latest      # 0.163.0 or newer: older versions are refused gpt-6.1-sol on a ChatGPT plan
+npm i -g @openai/codex@latest      # 0.163.0 or newer (the script checks): permission profiles and the model on a ChatGPT plan
 ```
 
 **A. A ChatGPT plan (Plus, Pro, Team).** No key: the review uses the plan's quota.
@@ -30,12 +30,22 @@ the plan does not include the model.
 
 **B. An OpenAI API key** from platform.openai.com. This is billed per request.
 ```bash
-export CODEX_API_KEY=…                               # in your shell profile: the variable `codex exec` reads
-printenv CODEX_API_KEY | codex login --with-api-key  # or store it in Codex's own login instead
+printenv CODEX_API_KEY | codex login --with-api-key   # store it in Codex's own login (~/.codex/auth.json), then unset it
 ```
-`OPENAI_API_KEY` is accepted too and copied into `CODEX_API_KEY`. Keep the key in your shell profile or a password
-manager. Do not put it in this repository, `local.properties`, `service.properties` or a commit, and do not paste it
-into an issue or a chat.
+`CODEX_API_KEY` in the environment works too (`OPENAI_API_KEY` is copied into it), but prefer the stored login. Keep
+the key out of your shell profile (a login shell would put it back), this repository, `local.properties`,
+`service.properties`, commits, issues and chats.
+
+**What the review may touch.** The branch under review is untrusted code: it can ask the model to run `printenv`
+or `cat ~/.codex/auth.json`. So the commands the model runs get a bare environment with the key names excluded,
+and a Codex permission profile instead of the read-only sandbox (whose reads cover the whole disk): they may read
+the review's own clone of the commit (not a linked worktree: Codex would resolve its project trust through this
+checkout), the repository's object store it borrows, the pinned prompts and the minimal system paths, and write only
+under a scratch folder of the review's own. Your MCP servers (Codex starts those outside the sandbox) are switched off
+by name for the review and the roster is read back; if one stays enabled, the script does not review. They do not
+see your git configuration either (a PAT in a `url.insteadOf` or an `extraheader` would be readable): git in there
+runs with an empty global config, and the commands' environment is an explicit allowlist. Codex's other ways out of the sandbox — the implicit Apps connector, browser and computer use,
+web search — are switched off for the review and read back. The report is scrubbed of the key's value as well.
 
 `codex logout` removes a stored login. `codex login status` shows which one is active.
 
@@ -55,7 +65,7 @@ PREREVIEW_BASE=origin/release-x .claude/skills/pre-review/prereview.sh   # a PR 
 | `PREREVIEW_MODEL` | `gpt-6.1-sol` | the model passed to `codex exec -m` |
 | `PREREVIEW_EFFORT` | `high` | the model's reasoning effort (thepastaclaw's phase 2 runs at high); `xhigh` is deeper and slower |
 | `PREREVIEW_TIMEOUT` | `1500` | seconds before a review is abandoned (needs `timeout`) |
-| `CODEX_API_KEY` | unset | option B above (`OPENAI_API_KEY` is copied into it when set) |
+| `CODEX_API_KEY` | unset | option B above; prefer the stored login (`OPENAI_API_KEY` is copied into it when set) |
 
 Reports and verdicts are kept per commit in `~/.cache/prereview/<sha>.{md,json}`. The pinned review prompts are
 cached in `~/.cache/pastaclaw/<sha>/`. `test_prereview.sh` tests the script offline with a fake `codex`.

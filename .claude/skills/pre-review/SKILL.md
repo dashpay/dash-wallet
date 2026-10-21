@@ -42,8 +42,12 @@ The report is printed and kept in `~/.cache/prereview/<sha>.md`; `--status` show
 - **Suggestions and nitpicks count.** Any open one withholds the bot's approval, and most are cheap.
 - Show the user a table (severity · file:line · finding · verified? · fix) before you change code, and follow the
   repository's conventions (CLAUDE.md, `.claude/agents/DEVELOPMENT-PATTERNS.md`).
-- After the fixes, commit and run the review again. The new commit is a new range. Repeat until it is clean,
-  or until only findings the user decides to leave remain.
+- After the fixes, commit and run the review again. The new commit is a new range. **At most two rounds per
+  push.** A fix adds code, and the next round reads that code with the same eyes: on a long-running change the
+  rounds stop converging (this skill's own branch took 9 rounds on one of the bot's findings, each round a real
+  but smaller hole in the previous fix). After the second round, push what is there and let thepastaclaw be the
+  judge — its round is cheaper than ours, it runs four passes, and it carries findings forward anyway. Say in
+  the PR what the last round still listed.
 - A pre-existing problem the change neither introduced nor is responsible for is not a finding: the bot leaves
   those out too, so drop it. A finding that IS in scope but that the user decides to defer needs a tracking issue
   linked on the PR, or the bot keeps reporting it. Draft that issue for the user; do not open it yourself.
@@ -56,8 +60,9 @@ Pushing is the user's call. Push only when asked.
 .claude/skills/pre-review/prereview.sh --install     # on: a git pre-push hook (a copy under .git/hooks)
 .claude/skills/pre-review/prereview.sh --uninstall   # off
 ```
-With the gate on, a push to dash-wallet needs, for every pushed commit, a review with no blocking findings of
-exactly its range over `origin/master` (or `PREREVIEW_BASE`); a base that moved means a new review. From a terminal the hook runs a
+With the gate on, a push to dash-wallet needs, for each pushed ref's tip, a review with no blocking findings of
+exactly its range over `origin/master` (or `PREREVIEW_BASE`) — one review covers the commits in between; a base that
+moved means a new review. From a terminal the hook runs a
 missing review itself. From a non-interactive shell (Claude Code included) it refuses at once and says to run the
 review first: then run this skill and push again. `git push --no-verify` is the deliberate bypass. Run
 `--install` again after this script changes, because the hook is a copy.
