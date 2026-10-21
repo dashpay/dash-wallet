@@ -31,6 +31,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -1583,6 +1585,63 @@ class ShieldedBalanceServiceTest {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
             }
         } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * thepastaclaw (a6eb7c793): a stopped session's collector that already read
+     * the store — and finishes after the runtime was stopped and brought up
+     * again — must not mark the NEW session's ledger as covered. The new
+     * session stays SYNCING until a pass of its own is reflected.
+     */
+    @Test
+    fun anOldSessionsPass_cannotMakeANewSessionReady() = runBlocking {
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        val paused = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        var pauseNext = false
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = config(true),
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                afterCoverageRead = {
+                    if (pauseNext) {
+                        pauseNext = false
+                        paused.complete(Unit)
+                        // the synchronous tail after the read: cancellation can't stop it
+                        withContext(NonCancellable) { release.await() }
+                    }
+                }
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            pauseNext = true
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) { paused.await() }
+
+            withTimeout(5_000) { service.stop() }
+            assertTrue(service.ensureShieldedReady())
+            release.complete(Unit)
+            delay(ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS * 5)
+            assertEquals(
+                "the old session's pass is not the new session's coverage",
+                ShieldedSyncStatus.SYNCING,
+                service.shieldedSyncStatus.value
+            )
+
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
+            }
+        } finally {
+            release.complete(Unit)
             sweepScope.cancel()
         }
     }

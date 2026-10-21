@@ -928,7 +928,13 @@ class ShieldedBalanceServiceImpl internal constructor(
     /**
      * Wall clock (Unix millis) for spend start times. Injectable for tests.
      */
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    /**
+     * Test seam: runs in [onShieldedPassCompleted] right after the note store
+     * was read, before the readiness-coverage decision — where a stopped
+     * session's collector can still be running. No-op in production.
+     */
+    private val afterCoverageRead: suspend () -> Unit = {}
 ) : ShieldedBalanceService {
 
     @Inject
@@ -1428,7 +1434,6 @@ class ShieldedBalanceServiceImpl internal constructor(
         // bring-up restarts the driver; it must not force passes meanwhile.
         settlementKickJob?.cancel()
         settlementKickJob = null
-        ledgerCoverageConfirmed = false
         _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
         _shieldedBalanceMaybeStale.value = false
     }
@@ -1440,10 +1445,11 @@ class ShieldedBalanceServiceImpl internal constructor(
      * its constructed value and callers exercise [mapShieldedSyncStatus]
      * directly.
      *
-     * "First pass completed" latches only once [ledgerCoverageConfirmed]: a
-     * SUCCESSFUL pass result for the bound wallet delivered after this
-     * bring-up whose balance the displayed note store matches (see
-     * [onShieldedPassCompleted]) — the store then covers the ledger, so its
+     * "First pass completed" latches only once THIS session's collector saw a
+     * SUCCESSFUL pass result for the bound wallet whose balance the displayed
+     * note store matches (see [onShieldedPassCompleted]); the latch is local to
+     * the session, so a stopped session's collector can't set it for a newer
+     * one. The store then covers the ledger, so its
      * balance, even a genuine zero, is authoritative. A failed or skipped pass,
      * a successful one the store doesn't reflect yet (its persistence failed or
      * lags), or the in-flight flag merely going idle never does: until then
@@ -1454,8 +1460,13 @@ class ShieldedBalanceServiceImpl internal constructor(
         val scope = sweepScope ?: return
         if (syncStatusJob?.isActive == true) return
         syncStatusJob = scope.launch {
+            // This session's: the generation it was started for (the caller
+            // holds [readyMonitor] with this runtime published), and its own
+            // coverage latch — a stopped session's collector, still finishing a
+            // pass, can set only its own.
+            val sessionGeneration = readyGeneration.get()
+            val ledgerCovered = java.util.concurrent.atomic.AtomicBoolean(false)
             var firstPassCompleted = false
-            ledgerCoverageConfirmed = false
             // A local spend that was still reconciling when the runtime stopped
             // or the process died: restore the settlement guard BEFORE the first
             // READY can be published, so that pass is not trusted (and not
@@ -1484,24 +1495,34 @@ class ShieldedBalanceServiceImpl internal constructor(
             // between two polls. Cancelled when this loop exits, so the job
             // completes and a later bring-up can start a fresh poller.
             val settlementJob = launch {
-                source.shieldedSyncResults().collect { result -> onShieldedPassCompleted(result) }
+                source.shieldedSyncResults().collect { result ->
+                    if (onShieldedPassCompleted(result)) ledgerCovered.set(true)
+                }
             }
             while (isActive) {
-                if (readyWalletIdHex.value == null) {
-                    _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
-                    break
-                }
                 val inFlight = runCatching { source.isShieldedSyncing() }
                     .getOrElse {
                         if (it is CancellationException) throw it
                         false
                     }
-                if (ledgerCoverageConfirmed) firstPassCompleted = true
-                _shieldedSyncStatus.value = mapShieldedSyncStatus(
-                    ready = true,
-                    firstPassCompleted = firstPassCompleted,
-                    passInFlight = inFlight
-                )
+                if (ledgerCovered.get()) firstPassCompleted = true
+                // Publish only while this session is still the published
+                // runtime — atomic with teardown, which resets the status
+                // under the same monitor — so a stopped poller never writes
+                // over a newer session's status.
+                val current = synchronized(readyMonitor) {
+                    if (readyWalletIdHex.value == null || readyGeneration.get() != sessionGeneration) {
+                        false
+                    } else {
+                        _shieldedSyncStatus.value = mapShieldedSyncStatus(
+                            ready = true,
+                            firstPassCompleted = firstPassCompleted,
+                            passInFlight = inFlight
+                        )
+                        true
+                    }
+                }
+                if (!current) break
                 delay(SYNC_STATUS_POLL_INTERVAL_MS)
             }
             settlementJob.cancel()
@@ -1565,10 +1586,10 @@ class ShieldedBalanceServiceImpl internal constructor(
      * If (2) or (3) fails the streak is kept and the next successful pass
      * re-checks. Any read failure keeps the reconciliation pending.
      */
-    private suspend fun onShieldedPassCompleted(result: ShieldedPassResult) {
-        val boundWalletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return
-        if (!result.walletId.contentEquals(boundWalletId)) return
-        if (result.outcome == ShieldedPassResult.Outcome.SKIPPED) return
+    private suspend fun onShieldedPassCompleted(result: ShieldedPassResult): Boolean {
+        val boundWalletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return false
+        if (!result.walletId.contentEquals(boundWalletId)) return false
+        if (result.outcome == ShieldedPassResult.Outcome.SKIPPED) return false
         val (generation, sinceMs) = reconcileMutex.withLock {
             reconcileGeneration to reconcileSinceMs.takeIf { _shieldedBalanceMaybeStale.value }
         }
@@ -1592,9 +1613,11 @@ class ShieldedBalanceServiceImpl internal constructor(
             null
         }
         val displayedCredits = notes?.filter { !it.isSpent }?.sumOf { it.value }
+        afterCoverageRead()
         // Initial readiness (see [startSyncStatusPolling]): the displayed store
-        // covers a successful pass. Latches; never retracted within a session.
-        if (passCredits != null && displayedCredits == passCredits) ledgerCoverageConfirmed = true
+        // covers a successful pass. Returned to the calling session's poller,
+        // which alone owns its latch.
+        val covered = passCredits != null && displayedCredits == passCredits
         // Only a pending reconciliation needs the gate (nothing to settle
         // otherwise); an unreadable store keeps it closed.
         val spendsReflected = when {
@@ -1634,6 +1657,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             // with the balance it observed.
             lastPassBalanceCredits = passCredits
         }
+        return covered
     }
 
     /** [read]'s value, or null (logged) when the store can't be read; cancellation propagates. */
@@ -2405,14 +2429,6 @@ class ShieldedBalanceServiceImpl internal constructor(
      * (a new process restores from the durable marker).
      */
     private var spendsInFlight = 0
-
-    /**
-     * A successful pass of the bound wallet has been matched by the displayed
-     * note store since the current bring-up — the readiness latch of
-     * [startSyncStatusPolling]. Reset at each bring-up and teardown.
-     */
-    @Volatile
-    private var ledgerCoverageConfirmed = false
 
     /** Balance at the last completed sync pass — see the stability rule in [onShieldedPassCompleted]. */
     @Volatile
