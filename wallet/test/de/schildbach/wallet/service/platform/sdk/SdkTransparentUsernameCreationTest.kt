@@ -627,6 +627,7 @@ class SdkTransparentUsernameCreationTest {
     // ── name-only retry for an existing identity ─────────────────────────
 
     private class RetryRun {
+        var accepted = false
         val states = mutableListOf<Pair<IdentityCreationState, String?>>()
         val handedOff = mutableListOf<String>()
         val nameContexts = mutableListOf<List<Any?>>()
@@ -637,13 +638,14 @@ class SdkTransparentUsernameCreationTest {
      * A name-only retry for the existing identity, run on an app-like scope (no exception handler
      * of its own: anything escaping is collected in [RetryRun.uncaught]).
      */
-    private fun TestScope.retry(
+    private suspend fun TestScope.retry(
         source: TransparentUsernameSource,
         username: String,
         secondary: String?,
-        nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false }
+        nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false },
+        persistNameContext: (suspend (String, String, String?, Boolean) -> Unit)? = null,
+        run: RetryRun = RetryRun()
     ): RetryRun {
-        val run = RetryRun()
         val appScope = CoroutineScope(
             kotlinx.coroutines.SupervisorJob() +
                 kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) +
@@ -655,11 +657,13 @@ class SdkTransparentUsernameCreationTest {
             feeDuffs = { feeDuffs },
             handOffToLegacy = { run.handedOff += it },
             driveCreationState = { state, error -> run.states += state to error },
-            persistNameContext = { id, name, second, restoring -> run.nameContexts += listOf(id, name, second, restoring) },
+            persistNameContext = persistNameContext ?: { id, name, second, restoring ->
+                run.nameContexts += listOf(id, name, second, restoring)
+            },
             executorScope = appScope,
             nameAlreadyTaken = nameAlreadyTaken
         )
-        assertTrue("accepted", creation.retryNameForExistingIdentity(identityIdBase58, username, secondary))
+        run.accepted = creation.retryNameForExistingIdentity(identityIdBase58, username, secondary)
         advanceUntilIdle()
         return run
     }
@@ -736,8 +740,9 @@ class SdkTransparentUsernameCreationTest {
     }
 
     @Test
-    fun `an unreadable owned-names lookup refuses the retry with a retryable error`() = runTest {
-        // fail closed: never submit a name whose ownership could not be checked
+    fun `an unreadable owned-names lookup refuses the retry before accepting it, touching nothing`() = runTest {
+        // fail closed, and synchronously: the screen shows its error; the record is not touched,
+        // so no stamped error can send a later "Try again" down the legacy path
         val source = source(lockAfterFailure = null)
 
         val run = retry(
@@ -747,13 +752,77 @@ class SdkTransparentUsernameCreationTest {
             nameAlreadyTaken = { _, _ -> throw java.io.IOException("DAPI unreachable") }
         )
 
-        assertTrue("nothing escapes the app-scoped launch: ${run.uncaught}", run.uncaught.isEmpty())
+        assertFalse("refused", run.accepted)
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        assertTrue("no state touched: ${run.states}", run.states.isEmpty())
+        assertTrue("no name context written: ${run.nameContexts}", run.nameContexts.isEmpty())
         coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
-        val (state, error) = run.states.last()
-        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
-        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
-        assertTrue("nothing handed on", run.handedOff.isEmpty())
         neverFunded(source)
+    }
+
+    @Test
+    fun `a failed replacement stays on the name-only route and a tile retry registers it`() = runTest {
+        // review 4301924854: the failure used to set restoring, which sent the tile retry and the
+        // background discovery into the restore worker; that dropped the replacement
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } throws
+            DashSdkError.InvalidParameter("domain document rejected")
+
+        val failed = retry(source, "alice3", null)
+
+        assertTrue(failed.accepted)
+        assertTrue("never routed to the restore worker: ${failed.nameContexts}", failed.nameContexts.all { it[3] == false })
+        assertTrue("nothing handed off", failed.handedOff.isEmpty())
+        val error = failed.states.last().second
+        assertTrue("an error the tile sends back to the name-only retry: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
+
+        // the tile's retry re-enters the name-only retry with the persisted labels
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val retried = retry(source, "alice3", null)
+
+        assertTrue(retried.accepted)
+        assertEquals(IdentityCreationState.DONE, retried.states.last().first)
+        assertEquals(listOf(identityIdBase58), retried.handedOff)
+        neverFunded(source)
+    }
+
+    @Test
+    fun `an ambiguous replacement is retried by the tile without being submitted again once it landed`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } throws RuntimeException("timeout")
+
+        val ambiguous = retry(source, "alice3", null)
+
+        assertTrue(
+            "the unknown outcome is stamped for the name-only route: ${ambiguous.states}",
+            SdkTransparentUsernameCreation.isNameOnlyRetryError(ambiguous.states.last().second)
+        )
+        assertTrue(ambiguous.nameContexts.all { it[3] == false })
+
+        // it had landed: the re-entry finds it owned and does not submit it again
+        val retried = retry(source, "alice3", null, nameAlreadyTaken = { _, label -> label == "alice3" })
+
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertEquals(IdentityCreationState.DONE, retried.states.last().first)
+        assertEquals(listOf(identityIdBase58), retried.handedOff)
+    }
+
+    @Test
+    fun `a failure inside the accepted run is stamped for the name-only route`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val run = RetryRun()
+
+        retry(
+            source,
+            "alice3",
+            null,
+            persistNameContext = { _, _, _, _ -> throw java.io.IOException("datastore write failed") },
+            run = run
+        )
+
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        val error = run.states.last().second
+        assertTrue("the tile's Try again goes back to the name-only retry: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
     }
 
     // --- MO-1069: protocol-gated funding amount ---

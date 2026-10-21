@@ -214,15 +214,6 @@ class PlatformRepo @Inject constructor(
      * CLOSED (an empty result and a failed read mean different things
      * there: the latter must never enable the request button).
      */
-    /**
-     * The DPNS labels [userId] owns, through the same lookup the profile refresh uses (the Kotlin
-     * SDK read, else dashj). Throws when they cannot be read: a caller deciding whether to submit
-     * a name again must not mistake an unreadable answer for "owns none".
-     */
-    suspend fun getOwnedUsernamesOrThrow(userId: String): List<String> =
-        (sdkUsernameQueries.getDomainDocumentsByOwnerOrNull(userId) ?: platform.names.getByOwnerId(userId))
-            .map { DomainDocument(it).label }
-
     fun getVoteContendersOrThrow(username: String): Contenders {
         // Phase 3d (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read path
         // behind USE_KOTLIN_SDK_DPNS_READS (default off). Returns null when
@@ -234,6 +225,15 @@ class PlatformRepo @Inject constructor(
         log.info("getVoteContenders took {}", watch)
         return contenders
     }
+
+    /**
+     * The DPNS labels [userId] owns, through the same lookup the profile refresh uses (the Kotlin
+     * SDK read, else dashj). Throws when they cannot be read: a caller deciding whether to submit
+     * a name again must not mistake an unreadable answer for "owns none".
+     */
+    suspend fun getOwnedUsernamesOrThrow(userId: String): List<String> =
+        (sdkUsernameQueries.getDomainDocumentsByOwnerOrNull(userId) ?: platform.names.getByOwnerId(userId))
+            .map { DomainDocument(it).label }
 
     fun getFromProfiles(
         profiles: Map<String, DashPayProfile?>,
