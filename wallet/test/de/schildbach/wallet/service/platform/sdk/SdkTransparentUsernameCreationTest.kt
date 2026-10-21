@@ -21,6 +21,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -610,91 +611,133 @@ class SdkTransparentUsernameCreationTest {
 
     // ── name-only retry for an existing identity ─────────────────────────
 
-    @Test
-    fun `a name-only retry keeps the existing identity and never funds a new one`() = runTest {
-        val source = source(lockAfterFailure = null)
-        val nameContexts = mutableListOf<List<Any?>>()
-        val handedOff = mutableListOf<String>()
+    private class RetryRun {
         val states = mutableListOf<Pair<IdentityCreationState, String?>>()
-        val retries = mutableListOf<String>()
-        val retry = SdkTransparentUsernameCreation(
+        val handedOff = mutableListOf<String>()
+        val nameContexts = mutableListOf<List<Any?>>()
+        val uncaught = mutableListOf<Throwable>()
+    }
+
+    /**
+     * A name-only retry for the existing identity, run on an app-like scope (no exception handler
+     * of its own: anything escaping is collected in [RetryRun.uncaught]).
+     */
+    private fun TestScope.retry(
+        source: TransparentUsernameSource,
+        username: String,
+        secondary: String?,
+        nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false }
+    ): RetryRun {
+        val run = RetryRun()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() +
+                kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) +
+                kotlinx.coroutines.CoroutineExceptionHandler { _, e -> run.uncaught += e }
+        )
+        val creation = SdkTransparentUsernameCreation(
             source = source,
             cutoverCommitted = { true },
             feeDuffs = { feeDuffs },
-            handOffToLegacy = { handedOff += it },
-            driveCreationState = { state, error -> states += state to error },
-            persistNameContext = { id, name, secondary, restoring -> nameContexts += listOf(id, name, secondary, restoring) },
-            markNameRetry = { retries += it },
-            executorScope = this
+            handOffToLegacy = { run.handedOff += it },
+            driveCreationState = { state, error -> run.states += state to error },
+            persistNameContext = { id, name, second, restoring -> run.nameContexts += listOf(id, name, second, restoring) },
+            executorScope = appScope,
+            nameAlreadyTaken = nameAlreadyTaken
         )
-
-        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        assertTrue("accepted", creation.retryNameForExistingIdentity(identityIdBase58, username, secondary))
         advanceUntilIdle()
+        return run
+    }
 
-        assertEquals(listOf(listOf(identityIdBase58, "alice3", null, true)), nameContexts)
-        assertEquals("the replacement this restore may register", listOf("alice3"), retries)
-        assertEquals("the name step, error cleared", listOf(IdentityCreationState.USERNAME_REGISTERING to null), states)
-        assertEquals("the same identity goes to the name-only recovery", listOf(identityIdBase58), handedOff)
+    private fun neverFunded(source: TransparentUsernameSource) {
         coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
         coVerify(exactly = 0) { source.previewRegistrationKeySet(any(), any(), any()) }
     }
 
-    // ── failures inside the application-scoped name retry (review 4302041841) ──
+    @Test
+    fun `a name-only retry registers the replacement primary for the existing identity`() = runTest {
+        // the identity owns a registered secondary; the lost name is replaced by "alice3", which
+        // becomes the primary while the secondary stays as it is (no secondary in this request)
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
 
-    /** Runs [retry] on an app-like scope and returns whatever escaped it uncaught. */
-    private fun TestScope.uncaughtFrom(
-        persistNameContext: suspend (String, String, String?, Boolean) -> Unit = { _, _, _, _ -> },
-        handOffToLegacy: (String) -> Unit = {},
-        states: MutableList<Pair<IdentityCreationState, String?>>
-    ): List<Throwable> {
-        val uncaught = mutableListOf<Throwable>()
-        val appScope = CoroutineScope(
-            kotlinx.coroutines.SupervisorJob() +
-                kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) +
-                kotlinx.coroutines.CoroutineExceptionHandler { _, e -> uncaught += e }
+        val run = retry(source, "alice3", null)
+
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertEquals(
+            "registered like the create path's primary, then DONE for a non-contested name",
+            listOf(
+                IdentityCreationState.PREORDER_REGISTERING,
+                IdentityCreationState.USERNAME_REGISTERING,
+                IdentityCreationState.USERNAME_REGISTERED,
+                IdentityCreationState.DONE
+            ),
+            run.states.map { it.first }
         )
-        val retry = SdkTransparentUsernameCreation(
-            source = source(lockAfterFailure = null),
-            cutoverCommitted = { true },
-            feeDuffs = { feeDuffs },
-            handOffToLegacy = handOffToLegacy,
-            driveCreationState = { state, error -> states += state to error },
-            persistNameContext = persistNameContext,
-            executorScope = appScope
-        )
-        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
-        advanceUntilIdle()
-        return uncaught
+        assertTrue("no error left behind: ${run.states}", run.states.all { it.second == null })
+        assertEquals("the record's secondary is left alone", listOf(identityIdBase58, "alice3", null, false), run.nameContexts.first())
+        assertEquals("handed to recovery, like the create path", listOf(identityIdBase58), run.handedOff)
+        neverFunded(source)
     }
 
     @Test
-    fun `a failed name-context write records a retryable error instead of crashing`() = runTest {
-        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+    fun `a newly requested secondary is registered once the replacement primary is confirmed`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice4") } returns "alice4.dash"
 
-        val uncaught = uncaughtFrom(
-            persistNameContext = { _, _, _, _ -> throw java.io.IOException("datastore write failed") },
-            states = states
+        val run = retry(source, "alice3", "alice4")
+
+        coVerifyOrder {
+            source.registerDpnsName(walletIdHex, identityId, "alice3")
+            source.registerDpnsName(walletIdHex, identityId, "alice4")
+        }
+        assertTrue(
+            "the secondary's own states: ${run.states}",
+            run.states.map { it.first }.containsAll(
+                listOf(
+                    IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+                    IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+                    IdentityCreationState.USERNAME_SECONDARY_REGISTERED
+                )
+            )
         )
-
-        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
-        val (state, error) = states.last()
-        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
-        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+        neverFunded(source)
     }
 
     @Test
-    fun `a failed worker handoff records a retryable error instead of crashing`() = runTest {
-        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+    fun `a label the identity already owns is not submitted again`() = runTest {
+        // an earlier Ambiguous attempt landed: the name is on chain already
+        val source = source(lockAfterFailure = null)
 
-        val uncaught = uncaughtFrom(
-            handOffToLegacy = { throw IllegalStateException("WorkManager not initialised") },
-            states = states
+        val run = retry(source, "alice3", null, nameAlreadyTaken = { _, label -> label == "alice3" })
+
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), "alice3") }
+        assertEquals(IdentityCreationState.DONE, run.states.last().first)
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+    }
+
+    @Test
+    fun `an unreadable owned-names lookup refuses the retry with a retryable error`() = runTest {
+        // fail closed: never submit a name whose ownership could not be checked
+        val source = source(lockAfterFailure = null)
+
+        val run = retry(
+            source,
+            "alice3",
+            null,
+            nameAlreadyTaken = { _, _ -> throw java.io.IOException("DAPI unreachable") }
         )
 
-        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
-        val (state, error) = states.last()
+        assertTrue("nothing escapes the app-scoped launch: ${run.uncaught}", run.uncaught.isEmpty())
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        val (state, error) = run.states.last()
         assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
         assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
+        assertTrue("nothing handed on", run.handedOff.isEmpty())
+        neverFunded(source)
     }
 }

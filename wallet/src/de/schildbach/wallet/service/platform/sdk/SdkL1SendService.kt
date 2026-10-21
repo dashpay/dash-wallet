@@ -1825,6 +1825,22 @@ class SdkL1SendService internal constructor(
      * Contained: a config read failure reads as NOT committed (dashj rules,
      * today's behavior).
      */
+    /**
+     * [cutoverCommitted] as a tri-state: null when the state cannot be read (the store read with
+     * its errors kept, [DashPayConfig.observePreservingErrors]), instead of "not committed". An
+     * absent state is still a real answer: not committed.
+     */
+    suspend fun cutoverCommittedOrUnknown(): Boolean? = try {
+        !dashjEngineMayStart(
+            CutoverState.fromStored(dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE).first())
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to read the cutover state; it is unknown", e)
+        null
+    }
+
     suspend fun cutoverCommitted(): Boolean = try {
         !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
     } catch (e: Exception) {

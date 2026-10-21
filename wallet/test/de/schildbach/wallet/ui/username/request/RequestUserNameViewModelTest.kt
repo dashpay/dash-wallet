@@ -100,6 +100,8 @@ class RequestUserNameViewModelTest {
     private val transparentUsernameCreation = mockk<SdkTransparentUsernameCreation> {
         every { submitState } returns transparentSubmitState
         coEvery { isCutoverCommitted() } returns false
+        // A readable state: the routing's strict read agrees with whatever a test stubs above.
+        coEvery { cutoverStateOrUnknown() } coAnswers { (self as SdkTransparentUsernameCreation).isCutoverCommitted() }
         every { acknowledge() } just Runs
     }
 
@@ -399,6 +401,34 @@ class RequestUserNameViewModelTest {
         }
         verify(exactly = 0) { walletApplication.startService(any()) }
         verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun submit_withTheCutoverStateUnknown_refusesWithoutResettingTheIdentity() = runVmTest {
+        // The lenient read turns an unreadable state into "not committed", which sent a
+        // registered SDK identity down the legacy reuse path (reset to NONE, fresh legacy
+        // funding). Unknown must refuse, starting and resetting nothing.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns false
+        coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns null
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        val registered = BlockchainIdentityData(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "username registration did not complete (retryable): domain document rejected",
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false
+        )
+        viewModel.identity = registered
+
+        viewModel.submit()
+
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        verify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+        assertEquals("nothing reset", registered, viewModel.identity)
     }
 
     @Test

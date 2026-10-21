@@ -42,7 +42,7 @@ import org.junit.Test
  * A name-only retry after a lost or locked vote (match master): the requested replacement
  * becomes the primary/display name and the registered instant secondary stays the secondary.
  * Driven through the repository's real record update from the recovered dashj names, which is
- * what RestoreIdentityWorker runs right before and right after registering the replacement.
+ * what the recovery handed the identity after a name-only retry registers the replacement runs.
  */
 class IdentityReplacementNameRecordTest {
     private val identityId = "6qKq6dvbcJ8fH8ekXCbrbQpNfKPRgcHLw1TEQSyx3KVy"

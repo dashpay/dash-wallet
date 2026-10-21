@@ -477,13 +477,15 @@ class SdkTransparentUsernameCreation internal constructor(
      * by default keeps the host-JVM tests unaffected.
      */
     private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence(),
+    /** Drops the old name request's lost or locked status before a name-only retry. No-op by default. */
+    private val clearPreviousNameRequest: suspend () -> Unit = {},
     /**
-     * Records [label] as the replacement a name-only retry asked for
-     * ([BlockchainIdentityConfig.REQUESTED_NAME_RETRY]) and drops the previous request's
-     * status, so the restore registers this label and the record stops reporting the old
-     * name's lost or locked vote. No-op default keeps the host-JVM tests inert.
+     * True when the identity already owns [label], or contends for it: a name-only retry never
+     * submits it again. Throws when that cannot be read, refusing the retry (fail closed).
      */
-    private val markNameRetry: suspend (label: String) -> Unit = {}
+    private val nameAlreadyTaken: suspend (identityIdBase58: String, label: String) -> Boolean = { _, _ -> false },
+    /** [cutoverCommitted] as a tri-state, null when the state cannot be read. Defaults to [cutoverCommitted]. */
+    private val cutoverCommittedOrUnknown: suspend () -> Boolean? = { cutoverCommitted() }
 ) {
     @Inject
     constructor(
@@ -493,7 +495,9 @@ class SdkTransparentUsernameCreation internal constructor(
         blockchainIdentityConfig: BlockchainIdentityConfig,
         assetLockKindResolver: AssetLockKindResolver,
         applicationScope: CoroutineScope,
-        secretWriteFence: WalletSecretWriteFence
+        secretWriteFence: WalletSecretWriteFence,
+        // A Provider: only a name-only retry reads it, and it pulls in the platform services.
+        platformRepo: javax.inject.Provider<de.schildbach.wallet.ui.dashpay.PlatformRepo>
     ) : this(
         source = DashSdkTransparentUsernameSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
@@ -523,11 +527,22 @@ class SdkTransparentUsernameCreation internal constructor(
         },
         executorScope = applicationScope,
         secretWriteFence = secretWriteFence,
-        markNameRetry = { label ->
-            blockchainIdentityConfig.set(BlockchainIdentityConfig.REQUESTED_NAME_RETRY, label)
+        clearPreviousNameRequest = {
             // the lost or locked status belonged to the old name, not to this request
             blockchainIdentityConfig.remove(BlockchainIdentityConfig.USERNAME_REQUESTED)
-        }
+        },
+        nameAlreadyTaken = { identityIdBase58, label ->
+            val repo = platformRepo.get()
+            val normalized = Names.normalizeString(label)
+            repo.getOwnedUsernamesOrThrow(identityIdBase58).any { Names.normalizeString(it) == normalized } ||
+                (
+                    Names.isUsernameContestable(label) &&
+                        repo.getVoteContendersOrThrow(label).map.keys.any {
+                            it == Identifier.from(identityIdBase58)
+                        }
+                    )
+        },
+        cutoverCommittedOrUnknown = { sdkL1SendService.cutoverCommittedOrUnknown() }
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -548,6 +563,9 @@ class SdkTransparentUsernameCreation internal constructor(
      * uses to pick this path over the dashj [CreateIdentityService] path.
      * Contained: a read failure reads as NOT committed (dashj rules).
      */
+    /** Whether the cutover is committed, or null when the state cannot be read (routing that must fail closed). */
+    suspend fun cutoverStateOrUnknown(): Boolean? = cutoverCommittedOrUnknown()
+
     suspend fun isCutoverCommitted(): Boolean = try {
         cutoverCommitted()
     } catch (e: Exception) {
@@ -901,6 +919,31 @@ class SdkTransparentUsernameCreation internal constructor(
         // primary DPNS step's "before" snapshot.
         val balanceAfterCreate = recordIdentityCreateFee(walletId, identityIndex, identityIdBase58, amountDuffs)
 
+        return registerNamesAndHandOff(
+            walletId,
+            identityId,
+            identityIdBase58,
+            label,
+            secondaryLabel,
+            contested,
+            balanceAfterCreate
+        )
+    }
+
+    /**
+     * The name tail once the identity is on chain, shared by [createUsernameTransparent] and the
+     * name-only retry: names in [alreadyTaken] are not submitted again (see [registerNameTracked]).
+     */
+    private suspend fun registerNamesAndHandOff(
+        walletId: String,
+        identityId: ByteArray,
+        identityIdBase58: String,
+        label: String,
+        secondaryLabel: String?,
+        contested: Boolean,
+        balanceBefore: Long?,
+        alreadyTaken: Set<String> = emptySet()
+    ): SdkWriteResult.Broadcast<ShieldedUsernameCreationOutcome> {
         // REQUIRED, state-tracked DPNS registration (primary). Drives the
         // creation state AROUND source.registerDpnsName so the tile shows the
         // processing card while it lands, and GATES the terminal outcome on
@@ -911,10 +954,11 @@ class SdkTransparentUsernameCreation internal constructor(
             identityId,
             identityIdBase58,
             label,
-            balanceBefore = balanceAfterCreate,
+            balanceBefore = balanceBefore,
             preorderState = IdentityCreationState.PREORDER_REGISTERING,
             registeringState = IdentityCreationState.USERNAME_REGISTERING,
-            registeredState = IdentityCreationState.USERNAME_REGISTERED
+            registeredState = IdentityCreationState.USERNAME_REGISTERED,
+            taken = label in alreadyTaken
         )
         val nameStatus = primary.status
         val nameFailure = primary.failureReason
@@ -930,7 +974,8 @@ class SdkTransparentUsernameCreation internal constructor(
                     balanceBefore = primary.balanceAfter,
                     preorderState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
                     registeringState = IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
-                    registeredState = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
+                    registeredState = IdentityCreationState.USERNAME_SECONDARY_REGISTERED,
+                    taken = it in alreadyTaken
                 )
             }
         } else {
@@ -1260,8 +1305,15 @@ class SdkTransparentUsernameCreation internal constructor(
         balanceBefore: Long?,
         preorderState: IdentityCreationState,
         registeringState: IdentityCreationState,
-        registeredState: IdentityCreationState
+        registeredState: IdentityCreationState,
+        // The identity already owns or contends for [label]: never submitted again, counted as registered.
+        taken: Boolean = false
     ): NameRegistration {
+        if (taken) {
+            log.info("'{}' is already this identity's; not submitting it again", label)
+            driveCreationState(registeredState, null)
+            return NameRegistration(ShieldedUsernameNameStatus.REGISTERED, null, balanceBefore)
+        }
         try {
             driveCreationState(preorderState, null)
             driveCreationState(registeringState, null)
@@ -1429,15 +1481,12 @@ class SdkTransparentUsernameCreation internal constructor(
     /**
      * Name-only retry for an identity that is already registered on chain and only needs a
      * (new) DPNS name: a lost or locked vote, or a rejected domain document. It never funds and
-     * never resets the identity. It records the requested name(s) against the EXISTING identity
-     * with `restoring = true`, marks the label as the replacement this restore may register even
-     * though the identity already owns a name ([markNameRetry]), puts the creation state back on
-     * the name step with the old error cleared, and hands the identity to the same name-only
-     * recovery a home-tile retry uses ([RestoreIdentityOperation] via [handOffToLegacy]). After
-     * the cutover that worker registers the requested name through
-     * [registerDpnsNameForExistingIdentity], and the requested name becomes the primary/display
-     * name while a registered instant secondary stays the secondary, as master's dashj
-     * `finishRegistration` does.
+     * never resets the identity. The requested name(s) are registered for the EXISTING identity
+     * the way the create path registers them ([registerNamesAndHandOff]): the primary, then a
+     * requested secondary once the primary is confirmed, then the same recovery handoff. The
+     * requested name becomes the primary/display name, while a registered secondary that is not
+     * re-requested stays the secondary, as master's dashj `finishRegistration` does. A label the
+     * identity already owns or contends for is not submitted again ([nameAlreadyTaken]).
      *
      * The legacy CreateIdentityService reuse path must not be used for this after the cutover: it
      * replaces the identity record with a fresh one at NONE and looks for a dashj asset-lock
@@ -1445,10 +1494,10 @@ class SdkTransparentUsernameCreation internal constructor(
      * starts fresh legacy funding.
      *
      * Runs on the application scope, like [submit], and is registered with the wipe fence: the
-     * caller's screen finishes as soon as this is accepted (review 5556781925), and a retry
-     * cancelled half way, with the name context written but the worker never enqueued, would leave
-     * the user on Home with nothing submitted. Returns false, doing nothing, when there is no
-     * executor scope or a wallet wipe is in progress.
+     * caller's screen finishes as soon as this is accepted (review 5556781925). A failure before
+     * the names are submitted (an unbound wallet, an ownership lookup that cannot be read, a
+     * context write) is recorded as a retryable error. Returns false, doing nothing, when there is
+     * no executor scope or a wallet wipe is in progress.
      */
     fun retryNameForExistingIdentity(identityIdBase58: String, username: String, secondaryUsername: String?): Boolean {
         val scope = executorScope
@@ -1470,8 +1519,8 @@ class SdkTransparentUsernameCreation internal constructor(
             } catch (e: Exception) {
                 // Never out of the launch: the application scope has no handler, so an escaped
                 // exception crashes the process after the screen was told the retry started.
-                // Nothing reached the worker; record a retryable error so the retry card shows.
-                log.error("name-only retry for identity {} failed before its handoff", identityIdBase58, e)
+                // Record a retryable error so the retry card shows.
+                log.error("name-only retry for identity {} failed", identityIdBase58, e)
                 recordRetryFailure(e)
             }
         }
@@ -1496,10 +1545,37 @@ class SdkTransparentUsernameCreation internal constructor(
 
     private suspend fun retryNameNow(identityIdBase58: String, username: String, secondaryUsername: String?) {
         log.info("name-only retry for existing identity {}: requesting a new DPNS name", identityIdBase58)
-        persistNameContext(identityIdBase58, username, secondaryUsername, true)
-        markNameRetry(username)
-        driveCreationState(IdentityCreationState.USERNAME_REGISTERING, null)
-        handOffToLegacy(identityIdBase58)
+        val walletId = source.boundWalletIdOrNull() ?: throw IllegalStateException("app wallet not bound to the SDK")
+        val identityId = Identifier.from(identityIdBase58).toBuffer()
+        val contested = Names.isUsernameContestable(username) ||
+            (secondaryUsername != null && Names.isUsernameContestable(secondaryUsername))
+        // Before anything is submitted, and failing closed (a throw is recorded as a retryable
+        // error by the caller): a label this identity already owns or contends for, an earlier
+        // Ambiguous attempt that landed for instance, is never submitted again.
+        val alreadyTaken = listOfNotNull(username, secondaryUsername)
+            .filter { nameAlreadyTaken(identityIdBase58, it) }
+            .toSet()
+        // The requested names become the record's (a secondary only when one is requested, so a
+        // registered secondary stays), restoring=false while they land, as in the create path.
+        persistNameContext(identityIdBase58, username, secondaryUsername, false)
+        clearPreviousNameRequest()
+        val balanceBefore = IdentityFeeLedger.readBalanceOrNull(
+            IdentityFeeStep.DPNS,
+            identityIdBase58,
+            feeLedgerReadTimeoutMs
+        ) {
+            source.identityCreditBalance(identityIdBase58)
+        }
+        registerNamesAndHandOff(
+            walletId,
+            identityId,
+            identityIdBase58,
+            username,
+            secondaryUsername,
+            contested,
+            balanceBefore,
+            alreadyTaken
+        )
     }
 
     suspend fun registerDpnsNameForExistingIdentity(

@@ -78,11 +78,9 @@ internal fun preferDisplayLabel(
  * - a REPLACEMENT name after a lost or locked vote (a name-only retry, matching
  *   master's dashj `finishRegistration`): the requested replacement becomes the
  *   primary/display name whether or not it is contestable, and the instant
- *   secondary stays the secondary. Before the replacement registers, dashj sees
- *   only the secondary; afterwards it owns both names and may still call the
- *   secondary "primary". Either way the requested label must survive, or the
- *   name step reads the secondary back as the label to register and the
- *   replacement is never submitted.
+ *   secondary stays the secondary. Once the replacement registers, dashj owns
+ *   both names and may still call the secondary "primary"; the requested label
+ *   must survive as the display name.
  *
  * The comparison is on NORMALIZED forms throughout: the recovered value IS
  * the normalized label, so a raw-string compare against the record's
