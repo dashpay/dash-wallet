@@ -8,7 +8,7 @@ does with the findings.
 ## Setup: give Codex access to ChatGPT
 
 The script never reads a key from this repository and never asks for one. Codex keeps its own login, and the
-script only checks that one exists (`codex login status`, or `OPENAI_API_KEY` in the environment). Pick one of
+script only checks that one exists (`codex login status`, or `CODEX_API_KEY` in the environment). Pick one of
 the options below.
 
 ```bash
@@ -30,11 +30,12 @@ the plan does not include the model.
 
 **B. An OpenAI API key** from platform.openai.com. This is billed per request.
 ```bash
-export OPENAI_API_KEY=…                               # in your shell profile; the script passes it to codex
-printenv OPENAI_API_KEY | codex login --with-api-key  # or store it in Codex's own login instead
+export CODEX_API_KEY=…                               # in your shell profile: the variable `codex exec` reads
+printenv CODEX_API_KEY | codex login --with-api-key  # or store it in Codex's own login instead
 ```
-Keep the key in your shell profile or a password manager. Do not put it in this repository, `local.properties`,
-`service.properties` or a commit, and do not paste it into an issue or a chat.
+`OPENAI_API_KEY` is accepted too and copied into `CODEX_API_KEY`. Keep the key in your shell profile or a password
+manager. Do not put it in this repository, `local.properties`, `service.properties` or a commit, and do not paste it
+into an issue or a chat.
 
 `codex logout` removes a stored login. `codex login status` shows which one is active.
 
@@ -52,8 +53,9 @@ PREREVIEW_BASE=origin/release-x .claude/skills/pre-review/prereview.sh   # a PR 
 |---|---|---|
 | `PREREVIEW_BASE` | `origin/master` | the PR's base. Set it for the push too when the PR targets another branch |
 | `PREREVIEW_MODEL` | `gpt-6.1-sol` | the model passed to `codex exec -m` |
+| `PREREVIEW_EFFORT` | `high` | the model's reasoning effort (thepastaclaw's phase 2 runs at high); `xhigh` is deeper and slower |
 | `PREREVIEW_TIMEOUT` | `1500` | seconds before a review is abandoned (needs `timeout`) |
-| `OPENAI_API_KEY` | unset | option B above |
+| `CODEX_API_KEY` | unset | option B above (`OPENAI_API_KEY` is copied into it when set) |
 
 Reports and verdicts are kept per commit in `~/.cache/prereview/<sha>.{md,json}`. The pinned review prompts are
 cached in `~/.cache/pastaclaw/<sha>/`. `test_prereview.sh` tests the script offline with a fake `codex`.

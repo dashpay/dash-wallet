@@ -5,9 +5,10 @@ description: Review this branch the way thepastaclaw will, before pushing it —
 
 # pre-review
 
-thepastaclaw re-reviews the whole PR range on every pushed commit and approves only when nothing is left at any
-severity: blocking, suggestion or nitpick. Most later-round findings sit on code written to fix the earlier ones.
-So review the range with the same model and the same rules first, and push only when it is clean.
+thepastaclaw reviews the whole PR range on its first pass, then each pushed commit against the findings it carries
+forward, and approves only when nothing is left at any severity: blocking, suggestion or nitpick. Most later-round
+findings sit on code written to fix the earlier ones. So review the whole range (this skill's choice: the net diff
+is what lands) with the same model and the same rules first, and push only when it is clean.
 
 The review runs in `.claude/skills/pre-review/prereview.sh`. It caches the verdict per commit, so a push right
 after a clean review is instant. The push gate (below) checks that cache.
@@ -23,7 +24,7 @@ after a clean review is instant. The push gate (below) checks that cache.
    Use `run_in_background: true` and wait for it to finish. Do not poll it.
 3. If it exits 2 (not reviewed), the message says why: the Codex CLI is missing, it has no access to ChatGPT,
    or the login does not serve the model. Tell the user how to set it up (`README.md` → Setup: `codex login`
-   with a ChatGPT plan, or `OPENAI_API_KEY`) and stop. Never ask for the key in the chat or write it anywhere. Do not
+   with a ChatGPT plan, or `CODEX_API_KEY`) and stop. Never ask for the key in the chat or write it anywhere. Do not
    review the range yourself under its name: a Claude review shares Claude's blind spots, which is why this runs
    on the bot's model.
 
@@ -55,8 +56,8 @@ Pushing is the user's call. Push only when asked.
 .claude/skills/pre-review/prereview.sh --install     # on: a git pre-push hook (a copy under .git/hooks)
 .claude/skills/pre-review/prereview.sh --uninstall   # off
 ```
-With the gate on, a push to dash-wallet needs, for every pushed commit, a review with no blocking findings over a
-range that covers its merge base with `origin/master` (or `PREREVIEW_BASE`). From a terminal the hook runs a
+With the gate on, a push to dash-wallet needs, for every pushed commit, a review with no blocking findings of
+exactly its range over `origin/master` (or `PREREVIEW_BASE`); a base that moved means a new review. From a terminal the hook runs a
 missing review itself. From a non-interactive shell (Claude Code included) it refuses at once and says to run the
 review first: then run this skill and push again. `git push --no-verify` is the deliberate bypass. Run
 `--install` again after this script changes, because the hook is a copy.
