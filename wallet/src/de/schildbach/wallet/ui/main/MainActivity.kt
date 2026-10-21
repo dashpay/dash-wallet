@@ -371,7 +371,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         try {
             findNavController(R.id.nav_host_fragment).navigate(
                 R.id.connectionsFragment,
-                bundleOf(ConnectionsFragment.ARG_SCANNED_URI to uri)
+                bundleOf(ConnectionsFragment.ARG_SCANNED_URI to uri,
+                    ConnectionsFragment.ARG_OPENED_FROM_URL to true)
             )
         } catch (e: IllegalStateException) {
             if (!isRetry) {

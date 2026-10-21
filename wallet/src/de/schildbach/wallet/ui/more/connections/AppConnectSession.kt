@@ -315,12 +315,18 @@ internal class AppConnectSession(
                                 additions.map { it.toNative() }, disable.map { KeyID(it) }, signer.nativeContext,
                                 BigInteger.valueOf(signer.signerCallback)).unwrap()
                         }
-                        identity = readIdentity()
-                        val confirmedTime = platform.client.getPlatformTime(identity.id)
-                        check(keys.all { expected -> identity.publicKeys.any { sameKey(it, expected) && live(it, confirmedTime) } }) {
-                            "Grant keys are not confirmed. Response was not published."
-                        }
-                        check(disable.all { id -> identity.publicKeys.any { it.id == id && it.disabledAt != null } })
+                        identity = awaitGrantConfirmation(
+                            read = {
+                                checkScope(plan.scope)
+                                readIdentity()
+                            },
+                            confirmed = { current ->
+                                val confirmedTime = platform.client.getPlatformTime(current.id)
+                                checkScope(plan.scope)
+                                keys.all { expected -> current.publicKeys.any { sameKey(it, expected) && live(it, confirmedTime) } } &&
+                                    disable.all { id -> current.publicKeys.any { it.id == id && it.disabledAt != null } }
+                            }
+                        )
                         checkScope(plan.scope)
                         rememberIdentity(identity)
                         config.saveGrant(record.put("state", "confirmed"))

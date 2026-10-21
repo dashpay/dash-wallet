@@ -13,12 +13,19 @@ internal fun connectionCallbackDialog(context: Context, host: String): AdaptiveD
     context.getString(R.string.dash_connect_return_open)
 )
 
-internal fun connectionDetailsDialog(context: Context, name: String, details: String): AdaptiveDialog = AdaptiveDialog.create(
+internal fun connectionDetailsDialog(
+    context: Context,
+    name: String,
+    details: String,
+    status: ConnectionStatus
+): AdaptiveDialog = AdaptiveDialog.create(
     null,
     name,
     details,
     context.getString(R.string.button_close),
-    context.getString(R.string.dash_connect_revoke)
+    context.getString(if (status == ConnectionStatus.DISCONNECTED) R.string.dash_connect_scan_qr else R.string.dash_connect_revoke)
 ).apply {
-    requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+    if (status != ConnectionStatus.DISCONNECTED) {
+        requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+    }
 }

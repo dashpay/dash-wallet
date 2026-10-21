@@ -59,13 +59,13 @@ class ConnectionsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun scan() {
-        model.onQrScanned("qr")
+    private fun scan(openedFromUrl: Boolean = false) {
+        if (openedFromUrl) model.onUrlOpened("qr") else model.onQrScanned("qr")
         dispatcher.scheduler.advanceUntilIdle()
     }
 
-    private fun failApproval() {
-        scan()
+    private fun failApproval(openedFromUrl: Boolean = false) {
+        scan(openedFromUrl)
         model.approvePendingRequest()
         dispatcher.scheduler.advanceUntilIdle()
         assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Error)
@@ -163,7 +163,7 @@ class ConnectionsViewModelTest {
     }
 
     @Test fun `denying untouched request does not revoke`() {
-        scan()
+        scan(openedFromUrl = true)
         model.denyPendingRequest()
         assertNull(model.uiState.value.pendingRequest)
         assertTrue(model.callbackOffer.value!!.contains("ac=declined"))
@@ -171,7 +171,7 @@ class ConnectionsViewModelTest {
     }
 
     @Test fun `failed approval must revoke before reporting declined`() {
-        failApproval()
+        failApproval(openedFromUrl = true)
         val revoked = CompletableDeferred<Unit>()
         coEvery { repository.revokePreparedLogin(any(), any()) } coAnswers { revoked.await() }
         model.denyPendingRequest()
@@ -183,6 +183,65 @@ class ConnectionsViewModelTest {
         assertNull(model.uiState.value.pendingRequest)
         assertTrue(model.callbackOffer.value!!.contains("ac=declined"))
         coVerify(exactly = 1) { repository.revokePreparedLogin(request, plan) }
+    }
+
+    @Test fun `scanner approval never offers website callback`() {
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        scan()
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+        assertNull(model.callbackOffer.value)
+    }
+
+    @Test fun `URL approval offers website callback`() {
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        scan(openedFromUrl = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+        assertEquals("https://example.org/return?ac=ok", model.callbackOffer.value)
+    }
+
+    @Test fun `scanner denial never offers website callback`() {
+        scan()
+        model.denyPendingRequest()
+        assertNull(model.uiState.value.pendingRequest)
+        assertNull(model.callbackOffer.value)
+    }
+
+    @Test fun `scanner revocation after failed approval never offers callback`() {
+        failApproval()
+        model.denyPendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.revokePreparedLogin(request, plan) }
+        assertNull(model.uiState.value.pendingRequest)
+        assertNull(model.callbackOffer.value)
+    }
+
+    @Test fun `URL origin does not leak into a later scan`() {
+        scan(openedFromUrl = true)
+        model.denyPendingRequest()
+        model.resetCallbackOffer()
+        scan()
+        model.denyPendingRequest()
+        assertNull(model.callbackOffer.value)
+    }
+
+    @Test fun `URL received during scanner approval cannot enable callback`() {
+        scan()
+        model.onUrlOpened("another request")
+        model.denyPendingRequest()
+        assertNull(model.callbackOffer.value)
+    }
+
+    @Test fun `URL origin survives failed approval and retry`() {
+        failApproval(openedFromUrl = true)
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+        assertEquals("https://example.org/return?ac=ok", model.callbackOffer.value)
     }
 
     @Test fun `uncertain revocation retains request and does not report declined`() {

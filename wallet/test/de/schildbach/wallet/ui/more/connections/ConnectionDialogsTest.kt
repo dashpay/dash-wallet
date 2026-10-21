@@ -38,7 +38,7 @@ class ConnectionDialogsTest {
         val controller = Robolectric.buildActivity(FragmentActivity::class.java)
         controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
         val activity = controller.setup().get()
-        val dialog = connectionDetailsDialog(activity, "App", "0.5 DASH remaining")
+        val dialog = connectionDetailsDialog(activity, "App", "0.5 DASH remaining", ConnectionStatus.ACTIVE)
         try {
             dialog.showNow(activity.supportFragmentManager, "connection-details")
             assertTrue(dialog.requireDialog().isShowing)
@@ -46,6 +46,46 @@ class ConnectionDialogsTest {
                 .findViewById<android.widget.TextView>(org.dash.wallet.common.R.id.dialog_message).text.toString())
         } finally {
             dialog.dismiss()
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test fun `disconnected details offer scanning instead of revocation`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        val dialog = connectionDetailsDialog(activity, "App", "Keys 4 and 5 disabled", ConnectionStatus.DISCONNECTED)
+        var accepted = false
+        try {
+            dialog.show(activity) { accepted = it == true }
+            shadowOf(Looper.getMainLooper()).idle()
+            activity.supportFragmentManager.executePendingTransactions()
+            val button = dialog.requireView().findViewById<android.widget.TextView>(
+                org.dash.wallet.common.R.id.dialog_positive_button)
+            assertEquals(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_scan_qr), button.text.toString())
+            assertFalse(dialog.requireArguments().containsKey(
+                org.dash.wallet.common.ui.dialogs.AdaptiveDialog.POS_BUTTON_COLOR_ARG))
+            button.performClick()
+            assertTrue(accepted)
+        } finally {
+            dialog.dismiss()
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test fun `active and pending details still offer revocation`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        try {
+            listOf(ConnectionStatus.ACTIVE, ConnectionStatus.APPROVED).forEach { status ->
+                val dialog = connectionDetailsDialog(activity, "App", "Grant details", status)
+                dialog.showNow(activity.supportFragmentManager, "details-$status")
+                assertEquals(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_revoke), dialog.requireView()
+                    .findViewById<android.widget.TextView>(org.dash.wallet.common.R.id.dialog_positive_button).text.toString())
+                dialog.dismissNow()
+            }
+        } finally {
             controller.pause().stop().destroy()
         }
     }

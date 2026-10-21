@@ -89,6 +89,7 @@ class ConnectionsViewModel @Inject constructor(
     /** The validated login request awaiting approval; retained separately from the UI claim. */
     private var pendingLoginRequest: DashKeyRequest? = null
     private var pendingPlan: AppConnectPlan? = null
+    private var pendingOpenedFromUrl = false
     private var operationInProgress = false
 
     init {
@@ -107,7 +108,11 @@ class ConnectionsViewModel @Inject constructor(
      * Decodes a scanned DashConnect QR code. A `dash-key:` login request builds the pending request
      * for the approve sheet with the wallet's own verified identity for display.
      */
-    fun onQrScanned(qrContent: String) {
+    fun onQrScanned(qrContent: String) = prepareRequest(qrContent, openedFromUrl = false)
+
+    fun onUrlOpened(uri: String) = prepareRequest(uri, openedFromUrl = true)
+
+    private fun prepareRequest(qrContent: String, openedFromUrl: Boolean) {
         if (operationInProgress || pendingLoginRequest != null || _uiState.value.pendingPurchase != null) return
         operationInProgress = true
         viewModelScope.launch {
@@ -127,6 +132,7 @@ class ConnectionsViewModel @Inject constructor(
                 val request = toConnectionRequest(payload.request)
                 pendingLoginRequest = payload.request
                 pendingPlan = plan
+                pendingOpenedFromUrl = openedFromUrl
                 _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
                     grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
                     walletIdentityId = plan?.identityId ?: request.walletIdentityId),
@@ -211,6 +217,7 @@ class ConnectionsViewModel @Inject constructor(
         if (operationInProgress) return
         val request = pendingLoginRequest ?: return
         val plan = pendingPlan
+        val openedFromUrl = pendingOpenedFromUrl
         operationInProgress = true
         // Once approval starts, a transport failure cannot establish that no grant was published.
         _uiState.update { it.copy(requiresRevocation = true,
@@ -221,9 +228,10 @@ class ConnectionsViewModel @Inject constructor(
                 val connection = repository.approvePreparedLogin(request, plan)
                 pendingLoginRequest = null
                 pendingPlan = null
+                pendingOpenedFromUrl = false
                 _uiState.update { it.copy(pendingRequest = null, requiresRevocation = false) }
                 _approveResult.value = ApproveResult.Success(connection)
-                offerCallback(request, "ok")
+                offerCallback(request, "ok", openedFromUrl)
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 log.error("failed to approve DashConnect login", ex)
@@ -235,6 +243,7 @@ class ConnectionsViewModel @Inject constructor(
     fun denyPendingRequest() {
         if (operationInProgress) return
         val request = pendingLoginRequest ?: return
+        val openedFromUrl = pendingOpenedFromUrl
         if (_uiState.value.requiresRevocation) {
             operationInProgress = true
             _approveResult.value = ApproveResult.Loading
@@ -242,7 +251,7 @@ class ConnectionsViewModel @Inject constructor(
                 try {
                     repository.revokePreparedLogin(request, pendingPlan)
                     clearPendingRequest()
-                    offerCallback(request, "declined")
+                    offerCallback(request, "declined", openedFromUrl)
                 } catch (ex: Exception) {
                     if (ex is CancellationException) throw ex
                     log.error("failed to revoke pending DashConnect approval", ex)
@@ -251,18 +260,20 @@ class ConnectionsViewModel @Inject constructor(
             }
         } else {
             clearPendingRequest()
-            offerCallback(request, "declined")
+            offerCallback(request, "declined", openedFromUrl)
         }
     }
 
     private fun clearPendingRequest() {
         pendingLoginRequest = null
         pendingPlan = null
+        pendingOpenedFromUrl = false
         _uiState.update { it.copy(pendingRequest = null, requiresRevocation = false) }
         _approveResult.value = ApproveResult.Idle
     }
 
-    private fun offerCallback(request: DashKeyRequest, status: String) {
+    private fun offerCallback(request: DashKeyRequest, status: String, openedFromUrl: Boolean) {
+        if (!openedFromUrl) return
         request.appConnect?.callback?.let {
             val uri = android.net.Uri.parse(it.toASCIIString())
             val builder = uri.buildUpon().clearQuery()

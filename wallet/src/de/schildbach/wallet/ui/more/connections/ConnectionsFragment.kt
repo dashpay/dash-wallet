@@ -73,9 +73,12 @@ class ConnectionsFragment : Fragment() {
                             viewLifecycleOwner.lifecycleScope.launch {
                                 try {
                                     val details = viewModel.connectionDetails(connection)
-                                    val revoke = connectionDetailsDialog(requireContext(), connection.name, details)
+                                    val confirmed = connectionDetailsDialog(requireContext(), connection.name, details, connection.status)
                                         .showAsync(requireActivity())
-                                    if (revoke == true) viewModel.disconnect(connection)
+                                    if (confirmed == true) {
+                                        if (connection.status == ConnectionStatus.DISCONNECTED) launchScanner()
+                                        else viewModel.disconnect(connection)
+                                    }
                                 } catch (e: Exception) {
                                     if (e is kotlinx.coroutines.CancellationException) throw e
                                     Toast.makeText(requireContext(), e.message, Toast.LENGTH_LONG).show()
@@ -100,10 +103,12 @@ class ConnectionsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         if (savedInstanceState == null) {
-            // A DashConnect QR scanned from another screen's scanner routes here with the URI.
+            // Scanner routes default to no callback; only an app-opening URL opts in.
             arguments?.getString(ARG_SCANNED_URI)?.let { uri ->
+                val openedFromUrl = arguments?.getBoolean(ARG_OPENED_FROM_URL) == true
                 arguments?.remove(ARG_SCANNED_URI)
-                viewModel.onQrScanned(uri)
+                arguments?.remove(ARG_OPENED_FROM_URL)
+                if (openedFromUrl) viewModel.onUrlOpened(uri) else viewModel.onQrScanned(uri)
             }
         }
 
@@ -172,5 +177,6 @@ class ConnectionsFragment : Fragment() {
         private const val PURCHASE_DIALOG = "approve_token_purchase_dialog"
         /** Matches the `scannedUri` argument in nav_home.xml. */
         const val ARG_SCANNED_URI = "scannedUri"
+        const val ARG_OPENED_FROM_URL = "openedFromUrl"
     }
 }

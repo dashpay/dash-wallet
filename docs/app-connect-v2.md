@@ -49,7 +49,10 @@ collision. This implementation does not silently recover an expired QR by
 publishing its response in the background.
 
 After approval starts (or a persisted grant is recovered), Deny becomes Revoke
-access. A declined callback is offered only after this request's revocation
+access. Website callbacks are offered only for requests that opened the app via
+an ACTION_VIEW URL, never for requests from the wallet scanners. URL-opened
+requests still require confirmation before opening the callback website.
+A declined callback is offered only after this request's revocation
 finishes; failures retain the request and error for retry. Approved terms stay
 frozen. The approval fragment restores from saved state without treating view
 disposal as denial, including when an in-flight operation subsequently fails.
