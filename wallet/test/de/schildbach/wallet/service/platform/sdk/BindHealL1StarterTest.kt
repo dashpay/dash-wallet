@@ -124,6 +124,85 @@ class BindHealL1StarterTest {
     }
 
     @Test
+    fun anObsoleteArm_keepsTheCurrentLifetimesWaiter_andTheHealStartsL1() = runBlocking {
+        // PastaClaw on #1632: an old startup kick passes its lifetime check, is
+        // descheduled while shutdown and the next service start complete, then
+        // reaches arm() after the new lifetime armed its own waiter. It used to
+        // cancel that waiter and install one that refuses to start.
+        val bound = MutableStateFlow(false)
+        var starts = 0
+        var lifetime = 0L
+        val starter = BindHealL1Starter(
+            scope = scope,
+            bindEstablished = bound,
+            serviceTearingDown = { false },
+            startL1 = { starts++; true }
+        )
+
+        val oldLifetime = lifetime
+        lifetime++ // shutdown of the old lifetime
+        val newLifetime = lifetime
+        starter.arm { lifetime == newLifetime } // the new lifetime's waiter
+        starter.arm { lifetime == oldLifetime } // the old kick, landing late
+
+        assertTrue("the current waiter is kept", starter.isArmed)
+        bound.value = true
+        assertEquals("the heal starts L1 for the running service", 1, starts)
+    }
+
+    @Test
+    fun anObsoleteCancel_keepsTheCurrentLifetimesWaiter() = runBlocking {
+        // The same race on the other branch: an old kick whose own start
+        // succeeded cancels "its" waiter, which is now the new lifetime's.
+        val bound = MutableStateFlow(false)
+        var starts = 0
+        var lifetime = 0L
+        val starter = BindHealL1Starter(
+            scope = scope,
+            bindEstablished = bound,
+            serviceTearingDown = { false },
+            startL1 = { starts++; true }
+        )
+
+        val oldLifetime = lifetime
+        lifetime++
+        val newLifetime = lifetime
+        starter.arm { lifetime == newLifetime }
+        starter.cancel { lifetime == oldLifetime }
+
+        assertTrue(starter.isArmed)
+        bound.value = true
+        assertEquals(1, starts)
+
+        // Shutdown's own cancel stays unconditional.
+        bound.value = false
+        starter.arm { lifetime == newLifetime }
+        starter.cancel()
+        assertFalse(starter.isArmed)
+    }
+
+    @Test
+    fun aLifetimeEndingWhileWaiting_startsNothingOnTheHeal() = runBlocking {
+        val bound = MutableStateFlow(false)
+        var starts = 0
+        var lifetime = 0L
+        val starter = BindHealL1Starter(
+            scope = scope,
+            bindEstablished = bound,
+            serviceTearingDown = { false },
+            startL1 = { starts++; true }
+        )
+
+        val armedIn = lifetime
+        starter.arm { lifetime == armedIn }
+        lifetime++ // that service shut down; its cancel did not reach the waiter
+        bound.value = true
+
+        assertEquals(0, starts)
+        assertFalse(starter.isArmed)
+    }
+
+    @Test
     fun aLaterArmReplacesAnEarlierOne() = runBlocking {
         val bound = MutableStateFlow(false)
         var starts = 0

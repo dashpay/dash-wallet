@@ -69,11 +69,22 @@ internal class BindHealL1Starter(
 
     /**
      * Arm for this service lifetime; a later arm replaces an earlier one.
-     * [stillCurrent] is re-read once the bind heals: false means the service
-     * lifetime that armed this has ended, and nothing starts.
+     *
+     * [stillCurrent] says whether the service lifetime asking is still the
+     * current one. It is checked FIRST, under the monitor: a startup kick of a
+     * lifetime that has since ended can reach this after the next lifetime has
+     * armed its own waiter (the kick passed its lifetime check, then
+     * shutdown and the next start ran), and replacing that valid waiter with an
+     * obsolete one would leave the running service with no L1 engine and nothing
+     * waiting to start it. An obsolete arm therefore touches nothing. It is
+     * re-read once the bind heals, for a lifetime that ends while waiting.
      */
     @Synchronized
     fun arm(stillCurrent: () -> Boolean = { true }) {
+        if (!stillCurrent()) {
+            log.info("SDK bind-heal arm from an ended service lifetime ignored; the current waiter is kept")
+            return
+        }
         job?.cancel()
         job = scope.launch {
             // Nothing may escape this job. It is launched on a long-lived
@@ -122,9 +133,15 @@ internal class BindHealL1Starter(
         )
     }
 
-    /** Stop waiting. Called from the service's shutdown and engine stop. */
+    /**
+     * Stop waiting. Called unconditionally from the service's shutdown and
+     * engine stop, and with [stillCurrent] from a startup kick whose own start
+     * succeeded: like [arm], a kick of an ended lifetime must not cancel the
+     * waiter the current lifetime armed.
+     */
     @Synchronized
-    fun cancel() {
+    fun cancel(stillCurrent: () -> Boolean = { true }) {
+        if (!stillCurrent()) return
         job?.cancel()
         job = null
     }

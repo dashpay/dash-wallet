@@ -594,16 +594,16 @@ class PlatformSynchronizationService @Inject constructor(
                 // Declined — most often "no wallet bound" after a failed startup
                 // bind pass. The unlock receiver and the retry ladder only bind;
                 // this is what starts L1 when they succeed (review, 2026-09-23).
-                // The lifetime is re-checked here and again by the waiter after
-                // the heal: a shutdown can run between the check above and this
-                // line (startIfEnabled() has returned, and arm() does not
-                // suspend, so cancelling this kick does not stop it), and a
-                // waiter armed after the shutdown's cancel would outlive it.
-                when {
-                    started -> bindHealL1Starter.cancel()
-                    serviceLifetime.get() == lifetime ->
-                        bindHealL1Starter.arm { serviceLifetime.get() == lifetime }
-                }
+                // A shutdown and even the next service start can run between the
+                // lifetime check above and this line (startIfEnabled() has
+                // returned, and arm()/cancel() do not suspend, so cancelling this
+                // kick does not stop it). Both calls therefore re-check the
+                // lifetime under the starter's monitor, and the waiter re-checks
+                // it after the heal: a kick of an ended lifetime can neither arm a
+                // waiter that outlives its service nor replace or cancel the
+                // waiter the current lifetime armed.
+                val stillCurrent = { serviceLifetime.get() == lifetime }
+                if (started) bindHealL1Starter.cancel(stillCurrent) else bindHealL1Starter.arm(stillCurrent)
             }
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the
