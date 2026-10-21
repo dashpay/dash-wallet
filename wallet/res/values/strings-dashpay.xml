@@ -809,6 +809,9 @@
     <string name="mixed_funds_migration_confirm_combine_message">Your mixed coins will be added back to your regular balance. This undoes the mixing, so these funds will no longer be private. This can’t be undone.</string>
     <string name="mixed_funds_migration_confirm_restart_title">Restart the transfer?</string>
     <string name="mixed_funds_migration_confirm_restart_message">The wallet will try again to move your mixed coins. Network fees may apply.</string>
+    <string name="mixed_funds_migration_close_migration_action">Close this migration</string>
+    <string name="mixed_funds_migration_confirm_close_title">Close this migration?</string>
+    <string name="mixed_funds_migration_confirm_close_message">We couldn’t confirm the shielded credit. Your funds left your CoinJoin balance and may have been credited to your shielded balance — check it there. This migration will no longer be tracked.</string>
 
     <!-- SAFETY-NET message for the narrow race where an invitation is checked
          just as the sync state flips (the invite tile's own join_dashpay_wait

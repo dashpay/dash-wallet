@@ -208,8 +208,19 @@ interface ShieldedBalanceService {
     suspend fun pendingCoinJoinShieldLockCount(): Int?
 
     /**
-     * How many of [pendingCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null when unknown.
-     * An unknown status is pending but never counted here: it is adopted like a live `0..3` lock.
+     * [pendingCoinJoinShieldLockCount] without the locks Platform already reported consumed
+     * ([PendingWalletShieldLock.retrySuppressed]) — except the outpoints of [settlingLockTxid]
+     * (display hex), a migration's OWN settling lock, which still count. For gates a STRANGER
+     * lock merely blocks (a fresh drain, the "no other lock pending" half of a migration's proof)
+     * and for RELEASES back to the choice (never a success); a migration's own settling lock is
+     * judged by its own row, never by this. Null when unknown.
+     */
+    suspend fun unsuppressedCoinJoinShieldLockCount(settlingLockTxid: String? = null): Int?
+
+    /**
+     * How many of [unsuppressedCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null
+     * when unknown. An unknown status is pending but never counted here: it is adopted like a
+     * live `0..3` lock.
      */
     suspend fun recoveredCoinJoinShieldLockCount(): Int?
 

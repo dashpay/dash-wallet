@@ -2159,14 +2159,27 @@ class ShieldedBalanceServiceTest {
         val consumed = PendingWalletShieldLock("aa".repeat(32) + ":0", 4, 1, coinJoinFunded = true)
         assertFalse(consumed.resumable)
         assertFalse(consumed.pendingCoinJoinDrain)
-        // Platform reported a FINAL lock consumed: no longer pending.
+        // Platform reported a FINAL lock consumed (unauthenticated): still pending, its retries
+        // stop, and — its inputs final on L1 — it no longer blocks a FRESH drain.
         for (status in listOf(2, 3, 5)) {
             val reported = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, true, platformConsumed = true)
-            assertFalse("status $status", reported.resumable)
-            assertFalse("status $status", reported.pendingCoinJoinDrain)
+            assertTrue("status $status", reported.resumable)
+            assertTrue("status $status", reported.pendingCoinJoinDrain)
+            assertTrue("status $status", reported.retrySuppressed)
+            assertFalse("status $status", reported.blocksFreshDrain)
+            assertFalse("status $status: no wedged cutover", reported.blocksCutover)
+            val unreported = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, true)
+            assertTrue("status $status", unreported.blocksFreshDrain)
         }
-        // A not-yet-final lock stays pending whatever was reported.
-        assertTrue(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1, true, platformConsumed = true).resumable)
+        // A not-yet-final lock stays pending and retried whatever was reported.
+        for (status in listOf(0, 1)) {
+            val reported = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, true, platformConsumed = true)
+            assertTrue("status $status", reported.resumable)
+            assertFalse("status $status", reported.retrySuppressed)
+            assertTrue("status $status", reported.blocksFreshDrain)
+            assertTrue("status $status", reported.blocksCutover)
+        }
+        assertFalse(PendingWalletShieldLock("aa".repeat(32) + ":0", 2, 1, true).retrySuppressed)
         // Cutover evidence keeps the 0..3 semantics: 5 never blocks it.
         assertEquals(
             listOf(true, true, true, true, false, false),
@@ -2190,6 +2203,8 @@ class ShieldedBalanceServiceTest {
                     assertTrue(label, lock.resumable)
                     assertTrue(label, lock.pendingCoinJoinDrain)
                     assertTrue(label, lock.blocksCutover)
+                    assertFalse(label, lock.retrySuppressed)
+                    assertTrue(label, lock.blocksFreshDrain)
                 }
             }
             // A BIP44-funded unknown lock still never blocks the CoinJoin drain.
@@ -2314,11 +2329,13 @@ class ShieldedBalanceServiceTest {
     /**
      * Platform answers a status-5 CoinJoin lock's resume with the typed
      * already-consumed signal (the SDK keeps it at 5, non-terminal): that one
-     * round trip records it durably, and it stops blocking a fresh drain and
-     * the sweep — in this process and after a restart.
+     * round trip records it durably and stops the sweep's retries — in this
+     * process and after a restart. The answer is unauthenticated, so the lock
+     * STAYS pending in the strict count; as a stranger (inputs final on L1) it
+     * no longer blocks a fresh drain.
      */
     @Test
-    fun resumeSweep_alreadyConsumedStatus5LockStopsBlockingTheDrainDurably() = runBlocking {
+    fun resumeSweep_alreadyConsumedStatus5LockStopsRetriesAndUnblocksTheDrain() = runBlocking {
         val failures = listOf<(String) -> Throwable>(
             { DashSdkError.PlatformWallet.AssetLockAlreadyConsumed(it) },
             // Wrapped by the JNI: matched down the cause chain.
@@ -2343,15 +2360,21 @@ class ShieldedBalanceServiceTest {
                 }
                 assertEquals(label, 0, resumed)
                 assertEquals(label, setOf(lockA), consumed.value)
-                assertEquals(label, 0, service.pendingCoinJoinShieldLockCount())
-                // Not proven again on later sweeps.
+                assertEquals(label, 1, service.pendingCoinJoinShieldLockCount())
+                // Not retried on later sweeps, nor on a user retry.
                 service.resumePendingWalletShields()
+                service.resumePendingWalletShieldsOnUserRequest()
                 assertEquals(label, 1, source.resumeCalls)
 
                 // A new process (fresh service, same store) reads the record.
                 val restarted = service(source, consumed = consumed, progress = { caughtUpProgress() })
                 assertTrue(label, restarted.ensureShieldedReady())
-                assertEquals(label, 0, restarted.pendingCoinJoinShieldLockCount())
+                assertEquals(label, 1, restarted.pendingCoinJoinShieldLockCount())
+                assertEquals(label, 0, restarted.unsuppressedCoinJoinShieldLockCount())
+                // Its own migration still counts it, by txid.
+                assertEquals(label, 1, restarted.unsuppressedCoinJoinShieldLockCount("02".repeat(32)))
+                assertEquals(label, 0, restarted.unsuppressedCoinJoinShieldLockCount("03".repeat(32)))
+                assertEquals(label, 0, restarted.recoveredCoinJoinShieldLockCount())
                 assertEquals(label, 0, restarted.resumePendingWalletShields())
                 assertEquals(label, 1, source.resumeCalls)
                 // The user's next shield drains the new coins instead of waiting on A.
@@ -2389,6 +2412,7 @@ class ShieldedBalanceServiceTest {
             assertEquals(failure.message, 0, service.resumePendingWalletShieldsOnUserRequest())
             assertNull(failure.message, consumed.value)
             assertEquals(failure.message, 1, service.pendingCoinJoinShieldLockCount())
+            assertEquals(failure.message, 1, service.unsuppressedCoinJoinShieldLockCount())
             assertEquals(
                 failure.message,
                 SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
@@ -2407,6 +2431,7 @@ class ShieldedBalanceServiceTest {
         val unreadable = service(source, consumed = consumed)
         assertTrue(unreadable.ensureShieldedReady())
         assertEquals(1, unreadable.pendingCoinJoinShieldLockCount())
+        assertEquals(1, unreadable.unsuppressedCoinJoinShieldLockCount())
     }
 
     /**

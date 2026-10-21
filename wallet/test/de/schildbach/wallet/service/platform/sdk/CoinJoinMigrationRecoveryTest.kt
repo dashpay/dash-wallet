@@ -45,6 +45,7 @@ class CoinJoinMigrationRecoveryTest {
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 1
+        coEvery { shield.unsuppressedCoinJoinShieldLockCount(any()) } returns 1
         coEvery { shield.resumePendingWalletShieldsOnUserRequest() } returns 1
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val send = mockk<SdkL1SendService>(relaxed = true)
@@ -83,6 +84,7 @@ class CoinJoinMigrationRecoveryTest {
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
+        coEvery { shield.unsuppressedCoinJoinShieldLockCount(any()) } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val wallet = mockk<WalletData>(relaxed = true)
         coEvery { wallet.networkParameters } returns TestNet3Params.get()
@@ -115,6 +117,7 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { shield.isWalletShieldingAvailable() } returns true
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
+        coEvery { shield.unsuppressedCoinJoinShieldLockCount(any()) } returns 0
         coEvery { shield.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
         val send = mockk<SdkL1SendService>(relaxed = true)
         coEvery { send.cutoverCommitted() } returns false
@@ -165,6 +168,7 @@ class CoinJoinMigrationRecoveryTest {
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 1
+        coEvery { shield.unsuppressedCoinJoinShieldLockCount(any()) } returns 1
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val service = CoinJoinFundsMigrationService(
             mockk(relaxed = true), shield, mockk(relaxed = true), mockk(relaxed = true), config,
@@ -214,6 +218,7 @@ class CoinJoinMigrationRecoveryTest {
     private fun quietShield(): ShieldedBalanceService = mockk<ShieldedBalanceService>(relaxed = true).also {
         coEvery { it.ensureShieldedReady() } returns true
         coEvery { it.pendingCoinJoinShieldLockCount() } returns 0
+        coEvery { it.unsuppressedCoinJoinShieldLockCount(any()) } returns 0
         coEvery { it.observeShieldedBalance() } returns MutableStateFlow(Dash.ZERO)
     }
 

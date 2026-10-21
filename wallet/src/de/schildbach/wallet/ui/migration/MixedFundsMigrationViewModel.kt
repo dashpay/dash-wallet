@@ -73,6 +73,9 @@ import javax.inject.Inject
  * @param shieldOperable / [combineOperable] that route's spend gate is open
  *   ([CoinJoinFundsMigrationService.routeAvailability], read with [amount]);
  *   an inoperable route is never offered, in the choice or as a fallback.
+ * @param closeMigrationAvailable the service allows the user to close the
+ *   current record ([CoinJoinFundsMigrationService.canCloseUnconfirmedMigration]);
+ *   read whenever the "could not confirm" guidance appears and on every showing.
  */
 data class MixedFundsMigrationUIState(
     val amount: Coin? = null,
@@ -85,7 +88,8 @@ data class MixedFundsMigrationUIState(
     val resultTimedOut: Boolean = false,
     val resultLanded: Boolean = false,
     val shieldOperable: Boolean = false,
-    val combineOperable: Boolean = false
+    val combineOperable: Boolean = false,
+    val closeMigrationAvailable: Boolean = false
 )
 
 /** Which parts of the sheet are shown — a pure function of [MixedFundsMigrationUIState]. */
@@ -103,6 +107,8 @@ internal data class MixedFundsSheetPresentation(
     val showCombineChoice: Boolean,
     val showRestart: Boolean,
     val showTransferUnmixed: Boolean,
+    /** "Close this migration": the expired guidance of a record the service allows the user to close. */
+    val showCloseMigration: Boolean,
     val showClose: Boolean,
     val cancelable: Boolean
 )
@@ -137,6 +143,7 @@ internal fun MixedFundsMigrationUIState.presentation(): MixedFundsSheetPresentat
         // offer a second, fresh spend — and only while Combine can run.
         showTransferUnmixed = failed && attemptedAction == MixedFundsMigrationAction.SHIELD && !inProgress &&
             combineOperable,
+        showCloseMigration = terminalGuidance && resultTimedOut && closeMigrationAvailable && !inProgress,
         showClose = !processing,
         cancelable = !processing && !choiceMode
     )
@@ -313,14 +320,37 @@ class MixedFundsMigrationViewModel @Inject constructor(
     private fun updateFacts(transform: (MixedFundsMigrationFacts) -> MixedFundsMigrationFacts) {
         facts = transform(facts)
         val view = facts.reduce()
+        val timedOutBefore = _uiState.value.resultTimedOut
         _uiState.value = _uiState.value.copy(
             inProgress = view.inProgress,
             outcome = view.outcome,
             attemptedAction = view.attemptedAction,
             awaitingResult = view.awaitingResult,
             resultTimedOut = view.resultTimedOut,
-            resultLanded = view.resultLanded
+            resultLanded = view.resultLanded,
+            closeMigrationAvailable = view.resultTimedOut && _uiState.value.closeMigrationAvailable
         )
+        // The guidance just appeared: ask whether this record may be closed by the user.
+        if (view.resultTimedOut && !timedOutBefore) refreshCloseOption()
+    }
+
+    /** Re-read [MixedFundsMigrationUIState.closeMigrationAvailable]; applied only while the guidance is up. */
+    private fun refreshCloseOption() {
+        viewModelScope.launch {
+            val closable = readCloseOption()
+            if (_uiState.value.resultTimedOut) {
+                _uiState.value = _uiState.value.copy(closeMigrationAvailable = closable)
+            }
+        }
+    }
+
+    /** [CoinJoinFundsMigrationService.canCloseUnconfirmedMigration]; false when it cannot be read. */
+    private suspend fun readCloseOption(): Boolean = try {
+        migrationService.canCloseUnconfirmedMigration()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("failed to read whether the mixed-funds migration may be closed; not offering it", t)
+        false
     }
 
     private fun onMarker(marker: InFlightMixedFundsMigration?) {
@@ -377,9 +407,14 @@ class MixedFundsMigrationViewModel @Inject constructor(
             val pending = migrationService.restorePendingShieldMigration()
             val amount = migrationService.mixedFundsToMigrate()
             val routes = readRoutes()
+            val closable = readCloseOption()
             // One write: the sheet must never see the amount checked without its routes.
-            _uiState.value = _uiState.value.copy(amount = amount, amountChecked = true, migrationPending = pending)
-                .withRoutes(routes)
+            _uiState.value = _uiState.value.copy(
+                amount = amount,
+                amountChecked = true,
+                migrationPending = pending,
+                closeMigrationAvailable = closable && _uiState.value.resultTimedOut
+            ).withRoutes(routes)
         }
     }
 
@@ -413,6 +448,38 @@ class MixedFundsMigrationViewModel @Inject constructor(
         viewModelScope.launch {
             migrationService.acknowledgeUnconfirmedMigration()
         }
+    }
+
+    /**
+     * The user confirmed "Close this migration" on the "could not confirm" guidance. Runs only while
+     * the option is shown; the service re-checks and may refuse. Closed: the record is gone, and the
+     * sheet returns to the choice for its next showing — never to success (nothing was proven).
+     * Refused: the option is re-read and the guidance stays.
+     *
+     * @return whether the migration was closed.
+     */
+    suspend fun closeUnconfirmedMigration(): Boolean {
+        if (!_uiState.value.presentation().showCloseMigration) return false
+        val closed = try {
+            migrationService.closeUnconfirmedMigration()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to close the unconfirmed mixed-funds migration", t)
+            false
+        }
+        if (!closed) {
+            refreshCloseOption()
+            return false
+        }
+        // The cleared marker's emission must not read as a landing, whenever it arrives.
+        markerSet = false
+        expiryJob?.cancel()
+        _uiState.value = _uiState.value.copy(closeMigrationAvailable = false)
+        updateFacts {
+            it.copy(marker = MarkerPhase.ABSENT, action = null, callResult = null, markerSeenSinceCall = false)
+        }
+        refreshRoutes()
+        return true
     }
 
     /**
@@ -478,7 +545,10 @@ class MixedFundsMigrationViewModel @Inject constructor(
      * resume — EVEN while the native call is still suspended: that guidance
      * is closable precisely because the call outlives the sheet, and the
      * acknowledgement keeps the marker (spend block and recovery intact).
-     * Uncertain or in-flight states are kept.
+     * A verified success closed with Done is acknowledged: the next showing
+     * (e.g. Tools offering CoinJoin coins that arrived later) starts from the
+     * choice. Until then — a lock-screen teardown never calls this — the
+     * success is shown again. Uncertain or in-flight states are kept.
      */
     fun onSheetClosed() {
         val state = _uiState.value
@@ -487,6 +557,10 @@ class MixedFundsMigrationViewModel @Inject constructor(
             return
         }
         if (state.inProgress) return
+        if (state.resultLanded) {
+            updateFacts { it.copy(landed = false, callResult = null, action = null, markerSeenSinceCall = false) }
+            return
+        }
         if (state.outcome != MixedFundsMigrationOutcome.NOT_ATTEMPTED) return
         updateFacts { it.copy(callResult = null, action = if (it.marker == MarkerPhase.FAILED) it.action else null) }
         viewModelScope.launch {

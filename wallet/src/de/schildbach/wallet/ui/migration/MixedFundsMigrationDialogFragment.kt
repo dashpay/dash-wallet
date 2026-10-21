@@ -69,7 +69,10 @@ import javax.inject.Inject
  * cannot be dismissed during processing. Closing terminal guidance retains
  * the recovery marker (it is cleared only when the result becomes visible)
  * but acknowledges it, so the automatic triggers stop re-presenting it;
- * Tools still opens it to resume.
+ * Tools still opens it to resume. Only for a shield whose own lock Platform
+ * already answered consumed (never retried, never provable), the guidance
+ * also offers "Close this migration": a confirmed user dismissal that drops
+ * the record without recording success.
  */
 @AndroidEntryPoint
 class MixedFundsMigrationDialogFragment :
@@ -110,6 +113,28 @@ class MixedFundsMigrationDialogFragment :
         // combine ("keep it spendable") migration instead.
         binding.transferUnmixedButton.setOnClickListener {
             confirmThen(MixedFundsMigrationAction.COMBINE) { viewModel.combineIntoUnmixedBalance() }
+        }
+        // "Close this migration": a user dismissal of a stuck, unprovable shield (no success is
+        // recorded). Asks first; spends nothing, so no authentication. Closed: the sheet goes.
+        binding.closeMigrationButton.setOnClickListener {
+            if (confirming) return@setOnClickListener
+            confirming = true
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val confirmed = AdaptiveDialog.create(
+                        R.drawable.ic_warning_yellow_circle,
+                        getString(R.string.mixed_funds_migration_confirm_close_title),
+                        getString(R.string.mixed_funds_migration_confirm_close_message),
+                        getString(R.string.button_cancel),
+                        getString(R.string.button_confirm)
+                    ).showAsync(requireActivity())
+                    if (confirmed == true && viewModel.closeUnconfirmedMigration()) {
+                        dismissAllowingStateLoss()
+                    }
+                } finally {
+                    confirming = false
+                }
+            }
         }
         binding.closeButton.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -180,6 +205,7 @@ class MixedFundsMigrationDialogFragment :
                     binding.combineButton.isEnabled = actionable
                     binding.restartButton.isVisible = presentation.showRestart
                     binding.transferUnmixedButton.isVisible = presentation.showTransferUnmixed
+                    binding.closeMigrationButton.isVisible = presentation.showCloseMigration
                     isCancelable = presentation.cancelable
                     binding.closeButton.isVisible = presentation.showClose
                     binding.closeButton.setText(when {

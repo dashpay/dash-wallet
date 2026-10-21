@@ -45,6 +45,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.dashfoundation.dashsdk.persistence.entities.AssetLockEntity
 import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger
@@ -1033,9 +1034,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * Unrelated BIP44 shield locks are not migration progress.
      */
     private suspend fun adoptPendingCoinJoinShield(): PendingCheck {
-        // Only a CONFIRMED zero authorises a fresh spend; unknown is never NONE.
+        // Only a CONFIRMED zero authorises a fresh spend; unknown is never NONE. No record exists, so
+        // every lock is a stranger: one Platform reported consumed (its inputs final on L1) is not
+        // this move's progress and does not block it.
         val pending = if (shieldedBalanceService.ensureShieldedReady()) {
-            shieldedBalanceService.pendingCoinJoinShieldLockCount()
+            shieldedBalanceService.unsuppressedCoinJoinShieldLockCount()
         } else {
             null
         }
@@ -1058,14 +1061,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * Every pending CoinJoin lock is RecoveredFromChain (5). Never adopted:
      * restore/scan rebuilds every historical shield as 5 (e.g. one completed on
      * another device), which is not this move's progress. The tap resumes them
-     * once (a Platform already-consumed answer stops them counting); a fresh
+     * once (a Platform already-consumed answer stops them counting: a stranger's
+     * inputs are final on L1, so the fresh drain cannot select them); a fresh
      * spend follows only on a confirmed zero, else DEFERRED: nothing spends or
      * is recorded.
      */
     private suspend fun resolveRecoveredCoinJoinLocks(): PendingCheck {
         log.info("mixed-funds migration: a RecoveredFromChain CoinJoin lock is unresolved; resuming it first")
         shieldedBalanceService.resumePendingWalletShieldsOnUserRequest()
-        val left = shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: return PendingCheck.UNREADABLE
+        val left = shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() ?: return PendingCheck.UNREADABLE
         if (left <= 0) return PendingCheck.NONE
         log.warn("mixed-funds migration: {} CoinJoin lock(s) still unresolved; not spending, nothing recorded", left)
         return PendingCheck.DEFERRED
@@ -1102,9 +1106,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 if (stage is ConsolidationStageRead.Valid && stage.state.phase != CoinJoinConsolidationState.READY) {
                     return false
                 }
-                // Release only on a CONFIRMED zero.
+                // Release only on a CONFIRMED zero. A failed record submitted nothing (a definitive
+                // NotBroadcast never follows a tracked lock of its own), so any lock is a stranger:
+                // one Platform reported consumed does not keep it.
                 if (!shieldedBalanceService.ensureShieldedReady() ||
-                    shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0
+                    shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() != 0
                 ) {
                     return false
                 }
@@ -1126,6 +1132,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * Release an adopted shield ([ADOPTED_SHIELD_INPUTS]) once the runtime
      * affirmatively reports no CoinJoin lock pending, back to the choice: no
      * success, no DONE. Any doubt keeps the record. Caller holds [migrationMutex].
+     *
+     * A lock Platform reported consumed ([PendingWalletShieldLock.retrySuppressed]) does not keep
+     * it, even if it is the adopted lock itself: its inputs are final on L1, so the next move cannot
+     * re-spend them, and it is never resumed again, so the record would only block every move
+     * forever (it can never be proven: an adopted lock is Unproven). A pending lock still keeps it.
      */
     private suspend fun releaseResolvedAdoptedShieldLocked(): Boolean {
         try {
@@ -1134,7 +1145,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (readCheckpoint(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS) != ADOPTED_SHIELD_INPUTS) return false
             if (!readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()) return false
             if (!shieldedBalanceService.ensureShieldedReady()) return false
-            if (shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0) return false
+            if (shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() != 0) return false
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("could not check an adopted mixed-funds shield; keeping its record", t)
@@ -1169,6 +1180,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * on its BIP44 destination ([recordedTransferSettled]); without a usable txid, no tx
      * recorded and no possible final transfer. Anything else stays blocked — reachable
      * only from corruption, which Reset Wallet clears.
+     *
+     * "No pending CoinJoin lock" sets aside a lock Platform reported consumed, even one this stage
+     * may have submitted itself: its inputs are final on L1 (no re-spend) and it is never resumed
+     * again (the record holds no recovery it could use), and the release records no success.
      */
     private suspend fun invalidStageReleasable(stage: ConsolidationStageRead.Invalid): Boolean = try {
         val recorded = stage.observation
@@ -1176,7 +1191,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             (recorded != null || (!stage.unidentifiedTx && !stage.mayBeFinalTransfer)) &&
             blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
             shieldedBalanceService.ensureShieldedReady() &&
-            shieldedBalanceService.pendingCoinJoinShieldLockCount() == 0 &&
+            shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() == 0 &&
             coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks).let { snapshot ->
                 snapshot != null && stage.walletId == snapshot.walletId.lowercase()
             } &&
@@ -1246,7 +1261,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (readCheckpoint(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) != DIRECT_SHIELD_PREPARING) return false
             if (!readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION).isNullOrBlank()) return false
             if (!shieldedBalanceService.ensureShieldedReady()) return false
-            if (shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0) return false
+            // `preparing` proves the native call was never reached, so this record has no lock of
+            // its own: a stranger Platform reported consumed does not keep it.
+            if (shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() != 0) return false
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("could not reconcile an interrupted mixed-funds shield; keeping its marker", t)
@@ -1307,7 +1324,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * interrupted intent, a released definitive failure. Never for an
      * uncertain migration — closing the "could not confirm" guidance
      * acknowledges it instead ([acknowledgeUnconfirmedMigration]), keeping
-     * the record so nothing in flight is ever rebuilt.
+     * the record so nothing in flight is ever rebuilt. The one exception is the
+     * user's explicit [closeUnconfirmedMigration] of a provably stuck record.
      */
     suspend fun clearInFlightMigration() = unlessWiped(Unit) { clearInFlightMigrationInner() }
 
@@ -1344,6 +1362,115 @@ class CoinJoinFundsMigrationService @Inject constructor(
             if (t is CancellationException) throw t
             log.warn("failed to acknowledge the unconfirmed mixed-funds migration", t)
         }
+    }
+
+    /**
+     * May the "could not confirm" guidance offer "Close this migration" ([closeUnconfirmedMigration])?
+     * Only for the stuck states no proof can ever leave: THIS shield's own settling lock is known
+     * and Platform already answered it consumed, or a legacy no-inputs shield held only by
+     * Platform-consumed locks over an affirmatively empty CoinJoin account (see
+     * [closableRecordOrNull]). False while latched for a wallet wipe and on any doubt.
+     */
+    suspend fun canCloseUnconfirmedMigration(): Boolean = unlessWiped(false) { closableRecordOrNull() != null }
+
+    /**
+     * The user's explicit "Close this migration": drop the record (marker, stage, recorded inputs,
+     * journal) so later migrations are no longer blocked. A user DISMISSAL, never proof: no verified
+     * landing, no success, no [DashPayConfig.MIXED_FUNDS_MIGRATION_DONE] is recorded. Re-checks the
+     * conditions under [migrationMutex]; refused (false) when they no longer hold or during a wipe.
+     * The dropped lock(s) stay tracked by the SDK at a final, retry-suppressed status, which never
+     * blocks a fresh drain ([PendingWalletShieldLock.blocksFreshDrain]), and with no recorded inputs
+     * left none is any record's own lock.
+     */
+    suspend fun closeUnconfirmedMigration(): Boolean = unlessWiped(false) {
+        try {
+            migrationMutex.withLock { closeUnconfirmedMigrationLocked() }
+        } catch (stopped: StoppedForWalletWipeException) {
+            log.warn("mixed-funds migration: close refused, the wallet is being wiped")
+            false
+        }
+    }
+
+    /** Caller holds [migrationMutex]. See [closeUnconfirmedMigration]. */
+    private suspend fun closeUnconfirmedMigrationLocked(): Boolean {
+        val closable = closableRecordOrNull()
+        if (closable == null) {
+            log.info("mixed-funds migration: close requested but the record is not closable; keeping it")
+            return false
+        }
+        log.warn(
+            "mixed-funds migration: the USER closed an unconfirmed shield ({}): final on L1 and Platform reported " +
+                "it consumed, but the credit is unproven. Dropping the record; NO success recorded",
+            closable
+        )
+        dropRecord()
+        return true
+    }
+
+    /**
+     * What makes the current record closable (for the log), or null. Always: a SHIELD marker, not
+     * failed, past its honesty window ("could not confirm"). Then either
+     *
+     * - its recorded inputs are proven spent by ONE shielded top-up lock ([ShieldSettlement.SpentBy];
+     *   no invalid stage, no stage of another move) and every row of that lock is
+     *   [PendingWalletShieldLock.retrySuppressed]: final on L1 (2, 3 or 5) AND answered
+     *   already-consumed by Platform. Never retried, so [settlingLockTerminal] can never pass; or
+     * - a LEGACY record with no inputs ([ShieldSettlement.NotRecorded]) and no stage, whose strict
+     *   CoinJoin-lock count is positive (so the legacy proof can never pass) while every counted lock
+     *   is retry-suppressed (unsuppressed count 0), on a synced chain with the CoinJoin account
+     *   affirmatively empty — the legacy proof's own reads; anything unreadable is not closable.
+     *
+     * An adopted record (Unproven), a 0/1, Consumed or unknown status, or a final lock Platform has
+     * not answered (still resumed; may yet reach Consumed) is not closable.
+     */
+    private suspend fun closableRecordOrNull(): String? {
+        try {
+            val marker = inFlightMigrationOrThrow() ?: return null
+            if (marker.action != MixedFundsMigrationAction.SHIELD || marker.failed || !marker.isExpired()) return null
+            val stage = readStage()
+            when (stage) {
+                null -> Unit
+                is ConsolidationStageRead.Invalid -> return null
+                is ConsolidationStageRead.Valid ->
+                    if (stage.state.action != MixedFundsMigrationAction.SHIELD) return null
+            }
+            return when (val settlement = recordedShieldSettlement()) {
+                is ShieldSettlement.SpentBy ->
+                    "own lock ${settlement.lockTxid}".takeIf { ownLockStuck(settlement.lockTxid) }
+                ShieldSettlement.NotRecorded ->
+                    if (stage == null && legacyRecordStuck()) "legacy record, Platform-consumed locks only" else null
+                ShieldSettlement.Unproven -> null
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not check whether the unconfirmed mixed-funds migration is closable; it is not", t)
+            return null
+        }
+    }
+
+    /** Every row of [lockTxid] is [PendingWalletShieldLock.retrySuppressed]; see [closableRecordOrNull]. */
+    private suspend fun ownLockStuck(lockTxid: String): Boolean {
+        val consumed = readCheckpoint(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED).orEmpty()
+        val rows = settlingLockRows(lockTxid) ?: return false
+        return rows.isNotEmpty() && rows.all {
+            PendingWalletShieldLock(
+                it.outPointHex, it.statusRaw, it.amountDuffs, platformConsumed = it.outPointHex in consumed
+            ).retrySuppressed
+        }
+    }
+
+    /**
+     * A legacy no-inputs record the legacy proof can never complete: CoinJoin locks pending, all of
+     * them retry-suppressed, on a synced chain with the CoinJoin account affirmatively empty. The
+     * counts are read FIRST (as in [shieldMigrationProven]); see [closableRecordOrNull].
+     */
+    private suspend fun legacyRecordStuck(): Boolean {
+        if (!shieldedBalanceService.ensureShieldedReady()) return false
+        val strict = shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: return false
+        if (strict <= 0) return false
+        if (shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() != 0) return false
+        return blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+            sdkCoinJoinConfirmedDuffs() == 0L
     }
 
     /**
@@ -1425,11 +1552,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
      *   spent by ONE shielded top-up asset lock ([recordedShieldSettlement]; an
      *   adopted lock, inputs unknown, never completes here; older records with
      *   none: the CoinJoin account reads affirmatively EMPTY on a synced chain), AND no
-     *   CoinJoin-funded lock is still resumable
-     *   ([ShieldedBalanceService.pendingCoinJoinShieldLockCount] == 0: Consumed,
-     *   or Platform's typed already-consumed answer; an unknown status counts as
-     *   pending). The note store is not consulted: during a restore or rescan it
-     *   fills in with pre-existing notes, so no balance (or baseline) proves this
+     *   OTHER CoinJoin-funded lock is still pending (only Consumed settles; an unknown status
+     *   counts; a stranger Platform reported consumed does not — see
+     *   [shieldMigrationProven]). The note store is not consulted: during a restore or
+     *   rescan it fills in with pre-existing notes, so no balance (or baseline) proves this
      *   migration's credit. The sheet may therefore close before the shielded
      *   balance shows the credit;
      * - COMBINE — the CoinJoin account reads EMPTY in the SDK's own
@@ -1625,9 +1751,11 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /**
      * The SHIELD completion proof: THIS shield's recorded inputs are spent by ONE shielded
-     * top-up lock whose OWN row is terminal ([settlingLockTerminal]: Consumed, or Platform's
-     * typed already-consumed answer), and no CoinJoin-funded lock is resumable. Older records
-     * with no inputs: the CoinJoin account reads affirmatively empty on a synced chain.
+     * top-up lock whose OWN row is terminal ([settlingLockTerminal]: the SDK's Consumed status
+     * only), and no OTHER CoinJoin-funded lock is pending except strangers Platform reported
+     * consumed ([ShieldedBalanceService.unsuppressedCoinJoinShieldLockCount]). Older records
+     * with no inputs (no settling lock to tell apart): the CoinJoin account reads affirmatively
+     * empty on a synced chain and no CoinJoin-funded lock is pending at all, Platform record or not.
      *
      * Ordered for a store wiped between reads (e.g. a wallet recreation deleting txos and
      * asset_locks, then rebinding): the count is read FIRST, so an emptied table can only
@@ -1636,44 +1764,49 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     private suspend fun shieldMigrationProven(): Boolean {
         if (!shieldedBalanceService.ensureShieldedReady()) return false
-        if (shieldedBalanceService.pendingCoinJoinShieldLockCount() != 0) return false
-        val proven = when (val settlement = recordedShieldSettlement()) {
-            is ShieldSettlement.SpentBy -> settlingLockTerminal(settlement.lockTxid)
+        // Both read FIRST (see the ordering note above).
+        val strict = shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: return false
+        if (shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() != 0) return false
+        return when (val settlement = recordedShieldSettlement()) {
+            // Its OWN lock (by txid) is judged by its own row only; a STRANGER lock Platform
+            // reported consumed does not hold it up, every other pending lock does.
+            is ShieldSettlement.SpentBy ->
+                settlingLockTerminal(settlement.lockTxid) &&
+                    shieldedBalanceService.unsuppressedCoinJoinShieldLockCount(settlement.lockTxid) == 0
             ShieldSettlement.Unproven -> false
+            // No settling lock to tell apart: any pending lock may be its own, so strict.
             ShieldSettlement.NotRecorded ->
-                blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
-                    sdkCoinJoinConfirmedDuffs() == 0L
+                strict == 0 &&
+                    blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+                    sdkCoinJoinConfirmedDuffs() == 0L &&
+                    shieldedBalanceService.pendingCoinJoinShieldLockCount() == 0
         }
-        return proven && shieldedBalanceService.pendingCoinJoinShieldLockCount() == 0
     }
 
     /**
-     * The settling lock's own `asset_locks` row(s) on the active wallet exist and none is
-     * resumable ([PendingWalletShieldLock.resumable]: only Consumed, or a Platform
-     * already-consumed record, is terminal; an unknown status is pending). A missing row,
-     * e.g. after the table was wiped, is not proof.
+     * The settling lock's own `asset_locks` row(s) on the active wallet exist and every one
+     * is the SDK's own Consumed ([ASSET_LOCK_STATUS_CONSUMED]) — nothing else. A Platform
+     * already-consumed record is unauthenticated (no proof the credit exists), so it never
+     * settles the lock; an unknown status is pending. A missing row, e.g. after the table
+     * was wiped, is not proof.
      */
     private suspend fun settlingLockTerminal(lockTxid: String): Boolean = try {
-        val db = dashSdkService.databaseOrNull()
-        val wallet = activeSdkWalletOrNull()
-        if (db == null || wallet == null) {
-            false
-        } else {
-            val consumed = readCheckpoint(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED).orEmpty()
-            val rows = db.assetLockDao()
-                .observeByWalletAndFundingType(Utils.HEX.decode(wallet), ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
-                .first()
-                .filter { it.outPointHex.substringBefore(':').equals(lockTxid, ignoreCase = true) }
-            rows.isNotEmpty() && rows.none {
-                PendingWalletShieldLock(
-                    it.outPointHex, it.statusRaw, it.amountDuffs, platformConsumed = it.outPointHex in consumed
-                ).resumable
-            }
-        }
+        val rows = settlingLockRows(lockTxid)
+        rows != null && rows.isNotEmpty() && rows.all { it.statusRaw == ASSET_LOCK_STATUS_CONSUMED }
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("could not read the settling shield lock's row; not complete", t)
         false
+    }
+
+    /** [lockTxid]'s shielded top-up `asset_locks` rows on the active wallet; null when the store is unavailable. */
+    private suspend fun settlingLockRows(lockTxid: String): List<AssetLockEntity>? {
+        val db = dashSdkService.databaseOrNull() ?: return null
+        val wallet = activeSdkWalletOrNull() ?: return null
+        return db.assetLockDao()
+            .observeByWalletAndFundingType(Utils.HEX.decode(wallet), ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
+            .first()
+            .filter { it.outPointHex.substringBefore(':').equals(lockTxid, ignoreCase = true) }
     }
 
     /** What the recorded shield inputs prove ([recordedShieldSettlement]). */
@@ -1838,7 +1971,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     delay(IN_FLIGHT_POLL_MS)
                     continue
                 }
-                val pending = shieldedBalanceService.pendingCoinJoinShieldLockCount()
+                // A stranger Platform reported consumed is not this stage's work: SHIELD_PREPARING never
+                // reached the native call, and SHIELDING never rebuilds — it proceeds to the proof,
+                // which judges its own lock by its own row.
+                val pending = shieldedBalanceService.unsuppressedCoinJoinShieldLockCount()
                 if (pending == null) { delay(IN_FLIGHT_POLL_MS); continue }
                 if (pending > 0) {
                     if (state.phase != CoinJoinConsolidationState.SHIELDING) {
@@ -1920,8 +2056,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 }
                 // Only a CoinJoin-funded lock is this migration's pending work;
                 // an unrelated BIP44 shield lock is left to the regular sweep
-                // and must not stand in for the drain.
-                val pending = shieldedBalanceService.pendingCoinJoinShieldLockCount()
+                // and must not stand in for the drain, nor may a stranger Platform
+                // reported consumed (its inputs are final on L1).
+                val pending = shieldedBalanceService.unsuppressedCoinJoinShieldLockCount()
                 if (pending == null) { delay(IN_FLIGHT_POLL_MS); continue }
                 if (pending > 0) {
                     state = state.copy(phase = CoinJoinConsolidationState.SHIELDING)

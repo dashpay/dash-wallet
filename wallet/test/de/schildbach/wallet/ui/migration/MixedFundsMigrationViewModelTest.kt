@@ -514,4 +514,182 @@ class MixedFundsMigrationViewModelTest {
             coVerify(exactly = 1) { service.releaseFailedMigration() }
         } finally { store.clear() }
     }
+
+    /** A shield that lands with a verified credit, the sheet up (marker set, then cleared). */
+    private fun landedShield(): Triple<MixedFundsMigrationViewModel, ViewModelStore, CoinJoinFundsMigrationService> {
+        val markers = MutableStateFlow<InFlightMixedFundsMigration?>(null)
+        val service = choiceService(markers)
+        var landings = 0
+        every { service.verifiedLandings } answers { landings }
+        coEvery { service.shieldMixedFunds(any()) } returns MixedFundsMigrationOutcome.STARTED
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        model.shieldMixedFunds()
+        markers.value = marker()
+        landings++
+        markers.value = null
+        assertTrue(model.uiState.value.resultLanded)
+        assertFalse(model.uiState.value.presentation().showShieldChoice)
+        return Triple(model, store, service)
+    }
+
+    /**
+     * Done acknowledges the verified success: CoinJoin coins arriving later make Tools offer
+     * the migration again, and the activity-scoped ViewModel shows the choice, not the old success.
+     */
+    @Test
+    fun doneAfterALandingOffersTheChoiceOnTheNextShowing() {
+        val (model, store, _) = landedShield()
+        try {
+            model.onSheetClosed()
+            // Tools: the sheet is shown again and re-reads the amount.
+            model.refreshAmount()
+            val state = model.uiState.value
+            assertFalse(state.resultLanded)
+            assertNull(state.outcome)
+            val presentation = state.presentation()
+            assertTrue(presentation.choiceMode)
+            assertTrue(presentation.showShieldChoice)
+            assertTrue(presentation.showCombineChoice)
+            assertFalse(presentation.showRestart)
+        } finally { store.clear() }
+    }
+
+    /**
+     * A success not yet acknowledged survives EVERY lock-screen teardown (which never calls
+     * [MixedFundsMigrationViewModel.onSheetClosed]): each unlock re-presents it, still as the
+     * success; only Done clears it, after which the next showing is the choice.
+     */
+    @Test
+    fun unacknowledgedSuccessSurvivesEveryLockScreenTeardownUntilDone() = runBlocking {
+        val (model, store, _) = landedShield()
+        try {
+            repeat(2) { teardown ->
+                // The device locks: the sheet is torn down; unlock reopens it and re-reads.
+                assertTrue("teardown $teardown", model.shouldRepresentAfterUnlock())
+                model.refreshAmount()
+                assertTrue("teardown $teardown", model.uiState.value.resultLanded)
+                assertFalse("teardown $teardown", model.uiState.value.presentation().choiceMode)
+            }
+            model.onSheetClosed()
+            assertFalse(model.uiState.value.resultLanded)
+            assertTrue(model.uiState.value.presentation().choiceMode)
+        } finally { store.clear() }
+    }
+
+    /** An expired SHIELD marker: the "could not confirm" guidance. */
+    private fun expiredShield() = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1L)
+
+    /**
+     * "Close this migration" is shown only on the expired guidance, and only when the service
+     * allows closing that record; processing never shows it, nor does a refusing service.
+     */
+    @Test
+    fun closeMigrationIsOfferedOnlyOnExpiredGuidanceTheServiceAllows() {
+        for (allowed in listOf(true, false)) {
+            val service = choiceService(MutableStateFlow(expiredShield()))
+            coEvery { service.canCloseUnconfirmedMigration() } returns allowed
+            val store = ViewModelStore()
+            val model = MixedFundsMigrationViewModel(service)
+            store.put("migration", model)
+            try {
+                assertTrue("$allowed", model.uiState.value.resultTimedOut)
+                assertEquals("$allowed", allowed, model.uiState.value.presentation().showCloseMigration)
+            } finally { store.clear() }
+        }
+        // Processing (window open): never offered, whatever the service would say.
+        val service = choiceService(
+            MutableStateFlow(InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis()))
+        )
+        coEvery { service.canCloseUnconfirmedMigration() } returns true
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            model.refreshAmount()
+            assertTrue(model.uiState.value.awaitingResult)
+            assertFalse(model.uiState.value.presentation().showCloseMigration)
+        } finally { store.clear() }
+    }
+
+    /**
+     * The confirmed close drops the record through the service and returns the sheet to the
+     * choice — never to success, even when the cleared marker emits afterwards.
+     */
+    @Test
+    fun confirmedCloseReturnsToTheChoiceWithoutSuccess() = runBlocking {
+        val markers = MutableStateFlow<InFlightMixedFundsMigration?>(expiredShield())
+        val service = choiceService(markers)
+        every { service.verifiedLandings } returns 0
+        coEvery { service.canCloseUnconfirmedMigration() } returns true
+        coEvery { service.closeUnconfirmedMigration() } coAnswers {
+            markers.value = null
+            true
+        }
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.uiState.value.presentation().showCloseMigration)
+            assertTrue(model.closeUnconfirmedMigration())
+            coVerify(exactly = 1) { service.closeUnconfirmedMigration() }
+            coVerify(exactly = 0) { service.acknowledgeUnconfirmedMigration() }
+            val state = model.uiState.value
+            assertFalse(state.resultLanded)
+            assertFalse(state.resultTimedOut)
+            assertNull(state.outcome)
+            assertFalse(state.presentation().showCloseMigration)
+            assertTrue(state.presentation().choiceMode)
+        } finally { store.clear() }
+    }
+
+    /**
+     * The service's answer is authoritative: the guidance goes as soon as the close returns, before
+     * the cleared marker's emission lands; when it does land, it is still no success.
+     */
+    @Test
+    fun confirmedCloseLeavesTheGuidanceBeforeTheClearedMarkerEmits() = runBlocking {
+        val markers = MutableStateFlow<InFlightMixedFundsMigration?>(expiredShield())
+        val service = choiceService(markers)
+        every { service.verifiedLandings } returns 0
+        coEvery { service.canCloseUnconfirmedMigration() } returns true
+        coEvery { service.closeUnconfirmedMigration() } returns true
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.closeUnconfirmedMigration())
+            assertFalse(model.uiState.value.resultTimedOut)
+            assertTrue(model.uiState.value.presentation().choiceMode)
+            markers.value = null
+            assertFalse(model.uiState.value.resultLanded)
+            assertTrue(model.uiState.value.presentation().choiceMode)
+        } finally { store.clear() }
+    }
+
+    /** A refused close (conditions changed) keeps the guidance and re-reads the option. */
+    @Test
+    fun refusedCloseKeepsTheGuidance() = runBlocking {
+        val service = choiceService(MutableStateFlow(expiredShield()))
+        var allowed = true
+        coEvery { service.canCloseUnconfirmedMigration() } answers { allowed }
+        coEvery { service.closeUnconfirmedMigration() } coAnswers {
+            allowed = false
+            false
+        }
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.uiState.value.presentation().showCloseMigration)
+            assertFalse(model.closeUnconfirmedMigration())
+            assertTrue(model.uiState.value.resultTimedOut)
+            assertTrue(model.uiState.value.presentation().terminalGuidance)
+            assertFalse(model.uiState.value.presentation().showCloseMigration)
+            // Not on offer: a further call does not reach the service.
+            assertFalse(model.closeUnconfirmedMigration())
+            coVerify(exactly = 1) { service.closeUnconfirmedMigration() }
+        } finally { store.clear() }
+    }
 }

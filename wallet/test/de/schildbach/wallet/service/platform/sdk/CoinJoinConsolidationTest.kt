@@ -241,6 +241,10 @@ class CoinJoinConsolidationTest {
             every { chainState.isSynced() } returns true
             coEvery { shield.ensureShieldedReady() } returns true
             coEvery { shield.pendingCoinJoinShieldLockCount() } answers { coinJoinLocks }
+            // Unless a test models Platform records (trackLocks), no lock is retry-suppressed.
+            coEvery { shield.unsuppressedCoinJoinShieldLockCount(any()) } coAnswers {
+                shield.pendingCoinJoinShieldLockCount()
+            }
             every { shield.observeShieldedBalance() } returns shieldedBalance
             coEvery { shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) } returns
                 SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
@@ -662,32 +666,365 @@ class CoinJoinConsolidationTest {
     }
 
     /**
-     * The settling lock's own row decides: still resumable (an unknown status included), the
-     * migration waits even if the count says nothing is pending; Consumed, or Platform's
-     * already-consumed record, completes it.
+     * The settling lock's own row decides, and only the SDK's Consumed (4) settles it: a
+     * nonterminal row (2, 3, 5) or an unknown status keeps the migration waiting even when
+     * the count says nothing is pending AND Platform's (unauthenticated) already-consumed
+     * record lists the lock. It expires into "could not confirm" with its marker — the
+     * recovery path — kept; no verified landing.
      */
-    @Test fun settlingLockRowMustBeTerminal() = runTest {
-        for (status in listOf(2, 42, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN)) {
+    @Test fun platformConsumedRecordNeverSettlesTheSettlingLock() = runTest {
+        for (status in listOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN, 42)) {
             val f = Fixture(this)
             directShieldInFlight(f)
             f.settleShieldLock()
             val lock = f.shieldLocks.single()
             f.shieldLockStatus[lock] = status
-            advanceTimeBy(60_000); runCurrent()
-            assertNotNull("$status", f.service.inFlightMigration())
-            if (status == 42) {
-                // Unknown: pending whatever Platform reported.
-                f.platformConsumed = setOf("$lock:0")
-                advanceTimeBy(30_000); runCurrent()
-                assertNotNull("$status", f.service.inFlightMigration())
-                f.shieldLockStatus[lock] = ASSET_LOCK_STATUS_CONSUMED
-            } else {
-                f.platformConsumed = setOf("$lock:0")
-            }
-            advanceTimeBy(15_000); runCurrent()
-            assertNull("$status", f.service.inFlightMigration())
-            assertEquals("$status", 1, f.service.verifiedLandings)
+            f.platformConsumed = setOf("$lock:0")
+            advanceTimeBy(MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 60_000); runCurrent()
+            // The watcher stood down without clearing; on the wall clock the window has lapsed too.
+            val kept = requireNotNull(f.service.inFlightMigration())
+            f.marker = formatInFlightMigration(
+                kept.copy(startedAtMillis = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 60_000L)
+            )
+            assertTrue("$status", f.expired())
+            assertFalse("$status", requireNotNull(f.service.inFlightMigration()).failed)
+            assertEquals("$status", MixedFundsMigrationAction.SHIELD, f.service.inFlightMigration()?.action)
+            // Its recovery path stays: Tools still offers the recorded migration.
+            assertTrue("$status", f.service.shouldOfferInTools())
+            assertNotEquals("$status: inputs kept", "", f.shieldInputs)
+            assertEquals("$status", 0, f.service.verifiedLandings)
         }
+    }
+
+    // ── "Close this migration": the user's dismissal of a stuck, unprovable shield ──
+
+    /**
+     * A direct SHIELD whose OWN settling lock sits at [status] (Platform's already-consumed record
+     * on it when [reported]), past its honesty window: the "could not confirm" guidance. Returns the
+     * lock's display txid.
+     */
+    private suspend fun TestScope.stuckOwnLock(
+        f: Fixture,
+        status: Int = ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN,
+        reported: Boolean = true
+    ): String {
+        directShieldInFlight(f)
+        f.settleShieldLock()
+        val lock = f.shieldLocks.single()
+        f.shieldLockStatus[lock] = status
+        if (reported) f.platformConsumed = setOf("$lock:0")
+        advanceTimeBy(MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 60_000); runCurrent()
+        val kept = requireNotNull(f.service.inFlightMigration())
+        f.marker = formatInFlightMigration(
+            kept.copy(startedAtMillis = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 60_000L)
+        )
+        assertTrue(f.expired())
+        return lock
+    }
+
+    /** Nothing was closed: the record, its inputs and the absence of any landing are intact. */
+    private suspend fun Fixture.assertNotClosable(why: String) {
+        assertFalse(why, service.canCloseUnconfirmedMigration())
+        assertFalse(why, service.closeUnconfirmedMigration())
+        assertNotNull(why, service.inFlightMigration())
+        assertEquals(why, 0, service.verifiedLandings)
+    }
+
+    /**
+     * The stuck state: the shield's OWN lock is final on L1 (2, 3 or 5) and Platform answered it
+     * already-consumed, so it is never retried and never reaches Consumed. Close is offered, and
+     * closing drops the record — marker, inputs, journal — WITHOUT a landing or the DONE flag.
+     */
+    @Test fun closeIsOfferedForAStuckOwnLockAndRecordsNoSuccess() = runTest {
+        for (status in listOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN)) {
+            val f = Fixture(this)
+            stuckOwnLock(f, status)
+            f.done = null
+            assertTrue("$status", f.service.canCloseUnconfirmedMigration())
+            assertTrue("$status", f.service.closeUnconfirmedMigration())
+            assertNull("$status", f.service.inFlightMigration())
+            assertEquals("$status", "", f.shieldInputs)
+            assertEquals("$status", "", f.consolidation)
+            assertEquals("$status", "", f.directPhase)
+            assertEquals("$status: a dismissal, not a landing", 0, f.service.verifiedLandings)
+            assertNull("$status: never DONE", f.done)
+            // Nothing left to close.
+            assertFalse("$status", f.service.canCloseUnconfirmedMigration())
+        }
+    }
+
+    /** A final own lock Platform has NOT answered is still resumed and may reach Consumed: not closable. */
+    @Test fun closeIsNotOfferedBeforePlatformAnsweredTheOwnLock() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN, reported = false)
+        f.assertNotClosable("unreported")
+    }
+
+    /** A not-yet-final (0, 1) or unknown own lock may still own live inputs: not closable, reported or not. */
+    @Test fun closeIsNotOfferedForANonFinalOrUnknownOwnLock() = runTest {
+        for (status in listOf(0, 1, 42)) {
+            val f = Fixture(this)
+            stuckOwnLock(f, status)
+            f.assertNotClosable("status $status")
+        }
+    }
+
+    /** Still inside its honesty window (processing, not "could not confirm"): not closable. */
+    @Test fun closeIsNotOfferedWhileTheWindowIsOpen() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        f.marker = formatInFlightMigration(
+            requireNotNull(f.service.inFlightMigration()).copy(startedAtMillis = System.currentTimeMillis())
+        )
+        f.assertNotClosable("window open")
+    }
+
+    /** A failed marker has its own release path: not closable. */
+    @Test fun closeIsNotOfferedForAFailedMarker() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        f.marker = formatInFlightMigration(requireNotNull(f.service.inFlightMigration()).copy(failed = true))
+        f.assertNotClosable("failed")
+    }
+
+    /** An adopted record (its own lock unknown) and a legacy no-inputs record: not closable. */
+    @Test fun closeIsNotOfferedWithoutAKnownOwnLock() = runTest {
+        for (inputs in listOf(CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, "")) {
+            val f = Fixture(this)
+            stuckOwnLock(f)
+            f.shieldInputs = inputs
+            f.assertNotClosable("inputs '$inputs'")
+        }
+    }
+
+    /** The own lock's `asset_locks` rows gone (e.g. a wiped table): nothing shows it stuck, so not closable. */
+    @Test fun closeIsNotOfferedWhenTheOwnLockRowsAreMissing() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        every {
+            f.db.assetLockDao().observeByWalletAndFundingType(any(), ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
+        } returns flowOf(emptyList())
+        f.assertNotClosable("no rows")
+    }
+
+    /** An invalid consolidation stage, or a COMBINE marker: not closable. */
+    @Test fun closeIsNotOfferedForAnInvalidStageOrACombine() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        f.consolidation = "not a stage"
+        f.assertNotClosable("invalid stage")
+        val g = Fixture(this)
+        stuckOwnLock(g)
+        g.marker = formatInFlightMigration(
+            requireNotNull(g.service.inFlightMigration()).copy(action = MixedFundsMigrationAction.COMBINE)
+        )
+        g.assertNotClosable("combine")
+    }
+
+    /** Latched for Reset Wallet: neither offered nor closed; the record is left to the wipe. */
+    @Test fun closeIsRefusedDuringAWalletWipe() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        f.service.stopForWalletWipe()
+        f.assertNotClosable("wiping")
+        f.service.resumeAfterWalletWipe()
+        assertTrue(f.service.canCloseUnconfirmedMigration())
+    }
+
+    /**
+     * After the close the stuck lock (still tracked at 5, Platform-consumed) blocks no fresh drain,
+     * and it is no longer any record's OWN lock: the next SHIELD completes on its own Consumed lock.
+     */
+    @Test fun closeUnblocksAFreshMigrationWhichCompletesOnItsOwnLock() = runTest {
+        val f = Fixture(this)
+        val stuck = stuckOwnLock(f)
+        val locks = f.trackLocks(
+            PendingWalletShieldLock(
+                "$stuck:0", ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN, 1L, coinJoinFunded = true, platformConsumed = true
+            )
+        )
+        // Before the close, the record blocks a fresh spend.
+        f.newCoinJoinCoinsArrive()
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
+        assertTrue(f.service.closeUnconfirmedMigration())
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        coVerify(exactly = 2) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
+        runCurrent()
+        f.settleShieldLock(Sha256Hash.of("second-lock".toByteArray()))
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(1, f.service.verifiedLandings)
+        assertEquals(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN, locks.single().statusRaw)
+    }
+
+    /**
+     * The closed record's lock stays tracked at 5 (Platform-consumed) for good. A LATER adopted lock
+     * B that reaches Consumed still returns to the choice: the closed lock does not wedge it.
+     */
+    @Test fun afterACloseALaterAdoptedLockStillReleases() = runTest {
+        val f = Fixture(this)
+        val stuck = stuckOwnLock(f)
+        val locks = f.trackLocks(
+            PendingWalletShieldLock(
+                "$stuck:0", ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN, 1L, coinJoinFunded = true, platformConsumed = true
+            )
+        )
+        assertTrue(f.service.closeUnconfirmedMigration())
+        // A live CoinJoin lock B with no record appears; the next move adopts it.
+        val lockB = PendingWalletShieldLock("0b".repeat(32) + ":0", 2, 1L, coinJoinFunded = true)
+        locks += lockB
+        f.newCoinJoinCoinsArrive()
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        assertEquals(CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+        f.done = null
+        locks[1] = lockB.copy(statusRaw = ASSET_LOCK_STATUS_CONSUMED)
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
+        assertEquals("", f.marker)
+        assertNull(f.done)
+        assertEquals(0, f.service.verifiedLandings)
+        // Only the closed migration's own shield was ever built.
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
+    }
+
+    // ── "Close this migration" for a legacy no-inputs record ──
+
+    /** A live CoinJoin lock B Platform has not answered. */
+    private fun lockB() = PendingWalletShieldLock("0b".repeat(32) + ":0", 2, 1L, coinJoinFunded = true)
+
+    /**
+     * A legacy SHIELD record with no recorded inputs, past its honesty window, over [locks]; the
+     * CoinJoin account affirmatively empty on a synced chain.
+     */
+    private fun Fixture.stuckLegacyRecord(vararg locks: PendingWalletShieldLock): MutableList<PendingWalletShieldLock> {
+        val tracked = trackLocks(*locks)
+        coins.value = emptyList()
+        engineBalance = 0
+        marker = "SHIELD|${System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 60_000L}|0"
+        return tracked
+    }
+
+    /**
+     * Held only by Platform-consumed (retry-suppressed) CoinJoin locks, the legacy proof can never
+     * pass: Close is offered, and drops the record with no landing and no DONE.
+     */
+    @Test fun legacyRecordHeldOnlyByPlatformConsumedLocksIsClosable() = runTest {
+        val cases = listOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).map {
+            listOf(lockA(it).copy(platformConsumed = true))
+        } + listOf(listOf(lockA(2).copy(platformConsumed = true), lockB().copy(statusRaw = 3, platformConsumed = true)))
+        for (locks in cases) {
+            val f = Fixture(this)
+            f.stuckLegacyRecord(*locks.toTypedArray())
+            val label = locks.joinToString { "${it.statusRaw}" }
+            assertTrue(label, f.service.canCloseUnconfirmedMigration())
+            assertTrue(label, f.service.closeUnconfirmedMigration())
+            assertEquals(label, "", f.marker)
+            assertNull(label, f.done)
+            assertEquals(label, 0, f.service.verifiedLandings)
+            assertFalse(label, f.service.canCloseUnconfirmedMigration())
+        }
+    }
+
+    /** One counted lock Platform has not answered (still resumed, may reach Consumed): not closable. */
+    @Test fun legacyRecordWithAnUnansweredLockIsNotClosable() = runTest {
+        val f = Fixture(this)
+        f.stuckLegacyRecord(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true), lockB())
+        f.assertNotClosable("unanswered B")
+    }
+
+    /** No CoinJoin lock pending at all: the legacy proof itself completes it (Try again), so not closable. */
+    @Test fun legacyRecordWithNoPendingLockIsNotClosable() = runTest {
+        val f = Fixture(this)
+        f.stuckLegacyRecord()
+        f.assertNotClosable("no locks")
+    }
+
+    /** The CoinJoin account not empty, or unreadable: not closable. */
+    @Test fun legacyRecordOverANonEmptyOrUnreadableAccountIsNotClosable() = runTest {
+        val f = Fixture(this)
+        f.stuckLegacyRecord(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        f.engineBalance = 1_000L
+        f.assertNotClosable("not empty")
+        val g = Fixture(this)
+        g.stuckLegacyRecord(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        coEvery { g.manager.accountBalances(any()) } throws IllegalStateException("unreadable")
+        g.assertNotClosable("unreadable")
+    }
+
+    /** The chain not synced: not closable. */
+    @Test fun legacyRecordOnAnUnsyncedChainIsNotClosable() = runTest {
+        val f = Fixture(this)
+        f.stuckLegacyRecord(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        every { f.chainState.isSynced() } returns false
+        f.assertNotClosable("unsynced")
+    }
+
+    /** Window still open, a failed marker, or any stage: not closable. */
+    @Test fun legacyRecordOpenFailedOrStagedIsNotClosable() = runTest {
+        val stuck = lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true)
+        val f = Fixture(this)
+        f.stuckLegacyRecord(stuck)
+        f.marker = "SHIELD|${System.currentTimeMillis()}|0"
+        f.assertNotClosable("window open")
+        val g = Fixture(this)
+        g.stuckLegacyRecord(stuck)
+        g.marker += "|failed"
+        g.assertNotClosable("failed")
+        val h = Fixture(this)
+        h.stuckLegacyRecord(stuck)
+        h.consolidation = rawStage("shield_preparing")
+        h.assertNotClosable("staged")
+    }
+
+    /** The legacy record blocks every move until closed; after the close a fresh migration spends. */
+    @Test fun closingALegacyRecordUnblocksAFreshMigration() = runTest {
+        val f = Fixture(this)
+        f.stuckLegacyRecord(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        f.newCoinJoinCoinsArrive()
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        f.assertNothingBuilt()
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        assertTrue(f.service.closeUnconfirmedMigration())
+        f.newCoinJoinCoinsArrive()
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any(), any()) }
+        assertEquals(0, f.service.verifiedLandings)
+    }
+
+    /** The SDK's Consumed (4) completes it, with or without a Platform record. */
+    @Test fun settlingLockConsumedCompletes() = runTest {
+        for (reported in listOf(false, true)) {
+            val f = Fixture(this)
+            directShieldInFlight(f)
+            f.settleShieldLock()
+            val lock = f.shieldLocks.single()
+            f.shieldLockStatus[lock] = ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN
+            if (reported) f.platformConsumed = setOf("$lock:0")
+            advanceTimeBy(60_000); runCurrent()
+            assertNotNull("$reported", f.service.inFlightMigration())
+            f.shieldLockStatus[lock] = ASSET_LOCK_STATUS_CONSUMED
+            advanceTimeBy(15_000); runCurrent()
+            assertNull("$reported", f.service.inFlightMigration())
+            assertEquals("$reported", true, f.done)
+            assertEquals("$reported", 1, f.service.verifiedLandings)
+        }
+    }
+
+    /** An unknown status stays pending: no completion within the window, whatever Platform reported. */
+    @Test fun settlingLockUnknownStatusStaysPending() = runTest {
+        val f = Fixture(this)
+        directShieldInFlight(f)
+        f.settleShieldLock()
+        val lock = f.shieldLocks.single()
+        f.shieldLockStatus[lock] = 42
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertFalse(f.expired())
+        f.platformConsumed = setOf("$lock:0")
+        advanceTimeBy(60_000); runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        assertEquals(0, f.service.verifiedLandings)
     }
 
     /** No shielded balance is read before a move: an unreadable one refuses or defers nothing. */
@@ -1233,8 +1570,12 @@ class CoinJoinConsolidationTest {
     private fun Fixture.trackLocks(vararg initial: PendingWalletShieldLock): MutableList<PendingWalletShieldLock> {
         val locks = initial.toMutableList()
         coEvery { shield.pendingCoinJoinShieldLockCount() } answers { locks.count { it.pendingCoinJoinDrain } }
+        coEvery { shield.unsuppressedCoinJoinShieldLockCount(any()) } answers {
+            val settling = firstArg<String?>()
+            locks.count { it.blocksFreshDrain || (it.pendingCoinJoinDrain && it.isOfTransaction(settling)) }
+        }
         coEvery { shield.recoveredCoinJoinShieldLockCount() } answers {
-            locks.count { it.pendingCoinJoinDrain && it.statusRaw == ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN }
+            locks.count { it.blocksFreshDrain && it.statusRaw == ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN }
         }
         coEvery { shield.pendingWalletShieldLockCount() } answers { locks.count { it.blocksCutover } }
         coEvery { shield.resumePendingWalletShields() } returns 0
@@ -1398,6 +1739,234 @@ class CoinJoinConsolidationTest {
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
         coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
         assertNotEquals(CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+    }
+
+    /** A restored wallet's historical CoinJoin lock A (status 5) that Platform reported consumed. */
+    private fun Fixture.restoredWithAPlatformConsumedStranger(): MutableList<PendingWalletShieldLock> {
+        val locks = trackLocks(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        newCoinJoinCoinsArrive()
+        return locks
+    }
+
+    /**
+     * The restored wallet's new SHIELD starts past stranger A and completes once its OWN new lock
+     * reaches Consumed (4): A, which stays at 5, holds neither the drain nor the proof.
+     */
+    @Test fun restoredWalletShieldPastAPlatformConsumedStrangerCompletesOnItsOwnConsumedLock() = runTest {
+        val f = Fixture(this)
+        f.restoredWithAPlatformConsumedStranger()
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any(), any()) }
+        assertNotEquals(CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+        runCurrent()
+        assertNotNull(f.service.inFlightMigration())
+        f.settleShieldLock()
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(1, f.service.verifiedLandings)
+    }
+
+    /**
+     * The same wallet's new SHIELD does NOT complete while its OWN settling lock is Platform-consumed
+     * but not Consumed: identified by txid, it is never set aside as a stranger. It expires with its
+     * marker kept, and completes once the SDK writes Consumed.
+     */
+    @Test fun restoredWalletShieldNeverCompletesOnItsOwnPlatformConsumedLock() = runTest {
+        for (status in listOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN)) {
+            val f = Fixture(this)
+            val locks = f.restoredWithAPlatformConsumedStranger()
+            assertEquals("$status", MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+            runCurrent()
+            val own = Sha256Hash.of("shield-lock".toByteArray())
+            f.settleShieldLock(own)
+            f.shieldLockStatus[own.toString()] = status
+            f.platformConsumed = setOf("$own:0")
+            locks += PendingWalletShieldLock("$own:0", status, 1L, coinJoinFunded = true, platformConsumed = true)
+            advanceTimeBy(MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 60_000); runCurrent()
+            assertNotNull("$status", f.service.inFlightMigration())
+            assertNotEquals("$status", "", f.shieldInputs)
+            assertEquals("$status", 0, f.service.verifiedLandings)
+
+            // The SDK's Consumed: Try again's fresh window completes it.
+            f.shieldLockStatus[own.toString()] = ASSET_LOCK_STATUS_CONSUMED
+            locks[locks.lastIndex] = locks.last().copy(statusRaw = ASSET_LOCK_STATUS_CONSUMED)
+            f.service.retryPendingMigration()
+            advanceTimeBy(15_000); runCurrent()
+            assertNull("$status", f.service.inFlightMigration())
+            assertEquals("$status", 1, f.service.verifiedLandings)
+        }
+    }
+
+    /** A consolidated SHIELD drains past stranger A and completes on its own Consumed lock. */
+    @Test fun restoredWalletConsolidatedShieldPastAPlatformConsumedStrangerCompletes() = runTest {
+        val f = Fixture(this)
+        f.trackLocks(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        consolidatedShieldInFlight(f)
+        landShield(f)
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(1, f.service.verifiedLandings)
+    }
+
+    /** SHIELD_PREPARING never reached the native call: stranger A does not stand in for its drain. */
+    @Test fun shieldPreparingPastAPlatformConsumedStrangerDrainsOnce() = runTest {
+        val f = Fixture(this)
+        f.trackLocks(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        f.consolidation = CoinJoinConsolidationState(walletId, destination,
+            CoinJoinConsolidationState.SHIELD_PREPARING).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any(), any()) }
+    }
+
+    /**
+     * A legacy marker with no recorded inputs has no settling lock to tell apart: a CoinJoin lock
+     * Platform reported consumed may be its own, so it never completes until that lock is Consumed.
+     */
+    @Test fun legacyNoInputsMarkerNeverCompletesPastAPlatformConsumedLock() = runTest {
+        for (status in listOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN)) {
+            val f = Fixture(this)
+            val locks = f.trackLocks(lockA(status).copy(platformConsumed = true))
+            f.coins.value = emptyList()
+            f.engineBalance = 0
+            f.marker = "SHIELD|${System.currentTimeMillis()}|0"
+            assertTrue("$status", f.service.restorePendingShieldMigration())
+            advanceTimeBy(60_000); runCurrent()
+            assertNotNull("$status", f.service.inFlightMigration())
+            assertEquals("$status", 0, f.service.verifiedLandings)
+            locks[0] = locks[0].copy(statusRaw = ASSET_LOCK_STATUS_CONSUMED)
+            advanceTimeBy(15_000); runCurrent()
+            assertNull("$status", f.service.inFlightMigration())
+            assertEquals("$status", 1, f.service.verifiedLandings)
+        }
+    }
+
+    /**
+     * A legacy marker with no recorded inputs, and the store wiped between the proof's lock-count
+     * reads: the later read sees the emptied table ("nothing pending"), but the count read FIRST
+     * saw the pending lock, so the migration does NOT complete.
+     */
+    @Test fun legacyNoInputsMarkerStoreWipedBetweenCountReadsDoesNotComplete() = runTest {
+        val f = Fixture(this)
+        val locks = f.trackLocks(lockA(ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN).copy(platformConsumed = true))
+        var reads = 0
+        // Only the second read sees the wiped store; the rebind then rebuilds the lock.
+        coEvery { f.shield.pendingCoinJoinShieldLockCount() } answers {
+            reads++
+            if (reads == 2) 0 else locks.count { it.pendingCoinJoinDrain }
+        }
+        f.coins.value = emptyList()
+        f.engineBalance = 0
+        f.marker = "SHIELD|${System.currentTimeMillis()}|0"
+        assertTrue(f.service.restorePendingShieldMigration())
+        advanceTimeBy(60_000); runCurrent()
+        assertTrue(reads >= 2)
+        assertNotNull(f.service.inFlightMigration())
+        assertEquals(0, f.service.verifiedLandings)
+    }
+
+    /** The restored wallet's new COMBINE starts past stranger A and completes on its own transfer. */
+    @Test fun restoredWalletCombinePastAPlatformConsumedStrangerCompletes() = runTest {
+        val f = Fixture(this)
+        f.restoredWithAPlatformConsumedStranger()
+        combineInFlight(f)
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
+        runCurrent()
+        advanceTimeBy(15_000); runCurrent()
+        assertEquals(MixedFundsMigrationAction.COMBINE, f.service.inFlightMigration()?.action)
+        f.storedTx = f.storedTx?.copy(context = 1)
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(1, f.service.verifiedLandings)
+    }
+
+    /**
+     * Release/clear sites (back to the choice, never a success). A lock Platform reported consumed
+     * (final on L1, never resumed again) does not keep any of them — not even where it may be the
+     * record's OWN lock (an adopted shield, an invalid stage): keeping those would block every move
+     * forever. A pending lock (not reported) keeps every one of them.
+     */
+    @Test fun releaseSitesSetAsidePlatformConsumedLocksButNeverAPendingOne() = runTest {
+        for (settled in listOf(false, true)) {
+            for (status in listOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN)) {
+                val label = "status $status, settled $settled"
+                fun reported() = lockA(status).copy(platformConsumed = true)
+                fun current() = if (settled) reported().copy(statusRaw = ASSET_LOCK_STATUS_CONSUMED) else reported()
+
+                for (pending in listOf(false, true)) {
+                    val tag = "$label, pending $pending"
+                    // Adopted (live 2/3 only: a 5 is never adopted).
+                    if (status != ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN) {
+                        val f = Fixture(this)
+                        val locks = f.trackLocks(lockA(status))
+                        f.newCoinJoinCoinsArrive()
+                        assertEquals(tag, MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+                        assertEquals(tag, CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+                        locks[0] = if (pending) lockA(status) else current()
+                        val retried = f.service.retryPendingMigration()
+                        if (pending) {
+                            assertEquals(tag, MixedFundsMigrationOutcome.UNCONFIRMED, retried)
+                            assertEquals(tag, CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+                            assertNotNull(tag, f.service.inFlightMigration())
+                        } else {
+                            assertEquals(tag, MixedFundsMigrationOutcome.NOT_ATTEMPTED, retried)
+                            assertEquals(tag, "", f.marker)
+                            assertEquals(tag, "", f.shieldInputs)
+                        }
+                        assertNull(tag, f.done)
+                        assertEquals(tag, 0, f.service.verifiedLandings)
+                        f.assertNoSecondDrain()
+                        if (!pending) {
+                            // Back at the choice, the next move spends afresh.
+                            assertEquals(tag, MixedFundsMigrationOutcome.STARTED, f.service.shieldMixedFunds(Dash.COIN))
+                            coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
+                        }
+                    }
+
+                    // An invalid stage.
+                    val k = Fixture(this)
+                    k.trackLocks(if (pending) lockA(status) else current())
+                    k.consolidation = rawStage("shielding", regularDestination = regular)
+                    assertTrue(tag, k.service.restorePendingShieldMigration())
+                    runCurrent()
+                    val saved = k.consolidation
+                    val outcome = k.service.retryPendingMigration()
+                    if (pending) {
+                        assertEquals(tag, MixedFundsMigrationOutcome.UNCONFIRMED, outcome)
+                        assertEquals(tag, saved, k.consolidation)
+                        assertNotNull(tag, k.service.inFlightMigration())
+                    } else {
+                        assertEquals(tag, MixedFundsMigrationOutcome.NOT_ATTEMPTED, outcome)
+                        assertEquals(tag, "", k.consolidation)
+                        assertNull(tag, k.service.inFlightMigration())
+                    }
+                    assertNull(tag, k.done)
+                    assertEquals(tag, 0, k.service.verifiedLandings)
+                    k.assertNothingBuilt()
+
+                    // A definitively failed record.
+                    val g = Fixture(this)
+                    g.trackLocks(if (pending) lockA(status) else current())
+                    val failed = shieldMarker(failed = true)
+                    g.marker = failed
+                    assertEquals(tag, !pending, g.service.releaseFailedMigration())
+                    assertEquals(tag, if (pending) failed else "", g.marker)
+
+                    // A direct shield interrupted before the native call.
+                    val h = Fixture(this)
+                    h.trackLocks(if (pending) lockA(status) else current())
+                    h.marker = formatInFlightMigration(
+                        InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis())
+                    )
+                    h.directPhase = CoinJoinFundsMigrationService.DIRECT_SHIELD_PREPARING
+                    assertEquals(tag, pending, h.service.restorePendingShieldMigration())
+                    assertEquals(tag, !pending, h.service.inFlightMigration() == null)
+                }
+            }
+        }
     }
 
     /**
