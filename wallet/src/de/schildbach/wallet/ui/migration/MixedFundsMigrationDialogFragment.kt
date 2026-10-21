@@ -103,6 +103,12 @@ class MixedFundsMigrationDialogFragment :
         // Definitive failures can retry; pending shields resume their lock.
         binding.restartButton.setOnClickListener {
             val state = viewModel.uiState.value
+            // Try again for a pending shield lock: resumes what the SDK already tracks, spends
+            // nothing, so it neither asks nor authenticates.
+            if (state.presentation().showRetryPendingShields) {
+                viewModel.retryPendingShields()
+                return@setOnClickListener
+            }
             // A timed-out/unconfirmed transfer resumes the existing transaction;
             // a failed one runs its move again, so it asks that move's question
             // (and, being a fresh spend, authenticates). The mode is decided once, here.
@@ -180,7 +186,7 @@ class MixedFundsMigrationDialogFragment :
                     // The "choose where to keep it" copy only makes sense
                     // while a choice (or failure-retry) is on offer.
                     binding.subtitle.isVisible = choiceMode || failed
-                    binding.coinjoinRemoved.isVisible = choiceMode || failed
+                    binding.coinjoinRemoved.isVisible = (choiceMode || failed) && !presentation.showRetryPendingShields
 
                     // Nothing to offer: the fresh read found no mixed funds
                     // (moved elsewhere, or the post-cutover SDK view cannot
@@ -189,7 +195,8 @@ class MixedFundsMigrationDialogFragment :
                     // recording a deferral.
                     val nothingRunnable = amount == null || (!state.shieldOperable && !state.combineOperable)
                     if (choiceMode && state.outcome == null && state.amountChecked && nothingRunnable &&
-                        !state.migrationPending
+                        !state.migrationPending && !state.pendingShieldRetryAvailable &&
+                        !state.pendingShieldRetryRunning
                     ) {
                         dismissAllowingStateLoss()
                         return@collect
@@ -203,7 +210,7 @@ class MixedFundsMigrationDialogFragment :
                     binding.combineNote.isVisible = presentation.showCombineChoice
                     binding.shieldButton.isEnabled = actionable
                     binding.combineButton.isEnabled = actionable
-                    binding.restartButton.isVisible = presentation.showRestart
+                    binding.restartButton.isVisible = presentation.showRestart || presentation.showRetryPendingShields
                     binding.transferUnmixedButton.isVisible = presentation.showTransferUnmixed
                     binding.closeMigrationButton.isVisible = presentation.showCloseMigration
                     isCancelable = presentation.cancelable
@@ -214,9 +221,9 @@ class MixedFundsMigrationDialogFragment :
                         else -> R.string.button_close
                     })
 
-                    binding.progressGroup.isVisible = processingAny
+                    binding.progressGroup.isVisible = processingAny || state.pendingShieldRetryRunning
                     binding.progressText.setText(
-                        if (state.inProgress) {
+                        if (state.inProgress || state.pendingShieldRetryRunning) {
                             R.string.mixed_funds_migration_in_progress
                         } else {
                             R.string.mixed_funds_migration_started
@@ -242,6 +249,8 @@ class MixedFundsMigrationDialogFragment :
                             }
                         state.outcome == MixedFundsMigrationOutcome.UNCONFIRMED ->
                             getString(R.string.mixed_funds_migration_unconfirmed)
+                        presentation.showRetryPendingShields ->
+                            getString(R.string.mixed_funds_migration_pending_shield_retry)
                         // While awaiting, the started message lives in the
                         // progress row next to the spinner.
                         else -> null

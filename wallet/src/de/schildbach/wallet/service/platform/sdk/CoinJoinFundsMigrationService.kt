@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -627,10 +628,55 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /**
      * Tools' "Move CoinJoin funds" entry: always for a recorded migration (so
      * it stays resumable), otherwise [userMigrationAllowed] and [anyOptionOperable]. Unlike
-     * [shouldPrompt] it ignores DONE, the deferral and the diagnostic toggle.
+     * [shouldPrompt] it ignores DONE, the deferral and the diagnostic toggle. Also offered
+     * while a tracked shield lock only an explicit retry resumes exists
+     * ([hasRetrySuppressedShields]) — record or not, CoinJoin coins or not — so that retry
+     * ([retryPendingShieldsOnUserRequest]) is always reachable.
      */
     suspend fun shouldOfferInTools(): Boolean =
-        restorePendingShieldMigration() || (userMigrationAllowed() && anyOptionOperable())
+        restorePendingShieldMigration() || (userMigrationAllowed() && anyOptionOperable()) ||
+            hasRetrySuppressedShields()
+
+    /**
+     * Is any tracked shield lock (CoinJoin or BIP44 funded) waiting on an explicit retry: pending,
+     * and answered already-consumed by Platform, which automatic sweeps no longer retry? False
+     * when it cannot be read, and while latched for a wallet wipe.
+     */
+    suspend fun hasRetrySuppressedShields(): Boolean = unlessWiped(false) {
+        try {
+            shieldedBalanceService.ensureShieldedReady() &&
+                (shieldedBalanceService.retrySuppressedShieldLockCount() ?: 0) > 0
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not read the retry-suppressed shield locks; not offering the retry", t)
+            false
+        }
+    }
+
+    /**
+     * The explicit retry on its own (the sheet's Try again when no migration is recorded): resume
+     * every tracked shield lock once ([resumeTrackedShieldsOnUserRequest]). Builds nothing,
+     * spends nothing and records nothing. 0 while latched for a wallet wipe.
+     */
+    suspend fun retryPendingShieldsOnUserRequest(): Int = unlessWiped(0) { resumeTrackedShieldsOnUserRequest() }
+
+    /**
+     * The FIRST step of every explicit user entry ([retryPendingShieldsOnUserRequest],
+     * [retryPendingMigration], [shieldMixedFunds], [combineIntoUnmixedBalance]), whatever the
+     * migration state: resume every tracked shield lock once, including those Platform answered
+     * already-consumed (an unauthenticated answer automatic sweeps no longer retry), BEFORE any
+     * release, adopt, close or drain decision — those then re-read their state. Only the SDK's
+     * recovery call on locks it already tracks: never a new lock, never a spend. Off Main, and
+     * not under [migrationMutex] (each lock may take a ~30 s proof). Never throws: a failure
+     * leaves every record as it was. Returns how many locks were resumed.
+     */
+    private suspend fun resumeTrackedShieldsOnUserRequest(): Int = try {
+        withContext(Dispatchers.IO) { shieldedBalanceService.resumePendingWalletShieldsOnUserRequest() }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("explicit pending-shield resume failed; continuing with the recorded state", t)
+        0
+    }
 
     suspend fun deferMigration(amount: Coin) = unlessWiped(Unit) {
         writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS, amount.value)
@@ -638,9 +684,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /** Continue the persisted consolidation stage, or resume the existing asset lock. */
     suspend fun retryPendingMigration(): MixedFundsMigrationOutcome =
-        unlessWiped(MixedFundsMigrationOutcome.NOT_ATTEMPTED) { retryPendingMigrationInner() }
+        unlessWiped(MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+            retryPendingMigrationInner(resumed = resumeTrackedShieldsOnUserRequest())
+        }
 
-    private suspend fun retryPendingMigrationInner(): MixedFundsMigrationOutcome {
+    /** [resumed]: the explicit resume already run first ([resumeTrackedShieldsOnUserRequest]). */
+    private suspend fun retryPendingMigrationInner(resumed: Int): MixedFundsMigrationOutcome {
         // A resolved adopted shield has nothing left to resume: back to the choice.
         if (migrationMutex.withLock { releaseResolvedAdoptedShieldLocked() }) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
@@ -683,14 +732,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis()))
         )
         restartInFlightWatcher()
-        // An explicit retry gets its own resume attempt even when the
-        // automatic per-process budget is spent (the lock stays tracked; this
-        // never builds a new one).
-        val resumed = if (marker.action == MixedFundsMigrationAction.SHIELD) {
-            shieldedBalanceService.resumePendingWalletShieldsOnUserRequest()
-        } else {
-            0
-        }
+        // The explicit resume already ran, first (it never builds a new lock).
         if (hasConsolidation) {
             return MixedFundsMigrationOutcome.STARTED
         }
@@ -755,7 +797,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * the SDK computes the actual lock value after fees.
      */
     suspend fun shieldMixedFunds(amount: Dash): MixedFundsMigrationOutcome =
-        unlessWiped(MixedFundsMigrationOutcome.NOT_ATTEMPTED) { shieldMixedFundsInner(amount) }
+        unlessWiped(MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+            resumeTrackedShieldsOnUserRequest()
+            shieldMixedFundsInner(amount)
+        }
 
     private suspend fun shieldMixedFundsInner(amount: Dash): MixedFundsMigrationOutcome = migrationMutex.withLock {
         if (!releaseFailedMigrationLocked()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
@@ -824,7 +869,10 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * destination address.
      */
     suspend fun combineIntoUnmixedBalance(): MixedFundsMigrationOutcome =
-        unlessWiped(MixedFundsMigrationOutcome.NOT_ATTEMPTED) { combineIntoUnmixedBalanceInner() }
+        unlessWiped(MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+            resumeTrackedShieldsOnUserRequest()
+            combineIntoUnmixedBalanceInner()
+        }
 
     private suspend fun combineIntoUnmixedBalanceInner(): MixedFundsMigrationOutcome = migrationMutex.withLock {
         if (!releaseFailedMigrationLocked()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
@@ -1060,15 +1108,13 @@ class CoinJoinFundsMigrationService @Inject constructor(
     /**
      * Every pending CoinJoin lock is RecoveredFromChain (5). Never adopted:
      * restore/scan rebuilds every historical shield as 5 (e.g. one completed on
-     * another device), which is not this move's progress. The tap resumes them
-     * once (a Platform already-consumed answer stops them counting: a stranger's
-     * inputs are final on L1, so the fresh drain cannot select them); a fresh
-     * spend follows only on a confirmed zero, else DEFERRED: nothing spends or
-     * is recorded.
+     * another device), which is not this move's progress. The tap already resumed
+     * them once, first ([resumeTrackedShieldsOnUserRequest]; a Platform
+     * already-consumed answer stops them counting: a stranger's inputs are final
+     * on L1, so the fresh drain cannot select them); a fresh spend follows only on
+     * a confirmed zero, else DEFERRED: nothing spends or is recorded.
      */
     private suspend fun resolveRecoveredCoinJoinLocks(): PendingCheck {
-        log.info("mixed-funds migration: a RecoveredFromChain CoinJoin lock is unresolved; resuming it first")
-        shieldedBalanceService.resumePendingWalletShieldsOnUserRequest()
         val left = shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() ?: return PendingCheck.UNREADABLE
         if (left <= 0) return PendingCheck.NONE
         log.warn("mixed-funds migration: {} CoinJoin lock(s) still unresolved; not spending, nothing recorded", left)
@@ -1312,10 +1358,24 @@ class CoinJoinFundsMigrationService @Inject constructor(
     private suspend fun <T> readCheckpoint(key: Preferences.Key<T>): T? =
         dashPayConfig.getPreservingErrors(key)
 
-    /** Reactive mirror of [inFlightMigration] — emits null once the result lands. */
+    /**
+     * Reactive mirror of [inFlightMigration] — emits null once the marker is cleared. Read WITHOUT the
+     * config's IOException rescue (which would emit "absent" and end the collection): a read error
+     * emits nothing, so collectors keep the last marker they saw, and the observation is retried with
+     * capped backoff (doubling from [MARKER_READ_RETRY_MIN_MS] up to [IN_FLIGHT_POLL_MS]) until it
+     * reads again or the collector is cancelled.
+     */
     fun observeInFlightMigration(): Flow<InFlightMixedFundsMigration?> =
-        dashPayConfig.observe(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT)
+        dashPayConfig.observePreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT)
             .map { parseInFlightMigration(it) }
+            .retryWhen { cause, attempt ->
+                if (cause is CancellationException) return@retryWhen false
+                val wait = (MARKER_READ_RETRY_MIN_MS shl attempt.coerceAtMost(4L).toInt())
+                    .coerceAtMost(IN_FLIGHT_POLL_MS)
+                log.warn("in-flight marker observation failed; retrying in {} ms", wait, cause)
+                delay(wait)
+                true
+            }
 
     /**
      * Drop the marker together with its consolidation stage and journal.
@@ -1643,13 +1703,50 @@ class CoinJoinFundsMigrationService @Inject constructor(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("the in-flight mixed-funds watcher stopped", t)
-            expireMigration()
+            try {
+                expireMigration()
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                log.warn("could not mark the stopped mixed-funds watcher's marker expired; keeping it as is", e)
+            }
+        }
+    }
+
+    /**
+     * The marker for the watcher, read WITHOUT the config's IOException rescue: null only when it is
+     * absent or malformed (a restore repairs a malformed one and re-arms the watcher). A read error
+     * is never "absent": it is retried with capped backoff (doubling up to [IN_FLIGHT_POLL_MS]),
+     * nothing written. After [MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS] of unbroken read errors the watcher
+     * stands down WITHOUT touching the marker; the next restore (startup, unlock, Tools) re-arms it.
+     * A marker whose window lapsed meanwhile is then "could not confirm", as for any expired marker.
+     * A wipe cancels the watcher, which ends the retry at once.
+     */
+    private suspend fun watcherMarkerOrNull(): InFlightMixedFundsMigration? {
+        var backoff = MARKER_READ_RETRY_MIN_MS
+        var failingFor = 0L
+        while (true) {
+            try {
+                return inFlightMigrationOrThrow()
+            } catch (malformed: MalformedMigrationMarkerException) {
+                log.warn("mixed-funds watcher: malformed marker; standing down until a restore repairs it")
+                return null
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (failingFor >= MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS) {
+                    log.warn("mixed-funds watcher: marker unreadable for too long; standing down, marker kept", t)
+                    return null
+                }
+                log.warn("mixed-funds watcher: marker unreadable; retrying in {} ms, marker kept", backoff, t)
+                delay(backoff)
+                failingFor += backoff
+                backoff = (backoff * 2).coerceAtMost(IN_FLIGHT_POLL_MS)
+            }
         }
     }
 
     private suspend fun watchInFlightMigration() {
         while (true) {
-            val marker = inFlightMigration() ?: return
+            val marker = watcherMarkerOrNull() ?: return
             // A definitive failure is not progress: nothing to watch or continue.
             if (marker.failed) return
             val remainingMs = marker.remainingMillis()
@@ -1672,7 +1769,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     marker.action, SIGNER_LOCKED_RETRY_MS / 1000L
                 )
                 delay(SIGNER_LOCKED_RETRY_MS)
-                val current = inFlightMigration() ?: return
+                val current = watcherMarkerOrNull() ?: return
                 writeConfig(
                     DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
                     formatInFlightMigration(current.copy(startedAtMillis = System.currentTimeMillis()))
@@ -2241,15 +2338,17 @@ class CoinJoinFundsMigrationService @Inject constructor(
         false
     }
 
+    /** Throws when the marker cannot be read: never "absent" over an unreadable record. */
     private suspend fun expireMigration() {
-        val marker = inFlightMigration() ?: return
+        val marker = inFlightMigrationOrThrow() ?: return
         writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
             formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1)))
     }
 
     /** Record a DEFINITIVE failure of a consolidated migration — see [InFlightMixedFundsMigration.failed]. */
     private suspend fun failMigration() {
-        val marker = inFlightMigration() ?: return
+        // Throws when unreadable: the watcher's transient handler re-derives the failure.
+        val marker = inFlightMigrationOrThrow() ?: return
         writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker.copy(failed = true)))
     }
 
@@ -2298,6 +2397,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
          * has no push feed, so the watcher re-reads it on this interval.
          */
         private const val IN_FLIGHT_POLL_MS = 15_000L
+
+        /** First retry delay after a marker read error (watcher and observer); doubles up to [IN_FLIGHT_POLL_MS]. */
+        private const val MARKER_READ_RETRY_MIN_MS = 1_000L
 
         /** How often a step blocked by a locked device is retried. */
         private const val SIGNER_LOCKED_RETRY_MS = 30_000L

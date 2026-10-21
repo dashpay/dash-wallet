@@ -2417,8 +2417,10 @@ class ShieldedBalanceServiceTest {
         // Automatic: skipped.
         assertEquals(0, service.resumePendingWalletShields())
         assertEquals(0, source.resumeCalls)
+        assertEquals(1, service.retrySuppressedShieldLockCount())
         // Explicit: resumed; it lands.
         assertEquals(1, service.resumePendingWalletShieldsOnUserRequest())
+        assertEquals(0, service.retrySuppressedShieldLockCount())
         assertEquals(1, source.resumeCalls)
         assertEquals(emptySet<String>(), consumed.value)
         assertEquals(0, service.pendingCoinJoinShieldLockCount())
@@ -2436,6 +2438,28 @@ class ShieldedBalanceServiceTest {
         assertEquals(0, swept.resumePendingWalletShields())
         assertEquals(setOf("05".repeat(32) + ":1"), stale.value)
         assertEquals(0, other.resumeCalls)
+    }
+
+    /** Locks waiting on an explicit retry: any funding (BIP44 too), suppressed and pending only. */
+    @Test
+    fun retrySuppressedShieldLockCount_countsEveryFundingButOnlySuppressedPendingLocks() = runBlocking {
+        val bip44 = "0b".repeat(32) + ":0"
+        val coinJoin = "02".repeat(32) + ":0"
+        val unanswered = "03".repeat(32) + ":0"
+        val landed = "04".repeat(32) + ":0"
+        val consumed = ConsumedStore().apply { value = setOf(bip44, coinJoin, landed) }
+        val source = readySource()
+        source.shieldLocks = {
+            listOf(
+                PendingWalletShieldLock(bip44, 3, 1L, coinJoinFunded = false),
+                PendingWalletShieldLock(coinJoin, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN, 1L, coinJoinFunded = true),
+                PendingWalletShieldLock(unanswered, 2, 1L, coinJoinFunded = true),
+                PendingWalletShieldLock(landed, ASSET_LOCK_STATUS_CONSUMED, 1L, coinJoinFunded = true)
+            )
+        }
+        val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, service.retrySuppressedShieldLockCount())
     }
 
     /**

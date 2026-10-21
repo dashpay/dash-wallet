@@ -76,6 +76,10 @@ import javax.inject.Inject
  * @param closeMigrationAvailable the service allows the user to close the
  *   current record ([CoinJoinFundsMigrationService.canCloseUnconfirmedMigration]);
  *   read whenever the "could not confirm" guidance appears and on every showing.
+ * @param pendingShieldRetryAvailable a tracked shield lock waits on an explicit
+ *   retry ([CoinJoinFundsMigrationService.hasRetrySuppressedShields]); read on
+ *   every showing. With nothing else to offer, the sheet offers that retry.
+ * @param pendingShieldRetryRunning that retry is running.
  */
 data class MixedFundsMigrationUIState(
     val amount: Coin? = null,
@@ -89,7 +93,9 @@ data class MixedFundsMigrationUIState(
     val resultLanded: Boolean = false,
     val shieldOperable: Boolean = false,
     val combineOperable: Boolean = false,
-    val closeMigrationAvailable: Boolean = false
+    val closeMigrationAvailable: Boolean = false,
+    val pendingShieldRetryAvailable: Boolean = false,
+    val pendingShieldRetryRunning: Boolean = false
 )
 
 /** Which parts of the sheet are shown — a pure function of [MixedFundsMigrationUIState]. */
@@ -109,6 +115,11 @@ internal data class MixedFundsSheetPresentation(
     val showTransferUnmixed: Boolean,
     /** "Close this migration": the expired guidance of a record the service allows the user to close. */
     val showCloseMigration: Boolean,
+    /**
+     * Try again for a tracked shield lock only an explicit retry resumes, when the choice has
+     * nothing runnable to offer (no record, no movable coins): the one entry left to reach it.
+     */
+    val showRetryPendingShields: Boolean,
     val showClose: Boolean,
     val cancelable: Boolean
 )
@@ -144,6 +155,9 @@ internal fun MixedFundsMigrationUIState.presentation(): MixedFundsSheetPresentat
         showTransferUnmixed = failed && attemptedAction == MixedFundsMigrationAction.SHIELD && !inProgress &&
             combineOperable,
         showCloseMigration = terminalGuidance && resultTimedOut && closeMigrationAvailable && !inProgress,
+        // The retry outlives the sheet (activity-scoped): Close stays available while it runs.
+        showRetryPendingShields = choiceMode && amountChecked && pendingShieldRetryAvailable &&
+            !pendingShieldRetryRunning && (amount == null || (!shieldOperable && !combineOperable)),
         showClose = !processing,
         cancelable = !processing && !choiceMode
     )
@@ -344,6 +358,38 @@ class MixedFundsMigrationViewModel @Inject constructor(
         }
     }
 
+    /** [CoinJoinFundsMigrationService.hasRetrySuppressedShields]; false when it cannot be read. */
+    private suspend fun readPendingShieldRetry(): Boolean = try {
+        migrationService.hasRetrySuppressedShields()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("failed to read whether a pending shield waits on a retry; not offering it", t)
+        false
+    }
+
+    /**
+     * Try again for tracked shield locks only an explicit retry resumes
+     * ([CoinJoinFundsMigrationService.retryPendingShieldsOnUserRequest]): resumes the locks the SDK
+     * already tracks, spends nothing and records nothing, so no confirmation or authentication.
+     * Runs only while offered; the sheet then re-reads everything.
+     */
+    fun retryPendingShields() {
+        val state = _uiState.value
+        if (!state.presentation().showRetryPendingShields) return
+        _uiState.value = state.copy(pendingShieldRetryRunning = true)
+        viewModelScope.launch {
+            try {
+                migrationService.retryPendingShieldsOnUserRequest()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("explicit pending-shield retry failed", t)
+            } finally {
+                _uiState.value = _uiState.value.copy(pendingShieldRetryRunning = false)
+            }
+            refreshAmount()
+        }
+    }
+
     /** [CoinJoinFundsMigrationService.canCloseUnconfirmedMigration]; false when it cannot be read. */
     private suspend fun readCloseOption(): Boolean = try {
         migrationService.canCloseUnconfirmedMigration()
@@ -408,12 +454,14 @@ class MixedFundsMigrationViewModel @Inject constructor(
             val amount = migrationService.mixedFundsToMigrate()
             val routes = readRoutes()
             val closable = readCloseOption()
+            val retryable = readPendingShieldRetry()
             // One write: the sheet must never see the amount checked without its routes.
             _uiState.value = _uiState.value.copy(
                 amount = amount,
                 amountChecked = true,
                 migrationPending = pending,
-                closeMigrationAvailable = closable && _uiState.value.resultTimedOut
+                closeMigrationAvailable = closable && _uiState.value.resultTimedOut,
+                pendingShieldRetryAvailable = retryable
             ).withRoutes(routes)
         }
     }
@@ -508,7 +556,7 @@ class MixedFundsMigrationViewModel @Inject constructor(
      */
     fun retryMigration(authenticatedMove: MixedFundsMigrationAction?) {
         val state = _uiState.value
-        if (state.inProgress) return
+        if (state.inProgress || state.pendingShieldRetryRunning) return
         // A pending marker blocks a retry unless its terminal guidance is up
         // (an UNCONFIRMED outcome keeps the marker): that retry only resumes.
         if (state.awaitingResult && !state.presentation().terminalGuidance) return
@@ -607,7 +655,9 @@ class MixedFundsMigrationViewModel @Inject constructor(
         action: MixedFundsMigrationAction,
         block: suspend (Coin) -> MixedFundsMigrationOutcome
     ) {
-        if (_uiState.value.inProgress || _uiState.value.awaitingResult || _uiState.value.resultTimedOut) return
+        val current = _uiState.value
+        val busy = current.inProgress || current.awaitingResult || current.pendingShieldRetryRunning
+        if (busy || current.resultTimedOut) return
         val amount = _uiState.value.amount
         if (amount == null || !amount.isPositive) {
             updateFacts { it.copy(callResult = MixedFundsMigrationOutcome.NOT_ATTEMPTED, action = action) }

@@ -2176,6 +2176,17 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
+    override suspend fun retrySuppressedShieldLockCount(): Int? {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            trackedShieldLocks(walletId).count { it.resumable && it.retrySuppressed }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("retry-suppressed shield-lock count unavailable; treating it as UNKNOWN", t)
+            null
+        }
+    }
+
     override suspend fun recoveredCoinJoinShieldLockCount(): Int? {
         val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
         return try {

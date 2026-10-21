@@ -64,7 +64,8 @@ class CoinJoinMigrationRecoveryTest {
             assertNotNull(service.inFlightMigration())
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.combineIntoUnmixedBalance())
             assertEquals(MixedFundsMigrationOutcome.STARTED, service.retryPendingMigration())
-            coVerify(exactly = 1) { shield.resumePendingWalletShieldsOnUserRequest() }
+            // Shield, Combine and Try again each resume the tracked locks first; nothing is built.
+            coVerify(exactly = 3) { shield.resumePendingWalletShieldsOnUserRequest() }
             coVerify(exactly = 0) { shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
             coVerify(exactly = 0) { send.drainCoinJoinAccountTo(any()) }
         } finally {

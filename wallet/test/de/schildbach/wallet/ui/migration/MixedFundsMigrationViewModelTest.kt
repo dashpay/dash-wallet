@@ -692,4 +692,47 @@ class MixedFundsMigrationViewModelTest {
             coVerify(exactly = 1) { service.closeUnconfirmedMigration() }
         } finally { store.clear() }
     }
+
+    /**
+     * Nothing movable and no record, but a tracked shield lock waits on an explicit retry: the
+     * sheet offers Try again, which only runs that retry (no move, no migration retry), then
+     * re-reads the state. With movable coins the choice is shown instead.
+     */
+    @Test
+    fun pendingShieldRetryIsOfferedWhenNothingElseIsAndOnlyResumes() = runBlocking {
+        val service = choiceService()
+        coEvery { service.mixedFundsToMigrate() } returns null
+        var waiting = true
+        coEvery { service.hasRetrySuppressedShields() } answers { waiting }
+        coEvery { service.retryPendingShieldsOnUserRequest() } answers {
+            waiting = false
+            1
+        }
+        val store = ViewModelStore()
+        val model = MixedFundsMigrationViewModel(service)
+        store.put("migration", model)
+        try {
+            assertTrue(model.uiState.value.presentation().showRetryPendingShields)
+            model.retryPendingShields()
+            coVerify(exactly = 1) { service.retryPendingShieldsOnUserRequest() }
+            coVerify(exactly = 0) { service.retryPendingMigration() }
+            coVerify(exactly = 0) { service.shieldMixedFunds(any()) }
+            coVerify(exactly = 0) { service.combineIntoUnmixedBalance() }
+            assertFalse(model.uiState.value.pendingShieldRetryRunning)
+            assertFalse(model.uiState.value.presentation().showRetryPendingShields)
+            // Not on offer any more: a further call does not reach the service.
+            model.retryPendingShields()
+            coVerify(exactly = 1) { service.retryPendingShieldsOnUserRequest() }
+        } finally { store.clear() }
+
+        val withCoins = choiceService()
+        coEvery { withCoins.hasRetrySuppressedShields() } returns true
+        val other = ViewModelStore()
+        val choice = MixedFundsMigrationViewModel(withCoins)
+        other.put("migration", choice)
+        try {
+            assertFalse(choice.uiState.value.presentation().showRetryPendingShields)
+            assertTrue(choice.uiState.value.presentation().showShieldChoice)
+        } finally { other.clear() }
+    }
 }

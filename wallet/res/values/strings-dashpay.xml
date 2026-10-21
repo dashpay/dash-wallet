@@ -810,6 +810,7 @@
     <string name="mixed_funds_migration_confirm_restart_title">Restart the transfer?</string>
     <string name="mixed_funds_migration_confirm_restart_message">The wallet will try again to move your mixed coins. Network fees may apply.</string>
     <string name="mixed_funds_migration_close_migration_action">Close this migration</string>
+    <string name="mixed_funds_migration_pending_shield_retry">A transfer to your shielded balance hasn’t been confirmed. Try again to check it with the network again. This doesn’t move any new funds.</string>
     <string name="mixed_funds_migration_confirm_close_title">Close this migration?</string>
     <string name="mixed_funds_migration_confirm_close_message">We couldn’t confirm the shielded credit. Your funds left your CoinJoin balance and may have been credited to your shielded balance — check it there. This migration will no longer be tracked.</string>
 

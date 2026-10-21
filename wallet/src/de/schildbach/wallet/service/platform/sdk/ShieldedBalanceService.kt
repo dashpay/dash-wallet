@@ -218,6 +218,13 @@ interface ShieldedBalanceService {
     suspend fun unsuppressedCoinJoinShieldLockCount(settlingLockTxid: String? = null): Int?
 
     /**
+     * Tracked shield locks of ANY funding (CoinJoin or BIP44) that only an explicit user retry
+     * ([resumePendingWalletShieldsOnUserRequest]) resumes: pending, and answered already-consumed
+     * by Platform ([PendingWalletShieldLock.retrySuppressed]). Null when unknown.
+     */
+    suspend fun retrySuppressedShieldLockCount(): Int?
+
+    /**
      * How many of [unsuppressedCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null
      * when unknown. An unknown status is pending but never counted here: it is adopted like a
      * live `0..3` lock.
