@@ -2990,6 +2990,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
                         .build()
+                    // Seed the NETWORK impediment from connectivity as it stands
+                    // now: the registration below reports nothing while no network
+                    // matches, so a service created offline read as online — and a
+                    // persisted replay held the no-timeout wake lock in airplane
+                    // mode. Seeded BEFORE registering, so every callback update
+                    // (all of them run after the registration) overrides it.
+                    if (!hasUsableNetworkNow(connectivityManager)) {
+                        log.info("no usable network at service start — NETWORK impediment set until one appears")
+                        impediments.add(Impediment.NETWORK)
+                        updateBlockchainStateImpediments()
+                    }
                     connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
                     networkCallbackRegistered = true
                     log.info("network callback registered with NetworkRequest: {}", networkCallback)
