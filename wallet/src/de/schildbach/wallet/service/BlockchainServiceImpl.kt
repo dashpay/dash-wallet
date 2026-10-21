@@ -982,25 +982,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var wakeLock: PowerManager.WakeLock? = null
 
     /**
-     * Whether the REPLAY's own acquisition of [wakeLock] is outstanding.
-     * Tracked apart from `isHeld` because the lock is reference-counted and
-     * shared with the dashj path: with the Tools dashj-sync diagnostic on, a
-     * peergroup and an SDK replay coexist, so `isHeld` cannot say whose count
-     * is whose. Each owner releases its own acquisition — the tick receiver
-     * on replay completion, [onDestroy] for an interrupted replay, where one
-     * release used to cover two acquisitions (review, 2026-09-22/23).
+     * The REPLAY's own acquisition of [wakeLock], tracked apart from `isHeld`
+     * because the lock is reference-counted and shared with the dashj path:
+     * with the Tools dashj-sync diagnostic on, a peergroup and an SDK replay
+     * coexist, so `isHeld` cannot say whose count is whose. Each owner releases
+     * its own acquisition — the tick receiver on replay completion, [onDestroy]
+     * for an interrupted replay, where one release used to cover two
+     * acquisitions (review, 2026-09-22/23). See [ReplayWakeLock].
      */
-    @Volatile
-    private var replayWakeLockHeld = false
-    private val replayWakeLockGuard = Any()
-    /**
-     * Set first thing in [onDestroy]: from then on the replay lock is only ever
-     * released. A network-callback coroutine launched just before the callback
-     * was unregistered can still run, and its re-acquire landing after the
-     * teardown's release would hold a no-timeout lock until the process died.
-     */
-    @Volatile
-    private var replayWakeLockRetired = false
+    private val replayWakeLock = ReplayWakeLock(
+        lock = {
+            wakeLock?.let { lock ->
+                object : ReplayWakeLockHandle {
+                    override val isHeld: Boolean get() = lock.isHeld
+                    override fun acquire() = lock.acquire()
+                    override fun release() = lock.release()
+                }
+            }
+        },
+        sdkPath = { dashjHeldByCutover },
+        replayDue = { replayWakeLockDue() }
+    )
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
     private val impediments: MutableSet<Impediment> = EnumSet.noneOf(
@@ -2477,7 +2479,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 networkImpeded = impediments.contains(Impediment.NETWORK),
                 filterScanWedged = dashjHeldByCutover && l1ShadowSyncService.filterScanWedged()
             )
-            holdWakeLockWhileReplaying(replayHoldsLock || engineStarting || durableLagging)
+            replayWakeLock.hold(replayHoldsLock || engineStarting || durableLagging)
             // Those two holds also keep the service in the foreground: the scan reads
             // synced while they last, and a demoted service would be stopped anyway.
             if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
@@ -2753,6 +2755,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
                     dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
                 )
+                // Re-take the replay wake lock the moment the filter wedge clears:
+                // ACTION_TIME_TICK is not delivered while the CPU sleeps (see ReplayWakeLock).
+                // Unconditional: the cutover gate can be re-resolved later in this
+                // service's life, and reacquireIfDue re-reads it itself.
+                replayWakeLock.observeWedge(serviceScope, l1ShadowSyncService.filterScanWedgedState)
 
                 peerConnectivityListener = PeerConnectivityListener()
                 broadcastPeerState(0)
@@ -3447,7 +3454,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
-        replayWakeLockRetired = true
+        replayWakeLock.retire()
         pendingDestroys.schedule(SystemClock.elapsedRealtime())
         super.onDestroy()
         // unregister receivers on the main thread, if they were registered
@@ -3612,15 +3619,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // One release per owner: the replay's own acquisition first
                     // (an interrupted replay never reached its completion
                     // release), then whatever the dashj path still holds.
-                    synchronized(replayWakeLockGuard) {
-                        if (replayWakeLockHeld) {
-                            replayWakeLockHeld = false
-                            if (lock.isHeld) {
-                                log.debug("releasing the replay's wake-lock acquisition")
-                                lock.release()
-                            }
-                        }
-                    }
+                    replayWakeLock.releaseForTeardown()
                     if (lock.isHeld) {
                         log.debug("wakelock still held, releasing")
                         lock.release()
@@ -3782,55 +3781,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
     }
 
-    /**
-     * On the SDK path no peergroup start acquires the partial wake lock,
-     * so a replay that the idle rule now keeps alive could still be
-     * dozed. Hold the lock for exactly the span the service is kept
-     * alive for: acquired while `replaying`, released when the replay
-     * completes — or while it cannot progress ([replayHoldsWakeLock]).
-     * The dashj path's own acquire/release (checkService /
-     * stopPeerGroup) is untouched; onDestroy releases either way.
-     *
-     * Called from the minute tick (main thread) and, to re-acquire after a
-     * reconnect, from the network callback (IO), so the held flag and the
-     * reference-counted lock change together under [replayWakeLockGuard].
-     */
-    private fun holdWakeLockWhileReplaying(replaying: Boolean) {
-        if (!dashjHeldByCutover) return
-        val lock = wakeLock ?: return
-        synchronized(replayWakeLockGuard) {
-            try {
-                if (replaying && !replayWakeLockHeld && !replayWakeLockRetired) {
-                    log.info("replay or engine start in progress on the SDK path — acquiring the wake lock")
-                    lock.acquire()
-                    replayWakeLockHeld = true
-                } else if (!replaying && replayWakeLockHeld && !replayWakeLockDue()) {
-                    // replayWakeLockDue() re-reads the inputs under the guard: the
-                    // tick decided from a reading the network callback may have
-                    // overtaken (NETWORK cleared, lock re-acquired) since.
-                    log.info("replay / engine start complete or unable to progress — releasing the wake lock")
-                    replayWakeLockHeld = false
-                    if (lock.isHeld) lock.release()
-                }
-            } catch (t: Throwable) {
-                log.warn("wake lock hold/release for the replay failed", t)
-            }
-        }
-    }
-
-    /**
-     * The tick releases the replay lock while the replay cannot progress, but
-     * only the tick decides it, and ACTION_TIME_TICK is not delivered while
-     * the CPU sleeps. So once the impediment that released it clears, take it
-     * back here, or a screen-off replay that lost the network for a moment
-     * would stay asleep until something else woke the device. Acquire-only:
-     * releasing is still the tick's decision.
-     */
-    private fun reacquireReplayWakeLockIfDue() {
-        if (!dashjHeldByCutover) return
-        if (replayWakeLockDue()) holdWakeLockWhileReplaying(true)
-    }
-
     /** The replay half of the tick's hold decision, read now. */
     private fun replayWakeLockDue(): Boolean = dashjHeldByCutover && replayHoldsWakeLock(
         replaying = blockchainState?.replaying == true && !sdkBindBlocked(),
@@ -3840,7 +3790,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private fun updateBlockchainStateImpediments() {
         blockchainStateDataProvider.updateImpediments(impediments)
-        reacquireReplayWakeLockIfDue()
+        // The network back (or any impediment change): the replay may be due
+        // the lock again, and the tick will not come while the CPU sleeps.
+        replayWakeLock.reacquireIfDue()
     }
 
 //    /**

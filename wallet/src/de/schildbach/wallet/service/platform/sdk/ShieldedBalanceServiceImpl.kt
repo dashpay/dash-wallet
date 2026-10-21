@@ -271,8 +271,7 @@ internal fun evaluateWalletFundingGate(
     // alone: dash-spv restores the header target from the last peer report
     // at engine start, which can sit below the stored header tip until a peer
     // raises it, while the filter target is already that stored tip.
-    maxOf(progress.bestKnownTipHeight, progress.filterTarget) - progress.filterHeight >
-        ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
+    fundingTipHeight(progress) - progress.filterHeight > ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
         WalletFundingGate(false, "SDK L1 filter scan is still short of the chain tip")
     // …and it keeps the veto the DISPLAY predicate
     // dropped on 2026-09-21. `scanCaughtUpToTip` now also accepts the iOS
@@ -284,10 +283,20 @@ internal fun evaluateWalletFundingGate(
     // The wallet cursor within tolerance of the tip is the evidence those
     // blocks are through; until then the gate stays closed. Unknown cursor
     // (0) never counts as lagging, so this cannot wedge a wallet at the tip.
-    progress.blockPipelineLagging ->
+    // Measured against the same highest-known tip as the height rule above:
+    // `blockPipelineLagging` reads headerTarget alone, which a restart can
+    // leave below the stored tip while the filters already reach it.
+    progress.blockPipelineLagging ||
+        (progress.walletSyncedHeight > 0 &&
+            fundingTipHeight(progress) - progress.walletSyncedHeight >
+            ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS) ->
         WalletFundingGate(false, "SDK L1 block pipeline is still processing matched blocks")
     else -> WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip")
 }
+
+/** The highest chain tip a progress snapshot knows: the reference both spend-gate height checks measure against. */
+private fun fundingTipHeight(progress: ShadowSyncProgress): Long =
+    maxOf(progress.bestKnownTipHeight, progress.filterTarget)
 
 /**
  * Pure [ShieldedSyncStatus] decision — host-testable. [ready] is the bring-up

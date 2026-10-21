@@ -1312,11 +1312,48 @@ internal class FilterStallWatchdogDecider(
      * the budget already spent). Cleared the moment the cursor moves, the scan
      * stops being behind, or the wallet-event stream shows the engine alive.
      * Read by the blockchain service from another thread: a wedged engine is
-     * no reason to keep the CPU awake.
+     * no reason to keep the CPU awake — and the moment it clears, the replay
+     * needs the CPU back at once ([standingDownState]).
      */
+    var standingDown: Boolean
+        get() = _standingDown.value
+        private set(value) {
+            _standingDown.value = value
+        }
+    private val _standingDown = MutableStateFlow(false)
+
+    /** [standingDown] as a flow, so a clear is an event and not only the next poll's reading. */
+    val standingDownState: StateFlow<Boolean> = _standingDown.asStateFlow()
+
+    /** The filter cursor the watchdog stood down at; written before [standingDown] goes true. */
     @Volatile
-    var standingDown: Boolean = false
-        private set
+    private var stoodDownAtHeight: Long = -1L
+
+    private fun standDownAt(filterHeight: Long) {
+        stoodDownAtHeight = filterHeight
+        standingDown = true
+    }
+
+    /**
+     * The event-driven half of the clear. [onCheck] runs on the watchdog's
+     * one-minute delay, which (like ACTION_TIME_TICK) only advances while the
+     * CPU is awake, so a recovery noticed there could wait out several brief
+     * wakes with the replay unprotected. The progress feed and the wallet-event
+     * tap see the engine move as it happens: a filter cursor off the height the
+     * watchdog stood down at, or any wallet event (the same liveness rule
+     * [onCheck] applies), ends the stand-down at once. Only [standingDown] is
+     * touched, so this is safe from those collectors' threads; [onCheck]
+     * re-times the next spell itself. A 0 height is a snapshot with no filter
+     * position (IDLE / CONNECTING), not movement.
+     */
+    fun onFilterProgress(filterHeight: Long) {
+        if (standingDown && filterHeight > 0L && filterHeight != stoodDownAtHeight) standingDown = false
+    }
+
+    /** See [onFilterProgress]. */
+    fun onWalletEvent() {
+        if (standingDown) standingDown = false
+    }
 
     /**
      * The engine stopped. [onCheck] only runs while it is up, so without this
@@ -1497,13 +1534,13 @@ internal class FilterStallWatchdogDecider(
             }
             !exhaustedReported -> {
                 exhaustedReported = true
-                standingDown = true
+                standDownAt(filterHeight)
                 Decision.EXHAUSTED
             }
             else -> {
                 // The budget is per process: a later wedge gets no restart and
                 // no second report, but it is still a wedge.
-                standingDown = true
+                standDownAt(filterHeight)
                 Decision.NONE
             }
         }
@@ -2550,6 +2587,9 @@ class L1ShadowSyncService internal constructor(
      */
     fun filterScanWedged(): Boolean = filterStallDecider.standingDown
 
+    /** [filterScanWedged] as a flow: the blockchain service re-takes the replay wake lock when it clears. */
+    val filterScanWedgedState: StateFlow<Boolean> get() = filterStallDecider.standingDownState
+
     /**
      * When the in-flight engine start began, on [nowMs]'s clock; 0 when no
      * start is in progress. Set once [startIfEnabled] is committed to bringing
@@ -3469,6 +3509,7 @@ class L1ShadowSyncService internal constructor(
                         sessionFilterStart = sessionFilterStart
                     )
                     _progress.value = mapped
+                    filterStallDecider.onFilterProgress(mapped.filterHeight)
                     // Verification verdict from the chain state: still
                     // scanning until SYNCED, then "probing" until a parity
                     // probe upgrades to VERIFIED (which progress ticks must
@@ -3599,6 +3640,7 @@ class L1ShadowSyncService internal constructor(
                     // any parsing: an event the parsers all drop still proves
                     // the engine is alive and producing.
                     lastWalletEventMs = nowMs()
+                    filterStallDecider.onWalletEvent()
                     // Chainlock feed first: it rides the SAME event stream but
                     // on OTHER variants (ChainLockProcessed / BlockProcessed),
                     // which parseL1TxEvent drops. Monotonic — a replayed or

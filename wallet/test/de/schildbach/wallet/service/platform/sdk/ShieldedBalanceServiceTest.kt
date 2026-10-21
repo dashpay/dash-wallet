@@ -1598,6 +1598,19 @@ class ShieldedBalanceServiceTest {
         val staleGate = evaluateWalletFundingGate(staleTarget)
         assertFalse(staleGate.allowed)
         assertTrue(staleGate.reason, staleGate.reason.contains("short of the chain tip"))
+        // …and the pipeline veto measures against the same tip: filters at the
+        // stored tip, the wallet cursor level with the stale target (500 back).
+        val stalePipeline = staleTarget.copy(filterHeight = 1_500_499, walletSyncedHeight = 1_500_000)
+        assertFalse("headerTarget alone reads no lag", stalePipeline.blockPipelineLagging)
+        val stalePipelineGate = evaluateWalletFundingGate(stalePipeline)
+        assertFalse(stalePipelineGate.allowed)
+        assertTrue(stalePipelineGate.reason, stalePipelineGate.reason.contains("processing matched blocks"))
+        assertTrue(
+            "a cursor within tolerance of the highest-known tip opens, stale target or not",
+            evaluateWalletFundingGate(
+                stalePipeline.copy(walletSyncedHeight = 1_500_500 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS)
+            ).allowed
+        )
 
         // THE VETO THE GATE KEEPS. A caught-up scan with the block pipeline
         // provably lagging — this wallet's own spends not yet applied to the
