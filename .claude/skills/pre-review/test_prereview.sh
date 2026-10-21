@@ -2,6 +2,9 @@
 # Tests prereview.sh with a fake codex on PATH (no quota, no network). Run: bash <this file>; non-zero on failure.
 set -u
 P=${1:-"$(cd "$(dirname "$0")" && pwd)/prereview.sh"}; T=$(mktemp -d "${TMPDIR:-/tmp}/prtest.XXXXXX"); export XDG_CACHE_HOME="$T/cache"; FAILS=0
+trap 'chmod -R u+w "$T" 2>/dev/null; rm -rf "$T"' EXIT   # this run's folder only, writable again first (the chmod tests)
+# the cases set these themselves: an inherited API key would pass the logged-out case, a base or timeout would move others
+unset OPENAI_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL
 mkdir -p "$T/bin"
 cat > "$T/bin/codex" <<'EOF'
 #!/usr/bin/env bash
@@ -99,7 +102,8 @@ g checkout -q other4; g tag -a v-test -m "annotated"; g checkout -q other3
 git push -q origin v-test 2>/dev/null; ok "an annotated tag on a reviewed commit → pushed" "$?" 0
 rm -rf "${XDG_CACHE_HOME:?}/pastaclaw"; mkdir -p "$T/bin2"; printf '#!/bin/sh\nfor a; do [ "$p" = -o ] && { echo partial > "$a"; exit 28; }; p=$a; done\n' > "$T/bin2/curl"; chmod +x "$T/bin2/curl"
 g checkout -q other4; PATH="$T/bin2:$PATH" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
-ok "a cut-off prompt download leaves nothing in the cache" "$(ls -A "$XDG_CACHE_HOME/pastaclaw/"* 2>/dev/null | wc -l | tr -d ' ')" 0
+ok "prompts cannot be fetched → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
+ok "  … and a cut-off download leaves nothing in the cache" "$(ls -A "$XDG_CACHE_HOME/pastaclaw/"* 2>/dev/null | wc -l | tr -d ' ')" 0
 g checkout -q other3
 PREREVIEW_BASE=origin/release git push -q origin feat:refs/heads/feat2 2>/dev/null; ok "reviewed against master, PREREVIEW_BASE=release → refused (stale)" "$?" 1
 cp "$P" "$T/moved.sh"; "$P" --uninstall >/dev/null 2>&1; "$T/moved.sh" --install >/dev/null 2>&1; mv "$T/moved.sh" "$T/gone.sh"

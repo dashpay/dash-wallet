@@ -106,15 +106,10 @@ review_locked() {
   command -v codex >/dev/null || { say "the Codex CLI is not installed: npm i -g @openai/codex@latest (README.md, Setup)"; return 2; }
   codex login status >/dev/null 2>&1 || [[ -n "${OPENAI_API_KEY:-}" ]] \
     || { say "Codex has no access to ChatGPT: codex login (a ChatGPT plan) or OPENAI_API_KEY (an API key); README.md, Setup"; return 2; }
-  local rules="this repository's CLAUDE.md and .claude/agents/DEVELOPMENT-PATTERNS.md"
-  if fetch_prompts; then
-    rules="these files exactly: $PC/review-agent.md (scope, required checks, severities), $PC/review.md and \
+  # the bot's own rules or no verdict: a review by other rules must not be cached as one the gate trusts
+  fetch_prompts || { say "cannot fetch the pinned review prompts (thepastaclaw/skills@${PC_SHA:0:10}): not reviewed, try again"; return 2; }
+  local rules="these files exactly: $PC/review-agent.md (scope, required checks, severities), $PC/review.md and \
 $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence or dependency changes $PC/security-auditor.md"
-  else
-    say "the pinned review prompts are unreachable, reviewing with this repository's own rules"
-  fi
-  # the reviewer reads a detached worktree of exactly this commit: not the working tree, which may hold another
-  # branch or uncommitted edits, and which a checkout could change during the review
   git -C "$repo" worktree prune 2>/dev/null   # registrations left by a review that was killed outright
   local wt; wt=$(mktemp -d "${TMPDIR:-/tmp}/prereview.XXXXXX"); out=$(mktemp); log=$(mktemp)
   # this runs as its own process (review() execs it), so process-level traps clean up on Ctrl-C and kill too
