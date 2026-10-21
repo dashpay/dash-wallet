@@ -33,6 +33,9 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
+import de.schildbach.wallet.service.platform.sdk.ProtocolVersionUnavailableException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -45,7 +48,8 @@ class SendInviteWorker @AssistedInject constructor(
     private val platformRepo: PlatformRepo,
     private val invitationsDao: InvitationsDao,
     private val topUpRepository: TopUpRepository,
-    private val walletDataProvider: WalletData
+    private val walletDataProvider: WalletData,
+    private val dashSdkService: DashSdkService
 ): BaseWorker(context, parameters) {
     companion object {
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"
@@ -53,6 +57,30 @@ class SendInviteWorker @AssistedInject constructor(
         const val KEY_TX_ID = "SendInviteWorker.KEY_TX_ID"
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
         const val KEY_VALUE = "SendInviteWorker.KEY_VALUE"
+        const val KEY_CONTESTED = "SendInviteWorker.KEY_CONTESTED"
+
+        /**
+         * The invitation's contested-ness for funding. An explicit [KEY_CONTESTED] wins;
+         * a work request persisted by a build that stored only the amount (it survives an
+         * app upgrade) infers it from that amount with the same CURRENT.contested floor
+         * ConfirmInviteDialogFragment classifies with — so an unfinished contested
+         * request still goes through the funding-time resolver instead of funding the
+         * stale quote verbatim. Pure — host-testable.
+         */
+        fun contestedFor(storedAmountDuffs: Long, explicit: Boolean?): Boolean =
+            explicit ?: (storedAmountDuffs >= ContestedUsernameFees.CURRENT.contested.value)
+
+        /**
+         * Attempts allowed for a [ProtocolVersionUnavailableException] before the invite
+         * fails for good. With WorkManager's default exponential backoff (30 s base) the
+         * retries span roughly a quarter of an hour.
+         */
+        const val MAX_PROTOCOL_VERSION_RETRIES = 5
+
+        /** Whether attempt [runAttemptCount] (0-based) retries a protocol-version outage. Pure. */
+        fun retriesProtocolVersionOutage(runAttemptCount: Int): Boolean =
+            runAttemptCount < MAX_PROTOCOL_VERSION_RETRIES
+
         private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
     }
 
@@ -75,6 +103,15 @@ class SendInviteWorker @AssistedInject constructor(
         val password = inputData.getString(KEY_PASSWORD)
             ?: return errorResult("missing KEY_PASSWORD parameter")
         val value = inputData.getLong(KEY_VALUE, 0L)
+        val contested = contestedFor(
+            value,
+            explicit = if (inputData.keyValueMap.containsKey(KEY_CONTESTED)) {
+                inputData.getBoolean(KEY_CONTESTED, false)
+            } else {
+                null
+            }
+        )
+        var fundedValue = value
         val fundingAddress = inputData.getString(KEY_FUNDING_ADDRESS)
             ?: return errorResult("missing KEY_FUNDING_ADDRESS parameter")
 
@@ -95,11 +132,25 @@ class SendInviteWorker @AssistedInject constructor(
                 if (value == 0L) {
                     error("missing KEY_VALUE parameter or KEY_VALUE is 0")
                 }
+                // The fee dialog's amount is a QUOTE; the invite is funded with the fee in
+                // effect NOW. A contested invite therefore re-resolves the live protocol
+                // version right before the asset lock is built (and refuses on an unknown
+                // one — the worker retries that, see the catch below), so a conservative legacy quote
+                // or a 13→14 activation in between cannot fund more than the active fee
+                // into the recipient-controlled invitation. Non-contested invites are the
+                // fixed DASH_PAY_FEE and use the quote as-is. Reuse of an already-created
+                // transaction (the branch below) is deliberately untouched.
+                val fundingAmount = if (contested) {
+                    ContestedUsernameFees.resolved(dashSdkService).contested
+                } else {
+                    Coin.valueOf(value)
+                }
+                fundedValue = fundingAmount.value
                 topUpRepository.createInviteFundingTransaction(
                     blockchainIdentity,
                     Address.fromBase58(wallet.params, fundingAddress),
                     encryptionKey,
-                    Coin.valueOf(value)
+                    fundingAmount
                 )
             } else {
                 val tx = authGroupExtension.invitationFundingTransactions.find { it.txId == invitation!!.txid }
@@ -139,10 +190,23 @@ class SendInviteWorker @AssistedInject constructor(
             Result.success(
                 workDataOf(
                     KEY_TX_ID to assetLockTx.txId.bytes,
-                    KEY_VALUE to value,
+                    KEY_VALUE to fundedValue,
                     KEY_USER_ID to assetLockTx.identityId.toStringBase58()
                 )
             )
+        } catch (ex: ProtocolVersionUnavailableException) {
+            // Thrown before any funding transaction is built, so nothing was spent:
+            // a transient protocol-version lookup failure. Let WorkManager retry it
+            // with backoff instead of surfacing a permanent invite failure, but stop
+            // after a bounded number of attempts so a lasting outage still reaches
+            // the UI as an error.
+            if (retriesProtocolVersionOutage(runAttemptCount)) {
+                log.info("Send Invite: protocol version unavailable (attempt {}); retrying", runAttemptCount)
+                Result.retry()
+            } else {
+                analytics.logError(ex, "Send Invite: protocol version unavailable after retries")
+                errorResult(formatExceptionMessage("send invite", ex))
+            }
         } catch (ex: Exception) {
             analytics.logError(ex, "Send Invite: failed to create invite")
             errorResult(formatExceptionMessage("send invite", ex))
