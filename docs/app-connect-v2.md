@@ -13,7 +13,14 @@ not a real user's keys or a pinned production app ID.
 - A non-mainnet network running protocol version 14 or later. Testnet and devnets
   must match the scanned request's network selector. The SDK must be configured
   for the actual devnet, not merely for testnet coin derivation.
-- Wallet-owned unbound master and HIGH document-signing keys.
+- Wallet-owned unbound master and HIGH document-signing keys. New identities also
+  include an unbound CRITICAL authentication key. Legacy identities migrate this
+  key through the identity repository before an approved token purchase is sent.
+
+CI builds the exact kotlin-platform commit in `platform-sdk-revision.txt`, and
+that SDK pins its Ferment-patched Platform rc.7 commit. The resulting artifacts
+are consumed from an exclusive, isolated Maven repository; old central snapshots
+and the runner's Maven-local contents cannot satisfy Platform dependencies.
 
 ## Lifecycle
 
@@ -25,12 +32,16 @@ unverified; no label-based branding or silent approval is used.
 Requested budgets are capped at 5 DASH per key without dropping a requested
 limit or inventing an absent budget. Missing expiry defaults to 90 days; requested
 expiry is capped at one year and must remain over an hour beyond proved block
-time. Presets only narrow those terms. The primary binding cannot be unchecked.
+time. Finite presets also cap an otherwise unlimited request; resetting to the
+requested preset restores the original terms. The primary binding cannot be unchecked.
 
 For each selected auth binding the derivation leaf is
 `hash256(appEphPub || u8(originalBindingIndex))`. V1 uses `hash256(appEphPub)`.
 The on-chain response lookup is always `hash160(appEphPub)`. Shared encryption
 keys use DIP-13 sub-feature 7, rotation 0, and are never silently rotated.
+Selection uses the proved current contract-key index, not numeric key order.
+Disabled, unavailable, or foreign indexed keys are omitted; the index is checked
+again before the encrypted response is published.
 
 Before broadcasting, the wallet stores a scoped pending grant with exact public
 keys, approved limits, selected binding indices, and encrypted response triple.
@@ -43,8 +54,11 @@ Previous responses are deleted using their complete original values, not replace
 
 An uncertain registration retains its record. A retry re-derives the same keys,
 preserves approved limits and settles from fresh identity/response reads. If an
-unknown registration is still absent, revocation refuses to claim success while
-it could still confirm. A fresh QR may be needed after expiration or a key-ID
+unknown registration is still absent, revocation reserves a missing authentication
+key ID with a wallet-only key. Once confirmed, non-reusable IDs fence the entire
+old atomic update. A race or failed fence retains the record for another attempt.
+The explicit close action leaves that audit record intact and never emits a
+declined callback or claims access was revoked. A fresh QR may be needed after expiration or a key-ID
 collision. This implementation does not silently recover an expired QR by
 publishing its response in the background.
 
@@ -63,6 +77,11 @@ connections without key IDs remain visible but cannot claim on-chain revocation.
 Unresolved registrations do not block disabling other confirmed keys. An occupied
 key ID with different immutable fields proves that atomic registration cannot
 land; truly unresolved records remain pending rather than claiming revocation.
+Disable/fence confirmation is polled three times with 2s/4s backoff. Complete
+disconnect also checks for live app-scoped keys missing from local history.
+Those keys are not automatically disabled: ambiguous recovered keys (including
+shared profile bounds) require identity review. The connection remains partial,
+with the surviving key IDs reported, rather than claiming all access was revoked.
 Tap a connection to query its current key budgets and expiry. Callback websites
 open only after a separate, explicit host confirmation.
 

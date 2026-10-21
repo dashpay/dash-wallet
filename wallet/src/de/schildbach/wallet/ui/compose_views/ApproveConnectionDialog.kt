@@ -89,7 +89,7 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<View>(org.dash.wallet.common.R.id.collapse_button)?.setOnClickListener {
-            viewModel.denyPendingRequest()
+            viewModel.closePendingRequest()
         }
         DialogComposeContainerBinding.bind(view).composeContainer.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)

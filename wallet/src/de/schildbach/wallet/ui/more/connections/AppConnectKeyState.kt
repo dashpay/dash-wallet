@@ -3,6 +3,8 @@ package de.schildbach.wallet.ui.more.connections
 
 import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.sdk.Purpose
+import org.dashj.platform.sdk.KeyType
+import org.dashj.platform.sdk.SecurityLevel
 
 internal object AppConnectKeyState {
     enum class Presence { MISSING, CONFLICTING, LIVE, INACTIVE }
@@ -39,4 +41,18 @@ internal object AppConnectKeyState {
 
     fun revocableIds(keys: List<KeyState>) =
         keys.filter { it.authentication && it.presence == Presence.LIVE }.map { it.id }.distinct()
+
+    fun fenceId(keys: List<KeyState>): Int? = if (unresolved(keys))
+        keys.firstOrNull { it.authentication && it.expectedLive && it.presence == Presence.MISSING }?.id else null
+
+    fun currentEncryptionKey(indexedId: Int?, candidates: List<IdentityPublicKey>, data: ByteArray, time: Long) =
+        candidates.firstOrNull { it.id == indexedId && live(it, time) && it.data.contentEquals(data) &&
+            it.type == KeyType.ECDSA_SECP256K1 && it.securityLevel == SecurityLevel.MEDIUM &&
+            it.totalBudget == null && it.expiresAt == null }
+
+    fun unrecordedKeys(actual: List<IdentityPublicKey>, recorded: List<IdentityPublicKey>, time: Long,
+                       belongsToApp: (IdentityPublicKey) -> Boolean): List<Int> = actual.filter { key ->
+        key.purpose == Purpose.AUTHENTICATION && key.contractBounds != null && live(key, time) &&
+            recorded.none { sameKeyIdentity(key, it) } && belongsToApp(key)
+    }.map { it.id }
 }

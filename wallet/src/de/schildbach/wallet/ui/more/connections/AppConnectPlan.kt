@@ -40,7 +40,7 @@ internal fun AppConnectPlan.withPresets(budget: Int, lifetime: Int): AppConnectP
     val credits = listOf(null, BigInteger("10000000000"), BigInteger("50000000000"), BigInteger("100000000000"))[budget]
     val days = listOf(null, 30L, 90L, 365L)[lifetime]
     return copy(grants = proposedGrants.map { grant -> grant.copy(
-        totalBudget = if (credits == null) grant.totalBudget else grant.totalBudget?.min(credits),
+        totalBudget = if (credits == null) grant.totalBudget else grant.totalBudget?.min(credits) ?: credits,
         expiresAt = if (days == null) grant.expiresAt else minOf(grant.expiresAt!!, blockTime + days * 86_400_000L)
     ) }, budgetPreset = budget, lifetimePreset = lifetime)
 }
@@ -53,8 +53,9 @@ internal fun AppConnectPlan.requireMatches(request: DashKeyRequest) {
     grants.zip(requested).forEach { (grant, raw) ->
         require(grant.kind == raw.kind && grant.id.contentEquals(raw.id) && grant.documentType == raw.documentType &&
             grant.securityLevel == raw.securityLevel) { "Consent bounds or security level changed" }
-        require(if (raw.totalBudget == null) grant.totalBudget == null else grant.totalBudget != null &&
-            grant.totalBudget.signum() > 0 && grant.totalBudget <= raw.totalBudget && grant.totalBudget <= BigInteger("500000000000")) {
+        require((grant.totalBudget == null && raw.totalBudget == null) || (grant.totalBudget != null &&
+            grant.totalBudget.signum() > 0 && (raw.totalBudget == null || grant.totalBudget <= raw.totalBudget) &&
+            grant.totalBudget <= BigInteger("500000000000"))) {
             "Consent budget changed or was removed"
         }
         require(grant.expiresAt != null && grant.expiresAt <= blockTime + 365 * 86_400_000L &&

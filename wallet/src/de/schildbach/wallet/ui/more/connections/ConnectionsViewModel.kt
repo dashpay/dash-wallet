@@ -272,6 +272,14 @@ class ConnectionsViewModel @Inject constructor(
         _approveResult.value = ApproveResult.Idle
     }
 
+    fun closePendingRequest() {
+        if (operationInProgress) return
+        if (_uiState.value.requiresRevocation) {
+            _scanOutcome.value = ScanOutcome.Error("No revocation was confirmed. Any unresolved grant remains in Connections for recovery.")
+            clearPendingRequest()
+        } else denyPendingRequest()
+    }
+
     private fun offerCallback(request: DashKeyRequest, status: String, openedFromUrl: Boolean) {
         if (!openedFromUrl) return
         request.appConnect?.callback?.let {

@@ -101,12 +101,23 @@ internal class AppConnectSession(
             check(!config.purchaseWasSubmitted(approval.requestId)) { "This purchase cannot be submitted again" }
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
+            check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             checkScope(approval.scope)
-            val identity = readIdentity()
+            var identity = readIdentity()
             check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk,
                 approval.request.transitionBytes, identity.id.toNative()))
             check(summary.contentEquals(approval.summary)) { "Purchase terms or token metadata changed. Scan again." }
+            val signingTime = platform.client.getPlatformTime(identity.id)
+            if (runCatching { signingKey(identity, SecurityLevel.CRITICAL, signingTime) }.isFailure) {
+                rememberIdentity(identity)
+                checkScope(approval.scope)
+                identities.ensureCriticalAuthenticationKey(identity.id, keyParameter)
+                identity = awaitGrantConfirmation(read = { checkScope(approval.scope); readIdentity() }, confirmed = { current ->
+                    val time = platform.client.getPlatformTime(current.id)
+                    runCatching { signingKey(current, SecurityLevel.CRITICAL, time) }.isSuccess
+                }, failureMessage = "Wallet purchase signing key is not confirmed. No purchase was submitted.")
+            }
             val key = signingKey(identity, SecurityLevel.CRITICAL, platform.client.getPlatformTime(identity.id))
             val chain = (wallet.getKeyChainExtension(org.bitcoinj.wallet.authentication.AuthenticationGroupExtension.EXTENSION_ID)
                 as org.bitcoinj.wallet.authentication.AuthenticationGroupExtension).identityKeyChain
@@ -210,6 +221,7 @@ internal class AppConnectSession(
             validateOwnership(request, plan.grants)
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
+            check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             checkScope(plan.scope)
             request.appConnect?.requireFresh(System.currentTimeMillis())
             val seed = walletRepo.getWalletSeed()?.seedBytes?.copyOf() ?: error("Wallet seed unavailable")
@@ -241,18 +253,22 @@ internal class AppConnectSession(
                     if (index !in plan.selectedEncryption) return@forEachIndexed
                     val purpose = if (binding.purpose == 1) Purpose.ENCRYPTION else Purpose.DECRYPTION
                     val secret = ApplicationKeyDerivation.encryption(seed, identity.id.toBuffer(), binding.contractId, purpose, false)
+                    privateKeys.add(secret)
                     val data = KeyExchangeCrypto.compressedPublicKey(secret)
                     val candidates = identity.publicKeys.filter { it.purpose == purpose && it.contractBounds is SingleContractBounds &&
                         it.contractBounds!!.identifier == Identifier.from(binding.contractId) }
-                    val newest = candidates.filter { live(it, time) }.maxByOrNull { it.id }
+                    val indexedId = platform.client.getCurrentContractKeyId(identity.id, Identifier.from(binding.contractId), purpose)
+                    val current = AppConnectKeyState.currentEncryptionKey(indexedId, candidates, data, time)
                     val key = when {
-                        newest != null && newest.data.contentEquals(data) && newest.type == KeyType.ECDSA_SECP256K1 &&
-                            newest.securityLevel == SecurityLevel.MEDIUM && newest.totalBudget == null && newest.expiresAt == null -> newest
-                        newest == null && candidates.none { it.data.contentEquals(data) } -> IdentityPublicKey(nextId++,
+                        current != null -> current
+                        indexedId == null && candidates.isEmpty() -> IdentityPublicKey(nextId++,
                             KeyType.ECDSA_SECP256K1, purpose, SecurityLevel.MEDIUM, SingleContractBounds(Identifier.from(binding.contractId)), data, false)
                         else -> null
                     }
-                    if (key == null) KeyExchangeCrypto.wipe(secret) else { keys.add(key); privateKeys.add(secret) }
+                    if (key == null) {
+                        privateKeys.removeAt(privateKeys.lastIndex)
+                        KeyExchangeCrypto.wipe(secret)
+                    } else keys.add(key)
                 }
                 if (record != null) {
                     val saved = decodeKeys(record)
@@ -399,6 +415,10 @@ internal class AppConnectSession(
         signingKey(identity, SecurityLevel.HIGH, platform.client.getPlatformTime(identity.id))
 
     private suspend fun publish(identity: Identity, record: JSONObject, signer: Signer, scope: String) {
+        decodeKeys(record).filter { it.purpose == Purpose.ENCRYPTION || it.purpose == Purpose.DECRYPTION }.forEach { key ->
+            val indexedId = platform.client.getCurrentContractKeyId(identity.id, key.contractBounds!!.identifier, key.purpose)
+            check(indexedId == key.id) { "Current application encryption key changed. Response was not published." }
+        }
         register()
         val existing = find(identity, record)
         check(existing.all { exact(it, record) }) { "Conflicting response exists for this QR" }
@@ -430,7 +450,7 @@ internal class AppConnectSession(
             checkScope(scope)
             val records = matchingRecords(scope, app)
             check(records.isNotEmpty()) { "No revocable grant record for this connection" }
-            revokeRecords(records, scope)
+            revokeRecords(records, scope, app)
         }
     }
 
@@ -445,23 +465,36 @@ internal class AppConnectSession(
         }
     }
 
-    private suspend fun revokeRecords(records: List<JSONObject>, scope: String) {
+    private suspend fun revokeRecords(records: List<JSONObject>, scope: String, completeApp: String? = null) {
         val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
         val keyParameter = walletRepo.getWalletEncryptionKey()
+        check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
         checkScope(scope)
         var identity = readIdentity()
         val time = platform.client.getPlatformTime(identity.id)
         val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(
             records.flatMap { decodeKeys(it) }, identity.publicKeys, time))
+        // Occupying one missing authentication ID prevents that entire atomic registration
+        // from ever landing. The replacement key belongs only to this wallet, not the app.
+        rememberIdentity(identity)
+        val fences = mutableListOf<IdentityPublicKey>()
+        records.filter { it.optString("state") !in setOf("prepared", "disabled") }.forEach { record ->
+            val id = AppConnectKeyState.fenceId(AppConnectKeyState.inspect(decodeKeys(record), identity.publicKeys, time))
+            if (id != null && fences.none { it.id == id }) {
+                fences.add(checkNotNull(identities.blockchainIdentity).createRevocationFenceKey(id, keyParameter, fences))
+            }
+        }
         WalletSignerCallback(wallet, keyParameter).use { signer ->
-            if (disable.isNotEmpty()) {
+            if (disable.isNotEmpty() || fences.isNotEmpty()) {
                 val master = signingKey(identity, SecurityLevel.MASTER, time)
                 checkScope(scope)
                 identity.revision++
                 dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, identity.toNative(), KeyID(master.id),
-                    emptyList(), disable.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
-                identity = readIdentity()
-                check(disable.all { id -> identity.publicKeys.any { it.id == id && it.disabledAt != null } }) { "Revocation not confirmed" }
+                    fences.map { it.toNative() }, disable.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+                identity = awaitGrantConfirmation(read = { checkScope(scope); readIdentity() }, confirmed = { current ->
+                    disable.all { id -> current.publicKeys.any { it.id == id && it.disabledAt != null } } &&
+                        fences.all { fence -> current.publicKeys.any { sameKeyIdentity(it, fence) } }
+                }, failureMessage = "Revocation not confirmed. The grant records were retained; retry to recover.")
             }
             records.forEach { deleteResponse(identity, it, signer, scope) }
         }
@@ -470,9 +503,36 @@ internal class AppConnectSession(
         val confirmedTime = platform.client.getPlatformTime(identity.id)
         val unresolved = records.filter { it.optString("state") !in setOf("prepared", "disabled") &&
             AppConnectKeyState.unresolved(AppConnectKeyState.inspect(decodeKeys(it), identity.publicKeys, confirmedTime)) }
-        records.filter { it !in unresolved }.forEach { config.saveGrant(it.put("state", "disabled")) }
+        val unknown = if (completeApp == null) emptyList() else unrecordedAppKeys(identity, completeApp, scope, confirmedTime)
+        checkScope(scope)
+        records.filter { it !in unresolved }.forEach {
+            config.saveGrant(it.put("state", if (unknown.isEmpty()) "disabled" else "partialRevocation")
+                .put("unrecordedKeyIds", JSONArray(unknown)))
+        }
         check(unresolved.isEmpty()) {
             "Confirmed keys were revoked, but a registration outcome is still unknown. Retry to finish revocation; pending records have been retained."
+        }
+        check(unknown.isEmpty()) {
+            "Recorded keys were revoked, but other live application keys (${unknown.joinToString()}) remain. " +
+                "Local history is incomplete, possibly after wallet recovery. Complete revocation is not confirmed."
+        }
+    }
+
+    private suspend fun unrecordedAppKeys(identity: Identity, app: String, scope: String, time: Long): List<Int> {
+        // Other locally recorded apps may legitimately have the same DashPay profile bounds.
+        val recorded = config.getGrants().filter { it.getString("scope") == scope }.flatMap { decodeKeys(it) }
+        val appId = Identifier.from(app)
+        val owner = platform.client.getDataContract(appId.toBuffer(), true)?.ownerId ?: error("App contract not found")
+        return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded, time) { key ->
+            val target = key.contractBounds!!.identifier
+            when (val bounds = key.contractBounds) {
+                is ContractGroupBounds -> platform.client.getContractGroupOwner(target) == owner
+                is SingleContractDocumentType -> target == appId ||
+                    (target.toString() == DASHPAY && bounds.documentType == "profile") ||
+                    (target.toString() !in SYSTEM_CONTRACTS && platform.client.getDataContract(target.toBuffer(), true)?.ownerId == owner)
+                else -> target == appId || (target.toString() !in SYSTEM_CONTRACTS &&
+                    platform.client.getDataContract(target.toBuffer(), true)?.ownerId == owner)
+            }
         }
     }
 
@@ -497,7 +557,11 @@ internal class AppConnectSession(
                 }
             }
             checkScope(scope)
-            text.ifEmpty { "This legacy connection has no recorded key IDs. Review its keys on your identity; local removal cannot revoke access." }
+            val unknown = unrecordedAppKeys(identity, app, scope, time)
+            checkScope(scope)
+            val historyWarning = if (unknown.isEmpty()) "" else "\n\nLocal history is incomplete. Other live application keys: ${unknown.joinToString()}. " +
+                "Revoking recorded keys alone will not revoke all access."
+            text.ifEmpty { "This connection has no recorded key IDs. Review its keys on your identity; local removal cannot revoke access." } + historyWarning
         }
     }
 }

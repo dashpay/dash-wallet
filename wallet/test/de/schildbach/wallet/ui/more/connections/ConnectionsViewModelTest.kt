@@ -72,6 +72,15 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.requiresRevocation)
     }
 
+    @Test fun `uncertain approval can close without revoking or reporting declined`() {
+        failApproval(openedFromUrl = true)
+        model.closePendingRequest()
+        assertNull(model.uiState.value.pendingRequest)
+        assertNull(model.callbackOffer.value)
+        assertTrue(model.scanOutcome.value is ConnectionsViewModel.ScanOutcome.Error)
+        coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
+    }
+
     private fun purchase() = TokenPurchaseApproval(
         de.schildbach.wallet.ui.more.connections.protocol.DashStRequest(byteArrayOf(1),
             de.schildbach.wallet.ui.more.connections.protocol.DashConnectNetwork.DEVNET),

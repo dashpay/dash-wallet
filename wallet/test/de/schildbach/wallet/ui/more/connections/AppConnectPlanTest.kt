@@ -29,6 +29,25 @@ class AppConnectPlanTest {
         assertThrows(IllegalArgumentException::class.java) { plan().copy(recovering = true).withPresets(1, 1) }
     }
 
+    @Test fun `finite presets cap an unlimited request and consent accepts narrowing`() {
+        val requested = plan().grants.map { it.copy(totalBudget = null) }
+        val original = plan().copy(grants = requested, proposedGrants = requested)
+        val uri = com.google.gson.JsonParser.parseReader(javaClass.getResourceAsStream("/app-connect-vectors.json")!!.reader())
+            .asJsonObject.getAsJsonObject("request")["uri"].asString
+        val decoded = de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.parseKeyRequest(uri)
+        val request = decoded.copy(appConnect = decoded.appConnect!!.copy(auth = requested))
+        for (preset in 1..3) {
+            val narrowed = original.withPresets(preset, 0)
+            assertTrue(narrowed.grants.all { it.totalBudget != null && it.totalBudget.signum() > 0 })
+            narrowed.requireMatches(request)
+            assertTrue(narrowed.choices().all { !it.description.contains("No budget limit") })
+        }
+        assertTrue(original.withPresets(1, 0).withPresets(0, 0).grants.all { it.totalBudget == null })
+        assertThrows(IllegalArgumentException::class.java) {
+            original.copy(grants = requested.map { it.copy(totalBudget = BigInteger.ZERO) }).requireMatches(request)
+        }
+    }
+
     @Test fun `u64 requested budgets are capped without inventing absent budgets`() {
         val grant = AuthBinding(0, 2, ByteArray(32), null, null)
         val defaults = AppConnectLimits.clamp(grant, time)

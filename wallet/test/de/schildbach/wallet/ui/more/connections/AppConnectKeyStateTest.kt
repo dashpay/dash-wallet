@@ -22,6 +22,23 @@ import org.robolectric.annotation.Implements
 @Config(application = Application::class, sdk = [28], manifest = Config.NONE,
     shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class AppConnectKeyStateTest {
+    @Test fun `pending registrations choose a missing authentication ID as atomic fence`() {
+        assertEquals(4, AppConnectKeyState.fenceId(listOf(KeyState(4, true, true, MISSING), KeyState(5, true, true, MISSING))))
+        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, true, true, CONFLICTING), KeyState(5, true, true, MISSING))))
+        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, true, false, MISSING))))
+        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, false, true, MISSING))))
+    }
+
+    @Test fun `proved encryption index wins over highest live key ID`() {
+        fun encryption(id: Int, disabled: Long? = null, data: ByteArray = byteArrayOf(2, 3)) = IdentityPublicKey(
+            id, KeyType.ECDSA_SECP256K1, Purpose.ENCRYPTION, SecurityLevel.MEDIUM, null, data, false, disabledAt = disabled)
+        val olderId = encryption(4)
+        val higherId = encryption(9)
+        assertEquals(olderId, AppConnectKeyState.currentEncryptionKey(4, listOf(olderId, higherId), olderId.data, time))
+        assertNull(AppConnectKeyState.currentEncryptionKey(9, listOf(olderId, encryption(9, time)), olderId.data, time))
+        assertNull(AppConnectKeyState.currentEncryptionKey(9, listOf(olderId, encryption(9, data = byteArrayOf(3, 4))), olderId.data, time))
+        assertNull(AppConnectKeyState.currentEncryptionKey(null, listOf(olderId), olderId.data, time))
+    }
     // These tests exercise Kotlin key matching, not native SDK calls. Supply the enum
     // constants through a shadow so the host JVM does not need the Android JNI library.
     @Implements(className = "org.dashj.platform.sdk.dashsdkJNI", isInAndroidSdk = false)
@@ -49,8 +66,8 @@ class AppConnectKeyStateTest {
     private val time = 1_790_000_000_000L
 
     private fun key(budget: Long = 1000, expiry: Long = time + 86_400_000,
-                    data: ByteArray = ByteArray(20) { 1 }, disabledAt: Long? = null) = IdentityPublicKey(
-        2, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION, SecurityLevel.CRITICAL,
+                    data: ByteArray = ByteArray(20) { 1 }, disabledAt: Long? = null, id: Int = 2) = IdentityPublicKey(
+        id, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION, SecurityLevel.CRITICAL,
         ContractGroupBounds(Identifier.from(ByteArray(32) { 7 })), data, false,
         disabledAt = disabledAt, totalBudget = BigInteger.valueOf(budget), expiresAt = expiry, version = 1
     )
@@ -64,6 +81,16 @@ class AppConnectKeyStateTest {
             assertEquals(LIVE, states.single().presence)
             assertEquals(listOf(stored.id), AppConnectKeyState.revocableIds(states))
         }
+    }
+
+    @Test fun `restored wallet must report surviving grants absent from local history`() {
+        val oldGrant = key(data = ByteArray(20) { 7 })
+        val newGrant = key(data = ByteArray(20) { 8 }, id = 3)
+        assertEquals(listOf(oldGrant.id), AppConnectKeyState.unrecordedKeys(
+            listOf(oldGrant, newGrant), listOf(newGrant), time) { true })
+        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(oldGrant), emptyList(), time) { false }.isEmpty())
+        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(key(disabledAt = time)), emptyList(), time) { true }.isEmpty())
+        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(key(budget = 2000)), listOf(key()), time) { true }.isEmpty())
     }
 
     @Test fun `extended expired grant remains revocable and changed material remains foreign`() {

@@ -17,8 +17,15 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.Before
+import org.junit.Assume.assumeFalse
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.NetworkParameters
 
 class AppConnectOwnershipTest {
+    @Before fun nonMainnetOnly() {
+        assumeFalse(Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET)
+    }
     private val service = mockk<PlatformService>(relaxed = true)
     private val repo = mockk<PlatformRepo>(relaxed = true)
     private val identities = mockk<IdentityRepository>(relaxed = true)
