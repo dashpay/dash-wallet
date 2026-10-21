@@ -52,7 +52,6 @@ class SendInviteWorker @AssistedInject constructor(
         const val KEY_FUNDING_ADDRESS = "SendInviteWorker.FUNDING_ADDRESS"
         const val KEY_TX_ID = "SendInviteWorker.KEY_TX_ID"
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
-        const val KEY_APPSFLYER_LINK = "SendInviteWorker.KEY_APPSFLYER_LINK"
         const val KEY_VALUE = "SendInviteWorker.KEY_VALUE"
         private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
     }
@@ -64,8 +63,6 @@ class SendInviteWorker @AssistedInject constructor(
             get() = data.getByteArray(KEY_TX_ID)!!
         val userId
             get() = data.getString(KEY_USER_ID)!!
-        val shortDynamicLink
-            get() = data.getString(KEY_APPSFLYER_LINK)!!
         val value: Coin
             get() = Coin.valueOf(data.getLong(KEY_VALUE, 0L))
     }
@@ -136,12 +133,14 @@ class SendInviteWorker @AssistedInject constructor(
                 )
                 topUpRepository.updateInvitation(invitation)
             }
+            // The share link stays in the invitation table only. WorkManager caps serialized output
+            // Data at 10 KB and the link embeds the InstantSend lock, which grows with every input of
+            // the funding transaction; consumers load the link from the database by user id instead.
             Result.success(
                 workDataOf(
                     KEY_TX_ID to assetLockTx.txId.bytes,
                     KEY_VALUE to value,
-                    KEY_USER_ID to assetLockTx.identityId.toStringBase58(),
-                    KEY_APPSFLYER_LINK to invitation.shortDynamicLink
+                    KEY_USER_ID to assetLockTx.identityId.toStringBase58()
                 )
             )
         } catch (ex: Exception) {

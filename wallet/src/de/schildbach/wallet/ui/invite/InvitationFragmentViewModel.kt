@@ -80,11 +80,9 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, fundingAddress)
 
-//    val dynamicLinkData
-//        get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
-
-    val shortDynamicLinkData
-        get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink
+    /** The link to share, read from the saved invitation; null until the invitation row has arrived. */
+    val shareLink: String?
+        get() = _invitation.value?.shortDynamicLink
 
     val walletData
         get() = walletApplication

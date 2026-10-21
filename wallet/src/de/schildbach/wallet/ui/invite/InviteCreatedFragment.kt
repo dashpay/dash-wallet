@@ -88,6 +88,10 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
     private fun initViewModel() {
         viewModel.invitation.filterNotNull().observe(viewLifecycleOwner) {
             binding.tagEdit.setText(it.memo)
+            // the link is loaded from the database, not from the worker output
+            val canShare = it.shortDynamicLink != null
+            binding.sendButton.isEnabled = canShare
+            binding.copyInvitationLink.isEnabled = canShare
         }
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) {
@@ -103,10 +107,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
                         binding.profilePictureEnvelope.isVisible = true
                         binding.previewButton.isVisible = true
                         binding.inviteCreationProgressTitle.text = getString(R.string.invitation_created_successfully)
-                        binding.sendButton.isEnabled = true
                         binding.progress.isGone = true
-                        binding.copyInvitationLink.isEnabled = true
-                        binding.sendButton.isEnabled = true
                     }
                 }
                 Status.LOADING -> {
@@ -133,10 +134,10 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_TAG)
         }
 
-        super.shareInvitation(shareImage, viewModel.shortDynamicLinkData)
+        viewModel.shareLink?.let { super.shareInvitation(shareImage, it) }
     }
 
     private fun copyInvitationLink() {
-        super.copyInvitationLink(viewModel.shortDynamicLinkData)
+        viewModel.shareLink?.let { super.copyInvitationLink(it) }
     }
 }
