@@ -27,8 +27,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import de.schildbach.wallet.Constants
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.wallet.Wallet
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
@@ -787,16 +785,6 @@ open class DashPayConfig @Inject constructor(
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
 
         /**
-         * The wallet [LAST_SHIELDED_BALANCE_DUFFS] belongs to
-         * ([shieldedBalanceCacheOwner]), written in the same transaction. The
-         * value is one install-wide entry, so it is only read back for the
-         * wallet it was persisted for — a created, restored or (after a racing
-         * save) reloaded different wallet never sees it. A value without an
-         * owner (older build) belongs to no wallet.
-         */
-        val LAST_SHIELDED_BALANCE_OWNER = stringPreferencesKey("last_shielded_balance_owner")
-
-        /**
          * A local shielded spend is still reconciling (its note settlement can
          * span several sync passes). Set together with removing
          * [LAST_SHIELDED_BALANCE_DUFFS]; cleared only once the balance has
@@ -867,17 +855,11 @@ open class DashPayConfig @Inject constructor(
     }
 
     /**
-     * The last shielded balance persisted from a fully-synced runtime of the
-     * wallet [owner] ([shieldedBalanceCacheOwner]), in duffs, or null when
-     * none has been persisted for it (or [owner] is unknown). See
+     * The last shielded balance persisted from a fully-synced runtime, in
+     * duffs, or null when none has ever been persisted. See
      * [LAST_SHIELDED_BALANCE_DUFFS].
      */
-    suspend fun getLastShieldedBalanceDuffs(owner: String?): Long? =
-        observeLastShieldedBalanceDuffs(owner).first()
-
-    /** [getLastShieldedBalanceDuffs] as a flow, read from one consistent snapshot. */
-    fun observeLastShieldedBalanceDuffs(owner: String?): Flow<Long?> =
-        data.map { prefs -> ownedShieldedBalance(prefs, owner) }
+    suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
 
     /**
      * Durably record that a local shielded spend is reconciling: in ONE
@@ -892,7 +874,6 @@ open class DashPayConfig @Inject constructor(
      */
     suspend fun markShieldedSpendReconcilePending(sinceMs: Long) = editPreferences { prefs ->
         prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
-        prefs.remove(LAST_SHIELDED_BALANCE_OWNER)
         val alreadyPending = prefs[SHIELDED_SPEND_RECONCILE_PENDING] == true
         val existingSince = prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS]
         prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
@@ -909,16 +890,14 @@ open class DashPayConfig @Inject constructor(
      * so a balance sampled before a spend can never be written back after
      * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
      * and whichever lands second wins against the stale snapshot (the spend's
-     * removes it; this one sees the marker and skips). [owner] — the wallet
-     * the balance is for — is written with it. Returns whether it was
+     * removes it; this one sees the marker and skips). Returns whether it was
      * written.
      */
-    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long, owner: String): Boolean {
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long): Boolean {
         var written = false
         editPreferences { prefs ->
             if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
                 prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
-                prefs[LAST_SHIELDED_BALANCE_OWNER] = owner
                 written = true
             }
         }
@@ -1098,22 +1077,4 @@ open class DashPayConfig @Inject constructor(
             preferences[DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT] = syncedHeight
         }
     }
-}
-
-/** [DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS] if it belongs to [owner], else null. */
-internal fun ownedShieldedBalance(prefs: Preferences, owner: String?): Long? =
-    prefs[DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS]
-        ?.takeIf { owner != null && prefs[DashPayConfig.LAST_SHIELDED_BALANCE_OWNER] == owner }
-
-/**
- * The owner tag of [wallet]'s last-known shielded balance
- * ([DashPayConfig.LAST_SHIELDED_BALANCE_OWNER]): a SHA-256 of its watching
- * key, which the seed fixes (it stays the same when the wallet is encrypted).
- * Null without a wallet, or when the key can't be read — the cache then
- * belongs to no one.
- */
-fun shieldedBalanceCacheOwner(wallet: Wallet?): String? = try {
-    wallet?.watchingKey?.let { key -> Sha256Hash.of(key.pubKey + key.chainCode).toString() }
-} catch (e: Exception) {
-    null
 }

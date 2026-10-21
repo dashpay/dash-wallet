@@ -21,8 +21,6 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet.ui.dashpay.utils.shieldedBalanceCacheOwner
-import de.schildbach.wallet.data.WalletData
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -930,13 +928,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     /**
      * Wall clock (Unix millis) for spend start times. Injectable for tests.
      */
-    private val clock: () -> Long = System::currentTimeMillis,
-    /**
-     * The owner tag ([shieldedBalanceCacheOwner]) of the app's current wallet:
-     * the last-known balance is persisted for, and read back only by, that
-     * wallet. A fixed tag by default (tests); null means no wallet.
-     */
-    private val cacheOwner: () -> String? = { "wallet" }
+    private val clock: () -> Long = System::currentTimeMillis
 ) : ShieldedBalanceService {
 
     @Inject
@@ -946,8 +938,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         dashPayConfig: DashPayConfig,
         l1ShadowSyncService: L1ShadowSyncService,
         applicationScope: CoroutineScope,
-        assetLockKindResolver: AssetLockKindResolver,
-        walletData: WalletData
+        assetLockKindResolver: AssetLockKindResolver
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -964,8 +955,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         sweepScope = applicationScope,
-        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
-        cacheOwner = { shieldedBalanceCacheOwner(walletData.wallet) }
+        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -1059,7 +1049,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     private var sweepJob: Job? = null
 
     override suspend fun lastKnownShieldedBalance(): Dash? = try {
-        dashPayConfig.getLastShieldedBalanceDuffs(cacheOwner())?.let { Dash(it) }
+        dashPayConfig.getLastShieldedBalanceDuffs()?.let { Dash(it) }
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("failed to read the last-known shielded balance; treating as absent", t)
@@ -1438,6 +1428,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // bring-up restarts the driver; it must not force passes meanwhile.
         settlementKickJob?.cancel()
         settlementKickJob = null
+        ledgerCoverageConfirmed = false
         _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
         _shieldedBalanceMaybeStale.value = false
     }
@@ -1449,22 +1440,22 @@ class ShieldedBalanceServiceImpl internal constructor(
      * its constructed value and callers exercise [mapShieldedSyncStatus]
      * directly.
      *
-     * "First pass completed" latches only on a SUCCESSFUL pass result for the
-     * bound wallet ([ShieldedSource.shieldedSyncResults]) delivered after this
-     * bring-up: the note store then covers the ledger, so its balance — even a
-     * genuine zero — is authoritative. A failed or skipped pass, or the
-     * in-flight flag merely going idle (which a failed pass or an unreadable
-     * flag also produce), never does: until then the status stays SYNCING and
-     * surfaces show the last-known balance or "Syncing…", never a placeholder
-     * zero.
+     * "First pass completed" latches only once [ledgerCoverageConfirmed]: a
+     * SUCCESSFUL pass result for the bound wallet delivered after this
+     * bring-up whose balance the displayed note store matches (see
+     * [onShieldedPassCompleted]) — the store then covers the ledger, so its
+     * balance, even a genuine zero, is authoritative. A failed or skipped pass,
+     * a successful one the store doesn't reflect yet (its persistence failed or
+     * lags), or the in-flight flag merely going idle never does: until then
+     * the status stays SYNCING and surfaces show "Syncing…" or a last-known
+     * balance, never a placeholder zero.
      */
     private fun startSyncStatusPolling() {
         val scope = sweepScope ?: return
         if (syncStatusJob?.isActive == true) return
         syncStatusJob = scope.launch {
-            val boundWalletId = readyWalletIdHex.value?.let(::walletIdFromHex)
             var firstPassCompleted = false
-            val firstPassSucceeded = java.util.concurrent.atomic.AtomicBoolean(false)
+            ledgerCoverageConfirmed = false
             // A local spend that was still reconciling when the runtime stopped
             // or the process died: restore the settlement guard BEFORE the first
             // READY can be published, so that pass is not trusted (and not
@@ -1493,14 +1484,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             // between two polls. Cancelled when this loop exits, so the job
             // completes and a later bring-up can start a fresh poller.
             val settlementJob = launch {
-                source.shieldedSyncResults().collect { result ->
-                    if (result.outcome == ShieldedPassResult.Outcome.SUCCEEDED &&
-                        boundWalletId != null && result.walletId.contentEquals(boundWalletId)
-                    ) {
-                        firstPassSucceeded.set(true)
-                    }
-                    onShieldedPassCompleted(result)
-                }
+                source.shieldedSyncResults().collect { result -> onShieldedPassCompleted(result) }
             }
             while (isActive) {
                 if (readyWalletIdHex.value == null) {
@@ -1512,7 +1496,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                         if (it is CancellationException) throw it
                         false
                     }
-                if (firstPassSucceeded.get()) firstPassCompleted = true
+                if (ledgerCoverageConfirmed) firstPassCompleted = true
                 _shieldedSyncStatus.value = mapShieldedSyncStatus(
                     ready = true,
                     firstPassCompleted = firstPassCompleted,
@@ -1608,6 +1592,9 @@ class ShieldedBalanceServiceImpl internal constructor(
             null
         }
         val displayedCredits = notes?.filter { !it.isSpent }?.sumOf { it.value }
+        // Initial readiness (see [startSyncStatusPolling]): the displayed store
+        // covers a successful pass. Latches; never retracted within a session.
+        if (passCredits != null && displayedCredits == passCredits) ledgerCoverageConfirmed = true
         // Only a pending reconciliation needs the gate (nothing to settle
         // otherwise); an unreadable store keeps it closed.
         val spendsReflected = when {
@@ -1671,10 +1658,6 @@ class ShieldedBalanceServiceImpl internal constructor(
     private fun startBalancePersistence() {
         val scope = sweepScope ?: return
         if (balancePersistJob?.isActive == true) return
-        // Read once per session, at bring-up: the runtime is bound to this
-        // wallet, so its balances are tagged as this wallet's even if another
-        // is installed while the session lives (readers then reject them).
-        val owner = cacheOwner() ?: return
         balancePersistJob = scope.launch {
             var lastPersisted: Long? = null
             combine(
@@ -1701,7 +1684,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // so the write itself is conditional on the durable reconcile
                 // marker, inside one DataStore transaction — a pre-spend
                 // snapshot can never resurrect the cache.
-                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs, owner) }
+                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs) }
                     .onSuccess { written -> if (written) lastPersisted = duffs }
                     .onFailure {
                         if (it is CancellationException) throw it
@@ -2422,6 +2405,14 @@ class ShieldedBalanceServiceImpl internal constructor(
      * (a new process restores from the durable marker).
      */
     private var spendsInFlight = 0
+
+    /**
+     * A successful pass of the bound wallet has been matched by the displayed
+     * note store since the current bring-up — the readiness latch of
+     * [startSyncStatusPolling]. Reset at each bring-up and teardown.
+     */
+    @Volatile
+    private var ledgerCoverageConfirmed = false
 
     /** Balance at the last completed sync pass — see the stability rule in [onShieldedPassCompleted]. */
     @Volatile

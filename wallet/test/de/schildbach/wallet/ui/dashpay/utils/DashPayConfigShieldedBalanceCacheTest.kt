@@ -23,14 +23,11 @@ import io.mockk.mockk
 import io.mockk.spyk
 import java.io.IOException
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -52,7 +49,6 @@ class DashPayConfigShieldedBalanceCacheTest {
 
     // ONE instance per test: DataStore allows a single active store per file.
     private lateinit var cfg: DashPayConfig
-    private val owner = "wallet-a"
 
     @Before
     fun setUp() = runBlocking {
@@ -60,65 +56,33 @@ class DashPayConfigShieldedBalanceCacheTest {
         cfg.clearAll()
     }
 
-    /**
-     * thepastaclaw (182b454a0): the install-wide cache is only read back for
-     * the wallet it was persisted for — another wallet (created, restored, or
-     * reloaded after a save race) never sees it, nor does an unknown wallet or
-     * a value an older build wrote without an owner.
-     */
-    @Test
-    fun theCache_belongsOnlyToTheWalletItWasPersistedFor() = runBlocking {
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, owner))
-        assertEquals(1_000_000_000L, cfg.getLastShieldedBalanceDuffs(owner))
-        assertEquals(1_000_000_000L, cfg.observeLastShieldedBalanceDuffs(owner).first())
-        assertNull(cfg.getLastShieldedBalanceDuffs("wallet-b"))
-        assertNull(cfg.observeLastShieldedBalanceDuffs("wallet-b").first())
-        assertNull(cfg.getLastShieldedBalanceDuffs(null))
-
-        cfg.set(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS, 5L)
-        cfg.editPreferences { it.remove(DashPayConfig.LAST_SHIELDED_BALANCE_OWNER) }
-        assertNull("an owner-less (older build) value belongs to no wallet", cfg.getLastShieldedBalanceDuffs(owner))
-    }
-
-    @Test
-    fun theOwnerTag_isPerWallet() {
-        org.bitcoinj.core.Context.propagate(de.schildbach.wallet.Constants.CONTEXT)
-        val params = de.schildbach.wallet.Constants.NETWORK_PARAMETERS
-        val a = org.bitcoinj.wallet.Wallet.createDeterministic(params, org.bitcoinj.script.Script.ScriptType.P2PKH)
-        val b = org.bitcoinj.wallet.Wallet.createDeterministic(params, org.bitcoinj.script.Script.ScriptType.P2PKH)
-        assertNotNull(shieldedBalanceCacheOwner(a))
-        assertEquals(shieldedBalanceCacheOwner(a), shieldedBalanceCacheOwner(a))
-        assertNotEquals(shieldedBalanceCacheOwner(a), shieldedBalanceCacheOwner(b))
-        assertNull(shieldedBalanceCacheOwner(null))
-    }
-
     @Test
     fun noReconcile_persistsTheBalance() = runBlocking {
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, owner))
-        assertEquals(1_000_000_000L, cfg.getLastShieldedBalanceDuffs(owner))
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
+        assertEquals(1_000_000_000L, cfg.getLastShieldedBalanceDuffs())
     }
 
     @Test
     fun aPreSpendSnapshot_writtenAfterTheSpend_isRejected_andStaysGoneAfterRestart() = runBlocking {
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, owner))
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
 
         // the spend lands first: drops the cache, sets the marker
         cfg.markShieldedSpendReconcilePending(1_000L)
         // the delayed persistence write of the PRE-spend sample lands second
-        assertFalse(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, owner))
-        assertNull(cfg.getLastShieldedBalanceDuffs(owner))
+        assertFalse(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
+        assertNull(cfg.getLastShieldedBalanceDuffs())
 
         // what a restart reads back: the cache stays gone, the marker stays set
-        assertNull("the pre-spend cache must not come back", cfg.getLastShieldedBalanceDuffs(owner))
+        assertNull("the pre-spend cache must not come back", cfg.getLastShieldedBalanceDuffs())
         assertEquals(1_000L, cfg.shieldedSpendReconcilePendingSinceMs())
     }
 
     @Test
     fun aPreSpendSnapshot_writtenBeforeTheSpend_isRemovedByIt() = runBlocking {
         // the persistence write lands first, the spend second
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, owner))
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
         cfg.markShieldedSpendReconcilePending(1_000L)
-        assertNull(cfg.getLastShieldedBalanceDuffs(owner))
+        assertNull(cfg.getLastShieldedBalanceDuffs())
     }
 
     @Test
@@ -126,8 +90,8 @@ class DashPayConfigShieldedBalanceCacheTest {
         cfg.markShieldedSpendReconcilePending(1_000L)
         cfg.clearShieldedSpendReconcilePending()
         assertNull(cfg.shieldedSpendReconcilePendingSinceMs())
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L, owner))
-        assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs(owner))
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L))
+        assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs())
     }
 
     /** Overlapping spends: the reconciliation keeps the EARLIEST since until it settles. */

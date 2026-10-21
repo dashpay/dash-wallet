@@ -18,7 +18,6 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet.ui.dashpay.utils.shieldedBalanceCacheOwner
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -623,7 +622,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             withTimeoutOrNull(BASELINE_READ_TIMEOUT_MS) {
                 shieldedBalanceService.observeShieldedBalance().first()
             }?.duffs
-                ?: dashPayConfig.getLastShieldedBalanceDuffs(shieldedBalanceCacheOwner(walletData.wallet))
+                ?: dashPayConfig.getLastShieldedBalanceDuffs()
                 ?: 0L
         } else {
             0L

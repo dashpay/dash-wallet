@@ -56,7 +56,6 @@ import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet.ui.dashpay.utils.shieldedBalanceCacheOwner
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.Dispatchers
@@ -611,9 +610,9 @@ class MainViewModel @Inject constructor(
     /**
      * The shielded part of [homeBalance]: zero unless the shielded feature is
      * on (`SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`). The runtime is
-     * brought up at startup by [PlatformSyncService]; until it is READY the
-     * persisted last-known balance stands in (see [homeShieldedBalance]);
-     * null while the amount is unknown, including while a read is failing.
+     * brought up at startup by [PlatformSyncService]; null — the header shows
+     * the shielded part as pending — until it is READY (see
+     * [homeShieldedBalance]), and while a read is failing.
      */
     private fun observeHomeShieldedBalance(): Flow<Dash?> = homeShieldedBalanceFlow(
         // WITHOUT the IOException rescue: only a flag READ as disabled or
@@ -622,14 +621,6 @@ class MainViewModel @Inject constructor(
             .map { Constants.SUPPORTS_PLATFORM && it == true },
         live = { shieldedBalanceService.observeShieldedBalance() },
         status = { shieldedBalanceService.shieldedSyncStatus },
-        // Only the CURRENT wallet's last-known balance (see
-        // DashPayConfig.LAST_SHIELDED_BALANCE_OWNER), re-checked when it changes.
-        cachedDuffs = {
-            walletData.observeWallet()
-                .map { shieldedBalanceCacheOwner(it) }
-                .distinctUntilChanged()
-                .flatMapLatest { owner -> dashPayConfig.observeLastShieldedBalanceDuffs(owner) }
-        },
         maybeStale = { shieldedBalanceService.shieldedBalanceMaybeStale },
         onError = { e, attempt -> log.error("home shielded balance flow error (attempt {})", attempt, e) }
     )
@@ -1048,7 +1039,6 @@ internal fun homeShieldedBalanceFlow(
     enabledFlag: Flow<Boolean>,
     live: () -> Flow<Dash>,
     status: () -> Flow<ShieldedSyncStatus>,
-    cachedDuffs: () -> Flow<Long?>,
     maybeStale: () -> Flow<Boolean>,
     onError: (Throwable, Long) -> Unit,
     retryDelayMs: (Long) -> Long = ::shieldedReadRetryDelayMs
@@ -1058,8 +1048,8 @@ internal fun homeShieldedBalanceFlow(
         if (!enabled) {
             flowOf(Dash.ZERO)
         } else {
-            combine(live(), status(), cachedDuffs(), maybeStale()) { balance, syncStatus, cached, stale ->
-                homeShieldedBalance(syncStatus, balance, cached?.let { Dash(it) }, stale)
+            combine(live(), status(), maybeStale()) { balance, syncStatus, stale ->
+                homeShieldedBalance(syncStatus, balance, stale)
             }
         }
     }
@@ -1074,9 +1064,10 @@ internal fun homeShieldedBalanceFlow(
 /**
  * The shielded amount the home header adds to the L1 total — pure and
  * host-testable. `observeShieldedBalance()` reads `Dash.ZERO` until the
- * runtime is READY and during a re-scan, so only a READY balance is used
- * live; otherwise the persisted last-known (READY) balance stands in, and
- * with no cache the amount is unknown (null).
+ * runtime is READY and during a re-scan, so only a READY balance is used;
+ * otherwise the amount is unknown (null) and the header shows it as pending.
+ * The persisted last-known balance is deliberately NOT used here: it is one
+ * install-wide value that can't be proven to belong to the loaded wallet.
  *
  * After a local shielded spend ([balanceMaybeStale]) the amount is unknown
  * until the service clears the flag (the note balance has settled) — even
@@ -1087,18 +1078,15 @@ internal fun homeShieldedBalanceFlow(
  * on, `SdkWalletBinder` binds identity-free wallets too (fund → shield →
  * create identity), so a wallet without an identity can hold shielded
  * funds. Ownership comes from the bound runtime itself — the service tears
- * its READY state down when it stops, and a wallet wipe or a newly installed
- * wallet clears the cache.
+ * its READY state down when it stops.
  */
 internal fun homeShieldedBalance(
     status: ShieldedSyncStatus,
     live: Dash,
-    cached: Dash?,
     balanceMaybeStale: Boolean
 ): Dash? = when {
     balanceMaybeStale -> null
     status == ShieldedSyncStatus.READY -> live
-    cached != null -> cached
     else -> null
 }
 

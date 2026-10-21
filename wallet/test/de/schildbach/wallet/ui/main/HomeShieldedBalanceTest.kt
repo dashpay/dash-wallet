@@ -30,55 +30,42 @@ import org.junit.Test
 
 /**
  * The shielded amount the home header adds to the L1 total
- * ([homeShieldedBalance]): the live balance when READY and settled, the
- * last-known balance while not READY, otherwise unknown (null) — never the
- * transient zero the pool reads while not READY, and never a known-stale
- * amount after a local spend.
+ * ([homeShieldedBalance]): the live balance when READY and settled, otherwise
+ * unknown (null) — never the transient zero the pool reads while not READY,
+ * never a known-stale amount after a local spend, and never the install-wide
+ * last-known balance (it can't be proven to belong to the loaded wallet).
  */
 class HomeShieldedBalanceTest {
 
     private val live = Dash.parse("2.5")
-    private val cached = Dash.parse("1.25")
 
     @Test
-    fun `READY uses the live balance even when a cache exists`() {
-        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, cached, false))
+    fun `READY uses the live balance`() {
+        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, false))
     }
 
     @Test
     fun `READY with nothing shielded is zero`() {
-        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, Dash.ZERO, null, false))
+        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, Dash.ZERO, false))
     }
 
     @Test
     fun `a funded READY wallet counts regardless of platform identity`() {
         // identity-free wallets bind when the shielded flag is on (fund → shield → create identity);
         // the selector has no identity input at all
-        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, null, false))
+        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, false))
     }
 
     @Test
     fun `READY during post-spend reconciliation is unknown`() {
         // READY persists through later sync passes, so it does not mean the spend has settled
-        assertNull(homeShieldedBalance(ShieldedSyncStatus.READY, live, cached, true))
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.READY, live, true))
     }
 
     @Test
-    fun `not ready uses the last-known balance instead of the transient zero`() {
-        assertEquals(cached, homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, cached, false))
-        assertEquals(cached, homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO, cached, false))
-    }
-
-    @Test
-    fun `not ready with no cache is unknown`() {
-        assertNull(homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, null, false))
-        assertNull(homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO, null, false))
-    }
-
-    @Test
-    fun `after a local spend the known-stale cache is not used`() {
-        // e.g. cached 10 DASH, 4 DASH just spent, pool re-syncing
-        assertNull(homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.parse("6"), Dash.parse("10"), true))
+    fun `not ready is unknown, never the transient zero`() {
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, false))
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO, false))
     }
 
     // ── homeShieldedBalanceFlow: fail closed on read errors ──────────────
@@ -87,7 +74,6 @@ class HomeShieldedBalanceTest {
         enabledFlag = enabledFlag,
         live = { flowOf(Dash(500L)) },
         status = { flowOf(ShieldedSyncStatus.READY) },
-        cachedDuffs = { flowOf(null) },
         maybeStale = { flowOf(false) },
         onError = { _, _ -> },
         retryDelayMs = { 0L }
@@ -125,7 +111,6 @@ class HomeShieldedBalanceTest {
                 }
             },
             status = { flowOf(ShieldedSyncStatus.READY) },
-            cachedDuffs = { flowOf(null) },
             maybeStale = { flowOf(false) },
             onError = { _, _ -> },
             retryDelayMs = { 0L }

@@ -349,11 +349,11 @@ class ShieldedBalanceServiceTest {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns enabled
         }
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
-        coEvery { getLastShieldedBalanceDuffs(any()) } returns lastBalanceDuffs
+        coEvery { getLastShieldedBalanceDuffs() } returns lastBalanceDuffs
         coEvery { markShieldedSpendReconcilePending(any()) } just Runs
         coEvery { shieldedSpendReconcilePendingSinceMs() } returns null
         coEvery { clearShieldedSpendReconcilePending() } just Runs
-        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
+        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -1472,7 +1472,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun lastKnownShieldedBalance_configReadFailure_isNull() = runBlocking {
         val cfg: DashPayConfig = mockk {
-            coEvery { getLastShieldedBalanceDuffs(any()) } throws IllegalStateException("datastore down")
+            coEvery { getLastShieldedBalanceDuffs() } throws IllegalStateException("datastore down")
         }
         val service = ShieldedBalanceServiceImpl(
             source = readySource(),
@@ -1529,7 +1529,7 @@ class ShieldedBalanceServiceTest {
     fun afterRestart_aPendingReconcile_keepsTheFirstReadyStale_andUnpersisted() = runBlocking {
         val cfg = config(true)
         coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
-        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             // a fresh service = a new process: the in-memory flag starts false
@@ -1551,7 +1551,7 @@ class ShieldedBalanceServiceTest {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
             }
             assertTrue("first READY after restart is still reconciling", service.shieldedBalanceMaybeStale.value)
-            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) }
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) }
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
             sweepScope.cancel()
@@ -1588,6 +1588,35 @@ class ShieldedBalanceServiceTest {
     }
 
     /**
+     * thepastaclaw (dc96a3c6d): a successful pass alone is not coverage — the
+     * SDK's note persistence can fail or lag, leaving the displayed store at
+     * the placeholder zero. READY waits until the store matches a successful
+     * pass's balance.
+     */
+    @Test
+    fun ready_requiresTheStoreToReflectASuccessfulPass() = runBlocking {
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = scopedService(source, config(true), sweepScope)
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            // a funded wallet's pass succeeded, but its notes never reached the store
+            source.passResults.emit(passOk(preSpendCredits))
+            delay(ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS * 5)
+            assertEquals(ShieldedSyncStatus.SYNCING, service.shieldedSyncStatus.value)
+
+            source.notesFlow.value = listOf(inputNote, keptNote)
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
+            }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
      * Settlement of an earlier reconciliation pauses while clearing its durable
      * marker; a new spend arrives in that window. The older settlement must not
      * clear the newer spend's flag or marker: after both finish the newer
@@ -1599,7 +1628,7 @@ class ShieldedBalanceServiceTest {
         val cfg = config(true)
         // the earlier reconciliation (restored at bring-up, as after a restart)
         coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
-        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
         val clearEntered = CompletableDeferred<Unit>()
         val clearGate = CompletableDeferred<Unit>()
         coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
@@ -2174,7 +2203,7 @@ class ShieldedBalanceServiceTest {
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
-            source.passResults.emit(passOk())
+            source.passResults.emit(passOk(inputNote.value))
             withTimeout(10_000) {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
             }
