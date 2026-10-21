@@ -2474,12 +2474,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
             )
             // A replay that cannot make progress keeps the service up but releases the CPU.
-            val replayHoldsLock = replayHoldsWakeLock(
-                replaying,
-                networkImpeded = impediments.contains(Impediment.NETWORK),
-                filterScanWedged = dashjHeldByCutover && l1ShadowSyncService.filterScanWedged()
-            )
-            replayWakeLock.hold(replayHoldsLock || engineStarting || durableLagging)
+            // The same predicate ReplayWakeLock re-reads before releasing — one definition,
+            // or the two could disagree and refuse the release on every tick.
+            replayWakeLock.hold(replayWakeLockDue() || engineStarting || durableLagging)
             // Those two holds also keep the service in the foreground: the scan reads
             // synced while they last, and a demoted service would be stopped anyway.
             if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
