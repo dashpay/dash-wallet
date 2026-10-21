@@ -855,12 +855,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Volatile
     private var dashjCaughtUpAtMs: Long? = null
 
-    /** Last args passed to [publishDashjDiagnostic] — lets a new parity report re-publish. */
-    @Volatile
-    private var lastDiagnosticRawPercent = 0
+    /** One dashj progress sample, kept whole so a pass never reads a torn pair. */
+    private data class DashjDiagnosticSample(val rawPercent: Int, val stage: PeerGroup.SyncStage?)
 
+    /** Latest dashj progress sample — lets a new parity report or finding re-publish. */
     @Volatile
-    private var lastDiagnosticStage: PeerGroup.SyncStage? = null
+    private var lastDiagnosticSample = DashjDiagnosticSample(0, null)
+
+    /**
+     * Every diagnostic publication goes through here, so the passes never
+     * overlap and an older pass cannot overwrite a newer verdict (see
+     * [SerialRepublisher]).
+     */
+    private val dashjDiagnosticRepublisher = SerialRepublisher(
+        serviceScope,
+        onError = { e -> log.warn("dashj-sync-diagnostic: publishing the diagnostic failed", e) },
+        pass = ::runDashjDiagnosticPass
+    )
 
     /**
      * FIX 1 guard: the post-cutover identity/contacts discovery hook
@@ -2250,6 +2261,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                             dashjDiagnosticSyncState.reset()
                             lastDiagnosticParity = null
                             dashjCaughtUpAtMs = null
+                            // A pass already running may still write its
+                            // snapshot; the pass queued behind it sees the
+                            // flag off and resets again.
+                            dashjDiagnosticRepublisher.request()
                         }
 
                         if (!changed) return@withLock
@@ -2565,14 +2580,35 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         // DIAGNOSTIC (Tools toggle): while the readout is holding at 99%
         // waiting for a fresh post-catchup parity report (see
-        // publishDashjDiagnostic's freshness gate), progress callbacks alone
+        // runDashjDiagnosticPass's freshness gate), progress callbacks alone
         // can't flip it — once caught up they only fire on new blocks (minutes
         // apart). Re-publish whenever the shadow harness produces a report so
         // the 100% + verdict lands within one probe interval (~10s).
         serviceScope.launch {
             l1ShadowSyncService.latestParity.collect { report ->
                 if (report != null && dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
-                    publishDashjDiagnostic(lastDiagnosticRawPercent, lastDiagnosticStage)
+                    dashjDiagnosticRepublisher.request()
+                }
+            }
+        }
+
+        // Same reason, other input: MATCH now also needs a fresh
+        // transaction-level breakdown, and that run finishes on its own
+        // schedule — after the report that triggered it, and after a ledger
+        // rebuild cleared the previous one. Without this the verdict would
+        // hold at "not established" until some later report happened to
+        // change.
+        //
+        // Null is republished too: findings are cleared when a new
+        // transaction expires them or a ledger rebuild discards them, and
+        // the readout must leave MATCH at once rather than at the next
+        // report. A pass never reads absent findings as MATCH, and passes run
+        // one at a time, so an older pass that read the revoked findings
+        // cannot land after this one.
+        serviceScope.launch {
+            l1ShadowSyncService.latestBreakdownFindings.collect {
+                if (dashjSyncDiagnostic && dashjCaughtUpAtMs != null) {
+                    dashjDiagnosticRepublisher.request()
                 }
             }
         }
@@ -3813,9 +3849,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     /**
-     * Publish one dashj progress sample to the isolated diagnostic holder
-     * ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read the
-     * latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
+     * Record one dashj progress sample for the isolated diagnostic holder
+     * ([dashjDiagnosticSyncState]) and schedule a publication. Never blocks:
+     * the work runs in [runDashjDiagnosticPass], one pass at a time.
+     */
+    private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
+        lastDiagnosticSample = DashjDiagnosticSample(rawPercent, stage)
+        dashjDiagnosticRepublisher.request()
+    }
+
+    /**
+     * Publish the latest dashj progress sample to the isolated diagnostic
+     * holder ([dashjDiagnosticSyncState]). Once dashj has caught up (100%) read
+     * the latest SDK-vs-dashj parity verdict from the L1 shadow-sync harness
      * ([L1ShadowSyncService.latestParity]) and colour the readout
      * MATCH/BALANCE_MATCH/MISMATCH; while syncing the verdict is UNKNOWN.
      *
@@ -3830,10 +3876,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * the Tools readout shows a neutral "Verifying" instead of a percentage.
      * Logs a single SDK-vs-dashj line each time the verdict changes —
      * necessarily at/after that same moment.
+     *
+     * Runs only on [dashjDiagnosticRepublisher], so passes never overlap: the
+     * read, the verdict and the write below are one step as far as any other
+     * publication is concerned.
      */
-    private fun publishDashjDiagnostic(rawPercent: Int, stage: PeerGroup.SyncStage?) {
-        lastDiagnosticRawPercent = rawPercent
-        lastDiagnosticStage = stage
+    private suspend fun runDashjDiagnosticPass() {
+        if (!dashjSyncDiagnostic) {
+            // Turned off since this pass was requested, possibly while an
+            // earlier pass was writing. Leave the inert default behind.
+            dashjDiagnosticSyncState.reset()
+            lastDiagnosticParity = null
+            dashjCaughtUpAtMs = null
+            return
+        }
+        val (rawPercent, stage) = lastDiagnosticSample
         // The shared-row percentage is TIME-weighted (block timestamps vs the
         // clock), which wobbles non-monotonically on testnet's irregular block
         // production and under-reads badly (e.g. 52% shown at ~75% of blocks
@@ -3863,46 +3920,44 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     "dashj-sync-diagnostic: dashj chain caught up — showing 'Verifying' " +
                         "until a parity report computed against the caught-up state arrives"
                 )
+                // The harness gates its hourly breakdown on the same moment:
+                // a run started while dashj was behind produces findings this
+                // method will reject, and used to spend the slot anyway.
+                l1ShadowSyncService.dashjCaughtUp(dashjCaughtUpAtMs)
             }
         } else {
+            if (dashjCaughtUpAtMs != null) l1ShadowSyncService.dashjCaughtUp(null)
             dashjCaughtUpAtMs = null
         }
         val report = l1ShadowSyncService.latestParity.value
-        // Fresh = captured at/after the catch-up moment (same wall clock).
-        val caughtUpAtMs = dashjCaughtUpAtMs
-        val freshReport = report?.takeIf { caughtUpAtMs != null && it.timestampMs >= caughtUpAtMs }
-        val parity = if (percent >= 100 && freshReport != null) {
-            when {
-                freshReport.fullMatch -> DashjDiagnosticSyncState.Parity.MATCH
-                // Both balance comparisons agree exactly, only the tx counts
-                // differ — the funds are all accounted for on both sides.
-                freshReport.balancesMatch && freshReport.confirmedBalancesMatch ->
-                    DashjDiagnosticSyncState.Parity.BALANCE_MATCH
-                else -> DashjDiagnosticSyncState.Parity.MISMATCH
-            }.also { verdict ->
-                if (verdict != lastDiagnosticParity) {
-                    log.info(
-                        "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
-                            "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={}",
-                        verdict, freshReport.sdkDuffs, freshReport.dashjDuffs,
-                        freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
-                        freshReport.sdkTxCount, freshReport.dashjTxCount
-                    )
-                }
-            }
-        } else {
-            DashjDiagnosticSyncState.Parity.UNKNOWN
+        // The findings only count while the SDK store still reads as their run
+        // read it: a change whose event was lost must not leave MATCH standing.
+        val verdict = deriveCurrentDashjDiagnosticVerdict(
+            percent,
+            report,
+            l1ShadowSyncService.latestBreakdownFindings.value,
+            dashjCaughtUpAtMs,
+            l1ShadowSyncService::breakdownFindingsStillCurrent
+        )
+        val freshReport = verdict.freshReport
+        if (verdict.parity != DashjDiagnosticSyncState.Parity.UNKNOWN &&
+            freshReport != null &&
+            verdict.parity != lastDiagnosticParity
+        ) {
+            val freshFindings = verdict.freshFindings
+            log.info(
+                "dashj-sync-diagnostic: dashj caught up (100%) — parity {} " +
+                    "estimated sdk={} dashj={} confirmed sdk={} dashj={} tx sdk={} dashj={} " +
+                    "breakdown={}",
+                verdict.parity, freshReport.sdkDuffs, freshReport.dashjDuffs,
+                freshReport.sdkConfirmedDuffs, freshReport.dashjAvailableDuffs,
+                freshReport.sdkTxCount, freshReport.dashjTxCount,
+                freshFindings?.let { it.reason ?: "clean (${it.valueCompared} values compared)" }
+                    ?: "not run since dashj caught up"
+            )
         }
-        lastDiagnosticParity = parity
-        // dashj itself is done but the fresh post-catchup report hasn't landed
-        // yet: hold the internal percent at 99 and flag the window so the
-        // readout shows "Verifying" — 100 and the verdict colour then appear
-        // together when the report arrives.
-        val verifying = percent >= 100 && parity == DashjDiagnosticSyncState.Parity.UNKNOWN
-        val displayPercent = if (verifying) 99 else percent
-        dashjDiagnosticSyncState.update(displayPercent, parity, stage?.name, verifying)
-        // Feed the support-log history buffer (deduplicated inside).
-        dashjDiagnosticSyncState.recordParity(displayPercent, parity, report)
+        lastDiagnosticParity = verdict.parity
+        commitDashjDiagnostic(dashjDiagnosticSyncState, percent, stage?.name, verdict, report)
     }
 
     override fun getConnectedPeers(): List<Peer> {

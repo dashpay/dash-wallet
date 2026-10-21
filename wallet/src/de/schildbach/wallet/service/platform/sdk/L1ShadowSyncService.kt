@@ -1649,6 +1649,54 @@ fun parseL1TxEvent(eventDebug: String): L1TxEvent? = when {
     else -> null
 }
 
+/*
+ * The record lists that change the wallet's transaction history, matched at
+ * their FIRST occurrence: in the derived Debug order only `wallet_id`,
+ * `height` and `chain_lock` (`BlockProcessed`) or `wallet_id`
+ * (`TransactionsSwept`) come before them, and none has a field of these
+ * names, so the first match is the event's own field. The capture is the
+ * list's first non-blank character, empty for `[]`; `\s*` tolerates a
+ * pretty-printed `{:#?}`.
+ */
+private val BLOCK_INSERTED_RECORDS = Regex("""\binserted:\s*\[\s*([^\s\]]?)""")
+private val BLOCK_UPDATED_RECORDS = Regex("""\bupdated:\s*\[\s*([^\s\]]?)""")
+private val SWEPT_TXIDS = Regex("""\btxids:\s*\[\s*([^\s\]]?)""")
+
+/**
+ * Whether one engine wallet-event Debug string changed the wallet's
+ * transaction history in a way the instant-receive parser [parseL1TxEvent]
+ * does not see (it deliberately drops both variants: that feed only wants
+ * first sightings and IS locks) — `key-wallet-manager/src/events.rs`:
+ * - `BlockProcessed` with a record first stored in this block (`inserted`)
+ *   or a known record this block confirmed (`updated`). Without this a
+ *   confirmation would reach neither the parity findings nor their
+ *   generation;
+ * - `TransactionsSwept` that removed records (`txids`) the winning
+ *   transaction superseded.
+ *
+ * False for every other variant, for a block with both lists empty — most
+ * blocks, since the engine emits one per processed block, and expiring the
+ * findings on each would keep parity from ever being established — and for
+ * a sweep that removed nothing. An event of either kind whose lists cannot
+ * be found is treated as a change: a format the parser no longer reads must
+ * cost a recompute, not leave a stale verdict standing. Pure — host-testable.
+ */
+fun l1EventChangesTxHistory(eventDebug: String): Boolean {
+    fun nonEmpty(match: MatchResult?) = match?.groupValues?.get(1)?.isNotEmpty() == true
+    return when {
+        eventDebug.startsWith("BlockProcessed") -> {
+            val inserted = BLOCK_INSERTED_RECORDS.find(eventDebug)
+            val updated = BLOCK_UPDATED_RECORDS.find(eventDebug)
+            (inserted == null && updated == null) || nonEmpty(inserted) || nonEmpty(updated)
+        }
+        eventDebug.startsWith("TransactionsSwept") -> {
+            val txids = SWEPT_TXIDS.find(eventDebug)
+            txids == null || nonEmpty(txids)
+        }
+        else -> false
+    }
+}
+
 /**
  * The `ChainLock`'s own `block_height` inside a `WalletEvent` Debug
  * string. `block_height` is the field name of
@@ -1827,7 +1875,19 @@ interface L1ShadowSource {
      * spenders, so it can exceed [sdkTxCount] by in-flight change-less sends.
      * Null when unavailable; default null so test fakes stay source-compatible.
      */
-    suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, Int>? = null
+    suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, SdkTxFacts>? = null
+
+    /**
+     * The current [SdkTxStoreFingerprint] of what [sdkTxidHeights] would
+     * return, for checking that a breakdown's findings still describe the
+     * store ([L1ShadowSyncService.breakdownFindingsStillCurrent]). Null when
+     * unavailable, which never counts as unchanged. The default folds
+     * [sdkTxidHeights] itself, so a test fake's store and fingerprint cannot
+     * disagree; the production source streams the same rows instead
+     * ([querySdkTxStoreFingerprint]).
+     */
+    suspend fun sdkTxStoreFingerprint(walletIdHex: String): SdkTxStoreFingerprint? =
+        sdkTxidHeights(walletIdHex)?.let { fingerprintOf(it) }
 
     /**
      * The dashj side of the [ParityBreakdown] ([collectDashjBreakdownFacts]),
@@ -2006,11 +2066,25 @@ internal class DashSdkL1ShadowSource(
             )
         }
 
-    override suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, Int>? {
+    override suspend fun sdkTxidHeights(walletIdHex: String): Map<org.bitcoinj.core.Sha256Hash, SdkTxFacts>? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
         val db = database()
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
+        }
+    }
+
+    /**
+     * Streams the rows rather than building the map: this runs on every
+     * diagnostic pass that would use the findings. Never boots the SDK for it
+     * ([DashSdkService.databaseOrNull], not [database]): a store that is not
+     * open reads as unavailable, which never counts as unchanged.
+     */
+    override suspend fun sdkTxStoreFingerprint(walletIdHex: String): SdkTxStoreFingerprint? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        val db = service.databaseOrNull() ?: return null
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            querySdkTxStoreFingerprint(db.openHelper.readableDatabase, walletId)
         }
     }
 
@@ -2119,6 +2193,49 @@ internal class DashSdkShadowWalletRecreator(
     override suspend fun resetBinderLatch() = binder.resetForWalletRecreation()
 
     override fun rebindInBackground(): Job = binder.bindInBackground(unlock::unlockOrNull)
+}
+
+/**
+ * The paid contact address history marker's side of deleting an SDK wallet's
+ * transaction store ([PaidContactAddressStore.beginHistoryInvalidation] and
+ * [PaidContactAddressStore.endHistoryInvalidation]): the marker vouches for
+ * that store, so it is dropped before the deletion and cannot be recorded
+ * again until the deletion is over (PR #1608 review, rounds 12-14).
+ */
+interface ContactPaidHistoryInvalidation {
+    /**
+     * Drops the marker for [walletIdHex] and holds its recording. False when
+     * it could not be dropped on disk: the store must not be deleted then.
+     * Followed by exactly one [end], whatever happens.
+     */
+    suspend fun begin(walletIdHex: String): Boolean
+
+    /** Drops the marker again and lets it be recorded; false when that drop did not reach disk. */
+    suspend fun end(walletIdHex: String): Boolean
+
+    companion object {
+        /** No marker to drop (tests' default). */
+        val NONE = object : ContactPaidHistoryInvalidation {
+            override suspend fun begin(walletIdHex: String) = true
+            override suspend fun end(walletIdHex: String) = true
+        }
+
+        /**
+         * Over the [store] it returns (resolved on first use), with its
+         * blocking file work on [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO].
+         */
+        fun of(store: () -> PaidContactAddressStore) = object : ContactPaidHistoryInvalidation {
+            override suspend fun begin(walletIdHex: String) =
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    store().beginHistoryInvalidation(walletIdHex)
+                }
+
+            override suspend fun end(walletIdHex: String) =
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    store().endHistoryInvalidation(walletIdHex)
+                }
+        }
+    }
 }
 
 // ── The shadow-sync service ───────────────────────────────────────────
@@ -2241,7 +2358,14 @@ class L1ShadowSyncService internal constructor(
      * to fall back on; null (tests' default) keeps it in memory only. See
      * [parityBreakdownForReport].
      */
-    private val breakdownStore: ParityBreakdownStore? = null
+    private val breakdownStore: ParityBreakdownStore? = null,
+    /**
+     * Drops the paid contact address history marker for an SDK wallet whose
+     * transaction store is about to be deleted, and holds its recording until
+     * the deletion is over; a failed drop refuses the deletion. Tests'
+     * default: nothing to drop.
+     */
+    private val contactPaidHistory: ContactPaidHistoryInvalidation = ContactPaidHistoryInvalidation.NONE
 ) {
     @Inject
     constructor(
@@ -2294,7 +2418,8 @@ class L1ShadowSyncService internal constructor(
                 dashjEarliestKeyTimeSecs = walletData.wallet?.earliestKeyCreationTime
             )
         },
-        balanceFactsEnabled = true
+        balanceFactsEnabled = true,
+        contactPaidHistory = ContactPaidHistoryInvalidation.of { PaidContactAddressStore.app(context.filesDir) }
     )
 
     /** Serializes [startIfEnabled]/[stop] — the single-flight guarantee. */
@@ -2582,6 +2707,16 @@ class L1ShadowSyncService internal constructor(
 
     /** Live shadow SPV progress ([ShadowSyncProgress.IDLE] while stopped). */
     val progress: StateFlow<ShadowSyncProgress> = _progress.asStateFlow()
+
+    /**
+     * The newest breakdown's findings, in memory only, for the dashj diagnostic
+     * verdict. A StateFlow rather than [latestParityBreakdown] because that one
+     * reads a file on first call and the verdict runs on a progress callback.
+     * Null means "no breakdown has run in this process", which must never be
+     * read as parity.
+     */
+    private val _latestBreakdownFindings = MutableStateFlow<TimedBreakdownFindings?>(null)
+    val latestBreakdownFindings: StateFlow<TimedBreakdownFindings?> = _latestBreakdownFindings.asStateFlow()
 
     private val _latestParity = MutableStateFlow<ParityReport?>(null)
 
@@ -3398,7 +3533,25 @@ class L1ShadowSyncService internal constructor(
      * cadence, but it should not do so silently.
      */
     private suspend fun tapWalletEvents() {
+        var afterFailure = false
         while (currentCoroutineContext().isActive) {
+            // A history change in a gap reaches no invalidation: the feed has
+            // no replay, SPV is started before this tap and stopped after it,
+            // and a failed collect leaves a retry delay. So every
+            // (re)subscription revokes the findings. A change between here and
+            // the subscription itself is still unseen by the tap; the
+            // fingerprint check ([breakdownFindingsStillCurrent]) catches that.
+            //
+            // The session's first subscription needs no settle window: nothing
+            // is known to be arriving. After a failure it does: a feed failing
+            // every retry would otherwise free the hourly slot each time and
+            // buy a full breakdown per probe tick, every one of them fenced by
+            // the next failure. With the window, a broken feed simply keeps
+            // parity unestablished until it has stayed up for one window.
+            expireParityFindingsForNewTx(
+                if (afterFailure) "the wallet-event tap re-subscribing" else "the wallet-event tap subscribing",
+                settle = afterFailure
+            )
             try {
                 source.walletEventStrings().collect { debug ->
                     // Liveness for the filter-stall watchdog, stamped before
@@ -3424,15 +3577,32 @@ class L1ShadowSyncService internal constructor(
                     parseL1SyncHeightAdvanced(debug)?.let { height ->
                         _engineWalletSyncedHeight.value = height
                     }
+                    // A block that stored or confirmed a wallet transaction, or
+                    // a sweep that removed one, changes the history the
+                    // findings compared (a shared tx unconfirmed on both sides
+                    // was left out of the value comparison), though neither is
+                    // an instant-receive event.
+                    if (l1EventChangesTxHistory(debug)) {
+                        expireParityFindingsForNewTx()
+                        return@collect
+                    }
                     val event = parseL1TxEvent(debug) ?: return@collect
                     log.info("L1 engine tx event: {}", event)
+                    // A transaction the findings never saw makes them stale:
+                    // they described the history without it.
+                    expireParityFindingsForNewTx()
                     if (!_txEvents.tryEmit(event)) {
                         log.warn("L1 tx-event buffer full; dropped {} (Room snapshot will reconcile)", event)
                     }
                 }
-                return // upstream flow completed normally
+                // Upstream flow completed normally: no events from here on.
+                expireParityFindingsForNewTx("the wallet-event feed ending", settle = false)
+                return
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                // The gap starts now, not at the re-subscription after the delay.
+                expireParityFindingsForNewTx("the wallet-event tap failing")
+                afterFailure = true
                 log.warn("L1 wallet-event tap failed; re-collecting in ${LOOP_RETRY_DELAY_MS}ms", t)
                 delay(LOOP_RETRY_DELAY_MS)
             }
@@ -4028,12 +4198,39 @@ class L1ShadowSyncService internal constructor(
     private val breakdownLock = Any()
 
     /**
-     * Bumped by a wallet wipe ([clearParityBreakdownForWalletWipe]); under
+     * Bumped by [discardParityBreakdown] (wallet wipe, ledger rebuild); under
      * [breakdownLock]. A run, or a first [breakdownStore] read, that began in
      * an earlier epoch keeps nothing, so a run that finishes after the wipe
      * cannot write the wiped wallet's txids back.
      */
     private var breakdownEpoch = 0L
+
+    /**
+     * Advanced by every wallet transaction event, every block that stored or
+     * confirmed one, every sweep that removed one and every app-side repair
+     * that changed a stored net ([expireParityFindingsForNewTx],
+     * [storedNetsRepaired]);
+     * under [breakdownLock]. A run that began under an older generation read a
+     * history without that transaction: it may still keep its text, but it
+     * must not publish findings or touch the hourly cadence, or a clean sheet
+     * for the old history would come back as the verdict for the new one.
+     */
+    private var txHistoryGeneration = 0L
+
+    /**
+     * How many wallet wipes and SDK ledger rebuilds are in progress
+     * ([closeParityBreakdown]); under [breakdownLock]. While above zero no run
+     * is admitted ([startParityBreakdown]).
+     *
+     * The epoch alone is not enough: [discardParityBreakdown] fences the runs
+     * that exist when it is called, but a reset still has to stop SPV before
+     * it deletes the rows, and the shadow still reads as running and caught up
+     * meanwhile. A report or probe in that gap started a run under the NEW
+     * epoch that read the OLD ledger and, finishing after the deletion, passed
+     * every check — clean findings for a ledger that no longer existed, and
+     * the hourly slot spent on them.
+     */
+    private var breakdownClosedBy = 0
 
     /**
      * The run in flight, if any: at most one at a time, shared by the hourly
@@ -4048,6 +4245,62 @@ class L1ShadowSyncService internal constructor(
     /** When this process last completed a run — the hourly cadence. In memory only. */
     @Volatile
     private var lastBreakdownRunMs: Long? = null
+
+    /**
+     * When dashj last reached 100 % this stretch, as
+     * `BlockchainServiceImpl.dashjCaughtUpAtMs` stamped it — or null while it
+     * is still behind (or the diagnostic is off).
+     *
+     * The breakdown has two gates and they used to disagree. This one decides
+     * whether a run is WORTH STARTING; the diagnostic's own freshness check
+     * decides whether its result may be used, and only accepts findings
+     * computed at or after this moment. A run launched while dashj was behind
+     * therefore produced findings the verdict could never accept — and still
+     * consumed the hourly slot, so the readout said "full parity not
+     * established" for up to an hour after it was. Measured at 49 and 52
+     * minutes on two wallets in QA run 27.
+     *
+     * Volatile rather than locked: written from the service's publish path,
+     * read from the probe loop and the breakdown's own completion.
+     */
+    @Volatile
+    private var dashjCaughtUpAtMs: Long? = null
+
+    /**
+     * Tell the harness when dashj reached 100 % ([atMs]), or that it is behind
+     * again (null). Called by the diagnostic as it stamps its own catch-up
+     * moment, so both gates read one fact instead of two.
+     */
+    fun dashjCaughtUp(atMs: Long?) {
+        val released = synchronized(breakdownLock) {
+            val previous = dashjCaughtUpAtMs
+            if (previous == atMs) return
+            dashjCaughtUpAtMs = atMs
+            // A catch-up moment that moved FORWARD invalidates whatever was
+            // computed against the old one — the verdict applies the same test
+            // and will reject it. Without releasing the slot the findings are
+            // rejected and no replacement may run for the rest of the hour,
+            // which is the same defect this change set out to fix, reached from
+            // the other side: dashj falls behind, catches up again, and the
+            // readout holds at "full parity not established".
+            //
+            // Under [breakdownLock] with the completion that assigns the slot,
+            // so the two cannot interleave: a run finishing after this point
+            // sees the new stamp and finds itself unusable, and one that
+            // finished before it has its slot cleared here.
+            if (atMs != null && (previous == null || atMs > previous) && lastBreakdownRunMs != null) {
+                lastBreakdownRunMs = null
+                true
+            } else {
+                false
+            }
+        }
+        log.info(
+            "ParityBreakdown: dashj caught-up stamp {}{}",
+            atMs ?: "cleared (dashj is behind)",
+            if (released) " — hourly slot released, the next probe recomputes" else ""
+        )
+    }
 
     /** After a failed or skipped run, no hourly attempt before this (wall clock, [nowMs]). */
     @Volatile
@@ -4081,15 +4334,167 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * Wallet wipe: forget the breakdown (memory and [breakdownStore]) and
-     * cancel a run in flight. The epoch bump fences a run that cannot be
-     * stopped in time — it finishes without keeping or logging anything.
+     * A new transaction arrived, or a block stored or confirmed one, or a
+     * sweep removed one ([l1EventChangesTxHistory]): the completed findings described a
+     * history without that change, so they can no longer establish parity for
+     * the history with it. Dropping them makes the verdict fall back to "not
+     * established" until a run has compared the new state.
+     *
+     * A run IN FLIGHT is just as stale — it may already have read its inputs —
+     * so the event also advances [txHistoryGeneration]. A run started under an
+     * older generation still keeps its text (it is a true account of the
+     * moment it read), but publishes no findings and leaves the cadence alone
+     * ([keepParityBreakdown], [runParityBreakdown]). That applies to the
+     * first run of the process too: nothing completed is needed for the
+     * generation to move.
+     *
+     * Unlike [discardParityBreakdown] this keeps the stored breakdown text —
+     * it is timestamped and remains a valid account of the moment it was
+     * computed, which is what a support report wants. Only the verdict's
+     * input goes.
+     *
+     * The cadence is reset so the next probe tick can recompute rather than
+     * waiting out the hour, held off by [PARITY_BREAKDOWN_TX_SETTLE_MS] past
+     * the LATEST event, so a burst (one event per CoinJoin record) produces
+     * one run after it ends, not one per transaction.
+     *
+     * Also the conservative answer when a change may have gone unreported:
+     * a gap in the event tap ([tapWalletEvents]) and a store that no longer
+     * matches the findings' fingerprint ([breakdownFindingsStillCurrent]).
+     *
+     * @param settle hold the next run off by the settle window. False for the
+     *   tap's first subscription of a session and a feed that ended: nothing
+     *   is known to be arriving, so a recompute need not wait.
+     * @param onlyIfStill expire only while these exact findings are the
+     *   published ones. A check that read them may finish after a newer run
+     *   replaced them, and must not revoke findings it never checked.
      */
-    private suspend fun clearParityBreakdownForWalletWipe() {
+    private fun expireParityFindingsForNewTx(
+        cause: String = "a new transaction",
+        settle: Boolean = true,
+        onlyIfStill: TimedBreakdownFindings? = null
+    ) {
+        val expired = synchronized(breakdownLock) {
+            if (onlyIfStill != null && _latestBreakdownFindings.value !== onlyIfStill) return
+            txHistoryGeneration++
+            val hadSomething = _latestBreakdownFindings.value != null ||
+                lastBreakdownRunMs != null ||
+                inFlightParityBreakdown(breakdownRun) != null
+            _latestBreakdownFindings.value = null
+            lastBreakdownRunMs = null
+            if (settle) {
+                breakdownRetryNotBeforeMs = maxOf(
+                    breakdownRetryNotBeforeMs,
+                    nowMs() + PARITY_BREAKDOWN_TX_SETTLE_MS
+                )
+            }
+            hadSomething
+        }
+        // Logged only when something was expired, so a burst normally logs
+        // once: its later events find nothing left (unless a run is still in
+        // flight) and only extend the settle window.
+        if (expired) {
+            log.info("ParityBreakdown: findings expired by {}; recomputing after the settle window", cause)
+        }
+    }
+
+    /**
+     * The app itself rewrote [count] stored transaction nets in the SDK store
+     * (`SdkTxStoreWalker`'s reattribution write-back, reached from the display
+     * pipeline and its paged reconcile walk). The breakdown compares exactly
+     * those nets, but the write is not the engine's, so no wallet event
+     * reports it: without this call a breakdown that read the wrong net kept
+     * its VALUES_DIFFER for the rest of the hour, and one that read it while
+     * the repair committed could still publish. Same invalidation as an engine
+     * event ([expireParityFindingsForNewTx]): findings cleared, generation
+     * advanced, hourly slot released, settle window. Zero changes nothing.
+     *
+     * Called synchronously after the repair's transaction has committed, from
+     * whichever thread ran it; never blocks beyond [breakdownLock].
+     */
+    fun storedNetsRepaired(count: Int) {
+        if (count <= 0) return
+        expireParityFindingsForNewTx("$count stored net(s) repaired in the SDK store")
+    }
+
+    /**
+     * Whether [findings] still describe the SDK store, checked against the
+     * store itself rather than against the events that report changes to it.
+     *
+     * Every other invalidation needs an event to reach the tap, and events can
+     * be lost: the SDK's event buffer drops when full, and the tap is not
+     * subscribed while it starts, stops or recovers. So before the findings
+     * may support a verdict, the diagnostic pass re-reads the store's
+     * [SdkTxStoreFingerprint] and compares it with the one the run recorded
+     * from its own input. Equal means the SDK side the run compared is still
+     * exactly the store's state.
+     *
+     * Not equal expires the findings, as a lost event would have
+     * ([expireParityFindingsForNewTx], settle window included: a lost event
+     * usually means a burst), and returns false; the next probe recomputes.
+     * Findings without a fingerprint, or for a wallet other than the one
+     * running, are not current, and neither is a store that cannot be read
+     * now (that one is left in place: if the store reads the same later, the
+     * findings are still true of it).
+     *
+     * One aggregate over the wallet's txid set per call; call off the main
+     * thread. Never throws, except cancellation.
+     */
+    suspend fun breakdownFindingsStillCurrent(findings: TimedBreakdownFindings): Boolean {
+        val expected = findings.storeFingerprint ?: return false
+        val walletIdHex = findings.walletIdHex ?: return false
+        val running = runningWalletIdHex.value
+        if (running != null && running != walletIdHex) {
+            expireParityFindingsForNewTx("a different SDK wallet running", settle = false, onlyIfStill = findings)
+            return false
+        }
+        val current = try {
+            source.sdkTxStoreFingerprint(walletIdHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.debug("ParityBreakdown: SDK store fingerprint unreadable", t)
+            null
+        } ?: return false
+        if (current == expected) return true
+        expireParityFindingsForNewTx(
+            "an SDK store change no event reported (wallet txids ${expected.rows} -> ${current.rows})",
+            onlyIfStill = findings
+        )
+        return false
+    }
+
+    /**
+     * Forget the breakdown (memory and [breakdownStore]) and cancel a run in
+     * flight. The epoch bump fences a run that cannot be stopped in time — it
+     * finishes without keeping or logging anything.
+     *
+     * Two callers, one rule: the breakdown describes a ledger that is about to
+     * stop existing.
+     *
+     *  - a wallet wipe ([clearForWalletWipe]) — the stored breakdown carries
+     *    this wallet's txids and amounts and must never reach the next
+     *    wallet's support report;
+     *  - an SDK LEDGER REBUILD: `resetShadowState()` deletes the L1 rows and
+     *    `recoverByRecreatingWallet()` removes and restores the SDK wallet.
+     *    Neither is a wipe, so neither used to come through here and completed
+     *    findings survived both. With dashj still at 100 % a pre-rebuild clean
+     *    sheet stayed eligible, so a rebuilt ledger with matching balances and
+     *    counts but a wrong stored net could be published as MATCH without any
+     *    value comparison of the rebuilt state — until the next hourly run.
+     *
+     * Clearing the findings makes the verdict fall back to "not established",
+     * and resetting the cadence lets a fresh breakdown run immediately rather
+     * than waiting out the hour.
+     */
+    private suspend fun discardParityBreakdown(why: String) {
         val run = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             synchronized(breakdownLock) {
                 breakdownEpoch++
                 latestBreakdown = null
+                // The findings described the ledger that is going away.
+                // Clearing them means the verdict falls back to "not
+                // established" rather than carrying a stale clean sheet over.
+                _latestBreakdownFindings.value = null
                 breakdownStoreLoaded = true // the file is gone; nothing to load
                 lastBreakdownRunMs = null
                 breakdownRetryNotBeforeMs = 0L
@@ -4098,7 +4503,30 @@ class L1ShadowSyncService internal constructor(
             }
         }
         run?.cancel()
-        log.info("ParityBreakdown: cleared for the wallet wipe")
+        log.info("ParityBreakdown: discarded — {}", why)
+    }
+
+    /**
+     * Refuse new runs until the matching [reopenParityBreakdown] — for the
+     * whole of a wipe or ledger rebuild, from before its
+     * [discardParityBreakdown] to after its last destructive step. Not
+     * suspending, so the caller can pair it with a `finally` that is sure to
+     * run: a failed reset must not leave the breakdown closed for good.
+     */
+    private fun closeParityBreakdown() {
+        synchronized(breakdownLock) { breakdownClosedBy++ }
+    }
+
+    /**
+     * Undo one [closeParityBreakdown]. The epoch moves again on the way out,
+     * so nothing that began while closed — a first [breakdownStore] read
+     * included — survives into the rebuilt ledger.
+     */
+    private fun reopenParityBreakdown() {
+        synchronized(breakdownLock) {
+            breakdownClosedBy--
+            breakdownEpoch++
+        }
     }
 
     /**
@@ -4118,6 +4546,12 @@ class L1ShadowSyncService internal constructor(
      */
     private fun maybeLaunchParityBreakdown(walletIdHex: String) {
         if (!sdkCaughtUpForBreakdown()) return
+        // dashj still behind: the comparison would be against a partial dashj
+        // set — every transaction it has not reached yet counts as sdk-only —
+        // and the verdict would reject the result anyway for being older than
+        // the catch-up moment. Starting it would spend the hourly slot on an
+        // answer nobody can use.
+        if (dashjCaughtUpAtMs == null) return
         if (inFlightParityBreakdown(breakdownRun) != null) return
         val now = nowMs()
         if (now < breakdownRetryNotBeforeMs) return
@@ -4125,20 +4559,32 @@ class L1ShadowSyncService internal constructor(
         startParityBreakdown(walletIdHex, ParityBreakdownTrigger.PROBE)
     }
 
-    /** Start a run, or return the one already in flight (started or not). */
+    /**
+     * Start a run, or return the one already in flight (started or not) — or,
+     * while a wipe or ledger rebuild is in progress ([breakdownClosedBy]), an
+     * already-completed [ParityBreakdownRunResult.Unavailable].
+     */
     private fun startParityBreakdown(
         walletIdHex: String,
         trigger: ParityBreakdownTrigger
     ): Deferred<ParityBreakdownRunResult> {
         val run = synchronized(breakdownLock) {
+            if (breakdownClosedBy > 0) {
+                return kotlinx.coroutines.CompletableDeferred(
+                    ParityBreakdownRunResult.Unavailable(PARITY_BREAKDOWN_LEDGER_REBUILD)
+                )
+            }
             inFlightParityBreakdown(breakdownRun)?.let { return it }
             val epoch = breakdownEpoch
+            // Taken before the run reads anything, so a transaction that
+            // arrives at any point during the run makes it stale.
+            val generation = txHistoryGeneration
             // LAZY so the field is set before the body runs (an Unconfined
             // scope would otherwise run it inside this lock). Published
             // unstarted: callers in the gap below see it as in flight
             // ([inFlightParityBreakdown]), not as finished.
             scope.async(start = kotlinx.coroutines.CoroutineStart.LAZY) {
-                runParityBreakdown(walletIdHex, trigger, epoch)
+                runParityBreakdown(walletIdHex, trigger, epoch, generation)
             }.also { breakdownRun = it }
         }
         run.start()
@@ -4209,7 +4655,9 @@ class L1ShadowSyncService internal constructor(
      * dashj's transactions, then the pure [computeParityBreakdown]. Both
      * inputs are dropped when this returns; only the text is kept (in memory
      * and in [breakdownStore]), and only if no wallet wipe happened since
-     * [epoch]. Never throws, except cancellation.
+     * [epoch]. Its findings and its cadence update count only if no
+     * transaction arrived since [generation] ([txHistoryGeneration]). Never
+     * throws, except cancellation.
      *
      * Waits for the SDK's transaction processing, not just its filter scan:
      * a transaction below dashj's comparison height that the SDK has matched
@@ -4220,7 +4668,8 @@ class L1ShadowSyncService internal constructor(
     private suspend fun runParityBreakdown(
         walletIdHex: String,
         trigger: ParityBreakdownTrigger,
-        epoch: Long
+        epoch: Long,
+        generation: Long
     ): ParityBreakdownRunResult {
         val result = try {
             val startedMs = nowMs()
@@ -4249,15 +4698,29 @@ class L1ShadowSyncService internal constructor(
                         ParityBreakdownRunResult.Unavailable(processing)
                     } else {
                         val breakdown = computeParityBreakdown(dashj.txs, sdkTxids, dashj.lastBlockSeenHeight)
+                        // What the findings are true of: the SDK side exactly as
+                        // this run read it, from the same single query.
+                        val storeFingerprint = fingerprintOf(sdkTxids)
                         val tookMs = (System.nanoTime() - startedNanos) / 1_000_000
                         val text = parityBreakdownLog(breakdown, startedMs, tookMs, trigger.label, dashj.classifyFailures)
-                        val stored = StoredParityBreakdown(walletIdHex, startedMs, text)
-                        if (keepParityBreakdown(stored, epoch)) {
-                            log.info(text)
-                            ParityBreakdownRunResult.Done(stored)
-                        } else {
-                            log.info("ParityBreakdown discarded: the wallet was wiped while it ran")
-                            ParityBreakdownRunResult.Unavailable(PARITY_BREAKDOWN_WIPED)
+                        val stored = StoredParityBreakdown(walletIdHex, startedMs, text, findingsOf(breakdown))
+                        when (keepParityBreakdown(stored, storeFingerprint, epoch, generation)) {
+                            BreakdownKept.PUBLISHED -> {
+                                log.info(text)
+                                ParityBreakdownRunResult.Done(stored)
+                            }
+                            BreakdownKept.STALE_HISTORY -> {
+                                log.info(text)
+                                log.info(
+                                    "ParityBreakdown: a new transaction arrived while it ran — kept for reports, " +
+                                        "but its findings are not the verdict; recomputing after the settle window"
+                                )
+                                ParityBreakdownRunResult.Done(stored)
+                            }
+                            BreakdownKept.WIPED -> {
+                                log.info("ParityBreakdown discarded: the wallet was wiped while it ran")
+                                ParityBreakdownRunResult.Unavailable(PARITY_BREAKDOWN_WIPED)
+                            }
                         }
                     }
                 }
@@ -4268,9 +4731,27 @@ class L1ShadowSyncService internal constructor(
             ParityBreakdownRunResult.Failed("${t.javaClass.simpleName}: ${t.message}")
         }
         synchronized(breakdownLock) {
-            if (epoch == breakdownEpoch) {
+            // A wipe (epoch) or a new transaction (generation) since the start:
+            // the cadence belongs to whatever replaces this run. A stale run
+            // must neither take the hour nor push the settle window out to the
+            // retry back-off.
+            if (epoch == breakdownEpoch && generation == txHistoryGeneration) {
                 if (result is ParityBreakdownRunResult.Done) {
-                    lastBreakdownRunMs = result.stored.computedAtMs
+                    // Spend the hourly slot only on a result the verdict can
+                    // accept. The stamp can move WHILE a run is in flight —
+                    // after an app restart the run and the stamp land in the
+                    // same second — and a run that lost that race must not
+                    // lock the next one out for an hour.
+                    if (parityBreakdownIsUsable(result.stored.computedAtMs, dashjCaughtUpAtMs)) {
+                        lastBreakdownRunMs = result.stored.computedAtMs
+                    } else {
+                        log.info(
+                            "ParityBreakdown: computed at {} but dashj caught up at {} — not recorded " +
+                                "against the hourly cadence, the next probe recomputes",
+                            result.stored.computedAtMs,
+                            dashjCaughtUpAtMs
+                        )
+                    }
                 } else {
                     breakdownRetryNotBeforeMs = nowMs() + PARITY_BREAKDOWN_RETRY_MS
                 }
@@ -4279,20 +4760,52 @@ class L1ShadowSyncService internal constructor(
         return result
     }
 
+    /** What [keepParityBreakdown] did with a finished run. */
+    private enum class BreakdownKept {
+        /** Kept, and its findings are the verdict's input. */
+        PUBLISHED,
+
+        /** Kept as text for reports; a transaction arrived since it started, so no findings. */
+        STALE_HISTORY,
+
+        /** A wallet wipe or ledger rebuild since it started: nothing kept. */
+        WIPED
+    }
+
     /**
      * Keep [stored] as the latest result (memory and [breakdownStore]) unless
-     * a wallet wipe happened since [epoch]. The check and the write are one
-     * step under [breakdownLock], so a wipe cannot slip in between.
+     * a wallet wipe happened since [epoch], and publish its findings, with the
+     * [storeFingerprint] of the SDK state they describe, unless a transaction
+     * arrived since [generation]. The checks and the writes are one step under
+     * [breakdownLock], so neither a wipe nor a transaction event can slip in
+     * between the check and the publication.
      */
-    private suspend fun keepParityBreakdown(stored: StoredParityBreakdown, epoch: Long): Boolean =
+    private suspend fun keepParityBreakdown(
+        stored: StoredParityBreakdown,
+        storeFingerprint: SdkTxStoreFingerprint,
+        epoch: Long,
+        generation: Long
+    ): BreakdownKept =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             synchronized(breakdownLock) {
                 if (epoch != breakdownEpoch) {
-                    false
+                    BreakdownKept.WIPED
                 } else {
                     latestBreakdown = stored
                     breakdownStore?.save(stored)
-                    true
+                    if (generation == txHistoryGeneration) {
+                        stored.findings?.let {
+                            _latestBreakdownFindings.value = TimedBreakdownFindings(
+                                stored.computedAtMs,
+                                it,
+                                stored.walletIdHex,
+                                storeFingerprint
+                            )
+                        }
+                        BreakdownKept.PUBLISHED
+                    } else {
+                        BreakdownKept.STALE_HISTORY
+                    }
                 }
             }
         }
@@ -4393,6 +4906,9 @@ class L1ShadowSyncService internal constructor(
      * or a step failed; failures are logged, never thrown).
      */
     suspend fun resetShadowState(hard: Boolean = true): Boolean {
+        // No breakdown may START until the rows are gone: one started in
+        // between would read the old ledger and publish it as the new one's.
+        closeParityBreakdown()
         return try {
             mutex.withLock {
                 val walletIdHex = runningWalletIdHex.value
@@ -4400,6 +4916,9 @@ class L1ShadowSyncService internal constructor(
                     log.info("L1 shadow reset skipped: shadow sync not running")
                     return false
                 }
+                // BEFORE the L1 rows go: a clean sheet describes the ledger that
+                // is about to stop existing.
+                discardParityBreakdown("L1 shadow state reset")
                 log.warn(
                     "L1 shadow {} reset: stopping SPV, {}, clearing L1 rows, rescanning",
                     if (hard) "HARD" else "soft",
@@ -4412,17 +4931,28 @@ class L1ShadowSyncService internal constructor(
                 if (hard && !quiesceBringUpForDestruction("shadow hard reset", destructiveBringUpJoinMs)) {
                     return false
                 }
-                runCatching { source.stopSpv() }
-                    .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
-                _progress.value = ShadowSyncProgress.IDLE
-                sessionHeaderStart = 0L // the rescan is a new session's work
-                sessionFilterStart = 0L
-                // Pre-reset parity evidence must never count toward a cutover.
-                parityStreakRecorder.clear()
-                if (hard) {
-                    deleteSpvDataDir()
+                // The L1 rows below are what a paid-history marker vouches
+                // for: it is dropped, and not recorded again until they are
+                // gone (or the reset failed); nothing is deleted if it cannot
+                // be dropped.
+                try {
+                    if (!beginPaidHistoryInvalidation(walletIdHex, "shadow reset")) {
+                        return false
+                    }
+                    runCatching { source.stopSpv() }
+                        .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
+                    _progress.value = ShadowSyncProgress.IDLE
+                    sessionHeaderStart = 0L // the rescan is a new session's work
+                    sessionFilterStart = 0L
+                    // Pre-reset parity evidence must never count toward a cutover.
+                    parityStreakRecorder.clear()
+                    if (hard) {
+                        deleteSpvDataDir()
+                    }
+                    source.clearSdkL1Rows(walletIdHex)
+                } finally {
+                    endPaidHistoryInvalidation(walletIdHex, "shadow reset")
                 }
-                source.clearSdkL1Rows(walletIdHex)
                 if (!hard) {
                     source.clearSpvStorage()
                 }
@@ -4441,7 +4971,56 @@ class L1ShadowSyncService internal constructor(
             if (t is CancellationException) throw t
             log.error("L1 shadow reset failed; the shadow may need a manual restart", t)
             false
+        } finally {
+            reopenParityBreakdown()
         }
+    }
+
+    /**
+     * Drop the paid contact address history marker for [walletIdHex] before
+     * its SDK transaction store is deleted, holding its recording until
+     * [endPaidHistoryInvalidation] ([ContactPaidHistoryInvalidation.begin]);
+     * false (logged) when it could not be dropped, or the drop threw. Call
+     * inside a `try` whose `finally` runs [endPaidHistoryInvalidation].
+     */
+    private suspend fun beginPaidHistoryInvalidation(walletIdHex: String, what: String): Boolean {
+        val dropped = try {
+            contactPaidHistory.begin(walletIdHex)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("{}: dropping the paid contact address history marker failed", what, e)
+            false
+        }
+        if (!dropped) {
+            log.error(
+                "{}: the paid contact address history marker for wallet {}… could not be dropped; " +
+                    "refusing to delete the SDK transaction store it vouches for",
+                what, walletIdHex.take(8)
+            )
+        }
+        return dropped
+    }
+
+    /**
+     * Ends [beginPaidHistoryInvalidation], whether the deletion completed,
+     * failed or was cancelled ([ContactPaidHistoryInvalidation.end]): drops
+     * the marker again — a lookup that read the old store's state just before
+     * the first drop may have recorded it since — and lets it be recorded
+     * once more. Runs even in a cancelled coroutine: skipped, the marker could
+     * not be recorded again in this process. Best effort — logged, never
+     * throws.
+     */
+    private suspend fun endPaidHistoryInvalidation(walletIdHex: String, what: String) {
+        val dropped = try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                contactPaidHistory.end(walletIdHex)
+            }
+        } catch (e: Exception) {
+            log.warn("{}: re-dropping the paid contact address history marker failed", what, e)
+            return
+        }
+        if (!dropped) log.warn("{}: re-dropping the paid contact address history marker failed", what)
     }
 
     /** Fire-and-forget hard [resetShadowState], for the debug broadcast trigger. */
@@ -4550,6 +5129,10 @@ class L1ShadowSyncService internal constructor(
             log.warn("L1 shadow wallet re-creation skipped: no recreator wired (test construction?)")
             return false
         }
+        // Closed until the wallet is removed: the stop() below cancels a run,
+        // but one started between the discard and that stop would read the
+        // old ledger, and could keep it before the cancel reached it.
+        closeParityBreakdown()
         return try {
             recoveryMutex.withLock {
                 val walletIdHex = runningWalletIdHex.value ?: source.boundWalletIdOrNull()
@@ -4557,6 +5140,9 @@ class L1ShadowSyncService internal constructor(
                     log.info("L1 shadow wallet re-creation skipped: no SDK wallet bound")
                     return false
                 }
+                // stop() cancels an in-flight breakdown but keeps completed
+                // findings; the wallet is about to be removed and restored.
+                discardParityBreakdown("SDK wallet re-creation")
                 log.warn(
                     "L1 shadow RECOVERY BY WALLET RE-CREATION for SDK wallet {}…: stopping " +
                         "shadow + shielded sync, removing the SDK wallet (full cascade — this " +
@@ -4580,11 +5166,23 @@ class L1ShadowSyncService internal constructor(
                     if (!quiesceBringUpForDestruction("wallet re-creation", destructiveBringUpJoinMs)) {
                         return false
                     }
-                    recreator.removeSdkWallet(walletIdHex)
-                    deleteSpvDataDir()
-                    runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
-                        .onFailure { log.warn("wallet re-creation: failed to persist the reset marker", it) }
-                    recreator.resetBinderLatch()
+                    // The re-created wallet has the same id, so a paid-history
+                    // marker would vouch for the empty store that replaces this
+                    // one. Dropped first, and not recorded again until the
+                    // store and the binder latch are gone (or this failed);
+                    // nothing is deleted if it cannot be dropped.
+                    try {
+                        if (!beginPaidHistoryInvalidation(walletIdHex, "wallet re-creation")) {
+                            return false
+                        }
+                        recreator.removeSdkWallet(walletIdHex)
+                        deleteSpvDataDir()
+                        runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
+                            .onFailure { log.warn("wallet re-creation: failed to persist the reset marker", it) }
+                        recreator.resetBinderLatch()
+                    } finally {
+                        endPaidHistoryInvalidation(walletIdHex, "wallet re-creation")
+                    }
                 }
                 val bindJob = recreator.rebindInBackground()
                 scope.launch {
@@ -4613,6 +5211,8 @@ class L1ShadowSyncService internal constructor(
                 t
             )
             false
+        } finally {
+            reopenParityBreakdown()
         }
     }
 
@@ -4648,10 +5248,21 @@ class L1ShadowSyncService internal constructor(
      * rest (a partial clear is exactly the resurrection bug).
      */
     suspend fun clearForWalletWipe() {
+        // Closed until the SDK wallet is gone, or a run started before the
+        // stop() below could keep this wallet's txids after the discard.
+        closeParityBreakdown()
+        try {
+            clearForWalletWipeWithBreakdownClosed()
+        } finally {
+            reopenParityBreakdown()
+        }
+    }
+
+    private suspend fun clearForWalletWipeWithBreakdownClosed() {
         // First and unconditionally: the stored parity breakdown carries this
         // wallet's txids and amounts, and must never reach the next wallet's
         // support report.
-        clearParityBreakdownForWalletWipe()
+        discardParityBreakdown("the wallet wipe")
         val recreator = this.recreator ?: run {
             log.info("wallet-wipe SDK cleanup skipped: no recreator wired (test construction?)")
             return
@@ -4934,5 +5545,13 @@ class L1ShadowSyncService internal constructor(
 
         /** After a failed or skipped breakdown run, the wait before the next attempt. */
         internal const val PARITY_BREAKDOWN_RETRY_MS = 10 * 60_000L
+
+        /**
+         * After a new transaction, how long to let the two stacks settle
+         * before recomputing the findings it invalidated. Long enough to
+         * absorb a CoinJoin burst (one event per record), short enough that
+         * the verdict comes back in the same sitting.
+         */
+        internal const val PARITY_BREAKDOWN_TX_SETTLE_MS = 60_000L
     }
 }

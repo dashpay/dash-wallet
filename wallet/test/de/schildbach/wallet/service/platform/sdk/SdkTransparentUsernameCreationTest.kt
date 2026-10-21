@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -28,11 +29,12 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -44,16 +46,29 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Host-JVM tests for the transparent (post-cutover) username creation's
- * funding step — specifically the MO-1023 false-locked Keystore handling: a
- * signing refusal that lands AFTER the SDK built (and broadcast) the asset
- * lock must resume that lock, never report "nothing spent" while the funds
- * are committed, and never spin on a genuinely locked device.
+ * funding step:
+ *
+ * - the MO-1023 false-locked Keystore handling: a signing refusal that lands
+ *   AFTER the SDK built (and broadcast) the asset lock must resume that lock,
+ *   never report "nothing spent" while the funds are committed, and never
+ *   spin on a genuinely locked device;
+ * - [transparentUsernameFeeDuffs] — the exact `feeDuffs` lambda
+ *   [SdkTransparentUsernameCreation]'s `@Inject` constructor wires — pinning
+ *   the MO-1069 protocol-version gate: a wallet funded with the Platform v4.2
+ *   (0.15 DASH) contested fee while the network still runs protocol 13 fails
+ *   DPNS registration with "Insufficient identity balance" (the network still
+ *   needs ~0.2 DASH of prefunded voting balance, i.e. the 0.25 DASH total
+ *   LEGACY fee) — reproduced live before this fix routed the funding amount
+ *   through [ContestedUsernameFees] instead of the raw, un-gated
+ *   `Constants.DASH_PAY_FEE_CONTESTED` constant.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class SdkTransparentUsernameCreationTest {
 
     private val walletIdHex = "aa".repeat(32)
@@ -739,5 +754,97 @@ class SdkTransparentUsernameCreationTest {
         assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
         assertTrue("nothing handed on", run.handedOff.isEmpty())
         neverFunded(source)
+    }
+
+    // --- MO-1069: protocol-gated funding amount ---
+
+    private fun sdkService(protocolVersion: Int?) = mockk<DashSdkService> {
+        coEvery { currentProtocolVersion() } returns protocolVersion
+    }
+
+    @Test
+    fun `contested registration funds 0_25 DASH while the network still runs protocol 13`() = runTest {
+        val amountDuffs = transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(13))
+        assertEquals(Constants.DASH_PAY_FEE_CONTESTED_LEGACY.value, amountDuffs)
+    }
+
+    @Test
+    fun `contested registration funds 0_15 DASH once the network reports protocol 14`() = runTest {
+        val amountDuffs = transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(14))
+        assertEquals(Constants.DASH_PAY_FEE_CONTESTED.value, amountDuffs)
+    }
+
+    @Test
+    fun `an unresolved protocol version refuses to fund rather than falling back to a fee`() = runTest {
+        // A lower successful quote followed by a failed funding-time lookup must
+        // not become a higher actual funding; the service turns the throw into a
+        // NotBroadcast the user can retry.
+        assertThrows(ProtocolVersionUnavailableException::class.java) {
+            runBlocking { transparentUsernameFeeDuffs(contested = true, sdkService = sdkService(null)) }
+        }
+    }
+
+    @Test
+    fun `non-contested registration always funds the fixed 0_03 DASH fee, regardless of protocol version`() = runTest {
+        assertEquals(
+            Constants.DASH_PAY_FEE.value,
+            transparentUsernameFeeDuffs(contested = false, sdkService = sdkService(13))
+        )
+        assertEquals(
+            Constants.DASH_PAY_FEE.value,
+            transparentUsernameFeeDuffs(contested = false, sdkService = sdkService(14))
+        )
+    }
+
+    // --- MO-1069: the strict fee boundary inside createUsernameTransparent ---
+
+    /** Contestable label (letters only, 3–19 chars). */
+    private val contestedLabel = "alice"
+
+    /** The production `feeDuffs` wiring over a service whose protocol version is unknown. */
+    private fun creationWithUnknownProtocol(source: TransparentUsernameSource, sdkService: DashSdkService) =
+        SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { contested -> transparentUsernameFeeDuffs(contested, sdkService) },
+            handOffToLegacy = {},
+            driveCreationState = { state, _ -> creationStates += state },
+            pause = { pauses += it }
+        )
+
+    @Test
+    fun `an unknown protocol version refuses a fresh contested funding before anything is spent`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val sdkService = sdkService(null)
+
+        val result = creationWithUnknownProtocol(source, sdkService).createUsernameTransparent(contestedLabel)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        val failure = result as SdkWriteResult.NotBroadcast
+        assertEquals("username funding amount unavailable", failure.reason)
+        assertTrue(failure.cause is ProtocolVersionUnavailableException)
+        assertFalse(SdkTransparentUsernameCreation.isFundsPossiblyCommittedReason(failure.reason))
+        coVerify(exactly = 1) { sdkService.currentProtocolVersion() }
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { source.storeIdentityPrivateKey(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a tracked asset lock resumes without resolving a fee when the protocol version is unknown`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } returns lock
+        coEvery { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) } returns identityId
+        coEvery { source.registerDpnsName(walletIdHex, identityId, contestedLabel) } returns "$contestedLabel.dash"
+        val sdkService = sdkService(null)
+
+        val result = creationWithUnknownProtocol(source, sdkService).createUsernameTransparent(contestedLabel)
+
+        assertTrue("must be Broadcast, got $result", result is SdkWriteResult.Broadcast)
+        assertEquals(identityIdBase58, (result as SdkWriteResult.Broadcast).value.identityIdBase58)
+        // The committed lock needs no new quote: the fee is never resolved.
+        coVerify(exactly = 0) { sdkService.currentProtocolVersion() }
+        coVerify(exactly = 1) { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) }
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
     }
 }

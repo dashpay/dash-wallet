@@ -19,6 +19,9 @@ package de.schildbach.wallet.service.platform.sdk
 import android.app.Application
 import androidx.room.Room
 import de.schildbach.wallet_test.R
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.junit.After
@@ -97,7 +100,8 @@ class SdkTxStoreWalkerTest {
         pageRows: Int = 1_000,
         tailRows: Int = 32,
         payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts,
-        onQuery: (String) -> Unit = { queryLog += it }
+        onQuery: (String) -> Unit = { queryLog += it },
+        onStoredNetsRepaired: (Int) -> Unit = {}
     ) = SdkTxStoreWalker(
         db = db,
         walletId = walletId,
@@ -105,7 +109,8 @@ class SdkTxStoreWalkerTest {
         tailRows = tailRows,
         pageThrottleMs = 0L,
         onQuery = onQuery,
-        payloadFacts = payloadFacts
+        payloadFacts = payloadFacts,
+        onStoredNetsRepaired = onStoredNetsRepaired
     )
 
     /** Deterministic 32-byte wire txid for index [n]. */
@@ -908,6 +913,140 @@ class SdkTxStoreWalkerTest {
         walker(payloadFacts = markerPayloadFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
         assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
         assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+    }
+
+    // ── Repairs are reported: the parity breakdown compares these nets ─
+    //
+    // Review, PR #1605: the write-back is the app's own, so no engine event
+    // tells the parity breakdown its stored nets moved. The walker reports
+    // every committed change of a stored net, and nothing else.
+
+    @Test
+    fun reattribution_reportsTheStoredNetsItChanged_andNothingOnTheNextPass() = runBlocking {
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        walker(payloadFacts = markerPayloadFacts, onStoredNetsRepaired = { reported += it }).walkAll { }
+        // The sweep and the drain both had their nets rewritten.
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+        assertEquals(listOf(2), reported)
+
+        // A corrected store writes nothing, so it reports nothing.
+        reported.clear()
+        walker(payloadFacts = markerPayloadFacts, onStoredNetsRepaired = { reported += it }).walkAll { }
+        assertTrue(reported.isEmpty())
+    }
+
+    @Test
+    fun reattribution_countsOnlyTheRowsItActuallyRewrote() = runBlocking {
+        // The engine rewrites the drain between the walker's read and its
+        // write: the compare-and-set misses that row, and only the sweep's
+        // net changes.
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        var rewritten = false
+        walker(
+            payloadFacts = markerPayloadFacts,
+            onQuery = { sql ->
+                if (!rewritten && sql.startsWith("UPDATE transactions")) {
+                    rewritten = true
+                    exec("UPDATE transactions SET netAmount = 49999000 WHERE txid = ?", ids.drain)
+                }
+            },
+            onStoredNetsRepaired = { reported += it }
+        ).walkAll { }
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(0, 49_999_000L, null), storedShape(ids.drain))
+        assertEquals(listOf(1), reported)
+    }
+
+    @Test
+    fun reattribution_reportsNothing_whenEveryWriteMissed() = runBlocking {
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        var rewritten = false
+        walker(
+            payloadFacts = markerPayloadFacts,
+            onQuery = { sql ->
+                if (!rewritten && sql.startsWith("UPDATE transactions")) {
+                    rewritten = true
+                    exec("UPDATE transactions SET netAmount = netAmount - 1 WHERE txid IN (?, ?)", ids.sweep, ids.drain)
+                }
+            },
+            onStoredNetsRepaired = { reported += it }
+        ).walkAll { }
+        assertEquals(Triple(0, 49_999_773L, null), storedShape(ids.sweep))
+        assertEquals(Triple(0, 49_999_137L, null), storedShape(ids.drain))
+        assertTrue(reported.isEmpty())
+    }
+
+    @Test
+    fun coinJoin_mixingResumRead_reportsTheRepairedNet_besideTheCorrectionSignal() {
+        // The mixing re-sum's member read ([SdkTxStoreWalker.recordsFor]) persists
+        // the CoinJoin net-only correction too. Its txid signal is the display's;
+        // the count is the parity breakdown's, and it must arrive either way.
+        val ids = seedCoinJoinRound()
+        val reported = mutableListOf<Int>()
+        val signalled = mutableListOf<Set<String>>()
+        val w = SdkTxStoreWalker(
+            db = db,
+            walletId = walletId,
+            pageThrottleMs = 0L,
+            payloadFacts = coinJoinFacts,
+            onStoredNetsRepaired = { reported += it },
+            onCorrectionsPersisted = { signalled += it }
+        )
+        assertEquals(0L, w.recordsFor(listOf(displayHexOf(ids.round))).single().netAmountDuffs)
+        assertEquals(listOf(1), reported)
+        assertEquals(listOf(setOf(displayHexOf(ids.round))), signalled)
+
+        // Already persisted: a later walk has nothing left to report.
+        walkRecords(walker(payloadFacts = coinJoinFacts, onStoredNetsRepaired = { reported += it }))
+        assertEquals(listOf(1), reported)
+    }
+
+    /** A [DashSdkService] whose manager has this test's wallet as its only one. */
+    private fun boundSdkService(): DashSdkService {
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        return mockk { every { walletManagerOrNull() } returns manager }
+    }
+
+    @Test
+    fun detailSheetPointLookup_reportsTheStoredNetItRepaired() = runBlocking {
+        // The tx-detail sheet reads one record through a walker of its own
+        // ([boundWalletRecordOrNull]); that read reattributes, and so writes.
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        val drainBefore = storedShape(ids.drain).second
+        val record = boundWalletRecordOrNull(boundSdkService(), db, displayHexOf(ids.drain)) { reported += it }
+        val drainAfter = storedShape(ids.drain).second
+        assertNotEquals(drainBefore, drainAfter)
+        assertEquals(drainAfter, record?.netAmountDuffs)
+        assertEquals(listOf(1), reported)
+
+        // Read again: the store is already right, so nothing is reported.
+        boundWalletRecordOrNull(boundSdkService(), db, displayHexOf(ids.drain)) { reported += it }
+        assertEquals(listOf(1), reported)
+    }
+
+    @Test
+    fun metadataBatchLookup_reportsTheStoredNetsItRepaired() = runBlocking {
+        // The metadata import reads many records in one walker pass
+        // ([boundWalletRecordsOrEmpty]); its write-back is reported as one count.
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        val hexes = listOf(ids.receive, ids.sweep, ids.drain, ids.faucet).map(::displayHexOf)
+        val before = listOf(ids.sweep, ids.drain).map { storedShape(it).second }
+        val records = boundWalletRecordsOrEmpty(boundSdkService(), db, hexes) { reported += it }
+        val after = listOf(ids.sweep, ids.drain).map { storedShape(it).second }
+        assertTrue(before.zip(after).all { (b, a) -> b != a })
+        assertEquals(after, listOf(ids.sweep, ids.drain).map { records[displayHexOf(it)]?.netAmountDuffs })
+        assertEquals(listOf(2), reported)
+
+        boundWalletRecordsOrEmpty(boundSdkService(), db, hexes) { reported += it }
+        assertEquals(listOf(2), reported)
     }
 
     // ── Incomplete-TXO-mirror guard: no born-wrong durable stamps ─────

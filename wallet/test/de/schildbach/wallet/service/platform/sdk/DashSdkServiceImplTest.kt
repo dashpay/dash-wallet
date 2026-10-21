@@ -18,7 +18,9 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
+import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.params.OuzoDevNetParams
@@ -55,8 +57,92 @@ class DashSdkServiceImplTest {
     private fun newService() = DashSdkServiceImpl(
         context = mockk<Context>(relaxed = true),
         mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
-        secretWriteFence = WalletSecretWriteFence()
+        secretWriteFence = WalletSecretWriteFence(),
+        protocolVersionLatch = inMemoryProtocolVersionLatch()
     )
+
+    @Test
+    fun verifiedProtocolVersion_aFailedProbeIsUnknownEvenThoughRefreshWouldReportTheSeed() {
+        // The pinned SDK's refresh returns its cached version (the protocol-13
+        // floor in a fresh process) when its own fetch fails; with no durable
+        // protocol-14 mark that would price funding at the LEGACY fee.
+        var refreshed = false
+        val version = runBlocking {
+            DashSdkServiceImpl.protocolVersionOrUnknown {
+                DashSdkServiceImpl.verifiedProtocolVersion(
+                    probe = { throw IllegalStateException("Failed to fetch epochs info: DAPI unreachable") },
+                    refresh = { refreshed = true; 13 }
+                )
+            }
+        }
+
+        assertNull("an unverified seed must not be reported as the live version", version)
+        assertFalse("the refresh result is never consulted without a proven probe", refreshed)
+    }
+
+    @Test
+    fun verifiedProtocolVersion_aNullProbeIsUnknown() {
+        assertNull(runBlocking { DashSdkServiceImpl.verifiedProtocolVersion(probe = { null }, refresh = { 13 }) })
+    }
+
+    @Test
+    fun verifiedProtocolVersion_aSuccessfulProbeReturnsTheRefreshedVersion() {
+        val version = runBlocking {
+            DashSdkServiceImpl.verifiedProtocolVersion(
+                probe = { """[{"index":0,"protocol_version":1}]""" },
+                refresh = { 14 }
+            )
+        }
+
+        assertEquals(14, version)
+    }
+
+    @Test
+    fun liveRead_withAFailedProbeAndNoDurableMark_refusesFreshContestedFunding() {
+        // End to end through the latch: protocol-13 seed, no durable 14, failed probe.
+        val latch = inMemoryProtocolVersionLatch()
+        val service = mockk<DashSdkService> {
+            coEvery { currentProtocolVersion() } coAnswers {
+                latch.latch(
+                    DashSdkServiceImpl.protocolVersionOrUnknown {
+                        DashSdkServiceImpl.verifiedProtocolVersion(
+                            probe = { throw IllegalStateException("DAPI unreachable") },
+                            refresh = { 13 }
+                        )
+                    }
+                )
+            }
+        }
+
+        assertThrows(ProtocolVersionUnavailableException::class.java) {
+            runBlocking { ContestedUsernameFees.resolved(service) }
+        }
+    }
+
+    @Test
+    fun protocolVersionOrUnknown_mapsAMissingNativeLibraryToUnknown() {
+        val version = runBlocking {
+            DashSdkServiceImpl.protocolVersionOrUnknown { throw UnsatisfiedLinkError("no dash_sdk_jni") }
+        }
+
+        assertNull("a LinkageError must fall back to unknown, not escape to the UI coroutine", version)
+    }
+
+    @Test
+    fun protocolVersionOrUnknown_mapsAQueryFailureToUnknown() {
+        assertNull(runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { error("DAPI unreachable") } })
+        assertEquals(14, runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { 14 } })
+    }
+
+    @Test
+    fun protocolVersionOrUnknown_letsOtherFatalErrorsAndCancellationThrough() {
+        assertThrows(OutOfMemoryError::class.java) {
+            runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { throw OutOfMemoryError("fatal") } }
+        }
+        assertThrows(CancellationException::class.java) {
+            runBlocking { DashSdkServiceImpl.protocolVersionOrUnknown { throw CancellationException("cancelled") } }
+        }
+    }
 
     @Test
     fun widenedGapLimit_isTheRustMax() {
@@ -88,7 +174,8 @@ class DashSdkServiceImplTest {
         val service = DashSdkServiceImpl(
             context = mockk<Context>(relaxed = true),
             mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
-            secretWriteFence = fence
+            secretWriteFence = fence,
+            protocolVersionLatch = inMemoryProtocolVersionLatch()
         )
 
         assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
@@ -107,7 +194,8 @@ class DashSdkServiceImplTest {
         val service = DashSdkServiceImpl(
             context = mockk<Context>(relaxed = true),
             mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true)),
-            secretWriteFence = fence
+            secretWriteFence = fence,
+            protocolVersionLatch = inMemoryProtocolVersionLatch()
         )
         assertTrue(runBlocking { service.quiesceForWalletWipe(1_000L) })
 

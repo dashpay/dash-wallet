@@ -45,6 +45,8 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.evolution.EvolutionContact
+import org.bitcoinj.wallet.FriendChainAccess
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
@@ -160,6 +162,50 @@ interface IdentityRepository {
     suspend fun addInviteUserAlert()
     suspend fun shouldShowAlert(): Boolean
     fun getNextContactAddress(userId: String, accountReference: Int): Address?
+
+    /**
+     * After a SUCCESSFUL payment to a contact, mark the dashj SENDING-chain key for
+     * [address] used so dashj's [getNextContactAddress] moves past it. dashj only
+     * does this itself when it sees the transaction, which it never does once the
+     * SDK broadcasts (cutover). [userId] / [accountReference] select the chain
+     * exactly as [getNextContactAddress] does. Returns the dashj outcome, or null
+     * when there is no dashj identity / wallet to mark.
+     */
+    fun markContactAddressUsed(
+        userId: String,
+        accountReference: Int,
+        address: Address
+    ): FriendChainAccess.MarkResult?
+
+    /**
+     * The index of the dashj SENDING-chain key [getNextContactAddress] would serve
+     * for this contact and channel; every lower index has been paid. Persisted
+     * with the wallet. Null when there is no dashj identity, wallet or chain.
+     * Never issues a key.
+     */
+    fun getContactSendingCursor(userId: String, accountReference: Int): Int?
+
+    /**
+     * The address of derivation [index] on the dashj SENDING chain for this
+     * contact and channel, derived from the chain's public key
+     * ([FriendChainAccess.sendingPubKeyHashAtOrNull]). Null when there is no
+     * dashj identity, wallet or chain. Never issues a key.
+     */
+    fun getContactSendingAddressAt(userId: String, accountReference: Int, index: Int): Address?
+
+    /**
+     * Moves the dashj SENDING chain for this contact and channel past derivation
+     * [index], whose key must be [address] (a paid frontier recorded with its
+     * index): derives only the key at [index] to check it, then issues keys up to
+     * it ([FriendChainAccess.advanceSendingChainPast]). Returns the dashj outcome,
+     * or null when there is no dashj identity / wallet.
+     */
+    fun advanceContactSendingChainPast(
+        userId: String,
+        accountReference: Int,
+        index: Int,
+        address: Address
+    ): FriendChainAccess.AdvanceResult?
     suspend fun clearDatabase(includeInvitations: Boolean)
     fun updateIdentity()
 }
@@ -945,6 +991,69 @@ class IdentityRepositoryImpl @Inject constructor(
             null
         }
     }
+
+    override fun markContactAddressUsed(
+        userId: String,
+        accountReference: Int,
+        address: Address
+    ): FriendChainAccess.MarkResult? {
+        val identity = _blockchainIdentity ?: return null
+        val wallet = identity.wallet ?: return null
+        return FriendChainAccess.markSendingAddressUsed(
+            wallet,
+            sendingChainContact(identity, userId, accountReference),
+            address.hash
+        )
+    }
+
+    override fun advanceContactSendingChainPast(
+        userId: String,
+        accountReference: Int,
+        index: Int,
+        address: Address
+    ): FriendChainAccess.AdvanceResult? {
+        val identity = _blockchainIdentity ?: return null
+        val wallet = identity.wallet ?: return null
+        return FriendChainAccess.advanceSendingChainPast(
+            wallet,
+            sendingChainContact(identity, userId, accountReference),
+            index,
+            address.hash
+        )
+    }
+
+    override fun getContactSendingCursor(userId: String, accountReference: Int): Int? {
+        val identity = _blockchainIdentity ?: return null
+        val wallet = identity.wallet ?: return null
+        return FriendChainAccess.sendingCursorOrNull(wallet, sendingChainContact(identity, userId, accountReference))
+    }
+
+    override fun getContactSendingAddressAt(userId: String, accountReference: Int, index: Int): Address? {
+        val identity = _blockchainIdentity ?: return null
+        val wallet = identity.wallet ?: return null
+        val hash = FriendChainAccess.sendingPubKeyHashAtOrNull(
+            wallet,
+            sendingChainContact(identity, userId, accountReference),
+            index
+        ) ?: return null
+        return Address.fromPubKeyHash(wallet.params, hash)
+    }
+
+    /**
+     * The same EvolutionContact BlockchainIdentity.getContactNextPaymentAddress
+     * builds for the SENDING chain, so the key read or marked is on the chain the
+     * address was (or would have been) served from.
+     */
+    private fun sendingChainContact(
+        identity: BlockchainIdentity,
+        userId: String,
+        accountReference: Int
+    ) = EvolutionContact(
+        identity.uniqueIdString,
+        identity.account,
+        Identifier.from(userId).toString(),
+        accountReference
+    )
 
     /**
     This is used by java code, outside of coroutines

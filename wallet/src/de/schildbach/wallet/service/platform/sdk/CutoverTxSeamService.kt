@@ -96,9 +96,13 @@ class CutoverTxSeamService internal constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
         scope: CoroutineScope,
-        walletData: WalletData
+        walletData: WalletData,
+        // Provider, not the service: L1ShadowSyncService takes WalletData,
+        // whose adapter reaches back to this service, so a direct edge would
+        // close a loop. Resolved on the first repair, long after start-up.
+        l1ShadowSyncService: javax.inject.Provider<L1ShadowSyncService>
     ) : this(
-        source = DashSdkCutoverUiSource(sdkService),
+        source = DashSdkCutoverUiSource(sdkService) { count -> l1ShadowSyncService.get().storedNetsRepaired(count) },
         dashPayConfig = dashPayConfig,
         scope = scope,
         networkParameters = Constants.NETWORK_PARAMETERS,

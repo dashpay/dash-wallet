@@ -23,6 +23,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -86,15 +87,16 @@ class SdkTxidHeightsQueryTest {
     /** The key [querySdkTxidHeights] uses: display order, the way dashj keys its transactions. */
     private fun key(n: Int): Sha256Hash = Sha256Hash.wrapReversed(wire(n))
 
-    private fun insertTx(n: Int, blockHeight: Int) {
+    private fun insertTx(n: Int, blockHeight: Int, netAmount: Long = 0L) {
         exec(
             "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
                 "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
                 "netAmount, label, firstSeen, createdAt, lastUpdated) " +
-                "VALUES (?, ?, 0, ?, 0, 0, 0, 0, 'standard', 0, 0, '', 0, 0, 0)",
+                "VALUES (?, ?, 0, ?, 0, 0, 0, 0, 'standard', 0, ?, '', 0, 0, 0)",
             wire(n),
             ByteArray(0),
-            blockHeight
+            blockHeight,
+            netAmount
         )
     }
 
@@ -135,13 +137,15 @@ class SdkTxidHeightsQueryTest {
     @Test
     fun theWalletsFundingSpendingAndReservedTxids_withTheirHeights_andNoOtherWallets() {
         // A receive (900) whose output was spent (950).
-        insertTx(1, 900)
-        insertTx(2, 950)
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTx(2, 950, netAmount = -7_500_000L)
         insertTxo(walletId, funding = 1, spending = 2)
         // A receive (920) reserved by an in-flight change-less send: the send
         // has a transactions row (no height yet) but no TXO row of its own.
-        insertTx(3, 920)
-        insertTx(4, 0)
+        insertTx(3, 920, netAmount = 250_000L)
+        // Height 0 AND a stored net of 0: proves a real zero is distinguishable
+        // from the null a missing transactions row produces (key 5 below).
+        insertTx(4, 0, netAmount = 0L)
         val reserved = insertTxo(walletId, funding = 3)
         insertReservation(walletId, reserved, spending = 4)
         // A reservation whose spender has no transactions row: no height.
@@ -153,13 +157,91 @@ class SdkTxidHeightsQueryTest {
         insertTx(8, 995)
 
         assertEquals(
-            mapOf(key(1) to 900, key(2) to 950, key(3) to 920, key(4) to 0, key(5) to 0),
+            mapOf(
+                key(1) to SdkTxFacts(900, 11_000_000L),
+                key(2) to SdkTxFacts(950, -7_500_000L),
+                key(3) to SdkTxFacts(920, 250_000L),
+                key(4) to SdkTxFacts(0, 0L),
+                // Reservation whose spender has no transactions row: no height AND
+                // no stored net. The null must survive as null — read as 0 it would
+                // look like agreement in the parity comparison.
+                key(5) to SdkTxFacts(0, null)
+            ),
             querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
         )
     }
 
     @Test
     fun anEmptyWallet_hasNoTxids() {
-        assertEquals(emptyMap<Sha256Hash, Int>(), querySdkTxidHeights(db.openHelper.readableDatabase, walletId))
+        assertEquals(
+            emptyMap<Sha256Hash, SdkTxFacts>(),
+            querySdkTxidHeights(db.openHelper.readableDatabase, walletId)
+        )
+    }
+
+    // ── The store fingerprint the diagnostic checks findings against ──
+
+    private val readable get() = db.openHelper.readableDatabase
+
+    /** The streamed fingerprint, after checking it equals the one a breakdown takes from its map. */
+    private fun fingerprint(): SdkTxStoreFingerprint {
+        val streamed = querySdkTxStoreFingerprint(readable, walletId)
+        assertEquals(
+            "the publish-time fingerprint must be the breakdown's own, for the same state",
+            fingerprintOf(querySdkTxidHeights(readable, walletId)),
+            streamed
+        )
+        return streamed
+    }
+
+    @Test
+    fun fingerprint_changesOnInsertNetUpdateConfirmationAndDelete() {
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTx(2, 0, netAmount = -7_500_000L)
+        insertTxo(walletId, funding = 1, spending = 2)
+        val start = fingerprint()
+        assertEquals(2, start.rows)
+
+        // Insert: a new receive, as the engine stores it (tx row, then its TXO).
+        insertTx(3, 0, netAmount = 250_000L)
+        insertTxo(walletId, funding = 3)
+        val inserted = fingerprint()
+        assertNotEquals("insert", start, inserted)
+
+        // Update of the stored net (what the walker's write-back does).
+        exec("UPDATE transactions SET netAmount = ? WHERE txid = ?", 250_001L, wire(3))
+        val netUpdated = fingerprint()
+        assertNotEquals("net update", inserted, netUpdated)
+
+        // Confirmation: the height moves from 0 to the block's.
+        exec("UPDATE transactions SET blockHeight = ? WHERE txid = ?", 990, wire(2))
+        val confirmed = fingerprint()
+        assertNotEquals("confirmation", netUpdated, confirmed)
+
+        // Delete: the sweep's path, a transactions row removed (its TXOs cascade).
+        exec("DELETE FROM transactions WHERE txid = ?", wire(3))
+        val deleted = fingerprint()
+        assertNotEquals("delete", confirmed, deleted)
+
+        // A reservation for an in-flight change-less send joins the set too.
+        val reserved = insertTxo(walletId, funding = 1)
+        insertReservation(walletId, reserved, spending = 9)
+        assertNotEquals("reservation", deleted, fingerprint())
+    }
+
+    @Test
+    fun fingerprint_ignoresWhatTheBreakdownDoesNotRead() {
+        insertTx(1, 900, netAmount = 11_000_000L)
+        insertTxo(walletId, funding = 1)
+        val start = fingerprint()
+
+        // A label (metadata) and another wallet's history are not compared.
+        exec("UPDATE transactions SET label = 'rent' WHERE txid = ?", wire(1))
+        insertTx(6, 990, netAmount = 5L)
+        insertTxo(otherWalletId, funding = 6)
+        // A second TXO of a transaction already in the set adds no member.
+        insertTxo(walletId, funding = 1)
+
+        assertEquals(start, fingerprint())
     }
 }

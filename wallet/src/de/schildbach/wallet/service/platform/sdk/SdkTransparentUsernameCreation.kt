@@ -45,6 +45,25 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Identity-registration funding amount in Core DUFFS for a transparent
+ * username of the given contested-ness — the exact lambda
+ * [SdkTransparentUsernameCreation]'s `@Inject` constructor wires as
+ * `feeDuffs`, extracted so the protocol-gating (MO-1069) is host-JVM
+ * unit-testable without standing up the rest of the SDK plumbing. Contested
+ * labels resolve through [ContestedUsernameFees.resolved] (a live
+ * [DashSdkService.currentProtocolVersion] read: 0.25 DASH pre-v4.2, 0.15 DASH
+ * once the network reports protocol >= 14, and [ProtocolVersionUnavailableException]
+ * when the version is unknown — funding never falls back to a fee); non-contested
+ * labels are the fixed `DASH_PAY_FEE` (0.03 DASH).
+ */
+internal suspend fun transparentUsernameFeeDuffs(contested: Boolean, sdkService: DashSdkService): Long =
+    if (contested) {
+        ContestedUsernameFees.resolved(sdkService).contested.value
+    } else {
+        Constants.DASH_PAY_FEE.value
+    }
+
 // ── Shared registration-row plumbing ──────────────────────────────────
 
 /**
@@ -413,12 +432,14 @@ class SdkTransparentUsernameCreation internal constructor(
     private val cutoverCommitted: suspend () -> Boolean,
     /**
      * Identity-registration funding amount in Core DUFFS for the given
-     * contested-ness (prod: `DASH_PAY_FEE_CONTESTED` = 0.25 DASH for
-     * contested labels, `DASH_PAY_FEE` = 0.03 DASH otherwise) — the same fee
-     * the dashj path funds the asset lock with
+     * contested-ness — [ContestedUsernameFees.resolved]'s protocol-gated
+     * contested fee for contested labels, `DASH_PAY_FEE` = 0.03 DASH
+     * otherwise — the same fee the dashj path funds the asset lock with
      * ([de.schildbach.wallet.service.platform.TopUpRepository.createAssetLockTransaction]).
+     * Suspend: resolving the contested fee needs a live protocol-version read
+     * (MO-1069).
      */
-    private val feeDuffs: (contested: Boolean) -> Long,
+    private val feeDuffs: suspend (contested: Boolean) -> Long,
     /**
      * Hands the freshly created on-chain identity to the legacy state
      * machine (prod: enqueue [RestoreIdentityOperation]) — best-effort,
@@ -502,9 +523,7 @@ class SdkTransparentUsernameCreation internal constructor(
         source = DashSdkTransparentUsernameSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
         // Lazy: Constants untouched at construction (inert-until-called).
-        feeDuffs = { contested ->
-            if (contested) Constants.DASH_PAY_FEE_CONTESTED.value else Constants.DASH_PAY_FEE.value
-        },
+        feeDuffs = { contested -> transparentUsernameFeeDuffs(contested, sdkService) },
         handOffToLegacy = { identityId ->
             RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true).enqueue()
         },
@@ -685,20 +704,15 @@ class SdkTransparentUsernameCreation internal constructor(
         // Contested-ness is derived HERE from the labels (same rule the dashj
         // path uses — see TopUpRepository.createAssetLockTransaction) so the
         // asset lock is funded with the correct fee: contested labels take
-        // DASH_PAY_FEE_CONTESTED (0.25), non-contested DASH_PAY_FEE (0.03).
-        // Either label being contestable bumps the funding requirement.
+        // the protocol-gated contested fee (ContestedUsernameFees), non-contested
+        // DASH_PAY_FEE (0.03). Either label being contestable bumps the funding
+        // requirement.
         val contested = try {
             Names.isUsernameContestable(label) ||
                 (secondaryLabel != null && Names.isUsernameContestable(secondaryLabel))
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return notBroadcast("contested-ness check failed", t)
-        }
-        val amountDuffs = try {
-            feeDuffs(contested)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            return notBroadcast("username funding amount unavailable", t)
         }
 
         val walletId = try {
@@ -737,6 +751,24 @@ class SdkTransparentUsernameCreation internal constructor(
             return notBroadcast("resume-gate recovery lookup failed", t)
         }
         val includeDashPayKeys = existingLock == null
+
+        // The funding quote is needed ONLY to build fresh funding. Resolving it before the
+        // recovery lookup made a transient protocol-version failure block the resume of an
+        // asset lock a previous attempt already built or broadcast — committed funds that need
+        // no new quote. So: inspect the recovery record first, resolve strictly only for the
+        // fresh arm (pre-broadcast refusal retained there).
+        // Null on the resume arm: no fresh amount is resolved, and a placeholder
+        // would leak into the success log and the fee ledger as a 0-duff funding.
+        val amountDuffs: Long? = if (existingLock != null) {
+            null
+        } else {
+            try {
+                feeDuffs(contested)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast("username funding amount unavailable", t)
+            }
+        }
 
         // The canonical key set for that choice. previewRegistrationKeySet
         // returns the private scalars in hand (IdentityKeyPreview.privateKey)
@@ -811,7 +843,8 @@ class SdkTransparentUsernameCreation internal constructor(
                 } else {
                     source.registerWithWalletFunding(
                         walletIdHex = walletId,
-                        amountDuffs = amountDuffs,
+                        // Set whenever existingLock is null (see above).
+                        amountDuffs = checkNotNull(amountDuffs) { "fresh funding amount not resolved" },
                         accountIndex = ACCOUNT_INDEX,
                         identityIndex = identityIndex,
                         keys = keys
@@ -858,10 +891,10 @@ class SdkTransparentUsernameCreation internal constructor(
 
         val identityIdBase58 = Identifier.from(identityId).toString()
         log.info(
-            "transparent-funded identity created at index {} ({}…) — {} duffs, contested={}",
+            "transparent-funded identity created at index {} ({}…) — {}, contested={}",
             identityIndex,
             identityIdBase58.take(8),
-            amountDuffs,
+            amountDuffs?.let { "$it duffs" } ?: "resumed from a tracked asset lock",
             contested
         )
 
@@ -1394,7 +1427,7 @@ class SdkTransparentUsernameCreation internal constructor(
         walletId: String,
         identityIndex: Int,
         identityIdBase58: String,
-        requestedDuffs: Long
+        requestedDuffs: Long?
     ): Long? {
         val lockedDuffs = try {
             source.registrationAssetLockAmountDuffs(walletId, identityIndex)
@@ -1410,10 +1443,14 @@ class SdkTransparentUsernameCreation internal constructor(
         ) {
             source.identityCreditBalance(identityIdBase58)
         }
-        val credited = try {
-            IdentityFeeLedger.creditedCredits(lockedDuffs ?: requestedDuffs)
-        } catch (e: ArithmeticException) {
-            null
+        // No start at all on a resume whose lock amount can't be read: a guessed
+        // one would record a nonsensical (negative) IdentityCreate fee.
+        val credited = (lockedDuffs ?: requestedDuffs)?.let { duffs ->
+            try {
+                IdentityFeeLedger.creditedCredits(duffs)
+            } catch (e: ArithmeticException) {
+                null
+            }
         }
         IdentityFeeLedger.record(
             step = IdentityFeeStep.IDENTITY_CREATE,

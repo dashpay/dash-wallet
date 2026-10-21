@@ -34,6 +34,11 @@
     <!-- Palette (legacy names; snapped to Figma primitives where one exists) -->
     <color name="dash_blue">@color/palette_blue</color>
     <color name="dash_white">#FAFBFC</color>
+    <!-- A subtle panel surface. Light sits it just off the white background
+         (#F5F6F7 on #FFFFFF); dark mirrors that small lift by sitting just above
+         background_secondary (#1E1F24). Feeds DashAddressBackground,
+         EncircledIconTheme and PrimaryButtonTheme.Small.UltraLightGray. -->
+    <color name="ultra_light_gray">@color/ultra_dark_gray</color>
     <color name="extra_light_gray">#A4ABB2</color>
     <color name="light_gray">#8D9399</color>
     <color name="gray">#757A80</color>
