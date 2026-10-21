@@ -322,7 +322,7 @@ data class PendingWalletShieldLock(
     /**
      * A resume got Platform's typed `AssetLockAlreadyConsumed` ([DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED]).
      * That answer is unauthenticated (it does not prove this wallet's credit exists), so it only
-     * stops pointless resume retries ([retrySuppressed]); it never makes a lock settled.
+     * stops automatic resume retries ([retrySuppressed]); it never makes a lock settled.
      */
     val platformConsumed: Boolean = false
 ) {
@@ -346,8 +346,10 @@ data class PendingWalletShieldLock(
 
     /**
      * A pending final (2, 3, 5) lock Platform already reported consumed: the
-     * resume sweep skips it (another attempt only repeats that answer). Retry
-     * suppression ONLY — the lock stays [resumable], i.e. pending.
+     * AUTOMATIC resume sweeps skip it (another attempt likely repeats that
+     * answer); an explicit user retry still resumes it, since the answer is
+     * unauthenticated. Retry suppression ONLY — the lock stays [resumable],
+     * i.e. pending.
      */
     val retrySuppressed: Boolean get() =
         platformConsumed && statusRaw in setOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN)
@@ -356,7 +358,7 @@ data class PendingWalletShieldLock(
      * Cutover evidence keeps the `0..3` semantics for known statuses: restore/scan
      * rebuilds every historical shield as 5, and the SDK keeps such a lock resumable
      * after cutover. A [retrySuppressed] lock does not block it either: its inputs
-     * are final on L1 and no resume will run, so blocking would only wedge cutover.
+     * are final on L1 and no automatic resume will run, so blocking would only wedge cutover.
      * An unknown status blocks it like `0..3`: restore never writes one, so it cannot
      * wedge a restored wallet, and nothing proves its inputs spent.
      */
@@ -1658,6 +1660,23 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
+    /**
+     * Drop [outPointHexes] from the Platform-consumed record: their lock was resumed successfully or
+     * its row reached Consumed (4), so the unauthenticated answer no longer stands. Only called under
+     * [walletShieldMutex]. A failure keeps the record (the lock is only retried less, never settled).
+     */
+    private suspend fun forgetPlatformConsumed(outPointHexes: Collection<String>) {
+        if (outPointHexes.isEmpty()) return
+        try {
+            val current = dashPayConfig.getPreservingErrors(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED).orEmpty()
+            if (current.none { it in outPointHexes }) return
+            dashPayConfig.set(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED, current - outPointHexes.toSet())
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not clear the Platform-consumed record of {}", outPointHexes, t)
+        }
+    }
+
     /** The send-all union ([outputsAppLocked]) narrowed on the dashj side to the CoinJoin keychain. */
     private fun coinJoinOutputsLocked(): Boolean =
         seamOutputLockRegistry.outputsAppLocked("shieldMixedFundsFromWallet", hasAppLockedCoinJoinOutputs)
@@ -1918,13 +1937,24 @@ class ShieldedBalanceServiceImpl internal constructor(
      * ~30s proof). Requires the ready latch; does NOT require the L1
      * funding gate — the lock already exists, so completing the shield
      * spends nothing new and strands nothing.
+     *
+     * A lock Platform answered already-consumed ([PendingWalletShieldLock.retrySuppressed]) is
+     * skipped by AUTOMATIC sweeps only: that answer is unauthenticated, so an explicit
+     * [userRequested] retry resumes it again — the same tracked lock through the same recovery
+     * call, never a new spend. A successful resume, or a row that reached Consumed, clears the
+     * record; another already-consumed answer keeps it.
      */
     private suspend fun resumePendingWalletShieldsInner(userRequested: Boolean = false): Int {
         val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return 0
         return walletShieldMutex.withLock {
             val attempted = resumeAttempts
             val pending = try {
-                trackedShieldLocks(walletId).filter { it.resumable && !it.retrySuppressed }
+                val locks = trackedShieldLocks(walletId)
+                forgetPlatformConsumed(
+                    locks.filter { it.platformConsumed && it.statusRaw == ASSET_LOCK_STATUS_CONSUMED }
+                        .map { it.outPointHex }
+                )
+                locks.filter { it.resumable && (userRequested || !it.retrySuppressed) }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("pending wallet-shield sweep: cannot read the tracked asset locks", t)
@@ -1963,6 +1993,8 @@ class ShieldedBalanceServiceImpl internal constructor(
                     source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
                     resumed++
                     log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)
+                    // An earlier (unauthenticated) already-consumed answer no longer stands.
+                    if (lock.platformConsumed) forgetPlatformConsumed(listOf(lock.outPointHex))
                     // The direct path kicks this too — without it a shield
                     // completed via RESUME (interrupted stage (b)) sat on the
                     // ~60s tick before the balance appeared (observed live).

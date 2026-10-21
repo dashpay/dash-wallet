@@ -1135,7 +1135,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      *
      * A lock Platform reported consumed ([PendingWalletShieldLock.retrySuppressed]) does not keep
      * it, even if it is the adopted lock itself: its inputs are final on L1, so the next move cannot
-     * re-spend them, and it is never resumed again, so the record would only block every move
+     * re-spend them, and it is never resumed automatically, so the record would only block every move
      * forever (it can never be proven: an adopted lock is Unproven). A pending lock still keeps it.
      */
     private suspend fun releaseResolvedAdoptedShieldLocked(): Boolean {
@@ -1183,7 +1183,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      *
      * "No pending CoinJoin lock" sets aside a lock Platform reported consumed, even one this stage
      * may have submitted itself: its inputs are final on L1 (no re-spend) and it is never resumed
-     * again (the record holds no recovery it could use), and the release records no success.
+     * automatically again, and the release records no success.
      */
     private suspend fun invalidStageReleasable(stage: ConsolidationStageRead.Invalid): Boolean = try {
         val recorded = stage.observation
@@ -1414,7 +1414,8 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * - its recorded inputs are proven spent by ONE shielded top-up lock ([ShieldSettlement.SpentBy];
      *   no invalid stage, no stage of another move) and every row of that lock is
      *   [PendingWalletShieldLock.retrySuppressed]: final on L1 (2, 3 or 5) AND answered
-     *   already-consumed by Platform. Never retried, so [settlingLockTerminal] can never pass; or
+     *   already-consumed by Platform. Only an explicit Try again re-asks; until then
+     *   [settlingLockTerminal] cannot pass (a lock that lands reaches Consumed and is not closable); or
      * - a LEGACY record with no inputs ([ShieldSettlement.NotRecorded]) and no stage, whose strict
      *   CoinJoin-lock count is positive (so the legacy proof can never pass) while every counted lock
      *   is retry-suppressed (unsuppressed count 0), on a synced chain with the CoinJoin account

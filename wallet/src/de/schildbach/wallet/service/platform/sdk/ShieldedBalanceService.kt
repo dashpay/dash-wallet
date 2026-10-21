@@ -438,7 +438,9 @@ interface ShieldedBalanceService {
      * [resumePendingWalletShields] for an explicit user retry: each resumable
      * lock gets ONE attempt even when the automatic per-process budget is
      * exhausted (the attempt still counts against it, so unattended sweeps
-     * stay capped). Runs under the same mutex; never builds a new lock.
+     * stay capped), including a lock Platform answered already-consumed
+     * (unauthenticated; automatic sweeps skip it). Runs under the same mutex;
+     * never builds a new lock.
      */
     suspend fun resumePendingWalletShieldsOnUserRequest(): Int
 

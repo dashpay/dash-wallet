@@ -753,6 +753,28 @@ class CoinJoinConsolidationTest {
         }
     }
 
+    /**
+     * Try again on a closable record re-asks for its Platform-consumed own lock (explicit retry). The
+     * lock LANDS (Consumed, record cleared): the migration completes with a verified landing and is
+     * no longer closable. Nothing new is built.
+     */
+    @Test fun tryAgainOnAClosableRecordWhoseLockLandsCompletesIt() = runTest {
+        val f = Fixture(this)
+        val lock = stuckOwnLock(f)
+        assertTrue(f.service.canCloseUnconfirmedMigration())
+        coEvery { f.shield.resumePendingWalletShieldsOnUserRequest() } answers {
+            f.shieldLockStatus[lock] = ASSET_LOCK_STATUS_CONSUMED
+            f.platformConsumed = emptySet()
+            1
+        }
+        assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.retryPendingMigration())
+        assertFalse(f.service.canCloseUnconfirmedMigration())
+        advanceTimeBy(15_000); runCurrent()
+        assertNull(f.service.inFlightMigration())
+        assertEquals(1, f.service.verifiedLandings)
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
+    }
+
     /** A final own lock Platform has NOT answered is still resumed and may reach Consumed: not closable. */
     @Test fun closeIsNotOfferedBeforePlatformAnsweredTheOwnLock() = runTest {
         val f = Fixture(this)

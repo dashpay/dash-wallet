@@ -70,7 +70,7 @@ import javax.inject.Inject
  * the recovery marker (it is cleared only when the result becomes visible)
  * but acknowledges it, so the automatic triggers stop re-presenting it;
  * Tools still opens it to resume. Only for a shield whose own lock Platform
- * already answered consumed (never retried, never provable), the guidance
+ * already answered consumed (not retried automatically, unprovable), the guidance
  * also offers "Close this migration": a confirmed user dismissal that drops
  * the record without recording success.
  */

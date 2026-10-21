@@ -2329,13 +2329,14 @@ class ShieldedBalanceServiceTest {
     /**
      * Platform answers a status-5 CoinJoin lock's resume with the typed
      * already-consumed signal (the SDK keeps it at 5, non-terminal): that one
-     * round trip records it durably and stops the sweep's retries — in this
-     * process and after a restart. The answer is unauthenticated, so the lock
-     * STAYS pending in the strict count; as a stranger (inputs final on L1) it
-     * no longer blocks a fresh drain.
+     * round trip records it durably and stops the AUTOMATIC sweeps' retries — in
+     * this process and after a restart. The answer is unauthenticated, so the lock
+     * STAYS pending in the strict count, and an explicit user retry still re-asks
+     * (the same lock, nothing new built; the same answer keeps it suppressed); as
+     * a stranger (inputs final on L1) it no longer blocks a fresh drain.
      */
     @Test
-    fun resumeSweep_alreadyConsumedStatus5LockStopsRetriesAndUnblocksTheDrain() = runBlocking {
+    fun resumeSweep_alreadyConsumedStatus5LockStopsAutomaticRetriesAndUnblocksTheDrain() = runBlocking {
         val failures = listOf<(String) -> Throwable>(
             { DashSdkError.PlatformWallet.AssetLockAlreadyConsumed(it) },
             // Wrapped by the JNI: matched down the cause chain.
@@ -2361,10 +2362,16 @@ class ShieldedBalanceServiceTest {
                 assertEquals(label, 0, resumed)
                 assertEquals(label, setOf(lockA), consumed.value)
                 assertEquals(label, 1, service.pendingCoinJoinShieldLockCount())
-                // Not retried on later sweeps, nor on a user retry.
-                service.resumePendingWalletShields()
-                service.resumePendingWalletShieldsOnUserRequest()
+                // Not retried on later automatic sweeps.
+                assertEquals(label, 0, service.resumePendingWalletShields())
                 assertEquals(label, 1, source.resumeCalls)
+                // An explicit retry re-asks; the same answer keeps it suppressed, nothing new built.
+                assertEquals(label, 0, service.resumePendingWalletShieldsOnUserRequest())
+                assertEquals(label, 2, source.resumeCalls)
+                assertEquals(label, setOf(lockA), consumed.value)
+                assertEquals(label, 0, service.unsuppressedCoinJoinShieldLockCount())
+                assertEquals(label, 0, source.fundCalls)
+                assertEquals(label, 0, source.accountFundCalls)
 
                 // A new process (fresh service, same store) reads the record.
                 val restarted = service(source, consumed = consumed, progress = { caughtUpProgress() })
@@ -2376,7 +2383,11 @@ class ShieldedBalanceServiceTest {
                 assertEquals(label, 0, restarted.unsuppressedCoinJoinShieldLockCount("03".repeat(32)))
                 assertEquals(label, 0, restarted.recoveredCoinJoinShieldLockCount())
                 assertEquals(label, 0, restarted.resumePendingWalletShields())
-                assertEquals(label, 1, source.resumeCalls)
+                assertEquals(label, 2, source.resumeCalls)
+                // After the restart an explicit retry still re-asks.
+                assertEquals(label, 0, restarted.resumePendingWalletShieldsOnUserRequest())
+                assertEquals(label, 3, source.resumeCalls)
+                assertEquals(label, 0, source.accountFundCalls)
                 // The user's next shield drains the new coins instead of waiting on A.
                 assertEquals(
                     label,
@@ -2386,6 +2397,45 @@ class ShieldedBalanceServiceTest {
                 assertEquals(label, 1, source.accountFundCalls)
             }
         }
+    }
+
+    /**
+     * An explicit retry of a Platform-consumed lock that then LANDS (its row reaches Consumed):
+     * resumed through the recovery call only, the record cleared, the lock no longer pending. A row
+     * already Consumed has its stale record cleared by any sweep.
+     */
+    @Test
+    fun resumeSweep_explicitRetryOfAPlatformConsumedLockThatLandsClearsTheRecord() = runBlocking {
+        val lockA = "02".repeat(32) + ":0"
+        val consumed = ConsumedStore().apply { value = setOf(lockA) }
+        val source = readySource()
+        var status = ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN
+        source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, status, 84_997_634L, coinJoinFunded = true)) }
+        source.onResume = { _, _ -> status = ASSET_LOCK_STATUS_CONSUMED }
+        val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+        assertTrue(service.ensureShieldedReady())
+        // Automatic: skipped.
+        assertEquals(0, service.resumePendingWalletShields())
+        assertEquals(0, source.resumeCalls)
+        // Explicit: resumed; it lands.
+        assertEquals(1, service.resumePendingWalletShieldsOnUserRequest())
+        assertEquals(1, source.resumeCalls)
+        assertEquals(emptySet<String>(), consumed.value)
+        assertEquals(0, service.pendingCoinJoinShieldLockCount())
+        assertEquals(0, source.fundCalls)
+        assertEquals(0, source.accountFundCalls)
+
+        // A stale record over a row that reached Consumed by itself: cleared, nothing resumed.
+        val stale = ConsumedStore().apply { value = setOf(lockA, "05".repeat(32) + ":1") }
+        val other = readySource()
+        other.shieldLocks = {
+            listOf(PendingWalletShieldLock(lockA, ASSET_LOCK_STATUS_CONSUMED, 84_997_634L, coinJoinFunded = true))
+        }
+        val swept = service(other, consumed = stale, progress = { caughtUpProgress() })
+        assertTrue(swept.ensureShieldedReady())
+        assertEquals(0, swept.resumePendingWalletShields())
+        assertEquals(setOf("05".repeat(32) + ":1"), stale.value)
+        assertEquals(0, other.resumeCalls)
     }
 
     /**
