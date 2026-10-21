@@ -1833,15 +1833,26 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var networkCallbackRegistered = false
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
     private val availableNetworks: MutableSet<Network> = ConcurrentHashMap.newKeySet()
+    /** Serializes changes to [impediments] and decides the start-up connectivity seed. */
+    private val impedimentGate = ImpedimentGate()
+    /**
+     * The network callbacks' work, one at a time in delivery order. Each used to
+     * launch onto the multi-threaded IO pool, so an `onLost` could be processed
+     * before the `onAvailable` it follows and leave a lost network counted as
+     * available — online with no network.
+     */
+    private val networkEventDispatcher = Dispatchers.IO.limitedParallelism(1)
     private inner class NetworkCallbackImpl : ConnectivityManager.NetworkCallback() {
         init {
             // Setup security health monitoring
             securityFunctions.observeHealth().observe(this@BlockchainServiceImpl) { status ->
                 isKeyStoreHealthy = status.isHealthy
-                if (isKeyStoreHealthy) {
-                    impediments.remove(Impediment.SECURITY)
-                } else {
-                    impediments.add(Impediment.SECURITY)
+                impedimentGate.update {
+                    if (isKeyStoreHealthy) {
+                        impediments.remove(Impediment.SECURITY)
+                    } else {
+                        impediments.add(Impediment.SECURITY)
+                    }
                 }
                 updateBlockchainStateImpediments()
                 check()
@@ -1849,7 +1860,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         override fun onAvailable(network: Network) {
-            serviceScope.launch {
+            serviceScope.launch(networkEventDispatcher) {
                 val capabilities = connectivityManager.getNetworkCapabilities(network)
                 val hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
                 val hasValidated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
@@ -1872,8 +1883,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
 
                 if (hasInternet && hasValidated) {
-                    availableNetworks.add(network)
-                    impediments.remove(Impediment.NETWORK)
+                    impedimentGate.networkCallbackUpdate {
+                        availableNetworks.add(network)
+                        impediments.remove(Impediment.NETWORK)
+                    }
                     updateBlockchainStateImpediments()
                     check()
                 }
@@ -1881,13 +1894,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         override fun onLost(network: Network) {
-            serviceScope.launch {
-                availableNetworks.remove(network)
-                log.info("network lost: $network, remaining networks: ${availableNetworks.size}")
-
+            serviceScope.launch(networkEventDispatcher) {
                 // Only add impediment if no suitable networks remain
-                if (availableNetworks.isEmpty()) {
-                    impediments.add(Impediment.NETWORK)
+                val noneRemain = impedimentGate.networkCallbackUpdate {
+                    availableNetworks.remove(network)
+                    availableNetworks.isEmpty().also { if (it) impediments.add(Impediment.NETWORK) }
+                }
+                log.info("network lost: $network, remaining networks: ${availableNetworks.size}")
+                if (noneRemain) {
                     updateBlockchainStateImpediments()
                     check()
                 }
@@ -1895,7 +1909,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-            serviceScope.launch {
+            serviceScope.launch(networkEventDispatcher) {
                 val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 val hasValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
@@ -1907,10 +1921,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info(s.toString())
                 }
 
-                if (hasInternet && hasValidated) {
-                    impediments.remove(Impediment.NETWORK)
-                } else {
-                    impediments.add(Impediment.NETWORK)
+                impedimentGate.networkCallbackUpdate {
+                    if (hasInternet && hasValidated) {
+                        impediments.remove(Impediment.NETWORK)
+                    } else {
+                        impediments.add(Impediment.NETWORK)
+                    }
                 }
                 updateBlockchainStateImpediments()
                 check()
@@ -1919,9 +1935,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         override fun onUnavailable() {
             super.onUnavailable()
-            serviceScope.launch {
+            serviceScope.launch(networkEventDispatcher) {
                 log.info("network unavailable - no network satisfies request")
-                impediments.add(Impediment.NETWORK)
+                impedimentGate.networkCallbackUpdate { impediments.add(Impediment.NETWORK) }
                 updateBlockchainStateImpediments()
                 check()
             }
@@ -2987,20 +3003,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
                         .build()
-                    // Seed the NETWORK impediment from connectivity as it stands
-                    // now: the registration below reports nothing while no network
-                    // matches, so a service created offline read as online — and a
-                    // persisted replay held the no-timeout wake lock in airplane
-                    // mode. Seeded BEFORE registering, so every callback update
-                    // (all of them run after the registration) overrides it.
-                    if (!hasUsableNetworkNow(connectivityManager)) {
-                        log.info("no usable network at service start — NETWORK impediment set until one appears")
-                        impediments.add(Impediment.NETWORK)
-                        updateBlockchainStateImpediments()
-                    }
+                    // The registration reports nothing while no network matches, so a
+                    // service created offline read as online — and a persisted replay
+                    // held the no-timeout wake lock in airplane mode. Seed the NETWORK
+                    // impediment from connectivity read AFTER registering (a network
+                    // lost in between is then not missed), unless a callback update
+                    // has already landed: see ImpedimentGate.
+                    val seedToken = impedimentGate.seedToken()
                     connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
                     networkCallbackRegistered = true
                     log.info("network callback registered with NetworkRequest: {}", networkCallback)
+                    val usableNow = hasUsableNetworkNow(connectivityManager)
+                    if (impedimentGate.seedOffline(seedToken, usableNow) { impediments.add(Impediment.NETWORK) }) {
+                        log.info("no usable network at service start — NETWORK impediment set until one appears")
+                        updateBlockchainStateImpediments()
+                    }
                 }
                 monitorOlderTransactions(wallet)
                 wallet.addCoinsReceivedEventListener(

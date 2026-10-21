@@ -73,6 +73,49 @@ class NetworkAvailabilityTest {
         assertFalse(hasUsableNetworkNow(connectivityManager))
     }
 
+    // ── The seed after registration (CodeRabbit on #1632) ──────────────────
+
+    private val impediments = java.util.EnumSet.noneOf(
+        org.dash.wallet.common.data.entity.BlockchainState.Impediment::class.java
+    )
+    private val network = org.dash.wallet.common.data.entity.BlockchainState.Impediment.NETWORK
+    private val gate = ImpedimentGate()
+
+    @Test
+    fun aNetworkLostBeforeRegistration_isSeededOffline() {
+        // Usable when the old code read it, gone by the time the callback was
+        // registered: nothing matches, so the callback never says a word.
+        val token = gate.seedToken()
+        // registerNetworkCallback(...) — no callback update follows
+        assertTrue(gate.seedOffline(token, usableNow = false) { impediments.add(network) })
+        assertTrue(network in impediments)
+    }
+
+    @Test
+    fun aCallbackUpdateBeforeTheSeed_wins_overAStaleRead() {
+        val token = gate.seedToken()
+        // A network appears right after registration; its onAvailable lands first.
+        gate.networkCallbackUpdate { impediments.remove(network) }
+        // The seed's read was taken just before that network came up.
+        assertFalse(gate.seedOffline(token, usableNow = false) { impediments.add(network) })
+        assertFalse("the callback's online verdict stands", network in impediments)
+    }
+
+    @Test
+    fun aCallbackUpdateAfterTheSeed_overridesIt() {
+        val token = gate.seedToken()
+        assertTrue(gate.seedOffline(token, usableNow = false) { impediments.add(network) })
+        gate.networkCallbackUpdate { impediments.remove(network) } // onAvailable
+        assertFalse(network in impediments)
+    }
+
+    @Test
+    fun aUsableNetwork_isNeverSeededOffline() {
+        val token = gate.seedToken()
+        assertFalse(gate.seedOffline(token, usableNow = true) { impediments.add(network) })
+        assertFalse(network in impediments)
+    }
+
     @Test
     fun aServiceCreatedOffline_neverTakesTheReplayLock_untilANetworkAppears() {
         shadowOf(connectivityManager).setDefaultNetworkActive(false)
