@@ -1313,17 +1313,31 @@ internal class FilterStallWatchdogDecider(
      * stops being behind, or the wallet-event stream shows the engine alive.
      * Read by the blockchain service from another thread: a wedged engine is
      * no reason to keep the CPU awake — and the moment it clears, the replay
-     * needs the CPU back at once ([standingDownState]).
+     * needs the CPU back at once ([standDownClears]).
      */
     var standingDown: Boolean
         get() = _standingDown.value
         private set(value) {
-            _standingDown.value = value
+            synchronized(transitionLock) {
+                if (_standingDown.value != value) {
+                    _standingDown.value = value
+                    if (!value) _standDownClears.value = _standDownClears.value + 1
+                }
+            }
         }
+    private val transitionLock = Any()
     private val _standingDown = MutableStateFlow(false)
+    private val _standDownClears = MutableStateFlow(0L)
 
-    /** [standingDown] as a flow, so a clear is an event and not only the next poll's reading. */
-    val standingDownState: StateFlow<Boolean> = _standingDown.asStateFlow()
+    /**
+     * How many times [standingDown] has gone from true to false — counted, not
+     * mirrored, so a clear is never lost to conflation. A `StateFlow<Boolean>`
+     * of the flag collapses clear → re-wedge → clear into the value a delayed
+     * collector already saw, and the recovery after the second wedge went
+     * unnoticed. This only ever increases: any change a collector sees means
+     * at least one clear happened since its last look.
+     */
+    val standDownClears: StateFlow<Long> = _standDownClears.asStateFlow()
 
     /** The filter cursor the watchdog stood down at; written before [standingDown] goes true. */
     @Volatile
@@ -2587,8 +2601,11 @@ class L1ShadowSyncService internal constructor(
      */
     fun filterScanWedged(): Boolean = filterStallDecider.standingDown
 
-    /** [filterScanWedged] as a flow: the blockchain service re-takes the replay wake lock when it clears. */
-    val filterScanWedgedState: StateFlow<Boolean> get() = filterStallDecider.standingDownState
+    /**
+     * Counts [filterScanWedged] clearing ([FilterStallWatchdogDecider.standDownClears]):
+     * the blockchain service re-takes the replay wake lock on every increase.
+     */
+    val filterScanWedgeClears: StateFlow<Long> get() = filterStallDecider.standDownClears
 
     /**
      * When the in-flight engine start began, on [nowMs]'s clock; 0 when no

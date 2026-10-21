@@ -22,6 +22,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -98,7 +100,7 @@ class ReplayWakeLockTest {
 
     @Test
     fun aRecoveryFromAnExhaustedWedge_retakesTheLock_withoutATickOrANetworkChange() {
-        replayWakeLock.observeWedge(scope, decider.standingDownState)
+        replayWakeLock.observeWedgeClears(scope, decider.standDownClears)
         tick()
         assertTrue("the replay holds the lock", lock.isHeld)
 
@@ -124,7 +126,7 @@ class ReplayWakeLockTest {
         // The watchdog's own check runs on a one-minute delay that only advances
         // while awake; the progress feed and the event tap are what see the
         // engine move during a brief wake.
-        replayWakeLock.observeWedge(scope, decider.standingDownState)
+        replayWakeLock.observeWedgeClears(scope, decider.standDownClears)
         exhaustTheWatchdog()
         tick()
         assertFalse(lock.isHeld)
@@ -147,8 +149,66 @@ class ReplayWakeLockTest {
     }
 
     @Test
+    fun aDelayedObserver_thatMissesClearReWedgeClear_stillRetakesTheLock() = runTest {
+        // Codex on #1632: observed as a StateFlow<Boolean>, a collector that is
+        // slow to run sees clear → re-wedge → clear as the "not wedged" it had
+        // already seen (StateFlow conflates), while the minute tick released the
+        // lock during the re-wedge. Nothing re-took it. The collector here runs
+        // only when the test scheduler is advanced, so the whole sequence happens
+        // while it is held back.
+        replayWakeLock.observeWedgeClears(backgroundScope, decider.standDownClears)
+        runCurrent() // the observer is subscribed and idle
+        tick()
+        assertTrue("the replay holds the lock", lock.isHeld)
+
+        exhaustTheWatchdog() // wedged
+        decider.onFilterProgress(stuck + 1) // clear #1 — the observer does not run
+        // The cursor moved one block and stalls there: re-wedged, budget spent.
+        check(200 * 60_000L, height = stuck + 1)
+        check(300 * 60_000L, height = stuck + 1)
+        assertTrue(decider.standingDown)
+        tick()
+        assertFalse("the tick releases the lock during the re-wedge", lock.isHeld)
+        decider.onFilterProgress(stuck + 2) // clear #2 — still not run
+        assertFalse(decider.standingDown)
+        assertFalse("nothing has re-checked yet", lock.isHeld)
+
+        runCurrent() // the delayed observer finally runs
+        assertTrue("the missed recovery still re-takes the lock", lock.isHeld)
+        assertEquals(1, lock.count)
+    }
+
+    @Test
+    fun aDelayedObserver_seeingAClearFollowedByANewWedge_acquiresNothing() = runTest {
+        replayWakeLock.observeWedgeClears(backgroundScope, decider.standDownClears)
+        runCurrent()
+        exhaustTheWatchdog()
+        tick()
+        assertFalse(lock.isHeld)
+
+        decider.onFilterProgress(stuck + 1) // clear — observer held back
+        check(200 * 60_000L, height = stuck + 1)
+        check(300 * 60_000L, height = stuck + 1) // re-wedged before it runs
+        assertTrue(decider.standingDown)
+        runCurrent()
+        assertFalse("the clear it sees is already superseded by a wedge", lock.isHeld)
+    }
+
+    @Test
+    fun aClearBetweenRegistrationAndTheObserversFirstRun_isNotTakenForTheBaseline() = runTest {
+        exhaustTheWatchdog()
+        tick()
+        assertFalse(lock.isHeld)
+
+        replayWakeLock.observeWedgeClears(backgroundScope, decider.standDownClears)
+        decider.onFilterProgress(stuck + 1) // clears before the observer's first run
+        runCurrent()
+        assertTrue(lock.isHeld)
+    }
+
+    @Test
     fun aWedgeClearedWhileOffline_waitsForTheNetwork() {
-        replayWakeLock.observeWedge(scope, decider.standingDownState)
+        replayWakeLock.observeWedgeClears(scope, decider.standDownClears)
         exhaustTheWatchdog()
         networkImpeded = true
         tick()
@@ -165,7 +225,7 @@ class ReplayWakeLockTest {
 
     @Test
     fun aWedgeClearingAfterTeardownBegan_acquiresNothing() {
-        replayWakeLock.observeWedge(scope, decider.standingDownState)
+        replayWakeLock.observeWedgeClears(scope, decider.standDownClears)
         tick()
         exhaustTheWatchdog()
         tick()

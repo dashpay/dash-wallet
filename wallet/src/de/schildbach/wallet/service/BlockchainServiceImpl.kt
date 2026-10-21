@@ -2772,7 +2772,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // ACTION_TIME_TICK is not delivered while the CPU sleeps (see ReplayWakeLock).
                 // Unconditional: the cutover gate can be re-resolved later in this
                 // service's life, and reacquireIfDue re-reads it itself.
-                replayWakeLock.observeWedge(serviceScope, l1ShadowSyncService.filterScanWedgedState)
+                replayWakeLock.observeWedgeClears(serviceScope, l1ShadowSyncService.filterScanWedgeClears)
 
                 peerConnectivityListener = PeerConnectivityListener()
                 broadcastPeerState(0)

@@ -19,9 +19,7 @@ package de.schildbach.wallet.service
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -47,7 +45,7 @@ interface ReplayWakeLockHandle {
  * - the minute tick acquires and releases ([hold]);
  * - the moments a stuck replay can move again re-acquire at once
  *   ([reacquireIfDue]): the network impediment clearing, and the filter wedge
- *   clearing ([observeWedge]). ACTION_TIME_TICK is not delivered while the CPU
+ *   clearing ([observeWedgeClears]). ACTION_TIME_TICK is not delivered while the CPU
  *   sleeps, so waiting for the tick would leave a screen-off replay asleep
  *   until something unrelated woke the device.
  *
@@ -112,18 +110,28 @@ internal class ReplayWakeLock(
     }
 
     /**
-     * Re-check the moment the filter wedge clears ([wedged] turns false after
-     * the first value): the cursor moved, wallet events resumed, the scan
-     * caught up, or the engine stopped.
+     * Re-check every time the filter wedge clears: the cursor moved, wallet
+     * events resumed, the scan caught up, or the engine stopped.
+     *
+     * [clears] COUNTS the clears rather than mirroring the flag. A collector
+     * that is slow to run can miss intermediate values of a StateFlow, and on a
+     * Boolean that loses events: clear → re-wedge → clear arrives as the
+     * "not wedged" it already saw, while the minute tick released the lock
+     * during the re-wedge — and no re-check came. A count it has not seen
+     * always means a clear happened, so it re-checks. The baseline is read when
+     * this is CALLED, not when the collector first runs, so a clear in between
+     * is not taken for the starting value. [reacquireIfDue] reads the current
+     * state, so a clear that was followed by a new wedge acquires nothing.
      */
-    fun observeWedge(scope: CoroutineScope, wedged: Flow<Boolean>): Job = scope.launch {
-        wedged.distinctUntilChanged()
-            .drop(1) // the current value is not a transition
-            .filter { !it }
-            .collect {
-                log.info("the filter wedge cleared — re-checking the replay wake lock")
-                reacquireIfDue()
-            }
+    fun observeWedgeClears(scope: CoroutineScope, clears: StateFlow<Long>): Job {
+        val baseline = clears.value
+        return scope.launch {
+            clears.filter { it != baseline }
+                .collect {
+                    log.info("the filter wedge cleared — re-checking the replay wake lock")
+                    reacquireIfDue()
+                }
+        }
     }
 
     /** onDestroy, first thing: no acquisition after this. */
