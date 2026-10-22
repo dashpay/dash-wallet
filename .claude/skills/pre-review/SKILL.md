@@ -52,6 +52,16 @@ The report is printed and kept in `~/.cache/prereview/<sha>.md`; `--status` show
   those out too, so drop it. A finding that IS in scope but that the user decides to defer needs a tracking issue
   linked on the PR, or the bot keeps reporting it. Draft that issue for the user; do not open it yourself.
 
+## Scope
+
+This reviews **our own branches before we push them**. The branch is code the developer already builds and runs here,
+so it is not treated as hostile: Codex runs with the developer's login and Codex config. The isolation the script
+does apply (permission profile, environment allowlist, MCP servers and other out-of-sandbox capabilities off) is
+defence in depth, not a sandbox for hostile code. A finding of the class "a branch written to attack the reviewer
+escapes the review's isolation" is outside this scope: answer it with that, per rule 4 below, rather than adding
+another isolation layer. A defect that breaks the review for an ordinary user (it fails to start, it loses the
+login) is in scope and gets fixed.
+
 ## The rules of the loop
 
 1. **Only the PR's own code.** A finding on code this change does not touch is not fixed quietly: answer the

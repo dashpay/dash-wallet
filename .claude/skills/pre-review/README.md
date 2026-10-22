@@ -36,8 +36,14 @@ printenv CODEX_API_KEY | codex login --with-api-key   # store it in Codex's own 
 the key out of your shell profile (a login shell would put it back), this repository, `local.properties`,
 `service.properties`, commits, issues and chats.
 
-**What the review may touch.** The branch under review is untrusted code: it can ask the model to run `printenv`
-or `cat ~/.codex/auth.json`. So the commands the model runs get a bare environment with the key names excluded,
+**What it is for, and what it does not defend against.** The review is for your own branches before you push
+them: the code under review is code you already build and run on this machine (Gradle runs its build scripts, the
+tests run its classes). It is not a sandbox for reviewing a hostile branch. Codex runs with your Codex login and
+loads your `config.toml`; a branch written to attack the reviewer is out of scope, the same as for building it.
+Review someone else's untrusted branch only in a throwaway environment.
+
+Within that scope the review still keeps the model away from what it does not need, as defence in depth: the
+commands the model runs get a bare environment with the key names excluded,
 and a Codex permission profile instead of the read-only sandbox (whose reads cover the whole disk): they may read
 the review's own clone of the commit (not a linked worktree: Codex would resolve its project trust through this
 checkout), the repository's object store it borrows, the pinned prompts and the minimal system paths, and write only
@@ -47,7 +53,7 @@ see your git configuration either (a PAT in a `url.insteadOf` or an `extraheader
 runs with an empty global config, and the commands' environment is an explicit allowlist. Codex runs with `--ignore-rules`: your execpolicy allow rules
 (`~/.codex/rules`, a matching command may skip the sandbox) stay out of the review. Your `config.toml` does load (it
 may choose a keyring login store); what it could open is switched off and read back from inside the review clone,
-the same context the review runs in. `~/.codex` is an explicit deny in the profile, and the tree is checked out under
+the same context the review runs in (lifecycle hooks included). `~/.codex` is an explicit deny in the profile, and the tree is checked out under
 none of your git configuration (no hooks, no `filter.*` commands). Codex's other ways out of the sandbox — the implicit Apps connector, browser and computer use,
 web search — are switched off for the review and read back. The report is scrubbed of the key's value as well.
 

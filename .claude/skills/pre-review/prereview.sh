@@ -205,26 +205,31 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   # trusted source checkout's own .codex/config.toml could mask a server there, or point an HTTP one at an attacker
   local mcp_off=() name
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null
-  while IFS= read -r name; do
+  local transport
+  while IFS=$'\t' read -r name transport; do
     [[ -n "$name" ]] || continue
     [[ "$name" =~ ^[A-Za-z0-9_-]+$ ]] || { say "MCP server '$name' cannot be switched off by name: not reviewing"; return 2; }
     # a complete entry, not `.enabled=false` alone: a server another layer provides (the desktop app's) is not in
-    # config.toml, and a partial override of it leaves an entry without a command — codex then fails to load at all
-    mcp_off+=(-c "mcp_servers.$name={ command = \"/bin/sh\", enabled = false }")
+    # config.toml, and a partial override of it leaves an entry without a command — codex then fails to load at all.
+    # Of the server's own transport: the entry merges with the existing one, and a `command` next to an http
+    # server's `url` is rejected ("url is not supported for stdio")
+    if [[ "$transport" == stdio ]]; then mcp_off+=(-c "mcp_servers.$name={ command = \"/bin/sh\", enabled = false }")
+    else mcp_off+=(-c "mcp_servers.$name={ url = \"http://127.0.0.1:9/\", enabled = false }"); fi
   done < <(python3 -c 'import json,sys
-try: print("\n".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
+try: print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: pass' "$probe")
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
   if [[ -n "$(python3 -c 'import json,sys
 try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabled for codex: not reviewing"; return 2; fi
   # codex's other ways out of the sandbox: the implicit Apps connector (never in `mcp list`), browser and computer use,
-  # web search (a query can carry data out). Off for the review, and read back: each of the six must show false
+  # web search (a query can carry data out), lifecycle hooks. Off for the review, and read back: each must show false
   local feat_off=(-c features.apps=false -c features.browser_use=false -c features.browser_use_external=false \
-    -c features.browser_use_full_cdp_access=false -c features.computer_use=false -c features.in_app_browser=false -c 'web_search="disabled"')
+    -c features.browser_use_full_cdp_access=false -c features.computer_use=false -c features.in_app_browser=false -c 'web_search="disabled"' \
+    -c features.hooks=false)   # lifecycle hooks: run outside the sandbox, in the clone, from the user's trusted config
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex "${feat_off[@]}" features list > "$probe" 2>/dev/null
-  if [[ "$(awk '$1 ~ /^(apps|browser_use|browser_use_external|browser_use_full_cdp_access|computer_use|in_app_browser)$/ && $NF == "false"' "$probe" | wc -l | tr -d ' ')" != 6 ]]; then
-    say "a codex capability outside the sandbox (apps, browser or computer use) does not read back as off: not reviewing"; return 2
+  if [[ "$(awk '$1 ~ /^(apps|browser_use|browser_use_external|browser_use_full_cdp_access|computer_use|in_app_browser|hooks)$/ && $NF == "false"' "$probe" | wc -l | tr -d ' ')" != 7 ]]; then
+    say "a codex capability outside the sandbox (apps, browser or computer use, lifecycle hooks) does not read back as off: not reviewing"; return 2
   fi
   # the model's scratch: its own folder (TMPDIR below), not the shared temp dirs where other reviews keep their files
   mkdir -m 700 "$wt/tmp" || { say "cannot create $wt/tmp"; return 2; }

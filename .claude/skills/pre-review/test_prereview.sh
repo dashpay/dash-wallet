@@ -23,7 +23,7 @@ cat > "$T/bin/codex" <<'EOF'
 [[ "$1" == --version ]] && { echo "codex-cli ${FAKE_VERSION:-0.163.0}"; exit 0; }
 [[ "$1" == login ]] && exit "${FAKE_LOGIN_RC:-0}"
 if [[ " $* " == *" features list "* ]]; then   # the six capabilities, each off when its -c features.<name>=false came
-  for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser; do
+  for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do
     if [[ -n "${FAKE_FEAT_STUBBORN:-}" || " $* " != *" features.$n=false "* ]]; then echo "$n stable true"; else echo "$n stable false"; fi
   done; exit 0
 fi
@@ -31,8 +31,15 @@ if [[ " $* " == *" mcp list "* ]]; then   # the effective servers (FAKE_MCP), ea
   printf '%s\n' "$@" > "${FAKE_CDIR}.mcpargs"; pwd -P > "${FAKE_CDIR}.mcpcwd"
   python3 -c '
 import json, sys
-names = [n for n in sys.argv[1].split(",") if n]; args = sys.argv[3:]; stubborn = sys.argv[2] == "1"
-print(json.dumps([{"name": n, "enabled": stubborn or ("mcp_servers.%s={ command = \"/bin/sh\", enabled = false }" % n) not in args} for n in names]))' "${FAKE_MCP:-}" "${FAKE_MCP_STUBBORN:-0}" "$@"
+ents = [e.split(":") + ["stdio"] for e in sys.argv[1].split(",") if e]; args = sys.argv[3:]; stubborn = sys.argv[2] == "1"
+out = []
+for e in ents:
+    n, t = e[0], e[1]
+    if t != "stdio" and ("mcp_servers.%s={ command = \"/bin/sh\", enabled = false }" % n) in args:
+        print("Error: url is not supported for stdio", file=sys.stderr); sys.exit(1)
+    off = ("mcp_servers.%s={ command = \"/bin/sh\", enabled = false }" % n) if t == "stdio" else ("mcp_servers.%s={ url = \"http://127.0.0.1:9/\", enabled = false }" % n)
+    out.append({"name": n, "enabled": stubborn or off not in args, "transport": {"type": "stdio" if t == "stdio" else "streamable_http"}})
+print(json.dumps(out))' "${FAKE_MCP:-}" "${FAKE_MCP_STUBBORN:-0}" "$@"
   exit 0
 fi
 printf '%s\n' "$@" > "${FAKE_CDIR}.args"; pwd -P > "${FAKE_CDIR}.execcwd"   # before the loop below consumes them
@@ -112,9 +119,11 @@ ok "a --shared clone: its alternates and theirs are granted, recursively" "$?:$(
 cd "$T/app"
 FAKE_FEAT_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "a capability outside the sandbox that stays on (apps, browser, computer use) → not reviewed (exit 2)" "$?:$(V)" 2:none
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
-ok "apps, browser and computer use and web search are switched off for the review" "$?:$(grep -c -e '^features.apps=false$' -e '^features.computer_use=false$' -e '^web_search="disabled"$' "$T/cdir.args")" 0:3
+ok "apps, browser and computer use, web search and lifecycle hooks are switched off for the review" "$?:$(grep -c -e '^features.apps=false$' -e '^features.computer_use=false$' -e '^web_search="disabled"$' -e '^features.hooks=false$' "$T/cdir.args")" 0:4
 FAKE_MCP="canaryfs,second" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "the user's MCP servers are switched off by name for the review" "$?:$(grep -c -e '^mcp_servers.canaryfs={ command = "/bin/sh", enabled = false }$' -e '^mcp_servers.second={ command = "/bin/sh", enabled = false }$' "$T/cdir.args")" 0:2
+FAKE_MCP="docs:http,loc" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … an http server gets an entry of its own transport (a stdio one next to its url fails codex's config load)" "$?:$(grep -c '^mcp_servers.docs={ url = "http://127.0.0.1:9/", enabled = false }$' "$T/cdir.args")" 0:1
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
 FAKE_MCP="bad.name" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … a name that cannot be addressed → not reviewed (exit 2)" "$?" 2
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
@@ -137,7 +146,7 @@ FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1;
 kill -9 $LIVE; wait $LIVE 2>/dev/null
 FAKE_LAST='{"blocking": 1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "its holder was killed → the kernel released the lock, reviewed" "$?:$(V)" 1:blocking
 # the lock lives as long as the review: hold it from inside a running review (a slow fake codex), then try another
-printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && { echo codex-cli 0.163.0; exit 0; }\n[[ "$1" == login ]] && exit 0\n[[ " $* " == *" mcp list "* ]] && { echo "[]"; exit 0; }\n[[ " $* " == *" features list "* ]] && { for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser; do echo "$n stable false"; done; exit 0; }\nsleep 4; while [[ $# -gt 0 ]]; do [[ "$1" == -o ]] && { echo "{\\"blocking\\": 0, \\"suggestion\\": 0, \\"nitpick\\": 0}" > "$2"; shift; }; shift; done\n' > "$T/bin/codex.slow"
+printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && { echo codex-cli 0.163.0; exit 0; }\n[[ "$1" == login ]] && exit 0\n[[ " $* " == *" mcp list "* ]] && { echo "[]"; exit 0; }\n[[ " $* " == *" features list "* ]] && { for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do echo "$n stable false"; done; exit 0; }\nsleep 4; while [[ $# -gt 0 ]]; do [[ "$1" == -o ]] && { echo "{\\"blocking\\": 0, \\"suggestion\\": 0, \\"nitpick\\": 0}" > "$2"; shift; }; shift; done\n' > "$T/bin/codex.slow"
 chmod +x "$T/bin/codex.slow"; mkdir -p "$T/slow"; cp "$T/bin/codex.slow" "$T/slow/codex"
 PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 1
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "a second review while the first is inside codex → exit 2" "$?" 2
