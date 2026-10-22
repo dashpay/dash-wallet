@@ -252,6 +252,18 @@ g checkout -q -b filtery origin/master; echo '* filter=evil' > .gitattributes; e
 printf '[filter "evil"]\n\tsmudge = touch %s/FILTER_RAN; cat\n' "$T" > "$T/filtercfg"
 GIT_CONFIG_GLOBAL="$T/filtercfg" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "a smudge filter from the user's git config does not run on the review's checkout" "$?:$([[ -e "$T/FILTER_RAN" ]] && echo RAN || echo quiet)" 0:quiet
+# a TMPDIR whose path holds a double quote and a backslash: the profile and the env set stay valid TOML, one entry each
+need mkdir -p "$T/q\"d\\ir"; g checkout -q other4; TMPDIR="$T/q\"d\\ir" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "paths with a quote and a backslash are TOML-escaped in the profile and the env set" "$?:$(python3 -c '
+import sys, tomllib
+args = open(sys.argv[1]).read().split("\n")
+fs = [a for a in args if a.startswith("permissions.prereview.filesystem=")][0].split("=", 1)[1]
+st = [a for a in args if a.startswith("shell_environment_policy.set=")][0].split("=", 1)[1]
+t = tomllib.loads("x = " + fs); u = tomllib.loads("x = " + st)
+print(sum(1 for k in t["x"] if "q\"d\\ir" in k), "q\"d\\ir" in u["x"]["TMPDIR"])' "$T/cdir.args" 2>&1)" "0:2 True"
+g checkout -q feat
+need mkdir -p "$T/nopy"; ln -sf "$(command -v dirname)" "$T/nopy/dirname"   # all the script needs before its python3 check
+env -i HOME="$HOME" PATH="$T/nopy" "$(command -v bash)" "$P" --status > "$T/nopy.log" 2>&1; ok "no python3 on PATH → a clear message, exit 2" "$?:$(grep -c 'python3 is required' "$T/nopy.log")" "2:1"
 g checkout -q other4
 g checkout -q other3
 PREREVIEW_BASE=origin/release git push -q origin feat:refs/heads/feat2 2>/dev/null; ok "reviewed against master, PREREVIEW_BASE=release → refused (stale)" "$?" 1

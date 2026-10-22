@@ -44,6 +44,10 @@ VERDICTS="$CACHE/prereview"
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 export PREREVIEW_VERDICTS="$VERDICTS"
 say() { printf 'pre-review: %s\n' "$*" >&2; }
+# python3 does the verdict lookup, the lock, the JSON parsing and publication: without it nothing here is reliable
+command -v python3 >/dev/null || { say "python3 is required (README.md, Setup)"; exit 2; }
+# a path as a TOML basic string: JSON string escapes (\" \\ \uXXXX …) are valid TOML ones, and json.dumps leaves / alone
+toml_str() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 # every child that can outlive a cancelled review (git fetch and clone, curl, codex) starts without the review's lock
 # descriptor (review() takes it, see PREREVIEW_LOCK_FD): the lock is the review's own, and nothing left behind keeps it
 nolock() { ( [[ "${PREREVIEW_LOCK_FD:-}" =~ ^[0-9]+$ ]] && eval "exec $PREREVIEW_LOCK_FD>&-"; exec "$@" ); }
@@ -236,7 +240,7 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
   local fs alt queue=("$wt/tree/.git/objects") seen=" "
   # an explicit deny on the codex home as well: codex skips the sandbox for a command an allow rule matches unless the
   # profile holds an explicit Deny (an implicit one, a path simply not granted, does not count)
-  fs="\":minimal\" = \"read\", \"$wt/tmp\" = \"write\", \"$wt/gitconfig\" = \"read\", \"$PC\" = \"read\", \"${CODEX_HOME:-$HOME/.codex}\" = \"deny\""
+  fs="\":minimal\" = \"read\", $(toml_str "$wt/tmp") = \"write\", $(toml_str "$wt/gitconfig") = \"read\", $(toml_str "$PC") = \"read\", $(toml_str "${CODEX_HOME:-$HOME/.codex}") = \"deny\""
   while [[ ${#queue[@]} -gt 0 ]]; do
     local objs=${queue[0]}; queue=("${queue[@]:1}")
     [[ -f "$objs/info/alternates" ]] || continue
@@ -244,7 +248,7 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
       [[ -n "$alt" && "${alt:0:1}" != "#" ]] || continue
       [[ "$alt" == /* ]] || alt=$(cd "$objs" && cd "$alt" 2>/dev/null && pwd)
       [[ -n "$alt" && "$seen" != *" $alt "* ]] || continue
-      seen+="$alt "; fs+=", \"$alt\" = \"read\""; queue+=("$alt")
+      seen+="$alt "; fs+=", $(toml_str "$alt") = \"read\""; queue+=("$alt")
     done < "$objs/info/alternates"
   done
   fs="{ $fs, \":workspace_roots\" = { \".\" = \"read\" } }"
@@ -266,7 +270,7 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
     exec ${tmo[@]+"${tmo[@]}"} codex exec --ignore-rules ${mcp_off[@]+"${mcp_off[@]}"} "${feat_off[@]}" -m "$MODEL" -c model_reasoning_effort="$EFFORT" -C "$wt/tree" -o "$out" \
       -c shell_environment_policy.inherit=core -c shell_environment_policy.ignore_default_excludes=false \
       -c 'shell_environment_policy.exclude=["CODEX_API_KEY","OPENAI_API_KEY","*_API_KEY","*TOKEN*","*SECRET*","*PASSWORD*"]' \
-      -c "shell_environment_policy.set={ GIT_CONFIG_GLOBAL = \"$wt/gitconfig\", GIT_CONFIG_NOSYSTEM = \"1\", TMPDIR = \"$wt/tmp\" }" \
+      -c "shell_environment_policy.set={ GIT_CONFIG_GLOBAL = $(toml_str "$wt/gitconfig"), GIT_CONFIG_NOSYSTEM = \"1\", TMPDIR = $(toml_str "$wt/tmp") }" \
       -c 'shell_environment_policy.include_only=["HOME","PATH","USER","LOGNAME","SHELL","TERM","LANG","LC_ALL","LC_CTYPE","TMPDIR","TMP","TEMP","PWD","GIT_CONFIG_GLOBAL","GIT_CONFIG_NOSYSTEM"]' \
       -c default_permissions=prereview -c "permissions.prereview.filesystem=$fs" \
       "$(cat <<EOF

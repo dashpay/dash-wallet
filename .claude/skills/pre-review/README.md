@@ -14,6 +14,7 @@ the options below.
 ```bash
 npm i -g @openai/codex@latest      # 0.163.0 or newer (the script checks): permission profiles and the model on a ChatGPT plan
 ```
+`python3` (3.8 or newer) and `git` must be on `PATH` as well; the script checks for `python3` before anything else.
 
 **A. A ChatGPT plan (Plus, Pro, Team).** No key: the review uses the plan's quota.
 ```bash
