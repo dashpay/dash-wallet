@@ -181,8 +181,12 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   # the objects stay in the repository (read through alternates, granted below), only the files are checked out
   # no hooks while the tree is materialized: a relative core.hooksPath in the user's config (.githooks) would resolve
   # inside the review clone, and the reviewed commit's own post-checkout hook would run here, outside every restriction
-  waitfor git -c core.hooksPath=/dev/null clone -q --shared --no-checkout "$repo" "$wt/tree" 2>/dev/null \
-    && git -c core.hooksPath=/dev/null -C "$wt/tree" checkout -q --detach "$sha" 2>/dev/null \
+  # and none of the user's git configuration: a filter.<name>.smudge/process registered there runs on checkout for
+  # every path the reviewed commit's .gitattributes points at it — the commit's own code, outside every restriction
+  waitfor env -u GIT_CONFIG_COUNT -u GIT_CONFIG_PARAMETERS GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+      git -c core.hooksPath=/dev/null clone -q --shared --no-checkout "$repo" "$wt/tree" 2>/dev/null \
+    && env -u GIT_CONFIG_COUNT -u GIT_CONFIG_PARAMETERS GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+      git -c core.hooksPath=/dev/null -C "$wt/tree" checkout -q --detach "$sha" 2>/dev/null \
     || { say "cannot check out ${sha:0:10} to review it"; return 2; }
   # the clone's origin/<base> would be the checkout's LOCAL branch of that name (behind, or absent in a single-branch
   # checkout); the review needs the base as origin has it, fetched above: set that in the clone, name it in the prompt
@@ -197,10 +201,10 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   # the user's MCP servers would start outside the sandbox (a filesystem server for ~ hands auth.json over), and
   # `-c mcp_servers={}` merges instead of clearing: every effective server (plugins' included) is switched off by name,
   # and the roster is read back — anything still enabled means no review. Listed and verified from the review clone
-  # (-C), the configuration context codex exec runs in: a trusted source checkout's own .codex/config.toml could
-  # mask a global server as disabled there while the clone, which inherits no trust, still loads it
+  # (its working directory: codex's -C does not move `mcp list`'s configuration context), as codex exec runs: a
+  # trusted source checkout's own .codex/config.toml could mask a server there, or point an HTTP one at an attacker
   local mcp_off=() name
-  waitfor codex -C "$wt/tree" mcp list --json > "$probe" 2>/dev/null
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null
   while IFS= read -r name; do
     [[ -n "$name" ]] || continue
     [[ "$name" =~ ^[A-Za-z0-9_-]+$ ]] || { say "MCP server '$name' cannot be switched off by name: not reviewing"; return 2; }
@@ -210,7 +214,7 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   done < <(python3 -c 'import json,sys
 try: print("\n".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: pass' "$probe")
-  waitfor codex -C "$wt/tree" ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
   if [[ -n "$(python3 -c 'import json,sys
 try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabled for codex: not reviewing"; return 2; fi
@@ -218,7 +222,7 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
   # web search (a query can carry data out). Off for the review, and read back: each of the six must show false
   local feat_off=(-c features.apps=false -c features.browser_use=false -c features.browser_use_external=false \
     -c features.browser_use_full_cdp_access=false -c features.computer_use=false -c features.in_app_browser=false -c 'web_search="disabled"')
-  waitfor codex "${feat_off[@]}" features list > "$probe" 2>/dev/null
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex "${feat_off[@]}" features list > "$probe" 2>/dev/null
   if [[ "$(awk '$1 ~ /^(apps|browser_use|browser_use_external|browser_use_full_cdp_access|computer_use|in_app_browser)$/ && $NF == "false"' "$probe" | wc -l | tr -d ' ')" != 6 ]]; then
     say "a codex capability outside the sandbox (apps, browser or computer use) does not read back as off: not reviewing"; return 2
   fi
@@ -249,9 +253,12 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
     # CODEX_API_KEY would answer; include_only is applied last, so it also drops a `set` entry from the user's own
     # codex config), with git pointed at the empty config above, and (b) a permission profile instead of the read-only
     # sandbox, whose reads cover the whole disk, ~/.codex/auth.json included
-    # --ignore-rules: the user's execpolicy allow rules (~/.codex/rules) let a matching command run OUTSIDE the sandbox;
-    # --ignore-user-config: the user's config.toml stays out (its servers, `set` entries, plugins); the login still loads
-    exec ${tmo[@]+"${tmo[@]}"} codex exec --ignore-rules --ignore-user-config ${mcp_off[@]+"${mcp_off[@]}"} "${feat_off[@]}" -m "$MODEL" -c model_reasoning_effort="$EFFORT" -C "$wt/tree" -o "$out" \
+    # --ignore-rules: the user's execpolicy allow rules (~/.codex/rules) let a matching command run OUTSIDE the sandbox.
+    # The user's config.toml does load (it may select a keyring login store); what it could open is closed above and
+    # read back in this same context: MCP servers off by name, apps/browser/computer use/web search off, environment
+    # an allowlist. Started from inside the clone, the context the probes read.
+    cd "$wt/tree" || exit 2
+    exec ${tmo[@]+"${tmo[@]}"} codex exec --ignore-rules ${mcp_off[@]+"${mcp_off[@]}"} "${feat_off[@]}" -m "$MODEL" -c model_reasoning_effort="$EFFORT" -C "$wt/tree" -o "$out" \
       -c shell_environment_policy.inherit=core -c shell_environment_policy.ignore_default_excludes=false \
       -c 'shell_environment_policy.exclude=["CODEX_API_KEY","OPENAI_API_KEY","*_API_KEY","*TOKEN*","*SECRET*","*PASSWORD*"]' \
       -c "shell_environment_policy.set={ GIT_CONFIG_GLOBAL = \"$wt/gitconfig\", GIT_CONFIG_NOSYSTEM = \"1\", TMPDIR = \"$wt/tmp\" }" \

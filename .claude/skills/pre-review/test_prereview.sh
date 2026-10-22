@@ -28,14 +28,14 @@ if [[ " $* " == *" features list "* ]]; then   # the six capabilities, each off 
   done; exit 0
 fi
 if [[ " $* " == *" mcp list "* ]]; then   # the effective servers (FAKE_MCP), each off when a -c mcp_servers.<name>.enabled=false came
-  printf '%s\n' "$@" > "${FAKE_CDIR}.mcpargs"
+  printf '%s\n' "$@" > "${FAKE_CDIR}.mcpargs"; pwd -P > "${FAKE_CDIR}.mcpcwd"
   python3 -c '
 import json, sys
 names = [n for n in sys.argv[1].split(",") if n]; args = sys.argv[3:]; stubborn = sys.argv[2] == "1"
 print(json.dumps([{"name": n, "enabled": stubborn or ("mcp_servers.%s={ command = \"/bin/sh\", enabled = false }" % n) not in args} for n in names]))' "${FAKE_MCP:-}" "${FAKE_MCP_STUBBORN:-0}" "$@"
   exit 0
 fi
-printf '%s\n' "$@" > "${FAKE_CDIR}.args"   # before the loop below consumes them
+printf '%s\n' "$@" > "${FAKE_CDIR}.args"; pwd -P > "${FAKE_CDIR}.execcwd"   # before the loop below consumes them
 while [[ $# -gt 0 ]]; do [[ "$1" == -o ]] && { out=$2; shift; }; [[ "$1" == -C ]] && { cdir=$2; echo "$2" > "$FAKE_CDIR"; shift; }; shift; done
 echo "${CODEX_API_KEY:-}" > "${FAKE_CDIR}.key"; echo "${GIT_DIR:-unset}" > "${FAKE_CDIR}.gitdir"
 git -C "$cdir" rev-parse HEAD > "${FAKE_CDIR}.head" 2>/dev/null   # what git inside the review's folder sees
@@ -118,9 +118,10 @@ ok "the user's MCP servers are switched off by name for the review" "$?:$(grep -
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
 FAKE_MCP="bad.name" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … a name that cannot be addressed → not reviewed (exit 2)" "$?" 2
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
-ok "exec ignores the user's execpolicy rules and config.toml; the codex home is an explicit deny in the profile" \
-  "$(grep -c -e '^--ignore-rules$' -e '^--ignore-user-config$' "$T/cdir.args"):$(grep -c "\"$CODEX_HOME\" = \"deny\"" "$T/cdir.args")" 2:1
-ok "MCP servers are listed and verified from the review clone, the context exec runs in" "$(grep -c -e '^-C$' "$T/cdir.mcpargs"):$(grep -c "$(dirname "$(cat "$T/cdir")")/tree" "$T/cdir.mcpargs")" 1:1
+ok "exec ignores the user's execpolicy rules but keeps config.toml (a keyring login store); the codex home is an explicit deny" \
+  "$(grep -c '^--ignore-rules$' "$T/cdir.args"):$(grep -c '^--ignore-user-config$' "$T/cdir.args"):$(grep -c "\"$CODEX_HOME\" = \"deny\"" "$T/cdir.args")" 1:0:1
+CLONE=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$(cat "$T/cdir")")
+ok "MCP probes and exec run with their working directory inside the review clone (the same configuration context)" "$(cat "$T/cdir.mcpcwd"):$(cat "$T/cdir.execcwd")" "$CLONE:$CLONE"
 ok "the model's scratch is the review's own folder, not the shared temp dirs" \
   "$(grep -c -e "\"$(dirname "$(cat "$T/cdir")")/tmp\" = \"write\"" "$T/cdir.args"):$(grep -c 'TMPDIR = ".*/tmp" }' "$T/cdir.args"):$(grep -c -e ':tmpdir' -e ':slash_tmp' "$T/cdir.args")" 1:1:0
 FAKE_VERSION=0.100.0 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "an older codex (no permission profiles) → not reviewed (exit 2)" "$?:$(V)" 2:none
@@ -237,6 +238,11 @@ g checkout -q -b hooky origin/master; need mkdir -p .githooks; printf '#!/bin/sh
 printf '[core]\n\thooksPath = .githooks\n' > "$T/hookcfg"
 GIT_CONFIG_GLOBAL="$T/hookcfg" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "the reviewed commit's own hooks do not run while its tree is checked out (relative core.hooksPath)" "$?:$([[ -e "$T/HOOK_RAN" ]] && echo RAN || echo quiet)" 0:quiet
+# a smudge filter in the user's git config, selected by the reviewed commit's .gitattributes: it must not run either
+g checkout -q -b filtery origin/master; echo '* filter=evil' > .gitattributes; echo payload > f.txt; g add .gitattributes f.txt; g commit -qm filtery
+printf '[filter "evil"]\n\tsmudge = touch %s/FILTER_RAN; cat\n' "$T" > "$T/filtercfg"
+GIT_CONFIG_GLOBAL="$T/filtercfg" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "a smudge filter from the user's git config does not run on the review's checkout" "$?:$([[ -e "$T/FILTER_RAN" ]] && echo RAN || echo quiet)" 0:quiet
 g checkout -q other4
 g checkout -q other3
 PREREVIEW_BASE=origin/release git push -q origin feat:refs/heads/feat2 2>/dev/null; ok "reviewed against master, PREREVIEW_BASE=release → refused (stale)" "$?" 1
