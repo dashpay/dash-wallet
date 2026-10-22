@@ -5,6 +5,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.coEvery
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
@@ -22,8 +23,9 @@ class IdentityRepositoryConnectKeyTest {
     private val provider = mockk<WalletDataProvider>(relaxed = true)
     private val platform = mockk<PlatformRepo>(relaxed = true)
     private val identity = mockk<BlockchainIdentity>(relaxed = true)
+    private val identityStorage = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
     private val repository = IdentityRepositoryImpl(mockk(relaxed = true), mockk(relaxed = true),
-        mockk(relaxed = true), provider, platform, mockk(relaxed = true), mockk(relaxed = true))
+        identityStorage, provider, platform, mockk(relaxed = true), mockk(relaxed = true))
     private val id = Identifier.from(ByteArray(32) { 7 })
 
     init {
@@ -31,6 +33,22 @@ class IdentityRepositoryConnectKeyTest {
         val field = IdentityRepositoryImpl::class.java.getDeclaredField("_blockchainIdentityFlow").also { it.isAccessible = true }
         @Suppress("UNCHECKED_CAST")
         (field.get(repository) as MutableStateFlow<BlockchainIdentity?>).value = identity
+    }
+
+    @Test fun completedLoadWithoutIdentityIsDifferentFromStillLoading() = runBlocking {
+        org.junit.Assert.assertNull(repository.initializationResult.value)
+        coEvery { identityStorage.load() } returns null
+        repository.init()
+        org.junit.Assert.assertTrue(repository.initializationResult.value!!.isSuccess)
+        org.junit.Assert.assertNull(repository.blockchainIdentity)
+    }
+
+    @Test fun failedIdentityLoadIsPublishedToWaitingRequests() = runBlocking {
+        val failure = IllegalStateException("Storage unavailable")
+        coEvery { identityStorage.load() } throws failure
+        val thrown = assertThrows(IllegalStateException::class.java) { runBlocking { repository.init() } }
+        org.junit.Assert.assertSame(failure, thrown)
+        org.junit.Assert.assertSame(failure, repository.initializationResult.value!!.exceptionOrNull())
     }
 
     @Test fun purchaseMigrationRejectsAnIdentitySwitchBeforeAnyMutation() {

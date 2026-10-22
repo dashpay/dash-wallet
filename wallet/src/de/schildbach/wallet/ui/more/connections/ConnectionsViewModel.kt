@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.NetworkParameters
@@ -122,8 +124,12 @@ class ConnectionsViewModel @Inject constructor(
     private fun prepareRequest(qrContent: String, openedFromUrl: Boolean) {
         if (operationInProgress || pendingLoginRequest != null || _uiState.value.pendingPurchase != null) return
         operationInProgress = true
+        _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             try {
+                // Keep the URI in this pending coroutine until local identity loading finishes.
+                // A completed load with no identity is handled by the normal preparation error.
+                identityRepository.initializationResult.filterNotNull().first().getOrThrow()
                 if (de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.isStUri(qrContent.trim())) {
                     val purchase = repository.prepareTokenPurchase(
                         de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.parseStRequest(qrContent.trim()))
@@ -151,7 +157,10 @@ class ConnectionsViewModel @Inject constructor(
                 log.error("failed to process scanned DashConnect QR", ex)
                 _scanOutcome.value = ScanOutcome.Error(ex.message)
                 _uiState.update { it.copy(error = ex.message) }
-            } finally { operationInProgress = false }
+            } finally {
+                operationInProgress = false
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 

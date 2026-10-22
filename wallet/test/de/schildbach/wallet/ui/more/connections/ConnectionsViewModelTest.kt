@@ -45,6 +45,7 @@ class ConnectionsViewModelTest {
         Dispatchers.setMain(dispatcher)
         every { repository.observeConnections() } returns MutableStateFlow(emptyList())
         every { identities.blockchainIdentity } returns null
+        every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
         coEvery { repository.parseQr(any()) } returns DashConnectQr(request)
         coEvery { repository.prepareLogin(any()) } returns plan
         coEvery { repository.resolveWalletUsername() } returns "Alice"
@@ -71,6 +72,38 @@ class ConnectionsViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Error)
         assertTrue(model.uiState.value.requiresRevocation)
+    }
+
+    @Test fun `cold URL is retained until identity initialization completes`() {
+        val initialized = MutableStateFlow<Result<Unit>?>(null)
+        every { identities.initializationResult } returns initialized
+        scan(openedFromUrl = true)
+        assertTrue(model.uiState.value.isLoading)
+        assertNull(model.uiState.value.pendingRequest)
+        coVerify(exactly = 0) { repository.parseQr(any()) }
+        initialized.value = Result.success(Unit)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(model.uiState.value.pendingRequest)
+        assertFalse(model.uiState.value.isLoading)
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(model.callbackOffer.value)
+    }
+
+    @Test fun `initialization error is surfaced without preparing a grant`() {
+        every { identities.initializationResult } returns MutableStateFlow(Result.failure(IllegalStateException("Identity load failed")))
+        scan(openedFromUrl = true)
+        assertFalse(model.uiState.value.isLoading)
+        assertEquals("Identity load failed", model.uiState.value.error)
+        coVerify(exactly = 0) { repository.prepareLogin(any()) }
+    }
+
+    @Test fun `completed initialization with no identity reports absence rather than waiting forever`() {
+        coEvery { repository.prepareLogin(any()) } throws IllegalStateException("Identity unavailable")
+        scan(openedFromUrl = true)
+        assertFalse(model.uiState.value.isLoading)
+        assertEquals("Identity unavailable", model.uiState.value.error)
     }
 
     @Test fun `uncertain approval can close without revoking or reporting declined`() {

@@ -14,6 +14,22 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [28])
 class ConnectLinkManifestTest {
+    @Test fun `exported Connect entry point ignores caller supplied keep unlocked`() {
+        val context = RuntimeEnvironment.getApplication()
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("dash-key:abc?n=d&v=2"))
+            .putExtra(de.schildbach.wallet.ui.LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, true)
+        val controller = org.robolectric.Robolectric.buildActivity(de.schildbach.wallet.ui.main.MainActivity::class.java, intent)
+        assertTrue(context.packageManager.getActivityInfo(controller.get().componentName, 0).exported)
+        assertFalse(controller.get().keepUnlocked)
+    }
+
+    @Test fun `exported payment entry point also ignores keep unlocked`() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("dash:X"))
+            .putExtra(de.schildbach.wallet.ui.LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, true)
+        val controller = org.robolectric.Robolectric.buildActivity(de.schildbach.wallet.ui.send.SendCoinsActivity::class.java, intent)
+        assertFalse(controller.get().keepUnlocked)
+    }
+
     @Test fun `Android resolves both opaque QR link schemes to exported MainActivity`() {
         val context = RuntimeEnvironment.getApplication()
         listOf("dash-key:abc?n=d&v=2", "dash-st:abc?n=d&v=1").forEach { link ->

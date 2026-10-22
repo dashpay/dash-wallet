@@ -127,7 +127,10 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     val keepUnlocked by lazy {
-        intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
+        // Only private activity entry points may request the quick-receive/scan shortcut.
+        // Exported activities must use the in-process authentication/auto-logout state.
+        !packageManager.getActivityInfo(componentName, 0).exported &&
+            intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
     protected var isLocked: Boolean = false

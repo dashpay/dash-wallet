@@ -40,6 +40,7 @@ import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
 import de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog
 import de.schildbach.wallet.ui.LockScreenActivity
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -73,18 +74,20 @@ class ConnectionsFragment : Fragment() {
                         onScanClick = { launchScanner() },
                         onConnectionClick = { connection ->
                             viewLifecycleOwner.lifecycleScope.launch {
+                                if (!viewModel.isWalletUnlocked) return@launch
                                 try {
                                     val details = viewModel.connectionDetails(connection)
-                                    val confirmed = connectionDetailsDialog(requireContext(), connection.name, details, connection.status, connection.legacyOnly)
-                                        .showAsync(requireActivity())
-                                    if (confirmed == true) {
+                                    val confirmed = showUnlockedDialog {
+                                        connectionDetailsDialog(requireContext(), connection.name, details, connection.status, connection.legacyOnly)
+                                    }
+                                    if (confirmed == true && viewModel.isWalletUnlocked) {
                                         if (connection.legacyOnly) viewModel.removeConnection(connection)
                                         else if (connection.status == ConnectionStatus.DISCONNECTED) launchScanner()
                                         else viewModel.disconnect(connection)
                                     }
                                 } catch (e: Exception) {
                                     if (e is kotlinx.coroutines.CancellationException) throw e
-                                    Toast.makeText(requireContext(), e.message, Toast.LENGTH_LONG).show()
+                                    if (viewModel.isWalletUnlocked) Toast.makeText(requireContext(), e.message, Toast.LENGTH_LONG).show()
                                 }
                             }
                         },
@@ -167,26 +170,35 @@ class ConnectionsFragment : Fragment() {
         }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                viewModel.callbackOffer.collect { callback ->
-                    if (callback != null) {
-                        viewModel.resetCallbackOffer()
-                        val uri = Uri.parse(callback)
-                        val confirmed = connectionCallbackDialog(requireContext(), uri.host.orEmpty())
-                            .showAsync(requireActivity())
-                        if (confirmed == true) {
-                            try { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
-                            catch (e: android.content.ActivityNotFoundException) {
-                                Toast.makeText(requireContext(), R.string.dash_connect_return_unavailable, Toast.LENGTH_LONG).show()
+                val lockState = host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)
+                combine(viewModel.callbackOffer, lockState) { callback, locked -> callback to locked }
+                    .collectLatest { (callback, locked) ->
+                        if (callback != null && !locked && viewModel.isWalletUnlocked) {
+                            val uri = Uri.parse(callback)
+                            val confirmed = showUnlockedDialog { connectionCallbackDialog(requireContext(), uri.host.orEmpty()) }
+                            if (!viewModel.isWalletUnlocked) return@collectLatest
+                            if (confirmed == true) {
+                                try { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                                catch (e: android.content.ActivityNotFoundException) {
+                                    Toast.makeText(requireContext(), R.string.dash_connect_return_unavailable, Toast.LENGTH_LONG).show()
+                                }
                             }
+                            viewModel.resetCallbackOffer()
                         }
                     }
-                }
             }
         }
     }
 
     private fun launchScanner() {
+        if (!viewModel.isWalletUnlocked) return
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))
+    }
+
+    private suspend fun showUnlockedDialog(create: () -> org.dash.wallet.common.ui.dialogs.AdaptiveDialog): Boolean? {
+        val host = activity as? LockScreenActivity ?: return null
+        return awaitUnlockedConnectionDialog(host, viewLifecycleOwner, host.walletLocked,
+            { viewModel.isWalletUnlocked }, create)
     }
 
     override fun onDestroyView() {

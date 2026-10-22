@@ -25,6 +25,14 @@ class AppConnectPlanTest {
         assertEquals(plan().grants.map { it.expiresAt }, reset.grants.map { it.expiresAt })
     }
 
+    @Test fun `critical consent discloses credit spending and the payee within the grant budget`() {
+        val choices = plan().choices()
+        assertTrue(choices[0].description.contains("spend your Platform credits"))
+        assertTrue(choices[0].description.contains("within this budget"))
+        assertTrue(choices[0].description.contains("app's contract owner"))
+        assertFalse(choices[1].description.contains("token purchases"))
+    }
+
     @Test fun `pending recovery cannot change approved limits`() {
         assertThrows(IllegalArgumentException::class.java) { plan().copy(recovering = true).withPresets(1, 1) }
     }

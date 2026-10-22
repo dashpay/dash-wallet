@@ -426,7 +426,7 @@ internal fun AppConnectApprovalPreview() {
             permissionText = "App ID: Hj6B9qRVHcVB97LZGEQvKm7zFsCP85cuSkEAssc1XWL7\nQR label is not verified branding.\nOnly these application keys are shared. Recovery phrase and master key are never shared.",
             grantChoices = listOf(
                 de.schildbach.wallet.ui.more.connections.GrantChoice(0,
-                    "CRITICAL authentication\nContract group: CsPWxFwNvLPjACBCQBSXJLHAimU44DDFimzA2Jbxm9GK\nBudget: 0.5 DASH\nExpires: 9 January 2027\nCan claim and spend this app's tokens on your behalf.", true),
+                    "CRITICAL authentication\nContract group: CsPWxFwNvLPjACBCQBSXJLHAimU44DDFimzA2Jbxm9GK\nBudget: 0.5 DASH\nExpires: 9 January 2027\nCan claim and spend this app's tokens and spend your Platform credits on token purchases from the app, within this budget. Purchase payments go to the app's contract owner.", true),
                 de.schildbach.wallet.ui.more.connections.GrantChoice(1,
                     "HIGH authentication\nDocument profile: Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7\nBudget: 0.01 DASH\nExpires: 9 January 2027", true)
             )

@@ -70,6 +70,7 @@ import javax.inject.Inject
 interface IdentityRepository {
     val blockchainIdentity: BlockchainIdentity?
     val blockchainIdentityFlow: StateFlow<BlockchainIdentity?>
+    val initializationResult: StateFlow<Result<Unit>?>
     //suspend fun addMissingKeys(keyParameter: KeyParameter?): Boolean
     suspend fun getIdentityBalance(): CreditBalanceInfo?
     val hasBlockchainIdentity: Boolean
@@ -128,6 +129,8 @@ class IdentityRepositoryImpl @Inject constructor(
 
     private val _blockchainIdentityFlow = MutableStateFlow<BlockchainIdentity?>(null)
     override val blockchainIdentityFlow: StateFlow<BlockchainIdentity?> = _blockchainIdentityFlow.asStateFlow()
+    private val _initializationResult = MutableStateFlow<Result<Unit>?>(null)
+    override val initializationResult = _initializationResult.asStateFlow()
 
     private var _blockchainIdentity: BlockchainIdentity?
         get() = _blockchainIdentityFlow.value
@@ -214,13 +217,21 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun init() {
-        val data = blockchainIdentityDataStorage.load()
-        if (data != null) {
-            _blockchainIdentity = initBlockchainIdentity(data, walletDataProvider.wallet!!)
-            // initializeStateRepository()
-        } else {
-            _blockchainIdentity = null
-            hasCheckedIdentityForUpgrade = false
+        _initializationResult.value = null
+        try {
+            val data = blockchainIdentityDataStorage.load()
+            if (data != null) {
+                _blockchainIdentity = initBlockchainIdentity(data, walletDataProvider.wallet!!)
+                // initializeStateRepository()
+            } else {
+                _blockchainIdentity = null
+                hasCheckedIdentityForUpgrade = false
+            }
+            _initializationResult.value = Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            _initializationResult.value = Result.failure(error)
+            throw error
         }
     }
 

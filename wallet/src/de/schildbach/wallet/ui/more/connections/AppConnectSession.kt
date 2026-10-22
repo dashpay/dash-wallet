@@ -180,7 +180,7 @@ internal class AppConnectSession(
             append("App ID: ${Base58.encode(request.contractId)}\nQR label is not verified branding.\n\n")
             parsed?.callback?.let { append("Return address: ${it.host} (not opened automatically).\n") }
             parsed?.let { append("Requested ${maxOf(0, (System.currentTimeMillis() - it.createdAt) / 1000)} seconds ago.\n") }
-            append("Only these application keys are shared. Recovery phrase and master key are never shared. The app cannot transfer your credits, register names, or change identity keys.")
+            append("Only these application keys are shared. Recovery phrase and master key are never shared. The app cannot register names or change identity keys. CRITICAL grants can spend your Platform credits on token purchases from the app, within each approved budget. These payments credit the app's contract owner; other credit transfers are not authorized.")
         }
         val encChoices = parsed?.encryption.orEmpty().map {
             "${if (it.purpose == 1) "Encryption" else "Decryption"} key for this app (shared across sessions; omitted if another wallet controls it)."

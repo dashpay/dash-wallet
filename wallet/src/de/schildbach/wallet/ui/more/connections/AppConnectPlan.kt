@@ -69,6 +69,6 @@ internal fun AppConnectPlan.choices(): List<GrantChoice> = grants.mapIndexed { i
         append("${when (grant.kind) { 2 -> "Contract group"; 1 -> "Document ${grant.documentType}"; else -> "Contract" }}: ${org.bitcoinj.core.Base58.encode(grant.id)}\n")
         append("Budget: ${grant.totalBudget?.let { "${formatDash(it)} DASH" } ?: "No budget limit"}\n")
         append("Expires: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(grant.expiresAt!!))}")
-        if (grant.securityLevel == 1) append("\nCan claim and spend this app's tokens on your behalf.")
+        if (grant.securityLevel == 1) append("\nCan claim and spend this app's tokens and spend your Platform credits on token purchases from the app, within this budget. Purchase payments go to the app's contract owner.")
     }, index in selectedAuth)
 } + encryptionChoices.mapIndexed { index, text -> GrantChoice(index, text, index in selectedEncryption, true) }
