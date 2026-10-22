@@ -7,7 +7,7 @@ need() { "$@" || { echo "FAIL: setup: $*" >&2; exit 1; }; }
 P=${1:-"$(cd "$(dirname "$0")" && pwd)/prereview.sh"}; T=$(mktemp -d "${TMPDIR:-/tmp}/prtest.XXXXXX") || exit 1; export XDG_CACHE_HOME="$T/cache"; FAILS=0
 [[ -n "${KEEP:-}" ]] || trap 'chmod -R u+w "$T" 2>/dev/null; rm -rf "$T"' EXIT   # this run's folder only, writable again first (the chmod tests); KEEP=1 leaves it for a look
 # the cases set these themselves: an inherited API key would pass the logged-out case, a base or timeout would move others
-unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
+unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_DURING FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
 # the caller's git configuration stays out too: a global core.hooksPath would make the fixture's --install and
 # --uninstall write to, and delete from, the caller's real hooks folder
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
@@ -53,6 +53,7 @@ git -C "$cdir" rev-parse origin/master > "${FAKE_CDIR}.base" 2>/dev/null
 echo "${CODEX_HOME:-unset}" > "${FAKE_CDIR}.home"; cat "${CODEX_HOME:-/nonexistent}/auth.json" > "${FAKE_CDIR}.auth" 2>/dev/null
 [[ -e "${CODEX_HOME:-/nonexistent}/config.toml" ]] && echo yes > "${FAKE_CDIR}.cfg" || echo no > "${FAKE_CDIR}.cfg"
 [[ -n "${FAKE_REFRESH:-}" ]] && echo "$FAKE_REFRESH" >> "${CODEX_HOME}/auth.json"
+[[ -n "${FAKE_DURING:-}" ]] && eval "$FAKE_DURING"   # something else happening while the review runs
 printf 'finding text\n%s\n' "$FAKE_LAST" > "$out"
 EOF
 chmod +x "$T/bin/codex"; export PATH="$T/bin:$PATH" FAKE_CDIR="$T/cdir"
@@ -194,6 +195,11 @@ git push -q -f origin "$MASTER:master"; ok "  … master back → clean again" "
 ( cd "$T/seed" && g checkout -q master && echo m2 > m2 && g add m2 && g commit -qm m2 && git push -q origin master ) 2>/dev/null
 ok "origin/master moved independently (same merge base) → stale" "$(V)" stale
 git push -q -f origin "$MASTER:master"; ok "  … master back → clean again" "$(V)" clean
+# the base moves while the review runs (another --status fetched it): the fresh verdict is stale, which is not a pass
+FAKE_DURING="git -C '$T/app' push -q origin '$FIRST:master' && git -C '$T/app' fetch -q origin" \
+  FAKE_LAST='{"blocking": 1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "the base moved during a blocking review → exit 1, not 0" "$?:$(V)" 1:stale
+git push -q -f origin "$MASTER:master"; git fetch -q origin
 # the review clone must carry the base as origin has it, not this checkout's stale local master
 g checkout -q -b drift origin/master; echo d2 > d2; g add d2; g commit -qm d2; git push -q origin "$FIRST:master"
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1

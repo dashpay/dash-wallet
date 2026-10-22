@@ -331,7 +331,10 @@ publish(path, lambda fh: json.dump({"verdict": v, "counts": c, "base": mb, "base
 print(f"pre-review: verdict {v} {c} (report: {path[:-5]}.md)", file=sys.stderr)
 PY
   rm -f "$out" "$log"
-  [[ "$(verdict "$repo" "$sha")" != blocking ]] || return 1
+  case "$(verdict "$repo" "$sha")" in   # stale (the base moved while the review ran) or none is no verdict: not 0
+    clean|suggestions) ;;
+    *) return 1 ;;
+  esac
 }
 
 if [[ "${1:-}" == --locked-review ]]; then   # review() runs this under the lock
