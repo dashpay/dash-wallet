@@ -49,7 +49,8 @@ data class DAppConnection(
     val status: ConnectionStatus,
     /** Millis since epoch of the last status change. */
     val updatedAt: Long,
-    val scope: String? = null
+    val scope: String? = null,
+    val legacyOnly: Boolean = false
 )
 
 /**

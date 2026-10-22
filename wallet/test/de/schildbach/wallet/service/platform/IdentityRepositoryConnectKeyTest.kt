@@ -48,4 +48,14 @@ class IdentityRepositoryConnectKeyTest {
         }
         verify(exactly = 0) { identity.addMissingKeys(any()) }
     }
+
+    @Test fun purchaseMigrationReportsFailureInsteadOfPretendingAKeyWasSubmitted() {
+        every { provider.wallet } returns null
+        every { identity.hasCriticalAuthenticationKey() } returns false
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) }
+        }
+        org.junit.Assert.assertTrue(error.message!!.contains("Unable to register"))
+        verify(exactly = 0) { identity.addMissingKeys(any()) }
+    }
 }

@@ -321,16 +321,22 @@ internal class AppConnectSession(
                             check(additions.none { addition -> identity.publicKeys.any { it.id == addition.id } }) {
                                 "Pending key IDs are occupied. Disconnect and scan a new QR."
                             }
-                            val master = signingKey(identity, SecurityLevel.MASTER, time)
+                            check(additions.size <= 6) { "A grant must fit in one atomic key registration" }
                             checkScope(plan.scope)
                             request.appConnect?.requireFresh(System.currentTimeMillis())
                             config.saveGrant(record.put("state", "pending"))
                             checkScope(plan.scope)
-                            identity.revision++
                             // On an uncertain result the durable pending record remains, and a retry reads the identity first.
-                            dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, identity.toNative(), KeyID(master.id),
-                                additions.map { it.toNative() }, disable.map { KeyID(it) }, signer.nativeContext,
-                                BigInteger.valueOf(signer.signerCallback)).unwrap()
+                            identity = updateIdentityInBatches(additions, disable,
+                                read = { checkScope(plan.scope); readIdentity() }) { current, add, ids ->
+                                val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
+                                checkScope(plan.scope)
+                                request.appConnect?.requireFresh(System.currentTimeMillis())
+                                current.revision++
+                                dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
+                                    add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext,
+                                    BigInteger.valueOf(signer.signerCallback)).unwrap()
+                            }
                         }
                         identity = awaitGrantConfirmation(
                             read = {
@@ -486,15 +492,13 @@ internal class AppConnectSession(
         }
         WalletSignerCallback(wallet, keyParameter).use { signer ->
             if (disable.isNotEmpty() || fences.isNotEmpty()) {
-                val master = signingKey(identity, SecurityLevel.MASTER, time)
-                checkScope(scope)
-                identity.revision++
-                dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, identity.toNative(), KeyID(master.id),
-                    fences.map { it.toNative() }, disable.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
-                identity = awaitGrantConfirmation(read = { checkScope(scope); readIdentity() }, confirmed = { current ->
-                    disable.all { id -> current.publicKeys.any { it.id == id && it.disabledAt != null } } &&
-                        fences.all { fence -> current.publicKeys.any { sameKeyIdentity(it, fence) } }
-                }, failureMessage = "Revocation not confirmed. The grant records were retained; retry to recover.")
+                identity = updateIdentityInBatches(fences, disable, read = { checkScope(scope); readIdentity() }) { current, add, ids ->
+                    val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
+                    checkScope(scope)
+                    current.revision++
+                    dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
+                        add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+                }
             }
             records.forEach { deleteResponse(identity, it, signer, scope) }
         }
@@ -526,15 +530,22 @@ internal class AppConnectSession(
         return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded, time) { key ->
             val target = key.contractBounds!!.identifier
             when (val bounds = key.contractBounds) {
-                is ContractGroupBounds -> platform.client.getContractGroupOwner(target) == owner
+                is ContractGroupBounds -> checkNotNull(platform.client.getContractGroupOwner(target)) {
+                    "Contract group ownership could not be established. Complete revocation is not confirmed."
+                } == owner
                 is SingleContractDocumentType -> target == appId ||
                     (target.toString() == DASHPAY && bounds.documentType == "profile") ||
-                    (target.toString() !in SYSTEM_CONTRACTS && platform.client.getDataContract(target.toBuffer(), true)?.ownerId == owner)
+                    (target.toString() !in SYSTEM_CONTRACTS && contractOwner(target) == owner)
                 else -> target == appId || (target.toString() !in SYSTEM_CONTRACTS &&
-                    platform.client.getDataContract(target.toBuffer(), true)?.ownerId == owner)
+                    contractOwner(target) == owner)
             }
         }
     }
+
+    private fun contractOwner(target: Identifier): Identifier =
+        checkNotNull(platform.client.getDataContract(target.toBuffer(), true)) {
+            "Contract ownership could not be established. Complete revocation is not confirmed."
+        }.ownerId
 
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {
         mutex.withLock {

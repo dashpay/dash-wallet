@@ -73,7 +73,10 @@ disposal as denial, including when an in-flight operation subsequently fails.
 
 Revocation disables recorded auth keys and deletes recorded responses. Shared
 encryption keys remain. Records are retained as a revocation audit trail. Legacy
-connections without key IDs remain visible but cannot claim on-chain revocation.
+connections without key IDs offer an explicitly local-only removal with a warning
+that Platform authorization is unchanged; real grant records cannot be removed this way.
+Updates use at most ten disables and six additions per transaction, refreshing and
+confirming each batch before the next. A partial failure retains the audit for retry.
 Unresolved registrations do not block disabling other confirmed keys. An occupied
 key ID with different immutable fields proves that atomic registration cannot
 land; truly unresolved records remain pending rather than claiming revocation.
@@ -82,6 +85,7 @@ disconnect also checks for live app-scoped keys missing from local history.
 Those keys are not automatically disabled: ambiguous recovered keys (including
 shared profile bounds) require identity review. The connection remains partial,
 with the surviving key IDs reported, rather than claiming all access was revoked.
+Failed or absent target-ownership lookups never count as proof of unrelated ownership.
 Tap a connection to query its current key budgets and expiry. Callback websites
 open only after a separate, explicit host confirmation.
 
@@ -109,6 +113,14 @@ debit. The UI reports submitted or outcome unknown, not proof of execution,
 and the same request is blocked across restarts. Denial before approval never
 signs or broadcasts anything. Tips, key revocation and limit raises via
 `dash-st:` need their own parsers and consent flows; they are not yet supported.
+
+The scoped Connect authorization and purchase-replay audit survives the app's
+wallet reset/wipe, while unscoped legacy rows and ordinary wallet settings are cleared.
+Restoring the same network, wallet watching key and identity restores its audit;
+another wallet cannot see or use it. This preserves existing authorizations and
+unknown purchase outcomes rather than treating reset as revocation. Uninstalling
+the app or clearing app storage still removes this local audit; this is not a
+cross-device recovery mechanism, and cannot reconstruct history lost before this fix.
 
 ## Verification
 

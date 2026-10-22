@@ -46,7 +46,7 @@ class PlatformDashConnectRepository @Inject constructor(
                 }, latest.optLong("updatedAt"), scope)
         }
         (current + legacy.filter { old -> current.none { it.id == old.contractId } }.map {
-            DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope)
+            DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope, legacyOnly = true)
         }).sortedByDescending { it.updatedAt }
     }
 
@@ -98,10 +98,12 @@ class PlatformDashConnectRepository @Inject constructor(
         session.revokePrepared(request, requireNotNull(plan) { "Approval terms unavailable" })
     }
     override suspend fun connectionDetails(connectionId: String, scope: String?): String =
-        session.details(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
+        if (config.getGrants().none { it.getString("scope") == scope && it.getString("app") == connectionId }) {
+            "This legacy connection has no recorded grant keys. Removing it from this list does not revoke any Platform authorization."
+        } else session.details(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
     override suspend fun removeConnection(connectionId: String, scope: String?) {
-        // Keep the revocation audit record. Never turn removal into a local-only logout.
-        disconnect(connectionId, scope)
+        check(scope == runCatching { session.scope() }.getOrNull()) { "Wallet, identity or network changed" }
+        config.removeLegacyConnection(connectionId, scope)
     }
 
     override suspend fun resolveWalletUsername(): String? = withContext(Dispatchers.IO) {

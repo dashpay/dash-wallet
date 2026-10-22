@@ -75,10 +75,11 @@ class ConnectionsFragment : Fragment() {
                             viewLifecycleOwner.lifecycleScope.launch {
                                 try {
                                     val details = viewModel.connectionDetails(connection)
-                                    val confirmed = connectionDetailsDialog(requireContext(), connection.name, details, connection.status)
+                                    val confirmed = connectionDetailsDialog(requireContext(), connection.name, details, connection.status, connection.legacyOnly)
                                         .showAsync(requireActivity())
                                     if (confirmed == true) {
-                                        if (connection.status == ConnectionStatus.DISCONNECTED) launchScanner()
+                                        if (connection.legacyOnly) viewModel.removeConnection(connection)
+                                        else if (connection.status == ConnectionStatus.DISCONNECTED) launchScanner()
                                         else viewModel.disconnect(connection)
                                     }
                                 } catch (e: Exception) {

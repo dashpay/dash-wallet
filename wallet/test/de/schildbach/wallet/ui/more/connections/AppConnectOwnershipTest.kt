@@ -23,7 +23,7 @@ import de.schildbach.wallet.Constants
 import org.bitcoinj.core.NetworkParameters
 
 class AppConnectOwnershipTest {
-    @Before fun nonMainnetOnly() {
+    private fun nonMainnetOnly() {
         assumeFalse(Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET)
     }
     private val service = mockk<PlatformService>(relaxed = true)
@@ -59,6 +59,7 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `owned group plus exact DashPay profile exception prepare successfully`() = runBlocking {
+        nonMainnetOnly()
         val plan = session.prepare(request)
         assertEquals(2, plan.grants.size)
         assertEquals("profile", plan.grants[1].documentType)
@@ -68,11 +69,13 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `foreign group ownership is rejected`() {
+        nonMainnetOnly()
         every { service.platform.client.getContractGroupOwner(any()) } returns identityId
         assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
     }
 
     @Test fun `DashPay exception does not permit contact requests or whole contract`() {
+        nonMainnetOnly()
         val raw = request.appConnect!!
         val changed = raw.auth[1].copy(documentType = "contactRequest")
         assertThrows(IllegalStateException::class.java) {
@@ -84,6 +87,7 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `encryption opt in and app binding are mandatory`() {
+        nonMainnetOnly()
         every { app.requiresIdentityEncryptionBoundedKey } returns false
         assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
         every { app.requiresIdentityEncryptionBoundedKey } returns true
@@ -94,6 +98,7 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `system apps old protocols and different identity hints are rejected`() {
+        nonMainnetOnly()
         assertThrows(IllegalStateException::class.java) {
             runBlocking { session.prepare(request.copy(contractId = Base58.decode(AppConnectSession.RESPONSE_CONTRACT))) }
         }
@@ -106,6 +111,7 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `consent cannot remove limits raise budgets or broaden bounds`() = runBlocking {
+        nonMainnetOnly()
         val plan = session.prepare(request)
         val primary = plan.grants.first()
         for (bad in listOf(primary.copy(totalBudget = null), primary.copy(totalBudget = primary.totalBudget!! + java.math.BigInteger.ONE),

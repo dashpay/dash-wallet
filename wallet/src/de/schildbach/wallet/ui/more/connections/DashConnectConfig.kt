@@ -81,9 +81,16 @@ open class DashConnectConfig @Inject constructor(
 
     companion object {
         const val PREFERENCES_NAME = "dash_connect"
+        const val AUDIT_FILE_NAME = "$PREFERENCES_NAME.preferences_pb"
         val CONNECTIONS = stringPreferencesKey("connections")
         private val GRANTS = stringPreferencesKey("app_connect_grants_v2")
         private val PURCHASES = stringPreferencesKey("dash_st_purchases")
+    }
+
+    // Authorizations and unknown purchase outcomes survive a local wallet reset. Their
+    // network/wallet/identity scope makes them visible only when that same wallet returns.
+    override suspend fun onWalletWiped() {
+        set(CONNECTIONS, "[]")
     }
 
     fun observeConnections(): Flow<List<StoredConnection>> =
@@ -119,10 +126,12 @@ open class DashConnectConfig @Inject constructor(
     }
 
     suspend fun savePurchase(receipt: JSONObject) {
-        val records = purchaseReceipts()
-        val updated = (0 until records.length()).map { records.getJSONObject(it) }
-            .filter { it.getString("id") != receipt.getString("id") } + receipt
-        set(PURCHASES, JSONArray(updated).toString())
+        configContext.dataStore.edit { preferences ->
+            val records = JSONArray(preferences[PURCHASES] ?: "[]")
+            val updated = (0 until records.length()).map { records.getJSONObject(it) }
+                .filter { it.getString("id") != receipt.getString("id") } + receipt
+            preferences[PURCHASES] = JSONArray(updated).toString()
+        }
     }
 
     // Unlike ordinary preferences, unreadable debit receipts must never look like an empty store.
@@ -144,6 +153,15 @@ open class DashConnectConfig @Inject constructor(
 
     suspend fun removeConnection(contractId: String) {
         set(CONNECTIONS, encode(getConnections().filter { it.contractId != contractId }))
+    }
+
+    suspend fun removeLegacyConnection(contractId: String, scope: String?) {
+        configContext.dataStore.edit { preferences ->
+            check(decodeGrants(preferences[GRANTS]).none {
+                it.getString("app") == contractId && it.getString("scope") == scope
+            }) { "This connection has grant records. Use Revoke access; its audit cannot be removed locally." }
+            preferences[CONNECTIONS] = encode(decode(preferences[CONNECTIONS]).filter { it.contractId != contractId })
+        }
     }
 
     private fun encode(connections: List<StoredConnection>): String {

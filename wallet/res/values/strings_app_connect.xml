@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="dash_connect_remove_local">Remove from list</string>
     <string name="dash_connect_revoke">Revoke Access</string>
     <string name="dash_connect_budget_requested">Requested budgets (capped at 5 DASH)</string>
     <string name="dash_connect_budget_cap">Budgeted keys: %1$s DASH maximum</string>

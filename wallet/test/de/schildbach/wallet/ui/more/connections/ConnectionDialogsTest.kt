@@ -34,6 +34,23 @@ class ConnectionDialogsTest {
         }
     }
 
+    @Test fun `legacy entries explicitly offer local removal`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        val dialog = connectionDetailsDialog(activity, "Old app", "Removing this entry does not revoke access.", ConnectionStatus.APPROVED, legacyOnly = true)
+        try {
+            dialog.showNow(activity.supportFragmentManager, "legacy-details")
+            assertTrue(dialog.requireDialog().isShowing)
+            assertTrue(dialog.requireView().findViewById<android.widget.TextView>(org.dash.wallet.common.R.id.dialog_message).text.contains("does not revoke"))
+            assertEquals("Remove from list", dialog.requireView()
+                .findViewById<android.widget.TextView>(org.dash.wallet.common.R.id.dialog_positive_button).text.toString())
+        } finally {
+            dialog.dismiss()
+            controller.pause().stop().destroy()
+        }
+    }
+
     @Test fun `budget details reuse the shared wallet dialog`() {
         val controller = Robolectric.buildActivity(FragmentActivity::class.java)
         controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)

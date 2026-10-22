@@ -392,8 +392,11 @@ class IdentityRepositoryImpl @Inject constructor(
     override suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?) {
         val identity = checkNotNull(_blockchainIdentity) { "Identity unavailable" }
         check(identity.uniqueIdentifier == expectedIdentity) { "Purchase identity changed" }
-        addMissingKeys(keyParameter, identity)
+        val added = addMissingKeys(keyParameter, identity)
         check(_blockchainIdentity === identity) { "Purchase identity changed" }
+        check(added || identity.hasCriticalAuthenticationKey()) {
+            "Unable to register the wallet purchase signing key. Check the identity balance and try again."
+        }
     }
 
     private suspend fun addMissingKeys(keyParameter: KeyParameter?, identity: BlockchainIdentity? = _blockchainIdentity): Boolean {
