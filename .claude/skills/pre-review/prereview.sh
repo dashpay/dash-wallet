@@ -158,13 +158,13 @@ review_locked() {
   # an older codex accepts the permission-profile settings below without applying them: full-disk reads again
   # probes run under waitfor into files, never in $(…): a command substitution is a foreground subshell, and bash
   # defers the cancellation trap until it returns — a stalled probe would keep the lock
+  command -v codex >/dev/null || { say "the Codex CLI is not installed: npm i -g @openai/codex@latest (README.md, Setup)"; return 2; }
   local probe ver; probe=$(mktemp); CLEANUP_PROBE=$probe
   waitfor codex --version > "$probe" 2>/dev/null; ver=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$probe" | head -1)
   [[ -n "$ver" ]] || { say "codex --version gave no version: not reviewing"; return 2; }
   if [[ "$(printf '%s\n' "$ver" "$MIN_CODEX" | sort -t. -k1,1n -k2,2n -k3,3n | head -1)" != "$MIN_CODEX" ]]; then
     say "codex-cli $ver is older than $MIN_CODEX, which ignores the permission profile this review relies on: npm i -g @openai/codex@latest"; return 2
   fi
-  command -v codex >/dev/null || { say "the Codex CLI is not installed: npm i -g @openai/codex@latest (README.md, Setup)"; return 2; }
   # codex exec (0.163) reads an API key from CODEX_API_KEY, not OPENAI_API_KEY; the familiar name is accepted and copied
   [[ -n "${OPENAI_API_KEY:-}" && -z "${CODEX_API_KEY:-}" ]] && export CODEX_API_KEY="$OPENAI_API_KEY"
   waitfor codex login status >/dev/null 2>&1 || [[ -n "${CODEX_API_KEY:-}" ]] \
