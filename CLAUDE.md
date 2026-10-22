@@ -113,3 +113,10 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 - Exchange rate data comes from multiple sources (CTX, BitPay, Dash Central, etc.)
 - Supports NFC for Dash payment requests
 - Uses dashj library for Dash-specific blockchain operations
+
+## Before pushing a PR branch
+PRs are reviewed by thepastaclaw, which approves only at zero findings and carries every finding forward across pushes.
+Run `/pre-review` (`.claude/skills/pre-review/`) on the committed branch first: the same model with the bot's
+prompts, findings verified and fixed by class. It needs the Codex CLI with access to ChatGPT (`codex login`, or
+`CODEX_API_KEY`; see `.claude/skills/pre-review/README.md`). Turn on its push gate (a git pre-push hook) for a
+clone with `.claude/skills/pre-review/prereview.sh --install`.
