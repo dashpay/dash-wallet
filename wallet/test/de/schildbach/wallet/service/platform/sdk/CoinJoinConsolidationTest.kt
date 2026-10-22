@@ -1,6 +1,8 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.app.Application
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.*
@@ -9,6 +11,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -139,6 +142,12 @@ class CoinJoinConsolidationTest {
         var done: Boolean? = null
         /** When set, writing [done] fails with this. */
         var doneWriteFailure: Throwable? = null
+        /** When set, an `editPreferences` transaction fails to commit with this (nothing applied). */
+        var editFailure: Throwable? = null
+        /** Committed `editPreferences` transactions. */
+        var edits = 0
+        /** How long an `editPreferences` transaction waits before it runs (a slow store). */
+        var editDelayMs = 0L
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         val send = mockk<SdkL1SendService>(relaxed = true)
         val sdk = mockk<DashSdkService>(relaxed = true)
@@ -189,6 +198,23 @@ class CoinJoinConsolidationTest {
                 consolidationWrites += consolidation
             }
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE) } answers { directPhase }
+            // DataStore's edit: the transform runs on a copy, applied only if the commit succeeds.
+            coEvery { config.editPreferences(any()) } coAnswers {
+                if (editDelayMs > 0L) delay(editDelayMs)
+                val preferences = mutablePreferencesOf(
+                    DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS to shieldInputs,
+                    DashPayConfig.MIXED_FUNDS_CONSOLIDATION to consolidation,
+                    DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT to marker,
+                    DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE to directPhase
+                )
+                firstArg<(MutablePreferences) -> Unit>().invoke(preferences)
+                editFailure?.let { throw it }
+                shieldInputs = preferences[DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS] ?: ""
+                consolidation = preferences[DashPayConfig.MIXED_FUNDS_CONSOLIDATION] ?: ""
+                marker = preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT] ?: ""
+                directPhase = preferences[DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE] ?: ""
+                edits++
+            }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, any()) } answers { directPhase = secondArg() }
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) } answers { done }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE, any()) } answers {
@@ -495,8 +521,8 @@ class CoinJoinConsolidationTest {
             f.marker
         }
         val acknowledge = async { f.service.acknowledgeUnconfirmedMigration() }
-        // Clear: its first write spans the wipe; the rest must not clear the next wallet's stage.
-        coEvery { f.config.set(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, any()) } coAnswers { delay(5_000) }
+        // Clear: its one transaction commits after the wipe; it must not clear the next wallet's stage.
+        f.editDelayMs = 5_000
         val clear = async { f.service.clearInFlightMigration() }
         runCurrent()
         f.service.stopForWalletWipe()
@@ -1136,6 +1162,71 @@ class CoinJoinConsolidationTest {
         combineInFlight(f)
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.combineIntoUnmixedBalance())
         assertEquals(listOf("" to ""), seen)
+    }
+
+    // ── The record is cleared in ONE transaction ──
+
+    /**
+     * A failure mid-clear (the commit, or any one key's write) leaves the record wholly intact:
+     * never a marker without its inputs, stage or journal. A successful clear removes them all.
+     */
+    @Test fun recordClearIsAllOrNothing() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        f.consolidation = ""
+        val before = listOf(f.marker, f.shieldInputs, f.consolidation, f.directPhase)
+        assertNotEquals("", f.marker)
+        assertNotEquals("", f.shieldInputs)
+        assertNotEquals("", f.directPhase)
+        f.editFailure = java.io.IOException("disk full")
+        coEvery { f.config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, "") } throws
+            java.io.IOException("disk full")
+        f.service.closeUnconfirmedMigration()
+        assertEquals(before, listOf(f.marker, f.shieldInputs, f.consolidation, f.directPhase))
+        assertEquals(0, f.edits)
+
+        val g = Fixture(this)
+        stuckOwnLock(g)
+        g.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        g.marker = formatInFlightMigration(
+            requireNotNull(g.service.inFlightMigration()).copy(
+                startedAtMillis = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 60_000L
+            )
+        )
+        g.service.clearInFlightMigration()
+        assertEquals(listOf("", "", "", ""), listOf(g.marker, g.shieldInputs, g.consolidation, g.directPhase))
+        assertEquals(1, g.edits)
+    }
+
+    /**
+     * A clear by a step whose wipe epoch ended (a Close suspended in its check while Reset Wallet
+     * runs) writes nothing.
+     */
+    @Test fun aClearAfterTheWipeEpochEndedWritesNothing() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        val rows = f.db.assetLockDao()
+            .observeByWalletAndFundingType(Utils.HEX.decode(walletId), ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
+            .first()
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        every {
+            f.db.assetLockDao().observeByWalletAndFundingType(any(), ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
+        } returns flow {
+            gate.await()
+            emit(rows)
+        }
+        val saved = f.marker
+        val close = async { f.service.closeUnconfirmedMigration() }
+        runCurrent()
+        val wipe = async { f.service.stopForWalletWipe() }
+        advanceTimeBy(CoinJoinFundsMigrationService.WIPE_JOIN_MS + 1); runCurrent()
+        assertTrue(wipe.isCompleted)
+        gate.complete(Unit)
+        runCurrent()
+        assertFalse(close.await())
+        assertEquals(saved, f.marker)
+        assertNotEquals("", f.shieldInputs)
+        assertEquals(0, f.edits)
     }
 
     // ── Marker read errors: never "absent" ──

@@ -1389,14 +1389,24 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     suspend fun clearInFlightMigration() = unlessWiped(Unit) { clearInFlightMigrationInner() }
 
-    /** [clearInFlightMigration] for a step that is already in its wipe epoch. */
+    /**
+     * [clearInFlightMigration] for a step that is already in its wipe epoch. Every key of the record
+     * (recorded inputs, stage, marker, direct-shield journal, acknowledgement) is cleared in ONE
+     * DataStore transaction: a process death or write failure leaves the record wholly intact, never
+     * a marker without its stage or inputs. Refused like every write while latched for a wipe, and
+     * re-checked inside the transaction: one that commits after a wipe began aborts whole.
+     */
     private suspend fun clearInFlightMigrationInner() {
         try {
-            // First: if it fails the marker stays, so the record never outlives its migration.
-            writeConfig(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, "")
-            writeConfig(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, "")
-            writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, "")
-            writeConfig(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, "")
+            val epoch = checkWritable()
+            dashPayConfig.editPreferences { preferences ->
+                if (!writable(epoch)) throw StoppedForWalletWipeException()
+                preferences[DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS] = ""
+                preferences[DashPayConfig.MIXED_FUNDS_CONSOLIDATION] = ""
+                preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT] = ""
+                preferences[DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE] = ""
+                preferences.remove(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT)
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("failed to clear the in-flight mixed-funds marker", t)
@@ -1690,10 +1700,21 @@ class CoinJoinFundsMigrationService @Inject constructor(
 
     /** Every config write: refused (unwinding the step) while latched or for a step of an older epoch. */
     private suspend fun <T> writeConfig(key: Preferences.Key<T>, value: T) {
-        val epoch = currentCoroutineContext()[WipeEpoch]?.value
-        if (wipeStopped || (epoch != null && epoch != wipeEpoch.get())) throw StoppedForWalletWipeException()
+        checkWritable()
         dashPayConfig.set(key, value)
     }
+
+    /**
+     * The guard of every config write ([writeConfig], [clearInFlightMigrationInner]): throws while
+     * latched or for a step of an older epoch; returns the step's epoch (null outside one).
+     */
+    private suspend fun checkWritable(): Int? {
+        val epoch = currentCoroutineContext()[WipeEpoch]?.value
+        if (!writable(epoch)) throw StoppedForWalletWipeException()
+        return epoch
+    }
+
+    private fun writable(epoch: Int?): Boolean = !wipeStopped && (epoch == null || epoch == wipeEpoch.get())
 
     /** Caller holds the `this` monitor. */
     private fun launchWatcherLocked(previous: Job?): Job = applicationScope.launch(WipeEpoch(wipeEpoch.get())) {
