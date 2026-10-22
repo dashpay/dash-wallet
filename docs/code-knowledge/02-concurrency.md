@@ -95,8 +95,9 @@ native call returns (#1568). A `CoroutineStart.LAZY` deferred is `isActive == fa
 **2.21 A one-shot `tryEmit` on a `replay = 0` flow before its subscriber exists is lost, and `tryEmit` still returns
 true.** Keep a pending flag and deliver it `onSubscription` (#1579).
 
-**2.22 Work that must outlive a screen goes to an injected `@ApplicationScope CoroutineScope`, in an ordered queue if
-the order matters.** Never `GlobalScope` (#1581, #1531).
+**2.22 Work that must outlive a screen goes to the injected application `CoroutineScope`, in an ordered queue if the
+order matters.** That scope is bound unqualified (`AppModule.providesApplicationScope()`, `SupervisorJob() +
+Dispatchers.Default`). Never `GlobalScope` (#1581, #1531).
 
 **2.23 Catch inside `appScope` / `lifecycleScope` launches.** `SupervisorJob` does not consume an uncaught exception;
 it crashes the process (#1616, #1608).

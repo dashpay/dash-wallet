@@ -155,8 +155,9 @@ review_locked() {
   mb=$(git -C "$repo" merge-base "$base" "$sha") || { say "no merge base of $sha and $base"; return 2; }
   mkdir -p "$VERDICTS"
   if [[ "$mb" == "$sha" ]]; then   # the commit is on the base: nothing of ours in the range (the record keeps that base)
-    printf '{"verdict": "clean", "counts": {}, "base": "%s", "base_tip": "%s", "base_ref": "%s", "model": "none: no commits over the base"}' \
-      "$mb" "$(git -C "$repo" rev-parse --verify -q "$base^{commit}")" "$base" > "$VERDICTS/.$sha.json.$$" && mv "$VERDICTS/.$sha.json.$$" "$VERDICTS/$sha.json"
+    { printf '{"verdict": "clean", "counts": {}, "base": "%s", "base_tip": "%s", "base_ref": "%s", "model": "none: no commits over the base"}' \
+      "$mb" "$(git -C "$repo" rev-parse --verify -q "$base^{commit}")" "$base" > "$VERDICTS/.$sha.json.$$" && mv "$VERDICTS/.$sha.json.$$" "$VERDICTS/$sha.json"; } \
+      2>/dev/null || { rm -f "$VERDICTS/.$sha.json.$$" 2>/dev/null; say "cannot write $VERDICTS/$sha.json: not reviewed"; return 2; }
     say "${sha:0:10} has no commits over $base, nothing to review"; return 0
   fi
   # an older codex accepts the permission-profile settings below without applying them: full-disk reads again

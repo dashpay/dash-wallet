@@ -76,7 +76,8 @@ accounts and silently failed fetches leave holes (#1608).
 same txid-membership rule as `SdkTxStoreWalker` (#1601). Compare only like with like (a confirmed SDK height on both
 sides), and count "could not compare" separately from "equal" (#1605).
 
-**4.20 Production SDK flags are pinned ON in prodRelease** (`productionFlagOverride()`). A policy that ignores persisted
+**4.20 Production SDK migration flags are pinned ON in prodRelease** (`productionFlagOverride()`). The one deliberate
+exception is `USE_KOTLIN_SDK_L1_SEND`, which is pinned OFF. A policy that ignores persisted
 flags must apply to reads, observations and setters, at every consumer (#1578).
 
 **4.21 In dashj, turning a sync flag off stops outbound requests, not inbound admission.** Check that something still

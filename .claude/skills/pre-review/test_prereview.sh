@@ -107,6 +107,11 @@ ok "  … and drops the earlier clean verdict too" "$(V)" none
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; chmod a-w "$XDG_CACHE_HOME/prereview"
 FAKE_LOGIN_RC=1 "$P" >/dev/null 2>&1; ok "unwritable cache folder: a failed re-review still empties the earlier record" "$?:$(V)" 2:none
 chmod u+w "$XDG_CACHE_HOME/prereview"
+# a commit already on the base needs no review, but its record must still be written for the gate to pass it
+g checkout -q --detach origin/master; "$P" >/dev/null 2>&1; chmod a-w "$XDG_CACHE_HOME/prereview"
+"$P" >/dev/null 2>&1; ok "a commit on the base, verdict folder unwritable → exit 2, not 0" "$?:$(V)" 2:none
+chmod u+w "$XDG_CACHE_HOME/prereview"; "$P" >/dev/null 2>&1; ok "  … writable again → clean" "$?:$(V)" 0:clean
+g checkout -q feat
 FAKE_LOGIN_RC=1 CODEX_API_KEY=k-codex FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "logged out, CODEX_API_KEY set → reviewed with it" "$?:$(cat "$T/cdir.key")" 0:k-codex
 FAKE_LOGIN_RC=1 OPENAI_API_KEY=k-openai FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
