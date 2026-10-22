@@ -52,6 +52,18 @@ The report is printed and kept in `~/.cache/prereview/<sha>.md`; `--status` show
   those out too, so drop it. A finding that IS in scope but that the user decides to defer needs a tracking issue
   linked on the PR, or the bot keeps reporting it. Draft that issue for the user; do not open it yourself.
 
+## The rules of the loop
+
+1. **Only the PR's own code.** A finding on code this change does not touch is not fixed quietly: answer the
+   reviewer with why it is not this change's concern. (Its scope rule says a change is responsible for a sibling
+   path it affects — then either fix that path or argue the point, on the thread.)
+2. **Two local rounds per push, three at most.** When each round finds holes in the previous fix, get out with
+   the smallest change, or ask the user what to do next.
+3. **Locally, blocking and major only.** Suggestions and nitpicks wait for the bot's own round, where they are
+   cheap to close and where its approval needs them closed.
+4. **Push back when a comment is not about our code or does not matter in our case**: reply with the reasons,
+   do not resolve the thread — the bot re-checks on reply.
+
 Pushing is the user's call. Push only when asked.
 
 ## The push gate (per clone, opt-in)
