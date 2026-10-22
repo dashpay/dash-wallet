@@ -106,6 +106,14 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
         super.onCancel(dialog)
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (!viewModel.isWalletUnlocked) {
+            dialog?.hide()
+            dismissAllowingStateLoss()
+        }
+    }
+
     @Composable
     private fun ApprovalContent() {
         val uiState by viewModel.uiState.collectAsState()

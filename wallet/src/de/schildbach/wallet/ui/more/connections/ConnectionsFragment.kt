@@ -38,6 +38,8 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
 import de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog
+import de.schildbach.wallet.ui.LockScreenActivity
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -101,6 +103,10 @@ class ConnectionsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val host = activity as? LockScreenActivity
+        viewModel.bindWalletUnlockCheck {
+            host != null && !host.walletLocked.value && !host.lockScreenDisplayed
+        }
 
         if (savedInstanceState == null) {
             // Scanner routes default to no callback; only an app-opening URL opts in.
@@ -134,7 +140,17 @@ class ConnectionsFragment : Fragment() {
         }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                viewModel.uiState.collect { state ->
+                val lockState = host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)
+                combine(viewModel.uiState, lockState) { state, locked -> state to locked }.collect { (state, locked) ->
+                    if (locked || !viewModel.isWalletUnlocked) {
+                        listOf(APPROVAL_DIALOG, PURCHASE_DIALOG).forEach { tag ->
+                            (childFragmentManager.findFragmentByTag(tag) as? androidx.fragment.app.DialogFragment)?.let {
+                                it.dialog?.hide()
+                                it.dismissAllowingStateLoss()
+                            }
+                        }
+                        return@collect
+                    }
                     if (state.pendingRequest != null &&
                         childFragmentManager.findFragmentByTag(APPROVAL_DIALOG) == null &&
                         !childFragmentManager.isStateSaved) {
@@ -170,6 +186,11 @@ class ConnectionsFragment : Fragment() {
 
     private fun launchScanner() {
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))
+    }
+
+    override fun onDestroyView() {
+        viewModel.bindWalletUnlockCheck { false }
+        super.onDestroyView()
     }
 
     companion object {

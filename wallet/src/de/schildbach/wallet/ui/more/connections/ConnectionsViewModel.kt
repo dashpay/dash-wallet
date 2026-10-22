@@ -91,6 +91,13 @@ class ConnectionsViewModel @Inject constructor(
     private var pendingPlan: AppConnectPlan? = null
     private var pendingOpenedFromUrl = false
     private var operationInProgress = false
+    private var walletUnlockCheck: () -> Boolean = { false }
+
+    internal val isWalletUnlocked: Boolean get() = walletUnlockCheck()
+
+    internal fun bindWalletUnlockCheck(check: () -> Boolean) {
+        walletUnlockCheck = check
+    }
 
     init {
         repository.observeConnections()
@@ -170,12 +177,14 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun approveTokenPurchase() {
+        if (!isWalletUnlocked) return
         if (operationInProgress || _uiState.value.purchaseStatus !in setOf(TokenPurchaseStatus.READY, TokenPurchaseStatus.FAILED)) return
         val purchase = _uiState.value.pendingPurchase ?: return
         operationInProgress = true
-        _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTING, purchaseError = null) }
         viewModelScope.launch {
             try {
+                if (!isWalletUnlocked) return@launch
+                _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTING, purchaseError = null) }
                 repository.approveTokenPurchase(purchase)
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTED) }
             } catch (error: Exception) {
@@ -188,11 +197,13 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun dismissTokenPurchase() {
+        if (!isWalletUnlocked) return
         if (operationInProgress) return
         _uiState.update { it.copy(pendingPurchase = null, purchaseStatus = TokenPurchaseStatus.READY, purchaseError = null) }
     }
 
     fun selectGrant(index: Int, encryption: Boolean, selected: Boolean) {
+        if (!isWalletUnlocked) return
         if (operationInProgress || _uiState.value.requiresRevocation) return
         val plan = pendingPlan ?: return
         if (plan.recovering || (!encryption && index == 0)) return
@@ -204,6 +215,7 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun selectLimits(budget: Int, lifetime: Int) {
+        if (!isWalletUnlocked) return
         if (operationInProgress || _uiState.value.requiresRevocation) return
         val plan = pendingPlan ?: return
         if (plan.recovering) return
@@ -214,17 +226,19 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun approvePendingRequest() {
+        if (!isWalletUnlocked) return
         if (operationInProgress) return
         val request = pendingLoginRequest ?: return
         val plan = pendingPlan
         val openedFromUrl = pendingOpenedFromUrl
         operationInProgress = true
-        // Once approval starts, a transport failure cannot establish that no grant was published.
-        _uiState.update { it.copy(requiresRevocation = true,
-            pendingRequest = it.pendingRequest?.copy(recovering = true)) }
         viewModelScope.launch {
-            _approveResult.value = ApproveResult.Loading
             try {
+                if (!isWalletUnlocked) return@launch
+                // Once approval starts, a transport failure cannot establish that no grant was published.
+                _uiState.update { it.copy(requiresRevocation = true,
+                    pendingRequest = it.pendingRequest?.copy(recovering = true)) }
+                _approveResult.value = ApproveResult.Loading
                 val connection = repository.approvePreparedLogin(request, plan)
                 pendingLoginRequest = null
                 pendingPlan = null
@@ -241,14 +255,16 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun denyPendingRequest() {
+        if (!isWalletUnlocked) return
         if (operationInProgress) return
         val request = pendingLoginRequest ?: return
         val openedFromUrl = pendingOpenedFromUrl
         if (_uiState.value.requiresRevocation) {
             operationInProgress = true
-            _approveResult.value = ApproveResult.Loading
             viewModelScope.launch {
                 try {
+                    if (!isWalletUnlocked) return@launch
+                    _approveResult.value = ApproveResult.Loading
                     repository.revokePreparedLogin(request, pendingPlan)
                     clearPendingRequest()
                     offerCallback(request, "declined", openedFromUrl)
@@ -273,6 +289,7 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun closePendingRequest() {
+        if (!isWalletUnlocked) return
         if (operationInProgress) return
         if (_uiState.value.requiresRevocation) {
             _scanOutcome.value = ScanOutcome.Error("No revocation was confirmed. Any unresolved grant remains in Connections for recovery.")
@@ -302,7 +319,7 @@ class ConnectionsViewModel @Inject constructor(
 
     fun disconnect(connection: DAppConnection) {
         viewModelScope.launch {
-            try { repository.disconnect(connection.id, connection.scope) }
+            try { if (isWalletUnlocked) repository.disconnect(connection.id, connection.scope) }
             catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _scanOutcome.value = ScanOutcome.Error(e.message)
@@ -313,7 +330,7 @@ class ConnectionsViewModel @Inject constructor(
     /** Cancels a pending login or removes an old connection so the user can start over. */
     fun removeConnection(connection: DAppConnection) {
         viewModelScope.launch {
-            try { repository.removeConnection(connection.id, connection.scope) }
+            try { if (isWalletUnlocked) repository.removeConnection(connection.id, connection.scope) }
             catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _scanOutcome.value = ScanOutcome.Error(e.message)

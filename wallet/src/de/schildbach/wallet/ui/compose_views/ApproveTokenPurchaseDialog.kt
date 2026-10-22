@@ -47,6 +47,14 @@ class ApproveTokenPurchaseDialog : OffsetDialogFragment(R.layout.dialog_compose_
         super.onCancel(dialog)
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (!viewModel.isWalletUnlocked) {
+            dialog?.hide()
+            dismissAllowingStateLoss()
+        }
+    }
+
     @Composable private fun PurchaseContent() {
         val state by viewModel.uiState.collectAsState()
         val loading = state.purchaseStatus == TokenPurchaseStatus.SUBMITTING

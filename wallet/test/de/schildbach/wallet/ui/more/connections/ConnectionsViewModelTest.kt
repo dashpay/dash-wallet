@@ -52,6 +52,7 @@ class ConnectionsViewModelTest {
         coEvery { repository.approvePreparedLogin(any(), any()) } throws IllegalStateException("Confirmation uncertain")
         coEvery { repository.revokePreparedLogin(any(), any()) } returns Unit
         model = ConnectionsViewModel(repository, identities)
+        model.bindWalletUnlockCheck { true }
     }
 
     @After fun teardown() {
@@ -91,6 +92,143 @@ class ConnectionsViewModelTest {
         coEvery { repository.prepareTokenPurchase(any()) } returns purchase()
         model.onQrScanned("dash-st:2?n=d&v=1")
         dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Test fun `approval fails closed without a bound unlocked wallet`() {
+        model.viewModelScope.cancel()
+        model = ConnectionsViewModel(repository, identities)
+        scan(openedFromUrl = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(model.uiState.value.pendingRequest)
+        assertFalse(model.uiState.value.requiresRevocation)
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+    }
+
+    @Test fun `locked URL request remains pending and can be approved after unlock`() {
+        var unlocked = false
+        model.bindWalletUnlockCheck { unlocked }
+        scan(openedFromUrl = true)
+        val pending = model.uiState.value.pendingRequest
+        model.approvePendingRequest()
+        model.denyPendingRequest()
+        model.closePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(pending, model.uiState.value.pendingRequest)
+        assertNull(model.callbackOffer.value)
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+        unlocked = true
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+    }
+
+    @Test fun `lock before queued login submission prevents signing without creating recovery state`() {
+        var unlocked = true
+        model.bindWalletUnlockCheck { unlocked }
+        scan()
+        model.approvePendingRequest()
+        unlocked = false
+        dispatcher.scheduler.advanceUntilIdle()
+        assertFalse(model.uiState.value.requiresRevocation)
+        assertNotNull(model.uiState.value.pendingRequest)
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+    }
+
+    @Test fun `locked purchase cannot submit or clear pending approval`() {
+        scanPurchase()
+        var unlocked = false
+        model.bindWalletUnlockCheck { unlocked }
+        model.approveTokenPurchase()
+        model.dismissTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(model.uiState.value.pendingPurchase)
+        assertEquals(TokenPurchaseStatus.READY, model.uiState.value.purchaseStatus)
+        coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+        unlocked = true
+        coEvery { repository.approveTokenPurchase(any()) } returns Unit
+        model.approveTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(TokenPurchaseStatus.SUBMITTED, model.uiState.value.purchaseStatus)
+    }
+
+    @Test fun `lock before queued purchase submission prevents debit`() {
+        var unlocked = true
+        model.bindWalletUnlockCheck { unlocked }
+        scanPurchase()
+        model.approveTokenPurchase()
+        unlocked = false
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(model.uiState.value.pendingPurchase)
+        assertEquals(TokenPurchaseStatus.READY, model.uiState.value.purchaseStatus)
+        coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+    }
+
+    @Test fun `locking preserves uncertain grant recovery and does not revoke`() {
+        failApproval()
+        val pending = model.uiState.value.pendingRequest
+        model.bindWalletUnlockCheck { false }
+        model.closePendingRequest()
+        model.denyPendingRequest()
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(pending, model.uiState.value.pendingRequest)
+        assertTrue(model.uiState.value.requiresRevocation)
+        coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
+        coVerify(exactly = 1) { repository.approvePreparedLogin(any(), any()) }
+    }
+
+    @Test fun `auto lock dismisses both nested approval sheets without clearing pending operations`() {
+        verifyLockDismissal(purchase = false, restoredWhileLocked = false)
+        verifyLockDismissal(purchase = true, restoredWhileLocked = false)
+    }
+
+    @Test fun `restored approval sheets cannot appear over the PIN screen`() {
+        verifyLockDismissal(purchase = false, restoredWhileLocked = true)
+        verifyLockDismissal(purchase = true, restoredWhileLocked = true)
+    }
+
+    private fun verifyLockDismissal(purchase: Boolean, restoredWhileLocked: Boolean) {
+        ShadowChoreographer.setPaused(true)
+        // Use a fresh model so the two pending request kinds cannot block each other.
+        model.viewModelScope.cancel()
+        model = ConnectionsViewModel(repository, identities)
+        var unlocked = !restoredWhileLocked
+        model.bindWalletUnlockCheck { unlocked }
+        if (purchase) scanPurchase() else scan(openedFromUrl = true)
+        ApprovalTestParent.model = model
+        val controller = Robolectric.buildActivity(ApprovalTestActivity::class.java).setup()
+        val activity = controller.get()
+        val parent = ApprovalTestParent()
+        activity.supportFragmentManager.beginTransaction().add(parent, "parent").commitNow()
+        val sheet = if (purchase) de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog()
+            else ApproveConnectionDialog()
+        try {
+            sheet.showNow(parent.childFragmentManager, "approval")
+            if (!restoredWhileLocked) {
+                assertTrue(sheet.requireDialog().isShowing)
+                unlocked = false
+                // Exercise the activity's real lock traversal with an ordinary parent fragment,
+                // the nesting that previously left approval sheets above the PIN screen.
+                val lockActivity = Robolectric.buildActivity(de.schildbach.wallet.ui.LockScreenActivity::class.java).get()
+                ReflectionHelpers.callInstanceMethod<Unit>(lockActivity, "notifyAndDismissFragments",
+                    ReflectionHelpers.ClassParameter.from(androidx.fragment.app.FragmentManager::class.java,
+                        activity.supportFragmentManager))
+            }
+            parent.childFragmentManager.executePendingTransactions()
+            assertFalse(sheet.dialog?.isShowing == true)
+            assertNotNull(if (purchase) model.uiState.value.pendingPurchase else model.uiState.value.pendingRequest)
+            assertNull(model.callbackOffer.value)
+            coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
+            coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+            coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+            unlocked = true
+            val reopened = if (purchase) de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog()
+                else ApproveConnectionDialog()
+            reopened.showNow(parent.childFragmentManager, "approval")
+            assertTrue(reopened.requireDialog().isShowing)
+        } finally { controller.pause().stop().destroy() }
     }
 
     @Test fun `operation link only prepares approval and cancel never signs`() {
