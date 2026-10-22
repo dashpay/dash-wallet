@@ -26,6 +26,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
@@ -53,7 +54,9 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         requireView().setOnClickListener { viewModel.triggerHideBalance() }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
-        viewModel.totalBalance.observe(viewLifecycleOwner) { updateBalance() }
+        // Transparent + shielded — the home header is the only screen that
+        // shows the combined figure.
+        viewModel.homeBalance.observe(viewLifecycleOwner) { updateBalance() }
 
         // The blinking "Syncing balance" indicator. Its predicate must stay in
         // lockstep with CutoverUiDataService's balance HOLD — a label over a
@@ -65,8 +68,14 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         // reports caught up, and the balance is short of every contact payment
         // until it finishes — 11.10.86 stopped blinking at 17:12:39 while the
         // true figure only landed at 17:25:00.
+        // Also kept on while the shielded part of the combined total is not
+        // known yet (no READY balance and nothing cached).
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.syncStatus.collect { updateSyncingIndicator(it.isFullySynced) }
+            viewModel.syncStatus
+                .combine(viewModel.homeShieldedPending) { status, shieldedPending ->
+                    status.isFullySynced && !shieldedPending
+                }
+                .collect { updateSyncingIndicator(it) }
         }
 
         viewModel.hideBalance.observe(viewLifecycleOwner) { hideBalance ->
@@ -90,7 +99,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
     }
 
     private fun updateBalance() {
-        val balance = viewModel.totalBalance.value ?: Coin.ZERO
+        val balance = viewModel.homeBalance.value ?: Coin.ZERO
         binding.walletBalanceDash.setAmount(balance)
         viewModel.exchangeRate.value?.let { exchangeRate ->
             val rate = org.bitcoinj.utils.ExchangeRate(

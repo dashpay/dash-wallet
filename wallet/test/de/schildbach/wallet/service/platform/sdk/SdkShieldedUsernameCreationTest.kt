@@ -110,6 +110,8 @@ class SdkShieldedUsernameCreationTest {
             every { shieldedSyncStatus } returns statusFlow
             every { observeShieldedBalance() } returns balanceFlow
             coEvery { isFundingNoteAnchoredForDenomination(any()) } returns fundingNoteAnchored
+            coEvery { beginExternalShieldedSpend() } returns 1_700_000_000_000L
+            coEvery { endExternalShieldedSpend(any()) } just Runs
         }
 
     private fun happySource() = mockk<ShieldedUsernameSource> {
@@ -600,6 +602,40 @@ class SdkShieldedUsernameCreationTest {
         assertTrue(result is SdkWriteResult.Ambiguous)
         assertTrue(handoff.identities.isEmpty())
         coVerify(exactly = 1) { source.createIdentityFromPool(any(), any(), any(), any(), any()) }
+    }
+
+    /**
+     * thepastaclaw (7ae06b9e7): the pool spend is recorded with the balance
+     * service BEFORE the SDK call and ended after it; one that can't be
+     * recorded is never submitted.
+     */
+    @Test
+    fun poolSpend_isRecordedBeforeTheCall_andEndedAfterIt() = runTest {
+        val source = happySource()
+        val balance = balanceService()
+        service(source = source, balance = balance).createUsernameFromShielded("alice2")
+        coVerifyOrder {
+            balance.beginExternalShieldedSpend()
+            source.createIdentityFromPool(any(), any(), any(), any(), any())
+            balance.endExternalShieldedSpend(1_700_000_000_000L)
+        }
+    }
+
+    @Test
+    fun anUnrecordablePoolSpend_isNotBroadcast_andNeverCreates() = runTest {
+        val source = happySource()
+        val balance = balanceService().apply {
+            coEvery { beginExternalShieldedSpend() } returns null
+        }
+        val handoff = HandoffRecorder()
+
+        val result = service(source = source, balance = balance, handoff = handoff)
+            .createUsernameFromShielded("alice2")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(handoff.identities.isEmpty())
+        coVerify(exactly = 0) { source.createIdentityFromPool(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { balance.endExternalShieldedSpend(any()) }
     }
 
     // ── Best-effort DPNS name / handoff resilience ────────────────────────
