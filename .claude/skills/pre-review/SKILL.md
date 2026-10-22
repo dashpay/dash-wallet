@@ -73,6 +73,9 @@ login) is in scope and gets fixed.
    cheap to close and where its approval needs them closed.
 4. **Push back when a comment is not about our code or does not matter in our case**: reply with the reasons,
    do not resolve the thread — the bot re-checks on reply.
+5. **The narrowest fix, never a new mechanism for a suggestion.** Fix a bot's suggestion only when it is a line or
+   two of the existing code; otherwise answer it and defer. On this skill's own PR, two of the three blockers of a
+   round came from the previous round's suggestion fixes.
 
 Pushing is the user's call. Push only when asked.
 

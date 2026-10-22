@@ -47,7 +47,7 @@ say() { printf 'pre-review: %s\n' "$*" >&2; }
 # python3 does the verdict lookup, the lock, the JSON parsing and publication: without it nothing here is reliable
 command -v python3 >/dev/null || { say "python3 is required (README.md, Setup)"; exit 2; }
 # a path as a TOML basic string: JSON string escapes (\" \\ \uXXXX …) are valid TOML ones, and json.dumps leaves / alone
-toml_str() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
+toml_str() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1], ensure_ascii=False))' "$1"; }   # literal UTF-8: TOML rejects \ud83d-style surrogate escapes
 # every child that can outlive a cancelled review (git fetch and clone, curl, codex) starts without the review's lock
 # descriptor (review() takes it, see PREREVIEW_LOCK_FD): the lock is the review's own, and nothing left behind keeps it
 nolock() { ( [[ "${PREREVIEW_LOCK_FD:-}" =~ ^[0-9]+$ ]] && eval "exec $PREREVIEW_LOCK_FD>&-"; exec "$@" ); }
@@ -207,21 +207,23 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   # and the roster is read back — anything still enabled means no review. Listed and verified from the review clone
   # (its working directory: codex's -C does not move `mcp list`'s configuration context), as codex exec runs: a
   # trusted source checkout's own .codex/config.toml could mask a server there, or point an HTTP one at an attacker
-  local mcp_off=() name
+  local mcp_off=() mcp_tab="" name
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null
   local transport
   while IFS=$'\t' read -r name transport; do
     [[ -n "$name" ]] || continue
-    [[ "$name" =~ ^[A-Za-z0-9_-]+$ ]] || { say "MCP server '$name' cannot be switched off by name: not reviewing"; return 2; }
     # a complete entry, not `.enabled=false` alone: a server another layer provides (the desktop app's) is not in
     # config.toml, and a partial override of it leaves an entry without a command — codex then fails to load at all.
     # Of the server's own transport: the entry merges with the existing one, and a `command` next to an http
     # server's `url` is rejected ("url is not supported for stdio")
-    if [[ "$transport" == stdio ]]; then mcp_off+=(-c "mcp_servers.$name={ command = \"/bin/sh\", enabled = false }")
-    else mcp_off+=(-c "mcp_servers.$name={ url = \"http://127.0.0.1:9/\", enabled = false }"); fi
+    # one `mcp_servers` table with quoted keys, not `-c mcp_servers.<name>=…`: names may hold `.` `:` `@` `/`, and codex
+    # splits a dotted -c path on every dot; the table merges into the existing servers like the per-server form did
+    if [[ "$transport" == stdio ]]; then mcp_tab+="${mcp_tab:+, }$(toml_str "$name") = { command = \"/bin/sh\", enabled = false }"
+    else mcp_tab+="${mcp_tab:+, }$(toml_str "$name") = { url = \"http://127.0.0.1:9/\", enabled = false }"; fi
   done < <(python3 -c 'import json,sys
 try: print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: pass' "$probe")
+  [[ -n "$mcp_tab" ]] && mcp_off=(-c "mcp_servers={ $mcp_tab }")
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
   if [[ -n "$(python3 -c 'import json,sys
 try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))

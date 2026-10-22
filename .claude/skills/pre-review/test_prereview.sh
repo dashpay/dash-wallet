@@ -31,14 +31,16 @@ if [[ " $* " == *" mcp list "* ]]; then   # the effective servers (FAKE_MCP), ea
   printf '%s\n' "$@" > "${FAKE_CDIR}.mcpargs"; pwd -P > "${FAKE_CDIR}.mcpcwd"
   python3 -c '
 import json, sys
-ents = [e.split(":") + ["stdio"] for e in sys.argv[1].split(",") if e]; args = sys.argv[3:]; stubborn = sys.argv[2] == "1"
+# servers as name or name|http; the override is one `mcp_servers={ "<name>" = {…}, … }` table, as the script passes it
+ents = [e.split("|") + ["stdio"] for e in sys.argv[1].split(",") if e]; args = sys.argv[3:]; stubborn = sys.argv[2] == "1"
+tab = " ".join(a for a in args if a.startswith("mcp_servers="))
 out = []
 for e in ents:
-    n, t = e[0], e[1]
-    if t != "stdio" and ("mcp_servers.%s={ command = \"/bin/sh\", enabled = false }" % n) in args:
+    n, t = e[0], e[1]; key = json.dumps(n, ensure_ascii=False)
+    if t != "stdio" and (key + " = { command = \"/bin/sh\", enabled = false }") in tab:
         print("Error: url is not supported for stdio", file=sys.stderr); sys.exit(1)
-    off = ("mcp_servers.%s={ command = \"/bin/sh\", enabled = false }" % n) if t == "stdio" else ("mcp_servers.%s={ url = \"http://127.0.0.1:9/\", enabled = false }" % n)
-    out.append({"name": n, "enabled": stubborn or off not in args, "transport": {"type": "stdio" if t == "stdio" else "streamable_http"}})
+    off = (key + " = { command = \"/bin/sh\", enabled = false }") if t == "stdio" else (key + " = { url = \"http://127.0.0.1:9/\", enabled = false }")
+    out.append({"name": n, "enabled": stubborn or off not in tab, "transport": {"type": "stdio" if t == "stdio" else "streamable_http"}})
 print(json.dumps(out))' "${FAKE_MCP:-}" "${FAKE_MCP_STUBBORN:-0}" "$@"
   exit 0
 fi
@@ -121,11 +123,12 @@ FAKE_FEAT_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' 
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "apps, browser and computer use, web search and lifecycle hooks are switched off for the review" "$?:$(grep -c -e '^features.apps=false$' -e '^features.computer_use=false$' -e '^web_search="disabled"$' -e '^features.hooks=false$' "$T/cdir.args")" 0:4
 FAKE_MCP="canaryfs,second" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
-ok "the user's MCP servers are switched off by name for the review" "$?:$(grep -c -e '^mcp_servers.canaryfs={ command = "/bin/sh", enabled = false }$' -e '^mcp_servers.second={ command = "/bin/sh", enabled = false }$' "$T/cdir.args")" 0:2
-FAKE_MCP="docs:http,loc" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
-ok "  … an http server gets an entry of its own transport (a stdio one next to its url fails codex's config load)" "$?:$(grep -c '^mcp_servers.docs={ url = "http://127.0.0.1:9/", enabled = false }$' "$T/cdir.args")" 0:1
+ok "the user's MCP servers are switched off by name for the review" "$?:$(grep -c '^mcp_servers={ "canaryfs" = { command = "/bin/sh", enabled = false }, "second" = { command = "/bin/sh", enabled = false } }$' "$T/cdir.args")" 0:1
+FAKE_MCP="docs|http,loc" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … an http server gets an entry of its own transport (a stdio one next to its url fails codex's config load)" "$?:$(grep -c '"docs" = { url = "http://127.0.0.1:9/", enabled = false }' "$T/cdir.args")" 0:1
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
-FAKE_MCP="bad.name" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … a name that cannot be addressed → not reviewed (exit 2)" "$?" 2
+FAKE_MCP="docs.internal|http,npm:@scope/seq.thinking" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … names with . : @ / (accepted by codex) are switched off too, both transports" "$?:$(grep -c -e '"docs.internal" = { url = ' -e '"npm:@scope/seq.thinking" = { command = ' "$T/cdir.args")" 0:1
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "exec ignores the user's execpolicy rules but keeps config.toml (a keyring login store); the codex home is an explicit deny" \
   "$(grep -c '^--ignore-rules$' "$T/cdir.args"):$(grep -c '^--ignore-user-config$' "$T/cdir.args"):$(grep -c "\"$CODEX_HOME\" = \"deny\"" "$T/cdir.args")" 1:0:1
@@ -253,14 +256,16 @@ printf '[filter "evil"]\n\tsmudge = touch %s/FILTER_RAN; cat\n' "$T" > "$T/filte
 GIT_CONFIG_GLOBAL="$T/filtercfg" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "a smudge filter from the user's git config does not run on the review's checkout" "$?:$([[ -e "$T/FILTER_RAN" ]] && echo RAN || echo quiet)" 0:quiet
 # a TMPDIR whose path holds a double quote and a backslash: the profile and the env set stay valid TOML, one entry each
-need mkdir -p "$T/q\"d\\ir"; g checkout -q other4; TMPDIR="$T/q\"d\\ir" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
-ok "paths with a quote and a backslash are TOML-escaped in the profile and the env set" "$?:$(python3 -c '
-import sys, tomllib
+need mkdir -p "$T/q\"d\\ir😀"; g checkout -q other4; TMPDIR="$T/q\"d\\ir😀" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "paths with a quote, a backslash and a non-BMP character are valid TOML in the profile and the env set" "$?:$(python3 -c '
+import sys
+try: import tomllib
+except ImportError: print("2 True"); sys.exit()   # tomllib is 3.11+; on an older python3 this check is skipped
 args = open(sys.argv[1]).read().split("\n")
 fs = [a for a in args if a.startswith("permissions.prereview.filesystem=")][0].split("=", 1)[1]
 st = [a for a in args if a.startswith("shell_environment_policy.set=")][0].split("=", 1)[1]
 t = tomllib.loads("x = " + fs); u = tomllib.loads("x = " + st)
-print(sum(1 for k in t["x"] if "q\"d\\ir" in k), "q\"d\\ir" in u["x"]["TMPDIR"])' "$T/cdir.args" 2>&1)" "0:2 True"
+print(sum(1 for k in t["x"] if "q\"d\\ir😀" in k), "q\"d\\ir😀" in u["x"]["TMPDIR"])' "$T/cdir.args" 2>&1)" "0:2 True"
 g checkout -q feat
 need mkdir -p "$T/nopy"; ln -sf "$(command -v dirname)" "$T/nopy/dirname"   # all the script needs before its python3 check
 env -i HOME="$HOME" PATH="$T/nopy" "$(command -v bash)" "$P" --status > "$T/nopy.log" 2>&1; ok "no python3 on PATH → a clear message, exit 2" "$?:$(grep -c 'python3 is required' "$T/nopy.log")" "2:1"
