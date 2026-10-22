@@ -196,9 +196,11 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   : > "$wt/gitconfig"
   # the user's MCP servers would start outside the sandbox (a filesystem server for ~ hands auth.json over), and
   # `-c mcp_servers={}` merges instead of clearing: every effective server (plugins' included) is switched off by name,
-  # and the roster is read back — anything still enabled means no review
+  # and the roster is read back — anything still enabled means no review. Listed and verified from the review clone
+  # (-C), the configuration context codex exec runs in: a trusted source checkout's own .codex/config.toml could
+  # mask a global server as disabled there while the clone, which inherits no trust, still loads it
   local mcp_off=() name
-  waitfor codex mcp list --json > "$probe" 2>/dev/null
+  waitfor codex -C "$wt/tree" mcp list --json > "$probe" 2>/dev/null
   while IFS= read -r name; do
     [[ -n "$name" ]] || continue
     [[ "$name" =~ ^[A-Za-z0-9_-]+$ ]] || { say "MCP server '$name' cannot be switched off by name: not reviewing"; return 2; }
@@ -208,7 +210,7 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   done < <(python3 -c 'import json,sys
 try: print("\n".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: pass' "$probe")
-  waitfor codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
+  waitfor codex -C "$wt/tree" ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
   if [[ -n "$(python3 -c 'import json,sys
 try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabled for codex: not reviewing"; return 2; fi
@@ -223,7 +225,9 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
   # the model's scratch: its own folder (TMPDIR below), not the shared temp dirs where other reviews keep their files
   mkdir -m 700 "$wt/tmp" || { say "cannot create $wt/tmp"; return 2; }
   local fs alt queue=("$wt/tree/.git/objects") seen=" "
-  fs="\":minimal\" = \"read\", \"$wt/tmp\" = \"write\", \"$wt/gitconfig\" = \"read\", \"$PC\" = \"read\""
+  # an explicit deny on the codex home as well: codex skips the sandbox for a command an allow rule matches unless the
+  # profile holds an explicit Deny (an implicit one, a path simply not granted, does not count)
+  fs="\":minimal\" = \"read\", \"$wt/tmp\" = \"write\", \"$wt/gitconfig\" = \"read\", \"$PC\" = \"read\", \"${CODEX_HOME:-$HOME/.codex}\" = \"deny\""
   while [[ ${#queue[@]} -gt 0 ]]; do
     local objs=${queue[0]}; queue=("${queue[@]:1}")
     [[ -f "$objs/info/alternates" ]] || continue
@@ -245,7 +249,9 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
     # CODEX_API_KEY would answer; include_only is applied last, so it also drops a `set` entry from the user's own
     # codex config), with git pointed at the empty config above, and (b) a permission profile instead of the read-only
     # sandbox, whose reads cover the whole disk, ~/.codex/auth.json included
-    exec ${tmo[@]+"${tmo[@]}"} codex exec ${mcp_off[@]+"${mcp_off[@]}"} "${feat_off[@]}" -m "$MODEL" -c model_reasoning_effort="$EFFORT" -C "$wt/tree" -o "$out" \
+    # --ignore-rules: the user's execpolicy allow rules (~/.codex/rules) let a matching command run OUTSIDE the sandbox;
+    # --ignore-user-config: the user's config.toml stays out (its servers, `set` entries, plugins); the login still loads
+    exec ${tmo[@]+"${tmo[@]}"} codex exec --ignore-rules --ignore-user-config ${mcp_off[@]+"${mcp_off[@]}"} "${feat_off[@]}" -m "$MODEL" -c model_reasoning_effort="$EFFORT" -C "$wt/tree" -o "$out" \
       -c shell_environment_policy.inherit=core -c shell_environment_policy.ignore_default_excludes=false \
       -c 'shell_environment_policy.exclude=["CODEX_API_KEY","OPENAI_API_KEY","*_API_KEY","*TOKEN*","*SECRET*","*PASSWORD*"]' \
       -c "shell_environment_policy.set={ GIT_CONFIG_GLOBAL = \"$wt/gitconfig\", GIT_CONFIG_NOSYSTEM = \"1\", TMPDIR = \"$wt/tmp\" }" \
@@ -343,8 +349,9 @@ if [[ "$(basename "$0")" == pre-push ]]; then
 (git push --no-verify pushes anyway, on purpose)"; refused=1 ;;
     esac
   done
-  # a review above fetched the base again; the base may have moved since an earlier ref was accepted against it —
-  # every tip is checked once more against the base as it is now
+  # the base may have moved since an earlier ref was accepted against it, or during a review above: fetched once
+  # more, and every tip checked once more against the base as it is now
+  refresh_base "$repo" || { say "cannot fetch $(base_ref) from origin for the final check: not pushing"; exit 1; }
   for lsha in ${shas[@]+"${shas[@]}"}; do
     v=$(verdict "$repo" "$lsha")
     [[ "$v" == clean || "$v" == suggestions ]] || { say "${lsha:0:10}: the base moved while this push was being reviewed ($v): run the review again, then push"; refused=1; }

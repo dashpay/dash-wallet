@@ -44,7 +44,9 @@ checkout), the repository's object store it borrows, the pinned prompts and the 
 under a scratch folder of the review's own. Your MCP servers (Codex starts those outside the sandbox) are switched off
 by name for the review and the roster is read back; if one stays enabled, the script does not review. They do not
 see your git configuration either (a PAT in a `url.insteadOf` or an `extraheader` would be readable): git in there
-runs with an empty global config, and the commands' environment is an explicit allowlist. Codex's other ways out of the sandbox — the implicit Apps connector, browser and computer use,
+runs with an empty global config, and the commands' environment is an explicit allowlist. Codex runs with `--ignore-rules` and `--ignore-user-config`: your
+execpolicy allow rules (`~/.codex/rules`, a matching command may skip the sandbox) and your `config.toml` stay out
+of the review, your login still loads, and `~/.codex` is an explicit deny in the profile. Codex's other ways out of the sandbox — the implicit Apps connector, browser and computer use,
 web search — are switched off for the review and read back. The report is scrubbed of the key's value as well.
 
 `codex logout` removes a stored login. `codex login status` shows which one is active.

@@ -28,6 +28,7 @@ if [[ " $* " == *" features list "* ]]; then   # the six capabilities, each off 
   done; exit 0
 fi
 if [[ " $* " == *" mcp list "* ]]; then   # the effective servers (FAKE_MCP), each off when a -c mcp_servers.<name>.enabled=false came
+  printf '%s\n' "$@" > "${FAKE_CDIR}.mcpargs"
   python3 -c '
 import json, sys
 names = [n for n in sys.argv[1].split(",") if n]; args = sys.argv[3:]; stubborn = sys.argv[2] == "1"
@@ -117,6 +118,9 @@ ok "the user's MCP servers are switched off by name for the review" "$?:$(grep -
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
 FAKE_MCP="bad.name" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … a name that cannot be addressed → not reviewed (exit 2)" "$?" 2
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "exec ignores the user's execpolicy rules and config.toml; the codex home is an explicit deny in the profile" \
+  "$(grep -c -e '^--ignore-rules$' -e '^--ignore-user-config$' "$T/cdir.args"):$(grep -c "\"$CODEX_HOME\" = \"deny\"" "$T/cdir.args")" 2:1
+ok "MCP servers are listed and verified from the review clone, the context exec runs in" "$(grep -c -e '^-C$' "$T/cdir.mcpargs"):$(grep -c "$(dirname "$(cat "$T/cdir")")/tree" "$T/cdir.mcpargs")" 1:1
 ok "the model's scratch is the review's own folder, not the shared temp dirs" \
   "$(grep -c -e "\"$(dirname "$(cat "$T/cdir")")/tmp\" = \"write\"" "$T/cdir.args"):$(grep -c 'TMPDIR = ".*/tmp" }' "$T/cdir.args"):$(grep -c -e ':tmpdir' -e ':slash_tmp' "$T/cdir.args")" 1:1:0
 FAKE_VERSION=0.100.0 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "an older codex (no permission profiles) → not reviewed (exit 2)" "$?:$(V)" 2:none
@@ -246,7 +250,7 @@ HOOK=$(git rev-parse --path-format=absolute --git-path hooks)/pre-push; Z=000000
 printf 'refs/heads/feat %s refs/heads/feat-race %s\nrefs/heads/other5 %s refs/heads/other5 %s\n' "$(git rev-parse feat)" "$Z" "$(git rev-parse other5)" "$Z" > "$T/race.refs"
 PATH="$T/racegit:$PATH" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/race.refs'" > "$T/race.log" 2>&1
 # the refusal is read from the hook's own output: util-linux script(1) does not always hand the child's exit status on
-ok "the base moved during the push's own review → the earlier ref is rechecked, push refused" "$(grep -c 'the base moved while this push' "$T/race.log"):$(cat "$T/fetches" 2>/dev/null)" 1:2
+ok "the base moved during the push's own review → the earlier ref is rechecked, push refused" "$(grep -c 'the base moved while this push' "$T/race.log"):$(cat "$T/fetches" 2>/dev/null)" 1:3   # fetches: up front, the review's, the final check's
 g checkout -q other5; ok "  … the later ref itself was reviewed against the moved base" "$(V)" clean; g checkout -q feat
 # two unreviewed refs, cancelled during the first's review: the hook stops, the second is never started
 g checkout -q -b c1 origin/master; echo c1 > c1; g add c1; g commit -qm c1; g checkout -q -b c2 origin/master; echo c2 > c2; g add c2; g commit -qm c2; g checkout -q feat
