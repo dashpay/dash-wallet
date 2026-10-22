@@ -7,7 +7,7 @@ need() { "$@" || { echo "FAIL: setup: $*" >&2; exit 1; }; }
 P=${1:-"$(cd "$(dirname "$0")" && pwd)/prereview.sh"}; T=$(mktemp -d "${TMPDIR:-/tmp}/prtest.XXXXXX") || exit 1; export XDG_CACHE_HOME="$T/cache"; FAILS=0
 [[ -n "${KEEP:-}" ]] || trap 'chmod -R u+w "$T" 2>/dev/null; rm -rf "$T"' EXIT   # this run's folder only, writable again first (the chmod tests); KEEP=1 leaves it for a look
 # the cases set these themselves: an inherited API key would pass the logged-out case, a base or timeout would move others
-unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL
+unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
 # the caller's git configuration stays out too: a global core.hooksPath would make the fixture's --install and
 # --uninstall write to, and delete from, the caller's real hooks folder
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
