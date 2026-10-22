@@ -9,7 +9,7 @@ components, dark mode).
   before inventing one. For example, `pendingSdkBindPendingSheet` copies `pendingCutoverUpgradeNotice`, and `showOnce`
   returns Boolean like `CutoverSyncNoticeDialogFragment.showOnce`.
 - **Reuse existing utilities.** Examples: `maskEmail()`, `getDistanceText`, the shared `AddressField`,
-  `Constants.DASH_CURRENCY`, `MyTheme.Colors`, `LocalDashColors`, `BaseConfig.editPreferences {}`.
+  `Constants.DASH_CURRENCY`, `LocalDashColors`, `BaseConfig.editPreferences {}`.
 - **A file is named after its primary public declaration.**
 - **Remove dead code**: commented-out launches, dead diagnostic blocks, unreachable catches. Order range conditions from
   most to least specific: an `else if (x > 3)` under `if (x > 1)` is dead (#1431).
@@ -45,7 +45,7 @@ components, dark mode).
 - **Fragments**: observe in `onViewCreated` with `viewLifecycleOwner`. Use SafeArgs-generated Args, not hardcoded
   keys.
 - **Compose**: `remember` or hoist formatters (`DecimalFormat`) instead of allocating them per recomposition. Use theme
-  colours from `MyTheme.Colors` / `LocalDashColors`, never hex.
+  colours from `LocalDashColors.current`, never `MyTheme.Colors` (the fixed light palette) or hex.
 
 ## Persistence
 - Multi-key settings are written in one `editPreferences {}` / one `Editor.commit()`.

@@ -92,7 +92,8 @@ actually rendered (`displayItems`, not `items`) (#1500, #1493).
 **5.18 Dark mode.**
 - Set `cursorBrush = SolidColor(LocalDashColors.current.textPrimary)` on `BasicTextField`; its default is black.
 - QR codes stay dark-on-light with a quiet zone (#1620, #1622).
-- Use semantic tokens (`content_primary`, `MyTheme.Colors`), never hex.
+- Use semantic tokens: `content_primary` in XML; `val colors = LocalDashColors.current` in Compose. `MyTheme.Colors` is
+  the fixed light palette. Never use hex.
 - Full guide: `.claude/agents/DEVELOPMENT-PATTERNS.md` → Dark Mode Compatibility.
 
 **5.19 Accessibility and strings.**

@@ -582,7 +582,8 @@ return types — the import decides which one you get. `util/MoneyShims.kt` hold
 
 Rounding / conversion rules seen in code:
 - Fiat↔coin via `BigInteger` multiply-then-divide with overflow checks (`common/.../money/ExchangeRate.java:55-75`,
-  same as dashj); `MonetaryFormat` default `HALF_UP`; `Coin.parseCoin` rounds `DOWN` at 8 decimals.
+  same as dashj); `MonetaryFormat` default `HALF_UP`; `Coin.parseCoin` tries an exact conversion first, then falls back to
+  `MathContext(8, DOWN)`: 8 *significant digits*, not 8 decimals (1.234567891 → 1.2345678).
 - Send-screen local-currency display rounds `UP` (`common/.../util/MonetaryExt.kt:98`); gift-card fiat amounts
   `setScale(2, UP)` (`DashSpendViewModel.kt:745`, `PurchaseGiftCardConfirmDialog.kt:213`); Maya duff conversion
   `HALF_UP` (`MayaBlockchainApiImpl.kt:286`); "More" balance `DOWN` (`MoreFragment.kt:150`).
@@ -710,7 +711,8 @@ before that date were never executed by CI; expect some to fail or to assert sta
 | `manual_distribution.yml` | `workflow_dispatch` | test + build/distribute chosen flavor |
 
 `fastlane/Fastfile:171-175`: `lane :test` runs `gradle(task: "test#{flavor}#{type}UnitTest")` → `testDebugUnitTest`,
-i.e. every module's debug unit tests, all wallet flavors **(inferred: the aggregate task covers all four flavors)**.
+which runs only in the unflavoured modules. `wallet` has only flavoured tasks (`test_testNet3DebugUnitTest`, …), so CI
+does not run the wallet unit tests (see `07-testing.md` §7.14).
 No instrumented tests, no lint gate (lint `abortOnError false`), no detekt, no coverage. The v12 branch
 `feat/kotlin-sdk-phase-1` matches `feat/*`, so PRs into it run CI.
 
