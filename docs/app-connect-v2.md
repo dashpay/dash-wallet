@@ -92,8 +92,13 @@ In the details UI, failed supplementary ownership or budget reads show an explic
 unavailable-check warning rather than hiding Revoke. Cancellation and wallet-scope
 changes still propagate. The revocation audit itself remains strict: failed
 ownership checks cannot confirm complete revocation. Earlier disconnect records
-without permanent-disable confirmation require one re-confirmation before the UI
+without app-wide revocation confirmation require one re-confirmation before the UI
 reports them disconnected.
+Request-specific revocation and superseding a session confirm only those request
+keys. Neither operation confirms an app-wide disconnect or clears previous
+partial-revocation evidence. Only a successful whole-app audit can clear that
+evidence and mark every settled grant as app-wide revoked. The UI requires both
+per-request permanent revocation and app-wide confirmation to show Disconnected.
 Expiry also does not settle an unconfirmed registration: its recovery record and
 wallet-only fence requirement remain until the old update is permanently blocked.
 Tap a connection to query its current key budgets and expiry. Callback websites

@@ -41,8 +41,9 @@ class PlatformDashConnectRepository @Inject constructor(
                             key.getInt("purpose") == 0 && key.optLong("expiresAt", Long.MAX_VALUE) > System.currentTimeMillis()
                         } }
                     } } -> ConnectionStatus.ACTIVE
-                    // Older disconnects could skip expired-but-enabled keys. Re-confirm once.
-                    grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") } -> ConnectionStatus.APPROVED
+                    // Revoked request keys do not prove that the app has no surviving access.
+                    grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
+                        !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
                     else -> ConnectionStatus.DISCONNECTED
                 }, latest.optLong("updatedAt"), scope)
         }

@@ -98,6 +98,34 @@ class DashConnectConfigTest {
         config.saveGrant(grant)
         assertEquals(ConnectionStatus.APPROVED, repository.observeConnections().first().single().status)
         config.saveGrant(grant.put("permanentRevocationConfirmed", true))
+        assertEquals(ConnectionStatus.APPROVED, repository.observeConnections().first().single().status)
+        config.saveGrant(settleConfirmedRevocation(grant, emptyList()))
+        assertEquals(ConnectionStatus.DISCONNECTED, repository.observeConnections().first().single().status)
+    }
+
+    @Test fun `request revocation cannot erase partial history or display a disconnected app`() = runBlocking {
+        val config = config(temporaryFolder.newFolder())
+        val service = mockk<de.schildbach.wallet.service.platform.PlatformService>(relaxed = true)
+        val wallet = mockk<de.schildbach.wallet.ui.dashpay.PlatformRepo>(relaxed = true)
+        val identities = mockk<de.schildbach.wallet.service.platform.IdentityRepository>(relaxed = true)
+        val identity = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
+        every { identity.uniqueIdentifier } returns org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 })
+        every { identities.blockchainIdentity } returns identity
+        every { identities.blockchainIdentityFlow } returns kotlinx.coroutines.flow.MutableStateFlow(identity)
+        every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
+        val scope = AppConnectSession(service, wallet, identities, config).scope()
+        val repository = PlatformDashConnectRepository(service, wallet, identities, config)
+        val grant = JSONObject().put("id", "$scope:grant").put("scope", scope).put("app", "app")
+            .put("state", "active").put("keys", org.json.JSONArray())
+        config.saveGrant(settleConfirmedRevocation(grant, listOf(77)))
+        val partial = config.getGrants().single()
+        config.saveGrant(settleConfirmedRevocation(partial, null))
+        val afterRequest = config.getGrants().single()
+        assertEquals("partialRevocation", afterRequest.getString("state"))
+        assertEquals(77, afterRequest.getJSONArray("unrecordedKeyIds").getInt(0))
+        assertFalse(afterRequest.getBoolean("appRevocationConfirmed"))
+        assertEquals(ConnectionStatus.APPROVED, repository.observeConnections().first().single().status)
+        config.saveGrant(settleConfirmedRevocation(afterRequest, emptyList()))
         assertEquals(ConnectionStatus.DISCONNECTED, repository.observeConnections().first().single().status)
     }
 

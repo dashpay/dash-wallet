@@ -234,7 +234,9 @@ internal class AppConnectSession(
                 check(plan.grants.all { it.expiresAt!! > time + 3_600_000 }) { "Grant expired. Scan again." }
                 val recordId = "${plan.scope}:${plan.requestHash}"
                 var record = config.getGrants().firstOrNull { it.getString("id") == recordId }
-                check(record?.optString("state") != "disabled") { "This QR has already been revoked. Scan a new one." }
+                check(record?.optString("state") != "disabled" && record?.optBoolean("permanentRevocationConfirmed") != true) {
+                    "This QR has already been revoked. Scan a new one."
+                }
                 val keys = mutableListOf<IdentityPublicKey>()
                 var nextId = (identity.publicKeys.maxOfOrNull { it.id } ?: -1) + 1
                 plan.grants.forEachIndexed { index, grant ->
@@ -354,7 +356,7 @@ internal class AppConnectSession(
                         checkScope(plan.scope)
                         rememberIdentity(identity)
                         config.saveGrant(record.put("state", "confirmed"))
-                        oldRecords.forEach { config.saveGrant(it.put("state", "disabled").put("permanentRevocationConfirmed", true)) }
+                        oldRecords.forEach { config.saveGrant(settleConfirmedRevocation(it, null)) }
                         publish(identity, record, walletSigner, plan.scope)
                     }
                 }
@@ -511,18 +513,16 @@ internal class AppConnectSession(
         val confirmedTime = platform.client.getPlatformTime(identity.id)
         val unresolved = records.filter { needsRegistrationRecovery(it) &&
             AppConnectKeyState.unresolved(AppConnectKeyState.inspect(decodeKeys(it), identity.publicKeys, confirmedTime)) }
-        val unknown = if (completeApp == null) emptyList() else unrecordedAppKeys(identity, completeApp, scope)
+        val unknown = completeApp?.let { unrecordedAppKeys(identity, it, scope) }
         checkScope(scope)
         records.filter { it !in unresolved }.forEach {
-            config.saveGrant(it.put("state", if (unknown.isEmpty()) "disabled" else "partialRevocation")
-                .put("permanentRevocationConfirmed", unknown.isEmpty())
-                .put("unrecordedKeyIds", JSONArray(unknown)))
+            config.saveGrant(settleConfirmedRevocation(it, unknown))
         }
         check(unresolved.isEmpty()) {
             "Confirmed keys were revoked, but a registration outcome is still unknown. Retry to finish revocation; pending records have been retained."
         }
-        check(unknown.isEmpty()) {
-            "Recorded keys were revoked, but other enabled application keys (${unknown.joinToString()}) remain. " +
+        check(unknown.isNullOrEmpty()) {
+            "Recorded keys were revoked, but other enabled application keys (${unknown?.joinToString()}) remain. " +
                 "Local history is incomplete, possibly after wallet recovery. Complete revocation is not confirmed."
         }
     }
