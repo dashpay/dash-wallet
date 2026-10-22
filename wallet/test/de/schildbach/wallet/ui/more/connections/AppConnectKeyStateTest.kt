@@ -23,10 +23,9 @@ import org.robolectric.annotation.Implements
     shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class AppConnectKeyStateTest {
     @Test fun `pending registrations choose a missing authentication ID as atomic fence`() {
-        assertEquals(4, AppConnectKeyState.fenceId(listOf(KeyState(4, true, true, MISSING), KeyState(5, true, true, MISSING))))
-        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, true, true, CONFLICTING), KeyState(5, true, true, MISSING))))
-        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, true, false, MISSING))))
-        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, false, true, MISSING))))
+        assertEquals(4, AppConnectKeyState.fenceId(listOf(KeyState(4, true, MISSING), KeyState(5, true, MISSING))))
+        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, true, CONFLICTING), KeyState(5, true, MISSING))))
+        assertNull(AppConnectKeyState.fenceId(listOf(KeyState(4, false, MISSING))))
     }
 
     @Test fun `proved encryption index wins over highest live key ID`() {
@@ -87,10 +86,10 @@ class AppConnectKeyStateTest {
         val oldGrant = key(data = ByteArray(20) { 7 })
         val newGrant = key(data = ByteArray(20) { 8 }, id = 3)
         assertEquals(listOf(oldGrant.id), AppConnectKeyState.unrecordedKeys(
-            listOf(oldGrant, newGrant), listOf(newGrant), time) { true })
-        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(oldGrant), emptyList(), time) { false }.isEmpty())
-        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(key(disabledAt = time)), emptyList(), time) { true }.isEmpty())
-        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(key(budget = 2000)), listOf(key()), time) { true }.isEmpty())
+            listOf(oldGrant, newGrant), listOf(newGrant)) { true })
+        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(oldGrant), emptyList()) { false }.isEmpty())
+        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(key(disabledAt = time)), emptyList()) { true }.isEmpty())
+        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(key(budget = 2000)), listOf(key())) { true }.isEmpty())
     }
 
     @Test fun `extended expired grant remains revocable and changed material remains foreign`() {
@@ -102,29 +101,28 @@ class AppConnectKeyStateTest {
         val states = AppConnectKeyState.inspect(listOf(renewed), listOf(foreign), time)
         assertEquals(CONFLICTING, states.single().presence)
         assertTrue(AppConnectKeyState.revocableIds(states).isEmpty())
-        assertEquals(INACTIVE, AppConnectKeyState.inspect(listOf(renewed),
+        assertEquals(DISABLED, AppConnectKeyState.inspect(listOf(renewed),
             listOf(key(budget = 2000, disabledAt = time)), time).single().presence)
     }
 
     @Test fun `missing submitted key remains unresolved`() {
-        assertTrue(AppConnectKeyState.unresolved(listOf(KeyState(2, true, true, MISSING))))
+        assertTrue(AppConnectKeyState.unresolved(listOf(KeyState(2, true, MISSING))))
     }
 
     @Test fun `conflicting ID proves atomic registration cannot land`() {
         assertFalse(AppConnectKeyState.unresolved(listOf(
-            KeyState(2, true, true, CONFLICTING), KeyState(3, true, true, MISSING))))
+            KeyState(2, true, CONFLICTING), KeyState(3, true, MISSING))))
     }
 
-    @Test fun `disabled and expired keys are settled`() {
-        assertFalse(AppConnectKeyState.unresolved(listOf(KeyState(2, true, true, INACTIVE))))
-        assertFalse(AppConnectKeyState.unresolved(listOf(KeyState(2, true, false, MISSING))))
+    @Test fun `permanently disabled keys are settled`() {
+        assertFalse(AppConnectKeyState.unresolved(listOf(KeyState(2, true, DISABLED))))
     }
 
     @Test fun `unresolved and conflicting grants do not block other confirmed keys`() {
-        val active = KeyState(1, true, true, LIVE)
-        val pending = KeyState(2, true, true, MISSING)
-        val collision = KeyState(3, true, true, CONFLICTING)
-        val disabled = KeyState(4, true, true, INACTIVE)
+        val active = KeyState(1, true, LIVE)
+        val pending = KeyState(2, true, MISSING)
+        val collision = KeyState(3, true, CONFLICTING)
+        val disabled = KeyState(4, true, DISABLED)
         assertEquals(listOf(1), AppConnectKeyState.revocableIds(listOf(active, pending, collision, disabled, active)))
         assertTrue(AppConnectKeyState.unresolved(listOf(pending)))
         assertFalse(AppConnectKeyState.unresolved(listOf(collision)))
@@ -132,7 +130,33 @@ class AppConnectKeyStateTest {
 
     @Test fun `never revoke foreign or shared encryption keys`() {
         assertEquals(emptyList<Int>(), AppConnectKeyState.revocableIds(listOf(
-            KeyState(1, true, true, CONFLICTING), KeyState(3, false, true, LIVE))))
-        assertFalse(AppConnectKeyState.unresolved(listOf(KeyState(3, false, true, MISSING))))
+            KeyState(1, true, CONFLICTING), KeyState(3, false, LIVE))))
+        assertFalse(AppConnectKeyState.unresolved(listOf(KeyState(3, false, MISSING))))
+    }
+
+    @Test fun `expired enabled keys require permanent revocation even when stored expiry differs`() {
+        val recorded = key()
+        val expired = key(expiry = time)
+        val states = AppConnectKeyState.inspect(listOf(recorded), listOf(expired), time)
+        assertEquals(EXPIRED, states.single().presence)
+        assertEquals(listOf(expired.id), AppConnectKeyState.revocableIds(states))
+        expired.disabledAt = time
+        val disabled = AppConnectKeyState.inspect(listOf(recorded), listOf(expired), time)
+        assertEquals(DISABLED, disabled.single().presence)
+        assertTrue(AppConnectKeyState.revocableIds(disabled).isEmpty())
+    }
+
+    @Test fun `expired unrecorded authorization cannot be overlooked during complete revocation`() {
+        val expired = key(expiry = time - 1)
+        assertEquals(listOf(expired.id), AppConnectKeyState.unrecordedKeys(listOf(expired), emptyList()) { true })
+        expired.disabledAt = time
+        assertTrue(AppConnectKeyState.unrecordedKeys(listOf(expired), emptyList()) { true }.isEmpty())
+    }
+
+    @Test fun `expired missing submitted registration still requires a permanent fence`() {
+        val expired = key(expiry = time - 1)
+        val states = AppConnectKeyState.inspect(listOf(expired), emptyList(), time)
+        assertTrue(AppConnectKeyState.unresolved(states))
+        assertEquals(expired.id, AppConnectKeyState.fenceId(states))
     }
 }

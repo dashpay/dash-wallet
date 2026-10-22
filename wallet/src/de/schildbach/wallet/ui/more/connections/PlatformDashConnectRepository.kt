@@ -41,7 +41,8 @@ class PlatformDashConnectRepository @Inject constructor(
                             key.getInt("purpose") == 0 && key.optLong("expiresAt", Long.MAX_VALUE) > System.currentTimeMillis()
                         } }
                     } } -> ConnectionStatus.ACTIVE
-                    grants.any { it.optString("state") != "disabled" } -> ConnectionStatus.APPROVED
+                    // Older disconnects could skip expired-but-enabled keys. Re-confirm once.
+                    grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") } -> ConnectionStatus.APPROVED
                     else -> ConnectionStatus.DISCONNECTED
                 }, latest.optLong("updatedAt"), scope)
         }

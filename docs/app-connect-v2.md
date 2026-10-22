@@ -71,7 +71,9 @@ finishes; failures retain the request and error for retry. Approved terms stay
 frozen. The approval fragment restores from saved state without treating view
 disposal as denial, including when an in-flight operation subsequently fails.
 
-Revocation disables recorded auth keys and deletes recorded responses. Shared
+Revocation permanently disables recorded auth keys, including expired-but-enabled
+keys, and deletes recorded responses. Expiry alone is not revocation: authorized
+limit updates can extend it. Shared
 encryption keys remain. Records are retained as a revocation audit trail. Legacy
 connections without key IDs offer an explicitly local-only removal with a warning
 that Platform authorization is unchanged; real grant records cannot be removed this way.
@@ -86,6 +88,14 @@ Those keys are not automatically disabled: ambiguous recovered keys (including
 shared profile bounds) require identity review. The connection remains partial,
 with the surviving key IDs reported, rather than claiming all access was revoked.
 Failed or absent target-ownership lookups never count as proof of unrelated ownership.
+In the details UI, failed supplementary ownership or budget reads show an explicit
+unavailable-check warning rather than hiding Revoke. Cancellation and wallet-scope
+changes still propagate. The revocation audit itself remains strict: failed
+ownership checks cannot confirm complete revocation. Earlier disconnect records
+without permanent-disable confirmation require one re-confirmation before the UI
+reports them disconnected.
+Expiry also does not settle an unconfirmed registration: its recovery record and
+wallet-only fence requirement remain until the old update is permanently blocked.
 Tap a connection to query its current key budgets and expiry. Callback websites
 open only after a separate, explicit host confirmation.
 

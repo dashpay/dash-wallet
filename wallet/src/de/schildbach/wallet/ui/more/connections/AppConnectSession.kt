@@ -300,10 +300,11 @@ internal class AppConnectSession(
                 val registered = keys.all { expected -> identity.publicKeys.any { sameKey(it, expected) && live(it, time) } }
                 val oldRecords = matchingRecords(plan.scope, Base58.encode(request.contractId)).filter {
                     it.getString("id") != recordId && request.appConnect?.connectionId != null &&
-                        it.optString("connection") == record.optString("connection") && it.optString("state") != "disabled"
+                        it.optString("connection") == record.optString("connection") &&
+                        (it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed"))
                 }
-                val disable = oldRecords.flatMap { decodeKeys(it) }.filter { it.purpose == Purpose.AUTHENTICATION }
-                    .mapNotNull { old -> identity.publicKeys.firstOrNull { sameKeyIdentity(it, old) && live(it, time) }?.id }.distinct()
+                val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(
+                    oldRecords.flatMap { decodeKeys(it) }, identity.publicKeys, time))
                 requireSettled(oldRecords, identity, time)
                 WalletSignerCallback(wallet, keyParameter).use { walletSigner ->
                     object : Signer() {
@@ -353,7 +354,7 @@ internal class AppConnectSession(
                         checkScope(plan.scope)
                         rememberIdentity(identity)
                         config.saveGrant(record.put("state", "confirmed"))
-                        oldRecords.forEach { config.saveGrant(it.put("state", "disabled")) }
+                        oldRecords.forEach { config.saveGrant(it.put("state", "disabled").put("permanentRevocationConfirmed", true)) }
                         publish(identity, record, walletSigner, plan.scope)
                     }
                 }
@@ -379,8 +380,11 @@ internal class AppConnectSession(
         val keys = record.getJSONArray("keys")
         return (0 until keys.length()).map { IdentityPublicKey(jsonMap(keys.getJSONObject(it))) }
     }
+    private fun needsRegistrationRecovery(record: JSONObject) = record.optString("state") != "prepared" &&
+        (record.optString("state") != "disabled" || !record.optBoolean("permanentRevocationConfirmed"))
+
     private fun requireSettled(records: List<JSONObject>, identity: Identity, time: Long) {
-        check(records.filter { it.optString("state") !in setOf("prepared", "disabled") }.none { record ->
+        check(records.filter { needsRegistrationRecovery(it) }.none { record ->
             AppConnectKeyState.unresolved(AppConnectKeyState.inspect(decodeKeys(record), identity.publicKeys, time))
         }) { "Registration outcome is still unknown. Try again after it confirms; the grant record has been retained." }
     }
@@ -484,7 +488,7 @@ internal class AppConnectSession(
         // from ever landing. The replacement key belongs only to this wallet, not the app.
         rememberIdentity(identity)
         val fences = mutableListOf<IdentityPublicKey>()
-        records.filter { it.optString("state") !in setOf("prepared", "disabled") }.forEach { record ->
+        records.filter { needsRegistrationRecovery(it) }.forEach { record ->
             val id = AppConnectKeyState.fenceId(AppConnectKeyState.inspect(decodeKeys(record), identity.publicKeys, time))
             if (id != null && fences.none { it.id == id }) {
                 fences.add(checkNotNull(identities.blockchainIdentity).createRevocationFenceKey(id, keyParameter, fences))
@@ -505,29 +509,30 @@ internal class AppConnectSession(
         checkScope(scope)
         rememberIdentity(identity)
         val confirmedTime = platform.client.getPlatformTime(identity.id)
-        val unresolved = records.filter { it.optString("state") !in setOf("prepared", "disabled") &&
+        val unresolved = records.filter { needsRegistrationRecovery(it) &&
             AppConnectKeyState.unresolved(AppConnectKeyState.inspect(decodeKeys(it), identity.publicKeys, confirmedTime)) }
-        val unknown = if (completeApp == null) emptyList() else unrecordedAppKeys(identity, completeApp, scope, confirmedTime)
+        val unknown = if (completeApp == null) emptyList() else unrecordedAppKeys(identity, completeApp, scope)
         checkScope(scope)
         records.filter { it !in unresolved }.forEach {
             config.saveGrant(it.put("state", if (unknown.isEmpty()) "disabled" else "partialRevocation")
+                .put("permanentRevocationConfirmed", unknown.isEmpty())
                 .put("unrecordedKeyIds", JSONArray(unknown)))
         }
         check(unresolved.isEmpty()) {
             "Confirmed keys were revoked, but a registration outcome is still unknown. Retry to finish revocation; pending records have been retained."
         }
         check(unknown.isEmpty()) {
-            "Recorded keys were revoked, but other live application keys (${unknown.joinToString()}) remain. " +
+            "Recorded keys were revoked, but other enabled application keys (${unknown.joinToString()}) remain. " +
                 "Local history is incomplete, possibly after wallet recovery. Complete revocation is not confirmed."
         }
     }
 
-    private suspend fun unrecordedAppKeys(identity: Identity, app: String, scope: String, time: Long): List<Int> {
+    internal suspend fun unrecordedAppKeys(identity: Identity, app: String, scope: String): List<Int> {
         // Other locally recorded apps may legitimately have the same DashPay profile bounds.
         val recorded = config.getGrants().filter { it.getString("scope") == scope }.flatMap { decodeKeys(it) }
         val appId = Identifier.from(app)
         val owner = platform.client.getDataContract(appId.toBuffer(), true)?.ownerId ?: error("App contract not found")
-        return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded, time) { key ->
+        return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded) { key ->
             val target = key.contractBounds!!.identifier
             when (val bounds = key.contractBounds) {
                 is ContractGroupBounds -> checkNotNull(platform.client.getContractGroupOwner(target)) {
@@ -559,19 +564,31 @@ internal class AppConnectSession(
                 val current = identity.publicKeys.firstOrNull { sameKeyIdentity(it, expected) }
                 when {
                     current == null -> "Key ${expected.id}: not confirmed on identity"
-                    !live(current, time) -> "Key ${expected.id}: disabled or expired"
+                    current.disabledAt != null -> "Key ${expected.id}: permanently disabled"
+                    !live(current, time) -> "Key ${expected.id}: expired but still enabled. Revoke access to disable it permanently."
                     else -> {
-                        val remaining = platform.client.getIdentityKeyRemainingBudget(identity.id, current.id)
+                        val remaining = try {
+                            platform.client.getIdentityKeyRemainingBudget(identity.id, current.id)
+                        } catch (error: Exception) {
+                            if (error is kotlinx.coroutines.CancellationException) throw error
+                            null
+                        }
                         "Key ${current.id}: ${remaining?.let { "${formatDash(it)} DASH remaining" } ?: if (current.totalBudget == null) "No budget limit" else "Remaining budget unavailable"}\n" +
                             "Expires: ${current.expiresAt?.let { DateFormat.getDateTimeInstance().format(Date(it)) } ?: "No expiry"}"
                     }
                 }
             }
             checkScope(scope)
-            val unknown = unrecordedAppKeys(identity, app, scope, time)
+            val historyWarning = try {
+                val unknown = unrecordedAppKeys(identity, app, scope)
+                if (unknown.isEmpty()) "" else "\n\nLocal history is incomplete. Other enabled application keys: ${unknown.joinToString()}. " +
+                    "Revoking recorded keys alone will not revoke all access."
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                "\n\nAdditional authorization ownership checks are unavailable. Complete revocation cannot be verified. " +
+                    "Revoke access is still available for recorded keys; incomplete checks will retain the recovery records."
+            }
             checkScope(scope)
-            val historyWarning = if (unknown.isEmpty()) "" else "\n\nLocal history is incomplete. Other live application keys: ${unknown.joinToString()}. " +
-                "Revoking recorded keys alone will not revoke all access."
             text.ifEmpty { "This connection has no recorded key IDs. Review its keys on your identity; local removal cannot revoke access." } + historyWarning
         }
     }

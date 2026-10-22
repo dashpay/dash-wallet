@@ -94,6 +94,11 @@ class DashConnectConfigTest {
         assertEquals(listOf("app"), repository.observeConnections().first().map { it.id })
         assertThrows(IllegalStateException::class.java) { runBlocking { repository.removeConnection("app", scope) } }
         assertEquals(1, config.getGrants().size)
+        val grant = config.getGrants().single().put("state", "disabled")
+        config.saveGrant(grant)
+        assertEquals(ConnectionStatus.APPROVED, repository.observeConnections().first().single().status)
+        config.saveGrant(grant.put("permanentRevocationConfirmed", true))
+        assertEquals(ConnectionStatus.DISCONNECTED, repository.observeConnections().first().single().status)
     }
 
     @Test fun `grant reads observation and writes propagate storage IO failures`() = runBlocking {

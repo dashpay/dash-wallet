@@ -19,8 +19,8 @@ import org.robolectric.annotation.Config
 @Config(application = Application::class, sdk = [28], manifest = Config.NONE,
     shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class IdentityUpdateBatchesTest {
-    private fun key(id: Int) = IdentityPublicKey(id, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION,
-        SecurityLevel.HIGH, null, ByteArray(20) { id.toByte() }, false)
+    private fun key(id: Int, expiry: Long? = null) = IdentityPublicKey(id, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION,
+        SecurityLevel.HIGH, null, ByteArray(20) { id.toByte() }, false, expiresAt = expiry)
     private fun identity(keys: MutableList<IdentityPublicKey>) = mockk<Identity> {
         every { publicKeys } returns keys
     }
@@ -38,6 +38,20 @@ class IdentityUpdateBatchesTest {
         assertEquals(listOf(6 to 10, 2 to 2), batches)
         assertTrue(reads >= 4)
         assertTrue(keys.filter { it.id < 12 }.all { it.disabledAt != null })
+    }
+
+    @Test fun `expired enabled authentication key is submitted and confirmed disabled`() = runTest {
+        val expired = key(7, expiry = 99)
+        val keys = mutableListOf(expired)
+        val current = identity(keys)
+        val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(listOf(expired), keys, 100))
+        val submitted = mutableListOf<Int>()
+        updateIdentityInBatches(emptyList(), disable, { current }) { _, _, ids ->
+            submitted.addAll(ids)
+            keys.filter { it.id in ids }.forEach { it.disabledAt = 100 }
+        }
+        assertEquals(listOf(7), submitted)
+        assertEquals(100L, expired.disabledAt)
     }
 
     @Test fun `partial submission failure stops and a retry skips confirmed disables`() = runTest {
