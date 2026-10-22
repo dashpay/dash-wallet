@@ -251,7 +251,7 @@ g checkout -q other5; ok "  … the later ref itself was reviewed against the mo
 # two unreviewed refs, cancelled during the first's review: the hook stops, the second is never started
 g checkout -q -b c1 origin/master; echo c1 > c1; g add c1; g commit -qm c1; g checkout -q -b c2 origin/master; echo c2 > c2; g add c2; g commit -qm c2; g checkout -q feat
 printf 'refs/heads/c1 %s refs/heads/c1 %s\nrefs/heads/c2 %s refs/heads/c2 %s\n' "$(git rev-parse c1)" "$Z" "$(git rev-parse c2)" "$Z" > "$T/cancel.refs"
-PATH="$T/slow:$PATH" tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/cancel.refs'" > "$T/cancel.log" 2>&1 & HK=$!; sleep 2; pkill -TERM -f "$HOOK origin" 2>/dev/null; wait $HK 2>/dev/null; sleep 1
+PATH="$T/slow:$PATH" tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/cancel.refs'" > "$T/cancel.log" 2>&1 & HK=$!; sleep 2; pkill -TERM -f "$(printf '%s' "$HOOK origin" | sed 's/[][\\.*^$+?(){}|]/\\&/g')" 2>/dev/null; wait $HK 2>/dev/null; sleep 1
 g checkout -q c2; ok "cancelled during the first ref's review → the hook stops, the second ref is never reviewed" "$(V):$(grep -c 'cancelled: not pushing' "$T/cancel.log")" none:1; g checkout -q feat
 git -C "$T/dash-wallet.git" update-ref refs/heads/master "$MASTER"; FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 cp "$P" "$T/moved.sh"; "$P" --uninstall >/dev/null 2>&1; "$T/moved.sh" --install >/dev/null 2>&1; mv "$T/moved.sh" "$T/gone.sh"
