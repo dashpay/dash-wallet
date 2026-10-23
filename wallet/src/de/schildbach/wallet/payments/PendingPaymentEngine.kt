@@ -52,9 +52,11 @@ enum class EngineObservation {
 }
 
 /**
- * Whether the SDK store's row for a payment proves it reached the network (review 4309551133): an
- * InstantSend lock on it, or a block (chain-locked or not). A row with neither is only what this
- * wallet recorded, possibly for its own broadcast, and is no evidence of delivery. Pure.
+ * Whether the SDK store's row for a payment proves it reached the network (review 4309551133): a
+ * block (chain-locked or not), or an InstantSend lock in the row. A row with neither is only what
+ * this wallet recorded, possibly for its own broadcast, and is no evidence of delivery. The SDK
+ * never writes context = 1 on Android, so [SdkPendingPaymentEngine.observation] also counts an IS
+ * lock in the app's own `instant_send_locks` table. Pure.
  */
 internal fun sdkRowIsNetworkEvidence(context: Int, blockHeight: Int): Boolean =
     context == TX_CONTEXT_INSTANT_SEND || context == TX_CONTEXT_CHAIN_LOCKED || blockHeight > 0
@@ -183,7 +185,8 @@ class SdkPendingPaymentEngine @Inject constructor(
     private val sdkL1SendService: SdkL1SendService,
     private val sdkService: DashSdkService,
     private val l1ShadowSyncService: L1ShadowSyncService,
-    private val bridgedTransactionFactory: SdkBridgedTransactionFactory
+    private val bridgedTransactionFactory: SdkBridgedTransactionFactory,
+    private val instantSendLockDao: de.schildbach.wallet.database.dao.InstantSendLockDao
 ) : PendingPaymentEngine {
     companion object {
         private val log = LoggerFactory.getLogger(SdkPendingPaymentEngine::class.java)
@@ -256,8 +259,11 @@ class SdkPendingPaymentEngine @Inject constructor(
                 null
             } else {
                 // A row is not delivery (review 4309551133): the engine records what it broadcast
-                // itself. Only network evidence counts, as master's dashj confidence did.
-                db.transactionDao().getByTxid(wire)?.let { sdkRowIsNetworkEvidence(it.context, it.blockHeight) } ?: false
+                // itself. Only network evidence counts, as master's dashj confidence did: a block,
+                // or an InstantSend lock. The SDK never writes context = 1 on Android, so the IS
+                // locks the app records itself count too, as SdkAssetLockFundingPreflight reads them.
+                db.transactionDao().getByTxid(wire)?.let { sdkRowIsNetworkEvidence(it.context, it.blockHeight) } == true ||
+                    instantSendLockDao.getLockedTxIds(listOf(txIdHex)).isNotEmpty()
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

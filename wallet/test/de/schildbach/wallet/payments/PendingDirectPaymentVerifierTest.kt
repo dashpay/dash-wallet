@@ -1280,7 +1280,7 @@ class PendingDirectPaymentVerifierTest {
         every { db.transactionDao() } returns mockk(relaxed = true) { coEvery { getByTxid(any()) } returns null }
         val sdkService = mockk<de.schildbach.wallet.service.platform.sdk.DashSdkService>(relaxed = true)
         every { sdkService.databaseOrNull() } returns db
-        val realEngine = SdkPendingPaymentEngine(sdkL1, sdkService, shadow, mockk(relaxed = true))
+        val realEngine = SdkPendingPaymentEngine(sdkL1, sdkService, shadow, mockk(relaxed = true), mockk(relaxed = true))
 
         val wipe = slot<suspend () -> Unit>()
         val ownWalletData = mockk<WalletData>(relaxed = true)
@@ -1661,12 +1661,15 @@ class PendingDirectPaymentVerifierTest {
     private fun engineWith(progress: ShadowSyncProgress): SdkPendingPaymentEngine {
         val shadow = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService>(relaxed = true)
         every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(progress)
-        return SdkPendingPaymentEngine(mockk(relaxed = true), mockk(relaxed = true), shadow, mockk(relaxed = true))
+        return SdkPendingPaymentEngine(mockk(relaxed = true), mockk(relaxed = true), shadow, mockk(relaxed = true), mockk(relaxed = true))
     }
 
     // --- review 4309551133: a stored row is not delivery ------------------------------------
 
-    private fun engineOverRow(row: org.dashfoundation.dashsdk.persistence.entities.TransactionEntity?): SdkPendingPaymentEngine {
+    private fun engineOverRow(
+        row: org.dashfoundation.dashsdk.persistence.entities.TransactionEntity?,
+        locks: de.schildbach.wallet.database.dao.InstantSendLockDao = mockk(relaxed = true)
+    ): SdkPendingPaymentEngine {
         val shadow = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService>(relaxed = true)
         every { shadow.isEngineRunning() } returns true
         every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(progress(walletSyncedHeight = 1_000L))
@@ -1674,7 +1677,7 @@ class PendingDirectPaymentVerifierTest {
         every { db.transactionDao() } returns mockk(relaxed = true) { coEvery { getByTxid(any()) } returns row }
         val sdkService = mockk<de.schildbach.wallet.service.platform.sdk.DashSdkService>(relaxed = true)
         every { sdkService.databaseOrNull() } returns db
-        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, shadow, mockk(relaxed = true))
+        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, shadow, mockk(relaxed = true), locks)
     }
 
     private fun row(context: Int, blockHeight: Int) =
@@ -1703,7 +1706,9 @@ class PendingDirectPaymentVerifierTest {
     // --- review 4309551218: fresh SDK funding and a reactivation never overlap ----------------
 
     @Test
-    fun `a reactivation waits while fresh SDK funding is selecting`() = runBlocking {
+    fun `a reactivation during an in-flight funding is refused at once, the payment untouched`() = runBlocking {
+        // the funding (a registration) may run for minutes: the reactivation must not wait for it
+        // while the resubmission holds its claim; it is refused, and the user retries later
         val (stored, _) = storeWithFlakyRemovals()
         val tx = createTransaction()
         stored.add(PendingDirectPayment(tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", 0L, abandoned = true))
@@ -1716,26 +1721,40 @@ class PendingDirectPaymentVerifierTest {
             ownWalletData, walletApplication, blockchainStateProvider, metadataProvider, config, engine, lock
         ).apply { pollIntervalMs = 20L }
 
-        val selecting = CompletableDeferred<Unit>()
-        val selected = CompletableDeferred<Unit>()
-        val funding = async(Dispatchers.Default) {
-            lock.withSelection {
-                selecting.complete(Unit)
-                selected.await() // a fresh send, authorized, selecting its inputs
+        val funding = CompletableDeferred<Unit>()
+        val done = CompletableDeferred<Unit>()
+        val registration = async(Dispatchers.Default) {
+            lock.withShared {
+                funding.complete(Unit)
+                done.await() // a long-running funding, past its gate check
             }
         }
-        selecting.await()
-        val reactivation = async(Dispatchers.Default) { shared.reactivateForResubmission(tx, wallet) }
-        delay(300)
+        funding.await()
 
-        assertTrue("still released while the funding selects", stored.single().abandoned)
+        val outcome = withTimeout(2_000) { shared.reactivateForResubmission(tx, wallet) }
+
+        assertEquals(PendingDirectPaymentVerifier.Reactivation.FUNDING_IN_PROGRESS, outcome)
+        assertTrue("untouched", stored.single().abandoned)
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
 
-        selected.complete(Unit)
-        funding.await()
-        assertEquals(PendingDirectPaymentVerifier.Reactivation.REACTIVATED, withTimeout(5_000) { reactivation.await() })
+        done.complete(Unit)
+        registration.await()
+        assertEquals(PendingDirectPaymentVerifier.Reactivation.REACTIVATED, shared.reactivateForResubmission(tx, wallet))
         assertFalse(stored.single().abandoned)
         if (wipe.isCaptured) wipe.captured()
+    }
+
+    @Test
+    fun `an InstantSend lock in the app's table is delivery even without a block`() = runBlocking {
+        // the SDK never writes context = 1 on Android; the app records received IS locks itself
+        val txid = "01".repeat(32)
+        val locks = mockk<de.schildbach.wallet.database.dao.InstantSendLockDao> {
+            coEvery { getLockedTxIds(listOf(txid)) } returns listOf(txid)
+        }
+        assertEquals(
+            EngineObservation.OBSERVED,
+            engineOverRow(row(context = 0, blockHeight = 0), locks).observation(txid)
+        )
     }
 
     @Test
@@ -1822,7 +1841,7 @@ class PendingDirectPaymentVerifierTest {
         every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(
             progress(walletSyncedHeight = headerHeight).copy(headerHeight = headerHeight, headerTarget = headerHeight)
         )
-        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, shadow, mockk(relaxed = true))
+        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, shadow, mockk(relaxed = true), mockk(relaxed = true))
     }
 
     private fun spentTxo(spendingTxid: ByteArray) =

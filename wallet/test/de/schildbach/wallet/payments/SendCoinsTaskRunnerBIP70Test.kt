@@ -178,7 +178,8 @@ class SendCoinsTaskRunnerBIP70Test {
             sdkL1SendService,
             mockk(relaxed = true),
             mockk(relaxed = true),
-            bridgedTransactionFactory
+            bridgedTransactionFactory,
+            mockk(relaxed = true)
         )
         val pendingPaymentEngine = object : PendingPaymentEngine by sdkEngine {
             override fun isObservationLive(): Boolean = true

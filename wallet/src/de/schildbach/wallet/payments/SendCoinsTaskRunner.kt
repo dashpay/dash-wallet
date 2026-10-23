@@ -1643,6 +1643,11 @@ class SendCoinsTaskRunner @Inject constructor(
                     // outcome unknown (review 4307815170). That is this attempt's outcome too;
                     // nothing here touches the payment, so its protection stays.
                     throw PaymentSubmissionPendingException(tx.txId.toString(), null)
+                PendingDirectPaymentVerifier.Reactivation.FUNDING_IN_PROGRESS ->
+                    // Fresh SDK funding is selecting inputs right now and may run for minutes (an
+                    // identity registration waits for its asset lock): refused rather than waited
+                    // for, so the claim is not held meanwhile. Nothing was touched; retry later.
+                    throw PaymentSubmissionPendingException(tx.txId.toString(), null)
                 PendingDirectPaymentVerifier.Reactivation.SETTLED -> {
                     // settled meanwhile (restoration found it on the network): that is the result
                     wallet.getTransaction(tx.txId)?.let { return@withContext it }

@@ -1451,9 +1451,9 @@ class SdkL1SendService internal constructor(
         // Re-asked under the shared selection lock and held through selection and the
         // reservation or broadcast: a resubmission reactivating an uncertain payment takes
         // the same lock, so its inputs are never selected while it is active (review 4309551218).
-        return fundingSelection.withSelection {
+        return fundingSelection.withShared {
             if (pendingPaymentInputsExposed()) {
-                return@withSelection notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
+                return@withShared notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
             }
             try {
                 val txidHex = if (sendAllFloor != null) {
@@ -1581,9 +1581,9 @@ class SdkL1SendService internal constructor(
         // Re-asked under the shared selection lock and held through selection and the
         // reservation or broadcast: a resubmission reactivating an uncertain payment takes
         // the same lock, so its inputs are never selected while it is active (review 4309551218).
-        return fundingSelection.withSelection {
+        return fundingSelection.withShared {
             if (pendingPaymentInputsExposed()) {
-                return@withSelection notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
+                return@withShared notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
             }
             try {
                 val txidHex = source.withCoreSendLock(walletIdHex) {
@@ -1645,7 +1645,7 @@ class SdkL1SendService internal constructor(
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
-        val payment = fundingSelection.withSelection {
+        val payment = fundingSelection.withShared {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("l1DeferredBuild")
             source.buildDeferredPayment(walletIdHex, trimmed).withReservedAtHeight(reservedAtHeight)
         }
@@ -1819,7 +1819,7 @@ class SdkL1SendService internal constructor(
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
-        val payment = fundingSelection.withSelection {
+        val payment = fundingSelection.withShared {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("mayaDepositBuild")
             source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
         }

@@ -233,9 +233,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * except the wipe's clear, which must never wait on a write in flight and does not need to.
      *
      * Innermost: taken after [scanMutex] or [settleMutex], never before them. While holding it,
-     * only [jobsMutex] (through [track]) is taken. The full order: [FundingSelectionLock] (held by
-     * fresh SDK funding and by [reactivateForResubmission]), then [scanMutex] or [settleMutex] or
-     * [claimMutex], then [recordMutex], then [jobsMutex].
+     * only [jobsMutex] (through [track]) is taken. The full order: [FundingSelectionLock] (shared by
+     * fresh SDK funding, exclusive and fail-fast for [reactivateForResubmission]), then [scanMutex]
+     * or [settleMutex] or [claimMutex], then [recordMutex], then [jobsMutex].
      */
     private val recordMutex = Mutex()
 
@@ -707,11 +707,17 @@ class PendingDirectPaymentVerifier @Inject constructor(
      *
      * @throws IllegalStateException when restoration fails or [origin] is no longer the wallet
      */
-    suspend fun reactivateForResubmission(tx: Transaction, origin: Wallet): Reactivation =
-        // Under the shared selection lock (review 4309551218): fresh SDK funding re-asks the
-        // funding gate and selects its inputs under it, so it never selects this payment's inputs
-        // while the reactivation makes it active. Outermost, before scanMutex and recordMutex.
-        fundingSelection.withSelection { reactivateNow(tx, origin) }
+    suspend fun reactivateForResubmission(tx: Transaction, origin: Wallet): Reactivation {
+        // Restoration first, outside the lock, so the exclusive section below stays short.
+        awaitRestored()
+        // EXCLUSIVE and fail-fast on the shared selection lock (review 4309551218): fresh SDK
+        // funding asks the gate again and selects its inputs under a shared hold, so it never
+        // selects this payment's inputs while the reactivation makes it active. A funding under way
+        // can take minutes (a registration waits for its asset lock); the reactivation is refused
+        // rather than waiting for it, touching nothing. Outermost, before scanMutex and recordMutex.
+        return fundingSelection.tryExclusive { reactivateNow(tx, origin) }
+            ?: Reactivation.FUNDING_IN_PROGRESS
+    }
 
     private suspend fun reactivateNow(tx: Transaction, origin: Wallet): Reactivation {
         awaitRestored()
@@ -751,7 +757,10 @@ class PendingDirectPaymentVerifier @Inject constructor(
         ALREADY_ACTIVE,
 
         /** No longer on record as unsettled: settled meanwhile. */
-        SETTLED
+        SETTLED,
+
+        /** Fresh SDK funding is selecting inputs right now: refused, the payment untouched. */
+        FUNDING_IN_PROGRESS
     }
 
     /**

@@ -1530,7 +1530,7 @@ class SdkL1SendServiceTest {
         val reactivating = CompletableDeferred<Unit>()
         val reactivated = CompletableDeferred<Unit>()
         val reactivation = async(Dispatchers.Default) {
-            lock.withSelection {
+            lock.tryExclusive {
                 reactivating.complete(Unit)
                 reactivated.await()
                 t1Active = true // the record is active again: fresh funding must be refused
@@ -1545,6 +1545,32 @@ class SdkL1SendServiceTest {
         val result = send.await()
         assertTrue("refused, not sent: $result", result is SdkWriteResult.NotBroadcast)
         assertEquals("never reached coin selection", 0, source.sendCalls)
+    }
+
+    @Test
+    fun aSendIsNotBlockedByALongRunningRegistration() = runBlocking {
+        // a username registration funds under the same lock and can wait minutes for its asset
+        // lock's IS/ChainLock; fresh fundings share the lock and never wait for each other
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource()
+        val svc = service(source, fundingSelection = lock)
+        val registering = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        val registration = async(Dispatchers.Default) {
+            lock.withShared {
+                registering.complete(Unit)
+                finish.await()
+            }
+        }
+        registering.await()
+
+        val result = kotlinx.coroutines.withTimeout(2_000) {
+            svc.sendToAddress(validAddress, Dash(10_000L), emptyWallet = false)
+        }
+
+        assertTrue("sent while the registration runs: $result", result is SdkWriteResult.Broadcast)
+        finish.complete(Unit)
+        registration.await()
     }
 
     // ── unprotected pending payment (review 4245734665) ────────────────────
