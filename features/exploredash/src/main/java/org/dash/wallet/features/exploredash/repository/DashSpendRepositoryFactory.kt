@@ -21,6 +21,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.network.PiggyCardsRemoteDataSource
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
+import org.dash.wallet.features.exploredash.network.authenticator.PiggyCardsAuthenticator
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
@@ -54,7 +55,9 @@ class DashSpendRepositoryFactory @Inject constructor(
     private fun createPiggyCardsRepository(): PiggyCardsRepository {
         val remoteDataSource = PiggyCardsRemoteDataSource(piggyCardsConfig, walletDataProvider)
         val api = remoteDataSource.buildApi(PiggyCardsApi::class.java)
+        val tokenApi = remoteDataSource.buildTokenApi()
+        val authenticator = PiggyCardsAuthenticator(tokenApi, piggyCardsConfig)
 
-        return PiggyCardsRepository(api, piggyCardsConfig)
+        return PiggyCardsRepository(api, piggyCardsConfig, authenticator)
     }
 }
