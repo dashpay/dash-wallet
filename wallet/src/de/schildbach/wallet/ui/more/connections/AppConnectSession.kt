@@ -426,6 +426,12 @@ internal class AppConnectSession(
     private fun documentKey(identity: Identity): IdentityPublicKey =
         signingKey(identity, SecurityLevel.HIGH, platform.client.getPlatformTime(identity.id))
 
+    internal suspend fun responsesToDelete(record: JSONObject, scope: String): List<JSONObject> =
+        matchingRecords(scope, record.getString("app")).filter {
+            it.getString("id") != record.getString("id") && it.optString("state") == "disabled" &&
+                it.optBoolean("permanentRevocationConfirmed")
+        }
+
     private suspend fun publish(identity: Identity, record: JSONObject, signer: Signer, scope: String) {
         decodeKeys(record).filter { it.purpose == Purpose.ENCRYPTION || it.purpose == Purpose.DECRYPTION }.forEach { key ->
             val indexedId = platform.client.getCurrentContractKeyId(identity.id, key.contractBounds!!.identifier, key.purpose)
@@ -434,9 +440,8 @@ internal class AppConnectSession(
         register()
         val existing = find(identity, record)
         check(existing.all { exact(it, record) }) { "Conflicting response exists for this QR" }
-        // Delete superseded encrypted responses using their complete original values, never replace index-only documents.
-        matchingRecords(scope, record.getString("app")).filter { it.getString("id") != record.getString("id") }
-            .forEach { old -> deleteResponse(identity, old, signer, scope) }
+        // Independent connections may still need their responses. Only confirmed revoked grants are obsolete.
+        responsesToDelete(record, scope).forEach { old -> deleteResponse(identity, old, signer, scope) }
         if (existing.isNotEmpty()) return
         val doc = platform.documents.create(LOCATOR, identity.id, fields(record).toMutableMap())
         doc.revision = 1
