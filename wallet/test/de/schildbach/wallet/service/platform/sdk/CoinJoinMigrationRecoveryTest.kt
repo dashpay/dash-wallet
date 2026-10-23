@@ -2,6 +2,8 @@ package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
@@ -41,6 +43,12 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
         coEvery { config.set(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, any()) } answers {
             marker = secondArg()
+        }
+        // A conditional (guarded) write is one DataStore transaction.
+        coEvery { config.editPreferences(any()) } coAnswers {
+            val preferences = mutablePreferencesOf(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT to marker)
+            firstArg<(MutablePreferences) -> Unit>().invoke(preferences)
+            marker = preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT] ?: ""
         }
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         coEvery { shield.ensureShieldedReady() } returns true

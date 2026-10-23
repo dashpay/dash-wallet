@@ -699,16 +699,34 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
         // Checkpoint reads that cannot be completed resume nothing: the record
         // (if any) stays exactly as saved.
+        val raw: String
         val marker: InFlightMixedFundsMigration
         val stage: ConsolidationStageRead?
         try {
-            marker = inFlightMigrationOrThrow() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            val record = markerRecordOrThrow() ?: return MixedFundsMigrationOutcome.NOT_ATTEMPTED
+            raw = record.first
+            marker = record.second
             stage = readStage()
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("mixed-funds migration checkpoint unreadable; not resuming", t)
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
+        // Everything this retry writes from here on is conditional on the record it just read: the
+        // watcher (not under [migrationMutex]) may complete or rewrite it meanwhile. A changed record
+        // writes nothing and answers NOT_ATTEMPTED, as for "no record": a completion the sheet then
+        // shows from the verified landing, never a resurrected marker.
+        return guardedBy(raw, stage = null, onChanged = { MixedFundsMigrationOutcome.NOT_ATTEMPTED }) {
+            retryRecordedMigration(marker, stage, resumed)
+        }
+    }
+
+    /** [retryPendingMigrationInner] past its reads; runs under the read record's [RecordGuard]. */
+    private suspend fun retryRecordedMigration(
+        marker: InFlightMixedFundsMigration,
+        stage: ConsolidationStageRead?,
+        resumed: Int
+    ): MixedFundsMigrationOutcome {
         val hasConsolidation = stage != null
         // A definitive failure has nothing to resume; only a fresh move may follow it.
         if (marker.failed) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
@@ -1023,8 +1041,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
             }
             val consolidation = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
             if (!consolidation.isNullOrBlank()) {
-                markStageInFlight(CoinJoinConsolidationState.parse(consolidation))
-                return PendingCheck.PENDING
+                // Only while there is still no marker and the same stage: a record the watcher
+                // completed meanwhile (both cleared) is never resurrected. Changed: re-evaluated later.
+                return guardedBy("", consolidation, onChanged = { PendingCheck.UNREADABLE }) {
+                    markStageInFlight(CoinJoinConsolidationState.parse(consolidation))
+                    PendingCheck.PENDING
+                }
             }
         } catch (malformed: MalformedMigrationMarkerException) {
             // A held mutex is a migration step, which repairs under its own lock.
@@ -1056,15 +1078,18 @@ class CoinJoinFundsMigrationService @Inject constructor(
             PendingCheck.UNREADABLE
         } else {
             val stage = readCheckpoint(DashPayConfig.MIXED_FUNDS_CONSOLIDATION)
-            if (!stage.isNullOrBlank()) {
-                val read = CoinJoinConsolidationState.parse(stage)
-                log.warn("mixed-funds migration: malformed marker; recreating it from the saved stage")
-                markStageInFlight(read)
-                PendingCheck.PENDING
-            } else {
-                log.warn("mixed-funds migration: malformed marker with no stage; recording it as an uncertain shield")
-                markExpired(MixedFundsMigrationAction.SHIELD)
-                PendingCheck.PENDING
+            // Only over the same malformed marker and stage it read.
+            guardedBy(raw, stage.orEmpty(), onChanged = { PendingCheck.UNREADABLE }) {
+                if (!stage.isNullOrBlank()) {
+                    val read = CoinJoinConsolidationState.parse(stage)
+                    log.warn("mixed-funds migration: malformed marker; recreating it from the saved stage")
+                    markStageInFlight(read)
+                    PendingCheck.PENDING
+                } else {
+                    log.warn("mixed-funds migration: malformed marker, no stage; recording an uncertain shield")
+                    markExpired(MixedFundsMigrationAction.SHIELD)
+                    PendingCheck.PENDING
+                }
             }
         }
     } catch (t: Throwable) {
@@ -1098,11 +1123,14 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val recovered = shieldedBalanceService.recoveredCoinJoinShieldLockCount() ?: return PendingCheck.UNREADABLE
         if (recovered >= pending) return resolveRecoveredCoinJoinLocks()
         // Its inputs are unknown: the sentinel keeps it from completing (no proof it was
-        // Consumed rather than dropped) and lets a resolved lock return to the choice.
-        writeConfig(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, ADOPTED_SHIELD_INPUTS)
-        markInFlight(MixedFundsMigrationAction.SHIELD)
-        log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
-        return PendingCheck.PENDING
+        // Consumed rather than dropped) and lets a resolved lock return to the choice. Only while
+        // there is still no record (no marker, no stage): never over one recorded meanwhile.
+        return guardedBy("", "", onChanged = { PendingCheck.UNREADABLE }) {
+            writeConfig(DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS, ADOPTED_SHIELD_INPUTS)
+            markInFlight(MixedFundsMigrationAction.SHIELD)
+            log.info("mixed-funds migration: adopted a pending CoinJoin-funded shield as the chosen move's progress")
+            PendingCheck.PENDING
+        }
     }
 
     /**
@@ -1339,10 +1367,13 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * [inFlightMigration] that THROWS when the marker cannot be read (see
      * [readCheckpoint]) or is malformed — never "absent" over a damaged record.
      */
-    private suspend fun inFlightMigrationOrThrow(): InFlightMixedFundsMigration? {
+    private suspend fun inFlightMigrationOrThrow(): InFlightMixedFundsMigration? = markerRecordOrThrow()?.second
+
+    /** [inFlightMigrationOrThrow] with the raw persisted marker, for a [RecordGuard]. */
+    private suspend fun markerRecordOrThrow(): Pair<String, InFlightMixedFundsMigration>? {
         val raw = readCheckpoint(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT)
         if (raw.isNullOrBlank()) return null
-        return parseInFlightMigration(raw) ?: throw MalformedMigrationMarkerException()
+        return raw to (parseInFlightMigration(raw) ?: throw MalformedMigrationMarkerException())
     }
 
     /** Read but unparseable — repairable ([repairMalformedMarkerLocked]), unlike a read error. */
@@ -1399,14 +1430,18 @@ class CoinJoinFundsMigrationService @Inject constructor(
     private suspend fun clearInFlightMigrationInner() {
         try {
             val epoch = checkWritable()
+            val guard = currentCoroutineContext()[RecordGuard]
             dashPayConfig.editPreferences { preferences ->
                 if (!writable(epoch)) throw StoppedForWalletWipeException()
+                guard?.check(preferences)
                 preferences[DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS] = ""
                 preferences[DashPayConfig.MIXED_FUNDS_CONSOLIDATION] = ""
                 preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT] = ""
                 preferences[DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE] = ""
                 preferences.remove(DashPayConfig.MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT)
             }
+            guard?.advance(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, "")
+            guard?.advance(DashPayConfig.MIXED_FUNDS_CONSOLIDATION, "")
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("failed to clear the in-flight mixed-funds marker", t)
@@ -1698,11 +1733,39 @@ class CoinJoinFundsMigrationService @Inject constructor(
         else -> withContext(WipeEpoch(wipeEpoch.get())) { block() }
     }
 
-    /** Every config write: refused (unwinding the step) while latched or for a step of an older epoch. */
+    /**
+     * Every config write: refused (unwinding the step) while latched or for a step of an older epoch.
+     * Inside a [RecordGuard] it is one transaction, conditional on the guarded record (both checks
+     * re-run inside it): a record completed, released or renewed since the step read it is never
+     * written over or resurrected ([RecordChangedException]).
+     */
     private suspend fun <T> writeConfig(key: Preferences.Key<T>, value: T) {
-        checkWritable()
-        dashPayConfig.set(key, value)
+        val epoch = checkWritable()
+        val guard = currentCoroutineContext()[RecordGuard]
+        if (guard == null) {
+            dashPayConfig.set(key, value)
+            return
+        }
+        dashPayConfig.editPreferences { preferences ->
+            if (!writable(epoch)) throw StoppedForWalletWipeException()
+            guard.check(preferences)
+            preferences[key] = value
+        }
+        guard.advance(key, value)
     }
+
+    /**
+     * [block] under a [RecordGuard] for the record a step just read ([marker] raw, "" when absent;
+     * [stage] raw when the decision depends on it). A changed record writes nothing and answers
+     * [onChanged] — the step's premise no longer holds.
+     */
+    private suspend fun <T> guardedBy(marker: String, stage: String?, onChanged: () -> T, block: suspend () -> T): T =
+        try {
+            withContext(RecordGuard(marker, stage)) { block() }
+        } catch (changed: RecordChangedException) {
+            log.info("mixed-funds migration: the record changed under this step; nothing written")
+            onChanged()
+        }
 
     /**
      * The guard of every config write ([writeConfig], [clearInFlightMigrationInner]): throws while
@@ -1740,14 +1803,17 @@ class CoinJoinFundsMigrationService @Inject constructor(
      * nothing written. After [MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS] of unbroken read errors the watcher
      * stands down WITHOUT touching the marker; the next restore (startup, unlock, Tools) re-arms it.
      * A marker whose window lapsed meanwhile is then "could not confirm", as for any expired marker.
-     * A wipe cancels the watcher, which ends the retry at once.
+     * A wipe cancels the watcher, which ends the retry at once. A marker read sets [guard] to it:
+     * the watcher's writes until the next read apply only while the record is still this one.
      */
-    private suspend fun watcherMarkerOrNull(): InFlightMixedFundsMigration? {
+    private suspend fun watcherMarkerOrNull(guard: RecordGuard): InFlightMixedFundsMigration? {
         var backoff = MARKER_READ_RETRY_MIN_MS
         var failingFor = 0L
         while (true) {
             try {
-                return inFlightMigrationOrThrow()
+                val (raw, marker) = markerRecordOrThrow() ?: return null
+                guard.marker = raw
+                return marker
             } catch (malformed: MalformedMigrationMarkerException) {
                 log.warn("mixed-funds watcher: malformed marker; standing down until a restore repairs it")
                 return null
@@ -1765,9 +1831,19 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
     }
 
+    /**
+     * The watcher runs WITHOUT [migrationMutex] (its windows span long native calls), so every write
+     * it makes is conditional on the record it last read ([RecordGuard]): a record completed,
+     * released, renewed or replaced meanwhile is never written over; the stale watcher unwinds.
+     */
     private suspend fun watchInFlightMigration() {
+        val guard = RecordGuard(marker = "", stage = null)
+        withContext(guard) { watchGuarded(guard) }
+    }
+
+    private suspend fun watchGuarded(guard: RecordGuard) {
         while (true) {
-            val marker = watcherMarkerOrNull() ?: return
+            val marker = watcherMarkerOrNull(guard) ?: return
             // A definitive failure is not progress: nothing to watch or continue.
             if (marker.failed) return
             val remainingMs = marker.remainingMillis()
@@ -1790,7 +1866,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     marker.action, SIGNER_LOCKED_RETRY_MS / 1000L
                 )
                 delay(SIGNER_LOCKED_RETRY_MS)
-                val current = watcherMarkerOrNull() ?: return
+                val current = watcherMarkerOrNull(guard) ?: return
                 writeConfig(
                     DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
                     formatInFlightMigration(current.copy(startedAtMillis = System.currentTimeMillis()))
@@ -1810,8 +1886,15 @@ class CoinJoinFundsMigrationService @Inject constructor(
                     return
                 }
                 log.info("mixed-funds migration ({}) result is now visible; clearing the in-flight marker", marker.action)
+                // Counted BEFORE the clear commits (the sheet reads it on the cleared emission), and
+                // taken back if the record changed under the watcher (nothing was cleared).
                 verifiedLandings++
-                clearInFlightMigrationInner()
+                try {
+                    clearInFlightMigrationInner()
+                } catch (changed: RecordChangedException) {
+                    verifiedLandings--
+                    throw changed
+                }
             } else {
                 log.warn(
                     "mixed-funds migration ({}) result did not become visible within {} min",
@@ -2360,17 +2443,34 @@ class CoinJoinFundsMigrationService @Inject constructor(
     }
 
     /** Throws when the marker cannot be read: never "absent" over an unreadable record. */
-    private suspend fun expireMigration() {
-        val marker = inFlightMigrationOrThrow() ?: return
-        writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT,
-            formatInFlightMigration(marker.copy(startedAtMillis = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1)))
+    private suspend fun expireMigration() = rewriteMarker {
+        it.copy(startedAtMillis = System.currentTimeMillis() - MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS - 1)
     }
 
-    /** Record a DEFINITIVE failure of a consolidated migration — see [InFlightMixedFundsMigration.failed]. */
-    private suspend fun failMigration() {
-        // Throws when unreadable: the watcher's transient handler re-derives the failure.
-        val marker = inFlightMigrationOrThrow() ?: return
-        writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, formatInFlightMigration(marker.copy(failed = true)))
+    /**
+     * Record a DEFINITIVE failure of a consolidated migration — see [InFlightMixedFundsMigration.failed].
+     * Throws when unreadable: the watcher's transient handler re-derives the failure.
+     */
+    private suspend fun failMigration() = rewriteMarker { it.copy(failed = true) }
+
+    /**
+     * Rewrite the current marker from itself, conditionally: inside a [RecordGuard] (the watcher, a
+     * retry) the marker read must still be the guarded record, else [RecordChangedException];
+     * outside one it must still be the marker just read, else nothing is written. Never over a
+     * record completed, released or replaced in between.
+     */
+    private suspend fun rewriteMarker(change: (InFlightMixedFundsMigration) -> InFlightMixedFundsMigration) {
+        val (raw, marker) = markerRecordOrThrow() ?: return
+        val updated = formatInFlightMigration(change(marker))
+        val guard = currentCoroutineContext()[RecordGuard]
+        if (guard != null) {
+            if (raw != guard.marker) throw RecordChangedException()
+            writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, updated)
+        } else {
+            guardedBy(raw, stage = null, onChanged = {}) {
+                writeConfig(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT, updated)
+            }
+        }
     }
 
     /**
@@ -2447,3 +2547,33 @@ private class WipeEpoch(val value: Int) : AbstractCoroutineContextElement(Key) {
 
 /** A config write refused after a wallet wipe began: unwinds the step like a cancellation. */
 internal class StoppedForWalletWipeException : CancellationException("mixed-funds migration stopped for a wallet wipe")
+
+/**
+ * The persisted record a step decided on: the raw marker it read ("" when absent) and, when
+ * [stage] is non-null, the raw consolidation stage. Inside it every record write
+ * ([CoinJoinFundsMigrationService] `writeConfig` / `clearInFlightMigrationInner`) is ONE DataStore
+ * transaction that applies only while the record still reads so; otherwise it writes nothing and
+ * throws [RecordChangedException]. The step's own marker and stage writes advance it.
+ */
+private class RecordGuard(@Volatile var marker: String, @Volatile var stage: String?) :
+    AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<RecordGuard>
+
+    /** Inside the transaction: the record must still be the one this step decided on. */
+    fun check(preferences: Preferences) {
+        if ((preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT] ?: "") != marker) throw RecordChangedException()
+        val expectedStage = stage
+        if (expectedStage != null && (preferences[DashPayConfig.MIXED_FUNDS_CONSOLIDATION] ?: "") != expectedStage) {
+            throw RecordChangedException()
+        }
+    }
+
+    /** After the step's own committed write of [key]. */
+    fun <T> advance(key: Preferences.Key<T>, value: T) {
+        if (key == DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) marker = value as? String ?: ""
+        if (key == DashPayConfig.MIXED_FUNDS_CONSOLIDATION && stage != null) stage = value as? String ?: ""
+    }
+}
+
+/** A guarded write found the record changed (completed, released, renewed): nothing written; unwinds the step. */
+internal class RecordChangedException : CancellationException("mixed-funds migration record changed under this step")

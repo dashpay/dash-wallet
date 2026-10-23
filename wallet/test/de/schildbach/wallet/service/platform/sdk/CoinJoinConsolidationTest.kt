@@ -148,6 +148,10 @@ class CoinJoinConsolidationTest {
         var edits = 0
         /** How long an `editPreferences` transaction waits before it runs (a slow store). */
         var editDelayMs = 0L
+        /** Runs after each committed `editPreferences` transaction (another writer stepping in). */
+        var afterEdit: () -> Unit = {}
+        /** Runs as each `editPreferences` transaction starts, before it reads (may throw to fail it). */
+        var beforeEdit: () -> Unit = {}
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         val send = mockk<SdkL1SendService>(relaxed = true)
         val sdk = mockk<DashSdkService>(relaxed = true)
@@ -201,19 +205,27 @@ class CoinJoinConsolidationTest {
             // DataStore's edit: the transform runs on a copy, applied only if the commit succeeds.
             coEvery { config.editPreferences(any()) } coAnswers {
                 if (editDelayMs > 0L) delay(editDelayMs)
+                beforeEdit()
                 val preferences = mutablePreferencesOf(
                     DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS to shieldInputs,
                     DashPayConfig.MIXED_FUNDS_CONSOLIDATION to consolidation,
                     DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT to marker,
                     DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE to directPhase
                 )
+                done?.let { preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_DONE] = it }
                 firstArg<(MutablePreferences) -> Unit>().invoke(preferences)
                 editFailure?.let { throw it }
+                val doneAfter = preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_DONE]
+                if (doneAfter != done) doneWriteFailure?.let { throw it }
                 shieldInputs = preferences[DashPayConfig.MIXED_FUNDS_SHIELD_INPUTS] ?: ""
-                consolidation = preferences[DashPayConfig.MIXED_FUNDS_CONSOLIDATION] ?: ""
+                val stage = preferences[DashPayConfig.MIXED_FUNDS_CONSOLIDATION] ?: ""
+                if (stage != consolidation && stage.isNotEmpty()) consolidationWrites += stage
+                consolidation = stage
                 marker = preferences[DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT] ?: ""
                 directPhase = preferences[DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE] ?: ""
+                done = doneAfter
                 edits++
+                afterEdit()
             }
             coEvery { config.set(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, any()) } answers { directPhase = secondArg() }
             coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_DONE) } answers { done }
@@ -1227,6 +1239,221 @@ class CoinJoinConsolidationTest {
         assertEquals(saved, f.marker)
         assertNotEquals("", f.shieldInputs)
         assertEquals(0, f.edits)
+    }
+
+    // ── Conditional writes: never over (or resurrecting) a record that changed ──
+
+    /** The watcher's verified landing, committed: the whole record cleared, DONE set. */
+    private fun Fixture.landNow() {
+        marker = ""
+        shieldInputs = ""
+        consolidation = ""
+        directPhase = ""
+        done = true
+    }
+
+    /**
+     * The settling lock reaches Consumed and the watcher clears the record BETWEEN Try again's
+     * marker read and its renewal: the renewal writes nothing, nothing is resurrected.
+     */
+    @Test fun retryRenewalNeverResurrectsARecordCompletedAfterItsRead() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        var armed = true
+        // Try again reads the marker, then the stage: the landing commits in between.
+        coEvery { f.config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } answers {
+            if (armed) {
+                armed = false
+                f.landNow()
+            }
+            f.consolidation
+        }
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
+        assertFalse(armed)
+        assertEquals("", f.marker)
+        assertEquals("", f.shieldInputs)
+        assertEquals("", f.directPhase)
+    }
+
+    /** Without a race the renewal still gives the same record a fresh window, inputs kept. */
+    @Test fun retryRenewalRenewsTheSameRecord() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        val inputs = f.shieldInputs
+        assertTrue(f.expired())
+        assertEquals(MixedFundsMigrationOutcome.UNCONFIRMED, f.service.retryPendingMigration())
+        assertFalse(f.expired())
+        assertEquals(inputs, f.shieldInputs)
+        assertEquals(MixedFundsMigrationAction.SHIELD, f.service.inFlightMigration()?.action)
+    }
+
+    /** Reset Wallet begins between Try again's read and its renewal: nothing is written. */
+    @Test fun aWipeDuringTheRetryRenewalWritesNothing() = runTest {
+        val f = Fixture(this)
+        stuckOwnLock(f)
+        val saved = f.marker
+        var armed = true
+        coEvery { f.config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } coAnswers {
+            if (armed) {
+                armed = false
+                f.service.stopForWalletWipe()
+            }
+            f.consolidation
+        }
+        val outcome = runCatching { f.service.retryPendingMigration() }
+        assertFalse(armed)
+        assertTrue(outcome.exceptionOrNull() is StoppedForWalletWipeException)
+        assertEquals(saved, f.marker)
+        assertEquals(0, f.edits)
+    }
+
+    /**
+     * The watcher proves the landing of the record it read, but the record was replaced meanwhile:
+     * it writes neither DONE nor the clear, and counts no landing.
+     */
+    @Test fun aStaleWatcherNeverCompletesAReplacedRecord() = runTest {
+        val f = Fixture(this)
+        directShieldInFlight(f)
+        f.done = null
+        val replaced = formatInFlightMigration(
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis() + 5)
+        )
+        f.marker = replaced
+        f.settleShieldLock()
+        advanceTimeBy(30_000); runCurrent()
+        assertEquals(replaced, f.marker)
+        assertNull(f.done)
+        assertEquals(0, f.service.verifiedLandings)
+    }
+
+    /**
+     * The record changes between the landing's DONE commit and its clear: nothing is cleared and the
+     * landing is not counted (the sheet never shows a success for a record that was not completed).
+     */
+    @Test fun aLandingWhoseClearFindsTheRecordChangedIsNotCounted() = runTest {
+        val f = Fixture(this)
+        directShieldInFlight(f)
+        f.done = null
+        val replaced = formatInFlightMigration(
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis() + 5)
+        )
+        var armed = true
+        f.afterEdit = {
+            if (armed && f.done == true) {
+                armed = false
+                f.marker = replaced
+            }
+        }
+        f.settleShieldLock()
+        advanceTimeBy(30_000); runCurrent()
+        assertFalse(armed)
+        assertEquals(replaced, f.marker)
+        assertNotEquals("", f.shieldInputs)
+        assertEquals(0, f.service.verifiedLandings)
+    }
+
+    /**
+     * A watcher that stops on an error expires the marker it then reads — never one replaced
+     * between that read and the commit.
+     */
+    @Test fun aStoppedWatcherNeverExpiresARecordReplacedAfterItsRead() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        val locked = SdkWriteResult.NotBroadcast(
+            REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING,
+            Exception("Signing failed: mnemonic resolver failed with code 3")
+        )
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) } returns locked
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        val replaced = formatInFlightMigration(
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis() + 5)
+        )
+        var edit = 0
+        f.beforeEdit = {
+            when (++edit) {
+                // The signer back-off's renewal fails: the watcher stops and expires the marker.
+                1 -> throw java.io.IOException("disk full")
+                // Another writer replaces the record before that expiry commits.
+                2 -> f.marker = replaced
+            }
+        }
+        advanceTimeBy(31_000); runCurrent()
+        assertEquals(2, edit)
+        assertEquals(replaced, f.marker)
+    }
+
+    /** A definitive failure the watcher derived for the record it read is never written over a replacement. */
+    @Test fun aStaleWatcherNeverFailsAReplacedRecord() = runTest {
+        val f = Fixture(this)
+        f.coins.value = f.coins.value.take(100)
+        f.engineBalance = f.coins.value.sumOf { it.amount }
+        val replaced = formatInFlightMigration(
+            InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, System.currentTimeMillis() + 5)
+        )
+        coEvery { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) } coAnswers {
+            f.marker = replaced
+            SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, Exception("coin selection is short"))
+        }
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        assertTrue(f.service.restorePendingShieldMigration())
+        runCurrent()
+        coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
+        assertEquals(replaced, f.marker)
+        assertEquals(false, f.service.inFlightMigration()?.failed)
+    }
+
+    /** Restore recreates a marker from a stage only while the stage is still there with no marker. */
+    @Test fun restoreNeverResurrectsAMarkerForACompletedStage() = runTest {
+        val f = Fixture(this)
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        var armed = true
+        coEvery { f.config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } answers {
+            val read = f.consolidation
+            if (armed) {
+                armed = false
+                f.landNow()
+            }
+            read
+        }
+        assertTrue("re-evaluated later", f.service.restorePendingShieldMigration())
+        assertEquals("", f.marker)
+        assertEquals("", f.consolidation)
+        assertFalse(f.service.restorePendingShieldMigration())
+    }
+
+    /** A malformed marker is repaired only over the same malformed marker it read. */
+    @Test fun repairNeverWritesOverAMarkerThatChanged() = runTest {
+        val f = Fixture(this)
+        f.marker = "SHIELD|not-a-number|0"
+        f.consolidation = CoinJoinConsolidationState(walletId, destination).encode()
+        val replaced = shieldMarker()
+        var reads = 0
+        coEvery { f.config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_CONSOLIDATION) } answers {
+            // The repair's own stage read (after its marker read): a valid marker lands meanwhile.
+            if (++reads == 1) f.marker = replaced
+            f.consolidation
+        }
+        f.service.restorePendingShieldMigration()
+        assertEquals(replaced, f.marker)
+    }
+
+    /** Adoption writes only while there is still no record: never over one recorded meanwhile. */
+    @Test fun adoptionNeverWritesOverARecordThatAppeared() = runTest {
+        val f = Fixture(this)
+        f.trackLocks(lockA(2))
+        val appeared = CoinJoinConsolidationState(walletId, destination).encode()
+        coEvery { f.shield.recoveredCoinJoinShieldLockCount() } answers {
+            f.consolidation = appeared
+            0
+        }
+        f.newCoinJoinCoinsArrive()
+        assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.retryPendingMigration())
+        assertNotEquals(CoinJoinFundsMigrationService.ADOPTED_SHIELD_INPUTS, f.shieldInputs)
+        assertEquals("", f.marker)
+        assertEquals(appeared, f.consolidation)
     }
 
     // ── Marker read errors: never "absent" ──
