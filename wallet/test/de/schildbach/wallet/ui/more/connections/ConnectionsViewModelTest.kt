@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonParser
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import io.mockk.*
 import kotlinx.coroutines.CompletableDeferred
@@ -36,6 +37,7 @@ class ConnectionsViewModelTest {
     private val repository = mockk<DashConnectRepository>(relaxed = true)
     private val identities = mockk<IdentityRepository>(relaxed = true)
     private lateinit var model: ConnectionsViewModel
+    private var originalSupportsPlatform = false
     private val vector = JsonParser.parseReader(javaClass.getResourceAsStream("/app-connect-vectors.json")!!.reader()).asJsonObject
     private val decoded = DashConnectUri.parseKeyRequest(vector.getAsJsonObject("request")["uri"].asString)
     private val request = decoded.copy(appConnect = decoded.appConnect!!.copy(callback = java.net.URI("https://example.org/return")))
@@ -43,6 +45,8 @@ class ConnectionsViewModelTest {
 
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
+        originalSupportsPlatform = Constants.SUPPORTS_PLATFORM
+        Constants.SUPPORTS_PLATFORM = true
         every { repository.observeConnections() } returns MutableStateFlow(emptyList())
         every { identities.blockchainIdentity } returns null
         every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
@@ -58,8 +62,45 @@ class ConnectionsViewModelTest {
 
     @After fun teardown() {
         model.viewModelScope.cancel()
+        Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
         Dispatchers.resetMain()
     }
+
+    private fun assertUnsupportedRequestRejected(openedFromUrl: Boolean, purchase: Boolean) {
+        model.viewModelScope.cancel()
+        Constants.SUPPORTS_PLATFORM = false
+        every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
+        model = ConnectionsViewModel(repository, identities)
+        model.bindWalletUnlockCheck { true }
+        val uri = if (purchase) "dash-st:2?n=d&v=1" else vector.getAsJsonObject("request")["uri"].asString
+        repeat(2) {
+            model.resetScanOutcome()
+            if (openedFromUrl) model.onUrlOpened(uri) else model.onQrScanned(uri)
+            dispatcher.scheduler.runCurrent()
+            assertTrue(model.uiState.value.featureUnavailable)
+            assertFalse(model.uiState.value.isLoading)
+            assertNull(model.uiState.value.pendingRequest)
+            assertNull(model.uiState.value.pendingPurchase)
+            assertEquals("App Connect is unavailable on this device",
+                (model.scanOutcome.value as ConnectionsViewModel.ScanOutcome.Error).message)
+        }
+        verify(exactly = 0) { identities.initializationResult }
+        coVerify(exactly = 0) { repository.parseQr(any()) }
+        coVerify(exactly = 0) { repository.prepareLogin(any()) }
+        coVerify(exactly = 0) { repository.prepareTokenPurchase(any()) }
+    }
+
+    @Test fun `unsupported device rejects scanned login without waiting for initialization`() =
+        assertUnsupportedRequestRejected(openedFromUrl = false, purchase = false)
+
+    @Test fun `unsupported device rejects login URL without waiting for initialization`() =
+        assertUnsupportedRequestRejected(openedFromUrl = true, purchase = false)
+
+    @Test fun `unsupported device rejects scanned purchase without waiting for initialization`() =
+        assertUnsupportedRequestRejected(openedFromUrl = false, purchase = true)
+
+    @Test fun `unsupported device rejects purchase URL without waiting for initialization`() =
+        assertUnsupportedRequestRejected(openedFromUrl = true, purchase = true)
 
     private fun scan(openedFromUrl: Boolean = false) {
         if (openedFromUrl) model.onUrlOpened("qr") else model.onQrScanned("qr")

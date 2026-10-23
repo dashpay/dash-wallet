@@ -182,8 +182,8 @@ private fun ConnectionsUnavailableState(
                         .size(80.dp)
                 )
             },
-            heading = stringResource(R.string.dash_connect_testnet_only_heading),
-            body = stringResource(R.string.dash_connect_testnet_only_message)
+            heading = stringResource(R.string.dash_connect_unavailable_heading),
+            body = stringResource(R.string.dash_connect_unavailable_message)
         )
     }
 }

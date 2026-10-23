@@ -41,8 +41,9 @@ import javax.inject.Inject
 data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
     val pendingRequest: ConnectionRequest? = null,
-    /** True on mainnet where the key-exchange contract is not deployed. */
-    val featureUnavailable: Boolean = Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
+    /** Connect requires Platform support and is disabled in production/on mainnet. */
+    val featureUnavailable: Boolean = !Constants.SUPPORTS_PLATFORM || Constants.IS_PROD_BUILD ||
+        Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
     val isLoading: Boolean = false,
     val requiresRevocation: Boolean = false,
     val pendingPurchase: TokenPurchaseApproval? = null,
@@ -127,6 +128,7 @@ class ConnectionsViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             try {
+                check(Constants.SUPPORTS_PLATFORM) { "App Connect is unavailable on this device" }
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()
