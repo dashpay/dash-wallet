@@ -86,6 +86,8 @@ g checkout -q feat
 V() { PREREVIEW_VERDICTS="$XDG_CACHE_HOME/prereview" "$P" --status | sed -n 's/^HEAD [0-9a-f]*: //p'; }
 FAKE_LAST='{"blocking": null, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "null count → not reviewed (exit 2)" "$?" 2
 ok "  … and no verdict cached" "$(V)" none
+PYTHONOPTIMIZE=1 FAKE_LAST='{"blocking": null, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … also with PYTHONOPTIMIZE=1 from the caller" "$?:$(V)" 2:none
 FAKE_LAST='no counts at all' "$P" >/dev/null 2>&1; ok "missing counts line → exit 2" "$?" 2
 FAKE_LAST=$'{"blocking": 0, "suggestion": 0, "nitpick": 0}\nreview incomplete' "$P" >/dev/null 2>&1; ok "counts not on the last line → exit 2" "$?" 2
 FAKE_LAST='{"blocking": -1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "negative count → exit 2" "$?" 2

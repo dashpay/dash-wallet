@@ -315,8 +315,9 @@ import json, os, shutil, sys, tempfile, datetime
 path, line, mb, base, model, report, base_tip = sys.argv[1:8]
 try:
     c = json.loads(line)
-    assert isinstance(c, dict) and all(isinstance(c.get(k), int) and not isinstance(c.get(k), bool) and c[k] >= 0
-                                       for k in ("blocking", "suggestion", "nitpick"))
+    if not (isinstance(c, dict) and all(isinstance(c.get(k), int) and not isinstance(c.get(k), bool) and c[k] >= 0
+                                        for k in ("blocking", "suggestion", "nitpick"))):
+        raise ValueError("counts")   # not assert: PYTHONOPTIMIZE from the caller would strip it
 except Exception:
     print("pre-review: the review did not end with a valid counts line, so it counts as not reviewed", file=sys.stderr)
     sys.exit(1)
