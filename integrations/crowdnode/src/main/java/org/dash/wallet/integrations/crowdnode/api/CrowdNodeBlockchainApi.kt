@@ -27,7 +27,6 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.transactions.ExactOutputsSelector
-import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.filters.CoinsReceivedTxFilter
 import org.dash.wallet.common.transactions.filters.LockedTransaction
 import org.dash.wallet.common.transactions.filters.TxWithinTimePeriod
@@ -236,12 +235,22 @@ open class CrowdNodeBlockchainApi @Inject constructor(
     open fun getApiAddressConfirmationTx(): Transaction? {
         val apiConfirmationFilter = CoinsReceivedTxFilter(
             walletData.transactionBag,
-            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
+            CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT,
+            // The user might have paid the confirmation from this same wallet
+            // (when the account's primary address is also in it), which makes the
+            // confirmation an entirely-self transaction
+            includeSelfTransfers = true
         ) // account address is unknown at this point
 
         val potentialApiConfirmationTxs = walletData.getTransactions(apiConfirmationFilter)
         potentialApiConfirmationTxs.forEach { confirmationTx ->
-            val receivedTo = TransactionUtils.getWalletAddressOfReceived(confirmationTx, walletData.transactionBag)
+            // The account address is the one that received the confirmation amount.
+            // For a self-paid confirmation the change output is also ours, so pick
+            // the output by the exact amount rather than the first received output.
+            val receivedTo = confirmationTx.outputs.firstOrNull {
+                it.value == CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT &&
+                    it.isMine(walletData.transactionBag)
+            }?.scriptPubKey?.getToAddress(params, true)
             val forwardedConfirmationFilter = CrowdNodeAPIConfirmationForwarded(params)
             // There might be several matching transactions. The real one will be forwarded to CrowdNode
             val forwardedTx = walletData.getTransactions(forwardedConfirmationFilter).firstOrNull()
