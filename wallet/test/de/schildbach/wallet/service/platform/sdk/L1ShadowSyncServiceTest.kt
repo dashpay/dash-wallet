@@ -742,6 +742,43 @@ class L1ShadowSyncServiceTest {
         assertFalse(d.standingDown)
     }
 
+    @Test
+    fun filterStall_aRunRestartedAtTheStoodDownHeight_getsAFullStallWindow() {
+        // PastaClaw on #1632: the stop cleared the flag but kept the old run's
+        // timing, so a new run resuming at the same height was judged "still
+        // since long ago" on its first check and stood down at once — the
+        // replay losing its wake lock about a minute into the restart.
+        val d = stallDecider()
+        val stuck = 1_500_000L // more than one commit batch behind
+        val target = 1_556_896L
+        fun check(atMs: Long) =
+            d.onCheck(atMs, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
+
+        check(0L)
+        check(10 * 60_000L + 1)
+        check(30 * 60_000L + 2)
+        check(60 * 60_000L + 3)
+        assertEquals(FilterStallWatchdogDecider.Decision.EXHAUSTED, check(120 * 60_000L))
+        assertTrue(d.standingDown)
+
+        // Stopped, down for hours, restarted with the durable watermark at the
+        // same height.
+        d.onEngineStopped()
+        val restartedAt = 600 * 60_000L
+
+        // The new run's first check, and every check inside the stall window
+        // (30 min: the budget is spent, so the last rung's wait applies).
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(restartedAt + 60_000L))
+        assertFalse("the new run starts its own stall window", d.standingDown)
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(restartedAt + 30 * 60_000L))
+        assertFalse(d.standingDown)
+
+        // Still at the same height past the window: a real wedge of this run.
+        // No restart (the budget is per process), but standing down again.
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(restartedAt + 31 * 60_000L + 1))
+        assertTrue(d.standingDown)
+    }
+
 
     @Test
     fun filterStall_anUnknownWatermarkIsTreatedAsFarFromTheTip() {

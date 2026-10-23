@@ -1374,8 +1374,18 @@ internal class FilterStallWatchdogDecider(
      * a wedge of the previous run would still read as current after a restart,
      * until the new run's first check. The restart budget is NOT reset: it is
      * per process, and a re-wedge sets [standingDown] again on its own.
+     *
+     * The stall TIMING is per run, so it is dropped too. Kept, a run restarted
+     * at the height the last one stood down at reads as "same cursor, still
+     * since long ago" on its first check, and stands down again within a
+     * minute — the replay losing its wake lock with none of the stall window
+     * spent. Synchronized with [onCheck]: a check still in flight on the
+     * cancelled watchdog cannot write the old run's baseline back after this.
      */
+    @Synchronized
     fun onEngineStopped() {
+        lastHeight = -1L
+        lastAdvanceMs = 0L
         standingDown = false
     }
 
@@ -1438,6 +1448,7 @@ internal class FilterStallWatchdogDecider(
      *   withdrawn, because the value it was read from is the in-memory cursor,
      *   not this one. 0 when unknown.
      */
+    @Synchronized
     fun onCheck(
         nowMs: Long,
         filterHeight: Long,
