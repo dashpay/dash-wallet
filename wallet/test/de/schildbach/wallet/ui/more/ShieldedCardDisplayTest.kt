@@ -121,12 +121,26 @@ class ShieldedCardDisplayTest {
     }
 
     @Test
-    fun `ready always shows the live balance - even with a cache or a stale one-shot`() {
-        // A fully-synced runtime is authoritative: live wins over any cache
-        // and any lingering stale signal (which is cleared on READY anyway).
+    fun `ready shows the live balance - even with a cache`() {
+        // A fully-synced, settled runtime is authoritative: live wins over any cache.
         for (context in listOf(true, false)) {
             assertEquals(
                 ShieldedCardDisplay.LIVE_AMOUNT,
+                mapShieldedCardDisplay(
+                    ShieldedSyncStatus.READY, hasShieldedContext = context,
+                    cachedBalance = cached, balanceMaybeStale = false
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `a reconciling spend keeps the placeholder even while READY - like the home header`() {
+        // READY persists through post-spend passes, so the live note store can
+        // still read the pre-spend or mid-spend amount until the spend settles.
+        for (context in listOf(true, false)) {
+            assertEquals(
+                ShieldedCardDisplay.SYNCING,
                 mapShieldedCardDisplay(
                     ShieldedSyncStatus.READY, hasShieldedContext = context,
                     cachedBalance = cached, balanceMaybeStale = true

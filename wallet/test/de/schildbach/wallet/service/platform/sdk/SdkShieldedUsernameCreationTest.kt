@@ -70,7 +70,7 @@ class SdkShieldedUsernameCreationTest {
             "denomination 30000000000 is not a member of the allowed exit-denomination set " +
             "[3000000000, 10000000000, 25000000000, 50000000000, 100000000000]"
 
-    /** 0.25 DASH in credits — Constants.DASH_PAY_FEE_CONTESTED without loading Constants. */
+    /** 0.25 DASH in credits — the LEGACY (protocol-13) contested fee, without loading Constants. */
     private val contestedFeeCredits = 25_000_000_000L
 
     /** The smallest covering denomination: 0.03 DASH (an exact member since v13). */
@@ -110,6 +110,8 @@ class SdkShieldedUsernameCreationTest {
             every { shieldedSyncStatus } returns statusFlow
             every { observeShieldedBalance() } returns balanceFlow
             coEvery { isFundingNoteAnchoredForDenomination(any()) } returns fundingNoteAnchored
+            coEvery { beginExternalShieldedSpend() } returns 1_700_000_000_000L
+            coEvery { endExternalShieldedSpend(any()) } just Runs
         }
 
     private fun happySource() = mockk<ShieldedUsernameSource> {
@@ -205,6 +207,11 @@ class SdkShieldedUsernameCreationTest {
         // The RETIRED 0.3 value is not a denomination — a fee of exactly 0.3
         // steps UP to 0.5 rather than resolving to the non-member 0.3.
         assertEquals(50_000_000_000L, chooseShieldedIdentityDenominationCredits(30_000_000_000L))
+        // The protocol-14 CURRENT contested fee (0.15 DASH) rounds up to the
+        // same 0.25 DASH denomination as the protocol-13 LEGACY 0.25 DASH fee
+        // (contestedFeeCredits above) — neither 0.1 nor any smaller member
+        // covers 0.15, so the shielded path is unaffected by the fee cut.
+        assertEquals(25_000_000_000L, chooseShieldedIdentityDenominationCredits(15_000_000_000L))
     }
 
     @Test
@@ -595,6 +602,40 @@ class SdkShieldedUsernameCreationTest {
         assertTrue(result is SdkWriteResult.Ambiguous)
         assertTrue(handoff.identities.isEmpty())
         coVerify(exactly = 1) { source.createIdentityFromPool(any(), any(), any(), any(), any()) }
+    }
+
+    /**
+     * thepastaclaw (7ae06b9e7): the pool spend is recorded with the balance
+     * service BEFORE the SDK call and ended after it; one that can't be
+     * recorded is never submitted.
+     */
+    @Test
+    fun poolSpend_isRecordedBeforeTheCall_andEndedAfterIt() = runTest {
+        val source = happySource()
+        val balance = balanceService()
+        service(source = source, balance = balance).createUsernameFromShielded("alice2")
+        coVerifyOrder {
+            balance.beginExternalShieldedSpend()
+            source.createIdentityFromPool(any(), any(), any(), any(), any())
+            balance.endExternalShieldedSpend(1_700_000_000_000L)
+        }
+    }
+
+    @Test
+    fun anUnrecordablePoolSpend_isNotBroadcast_andNeverCreates() = runTest {
+        val source = happySource()
+        val balance = balanceService().apply {
+            coEvery { beginExternalShieldedSpend() } returns null
+        }
+        val handoff = HandoffRecorder()
+
+        val result = service(source = source, balance = balance, handoff = handoff)
+            .createUsernameFromShielded("alice2")
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(handoff.identities.isEmpty())
+        coVerify(exactly = 0) { source.createIdentityFromPool(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { balance.endExternalShieldedSpend(any()) }
     }
 
     // ── Best-effort DPNS name / handoff resilience ────────────────────────
@@ -1449,5 +1490,42 @@ class SdkShieldedUsernameCreationTest {
         assertEquals(0x00, bytes[0].toInt() and 0xFF)
         assertEquals(0x11, bytes[1].toInt() and 0xFF)
         assertEquals(0xee, bytes[31].toInt() and 0xFF)
+    }
+
+    // ── MO-1069: the denomination fee input is resolved NON-strictly ──────
+
+    private fun protocolService(protocolVersion: Int?) = mockk<DashSdkService> {
+        coEvery { currentProtocolVersion() } returns protocolVersion
+    }
+
+    @Test
+    fun denominationFee_unknownProtocolVersion_fallsBackInsteadOfRefusing() = runTest {
+        // A protocol-version lookup outage must not block a shielded creation or
+        // invite claim: the fee only selects the denomination. Strict resolution
+        // (ContestedUsernameFees.resolved) would throw here.
+        val credits = shieldedDenominationFeeCredits(contested = true, sdkService = protocolService(null))
+
+        assertEquals(contestedFeeCredits, credits)
+        assertEquals(contestedDenominationCredits, chooseShieldedIdentityDenominationCredits(credits))
+    }
+
+    @Test
+    fun denominationFee_contested_selectsTheSameDenominationUnderEveryProtocolVersion() = runTest {
+        listOf(13, 14, null).forEach { version ->
+            val credits = shieldedDenominationFeeCredits(contested = true, sdkService = protocolService(version))
+            assertEquals(
+                "protocol $version",
+                contestedDenominationCredits,
+                chooseShieldedIdentityDenominationCredits(credits)
+            )
+        }
+    }
+
+    @Test
+    fun denominationFee_nonContested_isTheFixedFeeWithoutAProtocolRead() = runTest {
+        val service = protocolService(null)
+
+        assertEquals(feeCredits, shieldedDenominationFeeCredits(contested = false, sdkService = service))
+        coVerify(exactly = 0) { service.currentProtocolVersion() }
     }
 }

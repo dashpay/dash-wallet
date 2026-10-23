@@ -51,17 +51,24 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
     private val args by navArgs<ConfirmUsernameRequestDialogFragmentArgs>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
-        viewModel.hasIdentity = requestUserNameViewModel.identity != null
-        // Shielded-funded creations show the denomination actually leaving
-        // the shielded balance (0.03/0.25 under v13), not the L1 fee schedule.
-        viewModel.paymentSource = requestUserNameViewModel.paymentSource
         val usernameType = args.usernameType
-        viewModel.usernameType = usernameType
+        val isContestableUsername = requestUserNameViewModel.isUsernameContestable()
+        // The shown (and approved) amount is computed from these inputs; the
+        // confirm button stays disabled until it reflects them.
+        viewModel.setInputs(
+            ConfirmUserNameInputs(
+                usernameType = usernameType,
+                isContestableUsername = isContestableUsername,
+                hasIdentity = requestUserNameViewModel.identity != null,
+                // Shielded-funded creations show the denomination actually leaving
+                // the shielded balance (0.03/0.25 under v13), not the L1 fee schedule.
+                paymentSource = requestUserNameViewModel.paymentSource
+            )
+        )
         binding.confirmBtn.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
                 requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
-                if (usernameType == UsernameType.Primary && viewModel.isContestableUsername &&
+                if (usernameType == UsernameType.Primary && isContestableUsername &&
                     !requestUserNameViewModel.hasSecondaryName()) {
                     createInstantUsernameDialog(
                         onCreateInstantUsername = {
@@ -94,12 +101,13 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
             UsernameType.Secondary -> getString(R.string.new_account_secondary_confirm_message, args.username)
         }
         binding.userAccepts.setOnClickListener {
-            binding.confirmBtn.isEnabled = binding.userAccepts.isChecked
+            updateConfirmEnabled(viewModel.uiState.value.amountReady)
         }
 
         binding.dismissBtn.setOnClickListener { dismiss() }
 
         viewModel.uiState.observe(viewLifecycleOwner) {
+            updateConfirmEnabled(it.amountReady)
             binding.dashAmountView.text = it.amountStr
             binding.fiatSymbolView.text = it.fiatSymbol
             binding.fiatAmountView.text = it.fiatAmountStr
@@ -116,5 +124,14 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
             binding.fiatAmountView.isVisible = false
             binding.fiatSymbolView.isVisible = false
         }
+    }
+
+    /**
+     * Confirmation needs BOTH the user's acceptance and a resolved DASH amount:
+     * the checkbox alone would let the user approve a blank amount, or one not
+     * yet computed for this username kind and payment source.
+     */
+    private fun updateConfirmEnabled(amountReady: Boolean) {
+        binding.confirmBtn.isEnabled = binding.userAccepts.isChecked && amountReady
     }
 }

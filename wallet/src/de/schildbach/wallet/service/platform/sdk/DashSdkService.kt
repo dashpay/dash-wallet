@@ -918,4 +918,32 @@ interface DashSdkService {
         privateKey: ByteArray,
         walletId: ByteArray
     )
+
+    /**
+     * The network's currently active Platform protocol version, from a live
+     * proven `getEpochsInfo` read (a genesis-epoch probe, then
+     * `SystemQueries.refreshProtocolVersion`) — the single source the contested-username fee gate (MO-1069,
+     * [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees]) and
+     * any future protocol-version-gated behavior must share, so one flow can
+     * never learn a different version than another.
+     *
+     * MONOTONIC: the value is latched through [ProtocolVersionLatch] — never
+     * lower than the highest version this network was ever observed at
+     * (persisted per network, surviving restarts and Reset Wallet). Protocol
+     * activation is one-way, and a fee quoted from one read and funded from a
+     * later one (possibly answered by a lagging DAPI node) must never move to
+     * the older, HIGHER fee in between. A newer live version is still served
+     * on the very next read — the latch only refuses to go down.
+     *
+     * Null when the live read fails (the SDK cannot be started or the proven
+     * probe fails — the SDK's refresh alone would report its cached version)
+     * AND the network was never durably seen at the current fee protocol
+     * (>= 14), or when the persisted mark can't be read — callers MUST treat null as "unknown", never as any particular
+     * version. For quotes and display the safe fallback is the OLDER
+     * behavior; at FUNDING time "older" means the higher fee, so a null read
+     * refuses the operation instead (see
+     * [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees.resolved]).
+     * Default null so read-only fakes stay source-compatible.
+     */
+    suspend fun currentProtocolVersion(): Int? = null
 }
