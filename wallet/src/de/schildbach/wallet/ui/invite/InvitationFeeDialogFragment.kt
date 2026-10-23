@@ -25,6 +25,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import org.bitcoinj.core.Coin
 import de.schildbach.wallet_test.R
@@ -37,7 +38,14 @@ import org.dash.wallet.common.util.observe
 @AndroidEntryPoint
 class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitation_fee) {
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
-    private var selectedFee = Constants.DASH_PAY_FEE_CONTESTED
+
+    // Protocol-gated (MO-1069) — mirrors viewModel.contestedFees, refreshed
+    // by the observer in onViewCreated. Shows LEGACY (the safe pre-resolve
+    // fallback) until the live read lands; [contestedFeeResolved] keeps a
+    // contested L1 invite from being continued on that placeholder.
+    private var contestedFee = ContestedUsernameFees.LEGACY.contested
+    private var contestedFeeResolved = false
+    private var selectedFee = contestedFee
     private var contestedSelected = true
 
     // Gate inputs. For an L1 invite only [l1Balance] matters; for a private
@@ -66,7 +74,20 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setFeeAmounts()
+        // Protocol-gated (MO-1069): mirror the resolved contested fee and
+        // re-render the amounts/gate once the live read lands (replays the
+        // current StateFlow value immediately, so this also covers the
+        // pre-resolve LEGACY default). viewModel is activity-scoped, so a
+        // re-opened invite flow needs an explicit refresh — its own init only
+        // ran once, on the activity's first open.
+        viewModel.refreshContestedFees()
+        viewModel.contestedFees.observe(viewLifecycleOwner) { fees ->
+            contestedFeeResolved = fees != null
+            contestedFee = (fees ?: ContestedUsernameFees.LEGACY).contested
+            if (contestedSelected) selectedFee = contestedFee
+            setFeeAmounts()
+            applyGate()
+        }
         setMode(true)
         binding.mixButton.setOnClickListener {
             // Authentication happens on the confirm screen, right before the
@@ -118,10 +139,10 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
      * (Fix E — per the product rule, only the amount actually withdrawn).
      */
     private fun setFeeAmounts() {
-        val contestedFee = if (args.shielded) shieldedContestedFee else Constants.DASH_PAY_FEE_CONTESTED
+        val contestedAmount = if (args.shielded) shieldedContestedFee else contestedFee
         val nonContestedFee = if (args.shielded) shieldedNonContestedFee else Constants.DASH_PAY_FEE
         binding.contestedNameAmount.text =
-            getString(R.string.invitation_fee_amount, contestedFee.toPlainString())
+            getString(R.string.invitation_fee_amount, contestedAmount.toPlainString())
         binding.nonContestedNameAmount.text =
             getString(R.string.invitation_fee_amount, nonContestedFee.toPlainString())
     }
@@ -130,7 +151,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         if (isContestedName) {
             binding.contestedName.isSelected = true
             binding.nonContestedName.isSelected = false
-            selectedFee = Constants.DASH_PAY_FEE_CONTESTED
+            selectedFee = contestedFee
             contestedSelected = true
         } else {
             binding.contestedName.isSelected = false
@@ -164,12 +185,16 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
             l1Balance = l1Balance,
             shieldedReady = shieldedReady,
             shieldedBalance = shieldedBalance,
-            contestedSelected = contestedSelected
+            contestedSelected = contestedSelected,
+            contestedFee = contestedFee
         )
-        binding.mixButton.isEnabled = continueEnabled
-        binding.insufficientFundsMessage.isVisible = !continueEnabled
-        if (!continueEnabled) {
-            val required = inviteFeeRequirement(args.shielded, contestedSelected)
+        val awaitingFee = awaitingContestedInviteFee(args.shielded, contestedSelected, contestedFeeResolved)
+        binding.mixButton.isEnabled = continueEnabled && !awaitingFee
+        // Affordability is only judged against the resolved fee: the LEGACY
+        // placeholder would wrongly tell a 0.15–0.25 DASH holder they can't pay.
+        binding.insufficientFundsMessage.isVisible = !continueEnabled && !awaitingFee
+        if (!continueEnabled && !awaitingFee) {
+            val required = inviteFeeRequirement(args.shielded, contestedSelected, contestedFee)
             binding.insufficientFundsMessage.text =
                 getString(R.string.invitation_cant_afford_message, required.toPlainString())
         }

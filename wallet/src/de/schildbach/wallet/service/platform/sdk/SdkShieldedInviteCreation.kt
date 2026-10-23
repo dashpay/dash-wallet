@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.Invitation
@@ -28,7 +27,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Utils
 import de.schildbach.wallet.data.WalletData
-import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.wallet.OneTimeOrchardKey
 import org.dashj.platform.dpp.identifier.Identifier
 import kotlinx.coroutines.NonCancellable
@@ -248,7 +246,7 @@ class SdkShieldedInviteCreation internal constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val invitationsDao: InvitationsDao,
     /** Same fee → denomination input as [SdkShieldedUsernameCreation.feeCredits]. */
-    private val feeCredits: (contested: Boolean) -> Long,
+    private val feeCredits: suspend (contested: Boolean) -> Long,
     /**
      * Wraps the raw shielded deep link in an AppsFlyer OneLink (H1),
      * returning the OneLink short URL — or `null` when generation fails or
@@ -271,10 +269,10 @@ class SdkShieldedInviteCreation internal constructor(
         dashPayConfig = dashPayConfig,
         shieldedBalanceService = shieldedBalanceService,
         invitationsDao = invitationsDao,
-        feeCredits = { contested ->
-            val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
-            dashToCredits(Dash(fee.value))
-        },
+        // Non-strict (ContestedUsernameFees.current): the fee only selects the
+        // note denomination, identical for both contested fees — see
+        // shieldedDenominationFeeCredits.
+        feeCredits = { contested -> shieldedDenominationFeeCredits(contested, sdkService) },
         generateOneLink = { link ->
             // Bounded so a stuck AppsFlyer callback can't hang the invite;
             // any failure/timeout → null → raw deep-link fallback.
@@ -311,6 +309,9 @@ class SdkShieldedInviteCreation internal constructor(
             feeCredits(contested)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
+            // See SdkL1InviteCreation: a transient protocol-version failure must not be
+            // classified as a deterministic rejection.
+            if (t is ProtocolVersionUnavailableException) return notBroadcast("protocol version unavailable", t)
             return notBroadcast("invite fee unavailable", t)
         }
         val denominationCredits = shieldedInviteDenominationCredits(fee)
@@ -362,6 +363,10 @@ class SdkShieldedInviteCreation internal constructor(
         val criticalResult: SdkWriteResult<InvitationLinkData> = withContext(NonCancellable) {
             // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
             // TWO notes to the same one-time address (see [inviteFundingSplit]).
+            // The pending reconciliation is durable before anything is submitted
+            // (see ShieldedBalanceService.beginExternalShieldedSpend).
+            val spendStartedAtMs = shieldedBalanceService.beginExternalShieldedSpend()
+                ?: return@withContext notBroadcast("could not record the pending shielded spend", null)
             try {
                 source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
             } catch (t: Throwable) {
@@ -376,9 +381,13 @@ class SdkShieldedInviteCreation internal constructor(
                             "shielded invite funding outcome unconfirmed — the note MAY exist; do NOT retry",
                             t
                         )
+                        // The transfer MAY have spent pool notes: the
+                        // reconciliation begun above stays until settlement.
                         SdkWriteResult.Ambiguous(t)
                     }
                 }
+            } finally {
+                endPoolSpend(spendStartedAtMs)
             }
 
             // Advisory scan hint; a missing height is fine (claim scans without one).
@@ -460,6 +469,17 @@ class SdkShieldedInviteCreation internal constructor(
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded invite not created ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)
+    }
+
+    /**
+     * The invite-funding transfer's SDK call is over (whatever its outcome):
+     * hand the reconciliation it began to settlement
+     * ([ShieldedBalanceService.endExternalShieldedSpend]). Best-effort and
+     * NonCancellable — the spend's durable record already exists.
+     */
+    private suspend fun endPoolSpend(spendStartedAtMs: Long) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.endExternalShieldedSpend(spendStartedAtMs) }
+            .onFailure { log.warn("pool-spend end failed; settlement waits for the next pass", it) }
     }
 
     private suspend fun isEnabled(): Boolean = try {

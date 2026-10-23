@@ -481,7 +481,12 @@ class DashSdkServiceImpl @Inject constructor(
      * Reset Wallet's fence over every secret this service persists into
      * [WalletStorage] (wallet create / mnemonic re-store, identity keys).
      */
-    private val secretWriteFence: WalletSecretWriteFence
+    private val secretWriteFence: WalletSecretWriteFence,
+    /**
+     * Holds [currentProtocolVersion] monotonic per network (MO-1069 quote/fund
+     * agreement). Construction-inert: it reads its persisted mark lazily.
+     */
+    private val protocolVersionLatch: ProtocolVersionLatch
 ) : DashSdkService {
 
     /** Everything with a native or persistence footprint lives here. */
@@ -658,6 +663,37 @@ class DashSdkServiceImpl @Inject constructor(
         ensureStarted()
         val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
         return sdk.dpns.resolve(name)
+    }
+
+    /**
+     * See [DashSdkService.currentProtocolVersion] for the full contract.
+     * Always a live read — a proven epoch probe, then
+     * `sdk.system.refreshProtocolVersion()` ([verifiedProtocolVersion]: the SDK's
+     * refresh alone reports its cached version on failure) — and the live
+     * value is NOT cached across calls. A process can span network activation
+     * (this runtime outlives [de.schildbach.wallet.service.platform.PlatformSyncService]
+     * .stopSdkEngines(), which only stops the sync engines, not this
+     * service), so a value read before activation must never be served
+     * again after it. The live read then passes through [protocolVersionLatch],
+     * which only ever holds the answer UP (a lagging node can't report a
+     * version older than one already seen on this network); a newer live
+     * version wins immediately. A query failure surfaces as the latched
+     * version when the network is known to run the current fee protocol,
+     * otherwise as null — "unknown, fall back to the older behavior", never a
+     * particular version.
+     */
+    override suspend fun currentProtocolVersion(): Int? =
+        protocolVersionLatch.latch(liveProtocolVersion())
+
+    private suspend fun liveProtocolVersion(): Int? = protocolVersionOrUnknown {
+        ensureStarted()
+        val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
+        verifiedProtocolVersion(
+            // Genesis epoch, explicit ascending start: the one proved epoch query
+            // the verifier accepts without a current-epoch hint.
+            probe = { sdk.system.epochsInfo(startEpoch = "0", count = 1, ascending = true) },
+            refresh = { sdk.system.refreshProtocolVersion() }
+        )
     }
 
     /**
@@ -1791,6 +1827,56 @@ class DashSdkServiceImpl @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
+
+        /**
+         * A protocol version only a SUCCESSFUL proven query can vouch for.
+         *
+         * `Sdk::refresh_protocol_version()` swallows a failed epoch fetch and
+         * returns `Ok(<cached version>)`; in a fresh process the cache still holds
+         * the per-network floor (13), so a failed refresh on a protocol-14 network
+         * would report a confident 13 and price funding at the LEGACY fee. Its
+         * result therefore can't tell "the network says 13" from "nobody answered".
+         *
+         * So [probe] — one proven query that THROWS (or returns null) on failure —
+         * runs first. Every proof-verified response ratchets the SDK's version up
+         * from its quorum-signed metadata, so once the probe succeeds the SDK
+         * holds at least the highest verified version it RECOGNISES, and
+         * [refresh] (which can at most raise it further) returns at least that
+         * even if its own fetch fails. A failed probe is "unknown" (null):
+         * nothing was verified this time.
+         */
+        internal suspend fun verifiedProtocolVersion(
+            probe: suspend () -> String?,
+            refresh: suspend () -> Int?
+        ): Int? {
+            if (probe() == null) {
+                log.warn("currentProtocolVersion: proven epoch probe returned nothing; live version unknown")
+                return null
+            }
+            return refresh()
+        }
+
+        /**
+         * Run a live protocol-version [read], turning any failure into null
+         * ("unknown") for [currentProtocolVersion]'s callers. That includes a
+         * [LinkageError]: [ensureStarted] bootstraps the SDK (`Sdk.initialize()`
+         * loads `libdash_sdk`), and an `UnsatisfiedLinkError` is an [Error], so
+         * without this it would escape the fee quote's LEGACY fallback and crash
+         * the username/invite UI coroutine instead. Deliberately NOT every
+         * [Throwable]: unrelated fatal VM errors still propagate. Cancellation is
+         * rethrown.
+         */
+        internal suspend fun protocolVersionOrUnknown(read: suspend () -> Int?): Int? = try {
+            read()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("currentProtocolVersion: live read failed (SDK start, epoch probe or refresh); version unknown", e)
+            null
+        } catch (e: LinkageError) {
+            log.warn("currentProtocolVersion: SDK native library unavailable; live version unknown", e)
+            null
+        }
 
         /**
          * Gap limit the widening gives each standard account (BIP44, BIP32,

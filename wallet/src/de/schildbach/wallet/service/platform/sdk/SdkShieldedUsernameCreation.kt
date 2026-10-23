@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -89,11 +90,16 @@ internal val SHIELDED_IDENTITY_DENOMINATIONS_CREDITS = longArrayOf(
  * - non-contested username, `Constants.DASH_PAY_FEE` = 0.03 DASH
  *   (3e9 credits) → 0.03 DASH, now the smallest denomination and an exact
  *   match for the fee the transparent/L1 path funds.
- * - contested username, `Constants.DASH_PAY_FEE_CONTESTED` = 0.25 DASH
- *   (2.5e10 credits) → 0.25 DASH. The identity is created holding
+ * - contested username, the protocol-gated contested fee ([ContestedUsernameFees]
+ *   — 0.25 DASH pre-v4.2, 0.15 DASH once the network activates it) → 0.25 DASH
+ *   either way (both round UP to the same member). The identity is created holding
  *   `denomination − metered fee` in credits, and a contested DPNS registration
- *   needs ~0.2 DASH of those credits for the prefunded voting balance Drive
- *   attaches to every contestable label — 0.1 cannot cover it, 0.25 can.
+ *   needs some of those credits for the prefunded voting balance Drive attaches to
+ *   every contestable label. Why 0.1 is not enough depends on the protocol era:
+ *   pre-v4.2 that voting balance is ~0.2 DASH, which 0.1 cannot cover; from
+ *   protocol 14 the voting balance is 0.1 DASH, but the 0.15 DASH contested fee
+ *   itself exceeds 0.1. In both eras 0.25 is the smallest denomination that covers
+ *   the fee.
  *   (Before v13 this resolved to 0.3, which the active set no longer accepts.)
  */
 internal fun chooseShieldedIdentityDenominationCredits(
@@ -268,6 +274,35 @@ fun shieldedIdentityFundingRequirement(fee: Dash): Dash? {
 }
 
 /**
+ * The fee input — in credits — to the shielded exit-denomination choice
+ * ([chooseShieldedIdentityDenominationCredits]) for a username of the given
+ * contested-ness: the protocol-gated contested fee for contested labels,
+ * `DASH_PAY_FEE` (0.03 DASH) otherwise. The exact lambda both
+ * [SdkShieldedUsernameCreation] and [SdkShieldedInviteCreation] wire as
+ * `feeCredits`, extracted so it is host-JVM testable.
+ *
+ * Deliberately the NON-throwing [ContestedUsernameFees.current], not the
+ * strict [ContestedUsernameFees.resolved] the transparent funding paths use.
+ * This value never becomes an amount: it only selects a denomination, and the
+ * LEGACY (0.25) and CURRENT (0.15) contested fees both round UP to the same
+ * 0.25 DASH Type-20 denomination, so the amount that leaves the shielded pool
+ * is identical either way. Strict resolution would protect nothing here and
+ * would only add a failure mode — a protocol-version lookup outage would block
+ * shielded username creation and invite claims that spend exactly the same.
+ * Routed through [ContestedUsernameFees] (rather than a raw constant) so every
+ * contested-fee read shares one source, and a future denomination-set change
+ * that splits the two fees would surface here.
+ */
+internal suspend fun shieldedDenominationFeeCredits(contested: Boolean, sdkService: DashSdkService): Long {
+    val fee = if (contested) {
+        ContestedUsernameFees.current(sdkService).contested
+    } else {
+        Constants.DASH_PAY_FEE
+    }
+    return dashToCredits(Dash(fee.value))
+}
+
+/**
  * Decode a DIP-0018 bech32m Platform address (`dash1…` / `tdash1…`) to
  * the raw 21-byte PlatformAddress STORAGE bytes (variant tag + 20-byte
  * hash) the Type-20 `fallbackAddress` FFI parameter wants. The bech32m
@@ -402,7 +437,7 @@ interface ShieldedUsernameSource {
     /**
      * Register [label] as a DPNS name for [identityId]. Contested labels
      * need no special client-side handling: dpp derives the ~0.2 DASH
-     * prefunded voting balance from the contested unique index
+     * (0.1 from protocol 14) prefunded voting balance from the contested unique index
      * automatically (`prefunded_voting_balance_for_document`), paid from
      * the identity's credit balance — which is why a contested creation
      * must fund the identity with the 0.25 denomination (the smallest v13
@@ -611,10 +646,12 @@ sealed class ShieldedUsernameSubmitState {
  *
  * 1. Preflights (nothing submitted if any fails → NotBroadcast): flag on,
  *    contested-ness derived from the label (contested labels take the
- *    0.25-fee → 0.25-denomination mapping — the smallest covering member
- *    of the v13 set — so the identity's credits cover the ~0.2 prefunded
- *    voting balance the contested DPNS registration debits; non-contested
- *    take 0.03 → 0.03), fee → denomination mapping
+ *    protocol-gated contested fee — 0.25 DASH legacy/protocol-13, 0.15 DASH
+ *    from protocol 14 — → 0.25-denomination mapping either way — the
+ *    smallest covering member of the v13 set — so the identity's credits
+ *    cover the ~0.2 DASH (0.1 from protocol 14) prefunded voting balance the
+ *    contested DPNS registration debits; non-contested take 0.03 → 0.03),
+ *    fee → denomination mapping
  *    resolves ([chooseShieldedIdentityDenominationCredits]), shielded runtime
  *    ready ([ShieldedBalanceService.ensureShieldedReady]) with the pool
  *    READY (trustworthy balance, not a mid-sync placeholder zero) and
@@ -656,12 +693,19 @@ class SdkShieldedUsernameCreation internal constructor(
     private val dashPayConfig: DashPayConfig,
     private val shieldedBalanceService: ShieldedBalanceService,
     /**
-     * Creation fee in credits for a username of the given contested-ness
-     * (prod: `DASH_PAY_FEE_CONTESTED` = 0.25 DASH for contested labels,
-     * `DASH_PAY_FEE` = 0.03 DASH otherwise) — the input to the
-     * denomination mapping, NOT the amount spent.
+     * Creation fee in credits for a username of the given contested-ness —
+     * [ContestedUsernameFees.current]'s protocol-gated contested fee (MO-1069)
+     * for contested labels, `DASH_PAY_FEE` = 0.03 DASH otherwise — the input
+     * to the denomination mapping, NOT the amount spent (production:
+     * [shieldedDenominationFeeCredits]). Suspend: resolving the contested fee
+     * needs a protocol-version read. Both the LEGACY (0.25) and CURRENT (0.15)
+     * contested fees round UP to the same 0.25 DASH Type-20 exit denomination
+     * ([chooseShieldedIdentityDenominationCredits] — the v13 set's smallest
+     * member covering either), so this input is provably invariant to the
+     * actual amount SPENT — which is why an unknown protocol version falls
+     * back instead of refusing the creation.
      */
-    private val feeCredits: (contested: Boolean) -> Long,
+    private val feeCredits: suspend (contested: Boolean) -> Long,
     /** HRP the fallback Platform address must decode under (`dash`/`tdash`). */
     private val displayHrp: () -> String,
     /**
@@ -729,10 +773,7 @@ class SdkShieldedUsernameCreation internal constructor(
         dashPayConfig = dashPayConfig,
         shieldedBalanceService = shieldedBalanceService,
         // Lazy: Constants untouched at construction (inert-until-called).
-        feeCredits = { contested ->
-            val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
-            dashToCredits(Dash(fee.value))
-        },
+        feeCredits = { contested -> shieldedDenominationFeeCredits(contested, sdkService) },
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         handOffToLegacy = { identityId ->
             RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true).enqueue()
@@ -792,6 +833,8 @@ class SdkShieldedUsernameCreation internal constructor(
         }
         // LAZY + tracked before start: the job can never run unfenced.
         val job = scope.launch(start = CoroutineStart.LAZY) {
+            // The creation records its pool spend with the balance service
+            // itself, before the SDK call (see createUsernameFromShielded).
             val result = withContext(ioDispatcher) {
                 createUsernameFromShielded(username, secondaryUsername)
             }
@@ -799,15 +842,6 @@ class SdkShieldedUsernameCreation internal constructor(
                 is SdkWriteResult.Broadcast -> ShieldedUsernameSubmitState.Created(result.value)
                 is SdkWriteResult.NotBroadcast -> ShieldedUsernameSubmitState.NotSent(result.reason)
                 is SdkWriteResult.Ambiguous -> ShieldedUsernameSubmitState.MayHaveGoneThrough
-            }
-            if (result !is SdkWriteResult.NotBroadcast) {
-                // The Type-20 spend consumed pool notes OUTSIDE the balance
-                // service's own write paths — without this the More card
-                // shows the pre-spend balance until the next 60s sync pass
-                // (Ambiguous marks stale too: the spend MAY have landed,
-                // and a false "Syncing…" beats a false stale amount).
-                runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast() }
-                    .onFailure { log.warn("post-submit balance stale-mark failed; the 60s loop will catch up", it) }
             }
             synchronized(this@SdkShieldedUsernameCreation) {
                 _submitState.value = outcome
@@ -868,8 +902,8 @@ class SdkShieldedUsernameCreation internal constructor(
         // Contested-ness is derived HERE from the labels (same rule the
         // request screen gates on) so a caller can never pair a contested
         // name with the too-small non-contested denomination — the name
-        // registration would fail its ~0.2 prefunded-voting-balance
-        // debit after the identity was already created. In the dual-
+        // registration would fail its ~0.2 DASH (0.1 from protocol 14)
+        // prefunded-voting-balance debit after the identity was already created. In the dual-
         // username flow the primary is the contested one, but either
         // label being contestable bumps the funding requirement.
         val contested = try {
@@ -882,8 +916,9 @@ class SdkShieldedUsernameCreation internal constructor(
 
         // Fee → denomination (explicit mapping, see
         // chooseShieldedIdentityDenominationCredits: non-contested
-        // 0.03 DASH → 0.03, contested 0.25 DASH → 0.25 — both members of the
-        // allowed exit-denomination set).
+        // 0.03 DASH → 0.03, contested 0.25 DASH (legacy/protocol-13; the
+        // 0.15 DASH protocol-14 fee rounds up the same way) → 0.25 — both
+        // members of the allowed exit-denomination set).
         val fee = try {
             feeCredits(contested)
         } catch (t: Throwable) {
@@ -993,6 +1028,21 @@ class SdkShieldedUsernameCreation internal constructor(
         if (!secretWriteFence.tryAcquire("shielded identity funding")) {
             return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
         }
+        // The pending reconciliation is durable before anything is submitted
+        // (see ShieldedBalanceService.beginExternalShieldedSpend), so no
+        // surface (the home total, the More card) shows the pre-spend amount
+        // during the proof or the (slow) DPNS registration that follows.
+        val spendStartedAtMs = try {
+            // NonCancellable: a recorded spend must reach its end below.
+            withContext(NonCancellable) { shieldedBalanceService.beginExternalShieldedSpend() }
+        } catch (t: Throwable) {
+            secretWriteFence.release()
+            throw t
+        }
+        if (spendStartedAtMs == null) {
+            secretWriteFence.release()
+            return notBroadcast("could not record the pending shielded spend", null)
+        }
         val identityId = try {
             source.createIdentityFromPool(walletId, identityIndex, keys, denominationCredits, fallbackRaw21)
         } catch (t: Throwable) {
@@ -1008,10 +1058,13 @@ class SdkShieldedUsernameCreation internal constructor(
                             "and the spent notes stay reserved; do NOT retry",
                         t
                     )
+                    // The spend MAY have landed: the reconciliation begun
+                    // above stays until settlement.
                     SdkWriteResult.Ambiguous(t)
                 }
             }
         } finally {
+            endPoolSpend(spendStartedAtMs)
             secretWriteFence.release()
         }
         val identityIdBase58 = Identifier.from(identityId).toString()
@@ -1484,6 +1537,17 @@ class SdkShieldedUsernameCreation internal constructor(
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded username creation not attempted ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)
+    }
+
+    /**
+     * The identity-funding spend's SDK call is over (whatever its outcome):
+     * hand the reconciliation it began to settlement
+     * ([ShieldedBalanceService.endExternalShieldedSpend]). Best-effort and
+     * NonCancellable — the spend's durable record already exists.
+     */
+    private suspend fun endPoolSpend(spendStartedAtMs: Long) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.endExternalShieldedSpend(spendStartedAtMs) }
+            .onFailure { log.warn("pool-spend end failed; settlement waits for the next pass", it) }
     }
 
     /** [displayHrp] with failures contained (a throw must not escape a preflight). */

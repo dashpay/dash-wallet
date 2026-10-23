@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.invite
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
 import de.schildbach.wallet.service.platform.sdk.dashToCredits
@@ -93,7 +94,9 @@ class InviteShieldedFundingUIStateTest {
         )
         assertEquals(
             creditsToDash(
-                shieldedInviteDenominationCredits(dashToCredits(Dash(Constants.DASH_PAY_FEE_CONTESTED.value)))!!
+                shieldedInviteDenominationCredits(
+                    dashToCredits(Dash(ContestedUsernameFees.CURRENT.contested.value))
+                )!!
             ),
             state.contestedPrivateWithdrawn
         )
