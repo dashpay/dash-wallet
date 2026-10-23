@@ -728,7 +728,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 blockchainIdentityData.usingInvite
             )
             // check to see if restoring or if an invite was used
-            if (route == IdentityRetryRoute.NAME_ONLY) {
+            if (route == IdentityRetryRoute.NEW_NAME) {
+                startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
+            } else if (route == IdentityRetryRoute.NAME_ONLY) {
                 retryNameOnly(blockchainIdentityData)
             } else if (route == IdentityRetryRoute.RESTORE) {
                 RestoreIdentityOperation(requireActivity().application)
@@ -790,7 +792,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun openIdentityCreation() {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
-                if (SdkTransparentUsernameCreation.isNameOnlyRetryError(blockchainIdentityData.creationStateErrorMessage)) {
+                val route = identityRetryRoute(
+                    blockchainIdentityData.creationStateErrorMessage,
+                    blockchainIdentityData.restoring,
+                    blockchainIdentityData.usingInvite
+                )
+                if (route == IdentityRetryRoute.NAME_ONLY) {
                     retryNameOnly(blockchainIdentityData)
                 } else if (blockchainIdentityData.restoring) {
                     // are we restoring?
@@ -859,7 +866,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 }
 
 /** Where the home tile's retry sends an identity whose creation stopped with an error. */
-internal enum class IdentityRetryRoute { NAME_ONLY, RESTORE, LEGACY, INVITE }
+internal enum class IdentityRetryRoute { NEW_NAME, NAME_ONLY, RESTORE, LEGACY, INVITE }
 
 /** The route for [retryIdentityCreation] on the home tile. Pure, host-testable. */
 internal fun identityRetryRoute(
@@ -867,8 +874,25 @@ internal fun identityRetryRoute(
     restoring: Boolean,
     usingInvite: Boolean
 ): IdentityRetryRoute = when {
+    // the name is taken by someone else: retrying the same name cannot help, ask for a new one
+    SdkTransparentUsernameCreation.isNameOnlyRetryError(creationStateErrorMessage) &&
+        needsNewName(creationStateErrorMessage) -> IdentityRetryRoute.NEW_NAME
     SdkTransparentUsernameCreation.isNameOnlyRetryError(creationStateErrorMessage) -> IdentityRetryRoute.NAME_ONLY
     restoring -> IdentityRetryRoute.RESTORE
     !usingInvite -> IdentityRetryRoute.LEGACY
     else -> IdentityRetryRoute.INVITE
 }
+
+/**
+ * The failure says the requested name is taken (a duplicate, or a contest it is not part of):
+ * the user has to pick another name. Shared by the home tile's routing and the More screen;
+ * "primary username was lost" is the pre-11.10.52 wrapper-adoption clobber (S22).
+ */
+internal fun needsNewName(errorMessage: String?): Boolean = errorMessage != null && (
+    errorMessage.contains("Document transitions with duplicate unique properties") ||
+        errorMessage.contains("DuplicateUniqueIndexError") ||
+        errorMessage.contains("primary username was lost") ||
+        errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
+        errorMessage.contains(Regex("does not have .* as a contender")) ||
+        errorMessage.contains("missing domain document for ")
+    )

@@ -31,6 +31,21 @@ class IdentityRetryRouteTest {
     }
 
     @Test
+    fun `a name-only failure because the name is taken asks for a new name instead`() {
+        listOf(
+            "Document transitions with duplicate unique properties",
+            "DuplicateUniqueIndexError",
+            "missing domain document for alice3"
+        ).forEach { cause ->
+            assertEquals(
+                cause,
+                IdentityRetryRoute.NEW_NAME,
+                identityRetryRoute(SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": " + cause, restoring = false, usingInvite = false)
+            )
+        }
+    }
+
+    @Test
     fun `other errors keep their routes`() {
         assertEquals(IdentityRetryRoute.RESTORE, identityRetryRoute("x", restoring = true, usingInvite = false))
         assertEquals(IdentityRetryRoute.LEGACY, identityRetryRoute("x", restoring = false, usingInvite = false))

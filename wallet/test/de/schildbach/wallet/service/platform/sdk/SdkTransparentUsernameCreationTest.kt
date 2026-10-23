@@ -761,6 +761,41 @@ class SdkTransparentUsernameCreationTest {
     }
 
     @Test
+    fun `a second retry, or a creation, while a name-only retry runs is refused`() = runTest {
+        // B2: a double tap must not register the same label twice (a contested prefund twice)
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val gate = CompletableDeferred<Unit>()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            driveCreationState = { _, _ -> },
+            // the first run is still writing its name context
+            persistNameContext = { _, _, _, _ -> gate.await() },
+            executorScope = appScope
+        )
+
+        assertTrue("the first retry is accepted", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        assertFalse("a second retry is refused", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        assertFalse("a creation is refused", creation.submit("bob5"))
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertTrue(
+            "free again once the run is over",
+            creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+        )
+        appScope.cancel()
+    }
+
+    @Test
     fun `a failed replacement stays on the name-only route and a tile retry registers it`() = runTest {
         // review 4301924854: the failure used to set restoring, which sent the tile retry and the
         // background discovery into the restore worker; that dropped the replacement

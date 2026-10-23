@@ -576,6 +576,9 @@ class SdkTransparentUsernameCreation internal constructor(
     /** The in-flight/terminal state of the one allowed creation operation. */
     val submitState: StateFlow<ShieldedUsernameSubmitState> = _submitState.asStateFlow()
 
+    /** A name-only retry ([retryNameForExistingIdentity]) is running; guarded by `synchronized(this)`. */
+    private var nameRetryInFlight = false
+
     /**
      * Whether the cutover is committed — the routing signal
      * [de.schildbach.wallet.ui.username.request.RequestUserNameViewModel.submit]
@@ -617,6 +620,10 @@ class SdkTransparentUsernameCreation internal constructor(
                 state !is ShieldedUsernameSubmitState.NotSent
             ) {
                 log.warn("transparent username creation submit refused: an operation is {}", state)
+                return false
+            }
+            if (nameRetryInFlight) {
+                log.warn("transparent username creation submit refused: a name-only retry is running")
                 return false
             }
             _submitState.value = ShieldedUsernameSubmitState.Proving
@@ -1604,6 +1611,34 @@ class SdkTransparentUsernameCreation internal constructor(
             log.warn("name-only retry refused: wallet wipe in progress")
             return false
         }
+        // Single-flight with [submit], for the whole run: a double tap must not register the same
+        // label twice (a contested name's prefund twice).
+        synchronized(this) {
+            if (nameRetryInFlight || _submitState.value == ShieldedUsernameSubmitState.Proving) {
+                log.warn("name-only retry refused: another name operation is running")
+                return false
+            }
+            nameRetryInFlight = true
+        }
+        var launched = false
+        try {
+            return launchNameRetry(scope, identityIdBase58, username, secondaryUsername).also { launched = it }
+        } finally {
+            if (!launched) releaseNameRetry()
+        }
+    }
+
+    private fun releaseNameRetry() {
+        synchronized(this) { nameRetryInFlight = false }
+    }
+
+    /** The rest of [retryNameForExistingIdentity], once it holds the single-flight slot. */
+    private suspend fun launchNameRetry(
+        scope: CoroutineScope,
+        identityIdBase58: String,
+        username: String,
+        secondaryUsername: String?
+    ): Boolean {
         // Resolved before accepting, failing closed: a refusal touches nothing and shows the
         // screen's error, so no stamped error can send a later "Try again" anywhere else.
         val resolved = try {
@@ -1637,6 +1672,7 @@ class SdkTransparentUsernameCreation internal constructor(
                 recordRetryFailure(e)
             }
         }
+        job.invokeOnCompletion { releaseNameRetry() }
         secretWriteFence.track(job)
         job.start()
         return true

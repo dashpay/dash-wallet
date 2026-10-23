@@ -6,6 +6,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,8 @@ class CreateIdentityViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao,
-    val dashPayConfig: DashPayConfig
+    val dashPayConfig: DashPayConfig,
+    private val transparentUsernameCreation: SdkTransparentUsernameCreation
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
     private val _creationState = MutableStateFlow(IdentityCreationState.NONE)
@@ -51,6 +53,23 @@ class CreateIdentityViewModel @Inject constructor(
 
     fun retryCreateIdentity() {
         viewModelScope.launch {
+            // A name-only retry's error (an existing identity, after the cutover) goes back into the
+            // name-only retry with the requested names on record, never to CreateIdentityService,
+            // which would reset the identity and fund it again. A name that did land meanwhile is
+            // not submitted again there.
+            val error = blockchainIdentityDataDao.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE)
+            if (SdkTransparentUsernameCreation.isNameOnlyRetryError(error)) {
+                val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
+                val username = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME)
+                if (identityId != null && username != null) {
+                    transparentUsernameCreation.retryNameForExistingIdentity(
+                        identityId,
+                        username,
+                        blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME_SECONDARY)
+                    )
+                }
+                return@launch
+            }
             val isRestoring = blockchainIdentityDataDao.get(BlockchainIdentityConfig.RESTORING) ?: false
 
             if (isRestoring) {
