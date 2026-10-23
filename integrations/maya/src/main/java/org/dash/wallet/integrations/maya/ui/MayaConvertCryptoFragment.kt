@@ -94,6 +94,12 @@ class MayaConvertCryptoFragment : Fragment() {
         }
     private var canContinue: Boolean = false
 
+    // The screen's busy state has two independent sources — a quote in flight and the Max
+    // sendable estimate — so each is tracked separately and combined by [updateProcessing];
+    // mirroring one straight into uiState let the other clear it.
+    private var quoteInFlight: Boolean = false
+    private var maxEstimateInFlight: Boolean = false
+
     // Hard gate on Get quote independent of the entered value — false when the wallet has no
     // DASH to convert, so the button stays disabled no matter what the user types. Derived
     // from the ViewModel so the gate survives a configuration change.
@@ -232,8 +238,8 @@ class MayaConvertCryptoFragment : Fragment() {
         // While the quote is being fetched, block all amount input so a late key press
         // can't alter the value carried to the preview.
         viewModel.showLoading.observe(viewLifecycleOwner) { loading ->
-            uiState = uiState.copy(isProcessing = loading == true)
-            updateContinueEnabled()
+            quoteInFlight = loading == true
+            updateProcessing()
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) { swapTrade ->
@@ -243,11 +249,11 @@ class MayaConvertCryptoFragment : Fragment() {
                 // navigating. Keep Get quote disabled for that whole stretch (it happens in the
                 // same frame as the showLoading=false observer, so the button never flashes
                 // enabled); re-enable only on the error paths that keep the user on this screen.
-                uiState = uiState.copy(isProcessing = true)
-                updateContinueEnabled()
+                quoteInFlight = true
+                updateProcessing()
                 fun failToRetry() {
-                    uiState = uiState.copy(isProcessing = false)
-                    updateContinueEnabled()
+                    quoteInFlight = false
+                    updateProcessing()
                 }
 
                 val dashInbound = try {
@@ -394,10 +400,15 @@ class MayaConvertCryptoFragment : Fragment() {
             )
             applyNewValue(convertViewModel.enteredConvertAmount, pickedCurrencyType, isLocalized = true)
             // The value re-applied above comes from the formatted display string, which for fiat
-            // is rounded to the currency's 2 decimals — so a restored Max needs the exact balance
-            // pinned back on, taken from the balance as it stands now.
+            // is rounded to the currency's 2 decimals — so a restored Max needs the exact figure
+            // pinned back on. selectMaxAmount re-derives it from the balance as it stands now, so
+            // a balance that moved while this screen was away is picked up rather than restored.
             if (maxAmountSelected) {
-                convertViewModel.selectMaxAmount(pickedCurrencyType)
+                val type = pickedCurrencyType
+                lifecycleScope.launch {
+                    convertViewModel.selectMaxAmount(type)
+                    showPinnedMaxAmount(type)
+                }
             }
         }
     }
@@ -421,17 +432,45 @@ class MayaConvertCryptoFragment : Fragment() {
 
     private fun onMaxClick() {
         if (uiState.isProcessing) return
-        convertViewModel.selectedCryptoCurrencyAccount.value?.let { _ ->
-            convertViewModel.getMaxAmount()?.let { maxAmount ->
-                // Enter the balance in whichever currency the picker is on.
-                val type = pickedCurrencyType
-                applyNewValue(maxAmount.getValue(type).toString(), type, isLocalized = false)
-                // Flag it as a Max and re-pin the exact balance: the line above re-anchors the
-                // amount on the displayed currency, so for fiat/crypto the DASH value it derives
-                // back is a satoshi or two short of the balance.
-                convertViewModel.selectMaxAmount(type)
+        if (convertViewModel.selectedCryptoCurrencyAccount.value == null) return
+
+        // Enter what the wallet can actually send, not its balance — a max sell is a sweep and
+        // the miner fee comes out of the sweep's own output. Working that out means building a
+        // candidate sweep, so it can't be done on the main thread; the screen shows its busy
+        // state for the (usually pre-warmed, so instant) wait rather than ignoring the tap.
+        val type = pickedCurrencyType
+        maxEstimateInFlight = true
+        updateProcessing()
+        lifecycleScope.launch {
+            val maxAmount = try {
+                convertViewModel.getMaxAmount()
+            } finally {
+                maxEstimateInFlight = false
+                updateProcessing()
             }
+
+            if (maxAmount == null) {
+                // Nothing left once the fee is taken out — say so rather than entering zero.
+                showSwapValueErrorView(SwapValueErrorType.NotEnoughBalance)
+                return@launch
+            }
+
+            applyNewValue(maxAmount.getValue(type).toString(), type, isLocalized = false)
+            // Flag it as a Max and re-pin the exact figure: the line above re-anchors the amount
+            // on the displayed currency, so for fiat/crypto the DASH value it derives back is a
+            // satoshi or two short of what was entered.
+            convertViewModel.selectMaxAmount(type)
         }
+    }
+
+    /**
+     * Mirrors a Max figure pinned by the ViewModel back into the display, which otherwise still
+     * shows the value that was entered before the pin (for fiat, rounded to the currency's digits).
+     */
+    private fun showPinnedMaxAmount(type: CurrencyInputType) {
+        setAmountValue(type)
+        canContinue = convertViewModel.enteredConvertDashAmount.value?.isZero == false
+        updateContinueEnabled()
     }
 
     // ── Keypad input (ported from the old NumericKeyboardView listener) ───────────
@@ -574,6 +613,12 @@ class MayaConvertCryptoFragment : Fragment() {
         )
     }
 
+    /** Recomputes the busy state from its two sources; see [quoteInFlight]/[maxEstimateInFlight]. */
+    private fun updateProcessing() {
+        uiState = uiState.copy(isProcessing = quoteInFlight || maxEstimateInFlight)
+        updateContinueEnabled()
+    }
+
     // ── Derived display blocks ────────────────────────────────────────────────────
 
     /** Dash wallet balance row of the direction card: "Balance: 0.05 (Dash logo)" + fiat equivalent. */
@@ -624,8 +669,10 @@ class MayaConvertCryptoFragment : Fragment() {
             return
         }
 
-        val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
         lifecycleScope.launch {
+            // Suspends: the entry bound is the max sendable figure, which may still need its
+            // sweep estimate. Normally pre-warmed and cached, so this doesn't stall the tap.
+            val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
                     if (viewModel.getLastBalance() < (request.dashAmount ?: Coin.ZERO)) {
@@ -674,12 +721,14 @@ class MayaConvertCryptoFragment : Fragment() {
 
     private fun maxAmountErrorMessage(): String? {
         if (convertViewModel.dashToCrypto.value == true) {
-            viewModel.dashWalletBalance.value?.let { dash ->
-                convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
-                    val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
-                    val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
-                    return "${getString(R.string.maya_max_amount_error)} $fiatAmount"
-                }
+            // The limit that was just enforced is what the wallet can send, not its balance —
+            // quoting the balance here would name a figure the check itself rejects.
+            convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+                val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
+                val fiatAmount = currencyRate
+                    .coinToFiat(convertViewModel.lastMaxSendableAmount)
+                    .toFormattedString()
+                return "${getString(R.string.maya_max_amount_error)} $fiatAmount"
             }
         } else {
             convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
