@@ -389,9 +389,11 @@ enum class MixedFundsMigrationOutcome {
  *
  * Both operations are SINGLE-SOURCE-ACCOUNT transactions. Neither ever unions
  * CoinJoin UTXOs with BIP44 UTXOs — the design that was rejected in review for
- * "silently crossing privacy domains". Consolidation publicly links its inputs,
- * including when its destination stays in the CoinJoin account. The shielded
- * destination protects subsequent activity; the choice text explains the linkage.
+ * "silently crossing privacy domains". Consolidation publicly links the inputs
+ * it combines, including when its destination stays in the CoinJoin account;
+ * the sheet does not currently disclose this (the shield option's note says
+ * only that the funds stay private). The shielded destination protects
+ * subsequent activity.
  *
  * ## The `fundingPath` format, and how it was verified
  *
