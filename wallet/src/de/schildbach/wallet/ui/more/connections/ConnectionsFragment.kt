@@ -190,6 +190,11 @@ class ConnectionsFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshConnections()
+    }
+
     private fun launchScanner() {
         if (!viewModel.isWalletUnlocked) return
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))

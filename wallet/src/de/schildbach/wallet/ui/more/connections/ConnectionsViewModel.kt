@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
 import javax.inject.Inject
@@ -95,6 +96,7 @@ class ConnectionsViewModel @Inject constructor(
     private var pendingOpenedFromUrl = false
     private var operationInProgress = false
     private var walletUnlockCheck: () -> Boolean = { false }
+    private var connectionsJob: Job? = null
 
     internal val isWalletUnlocked: Boolean get() = walletUnlockCheck()
 
@@ -103,7 +105,12 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     init {
-        repository.observeConnections()
+        refreshConnections()
+    }
+
+    fun refreshConnections() {
+        connectionsJob?.cancel()
+        connectionsJob = repository.observeConnections()
             .catch { error ->
                 log.error("Cannot read connection grant records", error)
                 _scanOutcome.value = ScanOutcome.Error("Connection records could not be read. No access has been revoked.")

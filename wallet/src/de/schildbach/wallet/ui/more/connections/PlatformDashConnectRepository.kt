@@ -10,8 +10,11 @@ import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.connections.protocol.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.dashj.platform.sdk.platform.DomainDocument
@@ -28,28 +31,45 @@ class PlatformDashConnectRepository @Inject constructor(
     companion object { const val KEY_EXCHANGE_CONTRACT_ID = AppConnectSession.RESPONSE_CONTRACT }
     private val session = AppConnectSession(platform, platformRepo, identityRepository, config)
 
-    override fun observeConnections(): Flow<List<DAppConnection>> = combine(
+    override fun observeConnections(): Flow<List<DAppConnection>> = observeConnections(System::currentTimeMillis)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    internal fun observeConnections(now: () -> Long): Flow<List<DAppConnection>> = combine(
         config.observeGrants(), config.observeConnections(), identityRepository.blockchainIdentityFlow
-    ) { records, legacy, _ ->
-        val scope = runCatching { session.scope() }.getOrNull()
-        val current = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }.map { (app, grants) ->
-            val latest = grants.last()
-            DAppConnection(app, latest.optString("label").ifBlank { "Unknown app" }, "",
-                when {
-                    grants.any { record -> record.optString("state") == "active" && record.getJSONArray("keys").let { keys ->
-                        (0 until keys.length()).any { index -> keys.getJSONObject(index).let { key ->
-                            key.getInt("purpose") == 0 && key.optLong("expiresAt", Long.MAX_VALUE) > System.currentTimeMillis()
-                        } }
-                    } } -> ConnectionStatus.ACTIVE
-                    // Revoked request keys do not prove that the app has no surviving access.
-                    grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
-                        !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
-                    else -> ConnectionStatus.DISCONNECTED
-                }, latest.optLong("updatedAt"), scope)
+    ) { records, legacy, _ -> records to legacy }.transformLatest { (records, legacy) ->
+        // A record/identity update cancels the previous expiry schedule.
+        while (true) {
+            val currentTime = now()
+            val scope = runCatching { session.scope() }.getOrNull()
+            val current = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }.map { (app, grants) ->
+                val latest = grants.last()
+                DAppConnection(app, latest.optString("label").ifBlank { "Unknown app" }, "",
+                    when {
+                        grants.any { record -> record.optString("state") == "active" && record.getJSONArray("keys").let { keys ->
+                            (0 until keys.length()).any { index -> keys.getJSONObject(index).let { key ->
+                                key.getInt("purpose") == 0 && key.optLong("expiresAt", Long.MAX_VALUE) > currentTime
+                            } }
+                        } } -> ConnectionStatus.ACTIVE
+                        // Revoked request keys do not prove that the app has no surviving access.
+                        grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
+                            !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
+                        else -> ConnectionStatus.DISCONNECTED
+                    }, latest.optLong("updatedAt"), scope)
+            }
+            emit((current + legacy.filter { old -> current.none { it.id == old.contractId } }.map {
+                DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope, legacyOnly = true)
+            }).sortedByDescending { it.updatedAt })
+            val nextExpiry = records.asSequence()
+                .filter { it.getString("scope") == scope && it.optString("state") == "active" }
+                .flatMap { record -> record.getJSONArray("keys").let { keys ->
+                    (0 until keys.length()).asSequence().map { keys.getJSONObject(it) }
+                } }
+                .filter { it.getInt("purpose") == 0 }
+                .map { it.optLong("expiresAt", Long.MAX_VALUE) }
+                .filter { it > currentTime && it != Long.MAX_VALUE }
+                .minOrNull() ?: break
+            delay((nextExpiry - now()).coerceAtLeast(1L))
         }
-        (current + legacy.filter { old -> current.none { it.id == old.contractId } }.map {
-            DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope, legacyOnly = true)
-        }).sortedByDescending { it.updatedAt }
     }
 
     override suspend fun parseQr(qrContent: String): DashConnectQr {

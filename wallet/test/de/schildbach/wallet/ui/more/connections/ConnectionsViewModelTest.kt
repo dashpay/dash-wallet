@@ -102,6 +102,37 @@ class ConnectionsViewModelTest {
     @Test fun `unsupported device rejects purchase URL without waiting for initialization`() =
         assertUnsupportedRequestRejected(openedFromUrl = true, purchase = true)
 
+    @Test fun `resume refresh replaces observer and reprojects unchanged stored records`() {
+        model.viewModelScope.cancel()
+        var activeObservers = 0
+        var status = ConnectionStatus.ACTIVE
+        every { repository.observeConnections() } answers {
+            kotlinx.coroutines.flow.flow {
+                activeObservers++
+                try {
+                    emit(listOf(DAppConnection("app", "App", "", status, 1)))
+                    kotlinx.coroutines.awaitCancellation()
+                } finally {
+                    activeObservers--
+                }
+            }
+        }
+        model = ConnectionsViewModel(repository, identities)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionStatus.ACTIVE, model.uiState.value.connections.single().status)
+        status = ConnectionStatus.APPROVED
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionStatus.APPROVED, model.uiState.value.connections.single().status)
+        assertEquals(1, activeObservers)
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(1, activeObservers)
+        model.viewModelScope.cancel()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(0, activeObservers)
+    }
+
     private fun scan(openedFromUrl: Boolean = false) {
         if (openedFromUrl) model.onUrlOpened("qr") else model.onQrScanned("qr")
         dispatcher.scheduler.advanceUntilIdle()
