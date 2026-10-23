@@ -26,7 +26,7 @@ import org.junit.Test
 
 class PendingPaymentFundingGateTest {
 
-    private fun gate(verifier: PendingDirectPaymentVerifier) = PendingPaymentFundingGate { verifier }
+    private fun gate(verifier: PendingDirectPaymentVerifier) = PendingPaymentFundingGate({ verifier })
 
     @Test
     fun blocksWhileAPendingPaymentIsUnprotected() = runTest {

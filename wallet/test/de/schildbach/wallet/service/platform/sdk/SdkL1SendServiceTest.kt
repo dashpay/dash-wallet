@@ -29,6 +29,10 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.junit.Assert.assertEquals
@@ -229,7 +233,9 @@ class SdkL1SendServiceTest {
         // Fresh empty registry by default: no seam locks, drain paths
         // exercisable. Seam-lock refusal is covered by dedicated tests.
         seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
-        unprotectedPendingPayment: suspend () -> Boolean = { false }
+        unprotectedPendingPayment: suspend () -> Boolean = { false },
+        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
+            de.schildbach.wallet.payments.FundingSelectionLock()
     ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(enabled, cutoverState),
@@ -240,7 +246,8 @@ class SdkL1SendServiceTest {
         seamOutputLockRegistry = seamRegistry,
         onSelfSpendBroadcast = { selfSpendMarks++ },
         bridgeAfterBroadcast = bridgeAfterBroadcast,
-        hasUnprotectedPendingPayment = unprotectedPendingPayment
+        hasUnprotectedPendingPayment = unprotectedPendingPayment,
+        fundingSelection = fundingSelection
     )
 
     /** A source in the fully-ready state: wallet bound, send succeeds. */
@@ -1507,6 +1514,37 @@ class SdkL1SendServiceTest {
             assertTrue(e.message!!.contains("memoSizeBytes"))
         }
         Unit
+    }
+
+    // ── fresh funding vs. a resubmission's reactivation (review 4309551218) ──
+
+    @Test
+    fun aFreshSendAuthorizedBeforeAReactivation_neverSelectsTheReactivatedInputs() = runBlocking {
+        // The send passed the gate while T1 was still released; a resubmission then reactivated
+        // T1 (the gate now refuses). The send must not go on to select T1's inputs.
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        var t1Active = false
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { t1Active }, fundingSelection = lock)
+
+        val reactivating = CompletableDeferred<Unit>()
+        val reactivated = CompletableDeferred<Unit>()
+        val reactivation = async(Dispatchers.Default) {
+            lock.withSelection {
+                reactivating.complete(Unit)
+                reactivated.await()
+                t1Active = true // the record is active again: fresh funding must be refused
+            }
+        }
+        reactivating.await()
+        val send = async(Dispatchers.Default) { svc.sendToAddress(validAddress, Dash(10_000L), emptyWallet = false) }
+        delay(200)
+        reactivated.complete(Unit)
+        reactivation.await()
+
+        val result = send.await()
+        assertTrue("refused, not sent: $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals("never reached coin selection", 0, source.sendCalls)
     }
 
     // ── unprotected pending payment (review 4245734665) ────────────────────

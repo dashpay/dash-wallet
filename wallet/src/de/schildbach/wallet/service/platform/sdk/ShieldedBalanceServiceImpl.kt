@@ -933,6 +933,9 @@ class ShieldedBalanceServiceImpl internal constructor(
      * the host-JVM tests inert.
      */
     private val freshFundingBlocked: suspend () -> Boolean = { false },
+    /** Shared with a resubmission's reactivation; see [de.schildbach.wallet.payments.FundingSelectionLock]. */
+    private val fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
+        de.schildbach.wallet.payments.FundingSelectionLock(),
     /**
      * Wall clock (Unix millis) for spend start times. Injectable for tests.
      */
@@ -971,7 +974,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         sweepScope = applicationScope,
         seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
-        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() }
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
+        fundingSelection = fundingGate.selectionLock
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -1942,14 +1946,25 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
             try {
                 try {
-                    if (fundingPath == null) {
-                        source.fundFromAssetLock(walletId, recipient, amount.duffs)
-                    } else {
-                        // SINGLE-ACCOUNT: every input comes from the account this
-                        // path names (the DIP-9 CoinJoin account); BIP44 coins are
-                        // never co-spent. Only change returns to BIP44 account 0.
-                        source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
-                    }
+                    // Asked again under the shared selection lock and held through the build
+                    // (review 4309551218): a resubmission's reactivation cannot slip in between.
+                    fundingSelection.selectIfAllowed({
+                        try {
+                            freshFundingBlocked()
+                        } catch (t: Throwable) {
+                            if (t is CancellationException) throw t
+                            true
+                        }
+                    }) {
+                        if (fundingPath == null) {
+                            source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                        } else {
+                            // SINGLE-ACCOUNT: every input comes from the account this
+                            // path names (the DIP-9 CoinJoin account); BIP44 coins are
+                            // never co-spent. Only change returns to BIP44 account 0.
+                            source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+                        }
+                    } ?: return notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
                 } finally {
                     endLocalSpend(spendStartedAtMs)
                 }

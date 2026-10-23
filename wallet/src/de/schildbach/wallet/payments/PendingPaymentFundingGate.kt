@@ -36,7 +36,12 @@ import javax.inject.Singleton
  */
 @Singleton
 class PendingPaymentFundingGate @Inject constructor(
-    private val verifier: Provider<PendingDirectPaymentVerifier>
+    private val verifier: Provider<PendingDirectPaymentVerifier>,
+    /**
+     * The lock a fresh-funding entry point asks this gate again under, and holds through its
+     * selection (review 4309551218): shared with the verifier's reactivation.
+     */
+    val selectionLock: FundingSelectionLock = FundingSelectionLock()
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(PendingPaymentFundingGate::class.java)

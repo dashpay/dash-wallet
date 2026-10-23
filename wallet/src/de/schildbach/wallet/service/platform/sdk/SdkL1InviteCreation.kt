@@ -381,7 +381,10 @@ class SdkL1InviteCreation internal constructor(
      * selection) is then refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON]. Default false keeps
      * the host-JVM tests inert.
      */
-    private val freshFundingBlocked: suspend () -> Boolean = { false }
+    private val freshFundingBlocked: suspend () -> Boolean = { false },
+    /** Shared with a resubmission's reactivation; see [de.schildbach.wallet.payments.FundingSelectionLock]. */
+    private val fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
+        de.schildbach.wallet.payments.FundingSelectionLock()
 ) {
     @Inject
     constructor(
@@ -426,7 +429,8 @@ class SdkL1InviteCreation internal constructor(
             }
         },
         secretWriteFence = secretWriteFence,
-        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() }
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
+        fundingSelection = fundingGate.selectionLock
     )
 
     /**
@@ -513,14 +517,25 @@ class SdkL1InviteCreation internal constructor(
             return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
         }
         val created = try {
-            source.createInvitation(
-                walletIdHex = walletId,
-                amountDuffs = amountDuffs,
-                fundingAccountIndex = ACCOUNT_INDEX,
-                inviterIdentityId = inviterIdentityId,
-                inviterUsername = username,
-                nowUnix = nowUnixSeconds()
-            )
+            // Asked again under the shared selection lock and held through the build (review
+            // 4309551218): a resubmission's reactivation cannot slip in between.
+            fundingSelection.selectIfAllowed({
+                try {
+                    freshFundingBlocked()
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    true
+                }
+            }) {
+                source.createInvitation(
+                    walletIdHex = walletId,
+                    amountDuffs = amountDuffs,
+                    fundingAccountIndex = ACCOUNT_INDEX,
+                    inviterIdentityId = inviterIdentityId,
+                    inviterUsername = username,
+                    nowUnix = nowUnixSeconds()
+                )
+            }?.value ?: return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return when (val classified = classifyBroadcastFailure(t)) {

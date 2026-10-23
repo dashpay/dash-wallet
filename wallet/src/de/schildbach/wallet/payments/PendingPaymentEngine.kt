@@ -27,6 +27,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.TX_CONTEXT_CHAIN_LOCKED
+import de.schildbach.wallet.service.platform.sdk.TX_CONTEXT_INSTANT_SEND
 import de.schildbach.wallet.service.platform.sdk.sdkOutpointBytes
 import de.schildbach.wallet.service.platform.sdk.wireTxidBytesOrNull
 import kotlinx.coroutines.CancellationException
@@ -51,6 +52,14 @@ enum class EngineObservation {
 }
 
 /**
+ * Whether the SDK store's row for a payment proves it reached the network (review 4309551133): an
+ * InstantSend lock on it, or a block (chain-locked or not). A row with neither is only what this
+ * wallet recorded, possibly for its own broadcast, and is no evidence of delivery. Pure.
+ */
+internal fun sdkRowIsNetworkEvidence(context: Int, blockHeight: Int): Boolean =
+    context == TX_CONTEXT_INSTANT_SEND || context == TX_CONTEXT_CHAIN_LOCKED || blockHeight > 0
+
+/**
  * Pure classification behind [PendingPaymentEngine.observation]. A record found is evidence
  * whatever the engine's state; the absence of one only counts when [live].
  *
@@ -58,6 +67,7 @@ enum class EngineObservation {
  *   could not be read
  */
 internal fun classifyEngineObservation(recordFound: Boolean?, live: Boolean): EngineObservation = when {
+    // [recordFound]: a row with network evidence ([sdkRowIsNetworkEvidence]), not merely a row
     recordFound == true -> EngineObservation.OBSERVED
     recordFound == null -> EngineObservation.UNAVAILABLE
     !live -> EngineObservation.UNAVAILABLE
@@ -242,7 +252,13 @@ class SdkPendingPaymentEngine @Inject constructor(
         val recordFound: Boolean? = try {
             val wire = wireTxidBytesOrNull(txIdHex)
             val db = sdkService.databaseOrNull()
-            if (wire == null || db == null) null else db.transactionDao().getByTxid(wire) != null
+            if (wire == null || db == null) {
+                null
+            } else {
+                // A row is not delivery (review 4309551133): the engine records what it broadcast
+                // itself. Only network evidence counts, as master's dashj confidence did.
+                db.transactionDao().getByTxid(wire)?.let { sdkRowIsNetworkEvidence(it.context, it.blockHeight) } ?: false
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             log.warn("could not read the SDK store for {}", txIdHex, e)

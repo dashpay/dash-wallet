@@ -92,7 +92,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
     private val blockchainStateProvider: BlockchainStateProvider,
     private val metadataProvider: TransactionMetadataProvider,
     private val config: PendingDirectPaymentConfig,
-    private val engine: PendingPaymentEngine
+    private val engine: PendingPaymentEngine,
+    /** Shared with fresh SDK funding; see [FundingSelectionLock]. */
+    private val fundingSelection: FundingSelectionLock = FundingSelectionLock()
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(PendingDirectPaymentVerifier::class.java)
@@ -231,7 +233,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * except the wipe's clear, which must never wait on a write in flight and does not need to.
      *
      * Innermost: taken after [scanMutex] or [settleMutex], never before them. While holding it,
-     * only [jobsMutex] (through [track]) is taken.
+     * only [jobsMutex] (through [track]) is taken. The full order: [FundingSelectionLock] (held by
+     * fresh SDK funding and by [reactivateForResubmission]), then [scanMutex] or [settleMutex] or
+     * [claimMutex], then [recordMutex], then [jobsMutex].
      */
     private val recordMutex = Mutex()
 
@@ -703,7 +707,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
      *
      * @throws IllegalStateException when restoration fails or [origin] is no longer the wallet
      */
-    suspend fun reactivateForResubmission(tx: Transaction, origin: Wallet): Reactivation {
+    suspend fun reactivateForResubmission(tx: Transaction, origin: Wallet): Reactivation =
+        // Under the shared selection lock (review 4309551218): fresh SDK funding re-asks the
+        // funding gate and selects its inputs under it, so it never selects this payment's inputs
+        // while the reactivation makes it active. Outermost, before scanMutex and recordMutex.
+        fundingSelection.withSelection { reactivateNow(tx, origin) }
+
+    private suspend fun reactivateNow(tx: Transaction, origin: Wallet): Reactivation {
         awaitRestored()
         return recordMutex.withLock {
             if (!stillOwnedBy(origin)) {

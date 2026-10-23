@@ -29,6 +29,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -1661,6 +1662,80 @@ class PendingDirectPaymentVerifierTest {
         val shadow = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService>(relaxed = true)
         every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(progress)
         return SdkPendingPaymentEngine(mockk(relaxed = true), mockk(relaxed = true), shadow, mockk(relaxed = true))
+    }
+
+    // --- review 4309551133: a stored row is not delivery ------------------------------------
+
+    private fun engineOverRow(row: org.dashfoundation.dashsdk.persistence.entities.TransactionEntity?): SdkPendingPaymentEngine {
+        val shadow = mockk<de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService>(relaxed = true)
+        every { shadow.isEngineRunning() } returns true
+        every { shadow.progress } returns kotlinx.coroutines.flow.MutableStateFlow(progress(walletSyncedHeight = 1_000L))
+        val db = mockk<org.dashfoundation.dashsdk.persistence.DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk(relaxed = true) { coEvery { getByTxid(any()) } returns row }
+        val sdkService = mockk<de.schildbach.wallet.service.platform.sdk.DashSdkService>(relaxed = true)
+        every { sdkService.databaseOrNull() } returns db
+        return SdkPendingPaymentEngine(mockk(relaxed = true), sdkService, shadow, mockk(relaxed = true))
+    }
+
+    private fun row(context: Int, blockHeight: Int) =
+        org.dashfoundation.dashsdk.persistence.entities.TransactionEntity(
+            txid = ByteArray(32) { 1 },
+            transactionData = ByteArray(0),
+            context = context,
+            blockHeight = blockHeight
+        )
+
+    @Test
+    fun `a stored row with no InstantSend lock and no block is not delivery`() = runBlocking {
+        // the engine records what it broadcast itself; that row proves nothing reached the network
+        assertEquals(EngineObservation.ABSENT, engineOverRow(row(context = 0, blockHeight = 0)).observation("01".repeat(32)))
+    }
+
+    @Test
+    fun `an InstantSend-locked, chain-locked or mined row is delivery`() = runBlocking {
+        val txid = "01".repeat(32)
+        assertEquals(EngineObservation.OBSERVED, engineOverRow(row(context = 1, blockHeight = 0)).observation(txid))
+        assertEquals(EngineObservation.OBSERVED, engineOverRow(row(context = 3, blockHeight = 1_000)).observation(txid))
+        assertEquals(EngineObservation.OBSERVED, engineOverRow(row(context = 2, blockHeight = 999)).observation(txid))
+        assertEquals(EngineObservation.ABSENT, engineOverRow(null).observation(txid))
+    }
+
+    // --- review 4309551218: fresh SDK funding and a reactivation never overlap ----------------
+
+    @Test
+    fun `a reactivation waits while fresh SDK funding is selecting`() = runBlocking {
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        stored.add(PendingDirectPayment(tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", 0L, abandoned = true))
+        val lock = FundingSelectionLock()
+        val wipe = slot<suspend () -> Unit>()
+        val ownWalletData = mockk<WalletData>(relaxed = true)
+        every { ownWalletData.wallet } returns wallet
+        every { ownWalletData.attachOnWalletWipedListener(capture(wipe)) } answers { }
+        val shared = PendingDirectPaymentVerifier(
+            ownWalletData, walletApplication, blockchainStateProvider, metadataProvider, config, engine, lock
+        ).apply { pollIntervalMs = 20L }
+
+        val selecting = CompletableDeferred<Unit>()
+        val selected = CompletableDeferred<Unit>()
+        val funding = async(Dispatchers.Default) {
+            lock.withSelection {
+                selecting.complete(Unit)
+                selected.await() // a fresh send, authorized, selecting its inputs
+            }
+        }
+        selecting.await()
+        val reactivation = async(Dispatchers.Default) { shared.reactivateForResubmission(tx, wallet) }
+        delay(300)
+
+        assertTrue("still released while the funding selects", stored.single().abandoned)
+        tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
+
+        selected.complete(Unit)
+        funding.await()
+        assertEquals(PendingDirectPaymentVerifier.Reactivation.REACTIVATED, withTimeout(5_000) { reactivation.await() })
+        assertFalse(stored.single().abandoned)
+        if (wipe.isCaptured) wipe.captured()
     }
 
     @Test

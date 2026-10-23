@@ -505,6 +505,9 @@ class SdkTransparentUsernameCreation internal constructor(
      * that lock's own outputs and is never asked. Default false keeps the host-JVM tests inert.
      */
     private val freshFundingBlocked: suspend () -> Boolean = { false },
+    /** Shared with a resubmission's reactivation; see [de.schildbach.wallet.payments.FundingSelectionLock]. */
+    private val fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
+        de.schildbach.wallet.payments.FundingSelectionLock(),
     /**
      * [cutoverCommitted] as a tri-state for a routing decision that must fail closed: null when the
      * state cannot be read. By default it trusts [cutoverCommitted], which the host-JVM tests stub.
@@ -549,7 +552,8 @@ class SdkTransparentUsernameCreation internal constructor(
         },
         executorScope = applicationScope,
         secretWriteFence = secretWriteFence,
-        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() }
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
+        fundingSelection = fundingGate.selectionLock
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -854,14 +858,18 @@ class SdkTransparentUsernameCreation internal constructor(
                     )
                     source.resumeRegistrationFromAssetLock(walletId, existingLock, identityIndex, keys)
                 } else {
-                    source.registerWithWalletFunding(
-                        walletIdHex = walletId,
-                        // Set whenever existingLock is null (see above).
-                        amountDuffs = checkNotNull(amountDuffs) { "fresh funding amount not resolved" },
-                        accountIndex = ACCOUNT_INDEX,
-                        identityIndex = identityIndex,
-                        keys = keys
-                    )
+                    // Asked again under the shared selection lock and held through the build
+                    // (review 4309551218): a resubmission's reactivation cannot slip in between.
+                    fundingSelection.selectIfAllowed({ isFreshFundingBlockedSafe() }) {
+                        source.registerWithWalletFunding(
+                            walletIdHex = walletId,
+                            // Set whenever existingLock is null (see above).
+                            amountDuffs = checkNotNull(amountDuffs) { "fresh funding amount not resolved" },
+                            accountIndex = ACCOUNT_INDEX,
+                            identityIndex = identityIndex,
+                            keys = keys
+                        )
+                    }?.value ?: return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
                 }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
