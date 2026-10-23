@@ -246,16 +246,30 @@ interface ShieldedBalanceService {
     val shieldedBalanceMaybeStale: StateFlow<Boolean>
 
     /**
-     * Notify the service that a shielded spend was broadcast by an EXTERNAL
-     * executor (username creation, invite creation — the Type-20 family),
-     * outside this service's own write paths. Marks the cached balance
-     * stale and kicks an immediate sync pass, so the More card flips to
-     * "Syncing…" and settles within seconds instead of showing the
-     * pre-spend amount until the next 60-second pass (observed live:
-     * the shielded balance held the old value for up to a minute after a
-     * shielded-funded username submit — Brian, S21 2026-08-18).
+     * An EXTERNAL executor (username creation, invite creation — the
+     * Type-20 family) is about to spend shielded pool notes outside this
+     * service's own write paths: call BEFORE its SDK spend. Durably records
+     * the pending reconciliation (the cached balance is dropped) and marks
+     * the balance stale, so every surface shows "Syncing…" instead of the
+     * pre-spend amount — also after a process death mid-spend.
+     *
+     * Returns the spend's start time, to pass to [endExternalShieldedSpend];
+     * or null when the record could not be written — the caller must then
+     * NOT spend (report it as not broadcast).
      */
-    suspend fun noteExternalShieldedSpendBroadcast()
+    suspend fun beginExternalShieldedSpend(): Long?
+
+    /**
+     * The SDK spend [beginExternalShieldedSpend] announced has returned or
+     * thrown, whatever the outcome — call from `finally`. Lets settlement
+     * proceed (it waits while a spend is in flight, because the SDK writes
+     * the spend's activity row during the call) and kicks a sync pass without
+     * waiting for it, so the balance settles within seconds instead of on the
+     * next 60-second pass (observed live: the shielded balance held the old
+     * value for up to a minute after a shielded-funded username submit —
+     * Brian, S21 2026-08-18).
+     */
+    suspend fun endExternalShieldedSpend(spendStartedAtMs: Long)
 
     /**
      * True when the wallet holds an ANCHORED (confirmed, `blockHeight > 0`)
@@ -437,3 +451,11 @@ interface ShieldedBalanceService {
      */
     suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit>
 }
+
+/**
+ * Back-off before a balance surface re-subscribes after a shielded read
+ * failure ([attempt] counts from 0): 5 s, growing by 5 s per retry, capped at
+ * 60 s. The surface shows "Syncing…" meanwhile (fail closed) and recovers on
+ * its own once the read does.
+ */
+fun shieldedReadRetryDelayMs(attempt: Long): Long = (attempt.coerceIn(0L, 11L) + 1) * 5_000L

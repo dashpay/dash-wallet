@@ -25,6 +25,8 @@ import de.schildbach.wallet.service.platform.PlatformHealth
 import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.AssetLockFundingEvidence
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
@@ -59,6 +61,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import de.schildbach.wallet.data.WalletData
@@ -173,6 +176,18 @@ class RequestUserNameViewModelTest {
         coEvery { probe() } returns PlatformHealth.UNKNOWN
     }
 
+    /**
+     * Protocol-gated contested fee (MO-1069). Defaults to a null read (SDK
+     * down / query failed), which resolves to the LEGACY fee pair — the
+     * safe fallback and what testnet/mainnet actually run today (protocol
+     * 13 / Drive 4.1.x). Tests pinning the v4.2 branch override this with
+     * `coEvery { dashSdkService.currentProtocolVersion() } returns 14`
+     * before constructing the ViewModel.
+     */
+    private val dashSdkService = mockk<DashSdkService> {
+        coEvery { currentProtocolVersion() } returns null
+    }
+
     private fun viewModel(
         platformRepo: PlatformRepo = mockk<PlatformRepo>(relaxed = true)
     ) = RequestUserNameViewModel(
@@ -188,7 +203,8 @@ class RequestUserNameViewModelTest {
         shieldedBalanceService = shieldedBalanceService,
         platformHealthProbe = platformHealthProbe,
         identityCreationStatus = IdentityCreationStatusHolder(),
-        assetLockFundingPreflight = assetLockFundingPreflight
+        assetLockFundingPreflight = assetLockFundingPreflight,
+        dashSdkService = dashSdkService
     ).also { createdViewModels += it }
 
     @Before
@@ -538,10 +554,29 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsernameValid_dashSource_freshlyFundedWallet_passes_contested() = runVmTest {
-        // The same pre-block mirror state at the 0.25 DASH contested fee:
+    fun refreshContestedFees_afterUnresolvedFirstRead_picksUpProtocol14() = runVmTest {
+        // init() ran against a null (unreachable) read → legacy quote. The flow entry
+        // refresh must re-read and move the quote to CURRENT once protocol 14 is
+        // reported, instead of pinning the legacy requirement for the ViewModel's
+        // whole lifetime (MO-1069 re-review finding).
+        coEvery { dashSdkService.currentProtocolVersion() } returns null
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertEquals(ContestedUsernameFees.LEGACY, vm.contestedFees.value)
+
+        coEvery { dashSdkService.currentProtocolVersion() } returns 14
+        vm.refreshContestedFees()
+        advanceUntilIdle()
+        assertEquals(ContestedUsernameFees.CURRENT, vm.contestedFees.value)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_freshlyFundedWallet_passes_contested_legacyFee() = runVmTest {
+        // The same pre-block mirror state at the legacy 0.25 DASH contested
+        // fee (protocol 13 / Drive 4.1.x, what testnet/mainnet run today):
         // a wallet comfortably above the threshold must not be refused
-        // either (the S21 log failed both, at 0.03 and at 0.25).
+        // either (the S21 log failed both, at 0.03 and at the contested fee).
+        coEvery { dashSdkService.currentProtocolVersion() } returns null
         assetLockFundingEvidence.value = AssetLockFundingEvidence(
             eligibleDuffs = 0L,
             unclassifiedDuffs = 50_000_000L
@@ -556,6 +591,47 @@ class RequestUserNameViewModelTest {
         assertEquals("0.25", state.requiredAmount)
         assertTrue(state.enoughBalance)
         assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_freshlyFundedWallet_passes_contested_currentFee() = runVmTest {
+        // Same scenario once a live protocol-version read confirms Platform
+        // v4.2 (protocol >= 14) is active: the contested fee drops to 0.15.
+        coEvery { dashSdkService.currentProtocolVersion() } returns 14
+        assetLockFundingEvidence.value = AssetLockFundingEvidence(
+            eligibleDuffs = 0L,
+            unclassifiedDuffs = 50_000_000L
+        )
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(50_000_000L)
+        val viewModel = viewModel()
+
+        viewModel.checkUsernameValid("brian", UsernameType.Primary)
+
+        val state = viewModel.uiState.value
+        assertTrue("brian must be contested", state.usernameContestable)
+        assertEquals("0.15", state.requiredAmount)
+        assertTrue(state.enoughBalance)
+        assertFalse(state.fundsSettling)
+    }
+
+    @Test
+    fun checkUsernameValid_dashSource_contestedBalanceGate_requiresTheLegacyAmount() = runVmTest {
+        // MO-1069 regression: a wallet funded with exactly the CURRENT
+        // (v4.2) 0.15 DASH contested fee must NOT pass the gate while the
+        // live protocol version is still 13 (unresolved/null reads the same
+        // way) — the network still requires the legacy 0.25, and the SDK
+        // rejects a 0.15-funded identity's DPNS registration with
+        // "Insufficient identity balance … required 20000100000".
+        coEvery { dashSdkService.currentProtocolVersion() } returns null
+        walletBalanceFlow.value = org.bitcoinj.core.Coin.valueOf(15_000_000L) // 0.15 DASH
+        val viewModel = viewModel()
+
+        viewModel.checkUsernameValid("brian", UsernameType.Primary)
+
+        val state = viewModel.uiState.value
+        assertTrue("brian must be contested", state.usernameContestable)
+        assertEquals("0.25", state.requiredAmount)
+        assertFalse("0.15 DASH must not satisfy the legacy 0.25 requirement", state.enoughBalance)
     }
 
     @Test
