@@ -18,9 +18,11 @@
 package de.schildbach.wallet.ui.more.connections
 
 import android.content.Context
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.json.JSONArray
@@ -75,16 +77,66 @@ open class DashConnectConfig @Inject constructor(
     context: Context,
     walletDataProvider: WalletDataProvider
 ) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
+    private val configContext = context
 
     companion object {
         const val PREFERENCES_NAME = "dash_connect"
+        const val AUDIT_FILE_NAME = "$PREFERENCES_NAME.preferences_pb"
         val CONNECTIONS = stringPreferencesKey("connections")
+        private val GRANTS = stringPreferencesKey("app_connect_grants_v2")
+        private val PURCHASES = stringPreferencesKey("dash_st_purchases")
+    }
+
+    // Authorizations and unknown purchase outcomes survive a local wallet reset. Their
+    // network/wallet/identity scope makes them visible only when that same wallet returns.
+    override suspend fun onWalletWiped() {
+        set(CONNECTIONS, "[]")
     }
 
     fun observeConnections(): Flow<List<StoredConnection>> =
         observe(CONNECTIONS).map { decode(it) }
 
     suspend fun getConnections(): List<StoredConnection> = decode(get(CONNECTIONS))
+
+    // Grant records are required for revocation. Propagate read errors instead of using
+    // BaseConfig's empty-preferences fallback for ordinary settings.
+    suspend fun getGrants(): List<JSONObject> = observeGrants().first()
+
+    fun observeGrants(): Flow<List<JSONObject>> = configContext.dataStore.data.map { preferences ->
+        decodeGrants(preferences[GRANTS])
+    }
+
+    private fun decodeGrants(raw: String?): List<JSONObject> {
+        if (raw == null) return emptyList()
+        val array = JSONArray(raw)
+        return (0 until array.length()).map { array.getJSONObject(it) }
+    }
+
+    suspend fun saveGrant(grant: JSONObject) {
+        configContext.dataStore.edit { preferences ->
+            val records = decodeGrants(preferences[GRANTS])
+                .filter { it.getString("id") != grant.getString("id") } + grant
+            preferences[GRANTS] = JSONArray(records).toString()
+        }
+    }
+
+    suspend fun purchaseWasSubmitted(id: String): Boolean {
+        val records = purchaseReceipts()
+        return (0 until records.length()).any { records.getJSONObject(it).getString("id") == id }
+    }
+
+    suspend fun savePurchase(receipt: JSONObject) {
+        configContext.dataStore.edit { preferences ->
+            val records = JSONArray(preferences[PURCHASES] ?: "[]")
+            val updated = (0 until records.length()).map { records.getJSONObject(it) }
+                .filter { it.getString("id") != receipt.getString("id") } + receipt
+            preferences[PURCHASES] = JSONArray(updated).toString()
+        }
+    }
+
+    // Unlike ordinary preferences, unreadable debit receipts must never look like an empty store.
+    private suspend fun purchaseReceipts() =
+        JSONArray(configContext.dataStore.data.first()[PURCHASES] ?: "[]")
 
     /** Inserts or replaces the stored connection keyed by [StoredConnection.contractId]. */
     suspend fun upsertConnection(connection: StoredConnection) {
@@ -101,6 +153,15 @@ open class DashConnectConfig @Inject constructor(
 
     suspend fun removeConnection(contractId: String) {
         set(CONNECTIONS, encode(getConnections().filter { it.contractId != contractId }))
+    }
+
+    suspend fun removeLegacyConnection(contractId: String, scope: String?) {
+        configContext.dataStore.edit { preferences ->
+            check(decodeGrants(preferences[GRANTS]).none {
+                it.getString("app") == contractId && it.getString("scope") == scope
+            }) { "This connection has grant records. Use Revoke access; its audit cannot be removed locally." }
+            preferences[CONNECTIONS] = encode(decode(preferences[CONNECTIONS]).filter { it.contractId != contractId })
+        }
     }
 
     private fun encode(connections: List<StoredConnection>): String {

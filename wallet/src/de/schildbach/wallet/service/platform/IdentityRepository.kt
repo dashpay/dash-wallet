@@ -70,6 +70,7 @@ import javax.inject.Inject
 interface IdentityRepository {
     val blockchainIdentity: BlockchainIdentity?
     val blockchainIdentityFlow: StateFlow<BlockchainIdentity?>
+    val initializationResult: StateFlow<Result<Unit>?>
     //suspend fun addMissingKeys(keyParameter: KeyParameter?): Boolean
     suspend fun getIdentityBalance(): CreditBalanceInfo?
     val hasBlockchainIdentity: Boolean
@@ -88,6 +89,7 @@ interface IdentityRepository {
                                              state: IdentityCreationState,
                                              exception: Throwable? = null)
     suspend fun upgradeIdentity(keyParameter: KeyParameter?): Boolean
+    suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?)
     fun getIdentityFromPublicKeyId(): Identity?
     suspend fun clearBlockchainIdentityData()
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData)
@@ -127,6 +129,8 @@ class IdentityRepositoryImpl @Inject constructor(
 
     private val _blockchainIdentityFlow = MutableStateFlow<BlockchainIdentity?>(null)
     override val blockchainIdentityFlow: StateFlow<BlockchainIdentity?> = _blockchainIdentityFlow.asStateFlow()
+    private val _initializationResult = MutableStateFlow<Result<Unit>?>(null)
+    override val initializationResult = _initializationResult.asStateFlow()
 
     private var _blockchainIdentity: BlockchainIdentity?
         get() = _blockchainIdentityFlow.value
@@ -213,13 +217,21 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun init() {
-        val data = blockchainIdentityDataStorage.load()
-        if (data != null) {
-            _blockchainIdentity = initBlockchainIdentity(data, walletDataProvider.wallet!!)
-            // initializeStateRepository()
-        } else {
-            _blockchainIdentity = null
-            hasCheckedIdentityForUpgrade = false
+        _initializationResult.value = null
+        try {
+            val data = blockchainIdentityDataStorage.load()
+            if (data != null) {
+                _blockchainIdentity = initBlockchainIdentity(data, walletDataProvider.wallet!!)
+                // initializeStateRepository()
+            } else {
+                _blockchainIdentity = null
+                hasCheckedIdentityForUpgrade = false
+            }
+            _initializationResult.value = Result.success(Unit)
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            _initializationResult.value = Result.failure(error)
+            throw error
         }
     }
 
@@ -378,7 +390,8 @@ class IdentityRepositoryImpl @Inject constructor(
         // the only upgrade is to add missing keys
         // always run the upgrade action items the first time or if there is a failure the last time
         // those actions were run
-        return if (!hasCheckedIdentityForUpgrade || dashPayConfig.get(UPGRADE_IDENTITY_REQUIRED) == true) {
+        return if (!hasCheckedIdentityForUpgrade || dashPayConfig.get(UPGRADE_IDENTITY_REQUIRED) == true ||
+            _blockchainIdentity?.hasCriticalAuthenticationKey() == false) {
             hasCheckedIdentityForUpgrade = true
             addMissingKeys(keyParameter)
         } else {
@@ -387,11 +400,21 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     /** assumes that the blockchainIdentity has been synced against platform */
-    private suspend fun addMissingKeys(keyParameter: KeyParameter?): Boolean {
-        val identity = _blockchainIdentity
+    override suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?) {
+        val identity = checkNotNull(_blockchainIdentity) { "Identity unavailable" }
+        check(identity.uniqueIdentifier == expectedIdentity) { "Purchase identity changed" }
+        val added = addMissingKeys(keyParameter, identity)
+        check(_blockchainIdentity === identity) { "Purchase identity changed" }
+        check(added || identity.hasCriticalAuthenticationKey()) {
+            "Unable to register the wallet purchase signing key. Check the identity balance and try again."
+        }
+    }
+
+    private suspend fun addMissingKeys(keyParameter: KeyParameter?, identity: BlockchainIdentity? = _blockchainIdentity): Boolean {
         if (hasBlockchainIdentity && identity != null) {
             walletDataProvider.wallet?.let { wallet ->
-                if (!identity.hasTransferKey() || !identity.hasEncryptionKey()) {
+                check(identity.wallet === wallet && _blockchainIdentity === identity) { "Wallet or identity changed" }
+                if (!identity.hasTransferKey() || !identity.hasEncryptionKey() || !identity.hasCriticalAuthenticationKey()) {
                     dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, true)
                     try {
                         log.info(
@@ -403,8 +426,8 @@ class IdentityRepositoryImpl @Inject constructor(
                         )
                         val enough = getIdentityBalance()
                         if (enough != null && !enough.isBalanceEmpty()) {
-                            val signer = WalletSignerCallback(wallet, keyParameter)
-                            identity.addMissingKeys(signer)
+                            check(walletDataProvider.wallet === wallet && _blockchainIdentity === identity) { "Wallet or identity changed" }
+                            WalletSignerCallback(wallet, keyParameter).use { signer -> identity.addMissingKeys(signer) }
                             updateBlockchainIdentityData()
                             dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, false)
                             return true

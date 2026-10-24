@@ -371,7 +371,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         try {
             findNavController(R.id.nav_host_fragment).navigate(
                 R.id.connectionsFragment,
-                bundleOf(ConnectionsFragment.ARG_SCANNED_URI to uri)
+                bundleOf(ConnectionsFragment.ARG_SCANNED_URI to uri,
+                    ConnectionsFragment.ARG_OPENED_FROM_URL to true)
             )
         } catch (e: IllegalStateException) {
             if (!isRetry) {
@@ -389,10 +390,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             return
         }
         if (Intent.ACTION_VIEW == intent.action &&
-            intent.data?.scheme in listOf("dash-key", "dash-st")
+            intent.data?.scheme in setOf("dash-key", "dash-st")
         ) {
-            // DashConnect (MO-945): login / key-registration URI opened from an
-            // external scanner or browser — handled by the Connections screen
+            // DashConnect login or operation URI opened from a scanner or browser, handled by the
+            // Connections screen.
             val uri = intent.data.toString()
             intent.data = null // consume, so recreation doesn't navigate again
             navigateToConnections(uri)

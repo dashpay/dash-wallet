@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * DashConnect is testnet-only: the Tools entry and the dash-key/dash-st QR interception are all
+ * DashConnect is testnet-only: the Tools entry and dash-key QR interception are both
  * gated on [Constants.SUPPORTS_CONNECT], so it must be false in the production flavour.
  */
 class ConnectFlagTest {

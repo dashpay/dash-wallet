@@ -29,9 +29,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,57 +59,79 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
+import android.content.DialogInterface
+import android.os.Bundle
+import android.view.View
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.viewModels
+import de.schildbach.wallet_test.databinding.DialogComposeContainerBinding
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 /**
- * Creates the "Approve connection to …?" bottom sheet dialog (MO-945).
+ * Restorable approval sheet; the parent fragment owns the pending request and operation.
  *
  * Figma Node ID: 5799:51156
  */
-fun createApproveConnectionDialog(
-    viewModel: ConnectionsViewModel,
-    onDismiss: () -> Unit = {}
-): ComposeBottomSheet {
-    return ComposeBottomSheet(
-        backgroundStyle = R.style.SecondaryBackground,
-        forceExpand = true
-    ) { dialog ->
+class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_container) {
+    override val backgroundStyle = R.style.SecondaryBackground
+    override val forceExpand = true
+    private val viewModel: ConnectionsViewModel by viewModels({ requireParentFragment() })
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        isCancelable = !viewModel.uiState.value.requiresRevocation &&
+            viewModel.approveResult.value !is ConnectionsViewModel.ApproveResult.Loading
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        view.findViewById<View>(org.dash.wallet.common.R.id.collapse_button)?.setOnClickListener {
+            viewModel.closePendingRequest()
+        }
+        DialogComposeContainerBinding.bind(view).composeContainer.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                DashWalletTheme {
+                    Box(Modifier.navigationBarsPadding()) { ApprovalContent() }
+                }
+            }
+        }
+    }
+
+    override fun onCancel(dialog: DialogInterface) {
+        viewModel.denyPendingRequest()
+        super.onCancel(dialog)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!viewModel.isWalletUnlocked) {
+            dialog?.hide()
+            dismissAllowingStateLoss()
+        }
+    }
+
+    @Composable
+    private fun ApprovalContent() {
         val uiState by viewModel.uiState.collectAsState()
         val approveResult by viewModel.approveResult.collectAsState()
         val isLoading = approveResult is ConnectionsViewModel.ApproveResult.Loading
 
-        DisposableEffect(Unit) {
-            onDispose {
-                // Clear any error so a later scan doesn't open the sheet showing a stale failure.
-                viewModel.resetApproveResult()
-                onDismiss()
-            }
-        }
-
-        LaunchedEffect(approveResult) {
-            when (approveResult) {
-                is ConnectionsViewModel.ApproveResult.Loading -> {
-                    dialog.dialog?.setCancelable(false)
-                    dialog.dialog?.setCanceledOnTouchOutside(false)
-                }
-                is ConnectionsViewModel.ApproveResult.Success -> {
-                    dialog.dismiss()
-                    viewModel.resetApproveResult()
-                }
-                is ConnectionsViewModel.ApproveResult.Error -> {
-                    // Re-enable interaction but KEEP the result: it carries the message shown
-                    // below. Retrying moves it to Loading, and dismissing clears it above —
-                    // resetting here would blank the reason before the user could read it.
-                    dialog.dialog?.setCancelable(true)
-                    dialog.dialog?.setCanceledOnTouchOutside(true)
-                }
-                is ConnectionsViewModel.ApproveResult.Idle -> Unit
-            }
+        LaunchedEffect(isLoading, uiState.requiresRevocation, uiState.pendingRequest) {
+            isCancelable = !isLoading && !uiState.requiresRevocation
+            dialog?.setCanceledOnTouchOutside(isCancelable)
+            view?.findViewById<View>(org.dash.wallet.common.R.id.collapse_button)?.isEnabled = !isLoading
+            if (uiState.pendingRequest == null) dismissAllowingStateLoss()
         }
 
         uiState.pendingRequest?.let { request ->
             ApproveConnectionContent(
                 request = request,
                 isLoading = isLoading,
+                requiresRevocation = uiState.requiresRevocation,
                 errorMessage = (approveResult as? ConnectionsViewModel.ApproveResult.Error)?.let {
                     stringResource(R.string.dash_connect_error, it.message ?: "")
                 },
@@ -112,9 +143,10 @@ fun createApproveConnectionDialog(
                 onDeny = {
                     if (!isLoading) {
                         viewModel.denyPendingRequest()
-                        dialog.dismiss()
                     }
-                }
+                },
+                onGrantChanged = viewModel::selectGrant,
+                onLimitsChanged = viewModel::selectLimits
             )
         }
     }
@@ -129,15 +161,20 @@ fun createApproveConnectionDialog(
 internal fun ApproveConnectionContent(
     request: ConnectionRequest,
     isLoading: Boolean = false,
+    requiresRevocation: Boolean = false,
     /** Shown above the buttons when the approval failed; null while idle or in progress. */
     errorMessage: String? = null,
     onApprove: () -> Unit = {},
-    onDeny: () -> Unit = {}
+    onDeny: () -> Unit = {},
+    onGrantChanged: (Int, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onLimitsChanged: (Int, Int) -> Unit = { _, _ -> }
 ) {
     val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(max = 720.dp)
+            .verticalScroll(rememberScrollState())
             .padding(top = 60.dp) // space for drag indicator and close button
     ) {
         Column(
@@ -169,8 +206,25 @@ internal fun ApproveConnectionContent(
                 )
             }
 
-            // "This app will be able to:"
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (request.permissionText.isNotBlank()) {
+                Text(request.permissionText, style = MyTheme.Typography.BodyMedium, color = colors.textPrimary)
+                GrantPresetMenu(listOf(stringResource(R.string.dash_connect_budget_requested),
+                    stringResource(R.string.dash_connect_budget_cap, "0.1"), stringResource(R.string.dash_connect_budget_cap, "0.5"),
+                    stringResource(R.string.dash_connect_budget_cap, "1")),
+                    request.budgetPreset, !isLoading && !request.recovering) { onLimitsChanged(it, request.lifetimePreset) }
+                GrantPresetMenu(listOf(stringResource(R.string.dash_connect_expiry_requested), stringResource(R.string.dash_connect_days, 30),
+                    stringResource(R.string.dash_connect_days, 90), stringResource(R.string.dash_connect_days, 365)),
+                    request.lifetimePreset, !isLoading && !request.recovering) { onLimitsChanged(request.budgetPreset, it) }
+                request.grantChoices.forEach { choice ->
+                    Row(verticalAlignment = Alignment.Top) {
+                        Checkbox(checked = choice.selected,
+                            onCheckedChange = { onGrantChanged(choice.index, choice.encryption, it) },
+                            enabled = !isLoading && !request.recovering && (choice.encryption || choice.index != 0))
+                        Text(choice.description, style = MyTheme.Typography.BodyMedium, color = colors.textPrimary,
+                            modifier = Modifier.weight(1f))
+                    }
+                }
+            } else Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = stringResource(R.string.dash_connect_approve_will_be_able),
                     style = MyTheme.Typography.BodyMedium,
@@ -209,7 +263,7 @@ internal fun ApproveConnectionContent(
             }
 
             // "This app will NOT have access to:"
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (request.permissionText.isBlank()) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = stringResource(R.string.dash_connect_approve_no_access),
                     style = MyTheme.Typography.BodyMedium,
@@ -248,7 +302,7 @@ internal fun ApproveConnectionContent(
                 onClick = onApprove
             ),
             secondaryButton = SheetButton(
-                text = stringResource(R.string.dash_connect_deny),
+                text = stringResource(if (requiresRevocation) R.string.dash_connect_revoke_access else R.string.dash_connect_deny),
                 style = Style.TintedGray,
                 isEnabled = !isLoading,
                 onClick = onDeny
@@ -256,6 +310,19 @@ internal fun ApproveConnectionContent(
             horizontalPadding = 60.dp,
             spacing = 20.dp
         )
+    }
+}
+
+@Composable
+private fun GrantPresetMenu(options: List<String>, selected: Int, enabled: Boolean, onSelect: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    androidx.compose.foundation.layout.Box {
+        OutlinedButton(onClick = { expanded = true }, enabled = enabled) { Text(options[selected]) }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEachIndexed { index, option ->
+                DropdownMenuItem(text = { Text(option) }, onClick = { expanded = false; onSelect(index) })
+            }
+        }
     }
 }
 
@@ -349,4 +416,20 @@ private fun ApproveConnectionContentErrorPreview() {
         request = previewRequest,
         errorMessage = "Could not complete the DashConnect request: state transition was not accepted"
     )
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+internal fun AppConnectApprovalPreview() {
+    org.dash.wallet.common.ui.components.DashWalletTheme {
+        ApproveConnectionContent(previewRequest.copy(
+            permissionText = "App ID: Hj6B9qRVHcVB97LZGEQvKm7zFsCP85cuSkEAssc1XWL7\nQR label is not verified branding.\nOnly these application keys are shared. Recovery phrase and master key are never shared.",
+            grantChoices = listOf(
+                de.schildbach.wallet.ui.more.connections.GrantChoice(0,
+                    "CRITICAL authentication\nContract group: CsPWxFwNvLPjACBCQBSXJLHAimU44DDFimzA2Jbxm9GK\nBudget: 0.5 DASH\nExpires: 9 January 2027\nCan claim and spend this app's tokens and spend your Platform credits on token purchases from the app, within this budget. Purchase payments go to the app's contract owner.", true),
+                de.schildbach.wallet.ui.more.connections.GrantChoice(1,
+                    "HIGH authentication\nDocument profile: Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7\nBudget: 0.01 DASH\nExpires: 9 January 2027", true)
+            )
+        ))
+    }
 }

@@ -151,10 +151,9 @@ private fun ConnectionsScreenContent(
                             onQrClick = { onConnectionQrClick(connection) },
                             onToggle = { enabled -> onConnectionToggle(connection, enabled) }
                         )
-                        // Blue-tint banner attached inside the card, under an APPROVED connection
-                        // awaiting login (Figma 5802:51517 SystemMessage): prompts the login scan.
-                        if (connection.status == ConnectionStatus.APPROVED) {
-                            ScanToCompleteBanner(onScanClick = onScanClick)
+                        // Both pending and revoked connections need a fresh login QR.
+                        if (connection.status != ConnectionStatus.ACTIVE) {
+                            ScanToCompleteBanner(onScanClick = { onConnectionQrClick(connection) })
                         }
                     }
                 }
@@ -183,8 +182,8 @@ private fun ConnectionsUnavailableState(
                         .size(80.dp)
                 )
             },
-            heading = stringResource(R.string.dash_connect_testnet_only_heading),
-            body = stringResource(R.string.dash_connect_testnet_only_message)
+            heading = stringResource(R.string.dash_connect_unavailable_heading),
+            body = stringResource(R.string.dash_connect_unavailable_message)
         )
     }
 }
@@ -250,7 +249,7 @@ private fun ConnectionsEmptyState(
 
 /**
  * Blue-tint SystemMessage banner (Figma 5802:51517): info icon + prompt text + a small
- * filled-blue "Scan QR" button. Shown for APPROVED connections awaiting login.
+ * filled-blue "Scan QR" button. Shown for pending and disconnected connections.
  */
 @Composable
 private fun ScanToCompleteBanner(

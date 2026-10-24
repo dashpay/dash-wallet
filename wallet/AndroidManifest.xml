@@ -126,8 +126,8 @@
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- DashConnect (MO-945): login (dash-key:) and key-registration (dash-st:)
-                 URIs from external scanners and browsers route to the Connections screen -->
+            <!-- DashConnect: login and wallet-operation URIs from scanners and browsers
+                 route to the Connections screen for validation and explicit approval. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 

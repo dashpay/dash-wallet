@@ -18,6 +18,8 @@
 package de.schildbach.wallet.ui.more.connections
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -34,7 +36,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.compose_views.createApproveConnectionDialog
+import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
+import de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog
+import de.schildbach.wallet.ui.LockScreenActivity
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
@@ -66,7 +72,25 @@ class ConnectionsFragment : Fragment() {
                     ConnectionsScreen(
                         onBackClick = { findNavController().popBackStack() },
                         onScanClick = { launchScanner() },
-                        onConnectionClick = { /* no-op: connections are managed by the QR scan and the row slider */ },
+                        onConnectionClick = { connection ->
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                if (!viewModel.isWalletUnlocked) return@launch
+                                try {
+                                    val details = viewModel.connectionDetails(connection)
+                                    val confirmed = showUnlockedDialog {
+                                        connectionDetailsDialog(requireContext(), connection.name, details, connection.status, connection.legacyOnly)
+                                    }
+                                    if (confirmed == true && viewModel.isWalletUnlocked) {
+                                        if (connection.legacyOnly) viewModel.removeConnection(connection)
+                                        else if (connection.status == ConnectionStatus.DISCONNECTED) launchScanner()
+                                        else viewModel.disconnect(connection)
+                                    }
+                                } catch (e: Exception) {
+                                    if (e is kotlinx.coroutines.CancellationException) throw e
+                                    if (viewModel.isWalletUnlocked) Toast.makeText(requireContext(), e.message, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
                         onConnectionQrClick = { launchScanner() },
                         onConnectionToggle = { connection, enabled ->
                             // The switch is only ON for active connections; moving it OFF disconnects
@@ -83,12 +107,18 @@ class ConnectionsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val host = activity as? LockScreenActivity
+        viewModel.bindWalletUnlockCheck {
+            host != null && !host.walletLocked.value && !host.lockScreenDisplayed
+        }
 
         if (savedInstanceState == null) {
-            // A DashConnect QR scanned from another screen's scanner routes here with the URI.
+            // Scanner routes default to no callback; only an app-opening URL opts in.
             arguments?.getString(ARG_SCANNED_URI)?.let { uri ->
+                val openedFromUrl = arguments?.getBoolean(ARG_OPENED_FROM_URL) == true
                 arguments?.remove(ARG_SCANNED_URI)
-                viewModel.onQrScanned(uri)
+                arguments?.remove(ARG_OPENED_FROM_URL)
+                if (openedFromUrl) viewModel.onUrlOpened(uri) else viewModel.onQrScanned(uri)
             }
         }
 
@@ -97,15 +127,6 @@ class ConnectionsFragment : Fragment() {
                 viewModel.scanOutcome.collect { outcome ->
                     when (outcome) {
                         is ConnectionsViewModel.ScanOutcome.ConnectionRequested -> {
-                            showApproveConnectionDialog()
-                            viewModel.resetScanOutcome()
-                        }
-                        is ConnectionsViewModel.ScanOutcome.LoginCompleted -> {
-                            Toast.makeText(
-                                requireContext(),
-                                R.string.dash_connect_login_completed,
-                                Toast.LENGTH_SHORT
-                            ).show()
                             viewModel.resetScanOutcome()
                         }
                         is ConnectionsViewModel.ScanOutcome.Error -> {
@@ -121,20 +142,80 @@ class ConnectionsFragment : Fragment() {
                 }
             }
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                val lockState = host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)
+                combine(viewModel.uiState, lockState) { state, locked -> state to locked }.collect { (state, locked) ->
+                    if (locked || !viewModel.isWalletUnlocked) {
+                        listOf(APPROVAL_DIALOG, PURCHASE_DIALOG).forEach { tag ->
+                            (childFragmentManager.findFragmentByTag(tag) as? androidx.fragment.app.DialogFragment)?.let {
+                                it.dialog?.hide()
+                                it.dismissAllowingStateLoss()
+                            }
+                        }
+                        return@collect
+                    }
+                    if (state.pendingRequest != null &&
+                        childFragmentManager.findFragmentByTag(APPROVAL_DIALOG) == null &&
+                        !childFragmentManager.isStateSaved) {
+                        ApproveConnectionDialog().showNow(childFragmentManager, APPROVAL_DIALOG)
+                    }
+                    if (state.pendingPurchase != null &&
+                        childFragmentManager.findFragmentByTag(PURCHASE_DIALOG) == null &&
+                        !childFragmentManager.isStateSaved) {
+                        ApproveTokenPurchaseDialog().showNow(childFragmentManager, PURCHASE_DIALOG)
+                    }
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                val lockState = host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)
+                combine(viewModel.callbackOffer, lockState) { callback, locked -> callback to locked }
+                    .collectLatest { (callback, locked) ->
+                        if (callback != null && !locked && viewModel.isWalletUnlocked) {
+                            val uri = Uri.parse(callback)
+                            val confirmed = showUnlockedDialog { connectionCallbackDialog(requireContext(), uri.host.orEmpty()) }
+                            if (!viewModel.isWalletUnlocked) return@collectLatest
+                            if (confirmed == true) {
+                                try { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                                catch (e: android.content.ActivityNotFoundException) {
+                                    Toast.makeText(requireContext(), R.string.dash_connect_return_unavailable, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            viewModel.resetCallbackOffer()
+                        }
+                    }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshConnections()
     }
 
     private fun launchScanner() {
+        if (!viewModel.isWalletUnlocked) return
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))
     }
 
-    private fun showApproveConnectionDialog() {
-        createApproveConnectionDialog(
-            viewModel = viewModel
-        ).show(parentFragmentManager, "approve_connection_dialog")
+    private suspend fun showUnlockedDialog(create: () -> org.dash.wallet.common.ui.dialogs.AdaptiveDialog): Boolean? {
+        val host = activity as? LockScreenActivity ?: return null
+        return awaitUnlockedConnectionDialog(host, viewLifecycleOwner, host.walletLocked,
+            { viewModel.isWalletUnlocked }, create)
+    }
+
+    override fun onDestroyView() {
+        viewModel.bindWalletUnlockCheck { false }
+        super.onDestroyView()
     }
 
     companion object {
+        private const val APPROVAL_DIALOG = "approve_connection_dialog"
+        private const val PURCHASE_DIALOG = "approve_token_purchase_dialog"
         /** Matches the `scannedUri` argument in nav_home.xml. */
         const val ARG_SCANNED_URI = "scannedUri"
+        const val ARG_OPENED_FROM_URL = "openedFromUrl"
     }
 }

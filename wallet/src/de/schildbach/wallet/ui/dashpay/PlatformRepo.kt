@@ -163,10 +163,11 @@ class PlatformRepo @Inject constructor(
                 null
             }
             // Don't bother with DeriveKeyTask here, just call deriveKey
+            if (password == null) return null
             val encryptionKey = wallet.keyCrypter!!.deriveKey(password)
             wallet.keyChainSeed.decrypt(wallet.keyCrypter, "", encryptionKey)
         } else {
-            null
+            wallet.keyChainSeed
         }
     }
 
