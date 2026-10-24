@@ -26,6 +26,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +77,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.money.Dash
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.ui.main.needsNewName
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
@@ -594,14 +596,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun retry(errorMessage: String) {
-        val needsNewName = errorMessage.contains("Document transitions with duplicate unique properties") ||
-                errorMessage.contains("DuplicateUniqueIndexError") ||
-                // Pre-11.10.52 wrapper-adoption clobber (S22): the requested
-                // primary is gone from the record — route to re-entry.
-                errorMessage.contains("primary username was lost") ||
-                errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
-                errorMessage.contains(Regex("does not have .* as a contender")) ||
-                errorMessage.contains("missing domain document for ")
+        // Checked first: a taken name needs a new one, a name-only retry's error included (retrying
+        // the same name cannot help). Anything else goes to retryCreateIdentity(), which sends a
+        // name-only retry's error back into the name-only retry, never to CreateIdentityService.
+        val needsNewName = needsNewName(errorMessage)
         if (!needsNewName) {
             createIdentityViewModel.retryCreateIdentity()
         } else {
@@ -632,6 +630,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
                 showProfileSection(dashPayProfile)
             }
+        }
+        // the same toast the home tile shows when a name-only retry is refused
+        createIdentityViewModel.nameRetryRefused.observe(viewLifecycleOwner) { errorMessage ->
+            Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
         }
 
         createInviteViewModel.blockchainIdentity.observe(viewLifecycleOwner) { _ ->
