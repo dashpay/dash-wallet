@@ -63,9 +63,11 @@ in flight, carrying the stop generation).
 
   A failure at any step is a failed write. That includes `AtomicMoveNotSupportedException`, which is not a cue to
   fall back to a plain move. Whether `ATOMIC_MOVE` replaces an existing target is implementation-specific: it may
-  throw instead. So a marker that may already exist is written with `REPLACE_EXISTING` as well (as
-  `BackupReplacementState` does), or is never overwritten (rule above). This protects against a torn read and against process death, which is what
-  the markers here need. To survive an OS crash or a power loss, also fsync the parent directory after the move:
+  throw instead. `REPLACE_EXISTING` does not change that, because `ATOMIC_MOVE` ignores every other option. So a
+  failed replacement aborts the operation like any other failed step. On Android's filesystems the move is a
+  `rename(2)`, which does replace the target.
+
+  This protects against a torn read and against process death, which is what the markers here need. To survive an OS crash or a power loss, also fsync the parent directory after the move:
   open it with `FileChannel.open(dir, READ)` and call `force(true)`, where the platform allows it.
 - Version shared markers with a generation; `complete(dir, generation)` is a compare-and-delete under the writer lock
   (#1576 `BackupReplacementState`).
