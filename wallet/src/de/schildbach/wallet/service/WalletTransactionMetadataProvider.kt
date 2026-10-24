@@ -24,6 +24,7 @@ import de.schildbach.wallet.database.dao.IconBitmapDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.database.dao.TransactionRecordsDao
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -69,6 +70,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val iconBitmapDao: IconBitmapDao,
     private val walletData: de.schildbach.wallet.data.WalletData,
     private val giftCardDao: GiftCardDao,
+    private val transactionRecordsDao: TransactionRecordsDao,
     private val swapOrderDao: SwapOrderDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
@@ -497,6 +499,46 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 log.error("Failed to make an http call for icon: $iconUrl")
             }
         }
+    }
+
+    override suspend fun forgetTransaction(txId: TxId): Boolean {
+        // Fail closed: only proceed when a wallet is available AND says it does not hold the
+        // transaction. Without a wallet we cannot tell "never broadcast" from "cannot check
+        // right now", and deleting on a guess would discard the memo, tax category and cards of
+        // a real payment.
+        val wallet = walletData.wallet
+        if (wallet == null) {
+            // Deferred, not settled: the caller must keep the payment and try again later.
+            log.warn("not forgetting {}: no wallet available to confirm the transaction is absent", txId)
+            return false
+        }
+        if (wallet.getTransaction(txId.toSha256Hash()) != null) {
+            // Settled: the records describe a real transaction, so there is nothing to discard
+            // now or later.
+            log.warn("refusing to forget {}: the wallet holds this transaction", txId)
+            return true
+        }
+        // The dashj wallet is not the only record: a transaction the SDK found on its own has
+        // real metadata too (see importTransactionMetadata), so the SDK store holding it is the
+        // same proof. Its lookup cannot tell "not held" from "store not open", which is why only
+        // a positive answer counts here; callers have already established absence strictly.
+        val heldBySdk = try {
+            sdkTxMetadataSource.defaultMetadataFor(txId) != null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("not forgetting {}: the SDK store could not be checked", txId, e)
+            return false
+        }
+        if (heldBySdk) {
+            log.warn("refusing to forget {}: the SDK store holds this transaction", txId)
+            return true
+        }
+
+        // one Room transaction: a partial cleanup would strand rows with nothing left to retry it
+        val cards = transactionRecordsDao.forgetTransaction(txId)
+        log.info("forgot transaction {} that was never broadcast ({} gift card(s) removed)", txId, cards)
+        return true
     }
 
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {

@@ -20,8 +20,17 @@
     <string name="maya_portal_convert_to_title">Dash omzetten naar</string>
     <string name="maya_portal_convert_subtitle">Van Dash Portemonnee naar elke crypto</string>
     <string name="maya_portal_subtitle">Zet Dash om vanuit je portemonnee naar elke crypto die wordt ondersteund op Maya en stuur dat naar welke portemonnee dan ook.</string>
+    <string name="dash_dex_buy_title">Koop Dash</string>
+    <string name="dash_dex_sell_title">Verkoop Dash</string>
+    <string name="dash_dex_sell_subtitle">Van Dash Portemonnee naar elke crypto</string>
     <string name="maya_address_input_hint">%s adres</string>
     <string name="maya_address_input_title">Zet DASH om naar %s</string>
+    <!-- Nav bar title of the convert-crypto enter-amount screen (Figma 24034:44864) -->
+    <string name="maya_convert_enter_amount_title">Omzetten</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">Adres plakken vanuit</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">Klembord</string>
     <string name="maya_crypto_convert_title">Dash omzetten</string>
     <string name="maya_crypto_convert_order_preview_title">Voorbeeld bestelling</string>
 
@@ -29,13 +38,11 @@
     <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
     <string name="cryptocurrency_dash_network">Dash</string>
     <string name="cryptocurrency_rune_network">Thorchain</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
     <string name="cryptocurrency_kuji_network">Kujira</string>
     <string name="cryptocurrency_usk_network">USK</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
     <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
@@ -56,7 +63,7 @@
     <string name="cryptocurrency_zec_network">Zcash</string>
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
-
+    <string name="cryptocurrency_ltc_network">Litecoin</string>
     <string name="maya_error">Maya fout</string>
     <string name="maya_error_not_available">De Maya service is niet beschikbaar. Probeer het later opnieuw.</string>
     <string name="maya_error_report_issue">Meld dit probleem aan het Dash Portemonnee ondersteuningsteam via \"Contact opnemen met ondersteuning\" in het hoofdmenu.</string>
@@ -65,6 +72,8 @@
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">Het minimale transactiebedrag is</string>
     <string name="entered_amount_is_too_high">Het maximale transactiebedrag is</string>
+    <!-- Short form of the max-amount error on the convert-crypto enter-amount screen, e.g. "Max $205.32" (Figma 24034:44864) -->
+    <string name="maya_max_amount_error">Max</string>
     <string name="we_didnt_find_any_assets">We hebben geen activa gevonden op je Coinbase account.</string>
     <string name="something_wrong_title">Er is iets verkeerd gegaan</string>
     <string name="dont_have_any_dash">Je hebt geen Dash in je Dash portemonnee</string>
@@ -103,10 +112,16 @@
     <string name="you_receive">je ontvangt</string>
     <string name="to_dash_wallet_on_this_device">van de Dash portemonnee op dit apparaat</string>
     <string name="purchase">Aanschaffen</string>
-    <string name="maya_fee">Maya kosten</string>
+    <string name="maya_fee">Kosten</string>
+    <string name="network_label">Netwerk</string>
     <string name="total">Totaal</string>
     <string name="to_external_address">naar %s</string>
 
+    <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
+    <string name="button_refresh">Vernieuwen</string>
+    <string name="maya_explorer_view_maya">Bekijk MayaChain explorer</string>
+    <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
+    <string name="maya_explorer_view_near">Bekijk NEAR Intents explorer</string>
     <string name="maya_error_information">%s%nCryptovaluta: %s</string>
     <string name="maya_error_invalid_destination_address">Ongeldig bestemmingsadres</string>
     <string name="maya_error_below_recommended_minimum">Het ingevoerde bedrag is lager dan het aanbevolen minimum</string>
@@ -115,6 +130,33 @@
     <string name="maya_error_quote">Kon geen prijsopgave van Maya verkrijgen voor deze conversie</string>
     <string name="maya_halted_label">Gestopt</string>
     <string name="maya_halted_coins_toast">Sommige crypto zijn tijdelijk gestopt en niet beschikbaar voor handel</string>
+    <string name="maya_select_coin_title">Selecteer munt</string>
+    <string name="dex_enter_amount_checking">Bedrag controleren…</string>
+    <string name="dex_enter_amount_invalid">Dit bedrag kan nu niet worden geswapt. Probeer een ander bedrag, of probeer het straks opnieuw.</string>
+    <string name="maya_route_label_multiple">Meerdere netwerken</string>
+    <string name="dex_refund_address_heading">Voer terugbetalingsadres in</string>
+    <string name="dex_refund_address_field_label">Terugbetalingsadres</string>
+    <string name="dex_refund_address_placeholder">Lang indrukken om te plakken</string>
 
+    <string name="dex_receive_description">Zodra het netwerk je overboeking bevestigt, zetten we het om naar Dash en storten we het in je DashPay portemonnee</string>
+    <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_memo_label">Memo / Tag</string>
+    <string name="dex_receive_memo_warning">Je overboeking moet dit memo bevatten. Saldo dat zonder memo wordt verstuurd, kan niet worden gekoppeld aan je swap en gaat verloren.</string>
+    <string name="dex_receive_expiry_title">Dit adres verloopt over 10 minuten</string>
+    <string name="dex_receive_back_home">Terug naar home</string>
+
+    <!-- DashDEX buy: user-facing swap error messages (mapped from SwapKit error codes by SwapKitErrors).
+         %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
+    <string name="dex_error_generic">Er ging iets mis bij het instellen van je swap. Probeer het opnieuw.</string>
+    <string name="dex_error_no_route">Dit bedrag kan nu niet worden geswapt. Routes kunnen tijdelijk niet beschikbaar zijn — probeer het straks opnieuw, of probeer een ander bedrag.</string>
+    <string name="dex_error_validation">We konden je swap niet instellen. Controleer het bedrag en adres, en probeer het opnieuw.</string>
+    <string name="dex_error_unavailable">Swaps zijn tijdelijk niet beschikbaar. Probeer het later opnieuw.</string>
+    <string name="dex_error_quote_expired">Deze offerte is verlopen. Ga terug en probeer het opnieuw.</string>
+    <string name="dex_error_sanctioned">Dit adres kan niet worden gebruikt voor swaps.</string>
+    <string name="dex_error_insufficient_balance">Het bedrag is hoger dan wat je verstuurt.</string>
+    <string name="dex_error_allowance">Dit token heeft goedkeuring nodig voordat het geswapt kan worden.</string>
+    <string name="dex_error_build_failed">We konden deze swap niet voorbereiden. Probeer het opnieuw.</string>
+    <string name="dex_error_invalid_destination">We konden je storting niet instellen. Probeer het opnieuw.</string>
+    <string name="dex_error_price_moved">De prijs is te veel veranderd. Ga terug en probeer het opnieuw.</string>
 
 </resources>

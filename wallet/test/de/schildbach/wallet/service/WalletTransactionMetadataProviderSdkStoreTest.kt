@@ -132,6 +132,7 @@ class WalletTransactionMetadataProviderSdkStoreTest {
             iconBitmapDao = mockk(relaxed = true),
             walletData = walletData,
             giftCardDao = mockk(relaxed = true),
+            transactionRecordsDao = mockk(relaxed = true),
             swapOrderDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = changeCacheDao,
             transactionMetadataDocumentDao = documentDao,

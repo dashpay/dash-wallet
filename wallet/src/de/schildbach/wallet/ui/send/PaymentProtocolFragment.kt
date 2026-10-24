@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -39,6 +40,8 @@ import org.dash.wallet.common.payments.bip70.PaymentProtocolException
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.PaymentStillConfirmingException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.toFormattedString
@@ -111,7 +114,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
     private fun confirmWhenAuthorizedAndNoException() {
         if (viewModel.finalPaymentIntent!!.expired) {
-            showRequestExpiredMessage()
+            // Resending the earlier payment of an expired request is pointless; its outcome is
+            // still unknown, and that is what the screen says.
+            if (viewModel.isResubmission) showSubmissionPending() else showRequestExpiredMessage()
             return
         }
 
@@ -122,6 +127,16 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         } else {
             handleSendRequestException()
         }
+    }
+
+    private fun showSubmissionPending() {
+        // The merchant may have received the payment; the wallet keeps checking the network in
+        // the background. Paying again with a new transaction could pay twice.
+        binding.errorView.title = R.string.payment_submission_pending_title
+        binding.errorView.message = R.string.payment_submission_pending_message
+        binding.errorView.hideConfirmButton()
+        binding.errorView.hideCancelButton()
+        binding.viewFlipper.displayedChild = VIEW_ERROR
     }
 
     private fun showRequestExpiredMessage() {
@@ -147,7 +162,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
                 Status.ERROR -> {
-                    if (it.exception is PaymentProtocolException.Expired) {
+                    if (it.exception is PaymentSubmissionPendingException) {
+                        showSubmissionPending()
+                    } else if (it.exception is PaymentProtocolException.Expired) {
                         showRequestExpiredMessage()
                     } else if (viewModel.finalPaymentIntent == null) {
                         // server error
@@ -182,10 +199,18 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                 Status.ERROR -> {
                     if (isAdded) {
                         binding.viewFlipper.displayedChild = VIEW_ERROR
-                        binding.errorView.title = R.string.payment_request_problem_title
-                        binding.errorView.setMessage(ack.message)
-                        binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                            viewModel.sendPayment()
+                        if (ack.exception is PaymentSubmissionPendingException) {
+                            // The merchant may have received the payment; the wallet keeps checking
+                            // the network in the background. Retrying now could pay twice.
+                            binding.errorView.title = R.string.payment_submission_pending_title
+                            binding.errorView.message = R.string.payment_submission_pending_message
+                            binding.errorView.hideConfirmButton()
+                        } else {
+                            binding.errorView.title = R.string.payment_request_problem_title
+                            binding.errorView.setMessage(ack.message)
+                            binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
+                                viewModel.sendPayment()
+                            }
                         }
                         binding.errorView.hideCancelButton()
                     }
@@ -219,6 +244,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         when (resource.exception) {
             is InsufficientMoneyException -> {
                 showInsufficientMoneyDialog()
+            }
+            // An earlier payment is still unresolved and its inputs could not be kept out of
+            // this one: nothing was built, and it lifts once that payment is confirmed.
+            is PaymentStillConfirmingException -> {
+                showErrorDialog(getString(R.string.payment_still_confirming))
             }
             // The SDK build reports a shortfall as a native error whose
             // message carries key-wallet's "Insufficient funds" text
@@ -264,16 +294,18 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
         val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount.toDashjCoin())
         val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
-        // The SDK deferred build's exact fee; the fake fee only shows on
-        // a failed preview (send is gated off then anyway).
-        val txFee = viewModel.previewFee ?: PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
+        // The exact fee of the payment the preview shows, or none: a fee that cannot be known is
+        // shown as not available, never invented (review 4303472428).
+        val txFee = viewModel.displayFee
+        val notAvailable = getString(R.string.transaction_row_rate_not_available)
 
         binding.paymentRequest.amount.inputValue.text = amountStr
         binding.paymentRequest.amount.fiatValue.text = fiatAmountStr
-        binding.paymentRequest.transactionFee.text = txFee.toPlainString()
-        binding.paymentRequest.totalAmount.text = amount.toDashjCoin().add(txFee).toPlainString()
+        binding.paymentRequest.transactionFee.text = txFee?.toPlainString() ?: notAvailable
+        binding.paymentRequest.totalAmount.text = txFee?.let { amount.toDashjCoin().add(it).toPlainString() } ?: notAvailable
 
         binding.paymentRequest.memo.text = paymentIntent.memo
+        binding.paymentRequest.resendNotice.isVisible = viewModel.isResubmission
         if (paymentIntent.payeeVerifiedBy != null) {
             binding.paymentRequest.securedBy.text = getString(R.string.dialog_confirm_secured_by)
             binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy

@@ -34,8 +34,20 @@ public class PaymentProtocolException extends Exception {
     }
 
     public static class Expired extends PaymentProtocolException {
+        /**
+         * The SHA-256 of the expired serialized PaymentRequest, when it was parsed: lets a caller
+         * find an earlier submission for the same invoice (whose outcome it can still report).
+         */
+        @javax.annotation.Nullable
+        public final byte[] paymentRequestHash;
+
         public Expired(String msg) {
+            this(msg, null);
+        }
+
+        public Expired(String msg, @javax.annotation.Nullable byte[] paymentRequestHash) {
             super(msg);
+            this.paymentRequestHash = paymentRequestHash;
         }
     }
 

@@ -89,6 +89,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     private lateinit var sdkL1SendService: SdkL1SendService
     private lateinit var bridgeFactory: SdkBridgedTransactionFactory
     private lateinit var runner: SendCoinsTaskRunner
+    private lateinit var verifier: PendingDirectPaymentVerifier
 
     @Before
     fun setUp() {
@@ -127,7 +128,9 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
                 sdkL1SendService,
                 mockk(relaxed = true),
                 mockk(relaxed = true),
-                bridgeFactory
+                bridgeFactory,
+                // the pending-payment verifier: no uncertain payment, nothing to restore
+                mockk<PendingDirectPaymentVerifier>(relaxed = true).also { verifier = it }
             )
         )
         coEvery { runner.logSendTxEvent(any(), any()) } returns Unit
@@ -146,7 +149,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     private fun bridgeReturns(result: BridgedTxResult) {
-        coEvery { bridgeFactory.bridge(any(), any(), any(), any()) } returns result
+        coEvery { bridgeFactory.bridge(any(), any(), any(), any(), any()) } returns result
     }
 
     /** Broadcast signals as their txid; a not-broadcast signal as [NOT_BROADCAST]. */
@@ -261,6 +264,30 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         )
 
         assertTrue(tx === bridged)
+    }
+
+    @Test
+    fun postCutover_aWipeDuringTheSdkSend_refusesTheBroadcast_evenWithoutANamedOwner() = runTest {
+        // the caller named no origin wallet: the reroute must still bind the send to the wallet it
+        // resolved, so a wipe landing inside the SDK call cannot have the replacement pay
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        every { verifier.stillOwnedBy(wallet) } returns true
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } coAnswers {
+            every { verifier.stillOwnedBy(wallet) } returns false // the wipe lands
+            arg<suspend () -> Unit>(3).invoke() // the pre-broadcast hook
+            SdkWriteResult.Broadcast(sdkTxid)
+        }
+        bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
+        val signals = mutableListOf<String?>()
+
+        try {
+            sendCollecting(signals)
+            fail("a payment confirmed on a wiped wallet was broadcast from its replacement")
+        } catch (expected: IllegalStateException) {
+            // refused before the broadcast
+        }
+
+        coVerify(exactly = 0) { bridgeFactory.bridge(any(), any(), any(), any(), any()) }
     }
 
     @Test

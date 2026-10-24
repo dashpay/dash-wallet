@@ -87,7 +87,11 @@ class SdkL1InviteCreationTest {
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_INVITE) } returns true
     }
 
-    private fun creation(source: L1InviteSource, deviceLockedNow: () -> Boolean = { false }) =
+    private fun creation(
+        source: L1InviteSource,
+        deviceLockedNow: () -> Boolean = { false },
+        freshFundingBlocked: suspend () -> Boolean = { false }
+    ) =
         SdkL1InviteCreation(
             source = source,
             dashPayConfig = config(),
@@ -95,7 +99,8 @@ class SdkL1InviteCreationTest {
             feeDuffs = { 3_000_000L },
             nowUnixSeconds = { 1_000L },
             pause = { pauses += it },
-            deviceLockedNow = deviceLockedNow
+            deviceLockedNow = deviceLockedNow,
+            freshFundingBlocked = freshFundingBlocked
         )
 
     @Test
@@ -212,5 +217,19 @@ class SdkL1InviteCreationTest {
         coVerify(exactly = 2) { source.claimInvitation(any(), any(), any(), any(), any()) }
         assertEquals(listOf(500L), pauses)
         assertEquals(SdkWriteResult.Ambiguous(network), result)
+    }
+
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun `invite funding is refused while a pending payment is unprotected`() = runTest {
+        val source = source()
+
+        val result = creation(source, freshFundingBlocked = { true })
+            .createL1Invite("alice", "Alice", "", null, contested = false)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        coVerify(exactly = 0) { source.createInvitation(any(), any(), any(), any(), any(), any()) }
     }
 }

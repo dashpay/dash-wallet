@@ -296,14 +296,25 @@ class SdkTransparentTopUp internal constructor(
      * (the visible-flip fix). Best-effort — no-op default keeps the host-JVM
      * tests inert.
      */
-    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> }
+    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> },
+    /**
+     * True while an uncertain BIP70 payment's inputs are exposed to the engine's coin selection
+     * ([de.schildbach.wallet.payments.PendingPaymentFundingGate]); a FRESH funding build is then
+     * refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON]. Resuming a tracked lock is not asked.
+     * Default false: constructions that don't wire the gate keep their behavior.
+     */
+    private val freshFundingBlocked: suspend () -> Boolean = { false },
+    /** Shared with a resubmission's reactivation; see [de.schildbach.wallet.payments.FundingSelectionLock]. */
+    private val fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
+        de.schildbach.wallet.payments.FundingSelectionLock()
 ) {
     @Inject
     constructor(
         sdkService: DashSdkService,
         sdkL1SendService: SdkL1SendService,
         topUpsDao: TopUpsDao,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
     ) : this(
         source = DashSdkTransparentTopUpSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
@@ -312,11 +323,22 @@ class SdkTransparentTopUp internal constructor(
         },
         seedAssetLockKind = { displayHex, kind ->
             assetLockKindResolver.seed(displayHex, kind)
-        }
+        },
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
+        fundingSelection = fundingGate.selectionLock
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
     var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    /** [freshFundingBlocked], failing closed. */
+    private suspend fun isFreshFundingBlockedSafe(): Boolean = try {
+        freshFundingBlocked()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not check for unprotected pending payments; refusing the fresh build", t)
+        true
+    }
 
     /**
      * Process-level guard shared across BuyCredits screen instances (this is a
@@ -492,6 +514,12 @@ class SdkTransparentTopUp internal constructor(
             return notBroadcast("resume-gate recovery lookup failed", t)
         }
 
+        // A fresh build selects new inputs; refuse it while an uncertain payment's are exposed.
+        // Nothing has been spent, so the purchase is the user's to retry once that resolves.
+        if (existingLock == null && isFreshFundingBlockedSafe()) {
+            return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
+        }
+
         // THE funding spend — one attempt (resume or fresh build).
         val newBalance: Long? = try {
             if (existingLock != null) {
@@ -502,12 +530,17 @@ class SdkTransparentTopUp internal constructor(
                 )
                 source.resumeTopUpFromAssetLock(walletId, ref.identityId, existingLock)
             } else {
-                source.topUpFromCore(
-                    walletIdHex = walletId,
-                    identityId = ref.identityId,
-                    amountDuffs = amountDuffs,
-                    accountIndex = ACCOUNT_INDEX
-                )
+                // Asked again under the shared selection lock and held through the build (review
+                // 4309551218): a resubmission's reactivation cannot slip in between.
+                val selected = fundingSelection.selectIfAllowed({ isFreshFundingBlockedSafe() }) {
+                    source.topUpFromCore(
+                        walletIdHex = walletId,
+                        identityId = ref.identityId,
+                        amountDuffs = amountDuffs,
+                        accountIndex = ACCOUNT_INDEX
+                    )
+                } ?: return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
+                selected.value
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t

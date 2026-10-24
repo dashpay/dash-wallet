@@ -151,8 +151,15 @@ class TransactionResultActivity : LockScreenActivity() {
             finishWhenUserSheetDismissed()
         }
 
-        val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
-        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!) {
+        val txId = intent.getSerializableExtra(EXTRA_TX_ID) as? Sha256Hash
+
+        if (txId == null) {
+            log.warn("no transaction id in the intent, closing")
+            finish()
+            return
+        }
+
+        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) == true) {
             intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
         }
 
@@ -362,7 +369,11 @@ class TransactionResultActivity : LockScreenActivity() {
     override fun onDestroy() {
         super.onDestroy()
         if (finishedForNoWallet) return // never created the view model or the binder
-        viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
+
+        // onCreateWithWallet() also returns before creating the binder when the intent has no tx id
+        if (::transactionResultViewBinder.isInitialized) {
+            viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
+        }
     }
 
     private fun rescanBlockchain() {

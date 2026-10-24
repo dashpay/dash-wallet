@@ -245,6 +245,8 @@
     <string name="something_wrong_title">Etwas ist schiefgelaufen!</string>
     <string name="retry">Wiederholen</string>
     <string name="gift_card_purchase_failed">Der Kauf der Geschenkkarte ist fehlgeschlagen.</string>
+    <string name="gift_card_save_failed_title">Geschenkkartendaten nicht gespeichert</string>
+    <string name="gift_card_save_failed_message">Deine Zahlung wurde erfolgreich gesendet, aber die Geschenkkarte konnte auf diesem Gerät nicht gespeichert werden. Kaufe diese Geschenkkarte nicht erneut. Du findest die Zahlung in deinem Transaktionsverlauf, und der Support kann die Karte daraus wiederherstellen.</string>
     <string name="try_again">Erneut versuchen</string>
     <string name="cancel">Abbrechen</string>
     <string name="gift_card_error">Aus einem unerfindlichen Grund konnten wir deine Geschenkkarte nicht kaufen. Bitte versuche es später noch einmal.</string>

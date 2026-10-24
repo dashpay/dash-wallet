@@ -255,6 +255,18 @@ internal fun parseInFlightMigration(raw: String?): InFlightMixedFundsMigration? 
     return InFlightMixedFundsMigration(action, startedAt, baseline)
 }
 
+/** The outcome of one migration attempt's spend. */
+internal fun migrationOutcomeOf(result: SdkWriteResult<*>): MixedFundsMigrationOutcome = when (result) {
+    is SdkWriteResult.Broadcast -> MixedFundsMigrationOutcome.STARTED
+    is SdkWriteResult.NotBroadcast ->
+        if (isPaymentStillConfirmingReason(result.reason)) {
+            MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
+        } else {
+            MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
+    is SdkWriteResult.Ambiguous -> MixedFundsMigrationOutcome.UNCONFIRMED
+}
+
 /** What the user chose, and how it went. */
 enum class MixedFundsMigrationOutcome {
     /** Broadcast/submitted; the CoinJoin account is being emptied. */
@@ -262,6 +274,13 @@ enum class MixedFundsMigrationOutcome {
 
     /** Nothing was spent — safe to re-offer immediately. */
     NOT_ATTEMPTED,
+
+    /**
+     * Nothing was spent: refused because an earlier payment's outcome is still being confirmed
+     * and its inputs are not protected from coin selection. Same retry path as [NOT_ATTEMPTED]
+     * (the migration stays unrecorded), but the sheet says why and lets the user come back later.
+     */
+    PAYMENT_STILL_CONFIRMING,
 
     /** The outcome is unknown; the transaction MAY be on the network. */
     UNCONFIRMED
@@ -542,7 +561,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
         action: MixedFundsMigrationAction,
         outcome: MixedFundsMigrationOutcome
     ): MixedFundsMigrationOutcome {
-        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED ||
+            outcome == MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
+        ) {
             // Nothing was spent — leave the flag unset so the prompt returns
             // on the next startup. This is the retry path.
             log.warn("mixed-funds migration ({}) did not run; the prompt will reappear", action)
@@ -701,11 +722,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
     }
 
-    private fun SdkWriteResult<*>.toOutcome(): MixedFundsMigrationOutcome = when (this) {
-        is SdkWriteResult.Broadcast -> MixedFundsMigrationOutcome.STARTED
-        is SdkWriteResult.NotBroadcast -> MixedFundsMigrationOutcome.NOT_ATTEMPTED
-        is SdkWriteResult.Ambiguous -> MixedFundsMigrationOutcome.UNCONFIRMED
-    }
+    private fun SdkWriteResult<*>.toOutcome(): MixedFundsMigrationOutcome = migrationOutcomeOf(this)
 
     companion object {
         private val log = LoggerFactory.getLogger(CoinJoinFundsMigrationService::class.java)

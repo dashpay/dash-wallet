@@ -20,8 +20,21 @@
     <string name="maya_portal_convert_to_title">Convertir Dash en</string>
     <string name="maya_portal_convert_subtitle">Desde Dash Wallet hasta cualquier criptomoneda.</string>
     <string name="maya_portal_subtitle">Convierte Dash desde Dash Wallet a cualquier criptomoneda compatible con Maya y envíala a cualquier monedero.</string>
+    <string name="dash_dex_subtitle">Convierte Dash hacia o desde Dash Wallet con cualquier cripto que esté en las redes compatibles</string>
+    <string name="dash_dex_buy_title">Comprar Dash</string>
+    <string name="dash_dex_buy_subtitle">De cualquier cripto a Dash Wallet</string>
+    <string name="dash_dex_sell_title">Vender Dash</string>
+    <string name="dash_dex_sell_subtitle">Desde Dash Wallet hasta cualquier criptomoneda.</string>
     <string name="maya_address_input_hint">%s dirección</string>
     <string name="maya_address_input_title">Convierte Dash a %s</string>
+    <!-- Nav bar title of the convert-crypto enter-amount screen (Figma 24034:44864) -->
+    <string name="maya_convert_enter_amount_title">Convertir</string>
+    <string name="maya_enter_address_title">Ingresa la dirección</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">Pegue la dirección de</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">Portapapeles</string>
+    <string name="maya_exchange_unsupported_network">%1$s no admite %2$s en la red %3$s</string>
     <string name="maya_crypto_convert_title">Convertir Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Vista previa del pedido</string>
 
@@ -35,7 +48,7 @@
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
     <string name="cryptocurrency_kuji_network">Kujira</string>
     <string name="cryptocurrency_usk_network">USK</string>
-    <string name="cryptocurrency_wsteth_network">stETH (Ethereum) Envuelto</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
     <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
@@ -56,7 +69,108 @@
     <string name="cryptocurrency_zec_network">Zcash</string>
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
-
+    <string name="cryptocurrency_cacao_network">Maya Protocol (Maya)</string>
+    <string name="cryptocurrency_ada_network">Cardano</string>
+    <string name="cryptocurrency_avax_network">Avalanche</string>
+    <string name="cryptocurrency_bch_network">Bitcoin Cash</string>
+    <string name="cryptocurrency_bera_network">Berachain</string>
+    <string name="cryptocurrency_bnb_network">BNB (BSC)</string>
+    <string name="cryptocurrency_doge_network">Dogecoin</string>
+    <string name="cryptocurrency_ltc_network">Litecoin</string>
+    <string name="cryptocurrency_mon_network">Monad</string>
+    <string name="cryptocurrency_near_network">NEAR Protocol</string>
+    <string name="cryptocurrency_okb_network">OKB (X Layer)</string>
+    <string name="cryptocurrency_pol_network">POL (Polygon)</string>
+    <string name="cryptocurrency_sol_network">Solana</string>
+    <string name="cryptocurrency_strk_network">Starknet</string>
+    <string name="cryptocurrency_sui_network">Sui</string>
+    <string name="cryptocurrency_ton_network">Toncoin</string>
+    <string name="cryptocurrency_trx_network">TRON</string>
+    <string name="cryptocurrency_xdai_network">xDAI (Gnosis)</string>
+    <string name="cryptocurrency_xrp_network">XRP</string>
+    <string name="cryptocurrency_ethereum_base_network">Ethereum (Base)</string>
+    <string name="cryptocurrency_ethereum_optimism_network">Ethereum (Optimism)</string>
+    <string name="cryptocurrency_ethereum_near_network">Ethereum (NEAR)</string>
+    <string name="cryptocurrency_adi_ethereum_network">ADI (Ethereum)</string>
+    <string name="cryptocurrency_aurora_ethereum_network">Aurora (Ethereum)</string>
+    <string name="cryptocurrency_aurora_near_network">Aurora (NEAR)</string>
+    <string name="cryptocurrency_cbbtc_ethereum_network">Coinbase Wrapped BTC (Ethereum)</string>
+    <string name="cryptocurrency_cbbtc_base_network">Coinbase Wrapped BTC (Base)</string>
+    <string name="cryptocurrency_dai_ethereum_network">Dai (Ethereum)</string>
+    <string name="cryptocurrency_mog_ethereum_network">Mog Coin (Ethereum)</string>
+    <string name="cryptocurrency_safe_ethereum_network">Safe (Ethereum)</string>
+    <string name="cryptocurrency_safe_gnosis_network">Safe (Gnosis)</string>
+    <string name="cryptocurrency_shib_ethereum_network">Shiba Inu (Ethereum)</string>
+    <string name="cryptocurrency_turbo_ethereum_network">Turbo (Ethereum)</string>
+    <string name="cryptocurrency_turbo_solana_network">Turbo (Solana)</string>
+    <string name="cryptocurrency_turbo_near_network">TURBO (NEAR)</string>
+    <string name="cryptocurrency_usd1_ethereum_network">USD1 (Ethereum)</string>
+    <string name="cryptocurrency_usdf_ethereum_network">Falcon USD (Ethereum)</string>
+    <string name="cryptocurrency_wbtc_ethereum_network">Wrapped Bitcoin (Ethereum)</string>
+    <string name="cryptocurrency_wbtc_near_network">wBTC (NEAR)</string>
+    <string name="cryptocurrency_weth_ethereum_network">WETH (Ethereum)</string>
+    <string name="cryptocurrency_weth_arbitrum_network">WETH (Arbitrum)</string>
+    <string name="cryptocurrency_weth_base_network">WETH (Base)</string>
+    <string name="cryptocurrency_weth_optimism_network">WETH (Optimism)</string>
+    <string name="cryptocurrency_weth_polygon_network">WETH (Polygon)</string>
+    <string name="cryptocurrency_weth_gnosis_network">WETH (Gnosis)</string>
+    <string name="cryptocurrency_usdt0_arbitrum_network">USDT0 (Arbitrum)</string>
+    <string name="cryptocurrency_usdt0_bera_network">USDT0 (Berachain)</string>
+    <string name="cryptocurrency_usdt0_monad_network">USDT0 (Monad)</string>
+    <string name="cryptocurrency_usdt0_xlayer_network">USDT0 (X Layer)</string>
+    <string name="cryptocurrency_cfi_base_network">ConsumerFi Protocol (Base)</string>
+    <string name="cryptocurrency_cfi_near_network">CFI (NEAR)</string>
+    <string name="cryptocurrency_usdcoin_base_network">USD Coin (Base)</string>
+    <string name="cryptocurrency_op_optimism_network">OP (Optimism)</string>
+    <string name="cryptocurrency_usdcoin_optimism_network">USD Coin (Optimism)</string>
+    <string name="cryptocurrency_tether_optimism_network">Tether (Optimism)</string>
+    <string name="cryptocurrency_usdcoin_avalanche_network">USD Coin (Avalanche)</string>
+    <string name="cryptocurrency_tether_avalanche_network">Tether (Avalanche)</string>
+    <string name="cryptocurrency_aster_bsc_network">Aster (BSC)</string>
+    <string name="cryptocurrency_near_bsc_network">NEAR (BSC)</string>
+    <string name="cryptocurrency_rhea_bsc_network">RHEA (BSC)</string>
+    <string name="cryptocurrency_rhea_near_network">RHEA (NEAR)</string>
+    <string name="cryptocurrency_usdcoin_bsc_network">USD Coin (BSC)</string>
+    <string name="cryptocurrency_tether_bsc_network">Tether (BSC)</string>
+    <string name="cryptocurrency_usdcoin_polygon_network">USD Coin (Polygon)</string>
+    <string name="cryptocurrency_tether_polygon_network">Tether (Polygon)</string>
+    <string name="cryptocurrency_usdcoin_monad_network">USD Coin (Monad)</string>
+    <string name="cryptocurrency_usdcoin_xlayer_network">USD Coin (X Layer)</string>
+    <string name="cryptocurrency_cow_gnosis_network">CoW Protocol (Gnosis)</string>
+    <string name="cryptocurrency_eure_gnosis_network">EURe (Gnosis)</string>
+    <string name="cryptocurrency_gno_gnosis_network">Gnosis Token (Gnosis)</string>
+    <string name="cryptocurrency_usdcoin_gnosis_network">USD Coin (Gnosis)</string>
+    <string name="cryptocurrency_tether_gnosis_network">Tether (Gnosis)</string>
+    <string name="cryptocurrency_wif_solana_network">dogwifhat (Solana)</string>
+    <string name="cryptocurrency_pengu_solana_network">Pudgy Penguins (Solana)</string>
+    <string name="cryptocurrency_spx_solana_network">SPX6900 (Solana)</string>
+    <string name="cryptocurrency_trump_solana_network">Official Trump (Solana)</string>
+    <string name="cryptocurrency_usdcoin_solana_network">USD Coin (Solana)</string>
+    <string name="cryptocurrency_tether_solana_network">Tether (Solana)</string>
+    <string name="cryptocurrency_zec_solana_network">Zcash (Solana)</string>
+    <string name="cryptocurrency_xbtc_solana_network">OKX Wrapped BTC (Solana)</string>
+    <string name="cryptocurrency_bitcoin_near_network">Bitcoin (NEAR)</string>
+    <string name="cryptocurrency_frax_near_network">FRAX (NEAR)</string>
+    <string name="cryptocurrency_itlx_near_network">Intellex (NEAR)</string>
+    <string name="cryptocurrency_jambo_near_network">JAMBO (NEAR)</string>
+    <string name="cryptocurrency_noear_near_network">NOEAR (NEAR)</string>
+    <string name="cryptocurrency_npro_near_network">NPRO (NEAR)</string>
+    <string name="cryptocurrency_nearkat_near_network">NearKat (NEAR)</string>
+    <string name="cryptocurrency_public_near_network">PublicAI (NEAR)</string>
+    <string name="cryptocurrency_purge_near_network">PURGE (NEAR)</string>
+    <string name="cryptocurrency_shitzu_near_network">Shitzu (NEAR)</string>
+    <string name="cryptocurrency_stjack_near_network">STJACK (NEAR)</string>
+    <string name="cryptocurrency_sweat_near_network">SWEAT (NEAR)</string>
+    <string name="cryptocurrency_usdcoin_near_network">USD Coin (NEAR)</string>
+    <string name="cryptocurrency_tether_near_network">Tether (NEAR)</string>
+    <string name="cryptocurrency_zec_near_network">Zcash (NEAR)</string>
+    <string name="cryptocurrency_mpdao_near_network">Meta Pool DAO (NEAR)</string>
+    <string name="cryptocurrency_nrusdt_near_network">nrUsdt (NEAR)</string>
+    <string name="cryptocurrency_stnear_near_network">Staked NEAR (NEAR)</string>
+    <string name="cryptocurrency_wnear_near_network">Wrapped NEAR (NEAR)</string>
+    <string name="cryptocurrency_tether_ton_network">Tether (Toncoin)</string>
+    <string name="cryptocurrency_tether_tron_network">Tether (TRON)</string>
+    <string name="cryptocurrency_usdcoin_sui_network">USD Coin (Sui)</string>
     <string name="maya_error">Error Maya</string>
     <string name="maya_error_not_available">El servicio Maya no está disponible. Inténtelo de nuevo más tarde.</string>
     <string name="maya_error_report_issue">Por favor, informe de este problema al equipo de soporte de Dash Wallet utilizando la opción \"Contactar con soporte\" del menú principal.</string>
@@ -65,6 +179,8 @@
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">El monto mínimo de la transacción es</string>
     <string name="entered_amount_is_too_high">El monto máximo de la transacción es</string>
+    <!-- Short form of the max-amount error on the convert-crypto enter-amount screen, e.g. "Max $205.32" (Figma 24034:44864) -->
+    <string name="maya_max_amount_error">Máx</string>
     <string name="we_didnt_find_any_assets">No encontramos ningún activo en tu cuenta de Coinbase.</string>
     <string name="something_wrong_title">¡Algo salió mal!</string>
     <string name="dont_have_any_dash">No tienes Dash en tu billetera de Dash.</string>
@@ -88,6 +204,7 @@
     <string name="transfer_dash_failed_msg">Hubo un problema al transferirlo a la billetera de Dash en este dispositivo.</string>
     <string name="auth_limit_description">Excediste el límite de autorización en Coinbase.</string>
     <string name="you_will_receive">Monto a recibir</string>
+    <string name="maya_receive_using_network">a través de la red %s</string>
     <string name="contact_maya_support">Contacta con el soporte de Maya</string>
     <string name="maya_fees_in_crypto_purchase">Comisiones de Maya en conversiones de criptomonedas</string>
     <string name="maya_fee_info_msg_content">Las transacciones en Maya conllevan diversas comisiones por entrada, salida y liquidez. El importe que usted introdujo es el que se recibirá.</string>
@@ -103,18 +220,67 @@
     <string name="you_receive">tu recibes</string>
     <string name="to_dash_wallet_on_this_device">desde Dash Wallet en este dispositivo</string>
     <string name="purchase">Compra</string>
-    <string name="maya_fee">Tarifa Maya</string>
+    <string name="maya_fee">Comisión</string>
+    <string name="network_label">Red de trabajo</string>
     <string name="total">Total</string>
     <string name="to_external_address">a %s</string>
 
+    <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
+    <string name="button_refresh">Actualizar</string>
+    <string name="maya_confirm_countdown">Confirmar (%1$ds)</string>
+    <string name="maya_quote_expires_in">La cotización expira en %1$s s</string>
+    <string name="maya_quote_expired">Cotización expirada</string>
+    <string name="maya_explorer_view_maya">Ver el explorador de MayaChain</string>
+    <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
+    <string name="maya_explorer_view_near">Ver explorador de intents NEAR</string>
     <string name="maya_error_information">%s%nCriptodivisa: %s</string>
     <string name="maya_error_invalid_destination_address">Dirección de destino inválida</string>
     <string name="maya_error_below_recommended_minimum">El importe introducido es inferior al mínimo recomendado.</string>
     <string name="maya_error_trading_halted">Los intercambios han sido suspendidos en%s.</string>
     <string name="maya_error_below_allowed_minimum">El importe introducido es inferior al mínimo permitido.</string>
+    <string name="maya_error_below_allowed_maximum">El importe ingresado es superior al máximo permitido</string>
     <string name="maya_error_quote">No se pudo obtener un presupuesto de Maya para esta conversión.</string>
     <string name="maya_halted_label">Suspendido</string>
     <string name="maya_halted_coins_toast">Algunas criptomonedas están temporalmente suspendidas y no disponibles para su negociación.</string>
+    <string name="maya_select_coin_title">Seleccionar moneda</string>
+    <string name="dex_enter_amount_title">Convertir %s a Dash</string>
+    <string name="dex_enter_amount_checking">Comprobando la cantidad…</string>
+    <string name="dex_enter_amount_invalid">Este importe no se puede cambiar ahora mismo. Prueba con otro importe o inténtalo de nuevo en breve.</string>
+    <string name="maya_route_label_multiple">Múltiples redes</string>
+    <string name="maya_no_available_coins">No hay monedas disponibles</string>
+    <string name="maya_no_search_results">Ninguna moneda coincide con tu búsqueda</string>
+    <string name="maya_no_connection_toast">Comprueba tu conexión e inténtalo de nuevo para ver las monedas disponibles</string>
+    <string name="maya_slippage_notice">El importe final que recibas puede diferir de esta estimación hasta en un %1$d%% debido al deslizamiento de precio.</string>
+    <string name="dex_refund_address_heading">Ingrese la dirección de reembolso</string>
+    <string name="dex_refund_address_description">Si el intercambio falla, tus %s se devolverán a esta dirección. Asegúrate de que sea una dirección %s de una billetera que controles.\n\nTu intercambio no se puede procesar sin una dirección de reembolso.</string>
+    <string name="dex_refund_address_field_label">Dirección de reembolso</string>
+    <string name="dex_refund_address_placeholder">Mantén pulsado para pegar</string>
+    <string name="dex_receive_heading">Envía %1$s a esta dirección</string>
 
+    <string name="dex_receive_description">Una vez que la red confirme tu transferencia, la convertiremos a Dash y la depositaremos en tu billetera DashPay.</string>
+    <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_memo_label">Nota / Etiqueta</string>
+    <string name="dex_receive_memo_warning">Su transferencia debe incluir este memo. Los fondos enviados sin ella no podrán vincularse a su intercambio y se perderán.</string>
+    <string name="dex_receive_expiry_title">Esta dirección caduca en 10 minutos.</string>
+    <string name="dex_receive_expiry_message">Envía tus %1$s antes de que se agote el tiempo. Si envías después de que expire la dirección, tus fondos serán reembolsados, no convertidos.</string>
+    <string name="dex_receive_back_home">Menú principal</string>
+
+    <!-- DashDEX buy: user-facing swap error messages (mapped from SwapKit error codes by SwapKitErrors).
+         %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
+    <string name="dex_error_generic">Se produjo un error al configurar el intercambio. Inténtalo de nuevo.</string>
+    <string name="dex_error_missing_details">Faltan los detalles del intercambio. Vuelve atrás e ingresa un importe.</string>
+    <string name="dex_error_no_route">Este importe no se puede cambiar ahora mismo. Las rutas pueden no estar disponibles temporalmente; inténtelo de nuevo en breve o pruebe con otro importe.</string>
+    <string name="dex_error_amount_too_small">Este importe está por debajo del mínimo para este intercambio. Ingresa un importe mayor.</string>
+    <string name="dex_error_blacklisted">%1$s no se puede intercambiar en este momento.</string>
+    <string name="dex_error_validation">No pudimos realizar el intercambio. Por favor, verifica el importe y la dirección, y vuelve a intentarlo.</string>
+    <string name="dex_error_unavailable">Los intercambios no están disponibles temporalmente. Inténtelo de nuevo más tarde.</string>
+    <string name="dex_error_quote_expired">Esta cotización ha caducado. Vuelva atrás e inténtelo de nuevo.</string>
+    <string name="dex_error_sanctioned">Esta dirección no se puede utilizar para intercambios.</string>
+    <string name="dex_error_insufficient_balance">La cantidad es mayor que la que estás enviando.</string>
+    <string name="dex_error_allowance">Este token necesita aprobación antes de poder ser intercambiado</string>
+    <string name="dex_error_build_failed">No pudimos preparar este intercambio. Por favor, inténtelo de nuevo.</string>
+    <string name="dex_error_invalid_refund_address">Esa dirección de reembolso no es una dirección %1$s válida.</string>
+    <string name="dex_error_invalid_destination">No pudimos procesar su depósito. Por favor, inténtelo de nuevo.</string>
+    <string name="dex_error_price_moved">El precio ha variado demasiado. Por favor, vuelva atrás e inténtelo de nuevo.</string>
 
 </resources>

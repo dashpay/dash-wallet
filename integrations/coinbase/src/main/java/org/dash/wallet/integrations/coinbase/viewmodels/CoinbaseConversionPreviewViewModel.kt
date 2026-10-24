@@ -26,6 +26,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.isTransactionPending
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.isInsufficientMoney
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -74,6 +75,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     var isFirstTime = true
 
     fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch {
+        // The wallet the user confirmed on, before the address and trade calls below wait (review
+        // 4304575003): a DASH sale is refused, with nothing sent, if a wipe replaces it meanwhile.
+        val session = sendPaymentService.currentWalletSession()
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
 
         _showLoading.value = true
@@ -104,7 +108,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                     if (inputCurrency == Constants.DASH_CURRENCY) {
                         try {
                             val coin = Dash.parse(inputAmount)
-                            sellDashToCoinBase(coin)
+                            sellDashToCoinBase(coin, session)
                         } catch (x: Exception) {
                             Dash.ZERO
                         }
@@ -200,7 +204,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         analyticsService.logEvent(eventName, mapOf())
     }
 
-    private suspend fun sellDashToCoinBase(coin: Dash) {
+    private suspend fun sellDashToCoinBase(coin: Dash, session: WalletSession?) {
         _showLoading.value = true
 
         when (val result = coinBaseRepository.createAddress()) {
@@ -209,7 +213,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                     _showLoading.value = false
                     getUserAccountAddressFailedCallback.call()
                 } else {
-                    sendDashToCoinbase(coin, result.value)
+                    sendDashToCoinbase(coin, result.value, session)
                     sellSwapSuccessState.call()
                     _showLoading.value = false
                 }
@@ -221,10 +225,10 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         }
     }
 
-    private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String): Boolean {
+    private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String, session: WalletSession?): Boolean {
         val address = addressInfo.trim { it <= ' ' }
         return try {
-            val txId = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
+            val txId = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false, session = session)
             transactionMetadataProvider.markAddressAsTransferOutAsync(
                 address,
                 ServiceName.Coinbase
