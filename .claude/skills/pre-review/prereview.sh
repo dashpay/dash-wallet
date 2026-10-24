@@ -238,7 +238,8 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
   local feat_off=(-c features.apps=false -c features.browser_use=false -c features.browser_use_external=false \
     -c features.browser_use_full_cdp_access=false -c features.computer_use=false -c features.in_app_browser=false -c 'web_search="disabled"' \
     -c features.hooks=false)   # lifecycle hooks: run outside the sandbox, in the clone, from the user's trusted config
-  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex "${feat_off[@]}" features list > "$probe" 2>/dev/null
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex "${feat_off[@]}" features list > "$probe" 2>/dev/null \
+    || { say "codex features list failed, so the capabilities' state is unknown: not reviewing"; return 2; }
   if [[ "$(awk '$1 ~ /^(apps|browser_use|browser_use_external|browser_use_full_cdp_access|computer_use|in_app_browser|hooks)$/ && $NF == "false"' "$probe" | wc -l | tr -d ' ')" != 7 ]]; then
     say "a codex capability outside the sandbox (apps, browser or computer use, lifecycle hooks) does not read back as off: not reviewing"; return 2
   fi

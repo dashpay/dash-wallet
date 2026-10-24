@@ -49,9 +49,15 @@ components, dark mode).
 
 ## Persistence
 - Multi-key settings are written in one `editPreferences {}` / one `Editor.commit()`.
-- Durable markers are small classes in `util/`. They have a tri-state read, an atomic write (temp in the same
-  directory, fsync, `ATOMIC_MOVE`; what that does and does not survive is in 03 §3.11), a generation, and a boolean-returning compare-and-delete `complete()`. Examples:
-  `RecoveryResetState`, `BackupReplacementState`, `WalletWipeState`.
+- Durable markers are small classes in `util/`. What they share: a tri-state read (absence confirmed with no-follow
+  NIO, unreadable is not absent), a write that never leaves a half marker, and a `complete()` that reports whether the
+  marker is really gone. The mechanisms differ by what each marker needs (03 §3.11):
+  - `RecoveryResetState`: an empty flag file made with `createNewFile()`; `complete()` deletes it, then confirms the
+    absence.
+  - `BackupReplacementState`: temp, fsync, `ATOMIC_MOVE` + `REPLACE_EXISTING`; a generation per arm; `complete(dir,
+    generation)` is a compare-and-delete under the writer lock.
+  - `WalletWipeState`: temp, fsync, `ATOMIC_MOVE`; the marker body is bound to an install token in
+    `noBackupFilesDir`, so a marker restored from backup onto another install does not count.
 - Distinct keys for distinct obligations.
 - Room: index columns used in joins and subqueries. An index on a shipped DB needs a migration.
 - Persisted diagnostics carry their owner, e.g. a `<ms> <walletId>` header.
