@@ -24,7 +24,9 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.just
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -836,6 +838,80 @@ class SdkTransparentUsernameCreationTest {
             creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
         )
         appScope.cancel()
+    }
+
+    /** A fence a wipe raises inside [WalletSecretWriteFence.track] (before or after the real call). */
+    private fun fenceRaisedOnTrack(afterTrack: Boolean, armed: () -> Boolean): WalletSecretWriteFence {
+        val fence = spyk(WalletSecretWriteFence())
+        every { fence.track(any()) } answers {
+            if (armed() && !afterTrack) fence.raise()
+            callOriginal()
+            if (armed() && afterTrack) fence.raise()
+        }
+        return fence
+    }
+
+    @Test
+    fun `a wipe raising the fence while the name-only retry is tracked refuses it and frees the slot`() = runTest {
+        for (afterTrack in listOf(false, true)) {
+            val source = source(lockAfterFailure = null)
+            coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+            var armed = true
+            val fence = fenceRaisedOnTrack(afterTrack) { armed }
+            val appScope = CoroutineScope(
+                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            )
+            val persisted = mutableListOf<String>()
+            val creation = SdkTransparentUsernameCreation(
+                source = source,
+                cutoverCommitted = { true },
+                feeDuffs = { feeDuffs },
+                handOffToLegacy = {},
+                driveCreationState = { _, _ -> },
+                persistNameContext = { _, name, _, _ -> persisted += name },
+                executorScope = appScope,
+                secretWriteFence = fence
+            )
+
+            assertFalse(
+                "refused, not reported as started (afterTrack=$afterTrack)",
+                creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+            )
+            advanceUntilIdle()
+            assertTrue("the cancelled run never ran", persisted.isEmpty())
+            coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+
+            // the single-flight slot is free: once the wipe completes, the next retry is accepted
+            armed = false
+            fence.lower()
+            assertTrue(
+                "slot released (afterTrack=$afterTrack)",
+                creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+            )
+            advanceUntilIdle()
+            coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+            appScope.cancel()
+        }
+    }
+
+    @Test
+    fun `a wipe raising the fence while a creation is tracked refuses it and frees the slot`() = runTest {
+        for (afterTrack in listOf(false, true)) {
+            var armed = true
+            val fence = fenceRaisedOnTrack(afterTrack) { armed }
+            val appScope = CoroutineScope(
+                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            )
+            val creation = creation(source(lockAfterFailure = null), fence, executorScope = appScope)
+
+            assertFalse("refused, not reported as started (afterTrack=$afterTrack)", creation.submit(label))
+            assertEquals(ShieldedUsernameSubmitState.Idle, creation.submitState.value)
+
+            armed = false
+            fence.lower()
+            assertTrue("slot released (afterTrack=$afterTrack)", creation.submit(label))
+            appScope.cancel()
+        }
     }
 
     @Test

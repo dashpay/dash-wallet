@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -643,8 +644,27 @@ class SdkTransparentUsernameCreation internal constructor(
             }
         }
         job.invokeOnCompletion { cause -> if (cause is CancellationException) onCancelled() }
-        secretWriteFence.track(job)
+        if (!trackOrRefuse(job)) {
+            // the cancelled lazy job never ran; [onCancelled] already released the slot
+            log.warn("transparent username creation submit refused: wallet wipe in progress")
+            return false
+        }
         job.start()
+        return true
+    }
+
+    /**
+     * Register the LAZY [job] with the [secretWriteFence]. False — with the job cancelled, so it
+     * can never run — when a wipe raised the fence after the caller's early check: [track]
+     * cancelled it at once, or the fence went up just after. The caller must then report a
+     * refusal, not an accepted run.
+     */
+    private fun trackOrRefuse(job: Job): Boolean {
+        secretWriteFence.track(job)
+        if (job.isCancelled || secretWriteFence.isRaised) {
+            job.cancel(CancellationException("wallet wipe in progress"))
+            return false
+        }
         return true
     }
 
@@ -1676,8 +1696,15 @@ class SdkTransparentUsernameCreation internal constructor(
                 recordRetryFailure(e)
             }
         }
+        if (!trackOrRefuse(job)) {
+            // the caller's finally releases the single-flight slot
+            log.warn("name-only retry refused: wallet wipe in progress")
+            return false
+        }
+        // Registered only once accepted, so the refusal above releases the slot once (the
+        // caller's finally) and never after another caller took it. A wipe cancelling the job
+        // before this line still releases it: the handler runs at once on a completed job.
         job.invokeOnCompletion { releaseNameRetry() }
-        secretWriteFence.track(job)
         job.start()
         return true
     }
