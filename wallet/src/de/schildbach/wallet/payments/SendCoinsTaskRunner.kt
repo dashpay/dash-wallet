@@ -1942,7 +1942,9 @@ class SendCoinsTaskRunner @Inject constructor(
                 )
                 // With its owner (review 5560810479): the typed overload can have seen the
                 // pre-cutover route before the cutover committed, and the SDK binds a wallet only
-                // inside this call, so the owner is checked again right before the broadcast.
+                // inside this call, so the owner is checked again right before the broadcast. A
+                // caller that named no owner still gets the check, against the wallet this call
+                // resolved above: a wipe during the SDK call must not let the replacement pay.
                 return@withContext sendViaSdkBridged(
                     payment.address,
                     payment.amount,
@@ -1950,7 +1952,7 @@ class SendCoinsTaskRunner @Inject constructor(
                     payment.sendAll,
                     onBroadcast,
                     onNotBroadcast,
-                    originWallet = originWallet
+                    originWallet = wallet
                 )
             }
             notifyNotBroadcast(onNotBroadcast)
