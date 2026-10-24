@@ -2429,4 +2429,46 @@ class PendingDirectPaymentVerifierTest {
         assertEquals(first, verifier.claimSubmission(createTransaction().txId, "request-v2", false, orderId = "order-1"))
         verifier.releaseSubmissionClaim(first)
     }
+
+    // --- records from before order identities fail closed (#1628) ---
+
+    @Test
+    fun `a record from before order identities blocks a new request to the same payment url`() = runBlocking {
+        // it holds nothing an order identity can be recomputed from (not the request, its
+        // merchant data or which outputs were the payee's), so a request for the same endpoint
+        // is treated as the same invoice until that record is resolved
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "request-v1"))
+
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("request-v2", "order-new", paymentUrl = paymentUrl))
+        assertEquals(
+            tx.txId,
+            verifier.claimSubmission(createTransaction().txId, "request-v2", false, orderId = "order-new", paymentUrl = paymentUrl)
+        )
+        // never resubmitted for a request it may not be for
+        assertNull(verifier.abandonedSubmissionFor("request-v2", wallet, "order-new"))
+        // another endpoint is not blocked by it
+        assertNull(verifier.unresolvedSubmissionFor("request-v3", "order-new", paymentUrl = "https://other.example/pay"))
+    }
+
+    @Test
+    fun `a record with an order identity is not matched by its payment url alone`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "request-v1").copy(orderId = "order-1"))
+
+        assertNull(verifier.unresolvedSubmissionFor("request-v2", "order-2", paymentUrl = paymentUrl))
+    }
+
+    @Test
+    fun `a record stamped with the url and outputs identity matches a request that now carries merchant data`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "request-v1").copy(orderId = "heuristic-1"))
+
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("request-v2", "merchant-1", legacyOrderId = "heuristic-1"))
+        assertEquals(
+            tx.txId,
+            verifier.claimSubmission(createTransaction().txId, "request-v2", false, orderId = "merchant-1", legacyOrderId = "heuristic-1")
+        )
+    }
 }
+

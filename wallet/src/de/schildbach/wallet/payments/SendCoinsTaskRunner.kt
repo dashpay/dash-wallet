@@ -426,7 +426,12 @@ class SendCoinsTaskRunner @Inject constructor(
      * same ORDER made from a different refresh of its request (new time, expiry or signature).
      */
     suspend fun findUnresolvedSubmission(paymentIntent: PaymentIntent): Sha256Hash? =
-        pendingPaymentVerifier.unresolvedSubmissionFor(paymentIntent.paymentRequestId, paymentIntent.orderIdentity())
+        pendingPaymentVerifier.unresolvedSubmissionFor(
+            paymentIntent.paymentRequestId,
+            paymentIntent.orderIdentity(),
+            paymentIntent.legacyOrderIdentity(),
+            paymentIntent.paymentUrl
+        )
 
     /**
      * Refuses to go on with a payment whose wallet has been wiped since the user confirmed it,
@@ -1342,10 +1347,19 @@ class SendCoinsTaskRunner @Inject constructor(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
         paymentRequestId: String?,
         isGiftCardPurchase: Boolean,
-        orderId: String? = null
+        orderId: String? = null,
+        legacyOrderId: String? = null,
+        paymentUrl: String? = null
     ) {
         val conflicting = try {
-            pendingPaymentVerifier.claimSubmission(tx.txId, paymentRequestId, isGiftCardPurchase, orderId = orderId)
+            pendingPaymentVerifier.claimSubmission(
+                tx.txId,
+                paymentRequestId,
+                isGiftCardPurchase,
+                orderId = orderId,
+                legacyOrderId = legacyOrderId,
+                paymentUrl = paymentUrl
+            )
         } catch (e: Exception) {
             releaseDeferredPayment(payment, wallet)
             throw e
@@ -1430,7 +1444,9 @@ class SendCoinsTaskRunner @Inject constructor(
             payment,
             finalPaymentIntent.paymentRequestId,
             recovery?.isGiftCardPurchase == true,
-            finalPaymentIntent.orderIdentity()
+            finalPaymentIntent.orderIdentity(),
+            finalPaymentIntent.legacyOrderIdentity(),
+            finalPaymentIntent.paymentUrl
         )
 
         val (verification, request) = try {
@@ -1592,7 +1608,8 @@ class SendCoinsTaskRunner @Inject constructor(
         pendingPaymentVerifier.abandonedSubmissionFor(
             paymentIntent.paymentRequestId,
             originWallet,
-            paymentIntent.orderIdentity()
+            paymentIntent.orderIdentity(),
+            paymentIntent.legacyOrderIdentity()
         )
 
     /**
@@ -1645,7 +1662,12 @@ class SendCoinsTaskRunner @Inject constructor(
         }
         val paymentRequestId = finalPaymentIntent.paymentRequestId
         val orderId = finalPaymentIntent.orderIdentity()
-        val record = pendingPaymentVerifier.abandonedSubmissionFor(paymentRequestId, wallet, orderId)
+        val record = pendingPaymentVerifier.abandonedSubmissionFor(
+            paymentRequestId,
+            wallet,
+            orderId,
+            finalPaymentIntent.legacyOrderIdentity()
+        )
             ?: throw IllegalStateException("no earlier payment on record for this request")
         Context.propagate(wallet.context)
         val tx = Transaction(NETWORK_PARAMETERS, record.txBytes)
@@ -1658,7 +1680,9 @@ class SendCoinsTaskRunner @Inject constructor(
             paymentRequestId,
             record.isGiftCardPurchase,
             resubmission = true,
-            orderId = orderId
+            orderId = orderId,
+            legacyOrderId = finalPaymentIntent.legacyOrderIdentity(),
+            paymentUrl = requestUrl
         )?.let { other ->
             throw PaymentSubmissionPendingException(other.toString(), null)
         }

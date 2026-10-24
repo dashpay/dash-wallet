@@ -38,11 +38,12 @@ class PaymentIntentOrderIdentityTest {
         requestHash: ByteArray = ByteArray(32) { 1 },
         memo: String = "invoice",
         payee: String? = null,
-        verifiedBy: String? = null
+        verifiedBy: String? = null,
+        merchantData: ByteArray? = null
     ) = PaymentIntent(
         PaymentIntent.Standard.BIP70, payee, verifiedBy,
         outputs.map { (script, amount) -> PaymentIntent.Output(Coin.valueOf(amount), script) }.toTypedArray(),
-        memo, url, null, null, requestHash, null, null
+        memo, url, merchantData, null, requestHash, null, null
     )
 
     @Test
@@ -74,5 +75,43 @@ class PaymentIntentOrderIdentityTest {
     fun `nothing stable to key on gives no identity`() {
         assertNull(intent(listOf(a to 1_000L), url = null).orderIdentity())
         assertNull(intent(emptyList()).orderIdentity())
+    }
+
+    // --- BIP70 merchant_data: the merchant's own order identifier (#1628) ---
+
+    @Test
+    fun `merchant data tells apart two orders with the same url and outputs`() {
+        // one endpoint, two gift cards of the same price: the same url and outputs, two orders
+        val first = intent(listOf(a to 1_000L), merchantData = "order-1001".toByteArray())
+        val second = intent(listOf(a to 1_000L), merchantData = "order-1002".toByteArray())
+        assertNotEquals(first.orderIdentity(), second.orderIdentity())
+    }
+
+    @Test
+    fun `a refreshed request carrying the same merchant data is the same order`() {
+        val first = intent(listOf(a to 1_000L), requestHash = ByteArray(32) { 1 }, merchantData = "order-1001".toByteArray())
+        val refreshed = intent(listOf(a to 1_000L), requestHash = ByteArray(32) { 2 }, merchantData = "order-1001".toByteArray())
+        assertEquals(first.orderIdentity(), refreshed.orderIdentity())
+    }
+
+    @Test
+    fun `merchant data is keyed together with the url, the outputs and the verified merchant`() {
+        val md = "order-1001".toByteArray()
+        val base = intent(listOf(a to 1_000L), merchantData = md).orderIdentity()
+        assertNotEquals(base, intent(listOf(a to 1_001L), merchantData = md).orderIdentity())
+        assertNotEquals(base, intent(listOf(a to 1_000L), url = "https://other.example/pay", merchantData = md).orderIdentity())
+        assertNotEquals(base, intent(listOf(a to 1_000L), payee = "Merchant", verifiedBy = "CA", merchantData = md).orderIdentity())
+    }
+
+    @Test
+    fun `without merchant data the identity is the url and outputs heuristic`() {
+        val plain = intent(listOf(a to 1_000L))
+        assertEquals(plain.legacyOrderIdentity(), plain.orderIdentity())
+        // with it, the heuristic stays available to match records stamped before merchant data
+        val withData = intent(listOf(a to 1_000L), merchantData = "order-1001".toByteArray())
+        assertEquals(plain.orderIdentity(), withData.legacyOrderIdentity())
+        assertNotEquals(withData.orderIdentity(), withData.legacyOrderIdentity())
+        // empty merchant data is no merchant data
+        assertEquals(plain.orderIdentity(), intent(listOf(a to 1_000L), merchantData = ByteArray(0)).orderIdentity())
     }
 }

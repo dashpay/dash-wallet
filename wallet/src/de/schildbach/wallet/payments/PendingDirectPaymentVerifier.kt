@@ -665,24 +665,56 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * only once it is seen on the network (paid) or a confirmed transaction spends one of its
      * inputs (it can never confirm). Until then the invoice is paid again by resubmitting that same
      * transaction ([abandonedSubmissionFor]), never with a new one.
+     *
+     * @param legacyOrderId the url-and-outputs identity of the same order (`legacyOrderIdentity`),
+     *   which records stamped before merchant data was keyed on carry
+     * @param paymentUrl where the request posts its Payment: a record with no order identity at
+     *   all matches any request to the same url (fail closed, see [isForInvoice])
      */
-    suspend fun unresolvedSubmissionFor(paymentRequestId: String?, orderId: String? = null): Sha256Hash? {
-        if (paymentRequestId == null && orderId == null) {
+    suspend fun unresolvedSubmissionFor(
+        paymentRequestId: String?,
+        orderId: String? = null,
+        legacyOrderId: String? = null,
+        paymentUrl: String? = null
+    ): Sha256Hash? {
+        val invoice = Invoice(paymentRequestId, orderId, legacyOrderId, paymentUrl)
+        if (invoice.isEmpty) {
             return null
         }
         return config.getAllOrThrow()
-            .firstOrNull { it.isForInvoice(paymentRequestId, orderId) && it.txId !in pendingRemovals }
+            .firstOrNull { it.isForInvoice(invoice) && it.txId !in pendingRemovals }
             ?.txId
     }
 
+    /** What a payment request is known by; see [isForInvoice]. */
+    private class Invoice(
+        val paymentRequestId: String?,
+        orderId: String?,
+        legacyOrderId: String?,
+        /** Null when records with no order identity must not be matched by url. */
+        val paymentUrl: String?
+    ) {
+        val orderIds = setOfNotNull(orderId, legacyOrderId)
+        val isEmpty get() = paymentRequestId == null && orderIds.isEmpty() && paymentUrl == null
+    }
+
     /**
-     * Whether this record paid the invoice named by [paymentRequestId] (the exact request) or
-     * [orderId] (its order, whatever refresh of the request is being paid). A record written
-     * before order identities were stored is matched by its request alone, as it always was.
+     * Whether this record paid [invoice]: the exact request ([Invoice.paymentRequestId]), or any
+     * refresh of its order ([Invoice.orderIds]: the order identity, and the url-and-outputs one a
+     * record stamped before merchant data was keyed on carries).
+     *
+     * A record written before order identities were stored holds nothing one can be recomputed
+     * from: not the request, not its merchant data, and not which of its transaction's outputs were
+     * the payee's rather than change. It cannot be told apart from a refresh of its own order, so
+     * it fails closed: it matches every request posting to the same payment_url, until it is
+     * resolved (seen on the network, or invalidated by a conflict). A lookup that resubmits a
+     * stored transaction passes no url, so such a record is never resubmitted for a request it may
+     * not be for.
      */
-    private fun PendingDirectPayment.isForInvoice(paymentRequestId: String?, orderId: String?): Boolean =
-        (paymentRequestId != null && this.paymentRequestId == paymentRequestId) ||
-            (orderId != null && this.orderId == orderId)
+    private fun PendingDirectPayment.isForInvoice(invoice: Invoice): Boolean =
+        (invoice.paymentRequestId != null && paymentRequestId == invoice.paymentRequestId) ||
+            (orderId != null && orderId in invoice.orderIds) ||
+            (orderId == null && invoice.paymentUrl != null && paymentUrl == invoice.paymentUrl)
 
     /**
      * Claims the right to submit [txId] as the one payment for its invoice ([paymentRequestId])
@@ -711,12 +743,17 @@ class PendingDirectPaymentVerifier @Inject constructor(
          */
         resubmission: Boolean = false,
         /** The order [paymentRequestId] is a request for: a refreshed request for it is the same invoice. */
-        orderId: String? = null
+        orderId: String? = null,
+        /** As for [unresolvedSubmissionFor]. */
+        legacyOrderId: String? = null,
+        /** As for [unresolvedSubmissionFor]. */
+        paymentUrl: String? = null
     ): Sha256Hash? = claimMutex.withLock {
+        val invoice = Invoice(paymentRequestId, orderId, legacyOrderId, paymentUrl)
         val resubmissionKey = RESUBMISSION_CLAIM_PREFIX + txId
         val keys = buildList {
             paymentRequestId?.let { add(REQUEST_CLAIM_PREFIX + it) }
-            orderId?.let { add(ORDER_CLAIM_PREFIX + it) }
+            invoice.orderIds.forEach { add(ORDER_CLAIM_PREFIX + it) }
             if (isGiftCardPurchase) add(GIFT_CARD_CLAIM)
             if (resubmission) add(resubmissionKey)
         }
@@ -738,7 +775,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // blocks another. A new purchase is a separate order with its own invoice, not a duplicate
         // of a released one, whose late broadcast is still attributed to its own order.
         val stored = config.getAllOrThrow().filter { it.txId != txId && it.txId !in pendingRemovals }
-        val recorded = stored.firstOrNull { it.isForInvoice(paymentRequestId, orderId) }
+        val recorded = stored.firstOrNull { it.isForInvoice(invoice) }
             ?: stored.firstOrNull { isGiftCardPurchase && it.isGiftCardPurchase && !it.abandoned }
         if (recorded != null) {
             return@withLock recorded.txId
@@ -1352,12 +1389,16 @@ class PendingDirectPaymentVerifier @Inject constructor(
     suspend fun abandonedSubmissionFor(
         paymentRequestId: String?,
         origin: Wallet,
-        orderId: String? = null
+        orderId: String? = null,
+        /** As for [unresolvedSubmissionFor]. */
+        legacyOrderId: String? = null
     ): PendingDirectPayment? {
-        if (paymentRequestId == null && orderId == null) return null
+        // No url: a record with no order identity is never resubmitted for another request.
+        val invoice = Invoice(paymentRequestId, orderId, legacyOrderId, paymentUrl = null)
+        if (invoice.isEmpty) return null
         val walletId = walletIdentity(origin)
         return config.getAllOrThrow().firstOrNull {
-            it.isForInvoice(paymentRequestId, orderId) &&
+            it.isForInvoice(invoice) &&
                 (it.abandoned || it.watchExpired) &&
                 it.txId !in pendingRemovals &&
                 belongsTo(it, origin, walletId)
