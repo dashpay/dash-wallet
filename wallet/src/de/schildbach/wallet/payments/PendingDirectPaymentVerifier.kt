@@ -279,15 +279,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // way. See PendingDirectPaymentConfig.add.
         walletData.wallet?.let { retiredWallets.add(it) }
         // The wipe barrier (outermost, like every other user of the lock): EXCLUSIVE on the
-        // funding selection lock, waiting for the fresh fundings and invalidation settlements
-        // under way, refusing every one asked for until the wipe is done, and failing a
-        // reactivation fast. Under it nothing can select inputs or settle a payment for the old
-        // wallet while its state is cleared, and nothing that waited through the wipe is let
-        // through onto the next wallet ([FundingSelectionLock.withShared]).
+        // funding selection lock. It cancels the fresh fundings, SDK broadcasts and invalidation
+        // settlements under way and waits, with no timeout, until every one has released (one in
+        // a native call is waited for until that call returns), refuses every one asked for until
+        // the wipe is done, and fails a reactivation fast. Under it nothing can select inputs,
+        // broadcast or settle a payment for the old wallet while its state is cleared, and nothing
+        // that waited through the wipe is let through onto the next wallet
+        // ([FundingSelectionLock.withShared]).
         //
-        // Deadlock-free: the jobs joined below are cancelled first, and a job waiting for a
-        // shared hold (or for recordMutex) gives up at once when cancelled; none can be holding
-        // a shared hold, since the barrier waited for those to end.
+        // Deadlock-free: while it waits for the holds, the barrier holds only the lock's exclusive
+        // side, which a hold never needs (a nested hold passes through). The jobs joined below are
+        // cancelled first, and a job waiting for a shared hold (or for recordMutex) gives up at
+        // once when cancelled; none can be holding a shared hold, since the barrier waited for
+        // those to end.
         fundingSelection.exclusiveForWipe {
             val running = jobs.values.toList()
             jobs.clear()

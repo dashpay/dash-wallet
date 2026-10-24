@@ -2317,7 +2317,7 @@ class PendingDirectPaymentVerifierTest {
     // --- the wipe barrier: a wipe waits for funding under way and refuses funding that waited ---
 
     @Test
-    fun `a wipe waits for an in-flight funding, and refuses one that waited through it`() = runBlocking {
+    fun `a wipe cancels an in-flight funding, waits for it to release, and refuses one that waited`() = runBlocking {
         val lock = FundingSelectionLock()
         val wipe = slot<suspend () -> Unit>()
         val ownWalletData = mockk<WalletData>(relaxed = true)
@@ -2328,12 +2328,15 @@ class PendingDirectPaymentVerifierTest {
         ).apply { pollIntervalMs = 20L }
 
         // a funding of the old wallet is selecting its inputs
+        // (in a native call that ignores cancellation until it returns)
         val selecting = CompletableDeferred<Unit>()
         val finish = CompletableDeferred<Unit>()
         val inFlight = async(Dispatchers.Default) {
             lock.withShared {
-                selecting.complete(Unit)
-                finish.await()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    selecting.complete(Unit)
+                    finish.await()
+                }
                 "selected"
             }
         }
@@ -2349,6 +2352,7 @@ class PendingDirectPaymentVerifierTest {
         assertFalse(late.isCompleted)
 
         finish.complete(Unit)
+        // what the native call finished stands
         assertEquals("selected", withTimeout(2_000) { inFlight.await() })
         withTimeout(5_000) { wiping.await() }
         val refused = withTimeout(2_000) { late.await() }
@@ -2384,8 +2388,9 @@ class PendingDirectPaymentVerifierTest {
         coEvery { engine.inputSpentByFinalConflict(any()) } returns true
         delay(200)
         finish.complete(Unit)
-        funding.await()
-        // well inside the wipe's own drain timeout: the watch gave up when cancelled
+        // the wipe cancelled the funding it was waiting for
+        runCatching { funding.await() }
+        // the watch gave up when cancelled
         withTimeout(2_000) { wiping.await() }
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
         assertFalse(own.isTracked(tx.txId))
