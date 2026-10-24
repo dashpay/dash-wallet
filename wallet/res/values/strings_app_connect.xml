@@ -13,6 +13,12 @@
     <string name="dash_connect_return_open">Open Website</string>
     <string name="dash_connect_return_unavailable">No browser is available to open this address.</string>
     <string name="dash_st_purchase_title">Buy tokens?</string>
+    <string name="dash_st_key_setup">Set up signing key</string>
+    <string name="dash_st_key_setup_title">Set up purchase signing?</string>
+    <string name="dash_st_key_setup_warning">This wallet needs a purchase signing key. Setting it up registers a wallet-controlled key on your identity and charges a network fee in Platform credits. This does not buy tokens. You will review and approve the purchase separately afterward.</string>
+    <string name="dash_connect_records_unavailable">Connection records unavailable</string>
+    <string name="dash_connect_records_unavailable_message">Your saved connection records could not be read. Existing app access may still be active. No access has been revoked.</string>
+    <string name="dash_connect_records_retry">Retry</string>
     <string name="dash_st_purchase_quantity">Quantity: %1$s %2$s</string>
     <string name="dash_st_purchase_cost">Maximum cost: %1$s DASH in Platform credits, plus network fees</string>
     <string name="dash_st_purchase_identity">Paying identity: %1$s</string>

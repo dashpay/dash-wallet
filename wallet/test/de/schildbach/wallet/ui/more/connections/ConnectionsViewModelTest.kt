@@ -189,6 +189,100 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
     }
 
+    @Test fun `unreadable cold records are unavailable and block requests until retry succeeds`() {
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow { throw java.io.IOException("Unreadable") }
+        every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        for (url in listOf(false, true)) {
+            model.resetScanOutcome()
+            if (url) model.onUrlOpened("dash-key:2?n=d&v=2") else model.onQrScanned("dash-st:2?n=d&v=1")
+            dispatcher.scheduler.runCurrent()
+            assertTrue(model.scanOutcome.value is ConnectionsViewModel.ScanOutcome.Error)
+            assertFalse(model.uiState.value.isLoading)
+        }
+        verify(exactly = 0) { identities.initializationResult }
+        coVerify(exactly = 0) { repository.parseQr(any()) }
+        coVerify(exactly = 0) { repository.prepareTokenPurchase(any()) }
+        every { repository.observeConnections() } returns MutableStateFlow(emptyList())
+        model.refreshConnections()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
+        scan()
+        assertNotNull(model.uiState.value.pendingRequest)
+    }
+
+    @Test fun `late storage failure removes stale rows and blocks approval details and mutations`() {
+        val failed = CompletableDeferred<Unit>()
+        val connection = DAppConnection("app", "App", "", ConnectionStatus.ACTIVE, 1)
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            emit(listOf(connection))
+            failed.await()
+            throw java.io.IOException("Read failed")
+        }
+        model.refreshConnections()
+        scan()
+        assertEquals(listOf(connection), model.uiState.value.connections)
+        failed.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        model.approvePendingRequest()
+        model.disconnect(connection)
+        model.removeConnection(connection)
+        dispatcher.scheduler.runCurrent()
+        assertThrows(IllegalStateException::class.java) { kotlinx.coroutines.runBlocking { model.connectionDetails(connection) } }
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+        coVerify(exactly = 0) { repository.disconnect(any(), any()) }
+        coVerify(exactly = 0) { repository.removeConnection(any(), any()) }
+        coVerify(exactly = 0) { repository.connectionDetails(any(), any()) }
+    }
+
+    @Test fun `signing key setup requires its own action and never purchases tokens`() {
+        val needsKey = purchase().copy(requiresSigningKey = true)
+        coEvery { repository.prepareTokenPurchase(any()) } returnsMany listOf(needsKey, purchase())
+        model.onQrScanned("dash-st:2?n=d&v=1")
+        dispatcher.scheduler.advanceUntilIdle()
+        model.approveTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 0) { repository.setupPurchaseSigningKey(any()) }
+        coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+        val setup = CompletableDeferred<Unit>()
+        coEvery { repository.setupPurchaseSigningKey(any()) } coAnswers { setup.await() }
+        model.setupPurchaseSigningKey()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(TokenPurchaseStatus.SETTING_UP_KEY, model.uiState.value.purchaseStatus)
+        model.setupPurchaseSigningKey()
+        model.approveTokenPurchase()
+        model.dismissTokenPurchase()
+        setup.complete(Unit)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(TokenPurchaseStatus.READY, model.uiState.value.purchaseStatus)
+        assertFalse(model.uiState.value.pendingPurchase!!.requiresSigningKey)
+        coVerify(exactly = 1) { repository.setupPurchaseSigningKey(needsKey) }
+        coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+        coEvery { repository.approveTokenPurchase(any()) } returns Unit
+        model.approveTokenPurchase()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approveTokenPurchase(any()) }
+    }
+
+    @Test fun `lock prevents queued signing key setup`() {
+        var unlocked = true
+        model.bindWalletUnlockCheck { unlocked }
+        coEvery { repository.prepareTokenPurchase(any()) } returns purchase().copy(requiresSigningKey = true)
+        model.onQrScanned("dash-st:2?n=d&v=1")
+        dispatcher.scheduler.advanceUntilIdle()
+        model.setupPurchaseSigningKey()
+        unlocked = false
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 0) { repository.setupPurchaseSigningKey(any()) }
+        coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
+    }
+
     private fun purchase() = TokenPurchaseApproval(
         de.schildbach.wallet.ui.more.connections.protocol.DashStRequest(byteArrayOf(1),
             de.schildbach.wallet.ui.more.connections.protocol.DashConnectNetwork.DEVNET),

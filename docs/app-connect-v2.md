@@ -14,13 +14,18 @@ not a real user's keys or a pinned production app ID.
   must match the scanned request's network selector. The SDK must be configured
   for the actual devnet, not merely for testnet coin derivation.
 - Wallet-owned unbound master and HIGH document-signing keys. New identities also
-  include an unbound CRITICAL authentication key. Legacy identities migrate this
-  key through the identity repository before an approved token purchase is sent.
+  include an unbound CRITICAL authentication key. Existing identities without it
+  require a separate signing-key setup action that discloses the Platform-credit
+  network fee. Setup never purchases tokens; purchase terms are refreshed and
+  require a second, separate approval afterward. Background maintenance excludes
+  CRITICAL authentication keys, including when other default keys are missing.
 
 CI builds the exact kotlin-platform commit in `platform-sdk-revision.txt`, and
 that SDK pins its Ferment-patched Platform rc.7 commit. The resulting artifacts
 are consumed from an exclusive, isolated Maven repository; old central snapshots
 and the runner's Maven-local contents cannot satisfy Platform dependencies.
+
+The wallet and Kotlin SDK use DashJ `24.0.0-SNAPSHOT` for networks running Core 24.
 
 ## Lifecycle
 
@@ -28,6 +33,11 @@ Preparation proves app/target ownership, encryption opt-in, identity hint and
 request age. The approval sheet shows each exact grant, optional binding toggles,
 budget and lifetime presets, app ID and callback host. Unknown app labels are
 unverified; no label-based branding or silent approval is used.
+
+Connection records have explicit loading, ready and unavailable states. A failed
+audit read hides stale rows, blocks scanning and connection/purchase actions, and
+shows Retry without implying that any on-chain access has been revoked. Only a
+successful new observation restores the ready state.
 
 New approvals and approval retries reject contract-group bindings. The pinned SDK
 proves group ownership but does not expose the authenticated membership/admin

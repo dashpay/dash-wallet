@@ -28,7 +28,7 @@ class ApproveTokenPurchaseDialog : OffsetDialogFragment(R.layout.dialog_compose_
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        isCancelable = viewModel.uiState.value.purchaseStatus != TokenPurchaseStatus.SUBMITTING
+        isCancelable = viewModel.uiState.value.purchaseStatus !in setOf(TokenPurchaseStatus.SUBMITTING, TokenPurchaseStatus.SETTING_UP_KEY)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -57,7 +57,7 @@ class ApproveTokenPurchaseDialog : OffsetDialogFragment(R.layout.dialog_compose_
 
     @Composable private fun PurchaseContent() {
         val state by viewModel.uiState.collectAsState()
-        val loading = state.purchaseStatus == TokenPurchaseStatus.SUBMITTING
+        val loading = state.purchaseStatus in setOf(TokenPurchaseStatus.SUBMITTING, TokenPurchaseStatus.SETTING_UP_KEY)
         val finished = state.purchaseStatus in setOf(TokenPurchaseStatus.SUBMITTED, TokenPurchaseStatus.OUTCOME_UNKNOWN)
         val colors = LocalDashColors.current
         LaunchedEffect(loading, state.pendingPurchase) {
@@ -70,7 +70,8 @@ class ApproveTokenPurchaseDialog : OffsetDialogFragment(R.layout.dialog_compose_
             Column(Modifier.fillMaxWidth().navigationBarsPadding().heightIn(max = 720.dp)
                 .verticalScroll(rememberScrollState()).padding(top = 60.dp, bottom = 20.dp)) {
                 Column(Modifier.padding(horizontal = 40.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(stringResource(R.string.dash_st_purchase_title), style = MyTheme.Typography.HeadlineMediumBold,
+                    Text(stringResource(if (purchase.requiresSigningKey) R.string.dash_st_key_setup_title else R.string.dash_st_purchase_title),
+                        style = MyTheme.Typography.HeadlineMediumBold,
                         color = colors.textPrimary)
                     Text(stringResource(R.string.dash_st_purchase_quantity, purchase.quantity, purchase.tokenName),
                         style = MyTheme.Typography.BodyMedium, color = colors.textPrimary)
@@ -84,6 +85,10 @@ class ApproveTokenPurchaseDialog : OffsetDialogFragment(R.layout.dialog_compose_
                         style = MyTheme.Typography.BodyMedium, color = colors.textSecondary)
                     Text(stringResource(R.string.dash_st_purchase_warning), style = MyTheme.Typography.BodyMedium,
                         color = colors.textSecondary)
+                    if (purchase.requiresSigningKey) {
+                        Text(stringResource(R.string.dash_st_key_setup_warning), style = MyTheme.Typography.BodyMedium,
+                            color = colors.textPrimary)
+                    }
                     if (state.purchaseStatus == TokenPurchaseStatus.SUBMITTED) {
                         Text(stringResource(R.string.dash_st_purchase_submitted), style = MyTheme.Typography.BodyMedium,
                             color = colors.textPrimary)
@@ -92,9 +97,12 @@ class ApproveTokenPurchaseDialog : OffsetDialogFragment(R.layout.dialog_compose_
                 }
                 Spacer(Modifier.height(20.dp))
                 SheetButtonGroup(
-                    primaryButton = SheetButton(text = stringResource(if (finished) R.string.button_close else R.string.dash_st_purchase_approve),
-                        style = Style.FilledBlue, isEnabled = !loading, isLoading = loading,
-                        onClick = { if (finished) viewModel.dismissTokenPurchase() else viewModel.approveTokenPurchase() }),
+                    primaryButton = SheetButton(text = stringResource(if (finished) R.string.button_close
+                        else if (purchase.requiresSigningKey) R.string.dash_st_key_setup else R.string.dash_st_purchase_approve),
+                        style = Style.FilledBlue, isEnabled = !loading && viewModel.canUseConnections, isLoading = loading,
+                        onClick = { if (finished) viewModel.dismissTokenPurchase()
+                            else if (purchase.requiresSigningKey) viewModel.setupPurchaseSigningKey()
+                            else viewModel.approveTokenPurchase() }),
                     secondaryButton = if (finished) null else SheetButton(text = stringResource(android.R.string.cancel),
                         style = Style.TintedGray, isEnabled = !loading, onClick = viewModel::dismissTokenPurchase),
                     horizontalPadding = 40.dp, spacing = 20.dp)

@@ -103,6 +103,11 @@ class PlatformDashConnectRepository @Inject constructor(
         session.submitTokenPurchase(approval)
     }
 
+    override suspend fun setupPurchaseSigningKey(approval: TokenPurchaseApproval) {
+        checkNetwork()
+        session.setupPurchaseSigningKey(approval)
+    }
+
     override suspend fun approveLogin(request: DashKeyRequest): DAppConnection =
         error("Explicit approval of prepared grant terms is required")
 

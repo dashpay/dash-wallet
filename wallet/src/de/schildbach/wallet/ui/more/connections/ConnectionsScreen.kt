@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -79,6 +80,7 @@ fun ConnectionsScreen(
 
     ConnectionsScreen(
         uiStateFlow = viewModel.uiState,
+        onRetryClick = viewModel::refreshConnections,
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
@@ -90,6 +92,7 @@ fun ConnectionsScreen(
 @Composable
 fun ConnectionsScreen(
     uiStateFlow: StateFlow<ConnectionsUIState>,
+    onRetryClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
@@ -100,6 +103,7 @@ fun ConnectionsScreen(
 
     ConnectionsScreenContent(
         uiState = uiState,
+        onRetryClick = onRetryClick,
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
@@ -111,6 +115,7 @@ fun ConnectionsScreen(
 @Composable
 private fun ConnectionsScreenContent(
     uiState: ConnectionsUIState,
+    onRetryClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
@@ -131,6 +136,21 @@ private fun ConnectionsScreenContent(
 
         if (uiState.featureUnavailable) {
             ConnectionsUnavailableState(modifier = Modifier.weight(1f))
+        } else if (uiState.recordsStatus == ConnectionRecordsStatus.LOADING) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = colors.dashBlue)
+            }
+        } else if (uiState.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE) {
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(40.dp),
+                verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(stringResource(R.string.dash_connect_records_unavailable),
+                    style = MyTheme.Typography.TitleMediumSemibold, color = colors.textPrimary)
+                Text(stringResource(R.string.dash_connect_records_unavailable_message),
+                    style = MyTheme.Typography.BodyMedium, color = colors.textSecondary,
+                    modifier = Modifier.padding(vertical = 20.dp))
+                DashButton(text = stringResource(R.string.dash_connect_records_retry),
+                    style = Style.FilledBlue, size = Size.Large, onClick = onRetryClick)
+            }
         } else if (uiState.connections.isEmpty()) {
             ConnectionsEmptyState(
                 onScanClick = onScanClick,
@@ -370,7 +390,7 @@ private fun previewConnection(status: ConnectionStatus) = DAppConnection(
 @Composable
 @Preview
 private fun ConnectionsScreenEmptyPreview() {
-    ConnectionsScreenContent(uiState = ConnectionsUIState())
+    ConnectionsScreenContent(uiState = ConnectionsUIState(recordsStatus = ConnectionRecordsStatus.READY))
 }
 
 @Composable
@@ -378,6 +398,7 @@ private fun ConnectionsScreenEmptyPreview() {
 private fun ConnectionsScreenApprovedPreview() {
     ConnectionsScreenContent(
         uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
             connections = listOf(previewConnection(ConnectionStatus.APPROVED))
         )
     )
@@ -388,6 +409,7 @@ private fun ConnectionsScreenApprovedPreview() {
 private fun ConnectionsScreenActivePreview() {
     ConnectionsScreenContent(
         uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
             connections = listOf(previewConnection(ConnectionStatus.ACTIVE))
         )
     )
@@ -398,6 +420,7 @@ private fun ConnectionsScreenActivePreview() {
 private fun ConnectionsScreenDisconnectedPreview() {
     ConnectionsScreenContent(
         uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
             connections = listOf(previewConnection(ConnectionStatus.DISCONNECTED))
         )
     )

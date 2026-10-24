@@ -39,8 +39,11 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
 import javax.inject.Inject
 
+enum class ConnectionRecordsStatus { LOADING, READY, UNAVAILABLE }
+
 data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
+    val recordsStatus: ConnectionRecordsStatus = ConnectionRecordsStatus.LOADING,
     val pendingRequest: ConnectionRequest? = null,
     /** Connect requires Platform support and is disabled in production/on mainnet. */
     val featureUnavailable: Boolean = !Constants.SUPPORTS_PLATFORM || Constants.IS_PROD_BUILD ||
@@ -99,6 +102,11 @@ class ConnectionsViewModel @Inject constructor(
     private var connectionsJob: Job? = null
 
     internal val isWalletUnlocked: Boolean get() = walletUnlockCheck()
+    internal val canUseConnections: Boolean get() = _uiState.value.recordsStatus == ConnectionRecordsStatus.READY
+
+    private fun requireConnectionRecords() {
+        check(canUseConnections) { "Connection records are unavailable. Retry loading them before continuing. No access has been revoked." }
+    }
 
     internal fun bindWalletUnlockCheck(check: () -> Boolean) {
         walletUnlockCheck = check
@@ -110,13 +118,14 @@ class ConnectionsViewModel @Inject constructor(
 
     fun refreshConnections() {
         connectionsJob?.cancel()
+        _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING) }
         connectionsJob = repository.observeConnections()
             .catch { error ->
                 log.error("Cannot read connection grant records", error)
-                _scanOutcome.value = ScanOutcome.Error("Connection records could not be read. No access has been revoked.")
+                _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE, connections = emptyList()) }
             }
             .onEach { connections ->
-                _uiState.update { it.copy(connections = connections) }
+                _uiState.update { it.copy(connections = connections, recordsStatus = ConnectionRecordsStatus.READY) }
             }
             .launchIn(viewModelScope)
     }
@@ -139,9 +148,12 @@ class ConnectionsViewModel @Inject constructor(
                 check(!Constants.IS_PROD_BUILD && Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) {
                     "App Connect is unavailable in production or on mainnet"
                 }
+                uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
+                requireConnectionRecords()
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()
+                requireConnectionRecords()
                 if (de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.isStUri(qrContent.trim())) {
                     val purchase = repository.prepareTokenPurchase(
                         de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.parseStRequest(qrContent.trim()))
@@ -205,6 +217,8 @@ class ConnectionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (!isWalletUnlocked) return@launch
+                requireConnectionRecords()
+                check(!purchase.requiresSigningKey) { "Set up the wallet purchase signing key before approving a purchase" }
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTING, purchaseError = null) }
                 repository.approveTokenPurchase(purchase)
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTED) }
@@ -213,6 +227,27 @@ class ConnectionsViewModel @Inject constructor(
                 log.error("failed to submit DashConnect token purchase", error)
                 _uiState.update { it.copy(purchaseStatus = if (error is TokenPurchaseOutcomeUnknown)
                     TokenPurchaseStatus.OUTCOME_UNKNOWN else TokenPurchaseStatus.FAILED, purchaseError = error.message) }
+            } finally { operationInProgress = false }
+        }
+    }
+
+    fun setupPurchaseSigningKey() {
+        if (!isWalletUnlocked || operationInProgress) return
+        if (_uiState.value.purchaseStatus !in setOf(TokenPurchaseStatus.READY, TokenPurchaseStatus.FAILED)) return
+        val purchase = _uiState.value.pendingPurchase ?: return
+        if (!purchase.requiresSigningKey) return
+        operationInProgress = true
+        viewModelScope.launch {
+            try {
+                if (!isWalletUnlocked) return@launch
+                requireConnectionRecords()
+                _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SETTING_UP_KEY, purchaseError = null) }
+                repository.setupPurchaseSigningKey(purchase)
+                val refreshed = repository.prepareTokenPurchase(purchase.request)
+                _uiState.update { it.copy(pendingPurchase = refreshed, purchaseStatus = TokenPurchaseStatus.READY) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.FAILED, purchaseError = error.message) }
             } finally { operationInProgress = false }
         }
     }
@@ -256,6 +291,7 @@ class ConnectionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (!isWalletUnlocked) return@launch
+                requireConnectionRecords()
                 // Once approval starts, a transport failure cannot establish that no grant was published.
                 _uiState.update { it.copy(requiresRevocation = true,
                     pendingRequest = it.pendingRequest?.copy(recovering = true)) }
@@ -285,6 +321,7 @@ class ConnectionsViewModel @Inject constructor(
             viewModelScope.launch {
                 try {
                     if (!isWalletUnlocked) return@launch
+                    requireConnectionRecords()
                     _approveResult.value = ApproveResult.Loading
                     repository.revokePreparedLogin(request, pendingPlan)
                     clearPendingRequest()
@@ -332,7 +369,10 @@ class ConnectionsViewModel @Inject constructor(
 
     fun resetCallbackOffer() { _callbackOffer.value = null }
 
-    suspend fun connectionDetails(connection: DAppConnection): String = repository.connectionDetails(connection.id, connection.scope)
+    suspend fun connectionDetails(connection: DAppConnection): String {
+        requireConnectionRecords()
+        return repository.connectionDetails(connection.id, connection.scope).also { requireConnectionRecords() }
+    }
 
     fun resetApproveResult() {
         _approveResult.value = ApproveResult.Idle
@@ -340,7 +380,7 @@ class ConnectionsViewModel @Inject constructor(
 
     fun disconnect(connection: DAppConnection) {
         viewModelScope.launch {
-            try { if (isWalletUnlocked) repository.disconnect(connection.id, connection.scope) }
+            try { if (isWalletUnlocked) { requireConnectionRecords(); repository.disconnect(connection.id, connection.scope) } }
             catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _scanOutcome.value = ScanOutcome.Error(e.message)
@@ -351,7 +391,7 @@ class ConnectionsViewModel @Inject constructor(
     /** Cancels a pending login or removes an old connection so the user can start over. */
     fun removeConnection(connection: DAppConnection) {
         viewModelScope.launch {
-            try { if (isWalletUnlocked) repository.removeConnection(connection.id, connection.scope) }
+            try { if (isWalletUnlocked) { requireConnectionRecords(); repository.removeConnection(connection.id, connection.scope) } }
             catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _scanOutcome.value = ScanOutcome.Error(e.message)

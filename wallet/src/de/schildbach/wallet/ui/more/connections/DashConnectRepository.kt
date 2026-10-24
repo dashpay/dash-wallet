@@ -117,6 +117,10 @@ interface DashConnectRepository {
         error("Token purchase requests are unavailable")
     }
 
+    suspend fun setupPurchaseSigningKey(approval: TokenPurchaseApproval) {
+        error("Purchase signing-key setup is unavailable")
+    }
+
     /** Legacy/mock entry point. The real repository requires explicit prepared consent. */
     suspend fun approveLogin(request: DashKeyRequest): DAppConnection
 

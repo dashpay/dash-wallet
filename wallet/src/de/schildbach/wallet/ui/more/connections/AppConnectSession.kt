@@ -19,6 +19,7 @@ import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.*
+import org.dashj.platform.dpp.identity.ApplicationKeyDerivation
 import org.dashj.platform.sdk.BlockHeight
 import org.dashj.platform.sdk.CoreBlockHeight
 import org.dashj.platform.sdk.KeyID
@@ -87,11 +88,13 @@ internal class AppConnectSession(
             val identity = readIdentity()
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk, request.transitionBytes, identity.id.toNative()))
             val data = JSONObject(String(summary, Charsets.UTF_8))
+            val signingTime = platform.client.getPlatformTime(identity.id)
+            val needsKey = runCatching { signingKey(identity, SecurityLevel.CRITICAL, signingTime) }.isFailure
             checkScope(scope)
             TokenPurchaseApproval(request.copy(transitionBytes = request.transitionBytes.copyOf()), scope, id,
                 data.getString("ownerId"), data.getString("contractId"), data.getString("tokenId"),
                 BigInteger(data.getString("amount")), BigInteger(data.getString("maximumCredits")),
-                data.getString("name").replace(Regex("[\\p{Cc}\\p{Cf}]"), "").take(80), data.getInt("decimals"), summary)
+                data.getString("name").replace(Regex("[\\p{Cc}\\p{Cf}]"), "").take(80), data.getInt("decimals"), summary, needsKey)
         }
     }
 
@@ -103,21 +106,11 @@ internal class AppConnectSession(
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             checkScope(approval.scope)
-            var identity = readIdentity()
+            val identity = readIdentity()
             check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk,
                 approval.request.transitionBytes, identity.id.toNative()))
             check(summary.contentEquals(approval.summary)) { "Purchase terms or token metadata changed. Scan again." }
-            val signingTime = platform.client.getPlatformTime(identity.id)
-            if (runCatching { signingKey(identity, SecurityLevel.CRITICAL, signingTime) }.isFailure) {
-                rememberIdentity(identity)
-                checkScope(approval.scope)
-                identities.ensureCriticalAuthenticationKey(identity.id, keyParameter)
-                identity = awaitGrantConfirmation(read = { checkScope(approval.scope); readIdentity() }, confirmed = { current ->
-                    val time = platform.client.getPlatformTime(current.id)
-                    runCatching { signingKey(current, SecurityLevel.CRITICAL, time) }.isSuccess
-                }, failureMessage = "Wallet purchase signing key is not confirmed. No purchase was submitted.")
-            }
             val key = signingKey(identity, SecurityLevel.CRITICAL, platform.client.getPlatformTime(identity.id))
             val chain = (wallet.getKeyChainExtension(org.bitcoinj.wallet.authentication.AuthenticationGroupExtension.EXTENSION_ID)
                 as org.bitcoinj.wallet.authentication.AuthenticationGroupExtension).identityKeyChain
@@ -147,6 +140,26 @@ internal class AppConnectSession(
                     throw TokenPurchaseOutcomeUnknown(error)
                 }
             }
+        }
+    }
+
+    suspend fun setupPurchaseSigningKey(approval: TokenPurchaseApproval) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            checkScope(approval.scope)
+            check(approval.requiresSigningKey) { "Purchase signing-key setup was not requested" }
+            val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
+            val keyParameter = walletRepo.getWalletEncryptionKey()
+            check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
+            val identity = readIdentity()
+            check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
+            rememberIdentity(identity)
+            checkScope(approval.scope)
+            identities.ensureCriticalAuthenticationKey(identity.id, keyParameter)
+            awaitGrantConfirmation(read = { checkScope(approval.scope); readIdentity() }, confirmed = { current ->
+                val time = platform.client.getPlatformTime(current.id)
+                runCatching { signingKey(current, SecurityLevel.CRITICAL, time) }.isSuccess
+            }, failureMessage = "Wallet purchase signing key is not confirmed. No purchase was submitted.")
+            checkScope(approval.scope)
         }
     }
 

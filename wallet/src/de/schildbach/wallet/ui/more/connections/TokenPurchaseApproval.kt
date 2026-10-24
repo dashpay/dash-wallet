@@ -15,7 +15,8 @@ data class TokenPurchaseApproval(
     val maximumCredits: BigInteger,
     val tokenName: String,
     val decimals: Int,
-    internal val summary: ByteArray
+    internal val summary: ByteArray,
+    val requiresSigningKey: Boolean = false
 ) {
     init {
         require(decimals in 0..255)
@@ -26,7 +27,7 @@ data class TokenPurchaseApproval(
     val maximumDash: String get() = formatDash(maximumCredits)
 }
 
-enum class TokenPurchaseStatus { READY, SUBMITTING, SUBMITTED, OUTCOME_UNKNOWN, FAILED }
+enum class TokenPurchaseStatus { READY, SETTING_UP_KEY, SUBMITTING, SUBMITTED, OUTCOME_UNKNOWN, FAILED }
 
 class TokenPurchaseOutcomeUnknown(cause: Throwable) : Exception(
     "Purchase may have been submitted. Check your token and credit balances before making another purchase. This request cannot be retried.", cause)

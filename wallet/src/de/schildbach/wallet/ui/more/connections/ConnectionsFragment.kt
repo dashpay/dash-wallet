@@ -74,13 +74,13 @@ class ConnectionsFragment : Fragment() {
                         onScanClick = { launchScanner() },
                         onConnectionClick = { connection ->
                             viewLifecycleOwner.lifecycleScope.launch {
-                                if (!viewModel.isWalletUnlocked) return@launch
+                                if (!viewModel.isWalletUnlocked || !viewModel.canUseConnections) return@launch
                                 try {
                                     val details = viewModel.connectionDetails(connection)
                                     val confirmed = showUnlockedDialog {
                                         connectionDetailsDialog(requireContext(), connection.name, details, connection.status, connection.legacyOnly)
                                     }
-                                    if (confirmed == true && viewModel.isWalletUnlocked) {
+                                    if (confirmed == true && viewModel.isWalletUnlocked && viewModel.canUseConnections) {
                                         if (connection.legacyOnly) viewModel.removeConnection(connection)
                                         else if (connection.status == ConnectionStatus.DISCONNECTED) launchScanner()
                                         else viewModel.disconnect(connection)
@@ -146,7 +146,7 @@ class ConnectionsFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 val lockState = host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)
                 combine(viewModel.uiState, lockState) { state, locked -> state to locked }.collect { (state, locked) ->
-                    if (locked || !viewModel.isWalletUnlocked) {
+                    if (locked || !viewModel.isWalletUnlocked || state.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE) {
                         listOf(APPROVAL_DIALOG, PURCHASE_DIALOG).forEach { tag ->
                             (childFragmentManager.findFragmentByTag(tag) as? androidx.fragment.app.DialogFragment)?.let {
                                 it.dialog?.hide()
@@ -155,12 +155,12 @@ class ConnectionsFragment : Fragment() {
                         }
                         return@collect
                     }
-                    if (state.pendingRequest != null &&
+                    if (state.recordsStatus == ConnectionRecordsStatus.READY && state.pendingRequest != null &&
                         childFragmentManager.findFragmentByTag(APPROVAL_DIALOG) == null &&
                         !childFragmentManager.isStateSaved) {
                         ApproveConnectionDialog().showNow(childFragmentManager, APPROVAL_DIALOG)
                     }
-                    if (state.pendingPurchase != null &&
+                    if (state.recordsStatus == ConnectionRecordsStatus.READY && state.pendingPurchase != null &&
                         childFragmentManager.findFragmentByTag(PURCHASE_DIALOG) == null &&
                         !childFragmentManager.isStateSaved) {
                         ApproveTokenPurchaseDialog().showNow(childFragmentManager, PURCHASE_DIALOG)
@@ -196,7 +196,7 @@ class ConnectionsFragment : Fragment() {
     }
 
     private fun launchScanner() {
-        if (!viewModel.isWalletUnlocked) return
+        if (!viewModel.isWalletUnlocked || !viewModel.canUseConnections) return
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))
     }
 
