@@ -26,6 +26,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
@@ -609,6 +610,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
                 showProfileSection(dashPayProfile)
             }
+        }
+        // the same toast the home tile shows when a name-only retry is refused
+        createIdentityViewModel.nameRetryRefused.observe(viewLifecycleOwner) { errorMessage ->
+            Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
         }
 
         createInviteViewModel.blockchainIdentity.observe(viewLifecycleOwner) { _ ->

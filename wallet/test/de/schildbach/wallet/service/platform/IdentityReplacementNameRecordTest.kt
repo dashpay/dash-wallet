@@ -34,7 +34,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.dashj.platform.dashpay.IdentityStatus
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.sdk.platform.Names
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -119,6 +121,33 @@ class IdentityReplacementNameRecordTest {
         )
         assertEquals("replacement22", pickedReplacement.username)
         assertEquals("brimoztest3", pickedReplacement.usernameSecondary)
+    }
+
+    @Test
+    fun `a registered replacement's status and salt replace the lost name's in the primary fields`() = runBlocking {
+        val lostSalt = byteArrayOf(1, 1, 1)
+        val replacementSalt = byteArrayOf(2, 2, 2)
+        val secondarySalt = byteArrayOf(3, 3, 3)
+        val data = record(primary = "replacement22", secondary = "brimoztest3").apply {
+            usernameStatus = UsernameStatus.LOCKED
+            preorderSalt = lostSalt
+        }
+        // dashj adopted the instant secondary as "primary" and calls the replacement "secondary"
+        val identity = recovered(primary = "brimoztest3", secondary = "replacement22").apply {
+            // keyed on the NORMALIZED labels, like dashj's maps
+            every { statusOfUsername(Names.normalizeString("replacement22")) } returns UsernameStatus.CONFIRMED
+            every { saltForUsername(Names.normalizeString("replacement22"), false) } returns replacementSalt
+            every { statusOfUsername(Names.normalizeString("brimoztest3")) } returns UsernameStatus.CONFIRMED
+            every { saltForUsername(Names.normalizeString("brimoztest3"), false) } returns secondarySalt
+        }
+
+        repository().updateBlockchainIdentityData(data, identity)
+
+        assertEquals("replacement22", data.username)
+        assertEquals(UsernameStatus.CONFIRMED, data.usernameStatus)
+        assertArrayEquals(replacementSalt, data.preorderSalt)
+        assertEquals("not duplicated into the secondary", "brimoztest3", data.usernameSecondary)
+        assertArrayEquals(secondarySalt, data.preorderSaltSecondary)
     }
 
     @Test

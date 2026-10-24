@@ -1160,11 +1160,14 @@ class RequestUserNameViewModel @Inject constructor(
                 log.info("name-only retry for the existing identity (cutover committed)")
                 // Accepted means the retry runs on the application scope and survives this screen,
                 // which the submitting state closes; publish it only then.
-                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
-                    requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
-                    requestedUserName!!,
-                    requestedUsernameSecondary
-                )
+                // No requested name: nothing to register, treated as a refusal.
+                val requestedName = requestedUserName
+                val accepted = requestedName != null &&
+                    transparentUsernameCreation.retryNameForExistingIdentity(
+                        requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
+                        requestedName,
+                        requestedUsernameSecondary
+                    )
                 // A refusal changes nothing; the request is recorded only once the retry runs.
                 if (accepted) withContext(Dispatchers.IO) { updateConfig() }
                 _uiState.update {

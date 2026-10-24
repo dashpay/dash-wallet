@@ -479,13 +479,13 @@ class IdentityRepositoryImpl @Inject constructor(
                 // — same DPNS name, human spelling; anything else still
                 // loses to the on-chain value.
                 val recoveredPrimary = blockchainIdentity.primaryUsername
-                if (recoveredPrimaryIsPendingDualSecondary(
-                        recordPrimary = username,
-                        recordSecondary = usernameSecondary,
-                        recoveredPrimary = recoveredPrimary,
-                        normalize = Names::normalizeString
-                    )
-                ) {
+                val keptRequestedPrimary = recoveredPrimaryIsPendingDualSecondary(
+                    recordPrimary = username,
+                    recordSecondary = usernameSecondary,
+                    recoveredPrimary = recoveredPrimary,
+                    normalize = Names::normalizeString
+                )
+                if (keptRequestedPrimary) {
                     // dashj adopted the record's own secondary as "primary": a
                     // DUAL create whose contested primary is still in its vote
                     // (the Mo-972 shape, S21 2026-08-18), or a replacement name
@@ -520,12 +520,21 @@ class IdentityRepositoryImpl @Inject constructor(
                 }
 
                 log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
-                blockchainIdentity.secondaryUsername?.takeUnless { name ->
-                    // dashj called the requested primary its "secondary" (it owns both names
-                    // and adopted the old secondary as primary): the record already has it
-                    // right, primary and secondary, and must not end up with it twice.
-                    username?.let { Names.normalizeString(it) } == Names.normalizeString(name)
-                }?.let { name ->
+                val recoveredSecondary = blockchainIdentity.secondaryUsername
+                // dashj called the requested primary its "secondary" (it owns both names and
+                // adopted the old secondary as primary): the record already has it right,
+                // primary and secondary, and must not end up with it twice.
+                val recoveredSecondaryIsRequestedPrimary = recoveredSecondary != null &&
+                    username?.let { Names.normalizeString(it) } == Names.normalizeString(recoveredSecondary)
+                if (recoveredSecondary != null && recoveredSecondaryIsRequestedPrimary && keptRequestedPrimary &&
+                    blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED
+                ) {
+                    // The registered replacement's status and salt belong to the primary fields,
+                    // or they keep the lost name's (LOST_VOTE, LOCKED, an old salt).
+                    usernameStatus = blockchainIdentity.statusOfUsername(recoveredSecondary)
+                    preorderSalt = blockchainIdentity.saltForUsername(recoveredSecondary, false)
+                }
+                recoveredSecondary?.takeUnless { recoveredSecondaryIsRequestedPrimary }?.let { name ->
                     usernameSecondary = preferDisplayLabel(usernameSecondary, name, Names::normalizeString)
                     usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
                     log.info("creation: secondary username: {}, usernameSecondaryStatus = {}", name, usernameSecondaryStatus)

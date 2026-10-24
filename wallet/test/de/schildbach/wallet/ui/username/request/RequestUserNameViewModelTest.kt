@@ -476,6 +476,29 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun submit_aNameOnlyRetryWithNoRequestedName_isRefused() = runVmTest {
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = null
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "username registration did not complete (retryable): domain document rejected",
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false
+        )
+
+        viewModel.submit()
+
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
     fun submit_beforeTheCutover_aRejectedNameRecord_doesNotTakeTheReusePath() = runVmTest {
         // master's reuse rule (LOCKED or LOST_VOTE) before the cutover; the wider "rejected after
         // registration" clause belongs to the SDK identity's name-only retry only

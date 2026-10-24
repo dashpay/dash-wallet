@@ -28,10 +28,14 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
@@ -86,6 +90,33 @@ class CreateIdentityViewModelNameOnlyRetryTest {
         coVerify(exactly = 1, timeout = 5_000) {
             transparentUsernameCreation.retryNameForExistingIdentity(identityId, "alice3", null)
         }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun `a refused name-only retry is reported once, with the error on record`() = runBlocking {
+        val error = SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
+        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns false
+
+        val viewModel = viewModel()
+        viewModel.retryCreateIdentity()
+
+        assertEquals(error, withTimeout(5_000) { viewModel.nameRetryRefused.first() })
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun `a name-only retry with no requested name on record is reported as refused`() = runBlocking {
+        val error = SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
+        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
+        coEvery { config.get(BlockchainIdentityConfig.USERNAME) } returns null
+
+        val viewModel = viewModel()
+        viewModel.retryCreateIdentity()
+
+        assertEquals(error, withTimeout(5_000) { viewModel.nameRetryRefused.first() })
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
         verify(exactly = 0) { walletApplication.startService(any()) }
     }
 

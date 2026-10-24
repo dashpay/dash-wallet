@@ -1647,9 +1647,12 @@ class SdkTransparentUsernameCreation internal constructor(
             val identityId = Identifier.from(identityIdBase58).toBuffer()
             // A label this identity already owns or contends for (an earlier Ambiguous attempt that
             // landed, for instance) is never submitted again.
-            val alreadyTaken = listOfNotNull(username, secondaryUsername)
-                .filter { nameAlreadyTaken(identityIdBase58, it) }
-                .toSet()
+            // Platform queries: off the caller's dispatcher (Main, from a viewModelScope).
+            val alreadyTaken = withContext(ioDispatcher) {
+                listOfNotNull(username, secondaryUsername)
+                    .filter { nameAlreadyTaken(identityIdBase58, it) }
+                    .toSet()
+            }
             Triple(walletId, identityId, alreadyTaken)
         } catch (e: CancellationException) {
             throw e

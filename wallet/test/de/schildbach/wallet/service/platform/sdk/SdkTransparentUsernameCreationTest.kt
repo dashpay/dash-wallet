@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -758,6 +759,40 @@ class SdkTransparentUsernameCreationTest {
         assertTrue("no name context written: ${run.nameContexts}", run.nameContexts.isEmpty())
         coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
         neverFunded(source)
+    }
+
+    @Test
+    fun `the name-ownership checks run on the io dispatcher, not the caller's`() = runTest {
+        // the caller is a viewModelScope (Main): the platform queries must not run there
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, any()) } returns "alice3.dash"
+        val io = java.util.concurrent.Executors.newSingleThreadExecutor { Thread(it, "test-io") }
+        val ioDispatcher = io.asCoroutineDispatcher()
+        val checkedOn = mutableListOf<String>()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            driveCreationState = { _, _ -> },
+            persistNameContext = { _, _, _, _ -> },
+            executorScope = appScope,
+            nameAlreadyTaken = { _, _ ->
+                synchronized(checkedOn) { checkedOn += Thread.currentThread().name }
+                false
+            }
+        ).also { it.ioDispatcher = ioDispatcher }
+
+        try {
+            assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice4"))
+            assertEquals(listOf("test-io", "test-io"), synchronized(checkedOn) { checkedOn.toList() })
+        } finally {
+            appScope.cancel()
+            io.shutdown()
+        }
     }
 
     @Test

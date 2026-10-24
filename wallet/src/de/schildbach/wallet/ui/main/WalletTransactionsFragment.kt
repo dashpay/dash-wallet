@@ -797,7 +797,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     blockchainIdentityData.restoring,
                     blockchainIdentityData.usingInvite
                 )
-                if (route == IdentityRetryRoute.NAME_ONLY) {
+                if (route == IdentityRetryRoute.NEW_NAME) {
+                    // same as the Try again action: the name was lost, the user picks a new one
+                    startActivity(
+                        CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData)
+                    )
+                } else if (route == IdentityRetryRoute.NAME_ONLY) {
                     retryNameOnly(blockchainIdentityData)
                 } else if (blockchainIdentityData.restoring) {
                     // are we restoring?

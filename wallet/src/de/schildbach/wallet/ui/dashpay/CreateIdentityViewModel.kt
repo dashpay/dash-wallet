@@ -9,11 +9,14 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
@@ -35,6 +38,11 @@ class CreateIdentityViewModel @Inject constructor(
     private val _creationException = MutableStateFlow<String?>(null)
     val creationException: StateFlow<String?>
         get() = _creationException
+
+    // One-shot: a name-only retry that was refused before it started, with the error on record.
+    private val _nameRetryRefused = Channel<String?>(Channel.CONFLATED)
+    val nameRetryRefused: Flow<String?> = _nameRetryRefused.receiveAsFlow()
+
     init {
         blockchainIdentityDataDao.observe(BlockchainIdentityConfig.CREATION_STATE)
             .filterNotNull()
@@ -61,12 +69,14 @@ class CreateIdentityViewModel @Inject constructor(
             if (SdkTransparentUsernameCreation.isNameOnlyRetryError(error)) {
                 val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
                 val username = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME)
-                if (identityId != null && username != null) {
+                val accepted = identityId != null && username != null &&
                     transparentUsernameCreation.retryNameForExistingIdentity(
                         identityId,
                         username,
                         blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME_SECONDARY)
                     )
+                if (!accepted) {
+                    _nameRetryRefused.trySend(error)
                 }
                 return@launch
             }
