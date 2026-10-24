@@ -522,6 +522,18 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun gateClosed_waitingForPeers_withThePreviousSessionsHeights_isNotBroadcast() = runBlocking {
+        // PastaClaw on #1632: WAITING_FOR_CONNECTIONS maps to CONNECTING while
+        // the snapshot keeps heights that read caught up.
+        val source = readySource()
+        val connecting = caughtUpProgress().copy(phase = ShadowSyncPhase.CONNECTING)
+        val result = service(source, progress = { connecting })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
     fun gateClosed_scanNotCaughtUp_isNotBroadcast() = runBlocking {
         val source = readySource()
         // Every genuinely-not-caught-up shape closes the gate: headers still

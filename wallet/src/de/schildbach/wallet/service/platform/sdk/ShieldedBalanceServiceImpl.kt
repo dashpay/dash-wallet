@@ -232,7 +232,8 @@ internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
  * live 1 Hz feed, which resets to [ShadowSyncProgress.IDLE] the moment the
  * engine stops — so IDLE IS the "stale/not running" state, no clock
  * needed):
- * - engine running: phase is not [ShadowSyncPhase.IDLE];
+ * - engine running and connected: phase is not [ShadowSyncPhase.IDLE] or
+ *   [ShadowSyncPhase.CONNECTING];
  * - no sync error: phase is not [ShadowSyncPhase.ERROR];
  * - chain view current: [ShadowSyncProgress.scanCaughtUpToTip] — the header
  *   chain is at a known tip AND the wallet-relevant filter scan has caught
@@ -253,6 +254,12 @@ internal fun evaluateWalletFundingGate(
 ): WalletFundingGate = when {
     progress.phase == ShadowSyncPhase.IDLE ->
         WalletFundingGate(false, "SDK L1 engine not running")
+    // Waiting for peers: after a route loss or a restart the snapshot can keep
+    // the previous session's heights, which would pass every height rule below
+    // while the engine cannot see a single new block (PastaClaw on #1632). The
+    // display already reads this phase as offline (SdkBlockchainStateMapper).
+    progress.phase == ShadowSyncPhase.CONNECTING ->
+        WalletFundingGate(false, "SDK L1 engine is waiting for peers")
     progress.phase == ShadowSyncPhase.ERROR ->
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
     !progress.scanCaughtUpToTip ->

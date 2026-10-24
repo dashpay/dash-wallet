@@ -1534,6 +1534,11 @@ class ShieldedBalanceServiceTest {
         assertFalse(evaluateWalletFundingGate(ShadowSyncProgress.IDLE).allowed)
         // Engine errored — closed even with a complete scan snapshot.
         assertFalse(evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.ERROR)).allowed)
+        // Waiting for peers (PastaClaw on #1632): the previous session's heights
+        // still read caught up, but the engine cannot see a new block.
+        val connecting = evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.CONNECTING))
+        assertFalse(connecting.allowed)
+        assertEquals("SDK L1 engine is waiting for peers", connecting.reason)
 
         // Genuinely mid-scan: headers at the tip but the filter scan far
         // behind (the real "still scanning" state) stays closed. The aggregate
