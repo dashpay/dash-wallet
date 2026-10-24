@@ -17,9 +17,14 @@
 
 package de.schildbach.wallet.payments
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.withTimeoutOrNull
+import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,23 +44,51 @@ import javax.inject.Singleton
  *   its asset lock.
  * - The reactivation takes it EXCLUSIVE and fail-fast ([tryExclusive]): refused at once while any
  *   funding holds it, and otherwise short, so a funding only ever waits for that short section.
+ * - Settling an invalidated payment holds it SHARED, so it never interleaves with a reactivation.
+ * - A wallet wipe takes it EXCLUSIVE and waits ([exclusiveForWipe]): it waits for the holds under
+ *   way to end, blocks new ones while it clears the old wallet's payment state, and every hold
+ *   that was already waiting when it began is then refused ([WalletWipedException]) rather than
+ *   let through onto whatever wallet is installed next. The wipe never waits, under its hold, for
+ *   anything that itself needs a hold: what it joins is cancelled first, and a coroutine waiting
+ *   for a hold gives up at once when cancelled.
  *
  * Outermost: taken before the verifier's scanMutex, recordMutex, settleMutex and claimMutex,
  * never while holding any of them. Not reentrant for the exclusive side.
  */
 @Singleton
 class FundingSelectionLock @Inject constructor() {
+    companion object {
+        private val log = LoggerFactory.getLogger(FundingSelectionLock::class.java)
+
+        /** How long a wipe waits for the holds under way before going ahead without them. */
+        const val WIPE_DRAIN_TIMEOUT_MS = 30_000L
+    }
+
     /** Held through an exclusive section; a shared hold passes through it to register itself. */
     private val exclusive = Mutex()
-    private val sharedHolders = AtomicInteger(0)
+    private val sharedHolders = MutableStateFlow(0)
 
-    /** [block] under a shared hold; waits only for an exclusive section that is under way. */
+    /** Bumped by every wipe; a shared hold that began waiting before one is refused. */
+    private val wipes = AtomicLong(0)
+
+    /**
+     * [block] under a shared hold; waits only for an exclusive section that is under way.
+     *
+     * @throws WalletWipedException when a wallet wipe ran while this waited for the hold: the
+     *   caller decided to fund from a wallet that is gone, and nothing of it is run
+     */
     suspend fun <T> withShared(block: suspend () -> T): T {
-        exclusive.withLock { sharedHolders.incrementAndGet() }
+        val wipesBefore = wipes.get()
+        exclusive.withLock {
+            if (wipes.get() != wipesBefore) {
+                throw WalletWipedException()
+            }
+            sharedHolders.update { it + 1 }
+        }
         try {
             return block()
         } finally {
-            sharedHolders.decrementAndGet()
+            sharedHolders.update { it - 1 }
         }
     }
 
@@ -64,7 +97,7 @@ class FundingSelectionLock @Inject constructor() {
         if (!exclusive.tryLock()) return null
         try {
             // no shared hold can register while this holds [exclusive]
-            if (sharedHolders.get() > 0) return null
+            if (sharedHolders.value > 0) return null
             return block()
         } finally {
             exclusive.unlock()
@@ -72,12 +105,46 @@ class FundingSelectionLock @Inject constructor() {
     }
 
     /**
+     * [block] under the exclusive hold, for a wallet wipe: waits for the exclusive side, then for
+     * every shared hold under way to end (at most [drainTimeoutMs]; a hold wedged past that must
+     * not stop a wipe, which then goes ahead with new holds still blocked), and refuses every
+     * shared hold asked for while the wipe ran ([withShared]).
+     *
+     * [block] must not wait for anything that needs a hold of this lock.
+     */
+    suspend fun <T> exclusiveForWipe(drainTimeoutMs: Long = WIPE_DRAIN_TIMEOUT_MS, block: suspend () -> T): T {
+        // Counted at the start and again at the end, so a hold asked for at any point while the
+        // wipe runs finds the count changed once it gets in.
+        wipes.incrementAndGet()
+        try {
+            return exclusive.withLock {
+                val drained = withTimeoutOrNull(drainTimeoutMs) { sharedHolders.first { it == 0 } } != null
+                if (!drained) {
+                    log.warn("a funding selection is still under way after {} ms; the wipe goes ahead", drainTimeoutMs)
+                }
+                block()
+            }
+        } finally {
+            wipes.incrementAndGet()
+        }
+    }
+
+    /**
      * [select] under a shared hold once [blocked] (the funding gate, asked again here) says it may
-     * select fresh inputs; null, selecting nothing, when it may not.
+     * select fresh inputs; null, selecting nothing, when it may not, or when a wallet wipe ran
+     * while it waited for the hold.
      */
     suspend fun <T> selectIfAllowed(blocked: suspend () -> Boolean, select: suspend () -> T): Selected<T>? =
-        withShared { if (blocked()) null else Selected(select()) }
+        try {
+            withShared { if (blocked()) null else Selected(select()) }
+        } catch (e: WalletWipedException) {
+            null
+        }
 
     /** What [selectIfAllowed] selected. */
     class Selected<T>(val value: T)
 }
+
+/** A funding selection refused because the wallet it was for was wiped while it waited. */
+class WalletWipedException :
+    IllegalStateException("the wallet was wiped while this payment waited to select its inputs; nothing was selected")

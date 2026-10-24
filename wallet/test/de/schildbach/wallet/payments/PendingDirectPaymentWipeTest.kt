@@ -216,8 +216,19 @@ class PendingDirectPaymentWipeTest {
     private fun aWriteHeldAcrossAWipeIsNotRecreated(listenersReversed: Boolean) = runBlocking {
         val tx = createTransaction()
         // Given: the write has passed every check made before it and is about to land when the
-        // wipe runs to completion and a replacement wallet is installed
-        config.beforeNextWrite = { wipe(listenersReversed) }
+        // wipe starts. The wipe clears the records under the record lock the write holds, so it
+        // waits for the write; the write must then be refused where it lands, and the wipe's
+        // clear must leave nothing behind for the replacement.
+        val test = this
+        val wipeDone = CompletableDeferred<Unit>()
+        config.beforeNextWrite = {
+            test.launch {
+                wipe(listenersReversed)
+                wipeDone.complete(Unit)
+            }
+            // the wipe has started (retired the wallet) and waits for the record lock
+            withTimeoutOrNull(300) { wipeDone.await() }
+        }
 
         // When
         try {
@@ -226,6 +237,7 @@ class PendingDirectPaymentWipeTest {
         } catch (e: IllegalStateException) {
             // Expected: refused where it would have landed, so nothing is submitted for it either
         }
+        withTimeout(5_000) { wipeDone.await() }
 
         // Then: without this the test could pass by refusing before the write was ever reached
         assertEquals("the write was never held across the wipe", 1, config.heldWrites)
@@ -402,13 +414,19 @@ class PendingDirectPaymentWipeTest {
         val cancel = async(start = CoroutineStart.UNDISPATCHED) { verifier.cancelQuarantine(tx, oldWallet) }
         assertFalse("the cancel did not wait for the record lock", cancel.isCompleted)
 
-        wipe(listenersReversed = false)
-        replacementHoldsItsOwn(tx)
+        // the wipe starts meanwhile; it clears the records under the same lock, so it waits too,
+        // and the replacement is installed only once it is done
+        val wiping = async { wipe(listenersReversed = false) }
         release.complete(Unit)
         withTimeout(5_000) { cancel.await() }
         withTimeout(5_000) { held.await() }
+        withTimeout(5_000) { wiping.await() }
+        replacementHoldsItsOwn(tx)
 
         assertEquals(1, config.heldWrites)
+        tx.inputs.forEach {
+            assertTrue("the wiped wallet's cancel acted although its wallet was retired", oldWallet.isLockedOutput(it.outpoint))
+        }
         assertReplacementUntouched(tx)
     }
 

@@ -2308,4 +2308,81 @@ class PendingDirectPaymentVerifierTest {
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
         assertTrue("still watched", verifier.isTracked(tx.txId))
     }
+
+    // --- the wipe barrier: a wipe waits for funding under way and refuses funding that waited ---
+
+    @Test
+    fun `a wipe waits for an in-flight funding, and refuses one that waited through it`() = runBlocking {
+        val lock = FundingSelectionLock()
+        val wipe = slot<suspend () -> Unit>()
+        val ownWalletData = mockk<WalletData>(relaxed = true)
+        every { ownWalletData.wallet } returns wallet
+        every { ownWalletData.attachOnWalletWipedListener(capture(wipe)) } answers { }
+        PendingDirectPaymentVerifier(
+            ownWalletData, walletApplication, blockchainStateProvider, metadataProvider, config, engine, lock
+        ).apply { pollIntervalMs = 20L }
+
+        // a funding of the old wallet is selecting its inputs
+        val selecting = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        val inFlight = async(Dispatchers.Default) {
+            lock.withShared {
+                selecting.complete(Unit)
+                finish.await()
+                "selected"
+            }
+        }
+        withTimeout(2_000) { selecting.await() }
+
+        val wiping = async(Dispatchers.Default) { wipe.captured() }
+        delay(200)
+        assertFalse("the wipe cleared the payment state under a funding still selecting", wiping.isCompleted)
+
+        // a funding asked for while the wipe runs waits, and must not go on afterwards
+        val late = async(Dispatchers.Default) { runCatching { lock.withShared { "selected" } } }
+        delay(100)
+        assertFalse(late.isCompleted)
+
+        finish.complete(Unit)
+        assertEquals("selected", withTimeout(2_000) { inFlight.await() })
+        withTimeout(5_000) { wiping.await() }
+        val refused = withTimeout(2_000) { late.await() }
+        assertTrue("a funding that waited through the wipe went on: $refused", refused.exceptionOrNull() is WalletWipedException)
+
+        // the next wallet's funding is not held up
+        assertEquals("selected", withTimeout(2_000) { lock.withShared { "selected" } })
+    }
+
+    @Test
+    fun `a wipe never deadlocks on a watch waiting to settle an invalidation`() = runBlocking {
+        // the wipe holds the lock exclusively and joins the watches: one waiting for a shared hold
+        // must give up when cancelled rather than keep the wipe waiting for ever
+        val lock = FundingSelectionLock()
+        val wipe = slot<suspend () -> Unit>()
+        val ownWalletData = mockk<WalletData>(relaxed = true)
+        every { ownWalletData.wallet } returns wallet
+        every { ownWalletData.attachOnWalletWipedListener(capture(wipe)) } answers { }
+        val own = PendingDirectPaymentVerifier(
+            ownWalletData, walletApplication, blockchainStateProvider, metadataProvider, config, engine, lock
+        ).apply { pollIntervalMs = 20L }
+        val tx = createTransaction()
+        own.quarantine(tx, paymentUrl, "CTXSpend")
+        // a funding holds the lock, so the watch's settlement has to wait for it
+        val finish = CompletableDeferred<Unit>()
+        val holding = CompletableDeferred<Unit>()
+        val funding = async(Dispatchers.Default) { lock.withShared { holding.complete(Unit); finish.await() } }
+        withTimeout(2_000) { holding.await() }
+        // the wipe takes the lock and waits for the funding ...
+        val wiping = async(Dispatchers.Default) { wipe.captured() }
+        delay(100)
+        // ... while the watch judges the payment invalidated and waits for a shared hold
+        coEvery { engine.inputSpentByFinalConflict(any()) } returns true
+        delay(200)
+        finish.complete(Unit)
+        funding.await()
+        // well inside the wipe's own drain timeout: the watch gave up when cancelled
+        withTimeout(2_000) { wiping.await() }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
+        assertFalse(own.isTracked(tx.txId))
+    }
 }

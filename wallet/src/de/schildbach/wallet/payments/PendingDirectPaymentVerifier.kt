@@ -237,13 +237,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * A watch's release takes it too, to write the abandoned record only while that record is
      * still stored and unsettled. So do a quarantine's write, the removal retry worker (which
      * re-checks that an id is still queued, review 4302741459), the scan's discard of another
-     * wallet's record, and [reactivateForResubmission] / [releaseUnsentResubmission]: every write and delete of a record this class makes,
-     * except the wipe's clear, which must never wait on a write in flight and does not need to.
+     * wallet's record, [reactivateForResubmission] / [releaseUnsentResubmission], the settlement of
+     * an invalidated payment, and the wipe's clear: every write and delete of a record this class
+     * makes.
      *
      * Innermost: taken after [scanMutex] or [settleMutex], never before them. While holding it,
      * only [jobsMutex] (through [track]) is taken. The full order: [FundingSelectionLock] (shared by
-     * fresh SDK funding, exclusive and fail-fast for [reactivateForResubmission]), then [scanMutex]
-     * or [settleMutex] or [claimMutex], then [recordMutex], then [jobsMutex].
+     * fresh SDK funding and by an invalidation's settlement, exclusive and fail-fast for
+     * [reactivateForResubmission], exclusive and waiting for the wipe), then [scanMutex] or
+     * [settleMutex] or [claimMutex], then [recordMutex], then [jobsMutex].
+     *
+     * Settlement on network evidence ([commit], [commitAcknowledged]) takes no funding hold and no
+     * revision check, on purpose: a transaction seen on the network is paid whatever the record
+     * says, and a reactivation it overtakes is settled by the same evidence in its new watch.
      */
     private val recordMutex = Mutex()
 
@@ -271,34 +277,51 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // refused where it would land, so the clear below cannot be undone by one already under
         // way. See PendingDirectPaymentConfig.add.
         walletData.wallet?.let { retiredWallets.add(it) }
-        val running = jobs.values.toList()
-        jobs.clear()
-        // The wiped wallet's engine reservations go with it; nothing will consume or release them.
-        reservations.clear()
-        // Its in-flight submissions are refused by their own ownership checks; their claims must
-        // not hold up the replacement wallet's payments in the meantime.
-        submissionClaims.clear()
-        // The store is cleared below; nothing of the old wallet is retried after the wipe.
-        synchronized(pendingRemovals) {
-            removalRetryJob?.cancel()
-            removalRetryJob = null
-            pendingRemovals.clear()
+        // The wipe barrier (outermost, like every other user of the lock): EXCLUSIVE on the
+        // funding selection lock, waiting for the fresh fundings and invalidation settlements
+        // under way, refusing every one asked for until the wipe is done, and failing a
+        // reactivation fast. Under it nothing can select inputs or settle a payment for the old
+        // wallet while its state is cleared, and nothing that waited through the wipe is let
+        // through onto the next wallet ([FundingSelectionLock.withShared]).
+        //
+        // Deadlock-free: the jobs joined below are cancelled first, and a job waiting for a
+        // shared hold (or for recordMutex) gives up at once when cancelled; none can be holding
+        // a shared hold, since the barrier waited for those to end.
+        fundingSelection.exclusiveForWipe {
+            val running = jobs.values.toList()
+            jobs.clear()
+            synchronized(pendingRemovals) {
+                removalRetryJob?.cancel()
+                removalRetryJob = null
+            }
+            running.forEach { it.cancel() }
+            // Bounded: a job wedged in a call that does not answer cancellation must not hold up
+            // the wipe, and the captured-wallet checks mean a straggler still cannot touch the
+            // replacement wallet.
+            withTimeoutOrNull(DRAIN_TIMEOUT_MS) { running.forEach { runCatching { it.join() } } }
+            // Under the record lock, like every other write of the records: a quarantine or
+            // release already holding it finishes first, and any that comes after finds its
+            // wallet retired and is refused where it would land.
+            recordMutex.withLock {
+                // The wiped wallet's engine reservations go with it; nothing will consume or
+                // release them.
+                reservations.clear()
+                // Its in-flight submissions are refused by their own ownership checks; their
+                // claims must not hold up the replacement wallet's payments in the meantime.
+                submissionClaims.clear()
+                // The store is cleared below; nothing of the old wallet is retried after the wipe.
+                pendingRemovals.clear()
+                locksRestored = false
+                try {
+                    config.clearAll()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.error("could not clear pending payments during wipe", e)
+                }
+            }
+            log.info("wallet wiped; dropped {} pending payment watch(es) and reset readiness", running.size)
         }
-        running.forEach { it.cancel() }
-        // Bounded: a job wedged in a call that does not answer cancellation must not hold up the
-        // wipe, and the captured-wallet checks below mean a straggler still cannot touch the
-        // replacement wallet.
-        withTimeoutOrNull(DRAIN_TIMEOUT_MS) { running.forEach { runCatching { it.join() } } }
-        locksRestored = false
-        try {
-            // Deliberately not under recordMutex: a write held there (a slow quarantine) must not
-            // hold up the wipe, and need not, since every write for this wallet is refused where
-            // it lands once the wallet is retired (above).
-            config.clearAll()
-        } catch (e: Exception) {
-            log.error("could not clear pending payments during wipe", e)
-        }
-        log.info("wallet wiped; dropped {} pending payment watch(es) and reset readiness", running.size)
     }
 
     /**
