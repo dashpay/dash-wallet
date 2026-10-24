@@ -91,7 +91,16 @@ data class PendingDirectPayment(
      *
      * Null for a record written before this was stored, and when the fee was not known.
      */
-    val feeDuffs: Long? = null
+    val feeDuffs: Long? = null,
+    /**
+     * Which write of this record this is. Every write of a record (a quarantine, a release, a
+     * reactivation, putting an unsent resubmission back) stores a fresh value, so a step that
+     * decided what to do from an earlier read can tell, under the verifier's record lock, whether
+     * the record is still the one it decided on, and do nothing when it is not.
+     *
+     * 0 for a record written before this was stored.
+     */
+    val revision: Long = 0L
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
@@ -106,6 +115,7 @@ data class PendingDirectPayment(
         .put(KEY_WATCH_EXPIRED, watchExpired)
         .put(KEY_WALLET_ID, walletId ?: JSONObject.NULL)
         .put(KEY_FEE_DUFFS, feeDuffs ?: JSONObject.NULL)
+        .put(KEY_REVISION, revision)
 
     companion object {
         private const val KEY_TX_ID = "txId"
@@ -120,6 +130,7 @@ data class PendingDirectPayment(
         private const val KEY_WATCH_EXPIRED = "watchExpired"
         private const val KEY_WALLET_ID = "walletId"
         private const val KEY_FEE_DUFFS = "feeDuffs"
+        private const val KEY_REVISION = "revision"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
@@ -142,7 +153,9 @@ data class PendingDirectPayment(
             // opt for the same reason as paymentRequestId
             walletId = if (json.isNull(KEY_WALLET_ID)) null else json.optString(KEY_WALLET_ID, "").ifEmpty { null },
             // opt for the same reason as paymentRequestId; a negative value is not a fee
-            feeDuffs = if (json.isNull(KEY_FEE_DUFFS)) null else json.optLong(KEY_FEE_DUFFS, -1L).takeIf { it >= 0 }
+            feeDuffs = if (json.isNull(KEY_FEE_DUFFS)) null else json.optLong(KEY_FEE_DUFFS, -1L).takeIf { it >= 0 },
+            // opt for the same reason as paymentRequestId
+            revision = json.optLong(KEY_REVISION, 0L)
         )
     }
 }

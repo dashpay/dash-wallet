@@ -333,7 +333,7 @@ class PendingDirectPaymentWipeTest {
         }
 
         // When
-        verifier.cancelQuarantine(settled)
+        verifier.cancelQuarantine(settled, oldWallet)
         withTimeout(5_000) { wipeFinished.await() }
 
         // Then: without this the test could pass with the removal never reaching the gap
@@ -351,6 +351,66 @@ class PendingDirectPaymentWipeTest {
     @Test
     fun `a removal held across a wipe does not restore the other payments, verifier listener first`() =
         aRemovalHeldAcrossAWipeDoesNotRestoreTheRest(listenersReversed = true)
+
+    // --- a cancel for the wiped wallet must not reach the replacement's locks or record ------------
+
+    /** The replacement has its own record of [tx] and its own locks on the same outpoints. */
+    private suspend fun replacementHoldsItsOwn(tx: Transaction) {
+        tx.inputs.forEach { replacement.lockOutput(it.outpoint) }
+        config.add(recordFor(tx, replacement))
+    }
+
+    private suspend fun assertReplacementUntouched(tx: Transaction) {
+        tx.inputs.forEach {
+            assertTrue("the replacement's lock was given back by the wiped wallet's cancel", replacement.isLockedOutput(it.outpoint))
+        }
+        assertEquals(
+            "the replacement's record was dropped by the wiped wallet's cancel",
+            identityOf(replacement),
+            config.getAllOrThrow().single { it.txId == tx.txId }.walletId
+        )
+    }
+
+    @Test
+    fun `a cancel arriving after the wipe leaves the replacement's locks and record alone`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", origin = oldWallet)
+        wipe(listenersReversed = false)
+        replacementHoldsItsOwn(tx)
+
+        // the old wallet's submission learns its outcome only now
+        verifier.cancelQuarantine(tx, oldWallet)
+
+        assertReplacementUntouched(tx)
+    }
+
+    @Test
+    fun `a cancel waiting for the record lock across a wipe leaves the replacement alone`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", origin = oldWallet)
+        // another quarantine of the old wallet holds the record lock while its write is held
+        val release = CompletableDeferred<Unit>()
+        val holding = CompletableDeferred<Unit>()
+        config.beforeNextWrite = {
+            holding.complete(Unit)
+            release.await()
+        }
+        val other = createTransaction()
+        val held = async { runCatching { verifier.quarantine(other, paymentUrl, "CTXSpend", origin = oldWallet) } }
+        withTimeout(5_000) { holding.await() }
+        // the cancel passes its first ownership check and waits for the record lock
+        val cancel = async(start = CoroutineStart.UNDISPATCHED) { verifier.cancelQuarantine(tx, oldWallet) }
+        assertFalse("the cancel did not wait for the record lock", cancel.isCompleted)
+
+        wipe(listenersReversed = false)
+        replacementHoldsItsOwn(tx)
+        release.complete(Unit)
+        withTimeout(5_000) { cancel.await() }
+        withTimeout(5_000) { held.await() }
+
+        assertEquals(1, config.heldWrites)
+        assertReplacementUntouched(tx)
+    }
 
     // --- a payment waiting at the readiness barrier when the wipe lands ---------------------------
 

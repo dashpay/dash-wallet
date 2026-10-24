@@ -536,7 +536,7 @@ class PendingDirectPaymentVerifierTest {
         val tx = createTransaction()
         verifier.quarantine(tx, paymentUrl, "CTXSpend")
 
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
 
         // used when the outcome becomes certain, so nothing may be left for a restart to resume
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
@@ -1080,7 +1080,7 @@ class PendingDirectPaymentVerifierTest {
         val reservation = reservationFor(tx)
         verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservation)
 
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
 
         // the caller knows whether the outcome consumed it or frees it
         coVerify(exactly = 0) { engine.release(any()) }
@@ -1524,7 +1524,7 @@ class PendingDirectPaymentVerifierTest {
 
         // acknowledged (or definitively never sent): the outcome is known, but the removal fails
         failRemovals.set(true)
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
         assertEquals("the record is still on disk", 1, stored.size)
 
         // resolved, so it must not block SDK funding while its removal is pending
@@ -1545,7 +1545,7 @@ class PendingDirectPaymentVerifierTest {
         val tx = createTransaction()
         verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
         failRemovals.set(true)
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
         tx.inputs.forEach { assertFalse(wallet.isLockedOutput(it.outpoint)) }
 
         verifier.resume()
@@ -1575,7 +1575,7 @@ class PendingDirectPaymentVerifierTest {
         verifier.resume()
         withTimeout(5_000) { snapshotRead.await() }
 
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
         assertTrue("the record was removed", stored.isEmpty())
 
         proceed.complete(Unit)
@@ -1609,7 +1609,7 @@ class PendingDirectPaymentVerifierTest {
         verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
         withTimeout(5_000) { reached.await() }
 
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
         assertTrue("the record was removed", stored.isEmpty())
 
         proceed.complete(Unit)
@@ -1646,7 +1646,7 @@ class PendingDirectPaymentVerifierTest {
         val tx = createTransaction()
         verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
         failRemovals.set(true)
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
 
         onWalletWiped()
         // the wipe cleared the store itself; nothing of the old wallet may be retried after it
@@ -2041,7 +2041,7 @@ class PendingDirectPaymentVerifierTest {
         }
         // settled, but its removal fails: queued for the worker
         failRemovals.set(true)
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
         failRemovals.set(false)
         withTimeout(5_000) { reached.await() }
 
@@ -2075,7 +2075,7 @@ class PendingDirectPaymentVerifierTest {
 
         // definitively unsent, but the removal fails: the record stays, queued for removal
         failRemovals.set(true)
-        verifier.cancelQuarantine(tx)
+        verifier.cancelQuarantine(tx, wallet)
         assertEquals(1, stored.size)
 
         // the same transaction, rebuilt, cannot be recorded
@@ -2133,6 +2133,40 @@ class PendingDirectPaymentVerifierTest {
         assertFalse("active", stored.single().abandoned)
         tx.inputs.forEach { assertTrue("its inputs stay locked", wallet.isLockedOutput(it.outpoint)) }
         assertTrue("fresh SDK funding is still blocked", verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `a release decided on an older record never overwrites or unlocks the record written since`() = runBlocking {
+        // the release decided on the record it was watching, then took the record lock and wrote
+        // that snapshot as abandoned and unlocked, checking only that a record still existed. A
+        // step that rewrote the record active in between (here a quarantine of the same
+        // transaction, which keeps the running watch rather than cancelling it) was undone.
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        val (stored, _) = storeWithFlakyRemovals()
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        val decidedOn = stored.single()
+
+        val superseded = CompletableDeferred<PendingDirectPayment>()
+        verifier.beforeReleaseWrite = {
+            if (!superseded.isCompleted) {
+                // the watch has decided to release; the record is rewritten active before its write
+                verifier.syncedGraceMs = 60_000L
+                verifier.quarantine(tx, paymentUrl, "CTXSpend")
+                superseded.complete(stored.single())
+            }
+        }
+        goOnlineAndSynced()
+        val current = withTimeout(5_000) { superseded.await() }
+        assertTrue("a new write of the record", current.revision != decidedOn.revision)
+        delay(300)
+
+        assertEquals("the release left the newer record as it is", current, stored.single())
+        assertFalse(stored.single().abandoned)
+        tx.inputs.forEach { assertTrue("its inputs stay locked", wallet.isLockedOutput(it.outpoint)) }
+        assertTrue("still watched", verifier.isTracked(tx.txId))
+        coVerify(exactly = 0) { engine.release(any()) }
     }
 
     @Test
@@ -2200,13 +2234,13 @@ class PendingDirectPaymentVerifierTest {
                 interleaved = true
                 // in the retiring worker's window: the second payment settles and its removal fails
                 failRemovals.set(true)
-                verifier.cancelQuarantine(second)
+                verifier.cancelQuarantine(second, wallet)
                 failRemovals.set(false)
             }
         }
 
         failRemovals.set(true)
-        verifier.cancelQuarantine(first)
+        verifier.cancelQuarantine(first, wallet)
         failRemovals.set(false)
 
         withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }

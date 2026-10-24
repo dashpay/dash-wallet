@@ -55,6 +55,7 @@ import org.slf4j.LoggerFactory
 import java.util.Collections
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -330,7 +331,8 @@ class PendingDirectPaymentVerifier @Inject constructor(
             merchantIconUrl = recovery?.merchantIconUrl,
             walletId = walletIdentity(wallet),
             // what the SDK built it for; a resubmission shows it (review 4303472428)
-            feeDuffs = reservation?.feeDuffs
+            feeDuffs = reservation?.feeDuffs,
+            revision = newRevision()
         )
         lockInputs(wallet, tx)
         try {
@@ -732,7 +734,12 @@ class PendingDirectPaymentVerifier @Inject constructor(
             if (!payment.abandoned && !payment.watchExpired) {
                 return@withLock Reactivation.ALREADY_ACTIVE
             }
-            val active = payment.copy(abandoned = false, watchExpired = false, createdAt = System.currentTimeMillis())
+            val active = payment.copy(
+                abandoned = false,
+                watchExpired = false,
+                createdAt = System.currentTimeMillis(),
+                revision = newRevision()
+            )
             // Locked before the record says active, as a quarantine does; given back if it cannot
             // be written, which leaves the payment released as it was.
             lockInputs(origin, tx)
@@ -777,7 +784,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 if (payment == null || tx.txId in pendingRemovals || payment.abandoned) {
                     return@withLock
                 }
-                val released = payment.copy(abandoned = true)
+                val released = payment.copy(abandoned = true, revision = newRevision())
                 config.add(released) { stillOwnedBy(origin) }
                 if (stillOwnedBy(origin)) {
                     unlockInputs(origin, tx)
@@ -801,17 +808,35 @@ class PendingDirectPaymentVerifier @Inject constructor(
      *
      * Does not touch the SDK reservation: the caller knows whether the outcome consumed it (an
      * acknowledged broadcast) or frees it (a request that never left), and does that itself.
+     *
+     * Acts only for [origin], the wallet that quarantined [tx], and only while it is still the
+     * wallet: asked before the record lock is taken and again under it, since a wipe can land
+     * while it waits. Once [origin] is wiped this is a no-op. The wipe already dropped its watch,
+     * reservation and record, and the installed wallet is a replacement whose locks and record of
+     * the same outpoints are its own.
      */
-    suspend fun cancelQuarantine(tx: Transaction) {
+    suspend fun cancelQuarantine(tx: Transaction, origin: Wallet) {
+        if (!stillOwnedBy(origin)) {
+            log.info("not cancelling the quarantine of {}: the wallet that made it has been wiped", tx.txId)
+            return
+        }
         // Under the scan's per-record lock: a scan holding an older read of this record must not
         // lock and watch it again once it is gone (review 4302333212).
-        recordMutex.withLock {
+        val cancelled = recordMutex.withLock {
+            if (!stillOwnedBy(origin)) {
+                return@withLock false
+            }
             jobs.remove(tx.txId)?.cancel()
             reservations.remove(tx.txId)
-            walletData.wallet?.let { unlockInputs(it, tx) }
+            unlockInputs(origin, tx)
             removeRecord(tx.txId)
+            true
         }
-        log.info("quarantine cancelled for {}, its outcome is known", tx.txId)
+        if (cancelled) {
+            log.info("quarantine cancelled for {}, its outcome is known", tx.txId)
+        } else {
+            log.info("not cancelling the quarantine of {}: its wallet was wiped while it waited", tx.txId)
+        }
     }
 
     /**
@@ -1043,8 +1068,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * relay the transaction, so one that withholds it could otherwise have the records deleted
      * and then broadcast.
      *
-     * @return the payment as now stored, marked abandoned, or null when it was settled meanwhile and
-     *   the watch has nothing left to do
+     * Applied only to the record [payment] was read from: under the record lock the stored record
+     * is read again, and if it has been written since ([PendingDirectPayment.revision]), say made
+     * active again by a reactivation or a new quarantine, the release does nothing at all: no
+     * write, no unlock, the reservation left where it is. The watch carries on from the record as
+     * it is stored now.
+     *
+     * @return the payment as now stored (marked abandoned, or the newer record that superseded the
+     *   one this release decided on), or null when it was settled meanwhile and the watch has
+     *   nothing left to do
      */
     private suspend fun release(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): PendingDirectPayment? {
         log.warn(
@@ -1057,7 +1089,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // and resume() picks it up unchanged. Unlocking first and then failing to persist would
         // leave a stored payment claiming to be live while its inputs are already free and may
         // have been respent, and the next resume() would lock them again and re-verify it.
-        val abandoned = payment.copy(abandoned = true)
+        val abandoned = payment.copy(abandoned = true, revision = newRevision())
         beforeReleaseWrite()
         // Under the lock settlement takes, and only for a payment still unsettled: cancelling the
         // watch is a request, so one already this far would otherwise write back the record a
@@ -1068,13 +1100,22 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // active again, so unlocking after giving the lock back could undo that reactivation's
         // locks, and a reservation still in the map after the write could be trusted by the
         // funding gate for a record already reactivated.
+        //
+        // And only for the record it decided on: anything that rewrote it since (a reactivation
+        // relocking the inputs, a new quarantine) is newer than this decision, and writing the
+        // snapshot over it would undo it.
         var heldReservation: SdkDeferredPayment? = null
-        val written = recordMutex.withLock {
+        var released = false
+        val now = recordMutex.withLock {
             currentCoroutineContext().ensureActive()
             val stored = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
             if (stored == null || tx.txId in pendingRemovals) {
                 log.info("possibly-sent tx {} was settled while its release was under way; not releasing it", tx.txId)
-                return@withLock false
+                return@withLock null
+            }
+            if (stored.revision != payment.revision) {
+                log.info("possibly-sent tx {} was rewritten while its release was under way; not releasing it", tx.txId)
+                return@withLock stored
             }
             try {
                 config.add(abandoned) { stillOwnedBy(origin) }
@@ -1086,16 +1127,16 @@ class PendingDirectPaymentVerifier @Inject constructor(
             // again, only carry on watching.
             unlockInputs(origin, tx)
             heldReservation = reservations.remove(tx.txId)
-            true
+            released = true
+            abandoned
         }
         afterReleaseLocked()
-        if (!written) {
-            return null
+        if (released) {
+            // Given back to the engine outside the lock: an engine call, and no longer reachable
+            // from the funding gate once it left the map above.
+            heldReservation?.let { engine.release(it) }
         }
-        // Given back to the engine outside the lock: an engine call, and no longer reachable
-        // from the funding gate once it left the map above.
-        heldReservation?.let { engine.release(it) }
-        return abandoned
+        return now
     }
 
     /**
@@ -1334,6 +1375,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
             }
             wait = minOf(wait * 2, REMOVAL_RETRY_MAX_MS)
         }
+    }
+
+    /**
+     * A fresh [PendingDirectPayment.revision] for a write of a record. Random rather than counted,
+     * so it needs no read of the record it replaces; never 0, which marks a record written before
+     * revisions were stored.
+     */
+    private fun newRevision(): Long {
+        var revision: Long
+        do {
+            revision = ThreadLocalRandom.current().nextLong()
+        } while (revision == 0L)
+        return revision
     }
 
     private fun lockInputs(wallet: Wallet, tx: Transaction) {

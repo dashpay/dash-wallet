@@ -1260,7 +1260,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
                 is SdkWriteResult.NotBroadcast -> {
                     // Refused before reaching the network: definitively not sent.
-                    pendingPaymentVerifier.cancelQuarantine(tx)
+                    pendingPaymentVerifier.cancelQuarantine(tx, wallet)
                     releaseDeferredPayment(payment, wallet)
                     throw sdkSendNotAttemptedException(result.reason)
                 }
@@ -1293,7 +1293,7 @@ class SendCoinsTaskRunner @Inject constructor(
             }
             try {
                 applyGiftCardRecoveryMetadata(sent.txId, serviceName, recovery)
-                pendingPaymentVerifier.cancelQuarantine(tx)
+                pendingPaymentVerifier.cancelQuarantine(tx, wallet)
             } catch (e: Exception) {
                 log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
             }
@@ -1470,7 +1470,7 @@ class SendCoinsTaskRunner @Inject constructor(
         } catch (e: Exception) {
             if (isDefinitelyNotSubmitted(e)) {
                 log.warn("Payment submission failed before the request could be sent: {}", payment.txidHex, e)
-                pendingPaymentVerifier.cancelQuarantine(tx)
+                pendingPaymentVerifier.cancelQuarantine(tx, wallet)
                 releaseDeferredPayment(payment, wallet)
                 throw e
             }
@@ -1516,7 +1516,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 throw IllegalStateException("the wallet that sent ${payment.txidHex} has been wiped")
             }
             applyGiftCardRecoveryMetadata(sent.txId, serviceName, recovery)
-            pendingPaymentVerifier.cancelQuarantine(tx)
+            pendingPaymentVerifier.cancelQuarantine(tx, wallet)
         } catch (e: Exception) {
             // Keep the quarantine: it still holds what is needed to attribute this later.
             log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
