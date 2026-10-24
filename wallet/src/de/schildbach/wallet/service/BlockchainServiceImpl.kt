@@ -1922,11 +1922,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info(s.toString())
                 }
 
-                impedimentGate.networkCallbackUpdate {
-                    applyNetworkVerdict(defaultNetwork.onCapabilitiesChanged(network, hasInternet && hasValidated))
+                // An update for a network that is not the tracked default says nothing.
+                val offline = impedimentGate.networkCallbackUpdate {
+                    defaultNetwork.onCapabilitiesChanged(network, hasInternet && hasValidated)
+                        .also(::applyNetworkVerdict)
                 }
-                updateBlockchainStateImpediments()
-                check()
+                if (offline != null) {
+                    updateBlockchainStateImpediments()
+                    check()
+                }
             }
         }
 

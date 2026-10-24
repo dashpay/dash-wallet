@@ -188,6 +188,27 @@ class NetworkAvailabilityTest {
     }
 
     @Test
+    fun aLateCapabilityUpdateFromTheFormerDefault_doesNotTakeItBack() {
+        // PastaClaw on #1632: an update for A delivered after B's onAvailable
+        // used to make A current again (and offline), and A's later onLost
+        // then matched and left the tracker offline with B still up.
+        assertEquals(false, tracker.onAvailable("wifi", usable = true))
+        assertEquals(false, tracker.onAvailable("cell", usable = true)) // the handoff
+        assertEquals("a stale update for the former default says nothing", null,
+            tracker.onCapabilitiesChanged("wifi", usable = false))
+        assertEquals("…nor does its loss", null, tracker.onLost("wifi"))
+        // The successor is still the default and still decides.
+        assertEquals(false, tracker.onCapabilitiesChanged("cell", usable = true))
+        assertEquals(true, tracker.onLost("cell"))
+    }
+
+    @Test
+    fun aCapabilityUpdateBeforeAnyDefault_decidesNothing() {
+        assertEquals(null, tracker.onCapabilitiesChanged("wifi", usable = true))
+        assertEquals(null, tracker.onLost("wifi"))
+    }
+
+    @Test
     fun capabilitiesUnreadableOnAvailable_decideNothing_untilTheyArrive() {
         assertEquals(null, tracker.onAvailable("wifi", usable = null))
         assertEquals(false, tracker.onCapabilitiesChanged("wifi", usable = true))

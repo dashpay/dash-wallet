@@ -58,10 +58,14 @@ fun hasUsableNetworkNow(connectivityManager: ConnectivityManager): Boolean = try
  * about it is the whole answer.
  *
  * Each method returns the verdict: true offline, false online, null when the
- * event decides nothing (a loss of a network that is no longer the default —
- * its successor's `onAvailable` may already have been delivered — or an
- * `onAvailable` whose capabilities could not be read; `onCapabilitiesChanged`
- * follows it). Called in delivery order, one at a time.
+ * event decides nothing: a loss of, or a capability update for, a network
+ * that is not the tracked default (its successor's `onAvailable` may already
+ * have been delivered), or an `onAvailable` whose capabilities could not be
+ * read (`onCapabilitiesChanged` follows it). Only `onAvailable` changes which
+ * network is the default. A late update for the former default must not take
+ * it back (PastaClaw on #1632): its later `onLost` would then match and leave
+ * the tracker offline with the successor still up. Called in delivery order,
+ * one at a time.
  */
 internal class DefaultNetworkTracker<N : Any> {
     private var current: N? = null
@@ -71,8 +75,8 @@ internal class DefaultNetworkTracker<N : Any> {
         return usable?.not()
     }
 
-    fun onCapabilitiesChanged(network: N, usable: Boolean): Boolean {
-        current = network
+    fun onCapabilitiesChanged(network: N, usable: Boolean): Boolean? {
+        if (network != current) return null
         return !usable
     }
 
