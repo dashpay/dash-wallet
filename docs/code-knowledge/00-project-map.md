@@ -86,7 +86,7 @@ counts. `common` carries a self-contained port of dashj's money types instead (�
 `build.gradle` (root) is the version catalogue:
 
 - `kotlin_version = '2.1.0'`, `coroutinesVersion = '1.6.4'` (old), `roomVersion = '2.6.1'`, `hiltVersion = '2.53'`,
-  AGP `8.13.2`, Gradle wrapper `8.13` (`gradle/wrapper/gradle-wrapper.properties`; root `CLAUDE.md` still says 8.9).
+  AGP `8.13.2`, Gradle wrapper `8.13` (`gradle/wrapper/gradle-wrapper.properties`).
 - `dashjVersion = '22.0.5'` (`build.gradle:6`).
 - `dashSdkVersion = '0.1.0-v42int30-20261009.200225-1'` (`build.gradle:20`) — the **new Kotlin SDK**, pinned to an
   exact timestamped snapshot ("pin-don't-track"); the long comment above it records which platform integration
@@ -504,7 +504,7 @@ file's naming, comment density, and idiom").
   module graphs `nav_explore`, `nav_coinbase`, `nav_crowdnode`, `nav_maya`) and `Fragment.safeNavigate(directions)`
   (`common/.../util/NavigationExtensions.kt:30`, 168 call sites).
 - ViewBinding via `by viewBinding(...)` delegate (`common/.../ui/FragmentViewBindingDelegate.kt:81`). **No
-  DataBinding anywhere** (root `CLAUDE.md` "Android Views with Data Binding" is inaccurate).
+  DataBinding anywhere**.
 - Design system in `common/src/main/java/org/dash/wallet/common/ui/components/` (`DashButton`, `ListItem`,
   `TopNavBase`, `SheetButtonGroup`, `EnterAmount`, `TextField`, `MyTheme`, …), documented exhaustively in
   `.claude/agents/DEVELOPMENT-PATTERNS.md` (Figma → component mapping, typography, bottom-sheet patterns).
@@ -765,7 +765,6 @@ No instrumented tests, no lint gate (lint `abortOnError false`), no detekt, no c
 - Root `CLAUDE.md`: build commands (`./gradlew :wallet:compile_testNet3DebugKotlin` as the fastest check,
   `:wallet:test_testNet3DebugUnitTest`), MVVM rules, BIP70 test server recipe, and "Before pushing a PR branch":
   PRs are reviewed by the **thepastaclaw** bot which approves only at zero findings; run `/pre-review` first.
-  Some facts in it are stale (Gradle 8.9, "Data Binding", "Uses JUnit", dashj as the crypto library).
 - `wallet/CLAUDE.md`: the non-standard source-set layout and the four flavors.
 - `integrations/crowdnode/CLAUDE.md`: module boundary rule (only `:common`), layering; states `minSdk 24`/`targetSdk 35`
   while the build file says 29/36 (stale).

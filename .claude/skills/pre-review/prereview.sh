@@ -209,7 +209,8 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   # (its working directory: codex's -C does not move `mcp list`'s configuration context), as codex exec runs: a
   # trusted source checkout's own .codex/config.toml could mask a server there, or point an HTTP one at an attacker
   local mcp_off=() mcp_tab="" name
-  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null \
+    || { say "codex mcp list failed, so the servers to switch off are unknown: not reviewing"; return 2; }
   local transport
   while IFS=$'\t' read -r name transport; do
     [[ -n "$name" ]] || continue
@@ -225,12 +226,15 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
 try: print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: pass' "$probe")
   [[ -n "$mcp_tab" ]] && mcp_off=(-c "mcp_servers={ $mcp_tab }")
-  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null \
+    || { say "codex mcp list failed on the read-back: not reviewing"; return 2; }
   if [[ -n "$(python3 -c 'import json,sys
 try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
 except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabled for codex: not reviewing"; return 2; fi
   # codex's other ways out of the sandbox: the implicit Apps connector (never in `mcp list`), browser and computer use,
-  # web search (a query can carry data out), lifecycle hooks. Off for the review, and read back: each must show false
+  # web search (a query can carry data out), lifecycle hooks. Off for the review, and read back: each feature must show
+  # false. web_search is a config value, not a feature: `features list` has no row for it, so it is set (on the command
+  # line, the highest-precedence layer) and not read back
   local feat_off=(-c features.apps=false -c features.browser_use=false -c features.browser_use_external=false \
     -c features.browser_use_full_cdp_access=false -c features.computer_use=false -c features.in_app_browser=false -c 'web_search="disabled"' \
     -c features.hooks=false)   # lifecycle hooks: run outside the sandbox, in the clone, from the user's trusted config
@@ -267,7 +271,7 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
     # sandbox, whose reads cover the whole disk, ~/.codex/auth.json included
     # --ignore-rules: the user's execpolicy allow rules (~/.codex/rules) let a matching command run OUTSIDE the sandbox.
     # The user's config.toml does load (it may select a keyring login store); what it could open is closed above and
-    # read back in this same context: MCP servers off by name, apps/browser/computer use/web search off, environment
+    # read back in this same context: MCP servers off by name, apps/browser/computer use off (web search set off), environment
     # an allowlist. Started from inside the clone, the context the probes read.
     cd "$wt/tree" || exit 2
     exec ${tmo[@]+"${tmo[@]}"} codex exec --ignore-rules ${mcp_off[@]+"${mcp_off[@]}"} "${feat_off[@]}" -m "$MODEL" -c model_reasoning_effort="$EFFORT" -C "$wt/tree" -o "$out" \
