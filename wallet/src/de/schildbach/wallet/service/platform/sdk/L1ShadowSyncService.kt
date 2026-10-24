@@ -1356,15 +1356,22 @@ internal class FilterStallWatchdogDecider(
      * tap see the engine move as it happens: a filter cursor off the height the
      * watchdog stood down at, or any wallet event (the same liveness rule
      * [onCheck] applies), ends the stand-down at once. Only [standingDown] is
-     * touched, so this is safe from those collectors' threads; [onCheck]
-     * re-times the next spell itself. A 0 height is a snapshot with no filter
-     * position (IDLE / CONNECTING), not movement.
+     * touched; [onCheck] re-times the next spell itself. A 0 height is a
+     * snapshot with no filter position (IDLE / CONNECTING), not movement.
+     *
+     * Synchronized with [onCheck], because the read and the clear must be one
+     * step (PastaClaw on #1632). Otherwise a callback could read an old
+     * stand-down, a check could stand down again for a newer wedge, and the
+     * callback's clear would then end that one: a clear [standDownClears]
+     * reports, which re-takes the replay wake lock on a wedged engine.
      */
+    @Synchronized
     fun onFilterProgress(filterHeight: Long) {
         if (standingDown && filterHeight > 0L && filterHeight != stoodDownAtHeight) standingDown = false
     }
 
     /** See [onFilterProgress]. */
+    @Synchronized
     fun onWalletEvent() {
         if (standingDown) standingDown = false
     }

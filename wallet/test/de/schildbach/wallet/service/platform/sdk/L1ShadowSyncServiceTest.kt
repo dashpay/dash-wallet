@@ -54,6 +54,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 /**
  * Host-JVM tests for the Phase 5a L1 shadow-sync parity harness: the
@@ -740,6 +743,53 @@ class L1ShadowSyncServiceTest {
         assertTrue(d.standingDown)
         d.onEngineStopped()
         assertFalse(d.standingDown)
+    }
+
+    @Test
+    fun filterStall_theEventDrivenClears_waitForAStallDecisionInProgress() {
+        // PastaClaw on #1632: the progress and wallet-event callbacks read the
+        // stand-down and cleared it outside onCheck's monitor. A callback that
+        // read an old stand-down, then cleared after a check stood down again
+        // for a newer wedge, ended that one, and the clear re-took the replay
+        // wake lock on a wedged engine. Holding the decider's monitor here
+        // stands in for an onCheck in progress: the callbacks must wait for it,
+        // and then judge the state it left.
+        val d = stallDecider()
+        val stuck = 1_500_000L // more than one commit batch behind
+        val target = 1_556_896L
+        fun check(atMs: Long, height: Long) =
+            d.onCheck(atMs, height, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
+
+        check(0L, stuck)
+        check(10 * 60_000L + 1, stuck)
+        check(30 * 60_000L + 2, stuck)
+        check(60 * 60_000L + 3, stuck)
+        check(120 * 60_000L, stuck)
+        assertTrue(d.standingDown)
+
+        val progressDone = CountDownLatch(1)
+        synchronized(d) {
+            thread { d.onFilterProgress(stuck + 1); progressDone.countDown() }
+            assertFalse(
+                "the clear waits for the decision in progress",
+                progressDone.await(200, TimeUnit.MILLISECONDS)
+            )
+            // That decision: the cursor moved one block, then wedged there.
+            check(200 * 60_000L, stuck + 1)
+            check(300 * 60_000L, stuck + 1)
+            assertTrue(d.standingDown)
+        }
+        assertTrue(progressDone.await(5, TimeUnit.SECONDS))
+        assertTrue("the stand-down at the new height stands", d.standingDown)
+
+        // The wallet-event clear is serialized the same way.
+        val eventDone = CountDownLatch(1)
+        synchronized(d) {
+            thread { d.onWalletEvent(); eventDone.countDown() }
+            assertFalse(eventDone.await(200, TimeUnit.MILLISECONDS))
+        }
+        assertTrue(eventDone.await(5, TimeUnit.SECONDS))
+        assertFalse("a wallet event after the decision still clears it", d.standingDown)
     }
 
     @Test
