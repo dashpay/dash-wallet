@@ -243,7 +243,9 @@ internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
  * - filter scan within [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the
  *   tip: the HEIGHT rule, even where the display's aggregate rule says
  *   caught up;
- * - block pipeline drained: not [ShadowSyncProgress.blockPipelineLagging].
+ * - wallet cursor known: [ShadowSyncProgress.walletSyncedHeight] above 0;
+ * - block pipeline drained: not [ShadowSyncProgress.blockPipelineLagging],
+ *   and the wallet cursor within tolerance of the tip.
  *
  * Wallet binding is NOT re-checked here: every caller already preflights
  * the bound wallet, and an unbound wallet cannot produce a non-IDLE
@@ -269,11 +271,11 @@ internal fun evaluateWalletFundingGate(
     // tolerates a filter shortfall of up to 0.3% of chain height (~4,600
     // blocks on testnet) — right for a label, wrong for funding: an unscanned
     // block can hold a spend of a UTXO this wallet still reads unspent, or a
-    // receive the balance is missing. The pipeline-lag veto below cannot cover
-    // that gap when the wallet cursor is unknown (0), and when the cursor IS
-    // known the §34 stall parks it with the filter cursor, so that veto
-    // closes the gate there anyway. The funds-safety argument of
-    // SCAN_TIP_TOLERANCE_BLOCKS needs the scan itself within tolerance.
+    // receive the balance is missing. The cursor rules below close that gap
+    // too (an unknown cursor, or one the §34 stall parks with the filter
+    // cursor), but this check names the cause and does not depend on the
+    // cursor feed. The funds-safety argument of SCAN_TIP_TOLERANCE_BLOCKS
+    // needs the scan itself within tolerance.
     // Measured against the HIGHEST tip the snapshot knows, not headerTarget
     // alone: dash-spv restores the header target from the last peer report
     // at engine start, which can sit below the stored header tip until a peer
@@ -288,15 +290,27 @@ internal fun evaluateWalletFundingGate(
     // wallet already spent still reads unspent, and a transfer built on it is
     // a double-spend the network rejects (the 48.86 DASH incident's shape).
     // The wallet cursor within tolerance of the tip is the evidence those
-    // blocks are through; until then the gate stays closed. Unknown cursor
-    // (0) never counts as lagging, so this cannot wedge a wallet at the tip.
+    // blocks are through; until then the gate stays closed.
+    //
+    // An UNKNOWN cursor (0) is no evidence either way, so it closes too
+    // (PastaClaw on #1632: filters at the tip with the cursor unknown opened a
+    // spend over a UTXO view nothing proved current). It cannot wedge a synced
+    // wallet: the cursor is seeded at engine start from the SDK's durable
+    // `WalletEntity.syncedHeight`, and dash-spv emits `SyncHeightAdvanced` for
+    // every wallet a committed filter batch covered, matches or not, which is
+    // also what the durable value is written from. A fresh testnet wallet on
+    // the emulator (2026-10-24) logged a non-zero cursor from its first batch
+    // on, and its restart was seeded from the durable value. Unknown is left
+    // for a failed seed read before the next batch commits, or a wallet no
+    // batch has covered yet.
+    progress.walletSyncedHeight <= 0L ->
+        WalletFundingGate(false, "SDK L1 wallet scan cursor is not known yet")
     // Measured against the same highest-known tip as the height rule above:
     // `blockPipelineLagging` reads headerTarget alone, which a restart can
     // leave below the stored tip while the filters already reach it.
     progress.blockPipelineLagging ||
-        (progress.walletSyncedHeight > 0 &&
-            fundingTipHeight(progress) - progress.walletSyncedHeight >
-            ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS) ->
+        fundingTipHeight(progress) - progress.walletSyncedHeight >
+        ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
         WalletFundingGate(false, "SDK L1 block pipeline is still processing matched blocks")
     else -> WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip")
 }

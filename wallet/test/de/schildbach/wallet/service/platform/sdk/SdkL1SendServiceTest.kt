@@ -208,7 +208,9 @@ class SdkL1SendServiceTest {
         headerHeight = 1_500_000,
         headerTarget = 1_500_000,
         filterHeight = 1_500_000,
-        filterTarget = 1_500_000
+        filterTarget = 1_500_000,
+        // A known wallet cursor at the tip: an unknown one closes the gate.
+        walletSyncedHeight = 1_500_000
     )
 
     private var selfSpendMarks = 0
@@ -581,6 +583,20 @@ class SdkL1SendServiceTest {
             "the reason must name the pipeline, not the scan: $reason",
             reason.contains("processing matched blocks")
         )
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun gateClosed_unknownWalletCursor_atTheTip_isNotBroadcast() = runBlocking {
+        // PastaClaw on #1632: filters at the tip, but no evidence the matched
+        // blocks were applied — the UTXO view may still miss a spend.
+        val source = readySource()
+        val unknownCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
+        val result = service(source, progress = { unknownCursor })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains("cursor is not known"))
         assertEquals(0, source.sendCalls)
     }
 

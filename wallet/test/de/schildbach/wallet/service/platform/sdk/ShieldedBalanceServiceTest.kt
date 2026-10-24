@@ -335,7 +335,9 @@ class ShieldedBalanceServiceTest {
         headerHeight = 1_500_000,
         headerTarget = 1_500_000,
         filterHeight = 1_500_000,
-        filterTarget = 1_500_000
+        filterTarget = 1_500_000,
+        // A known wallet cursor at the tip: an unknown one closes the gate.
+        walletSyncedHeight = 1_500_000
     )
 
     private fun service(
@@ -1624,8 +1626,14 @@ class ShieldedBalanceServiceTest {
         val lagging = evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 1_200_000))
         assertFalse(lagging.allowed)
         assertTrue(lagging.reason, lagging.reason.contains("processing matched blocks"))
-        // Unknown cursor (0) is not lag: the gate cannot wedge a wallet at the tip.
-        assertTrue(evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 0)).allowed)
+        // An unknown cursor (0) is no evidence the matched blocks are through
+        // (PastaClaw on #1632): closed, with filters at the tip and no lag the
+        // display could see.
+        val unknownCursor = caughtUp.copy(walletSyncedHeight = 0)
+        assertFalse("no lag the display could see", unknownCursor.blockPipelineLagging)
+        val unknownGate = evaluateWalletFundingGate(unknownCursor)
+        assertFalse(unknownGate.allowed)
+        assertEquals("SDK L1 wallet scan cursor is not known yet", unknownGate.reason)
     }
 
     @Test
