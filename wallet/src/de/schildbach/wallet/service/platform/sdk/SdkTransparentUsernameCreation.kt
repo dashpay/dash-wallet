@@ -43,6 +43,7 @@ import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -568,6 +569,9 @@ class SdkTransparentUsernameCreation internal constructor(
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
     var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
+    /** Test seam: runs between the fence registration of a submit or retry job and its start. */
+    internal var beforeStartForTest: () -> Unit = {}
+
     /** Test seam: per-read budget of the log-only fee-ledger balance reads. */
     internal var feeLedgerReadTimeoutMs: Long = IdentityFeeLedger.BALANCE_READ_TIMEOUT_MS
 
@@ -649,8 +653,21 @@ class SdkTransparentUsernameCreation internal constructor(
             log.warn("transparent username creation submit refused: wallet wipe in progress")
             return false
         }
-        job.start()
+        if (!startOrRefuse(job)) {
+            // a wipe cancelled it after the track; [onCancelled] frees the slot at its completion
+            log.warn("transparent username creation submit refused: wallet wipe in progress")
+            return false
+        }
         return true
+    }
+
+    /**
+     * Start the tracked LAZY [job]. False when a wipe cancelled it after [trackOrRefuse] and before
+     * this start: the job never ran (or is being cancelled), and the caller must report a refusal.
+     */
+    private fun startOrRefuse(job: Job): Boolean {
+        beforeStartForTest()
+        return job.start() && !job.isCancelled
     }
 
     /**
@@ -992,7 +1009,8 @@ class SdkTransparentUsernameCreation internal constructor(
 
     /**
      * The name tail once the identity is on chain, shared by [createUsernameTransparent] and the
-     * name-only retry: names in [alreadyTaken] are not submitted again (see [registerNameTracked]).
+     * name-only retry: names in [alreadyTaken] are not submitted again (see [registerNameTracked]),
+     * and a name-only retry re-reads each name's ownership right before submitting it.
      */
     private suspend fun registerNamesAndHandOff(
         walletId: String,
@@ -1020,7 +1038,8 @@ class SdkTransparentUsernameCreation internal constructor(
             preorderState = IdentityCreationState.PREORDER_REGISTERING,
             registeringState = IdentityCreationState.USERNAME_REGISTERING,
             registeredState = IdentityCreationState.USERNAME_REGISTERED,
-            taken = label in alreadyTaken
+            taken = label in alreadyTaken,
+            recheckOwnership = nameOnlyRetry
         )
         val nameStatus = primary.status
         val nameFailure = primary.failureReason
@@ -1037,7 +1056,8 @@ class SdkTransparentUsernameCreation internal constructor(
                     preorderState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
                     registeringState = IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
                     registeredState = IdentityCreationState.USERNAME_SECONDARY_REGISTERED,
-                    taken = it in alreadyTaken
+                    taken = it in alreadyTaken,
+                    recheckOwnership = nameOnlyRetry
                 )
             }
         } else {
@@ -1382,9 +1402,17 @@ class SdkTransparentUsernameCreation internal constructor(
         registeringState: IdentityCreationState,
         registeredState: IdentityCreationState,
         // The identity already owns or contends for [label]: never submitted again, counted as registered.
-        taken: Boolean = false
+        taken: Boolean = false,
+        // A name-only retry: re-read [nameAlreadyTaken] right before submitting (fail closed).
+        recheckOwnership: Boolean = false
     ): NameRegistration {
-        if (taken) {
+        val alreadyOurs = when {
+            taken -> true
+            recheckOwnership -> ownershipRecheck(identityIdBase58, label)
+                ?: return ownershipRecheckFailed(label, registeringState, balanceBefore)
+            else -> false
+        }
+        if (alreadyOurs) {
             log.info("'{}' is already this identity's; not submitting it again", label)
             driveCreationState(registeredState, null)
             return NameRegistration(ShieldedUsernameNameStatus.REGISTERED, null, balanceBefore)
@@ -1444,6 +1472,40 @@ class SdkTransparentUsernameCreation internal constructor(
             recordDpnsFee(identityIdBase58, label, nameStatus.name, balanceBefore)
         }
         return NameRegistration(nameStatus, nameReason, balanceAfter)
+    }
+
+    /**
+     * The name-only retry's ownership read, repeated right before [label] is submitted: the
+     * preflight's answer can be stale by then (an earlier Ambiguous attempt that has landed since,
+     * the same name requested from another device). Null when it cannot be read.
+     */
+    private suspend fun ownershipRecheck(identityIdBase58: String, label: String): Boolean? = try {
+        withContext(ioDispatcher) { nameAlreadyTaken(identityIdBase58, label) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("could not re-check '{}' before registering it; not submitting it", label, e)
+        null
+    }
+
+    /**
+     * Fail closed on an unreadable [ownershipRecheck]: [label] is not submitted and counts as not
+     * registered, like a pre-broadcast rejection (for a primary, the caller stamps its
+     * [NAME_ONLY_RETRY_ERROR]). Nothing was spent.
+     */
+    private suspend fun ownershipRecheckFailed(
+        label: String,
+        registeringState: IdentityCreationState,
+        balanceBefore: Long?
+    ): NameRegistration {
+        val reason = "could not check '$label' before registering it"
+        try {
+            driveCreationState(registeringState, reason)
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+        }
+        return NameRegistration(ShieldedUsernameNameStatus.NOT_REGISTERED, reason, balanceBefore)
     }
 
     /**
@@ -1607,7 +1669,8 @@ class SdkTransparentUsernameCreation internal constructor(
      * requested secondary once the primary is confirmed, then the same recovery handoff. The
      * requested name becomes the primary/display name, while a registered secondary that is not
      * re-requested stays the secondary, as master's dashj `finishRegistration` does. A label the
-     * identity already owns or contends for is not submitted again ([nameAlreadyTaken]).
+     * identity already owns or contends for is not submitted again ([nameAlreadyTaken]: read before
+     * accepting, and again right before each name is submitted).
      *
      * The legacy CreateIdentityService reuse path must not be used for this after the cutover: it
      * replaces the identity record with a fresh one at NONE and looks for a dashj asset-lock
@@ -1640,11 +1703,15 @@ class SdkTransparentUsernameCreation internal constructor(
             }
             nameRetryInFlight = true
         }
+        // Freed exactly once per run, whichever of the refusal below and the job's completion
+        // handler gets there first: a second release could free a slot another caller holds.
+        val released = AtomicBoolean(false)
+        val release = { if (released.compareAndSet(false, true)) releaseNameRetry() }
         var launched = false
         try {
-            return launchNameRetry(scope, identityIdBase58, username, secondaryUsername).also { launched = it }
+            return launchNameRetry(scope, identityIdBase58, username, secondaryUsername, release).also { launched = it }
         } finally {
-            if (!launched) releaseNameRetry()
+            if (!launched) release()
         }
     }
 
@@ -1657,7 +1724,8 @@ class SdkTransparentUsernameCreation internal constructor(
         scope: CoroutineScope,
         identityIdBase58: String,
         username: String,
-        secondaryUsername: String?
+        secondaryUsername: String?,
+        release: () -> Unit
     ): Boolean {
         // Resolved before accepting, failing closed: a refusal touches nothing and shows the
         // screen's error, so no stamped error can send a later "Try again" anywhere else.
@@ -1701,11 +1769,15 @@ class SdkTransparentUsernameCreation internal constructor(
             log.warn("name-only retry refused: wallet wipe in progress")
             return false
         }
-        // Registered only once accepted, so the refusal above releases the slot once (the
-        // caller's finally) and never after another caller took it. A wipe cancelling the job
-        // before this line still releases it: the handler runs at once on a completed job.
-        job.invokeOnCompletion { releaseNameRetry() }
-        job.start()
+        // [release] frees the slot once, whether this handler or the caller's finally (on a
+        // refusal) runs first. A wipe cancelling the job before this line still releases it: the
+        // handler runs at once on a completed job.
+        job.invokeOnCompletion { release() }
+        if (!startOrRefuse(job)) {
+            // a wipe cancelled it between the track and the start; the caller's finally releases
+            log.warn("name-only retry refused: wallet wipe in progress")
+            return false
+        }
         return true
     }
 

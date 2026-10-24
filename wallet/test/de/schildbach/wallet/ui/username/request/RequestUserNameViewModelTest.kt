@@ -605,6 +605,57 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun submit_afterTheCutover_aFailedNameOnlyRetry_retriesOnlyTheNameWhateverTheRecordedState() = runVmTest {
+        // A failed name-only retry's own error keeps the replacement on the name-only route: picking
+        // another name must never fall through to the legacy path, which can fund a new identity.
+        // The state check alone is not relied on for it.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice4"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.IDENTITY_REGISTERING,
+            "${SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR}: NOT_REGISTERED",
+            "alice3",
+            "alice2instant",
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false
+        )
+
+        viewModel.submit()
+
+        coVerify(exactly = 1, timeout = 5_000) {
+            transparentUsernameCreation.retryNameForExistingIdentity("6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr", "alice4", null)
+        }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun submit_afterTheCutover_aFailedNameOnlyRetryWithNoIdentityId_isRefused() = runVmTest {
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice4"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "${SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR}: NOT_REGISTERED",
+            "alice3",
+            null,
+            null,
+            false
+        )
+
+        viewModel.submit()
+
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
     fun submit_beforeTheCutover_lostVote_keepsTheLegacyReusePath() = runVmTest {
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice3"

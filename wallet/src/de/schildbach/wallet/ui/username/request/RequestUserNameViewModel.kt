@@ -1114,9 +1114,12 @@ class RequestUserNameViewModel @Inject constructor(
                 it.usernameRequested == UsernameRequestStatus.LOCKED ||
                     it.usernameRequested == UsernameRequestStatus.LOST_VOTE
             } ?: false
-            // after the cutover also an identity on chain whose name was rejected: only its name is retried
+            // after the cutover also an identity on chain whose name was rejected: only its name is
+            // retried. A failed name-only retry's own error counts whatever state the record shows:
+            // only an identity that exists on chain is ever given one.
             val rejectedAfterRegistration = identity?.let {
-                it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED
+                SdkTransparentUsernameCreation.isNameOnlyRetryError(it.creationStateErrorMessage) ||
+                    (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
             } ?: false
             // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
             // dashj asset-lock funding CreateIdentityService drives fails

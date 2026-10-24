@@ -665,7 +665,7 @@ class SdkTransparentUsernameCreationTest {
             },
             executorScope = appScope,
             nameAlreadyTaken = nameAlreadyTaken
-        )
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
         run.accepted = creation.retryNameForExistingIdentity(identityIdBase58, username, secondary)
         advanceUntilIdle()
         return run
@@ -823,7 +823,7 @@ class SdkTransparentUsernameCreationTest {
             // the first run is still writing its name context
             persistNameContext = { _, _, _, _ -> gate.await() },
             executorScope = appScope
-        )
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
         assertTrue("the first retry is accepted", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
         advanceUntilIdle()
@@ -871,7 +871,7 @@ class SdkTransparentUsernameCreationTest {
                 persistNameContext = { _, name, _, _ -> persisted += name },
                 executorScope = appScope,
                 secretWriteFence = fence
-            )
+            ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
             assertFalse(
                 "refused, not reported as started (afterTrack=$afterTrack)",
@@ -912,6 +912,111 @@ class SdkTransparentUsernameCreationTest {
             assertTrue("slot released (afterTrack=$afterTrack)", creation.submit(label))
             appScope.cancel()
         }
+    }
+
+    @Test
+    fun `a wipe between the track and the start refuses the name-only retry and frees the slot once`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val fence = WalletSecretWriteFence()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val gate = CompletableDeferred<Unit>()
+        var persistCalls = 0
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            driveCreationState = { _, _ -> },
+            // the second (accepted) run holds the slot until the gate opens
+            persistNameContext = { _, _, _, _ ->
+                persistCalls++
+                gate.await()
+            },
+            executorScope = appScope,
+            secretWriteFence = fence
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+        // the wipe starts after the job passed the fence check and before it is started
+        creation.beforeStartForTest = { runBlocking { assertTrue(fence.raiseAndQuiesce(1_000L)) } }
+
+        assertFalse("refused, not reported as started", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        assertEquals("the cancelled run never ran", 0, persistCalls)
+
+        creation.beforeStartForTest = {}
+        fence.lower()
+        assertTrue("slot released", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        assertFalse(
+            "the refused run's release did not free the running retry's slot",
+            creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+        )
+        assertFalse("nor a creation's", creation.submit(label))
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a wipe between the track and the start refuses a creation and frees the slot`() = runTest {
+        val fence = WalletSecretWriteFence()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val source = source(lockAfterFailure = null)
+        val creation = creation(source, fence, executorScope = appScope)
+        creation.beforeStartForTest = { runBlocking { assertTrue(fence.raiseAndQuiesce(1_000L)) } }
+
+        assertFalse("refused, not reported as started", creation.submit(label))
+        advanceUntilIdle()
+        assertEquals(ShieldedUsernameSubmitState.Idle, creation.submitState.value)
+        neverFunded(source)
+
+        creation.beforeStartForTest = {}
+        fence.lower()
+        assertTrue("slot released", creation.submit(label))
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a name that became the identity's after the preflight is not submitted`() = runTest {
+        // the preflight read it as free; by the time it is registered an earlier Ambiguous attempt
+        // has landed, so the re-check right before the submission skips it
+        val source = source(lockAfterFailure = null)
+        var reads = 0
+        val run = retry(source, "alice3", null, nameAlreadyTaken = { _, _ -> reads++ > 0 })
+
+        assertTrue(run.accepted)
+        assertEquals("the preflight and the re-check", 2, reads)
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        assertEquals(IdentityCreationState.DONE, run.states.last().first)
+        assertTrue("no error: ${run.states}", run.states.all { it.second == null })
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+        neverFunded(source)
+    }
+
+    @Test
+    fun `an unreadable re-check fails closed without registering the name`() = runTest {
+        val source = source(lockAfterFailure = null)
+        var reads = 0
+        val run = retry(
+            source,
+            "alice3",
+            null,
+            nameAlreadyTaken = { _, _ -> if (reads++ == 0) false else throw java.io.IOException("DAPI unreachable") }
+        )
+
+        assertTrue("accepted on the preflight", run.accepted)
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        val error = run.states.last().second
+        assertTrue("stamped for the name-only route: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
+        assertTrue("nothing handed off", run.handedOff.isEmpty())
+        neverFunded(source)
     }
 
     @Test
