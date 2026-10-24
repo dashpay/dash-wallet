@@ -136,6 +136,9 @@ class ConnectionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 check(Constants.SUPPORTS_PLATFORM) { "App Connect is unavailable on this device" }
+                check(!Constants.IS_PROD_BUILD && Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) {
+                    "App Connect is unavailable in production or on mainnet"
+                }
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()

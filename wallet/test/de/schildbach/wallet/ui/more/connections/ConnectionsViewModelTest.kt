@@ -46,6 +46,8 @@ class ConnectionsViewModelTest {
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
         originalSupportsPlatform = Constants.SUPPORTS_PLATFORM
+        org.junit.Assume.assumeFalse(Constants.IS_PROD_BUILD ||
+            Constants.NETWORK_PARAMETERS.id == org.bitcoinj.core.NetworkParameters.ID_MAINNET)
         Constants.SUPPORTS_PLATFORM = true
         every { repository.observeConnections() } returns MutableStateFlow(emptyList())
         every { identities.blockchainIdentity } returns null
@@ -61,7 +63,7 @@ class ConnectionsViewModelTest {
     }
 
     @After fun teardown() {
-        model.viewModelScope.cancel()
+        if (::model.isInitialized) model.viewModelScope.cancel()
         Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
         Dispatchers.resetMain()
     }
