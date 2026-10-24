@@ -484,13 +484,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
                         // or locked again: the retry, not the scan, finishes it.
                         continue
                     }
-                    if (payment.walletId != null && payment.walletId != walletId) {
+                    if (!belongsTo(payment, wallet, walletId)) {
                         // Left by a wallet that has since been wiped: a write that was already on
                         // its way when the wipe cleared the store, or a clear that failed. Its
                         // outpoints are not this wallet's, so there is nothing here to protect,
                         // and binding it here is the harm - a watch on this wallet would commit and
                         // rebroadcast a transaction this wallet never made. Dropped, not kept:
-                        // no wallet that could use it is left.
+                        // no wallet that could use it is left. A record with no owner on it is
+                        // treated the same unless its own inputs prove it is this wallet's.
                         log.warn("discarding pending payment {}, it belongs to a wallet that was wiped", payment.txId)
                         recordMutex.withLock { removeRecord(payment.txId) }
                         continue
@@ -537,10 +538,19 @@ class PendingDirectPaymentVerifier @Inject constructor(
         tx: Transaction,
         wallet: Wallet
     ): Pair<Transaction, PendingDirectPayment>? = recordMutex.withLock {
-        val payment = config.getAllOrThrow().firstOrNull { it.txId == snapshot.txId }
-        if (payment == null || payment.txId in pendingRemovals) {
+        val read = config.getAllOrThrow().firstOrNull { it.txId == snapshot.txId }
+        if (read == null || read.txId in pendingRemovals) {
             log.info("pending payment {} was settled while the scan ran; not restoring it", snapshot.txId)
             return@withLock null
+        }
+        // A record with no owner (written before owners were stored) that the scan has just
+        // proven to be this wallet's: its owner is written down now, durably, so a later wipe
+        // leaves nothing a replacement could mistake for its own.
+        val owner = walletIdentity(wallet)
+        val payment = if (read.walletId == null && owner != null) {
+            read.copy(walletId = owner, revision = newRevision()).also { config.add(it) { stillOwnedBy(wallet) } }
+        } else {
+            read
         }
 
         if (payment.watchExpired) {
@@ -607,7 +617,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
             log.warn("could not read pending payments; treating SDK funding as unprotected", e)
             return true
         }
-        val walletId = walletData.wallet?.let { walletIdentity(it) }
+        // No wallet installed: nothing can be told apart, so every record counts (fail closed).
+        val installed = walletData.wallet
+        val walletId = installed?.let { walletIdentity(it) }
         val now = System.currentTimeMillis()
         val tip = try {
             engine.chainHeightUpperBound()
@@ -617,7 +629,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         return pending.any { payment ->
             payment.txId !in pendingRemovals &&
                 !payment.abandoned && !payment.watchExpired &&
-                (payment.walletId == null || walletId == null || payment.walletId == walletId) &&
+                (installed == null || belongsTo(payment, installed, walletId)) &&
                 !isReservationStillHeld(reservations[payment.txId], now, tip)
         }
     }
@@ -926,6 +938,30 @@ class PendingDirectPaymentVerifier @Inject constructor(
     } catch (e: Exception) {
         log.warn("wallet has no watching key, recording pending payments without an owner", e)
         null
+    }
+
+    /**
+     * Whether [payment] was made by [wallet] (whose identity is [walletId]). A record that names
+     * its owner belongs to that owner only; an unknown identity on either side matches nothing.
+     * A record that names no owner (one written before owners were stored, or by a wallet whose
+     * identity could not be read) is never taken on trust, since it may have been left by a wallet
+     * that has since been wiped: it belongs to [wallet] only when its own transaction proves it,
+     * by spending an output [wallet] holds and recognises as its own. Anything unreadable is
+     * treated as not belonging (fail closed).
+     */
+    private fun belongsTo(payment: PendingDirectPayment, wallet: Wallet, walletId: String?): Boolean {
+        payment.walletId?.let { owner -> return walletId != null && owner == walletId }
+        return try {
+            val tx = Transaction(wallet.params, payment.txBytes)
+            tx.inputs.any { input ->
+                wallet.getTransaction(input.outpoint.hash)
+                    ?.outputs?.getOrNull(input.outpoint.index.toInt())
+                    ?.isMine(wallet) == true
+            }
+        } catch (e: Exception) {
+            log.warn("could not tell which wallet made pending payment {}; not adopting it", payment.txId, e)
+            false
+        }
     }
 
     /**
@@ -1298,7 +1334,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
             it.paymentRequestId == paymentRequestId &&
                 (it.abandoned || it.watchExpired) &&
                 it.txId !in pendingRemovals &&
-                (it.walletId == null || walletId == null || it.walletId == walletId)
+                belongsTo(it, origin, walletId)
         }
     }
 

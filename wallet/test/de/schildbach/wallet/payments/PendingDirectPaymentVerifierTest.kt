@@ -80,6 +80,10 @@ class PendingDirectPaymentVerifierTest {
     private val paymentUrl = "https://merchant.example/payment"
 
     private lateinit var wallet: Wallet
+
+    /** The identity [wallet]'s records carry (what the verifier stamps a quarantine with). */
+    private val ownerId: String
+        get() = Sha256Hash.of(wallet.watchingKey.pubKey).toString()
     private lateinit var walletData: WalletData
     private lateinit var engine: PendingPaymentEngine
     private lateinit var walletApplication: WalletApplication
@@ -94,7 +98,8 @@ class PendingDirectPaymentVerifierTest {
     @Before
     fun setUp() {
         Context.propagate(Context(params))
-        wallet = Wallet.createBasic(params)
+        // deterministic, so it has an identity its records are stamped with
+        wallet = Wallet.createDeterministic(params, org.bitcoinj.script.Script.ScriptType.P2PKH)
 
         walletData = mockk(relaxed = true)
         every { walletData.wallet } returns wallet
@@ -356,7 +361,7 @@ class PendingDirectPaymentVerifierTest {
         coEvery { config.getAllOrThrow() } returns listOf(
             PendingDirectPayment(
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend",
-                System.currentTimeMillis(), abandoned = true
+                System.currentTimeMillis(), abandoned = true, walletId = ownerId
             )
         )
 
@@ -474,7 +479,7 @@ class PendingDirectPaymentVerifierTest {
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
                 System.currentTimeMillis(), isGiftCardPurchase = true,
                 merchantIconUrl = "https://logo.example/x.png",
-                abandoned = true, watchExpired = true
+                abandoned = true, watchExpired = true, walletId = ownerId
             )
         )
 
@@ -497,7 +502,7 @@ class PendingDirectPaymentVerifierTest {
             PendingDirectPayment(
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
                 System.currentTimeMillis(), isGiftCardPurchase = true,
-                abandoned = true, watchExpired = true
+                abandoned = true, watchExpired = true, walletId = ownerId
             )
         )
 
@@ -553,7 +558,7 @@ class PendingDirectPaymentVerifierTest {
             gate.await()
             listOf(
                 PendingDirectPayment(
-                    tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis()
+                    tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis(), walletId = ownerId
                 )
             )
         }
@@ -580,7 +585,7 @@ class PendingDirectPaymentVerifierTest {
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
                 System.currentTimeMillis(), isGiftCardPurchase = true,
                 merchantIconUrl = "https://logo.example/x.png",
-                abandoned = true, watchExpired = true
+                abandoned = true, watchExpired = true, walletId = ownerId
             )
         )
 
@@ -674,7 +679,7 @@ class PendingDirectPaymentVerifierTest {
     fun `resume re-locks inputs of persisted payments and tracks them`() = runBlocking {
         val tx = createTransaction()
         coEvery { config.getAllOrThrow() } returns listOf(
-            PendingDirectPayment(tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis())
+            PendingDirectPayment(tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis(), walletId = ownerId)
         )
 
         verifier.resume()
@@ -690,7 +695,7 @@ class PendingDirectPaymentVerifierTest {
     fun `resume keeps a payment it cannot restore`() = runBlocking {
         val txId = Sha256Hash.of(byteArrayOf(9))
         coEvery { config.getAllOrThrow() } returns listOf(
-            PendingDirectPayment(txId, byteArrayOf(0, 1), paymentUrl, null, System.currentTimeMillis())
+            PendingDirectPayment(txId, byteArrayOf(0, 1), paymentUrl, null, System.currentTimeMillis(), walletId = ownerId)
         )
 
         verifier.resume()
@@ -808,7 +813,7 @@ class PendingDirectPaymentVerifierTest {
     private fun storedPayment(tx: Transaction, requestId: String?, abandoned: Boolean = false) =
         PendingDirectPayment(
             tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", System.currentTimeMillis(),
-            abandoned = abandoned, paymentRequestId = requestId
+            abandoned = abandoned, paymentRequestId = requestId, walletId = ownerId
         )
 
     @Test
@@ -1318,7 +1323,7 @@ class PendingDirectPaymentVerifierTest {
             coEvery { config.getAllOrThrow() } returns listOf(
                 PendingDirectPayment(
                     tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
-                    System.currentTimeMillis() - 1_000L, isGiftCardPurchase = giftCard, abandoned = true
+                    System.currentTimeMillis() - 1_000L, isGiftCardPurchase = giftCard, abandoned = true, walletId = ownerId
                 )
             )
 
@@ -1366,7 +1371,7 @@ class PendingDirectPaymentVerifierTest {
             coEvery { config.getAllOrThrow() } returns listOf(
                 PendingDirectPayment(
                     tx.txId, tx.bitcoinSerialize(), paymentUrl, "PiggyCards",
-                    System.currentTimeMillis() - 1_000L, abandoned = true
+                    System.currentTimeMillis() - 1_000L, abandoned = true, walletId = ownerId
                 )
             )
             withTimeout(5_000) { v.awaitRestored() }
@@ -1711,7 +1716,7 @@ class PendingDirectPaymentVerifierTest {
         // while the resubmission holds its claim; it is refused, and the user retries later
         val (stored, _) = storeWithFlakyRemovals()
         val tx = createTransaction()
-        stored.add(PendingDirectPayment(tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", 0L, abandoned = true))
+        stored.add(PendingDirectPayment(tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", 0L, abandoned = true, walletId = ownerId))
         val lock = FundingSelectionLock()
         val wipe = slot<suspend () -> Unit>()
         val ownWalletData = mockk<WalletData>(relaxed = true)
@@ -2178,7 +2183,7 @@ class PendingDirectPaymentVerifierTest {
         stored.add(
             PendingDirectPayment(
                 tx.txId, tx.bitcoinSerialize(), paymentUrl, "CTXSpend", releasedAt,
-                abandoned = true
+                abandoned = true, walletId = ownerId
             )
         )
         assertFalse("released: not counted by the funding gate", verifier.hasUnprotectedPendingPayment())

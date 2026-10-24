@@ -300,6 +300,63 @@ class PendingDirectPaymentWipeTest {
         assertReplacementAdoptsNothing(tx)
     }
 
+    // --- a record that names no owner is never taken on trust ------------------------------------
+
+    private fun ownerless(tx: Transaction, abandoned: Boolean = false) = PendingDirectPayment(
+        txId = tx.txId,
+        txBytes = tx.bitcoinSerialize(),
+        paymentUrl = paymentUrl,
+        serviceName = "CTXSpend",
+        createdAt = System.currentTimeMillis(),
+        abandoned = abandoned,
+        paymentRequestId = "abc123"
+    )
+
+    @Test
+    fun `a recovery scan does not adopt an ownerless payment another wallet left behind`() = runBlocking {
+        // Given: a record with no owner on it (written before owners were stored, or when the
+        // identity could not be read) survived the wipe, and the replacement is installed
+        val tx = createTransaction()
+        installed = replacement
+        config.add(ownerless(tx))
+
+        // Then: its inputs are not the replacement's, so it is neither locked nor watched
+        assertReplacementAdoptsNothing(tx)
+    }
+
+    @Test
+    fun `an ownerless payment is neither resubmitted nor counted for a wallet it does not belong to`() = runBlocking {
+        val released = createTransaction()
+        val active = createTransaction()
+        installed = replacement
+        config.add(ownerless(released, abandoned = true))
+        config.add(ownerless(active))
+
+        assertEquals(null, verifier.abandonedSubmissionFor("abc123", replacement))
+        assertFalse("an ownerless record blocks the replacement's funding", verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `an ownerless payment whose own inputs are this wallet's is adopted, and its owner written down`() = runBlocking {
+        // Given: a record from before owners were stored, spending an output of the installed wallet
+        val parent = Transaction(params)
+        parent.addInput(Sha256Hash.of("funding-${System.nanoTime()}".toByteArray()), 0, ScriptBuilder.createEmpty())
+        parent.addOutput(Coin.parseCoin("1"), oldWallet.freshReceiveAddress())
+        oldWallet.receivePending(parent, null)
+        val tx = Transaction(params)
+        tx.addInput(parent.getOutput(0))
+        tx.addOutput(Coin.parseCoin("0.5"), Address.fromString(params, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        config.add(ownerless(tx))
+
+        // When
+        withTimeout(5_000) { verifier.awaitRestored() }
+
+        // Then: protected like any of its own, and never ambiguous again
+        assertTrue(verifier.isTracked(tx.txId))
+        tx.inputs.forEach { assertTrue(oldWallet.isLockedOutput(it.outpoint)) }
+        assertEquals(identityOf(oldWallet), config.getAllOrThrow().single { it.txId == tx.txId }.walletId)
+    }
+
     // --- the durable half only works if the owner is actually written down -----------------------
 
     @Test

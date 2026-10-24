@@ -1846,7 +1846,7 @@ class SendCoinsTaskRunnerBIP70Test {
         stored.add(
             de.schildbach.wallet.data.PendingDirectPayment(
                 t1.txId, t1.bitcoinSerialize(), mockWebServer.url("/payment").toString(), "Merchant",
-                System.currentTimeMillis(), abandoned = true, paymentRequestId = requestId
+                System.currentTimeMillis(), abandoned = true, paymentRequestId = requestId, walletId = Sha256Hash.of(wallet.watchingKey.pubKey).toString()
             )
         )
         val intent = bip70PaymentIntent(
@@ -1871,7 +1871,7 @@ class SendCoinsTaskRunnerBIP70Test {
         de.schildbach.wallet.data.PendingDirectPayment(
             deferredTx.txId, deferredTx.bitcoinSerialize(), mockWebServer.url("/payment").toString(), "Merchant",
             System.currentTimeMillis(), abandoned = true,
-            paymentRequestId = org.dash.wallet.common.util.Constants.HEX.encode(requestHash)
+            paymentRequestId = org.dash.wallet.common.util.Constants.HEX.encode(requestHash), walletId = Sha256Hash.of(wallet.watchingKey.pubKey).toString()
         ).also { stored.add(it) }
 
     @Test
