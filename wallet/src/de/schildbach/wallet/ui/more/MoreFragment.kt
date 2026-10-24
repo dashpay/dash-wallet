@@ -583,7 +583,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         if (!needsNewName) {
             createIdentityViewModel.retryCreateIdentity()
         } else {
-            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            // as the home tile: reuse the existing identity's record, so the new name is
+            // registered for it (no fresh funding)
+            createIdentityViewModel.blockchainIdentity.value?.let { identity ->
+                startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), identity))
+            }
         }
     }
 

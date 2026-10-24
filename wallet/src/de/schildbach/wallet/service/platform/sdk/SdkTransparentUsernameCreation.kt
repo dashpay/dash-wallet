@@ -88,6 +88,23 @@ internal suspend fun transparentUsernameFeeDuffs(contested: Boolean, sdkService:
  * Shared by [DashSdkTransparentUsernameSource], [DashSdkL1InviteSource] and
  * [DashSdkShieldedUsernameSource]; no private material is touched.
  */
+/**
+ * True when [identityIdBase58] already owns [label] or contends for it (a contested name in
+ * voting). Throws when Platform cannot be read: callers fail closed.
+ */
+internal suspend fun identityOwnsOrContendsFor(
+    repo: de.schildbach.wallet.ui.dashpay.PlatformRepo,
+    identityIdBase58: String,
+    label: String
+): Boolean {
+    val normalized = Names.normalizeString(label)
+    return repo.getOwnedUsernamesOrThrow(identityIdBase58).any { Names.normalizeString(it) == normalized } ||
+        (
+            Names.isUsernameContestable(label) &&
+                repo.getVoteContendersOrThrow(label).map.keys.any { it == Identifier.from(identityIdBase58) }
+            )
+}
+
 internal fun registrationRowsFor(keys: List<IdentityKeyPreview>): List<IdentityPubkey> =
     RegistrationKeys.buildRegistrationRows(
         publicKeys = keys.map { it.publicKey },
@@ -508,7 +525,12 @@ class SdkTransparentUsernameCreation internal constructor(
      */
     private val nameAlreadyTaken: suspend (identityIdBase58: String, label: String) -> Boolean = { _, _ -> false },
     /** [cutoverCommitted] as a tri-state, null when the state cannot be read. Defaults to [cutoverCommitted]. */
-    private val cutoverCommittedOrUnknown: suspend () -> Boolean? = { cutoverCommitted() }
+    private val cutoverCommittedOrUnknown: suspend () -> Boolean? = { cutoverCommitted() },
+    /**
+     * Held across every DPNS registration's re-check → submit → record, per identity, shared with
+     * the other in-app registrars. A fresh lock by default keeps the host-JVM tests independent.
+     */
+    private val dpnsLock: DpnsRegistrationLock = DpnsRegistrationLock()
 ) {
     @Inject
     constructor(
@@ -519,6 +541,7 @@ class SdkTransparentUsernameCreation internal constructor(
         assetLockKindResolver: AssetLockKindResolver,
         applicationScope: CoroutineScope,
         secretWriteFence: WalletSecretWriteFence,
+        dpnsLock: DpnsRegistrationLock,
         // A Provider: only a name-only retry reads it, and it pulls in the platform services.
         platformRepo: javax.inject.Provider<de.schildbach.wallet.ui.dashpay.PlatformRepo>
     ) : this(
@@ -553,17 +576,10 @@ class SdkTransparentUsernameCreation internal constructor(
             blockchainIdentityConfig.remove(BlockchainIdentityConfig.USERNAME_REQUESTED)
         },
         nameAlreadyTaken = { identityIdBase58, label ->
-            val repo = platformRepo.get()
-            val normalized = Names.normalizeString(label)
-            repo.getOwnedUsernamesOrThrow(identityIdBase58).any { Names.normalizeString(it) == normalized } ||
-                (
-                    Names.isUsernameContestable(label) &&
-                        repo.getVoteContendersOrThrow(label).map.keys.any {
-                            it == Identifier.from(identityIdBase58)
-                        }
-                    )
+            identityOwnsOrContendsFor(platformRepo.get(), identityIdBase58, label)
         },
-        cutoverCommittedOrUnknown = { sdkL1SendService.cutoverCommittedOrUnknown() }
+        cutoverCommittedOrUnknown = { sdkL1SendService.cutoverCommittedOrUnknown() },
+        dpnsLock = dpnsLock
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -1406,17 +1422,46 @@ class SdkTransparentUsernameCreation internal constructor(
         // A name-only retry: re-read [nameAlreadyTaken] right before submitting (fail closed).
         recheckOwnership: Boolean = false
     ): NameRegistration {
-        val alreadyOurs = when {
-            taken -> true
-            recheckOwnership -> ownershipRecheck(identityIdBase58, label)
-                ?: return ownershipRecheckFailed(label, registeringState, balanceBefore)
-            else -> false
+        // Re-check → submit → record under the identity's DPNS lock, so no other in-app
+        // registration can land between the re-check and the submit. The create path re-reads
+        // ownership only when another registration held the lock first (its identity is new).
+        val locked = dpnsLock.withIdentityLock(identityIdBase58) { waited ->
+            val alreadyOurs = when {
+                taken -> true
+                recheckOwnership || waited -> ownershipRecheck(identityIdBase58, label)
+                    ?: return@withIdentityLock ownershipRecheckFailed(label, registeringState, balanceBefore)
+                else -> false
+            }
+            if (alreadyOurs) {
+                log.info("'{}' is already this identity's; not submitting it again", label)
+                driveCreationState(registeredState, null)
+                return@withIdentityLock NameRegistration(ShieldedUsernameNameStatus.REGISTERED, null, balanceBefore)
+            }
+            submitNameTracked(walletId, identityId, label, preorderState, registeringState, registeredState)
         }
-        if (alreadyOurs) {
-            log.info("'{}' is already this identity's; not submitting it again", label)
-            driveCreationState(registeredState, null)
-            return NameRegistration(ShieldedUsernameNameStatus.REGISTERED, null, balanceBefore)
+        // Not submitted (skipped as ours, or refused): nothing was spent.
+        if (!locked.submitted) return locked
+        // The fee read stays outside the lock: it is log-only and can take its full timeout.
+        val balanceAfter = if (locked.status == ShieldedUsernameNameStatus.NOT_REGISTERED) {
+            balanceBefore
+        } else {
+            recordDpnsFee(identityIdBase58, label, locked.status.name, balanceBefore)
         }
+        return NameRegistration(locked.status, locked.failureReason, balanceAfter)
+    }
+
+    /**
+     * The submit + record part of [registerNameTracked], run under the identity's DPNS lock.
+     * [NameRegistration.balanceAfter] is left null; the caller reads it after releasing the lock.
+     */
+    private suspend fun submitNameTracked(
+        walletId: String,
+        identityId: ByteArray,
+        label: String,
+        preorderState: IdentityCreationState,
+        registeringState: IdentityCreationState,
+        registeredState: IdentityCreationState
+    ): NameRegistration {
         try {
             driveCreationState(preorderState, null)
             driveCreationState(registeringState, null)
@@ -1466,18 +1511,14 @@ class SdkTransparentUsernameCreation internal constructor(
             }
             status to reason
         }
-        val balanceAfter = if (nameStatus == ShieldedUsernameNameStatus.NOT_REGISTERED) {
-            balanceBefore
-        } else {
-            recordDpnsFee(identityIdBase58, label, nameStatus.name, balanceBefore)
-        }
-        return NameRegistration(nameStatus, nameReason, balanceAfter)
+        return NameRegistration(nameStatus, nameReason, balanceAfter = null, submitted = true)
     }
 
     /**
-     * The name-only retry's ownership read, repeated right before [label] is submitted: the
-     * preflight's answer can be stale by then (an earlier Ambiguous attempt that has landed since,
-     * the same name requested from another device). Null when it cannot be read.
+     * The ownership read repeated right before [label] is submitted, under the identity's
+     * [DpnsRegistrationLock]: an earlier answer can be stale by then (an earlier Ambiguous attempt
+     * that has landed since, another in-app registration, the same name requested from another
+     * device). Null when it cannot be read.
      */
     private suspend fun ownershipRecheck(identityIdBase58: String, label: String): Boolean? = try {
         withContext(ioDispatcher) { nameAlreadyTaken(identityIdBase58, label) }
@@ -1516,7 +1557,9 @@ class SdkTransparentUsernameCreation internal constructor(
     private data class NameRegistration(
         val status: ShieldedUsernameNameStatus,
         val failureReason: String?,
-        val balanceAfter: Long?
+        val balanceAfter: Long?,
+        /** Whether `registerDpnsName` was called (false: skipped as ours, or refused). */
+        val submitted: Boolean = false
     )
 
     /**
@@ -1618,6 +1661,11 @@ class SdkTransparentUsernameCreation internal constructor(
      * bound / malformed id / provably pre-broadcast rejection — retry-safe); and
      * [SdkWriteResult.Ambiguous] when the outcome cannot be proven pre-broadcast
      * (the caller re-checks the on-chain name before re-registering).
+     *
+     * Under the identity's [DpnsRegistrationLock], [nameAlreadyTaken] is re-read right before the
+     * submit: a label the identity already owns or contends for is not submitted again and is
+     * reported as [SdkWriteResult.Broadcast]; an unreadable check is
+     * [SdkWriteResult.NotBroadcast] (fail closed, retry-safe).
      */
     suspend fun registerDpnsNameForExistingIdentity(
         identityIdBase58: String,
@@ -1645,13 +1693,28 @@ class SdkTransparentUsernameCreation internal constructor(
         ) {
             source.identityCreditBalance(identityIdBase58)
         }
-        val result = try {
-            val fullName = source.registerDpnsName(walletId, identityId, label)
-            SdkWriteResult.Broadcast(fullName)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            classifyBroadcastFailure(t)
+        // Re-check → submit under the identity's DPNS lock: the caller's own on-chain check ran
+        // before it, so another in-app registration may have landed this name since. A label the
+        // identity already owns or contends for is reported as broadcast and not submitted again.
+        var submitted = false
+        val result = dpnsLock.withIdentityLock(identityIdBase58) {
+            when (ownershipRecheck(identityIdBase58, label)) {
+                null -> SdkWriteResult.NotBroadcast("could not check '$label' before registering it")
+                true -> {
+                    log.info("'{}' is already this identity's; not submitting it again", label)
+                    SdkWriteResult.Broadcast("$label.dash")
+                }
+                false -> try {
+                    submitted = true
+                    SdkWriteResult.Broadcast(source.registerDpnsName(walletId, identityId, label))
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    classifyBroadcastFailure(t)
+                }
+            }
         }
+        // Not submitted: nothing was spent, no fee line.
+        if (!submitted) return result
         val status = when (result) {
             is SdkWriteResult.Broadcast -> ShieldedUsernameNameStatus.REGISTERED
             is SdkWriteResult.NotBroadcast -> null

@@ -1066,6 +1066,89 @@ class SdkTransparentUsernameCreationTest {
         assertEquals(listOf(identityIdBase58), retried.handedOff)
     }
 
+    // ── per-identity DPNS lock ───────────────────────────────────────────
+
+    /** A source whose registerDpnsName blocks on [gate], then records the label as owned. */
+    private fun gatedSource(gate: CompletableDeferred<Unit>, owned: MutableSet<String>) =
+        source(lockAfterFailure = null).also { source ->
+            coEvery { source.identityCreditBalance(identityIdBase58) } returns null
+            coEvery { source.registerDpnsName(walletIdHex, identityId, any()) } coAnswers {
+                gate.await()
+                val name = thirdArg<String>()
+                owned += name
+                "$name.dash"
+            }
+        }
+
+    @Test
+    fun `two concurrent registrations of one name for one identity submit it once`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val owned = mutableSetOf<String>()
+        val source = gatedSource(gate, owned)
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned }
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+        val first = async { creation.registerDpnsNameForExistingIdentity(identityIdBase58, "alice3") }
+        val second = async { creation.registerDpnsNameForExistingIdentity(identityIdBase58, "alice3") }
+        advanceUntilIdle()
+        // the first is submitting under the lock; the second waits for it, not yet re-checked
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertFalse(second.isCompleted)
+
+        gate.complete(Unit)
+
+        assertEquals(SdkWriteResult.Broadcast("alice3.dash"), first.await())
+        assertEquals(
+            "the second re-checks under the lock, finds the name owned and skips it",
+            SdkWriteResult.Broadcast("alice3.dash"),
+            second.await()
+        )
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+    }
+
+    @Test
+    fun `a name-only retry waiting on another registration of its name does not submit it`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val owned = mutableSetOf<String>()
+        val source = gatedSource(gate, owned)
+        val states = mutableListOf<IdentityCreationState>()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            driveCreationState = { state, _ -> states += state },
+            executorScope = appScope,
+            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned }
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+        // e.g. the restore worker re-driving the same name for the same identity
+        val worker = async { creation.registerDpnsNameForExistingIdentity(identityIdBase58, "alice3") }
+        advanceUntilIdle()
+        // its preflight ran before the worker's name landed, so it accepts
+        assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+
+        gate.complete(Unit)
+        assertEquals(SdkWriteResult.Broadcast("alice3.dash"), worker.await())
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertEquals(
+            "the retry re-checked under the lock and counted the name as registered",
+            IdentityCreationState.DONE,
+            states.last()
+        )
+        appScope.cancel()
+    }
+
     @Test
     fun `a failure inside the accepted run is stamped for the name-only route`() = runTest {
         val source = source(lockAfterFailure = null)

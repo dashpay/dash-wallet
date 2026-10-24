@@ -756,7 +756,17 @@ class SdkShieldedUsernameCreation internal constructor(
      * registered so the wipe can cancel and join it. A fresh (lowered) fence
      * by default keeps the host-JVM tests unaffected.
      */
-    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence()
+    private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence(),
+    /**
+     * Held across each DPNS registration's submit → record, per identity, shared with the other
+     * in-app registrars ([SdkTransparentUsernameCreation]). A fresh lock by default for tests.
+     */
+    private val dpnsLock: DpnsRegistrationLock = DpnsRegistrationLock(),
+    /**
+     * True when the identity already owns or contends for the label; throws when unreadable. Read
+     * only when another registration held [dpnsLock] first (the identity is new otherwise).
+     */
+    private val nameAlreadyTaken: suspend (identityIdBase58: String, label: String) -> Boolean = { _, _ -> false }
 ) {
     @Inject
     constructor(
@@ -766,7 +776,10 @@ class SdkShieldedUsernameCreation internal constructor(
         walletApplication: WalletApplication,
         blockchainIdentityConfig: BlockchainIdentityConfig,
         applicationScope: CoroutineScope,
-        secretWriteFence: WalletSecretWriteFence
+        secretWriteFence: WalletSecretWriteFence,
+        dpnsLock: DpnsRegistrationLock,
+        // A Provider: only a contended name registration reads it, and it pulls in the platform services.
+        platformRepo: javax.inject.Provider<de.schildbach.wallet.ui.dashpay.PlatformRepo>
     ) : this(
         source = DashSdkShieldedUsernameSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -792,7 +805,11 @@ class SdkShieldedUsernameCreation internal constructor(
             ShieldedInviteOverageTopUp.persistPendingRecord(dashPayConfig, identityIdBase58, overageCredits)
         },
         executorScope = applicationScope,
-        secretWriteFence = secretWriteFence
+        secretWriteFence = secretWriteFence,
+        dpnsLock = dpnsLock,
+        nameAlreadyTaken = { identityIdBase58, label ->
+            identityOwnsOrContendsFor(platformRepo.get(), identityIdBase58, label)
+        }
     )
 
     /** Test seam: the pipeline blocks for a ~30s proof — keep it off main. */
@@ -1474,51 +1491,91 @@ class SdkShieldedUsernameCreation internal constructor(
         registeringState: IdentityCreationState,
         registeredState: IdentityCreationState
     ): Pair<ShieldedUsernameNameStatus, String?> {
-        try {
-            driveCreationState(preorderState, null)
-            driveCreationState(registeringState, null)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("failed to record DPNS registering state for '{}'", label, t)
-        }
-        return try {
-            source.registerDpnsName(walletId, identityId, label)
+        val identityIdBase58 = Identifier.from(identityId).toString()
+        // Submit → record under the identity's DPNS lock. The identity is new, so ownership is
+        // re-read only when another in-app registration held the lock first (fail closed).
+        return dpnsLock.withIdentityLock(identityIdBase58) { waited ->
+            if (waited) {
+                val taken = try {
+                    withContext(ioDispatcher) { nameAlreadyTaken(identityIdBase58, label) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("could not re-check '{}' before registering it; not submitting it", label, e)
+                    null
+                }
+                if (taken != false) {
+                    return@withIdentityLock skippedName(label, taken, registeringState, registeredState)
+                }
+            }
             try {
-                driveCreationState(registeredState, null)
+                driveCreationState(preorderState, null)
+                driveCreationState(registeringState, null)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-                log.warn("failed to record DPNS registered state for '{}'", label, t)
+                log.warn("failed to record DPNS registering state for '{}'", label, t)
             }
-            ShieldedUsernameNameStatus.REGISTERED to null
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            val (status, reason) = when (classifyBroadcastFailure(t)) {
-                is SdkWriteResult.NotBroadcast -> {
-                    log.warn("DPNS registration of '{}' rejected pre-broadcast after identity creation", label, t)
-                    ShieldedUsernameNameStatus.NOT_REGISTERED to (t.message ?: "name registration failed")
-                }
-                else -> {
-                    log.error("DPNS registration of '{}' outcome unconfirmed after identity creation", label, t)
-                    ShieldedUsernameNameStatus.AMBIGUOUS to (t.message ?: "name registration ambiguous")
-                }
-            }
-            // Leave the creation state at the registering state. A provably
-            // pre-broadcast rejection (NOT_REGISTERED) is a GENUINE, terminal
-            // failure for this attempt — stamp the error so the home tile shows
-            // the retryable error card. An AMBIGUOUS (unconfirmed) outcome is
-            // the self-healing case (the restore worker re-checks the on-chain
-            // name before re-registering, never a double-register/re-fund), so
-            // DON'T stamp a hard error — keep the sticky non-terminal
-            // "unconfirmed, will reconcile on sync" registering state. The
-            // ambiguous reason is still returned in the outcome for logging.
-            val errorForTile = if (status == ShieldedUsernameNameStatus.AMBIGUOUS) null else reason
             try {
-                driveCreationState(registeringState, errorForTile)
-            } catch (e: Throwable) {
-                if (e is CancellationException) throw e
-                log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+                source.registerDpnsName(walletId, identityId, label)
+                try {
+                    driveCreationState(registeredState, null)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("failed to record DPNS registered state for '{}'", label, t)
+                }
+                ShieldedUsernameNameStatus.REGISTERED to null
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                val (status, reason) = when (classifyBroadcastFailure(t)) {
+                    is SdkWriteResult.NotBroadcast -> {
+                        log.warn("DPNS registration of '{}' rejected pre-broadcast after identity creation", label, t)
+                        ShieldedUsernameNameStatus.NOT_REGISTERED to (t.message ?: "name registration failed")
+                    }
+                    else -> {
+                        log.error("DPNS registration of '{}' outcome unconfirmed after identity creation", label, t)
+                        ShieldedUsernameNameStatus.AMBIGUOUS to (t.message ?: "name registration ambiguous")
+                    }
+                }
+                // Leave the creation state at the registering state. A provably
+                // pre-broadcast rejection (NOT_REGISTERED) is a GENUINE, terminal
+                // failure for this attempt — stamp the error so the home tile shows
+                // the retryable error card. An AMBIGUOUS (unconfirmed) outcome is
+                // the self-healing case (the restore worker re-checks the on-chain
+                // name before re-registering, never a double-register/re-fund), so
+                // DON'T stamp a hard error — keep the sticky non-terminal
+                // "unconfirmed, will reconcile on sync" registering state. The
+                // ambiguous reason is still returned in the outcome for logging.
+                val errorForTile = if (status == ShieldedUsernameNameStatus.AMBIGUOUS) null else reason
+                try {
+                    driveCreationState(registeringState, errorForTile)
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+                }
+                status to reason
             }
-            status to reason
+        }
+    }
+
+    /** A contended name not submitted: already the identity's ([taken] true), or unreadable (null). */
+    private suspend fun skippedName(
+        label: String,
+        taken: Boolean?,
+        registeringState: IdentityCreationState,
+        registeredState: IdentityCreationState
+    ): Pair<ShieldedUsernameNameStatus, String?> {
+        val reason = if (taken == true) null else "could not check '$label' before registering it"
+        if (taken == true) log.info("'{}' is already this identity's; not submitting it again", label)
+        try {
+            driveCreationState(if (taken == true) registeredState else registeringState, reason)
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            log.warn("failed to record DPNS state for '{}'", label, e)
+        }
+        return if (taken == true) {
+            ShieldedUsernameNameStatus.REGISTERED to null
+        } else {
+            ShieldedUsernameNameStatus.NOT_REGISTERED to reason
         }
     }
 
