@@ -696,6 +696,89 @@ class L1ShadowSyncServiceTest {
         assertEquals(FilterStallWatchdogDecider.Decision.EXHAUSTED, check(120 * 60_000L))
     }
 
+    @Test
+    fun filterStall_standsDownOnExhaustion_untilTheCursorMoves() {
+        // The replay wake lock reads this: a wedge every restart failed to cure
+        // must not keep the CPU awake, and the first sign of life must give the
+        // lock back to the replay.
+        val d = stallDecider()
+        val stuck = 1_500_000L // more than one commit batch behind
+        val target = 1_556_896L
+        fun check(atMs: Long, height: Long = stuck, lastEventMs: Long = 0L) =
+            d.onCheck(atMs, height, target, lastWalletEventMs = lastEventMs, walletSyncedHeight = stuck)
+
+        check(0L)
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(10 * 60_000L + 1))
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(30 * 60_000L + 2))
+        assertEquals(FilterStallWatchdogDecider.Decision.RESTART, check(60 * 60_000L + 3))
+        assertFalse("restarts still in hand: not standing down", d.standingDown)
+        assertEquals(FilterStallWatchdogDecider.Decision.EXHAUSTED, check(120 * 60_000L))
+        assertTrue(d.standingDown)
+
+        // Wallet events arriving again: the engine is alive.
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(121 * 60_000L, lastEventMs = 121 * 60_000L))
+        assertFalse(d.standingDown)
+
+        // A later wedge with the budget spent: no restart, no second report,
+        // but standing down again.
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(200 * 60_000L))
+        assertTrue(d.standingDown)
+
+        // The cursor moves: cleared.
+        check(201 * 60_000L, height = stuck + 1)
+        assertFalse(d.standingDown)
+
+        // Not behind any more: cleared too.
+        check(300 * 60_000L, height = stuck + 1)
+        assertTrue(d.standingDown)
+        d.onCheck(301 * 60_000L, target, target, lastWalletEventMs = 0L)
+        assertFalse(d.standingDown)
+
+        // An engine stop clears it: the next run's replay must not inherit it.
+        check(400 * 60_000L)
+        check(500 * 60_000L)
+        assertTrue(d.standingDown)
+        d.onEngineStopped()
+        assertFalse(d.standingDown)
+    }
+
+    @Test
+    fun filterStall_aRunRestartedAtTheStoodDownHeight_getsAFullStallWindow() {
+        // PastaClaw on #1632: the stop cleared the flag but kept the old run's
+        // timing, so a new run resuming at the same height was judged "still
+        // since long ago" on its first check and stood down at once — the
+        // replay losing its wake lock about a minute into the restart.
+        val d = stallDecider()
+        val stuck = 1_500_000L // more than one commit batch behind
+        val target = 1_556_896L
+        fun check(atMs: Long) =
+            d.onCheck(atMs, stuck, target, lastWalletEventMs = 0L, walletSyncedHeight = stuck)
+
+        check(0L)
+        check(10 * 60_000L + 1)
+        check(30 * 60_000L + 2)
+        check(60 * 60_000L + 3)
+        assertEquals(FilterStallWatchdogDecider.Decision.EXHAUSTED, check(120 * 60_000L))
+        assertTrue(d.standingDown)
+
+        // Stopped, down for hours, restarted with the durable watermark at the
+        // same height.
+        d.onEngineStopped()
+        val restartedAt = 600 * 60_000L
+
+        // The new run's first check, and every check inside the stall window
+        // (30 min: the budget is spent, so the last rung's wait applies).
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(restartedAt + 60_000L))
+        assertFalse("the new run starts its own stall window", d.standingDown)
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(restartedAt + 30 * 60_000L))
+        assertFalse(d.standingDown)
+
+        // Still at the same height past the window: a real wedge of this run.
+        // No restart (the budget is per process), but standing down again.
+        assertEquals(FilterStallWatchdogDecider.Decision.NONE, check(restartedAt + 31 * 60_000L + 1))
+        assertTrue(d.standingDown)
+    }
+
 
     @Test
     fun filterStall_anUnknownWatermarkIsTreatedAsFarFromTheTip() {

@@ -1306,6 +1306,90 @@ internal class FilterStallWatchdogDecider(
     private var finalBatchReportedAtMs = 0L
 
     /**
+     * True while the watchdog has STOOD DOWN on a wedge: every restart it was
+     * willing to spend is gone and the cursor is still confirmed stalled (the
+     * [Decision.EXHAUSTED] report, or a later stall past the threshold with
+     * the budget already spent). Cleared the moment the cursor moves, the scan
+     * stops being behind, or the wallet-event stream shows the engine alive.
+     * Read by the blockchain service from another thread: a wedged engine is
+     * no reason to keep the CPU awake — and the moment it clears, the replay
+     * needs the CPU back at once ([standDownClears]).
+     */
+    var standingDown: Boolean
+        get() = _standingDown.value
+        private set(value) {
+            synchronized(transitionLock) {
+                if (_standingDown.value != value) {
+                    _standingDown.value = value
+                    if (!value) _standDownClears.value = _standDownClears.value + 1
+                }
+            }
+        }
+    private val transitionLock = Any()
+    private val _standingDown = MutableStateFlow(false)
+    private val _standDownClears = MutableStateFlow(0L)
+
+    /**
+     * How many times [standingDown] has gone from true to false — counted, not
+     * mirrored, so a clear is never lost to conflation. A `StateFlow<Boolean>`
+     * of the flag collapses clear → re-wedge → clear into the value a delayed
+     * collector already saw, and the recovery after the second wedge went
+     * unnoticed. This only ever increases: any change a collector sees means
+     * at least one clear happened since its last look.
+     */
+    val standDownClears: StateFlow<Long> = _standDownClears.asStateFlow()
+
+    /** The filter cursor the watchdog stood down at; written before [standingDown] goes true. */
+    @Volatile
+    private var stoodDownAtHeight: Long = -1L
+
+    private fun standDownAt(filterHeight: Long) {
+        stoodDownAtHeight = filterHeight
+        standingDown = true
+    }
+
+    /**
+     * The event-driven half of the clear. [onCheck] runs on the watchdog's
+     * one-minute delay, which (like ACTION_TIME_TICK) only advances while the
+     * CPU is awake, so a recovery noticed there could wait out several brief
+     * wakes with the replay unprotected. The progress feed and the wallet-event
+     * tap see the engine move as it happens: a filter cursor off the height the
+     * watchdog stood down at, or any wallet event (the same liveness rule
+     * [onCheck] applies), ends the stand-down at once. Only [standingDown] is
+     * touched, so this is safe from those collectors' threads; [onCheck]
+     * re-times the next spell itself. A 0 height is a snapshot with no filter
+     * position (IDLE / CONNECTING), not movement.
+     */
+    fun onFilterProgress(filterHeight: Long) {
+        if (standingDown && filterHeight > 0L && filterHeight != stoodDownAtHeight) standingDown = false
+    }
+
+    /** See [onFilterProgress]. */
+    fun onWalletEvent() {
+        if (standingDown) standingDown = false
+    }
+
+    /**
+     * The engine stopped. [onCheck] only runs while it is up, so without this
+     * a wedge of the previous run would still read as current after a restart,
+     * until the new run's first check. The restart budget is NOT reset: it is
+     * per process, and a re-wedge sets [standingDown] again on its own.
+     *
+     * The stall TIMING is per run, so it is dropped too. Kept, a run restarted
+     * at the height the last one stood down at reads as "same cursor, still
+     * since long ago" on its first check, and stands down again within a
+     * minute — the replay losing its wake lock with none of the stall window
+     * spent. Synchronized with [onCheck]: a check still in flight on the
+     * cancelled watchdog cannot write the old run's baseline back after this.
+     */
+    @Synchronized
+    fun onEngineStopped() {
+        lastHeight = -1L
+        lastAdvanceMs = 0L
+        standingDown = false
+    }
+
+    /**
      * The threshold the last decision was taken against, and how long the
      * cursor had actually sat still. Exposed so the log can state what
      * happened instead of a constant — the two tiers mean the constant is
@@ -1364,6 +1448,7 @@ internal class FilterStallWatchdogDecider(
      *   withdrawn, because the value it was read from is the in-memory cursor,
      *   not this one. 0 when unknown.
      */
+    @Synchronized
     fun onCheck(
         nowMs: Long,
         filterHeight: Long,
@@ -1376,11 +1461,13 @@ internal class FilterStallWatchdogDecider(
             // Caught up, or the target is not known yet. Nothing to stall on,
             // and the next spell of being behind must be timed from scratch.
             lastHeight = -1L
+            standingDown = false
             return Decision.NONE
         }
         if (filterHeight != lastHeight) {
             lastHeight = filterHeight
             lastAdvanceMs = nowMs
+            standingDown = false
             // A moving cursor ends the park. The final-batch report is PER
             // PARK, not per process: the next park earns its own report and
             // its own restart hold. (CodeRabbit on #1568: as a process-lifetime
@@ -1437,6 +1524,7 @@ internal class FilterStallWatchdogDecider(
         // cheap guard against the case it names; the BACKOFF above is what
         // limits the damage when a stall is one the watchdog cannot cure.
         if (lastWalletEventMs > 0L && nowMs - lastWalletEventMs < threshold) {
+            standingDown = false
             return Decision.NONE
         }
         // A CONFIRMED stall, so it is now worth asking WHICH stall — because for
@@ -1471,9 +1559,15 @@ internal class FilterStallWatchdogDecider(
             }
             !exhaustedReported -> {
                 exhaustedReported = true
+                standDownAt(filterHeight)
                 Decision.EXHAUSTED
             }
-            else -> Decision.NONE
+            else -> {
+                // The budget is per process: a later wedge gets no restart and
+                // no second report, but it is still a wedge.
+                standDownAt(filterHeight)
+                Decision.NONE
+            }
         }
     }
 
@@ -2488,6 +2582,12 @@ class L1ShadowSyncService internal constructor(
     private var externalStopGeneration = 0L
 
     /**
+     * The current [externalStopGeneration], for a start decided outside this
+     * class (the bind-heal waiter) to pass back to [startIfEnabled].
+     */
+    fun stopGeneration(): Long = externalStopGeneration
+
+    /**
      * When the engine last delivered ANY wallet event, monotonic-ish wall
      * clock via [nowMs]; 0 until the first one of this run.
      *
@@ -2509,6 +2609,20 @@ class L1ShadowSyncService internal constructor(
      * reads it so that tail does not raise "unable to connect".
      */
     fun lastEngineActivityMs(): Long = lastWalletEventMs
+
+    /**
+     * Whether the filter-stall watchdog has stood down on a wedged filter
+     * cursor ([FilterStallWatchdogDecider.standingDown]): the replay reads as
+     * in progress, but nothing this process will do moves it. The blockchain
+     * service stops holding the CPU awake for it.
+     */
+    fun filterScanWedged(): Boolean = filterStallDecider.standingDown
+
+    /**
+     * Counts [filterScanWedged] clearing ([FilterStallWatchdogDecider.standDownClears]):
+     * the blockchain service re-takes the replay wake lock on every increase.
+     */
+    val filterScanWedgeClears: StateFlow<Long> get() = filterStallDecider.standDownClears
 
     /**
      * When the in-flight engine start began, on [nowMs]'s clock; 0 when no
@@ -3254,6 +3368,7 @@ class L1ShadowSyncService internal constructor(
                 durableSyncedHeight = 0L
             }
             lastWalletEventMs = 0L // a fresh run must not inherit this run's liveness
+            filterStallDecider.onEngineStopped() // …nor its wedge (the watchdog only runs while up)
             lastStopAtMs = nowMs()
             stopCount++
             log.info(
@@ -3428,6 +3543,7 @@ class L1ShadowSyncService internal constructor(
                         sessionFilterStart = sessionFilterStart
                     )
                     _progress.value = mapped
+                    filterStallDecider.onFilterProgress(mapped.filterHeight)
                     // Verification verdict from the chain state: still
                     // scanning until SYNCED, then "probing" until a parity
                     // probe upgrades to VERIFIED (which progress ticks must
@@ -3558,6 +3674,7 @@ class L1ShadowSyncService internal constructor(
                     // any parsing: an event the parsers all drop still proves
                     // the engine is alive and producing.
                     lastWalletEventMs = nowMs()
+                    filterStallDecider.onWalletEvent()
                     // Chainlock feed first: it rides the SAME event stream but
                     // on OTHER variants (ChainLockProcessed / BlockProcessed),
                     // which parseL1TxEvent drops. Monotonic — a replayed or

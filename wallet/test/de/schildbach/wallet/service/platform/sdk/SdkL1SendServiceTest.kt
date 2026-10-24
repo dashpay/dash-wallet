@@ -253,7 +253,9 @@ class SdkL1SendServiceTest {
         headerHeight = 1_500_000,
         headerTarget = 1_500_000,
         filterHeight = 1_500_000,
-        filterTarget = 1_500_000
+        filterTarget = 1_500_000,
+        // A known wallet cursor at the tip: an unknown one closes the gate.
+        walletSyncedHeight = 1_500_000
     )
 
     private var selfSpendMarks = 0
@@ -768,6 +770,18 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun gateClosed_waitingForPeers_withThePreviousSessionsHeights_isNotBroadcast() = runBlocking {
+        // PastaClaw on #1632: WAITING_FOR_CONNECTIONS maps to CONNECTING while
+        // the snapshot keeps heights that read caught up.
+        val source = readySource()
+        val connecting = caughtUpProgress().copy(phase = ShadowSyncPhase.CONNECTING)
+        val result = service(source, progress = { connecting })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
     fun gateClosed_scanNotCaughtUp_isNotBroadcast() = runBlocking {
         val source = readySource()
         // Every genuinely-not-caught-up shape closes the gate: headers still
@@ -815,6 +829,45 @@ class SdkL1SendServiceTest {
             "the reason must name the pipeline, not the scan: $reason",
             reason.contains("processing matched blocks")
         )
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun gateClosed_unknownWalletCursor_atTheTip_isNotBroadcast() = runBlocking {
+        // PastaClaw on #1632: filters at the tip, but no evidence the matched
+        // blocks were applied — the UTXO view may still miss a spend.
+        val source = readySource()
+        val unknownCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
+        val result = service(source, progress = { unknownCursor })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains("cursor is not known"))
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun gateClosed_aggregateRuleOnly_withUnknownWalletCursor_isNotBroadcast() = runBlocking {
+        // The §34 shape: filters 2,167 short of the tip, the aggregate at
+        // 99.954% (the DISPLAY's iOS rule calls that synced), and the wallet
+        // cursor unknown, so the pipeline veto has no evidence to act on. The
+        // unscanned blocks can hold a spend of a UTXO this wallet still reads
+        // unspent; the send gate must keep the height rule.
+        val source = readySource()
+        val aggregateOnly = caughtUpProgress().copy(
+            headerHeight = 1_558_166, headerTarget = 1_558_166,
+            filterHeight = 1_555_999, filterTarget = 1_558_166, overallPercent = 0.99954,
+            walletSyncedHeight = 0
+        )
+        assertTrue("fixture must read caught up for the display", aggregateOnly.scanCaughtUpToTip)
+        assertFalse("…with no pipeline evidence", aggregateOnly.blockPipelineLagging)
+
+        val result = service(source, progress = { aggregateOnly })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains("short of the chain tip"))
         assertEquals(0, source.sendCalls)
     }
 
