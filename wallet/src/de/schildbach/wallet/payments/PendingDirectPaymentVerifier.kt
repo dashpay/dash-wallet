@@ -167,6 +167,13 @@ class PendingDirectPaymentVerifier @Inject constructor(
      */
     @VisibleForTesting internal var afterReleaseLocked: suspend () -> Unit = {}
 
+    /**
+     * Test seam: runs in a watch that has judged its payment invalidated, before it settles that
+     * under the funding-selection and record locks: the window in which a resubmission can
+     * reactivate the payment or a quarantine rewrite it.
+     */
+    @VisibleForTesting internal var beforeInvalidationSettled: suspend () -> Unit = {}
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val scanMutex = Mutex()
 
@@ -932,8 +939,15 @@ class PendingDirectPaymentVerifier @Inject constructor(
                 // The only other way out: a confirmed transaction spends one of its inputs, so it
                 // can never confirm and the payee can no longer be paid with it. Until then its
                 // record stays, and with it the block on its invoice (review 9fa90c30ccf1).
-                if (isInvalidated(tx, origin) && discardInvalidated(tx, current, origin)) {
-                    return null
+                if (isInvalidated(tx, origin)) {
+                    beforeInvalidationSettled()
+                    val now = discardInvalidated(tx, current, origin) ?: return null
+                    if (now.revision != current.revision) {
+                        // superseded: decide again from the newer record next round
+                        current = now
+                        delay(pollIntervalMs)
+                        continue
+                    }
                 }
 
                 val now = System.currentTimeMillis()
@@ -1189,27 +1203,64 @@ class PendingDirectPaymentVerifier @Inject constructor(
     /**
      * Drops a payment that can never confirm: its inputs are freed, its reservation given back,
      * everything recorded for it (gift cards, metadata, queued platform changes) removed, and then
-     * its record, which lifts the block on its invoice. Returns false, keeping the record and the
-     * watch for the next round, when the records could not be removed.
+     * its record, which lifts the block on its invoice.
+     *
+     * Settled inside the same boundary a reactivation uses: a SHARED hold on the
+     * [FundingSelectionLock] (so a reactivation's exclusive section is never interleaved with it),
+     * then [recordMutex], under which the stored record is read again. Like [release], it acts
+     * only on the record it decided on: a record rewritten since ([PendingDirectPayment.revision]),
+     * say reactivated by a resubmission, is left exactly as it is (no unlock, no reservation
+     * release, no forget, no removal) and the watch carries on from it; the next round decides
+     * again from the record as it is now.
+     *
+     * @return null when the watch has nothing left to do (discarded here, or settled meanwhile),
+     *   otherwise the record to carry on watching: [payment] itself when its records could not be
+     *   removed yet, or the newer record that superseded it
      */
-    private suspend fun discardInvalidated(tx: Transaction, payment: PendingDirectPayment, origin: Wallet): Boolean {
-        log.info("{} can never confirm: a confirmed transaction spends one of its inputs; dropping it", tx.txId)
-        if (stillOwnedBy(origin)) {
+    private suspend fun discardInvalidated(
+        tx: Transaction,
+        payment: PendingDirectPayment,
+        origin: Wallet
+    ): PendingDirectPayment? = fundingSelection.withShared {
+        var heldReservation: SdkDeferredPayment? = null
+        val outcome = recordMutex.withLock {
+            currentCoroutineContext().ensureActive()
+            if (!stillOwnedBy(origin)) {
+                // the wipe owns everything of this wallet now
+                return@withLock null
+            }
+            val stored = config.getAllOrThrow().firstOrNull { it.txId == tx.txId }
+            if (stored == null || tx.txId in pendingRemovals) {
+                log.info("{} was settled while its invalidation was under way; nothing to discard", tx.txId)
+                jobs.remove(tx.txId)
+                return@withLock null
+            }
+            if (stored.revision != payment.revision) {
+                log.info("{} was rewritten while its invalidation was under way; not discarding it", tx.txId)
+                return@withLock stored
+            }
+            log.info("{} can never confirm: a confirmed transaction spends one of its inputs; dropping it", tx.txId)
             unlockInputs(origin, tx)
+            heldReservation = reservations.remove(tx.txId)
+            val forgotten = try {
+                metadataProvider.forgetTransaction(payment.txId.toTxId())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.error("could not discard the records of invalidated payment {}", payment.txId, e)
+                false
+            }
+            if (!forgotten) {
+                log.warn("records of invalidated payment {} are still present, retrying", payment.txId)
+                return@withLock payment
+            }
+            removeRecord(payment.txId)
+            jobs.remove(payment.txId)
+            null
         }
-        reservations.remove(tx.txId)?.let { engine.release(it) }
-        val settled = try {
-            metadataProvider.forgetTransaction(payment.txId.toTxId())
-        } catch (e: Exception) {
-            log.error("could not discard the records of invalidated payment {}", payment.txId, e)
-            false
-        }
-        if (!settled) {
-            log.warn("records of invalidated payment {} are still present, retrying", payment.txId)
-            return false
-        }
-        finish(payment)
-        return true
+        // Given back to the engine outside the record lock, as release() does.
+        heldReservation?.let { engine.release(it) }
+        outcome
     }
 
     /**

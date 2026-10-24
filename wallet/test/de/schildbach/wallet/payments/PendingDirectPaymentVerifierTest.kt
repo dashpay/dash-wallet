@@ -2246,4 +2246,66 @@ class PendingDirectPaymentVerifierTest {
         withTimeout(5_000) { while (stored.isNotEmpty()) delay(10) }
         assertTrue(interleaved)
     }
+
+    // --- invalidation settles under the reactivation boundary, only for the record it judged ---
+
+    /** Released and watched, with [tx]'s first invalidation check answering yes, later ones no. */
+    private suspend fun releasedAndThenInvalidatedOnce(tx: Transaction): MutableList<PendingDirectPayment> {
+        verifier.minAgeMs = 0L
+        verifier.syncedGraceMs = 100L
+        val (stored, _) = storeWithFlakyRemovals()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", reservation = reservationFor(tx))
+        goOnlineAndSynced()
+        withTimeout(5_000) { while (!stored.single().abandoned) delay(10) }
+        // no further releases while the test looks
+        verifier.syncedGraceMs = 60_000L
+        val asked = AtomicInteger(0)
+        coEvery { engine.inputSpentByFinalConflict(any()) } answers { asked.getAndIncrement() == 0 }
+        return stored
+    }
+
+    @Test
+    fun `an invalidation judged before a reactivation never undoes the reactivation`() = runBlocking {
+        val tx = createTransaction()
+        val reactivated = CompletableDeferred<PendingDirectPaymentVerifier.Reactivation>()
+        verifier.beforeInvalidationSettled = {
+            if (!reactivated.isCompleted) {
+                // a resubmission reactivates T1 after the watch judged it invalidated
+                val outcome = async(Dispatchers.Default) { verifier.reactivateForResubmission(tx, wallet) }
+                withContext(NonCancellable) { reactivated.complete(outcome.await()) }
+            }
+        }
+        val stored = releasedAndThenInvalidatedOnce(tx)
+
+        assertEquals(PendingDirectPaymentVerifier.Reactivation.REACTIVATED, withTimeout(5_000) { reactivated.await() })
+        delay(300)
+
+        assertFalse("still active", stored.single().abandoned)
+        tx.inputs.forEach { assertTrue("its inputs stay locked", wallet.isLockedOutput(it.outpoint)) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
+        assertTrue("watched", verifier.isTracked(tx.txId))
+    }
+
+    @Test
+    fun `an invalidation decided on an older record never discards the record written since`() = runBlocking {
+        val tx = createTransaction()
+        val rewritten = CompletableDeferred<PendingDirectPayment>()
+        lateinit var stored: MutableList<PendingDirectPayment>
+        verifier.beforeInvalidationSettled = {
+            if (!rewritten.isCompleted) {
+                // a quarantine of the same transaction rewrites it active and keeps this watch
+                verifier.quarantine(tx, paymentUrl, "CTXSpend")
+                rewritten.complete(stored.single())
+            }
+        }
+        stored = releasedAndThenInvalidatedOnce(tx)
+
+        val current = withTimeout(5_000) { rewritten.await() }
+        delay(300)
+
+        assertEquals("left exactly as written", current, stored.single())
+        tx.inputs.forEach { assertTrue("its inputs stay locked", wallet.isLockedOutput(it.outpoint)) }
+        coVerify(exactly = 0) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
+        assertTrue("still watched", verifier.isTracked(tx.txId))
+    }
 }
