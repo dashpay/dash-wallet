@@ -7,7 +7,7 @@ need() { "$@" || { echo "FAIL: setup: $*" >&2; exit 1; }; }
 P=${1:-"$(cd "$(dirname "$0")" && pwd)/prereview.sh"}; T=$(mktemp -d "${TMPDIR:-/tmp}/prtest.XXXXXX") || exit 1; export XDG_CACHE_HOME="$T/cache"; FAILS=0
 [[ -n "${KEEP:-}" ]] || trap 'chmod -R u+w "$T" 2>/dev/null; rm -rf "$T"' EXIT   # this run's folder only, writable again first (the chmod tests); KEEP=1 leaves it for a look
 # the cases set these themselves: an inherited API key would pass the logged-out case, a base or timeout would move others
-unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_DURING FAKE_MCP_RC FAKE_FEAT_RC FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
+unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_DURING FAKE_MCP_RC FAKE_FEAT_RC FAKE_FEAT_ROWS FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
 # the caller's git configuration stays out too: a global core.hooksPath would make the fixture's --install and
 # --uninstall write to, and delete from, the caller's real hooks folder
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
@@ -23,6 +23,7 @@ cat > "$T/bin/codex" <<'EOF'
 [[ "$1" == --version ]] && { echo "codex-cli ${FAKE_VERSION:-0.163.0}"; exit 0; }
 [[ "$1" == login ]] && exit "${FAKE_LOGIN_RC:-0}"
 if [[ " $* " == *" features list "* ]]; then   # the six capabilities, each off when its -c features.<name>=false came
+  [[ -n "${FAKE_FEAT_ROWS:-}" ]] && { printf '%b' "$FAKE_FEAT_ROWS"; exit 0; }   # a listing given verbatim (malformed ones)
   for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do
     if [[ -n "${FAKE_FEAT_STUBBORN:-}" || " $* " != *" features.$n=false "* ]]; then echo "$n stable true"; else echo "$n stable false"; fi
   done; exit "${FAKE_FEAT_RC:-0}"   # FAKE_FEAT_RC: a failing probe that still printed every row as off
@@ -150,6 +151,11 @@ ok "  … an http server gets an entry of its own transport (a stdio one next to
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
 FAKE_MCP_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex mcp list fails (exit 1, even with a list printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
 FAKE_FEAT_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex features list fails (exit 1, every row printed as off) → not reviewed (exit 2)" "$?:$(V)" 2:none
+DUP=""; for k in 1 2 3 4 5 6 7; do DUP+="apps stable false\\n"; done
+FAKE_FEAT_ROWS="$DUP" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … seven copies of one capability, the others missing → not reviewed (exit 2)" "$?:$(V)" 2:none
+ALL=""; for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do ALL+="$n stable false\\n"; done
+FAKE_FEAT_ROWS="${ALL}apps stable false\\n" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … all seven off but one listed twice → not reviewed (exit 2)" "$?:$(V)" 2:none
+FAKE_FEAT_ROWS="$ALL" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … each of the seven exactly once and off → reviewed" "$?:$(V)" 0:clean
 FAKE_MCP="docs.internal|http,npm:@scope/seq.thinking" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "  … names with . : @ / (accepted by codex) are switched off too, both transports" "$?:$(grep -c -e '"docs.internal" = { url = ' -e '"npm:@scope/seq.thinking" = { command = ' "$T/cdir.args")" 0:1
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1

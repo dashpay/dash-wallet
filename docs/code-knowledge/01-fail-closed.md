@@ -19,8 +19,8 @@ and #1576 had 5.
 **1.2 Never make a safety decision with `BaseConfig.get()` / `observe()`.** `BaseConfig.data` catches `IOException`
 and emits `emptyPreferences()`, so a failed read looks exactly like "key not set". This trap was hit in #1621, #1616,
 #1608, #1607 and #1570.
-- Use `observePreservingErrors(KEY)` or `cutoverCommittedOrThrow()` (and `getPreservingErrors()` / `getAllOrThrow()`,
-  which arrive with the open #1607 and #1616) for
+- Use `observePreservingErrors(KEY)` or `cutoverCommittedOrThrow()` (and `getPreservingErrors()`; `getAllOrThrow()`
+  arrives with the still-open #1616) for
   any flag or marker whose absence *means something*. Examples: cutover ownership, reconcile/migration markers, recovery
   checkpoints, `USE_KOTLIN_SDK_*` flags that gate money paths.
 - A `Flow<Boolean?>` where `null` = unreadable is fine. The UI shows "pending" and the gate stays closed.

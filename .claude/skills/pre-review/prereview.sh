@@ -240,7 +240,11 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
     -c features.hooks=false)   # lifecycle hooks: run outside the sandbox, in the clone, from the user's trusted config
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex "${feat_off[@]}" features list > "$probe" 2>/dev/null \
     || { say "codex features list failed, so the capabilities' state is unknown: not reviewing"; return 2; }
-  if [[ "$(awk '$1 ~ /^(apps|browser_use|browser_use_external|browser_use_full_cdp_access|computer_use|in_app_browser|hooks)$/ && $NF == "false"' "$probe" | wc -l | tr -d ' ')" != 7 ]]; then
+  # each of the seven exactly once, and off: a count of "false" rows alone passes seven copies of one of them
+  if ! awk 'BEGIN { split("apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks", w, " ")
+                    for (i in w) want[w[i]] = 1 }
+            $1 in want { if ($NF != "false" || ++seen[$1] > 1) bad = 1 }
+            END { for (k in want) if (seen[k] != 1) bad = 1; exit bad }' "$probe"; then
     say "a codex capability outside the sandbox (apps, browser or computer use, lifecycle hooks) does not read back as off: not reviewing"; return 2
   fi
   # the model's scratch: its own folder (TMPDIR below), not the shared temp dirs where other reviews keep their files

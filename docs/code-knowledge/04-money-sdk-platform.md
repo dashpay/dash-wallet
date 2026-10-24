@@ -129,7 +129,7 @@ arrives.**
 - READY means "first pass done", not "this spend settled".
 
 **4.34 Gate fresh money-moving actions with one policy, enforced in the service as well as in every UI entry** (#1607
-`cutoverCommitted()`, per-route `MixedFundsRoutes`; #1607 is still open).
+`cutoverCommitted()`, per-route `MixedFundsRoutes`).
 
 **4.35 Require PIN/biometric authentication before every fresh spend.** The SDK signs with a stored mnemonic resolver
 (DEVICE_BOUND), so an unlocked session authorizes nothing. Resuming an in-flight spend stays auth-free (#1607).
