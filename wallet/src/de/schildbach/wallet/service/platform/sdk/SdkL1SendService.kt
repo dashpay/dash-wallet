@@ -503,6 +503,12 @@ class SdkDeferredPayment internal constructor(
      * remaining life against; wall-clock time is no bound on how fast blocks arrive.
      */
     val reservedAtHeight: Long? = null,
+    /**
+     * The SDK wallet the inputs were reserved in, stamped by [SdkL1SendService] when it built
+     * this. The reservation is consumed (broadcast) or released only while that wallet is still
+     * the bound one; null (not built by the service) is never broadcast.
+     */
+    val walletIdHex: String? = null,
 )
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -1273,8 +1279,28 @@ class SdkL1SendService internal constructor(
         null
     }
 
-    private fun SdkDeferredPayment.withReservedAtHeight(height: Long?) =
-        SdkDeferredPayment(txidHex, rawTxBytes, feeDuffs, native, reservedAtMs, height)
+    private fun SdkDeferredPayment.stamped(walletIdHex: String, height: Long?) =
+        SdkDeferredPayment(txidHex, rawTxBytes, feeDuffs, native, reservedAtMs, height, walletIdHex)
+
+    /**
+     * Why the SDK must not act for [expectedWalletIdHex] right now, or null when it may: asked
+     * under the shared funding hold, so a wipe (which cancels and drains every hold first) cannot
+     * swap the bound wallet between this answer and the SDK call that follows. The SDK always
+     * acts on whichever wallet is bound; a reservation, a send or a build decided for one wallet
+     * must never land on another.
+     */
+    private suspend fun boundWalletRefusal(expectedWalletIdHex: String?): String? = try {
+        val bound = source.boundWalletIdOrNull()
+        when {
+            expectedWalletIdHex == null -> "no SDK wallet recorded for this payment"
+            bound != expectedWalletIdHex -> "the SDK's bound wallet is no longer the one this payment was made on"
+            else -> null
+        }
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("SDK bind lookup failed under the funding hold; refusing", t)
+        "SDK bootstrap/bind lookup failed"
+    }
 
     private fun paymentStillConfirming(operation: String) =
         org.dash.wallet.common.services.PaymentStillConfirmingException(
@@ -1406,11 +1432,6 @@ class SdkL1SendService internal constructor(
             }
         }
 
-        // Call-site pre-send conditions (may throw, e.g. LeftoverBalanceException) —
-        // deliberately outside the classification try: nothing broadcast yet
-        // and the dashj path surfaces the same throw the same way.
-        beforeBroadcast()
-
         val sendAllFloor = if (emptyWallet) {
             // Send-all floor (iOS-validated max pattern): pooled spendable −
             // size-based fee reserve. The pooled ALL_SPENDABLE drain delivers
@@ -1451,10 +1472,19 @@ class SdkL1SendService internal constructor(
         // Re-asked under the shared selection lock and held through selection and the
         // reservation or broadcast: a resubmission reactivating an uncertain payment takes
         // the same lock, so its inputs are never selected while it is active (review 4309551218).
-        return fundingSelection.withShared {
+        return withSharedOrNotBroadcast(operation) {
             if (pendingPaymentInputsExposed()) {
-                return@withShared notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
+                return@withSharedOrNotBroadcast notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
             }
+            // Call-site pre-send conditions (may throw, e.g. LeftoverBalanceException; the
+            // caller's own check that the wallet it confirmed on is still installed) — under the
+            // hold, which a wipe cancels and drains first, and deliberately outside the
+            // classification try: nothing broadcast yet and the dashj path surfaces the same
+            // throw the same way.
+            beforeBroadcast()
+            // Last, right before the SDK call: the wallet bound now is still the one this send
+            // was decided for.
+            boundWalletRefusal(walletIdHex)?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
             try {
                 val txidHex = if (sendAllFloor != null) {
                     // ONE core-send-lock acquisition across BOTH drain attempts:
@@ -1581,10 +1611,11 @@ class SdkL1SendService internal constructor(
         // Re-asked under the shared selection lock and held through selection and the
         // reservation or broadcast: a resubmission reactivating an uncertain payment takes
         // the same lock, so its inputs are never selected while it is active (review 4309551218).
-        return fundingSelection.withShared {
+        return withSharedOrNotBroadcast(operation) {
             if (pendingPaymentInputsExposed()) {
-                return@withShared notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
+                return@withSharedOrNotBroadcast notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
             }
+            boundWalletRefusal(walletIdHex)?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
             try {
                 val txidHex = source.withCoreSendLock(walletIdHex) {
                     source.drainCoinJoinToAddress(walletIdHex, address, COIN_JOIN_DRAIN_FLOOR_DUFFS)
@@ -1626,7 +1657,15 @@ class SdkL1SendService internal constructor(
      * returns; follow with exactly one of [broadcastDeferredPayment]
      * (merchant acked) or [releaseDeferredPayment] (abandoned/nacked).
      */
-    suspend fun buildDeferredPayment(recipients: List<Pair<String, Long>>): SdkDeferredPayment {
+    suspend fun buildDeferredPayment(
+        recipients: List<Pair<String, Long>>,
+        /**
+         * Whether the wallet the payment was confirmed on is still the installed one: asked under
+         * the funding hold, right before the SDK selects and reserves, so a wipe cannot slip in
+         * between the answer and the build.
+         */
+        stillOwned: suspend () -> Boolean
+    ): SdkDeferredPayment {
         check(recipients.isNotEmpty()) { "BIP70 payment has no outputs" }
         if (pendingPaymentInputsExposed()) throw paymentStillConfirming("l1DeferredBuild")
         val trimmed = recipients.map { (address, amountDuffs) ->
@@ -1647,7 +1686,9 @@ class SdkL1SendService internal constructor(
         // (review 4309551218).
         val payment = fundingSelection.withShared {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("l1DeferredBuild")
-            source.buildDeferredPayment(walletIdHex, trimmed).withReservedAtHeight(reservedAtHeight)
+            check(stillOwned()) { "the wallet this payment was confirmed on has been wiped; not building it" }
+            boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
+            source.buildDeferredPayment(walletIdHex, trimmed).stamped(walletIdHex, reservedAtHeight)
         }
         log.info(
             "SDK l1DeferredBuild: built {} ({} recipient(s), fee {} duffs), inputs reserved",
@@ -1777,7 +1818,9 @@ class SdkL1SendService internal constructor(
         vaultAddressBase58: String,
         vaultDuffs: Long,
         memo: ByteArray,
-        isMaxDeposit: Boolean = false
+        isMaxDeposit: Boolean = false,
+        /** As for [buildDeferredPayment]: asked under the funding hold, right before the build. */
+        stillOwned: suspend () -> Boolean
     ): SdkDeferredPayment {
         // Every build names its own amount now, max included.
         check(vaultDuffs > 0) { "Maya vault amount must be positive, got $vaultDuffs" }
@@ -1821,9 +1864,11 @@ class SdkL1SendService internal constructor(
         // (review 4309551218).
         val payment = fundingSelection.withShared {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("mayaDepositBuild")
+            check(stillOwned()) { "the wallet this deposit was confirmed on has been wiped; not building it" }
+            boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
             source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
         }
-            .withReservedAtHeight(reservedAtHeight)
+            .stamped(walletIdHex, reservedAtHeight)
         log.info(
             "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
             payment.txidHex,
@@ -1844,16 +1889,46 @@ class SdkL1SendService internal constructor(
      * success like every other SDK broadcast. Deliberately NO bridge hook
      * here — the BIP70 caller bridges synchronously with the raw bytes it
      * already holds.
+     *
+     * Runs under a shared funding hold (reentrant: a caller already holding one passes through),
+     * so a wipe, which cancels and drains every hold before it swaps the wallet, is serialized
+     * with it. Under that hold it refuses (NotBroadcast) unless the SDK's bound wallet is still
+     * the one [payment] was reserved in ([SdkDeferredPayment.walletIdHex]) and [stillOwned] says
+     * the wallet it was confirmed on is still installed: a check made by the caller beforehand
+     * leaves a window in which a wipe could install a replacement.
      */
-    suspend fun broadcastDeferredPayment(payment: SdkDeferredPayment): SdkWriteResult<String> {
+    suspend fun broadcastDeferredPayment(
+        payment: SdkDeferredPayment,
+        stillOwned: suspend () -> Boolean
+    ): SdkWriteResult<String> {
         val operation = "l1DeferredBroadcast"
-        val walletIdHex = try {
-            source.boundWalletIdOrNull()
-                ?: return notBroadcast(operation, "app wallet not bound to the SDK", null)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            return notBroadcast(operation, "SDK bootstrap/bind lookup failed", t)
+        return withSharedOrNotBroadcast(operation) {
+            val owned = try {
+                stillOwned()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                false
+            }
+            if (!owned) {
+                return@withSharedOrNotBroadcast notBroadcast(
+                    operation,
+                    "the wallet this payment was confirmed on has been wiped",
+                    null
+                )
+            }
+            // Last, right before the SDK call: consumed only in the wallet that reserved it.
+            boundWalletRefusal(payment.walletIdHex)?.let {
+                return@withSharedOrNotBroadcast notBroadcast(operation, it, null)
+            }
+            broadcastDeferredUnderHold(operation, checkNotNull(payment.walletIdHex), payment)
         }
+    }
+
+    private suspend fun broadcastDeferredUnderHold(
+        operation: String,
+        walletIdHex: String,
+        payment: SdkDeferredPayment
+    ): SdkWriteResult<String> {
         return try {
             val txidHex = source.broadcastDeferredPayment(walletIdHex, payment)
             log.info("SDK {}: broadcast deferred tx {}", operation, txidHex)
@@ -1886,10 +1961,14 @@ class SdkL1SendService internal constructor(
      */
     suspend fun releaseDeferredPayment(payment: SdkDeferredPayment) {
         try {
-            val walletIdHex = source.boundWalletIdOrNull()
-            if (walletIdHex == null) {
+            // Only in the wallet that reserved it: a release on whichever wallet is bound now
+            // could free a replacement wallet's inputs. Not under the funding hold: a release
+            // spends nothing, and it runs from cleanup paths a wipe may be draining.
+            val walletIdHex = payment.walletIdHex
+            val bound = source.boundWalletIdOrNull()
+            if (walletIdHex == null || bound != walletIdHex) {
                 log.warn(
-                    "SDK l1DeferredRelease: wallet not bound; reservation for {} falls to the TTL sweep",
+                    "SDK l1DeferredRelease: the wallet that reserved {} is not bound; its reservation falls to the TTL sweep",
                     payment.txidHex
                 )
                 return
@@ -1933,6 +2012,20 @@ class SdkL1SendService internal constructor(
     } catch (e: Exception) {
         log.warn("failed to read the SDK L1 sync progress; send gate stays closed", e)
         ShadowSyncProgress.IDLE
+    }
+
+    /**
+     * [block] under the shared funding hold; a hold refused because a wallet wipe ran while it
+     * waited is NotBroadcast (nothing of [block] ran). A wipe that cancels [block] while it runs
+     * propagates as [de.schildbach.wallet.payments.WalletWipedCancellationException].
+     */
+    private suspend fun withSharedOrNotBroadcast(
+        operation: String,
+        block: suspend () -> SdkWriteResult<String>
+    ): SdkWriteResult<String> = try {
+        fundingSelection.withShared(block)
+    } catch (e: de.schildbach.wallet.payments.WalletWipedException) {
+        notBroadcast(operation, "the wallet was wiped while this waited to send", e)
     }
 
     private fun notBroadcast(operation: String, reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {

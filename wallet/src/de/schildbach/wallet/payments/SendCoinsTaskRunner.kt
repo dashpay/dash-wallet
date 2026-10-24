@@ -1110,7 +1110,9 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
 
-        val payment = sdkL1SendService.buildDeferredPayment(recipients)
+        // Ownership asked again under the SDK's funding hold, right before it selects: the
+        // check after the build below remains, for a wipe that lands once the hold is gone.
+        val payment = sdkL1SendService.buildDeferredPayment(recipients) { pendingPaymentVerifier.stillOwnedBy(wallet) }
         if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
             // The build may have selected the replacement wallet's funds. Nothing has been sent:
             // give the reservation back and refuse.
@@ -1272,7 +1274,8 @@ class SendCoinsTaskRunner @Inject constructor(
 
             // The broadcast consumes the reservation, so the watch must not hold it any more.
             pendingPaymentVerifier.detachReservation(tx.txId)
-            when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
+            // Ownership asked again inside the SDK's funding hold, which a wipe drains first.
+            when (val result = sdkL1SendService.broadcastDeferredPayment(payment) { pendingPaymentVerifier.stillOwnedBy(wallet) }) {
                 is SdkWriteResult.Broadcast -> {
                     log.info("plain payment {} broadcast via the SDK", result.value)
                     // Spent now: the mirrored locks have done their job. Cleared only once the
@@ -1774,7 +1777,8 @@ class SendCoinsTaskRunner @Inject constructor(
     ): Transaction {
         // Broadcast ourselves too (identical bytes/txid; a payee broadcast makes this a harmless
         // duplicate announce), but never release.
-        val broadcast = sdkL1SendService.broadcastDeferredPayment(payment)
+        // Ownership asked again inside the SDK's funding hold, which a wipe drains first.
+        val broadcast = sdkL1SendService.broadcastDeferredPayment(payment) { pendingPaymentVerifier.stillOwnedBy(origin) }
         // Fail closed (review 4306695898): only a state read as "not committed" takes the dashj
         // completion below; an unreadable one is treated as the SDK owning L1.
         if (broadcast !is SdkWriteResult.Broadcast && sdkL1SendService.cutoverCommittedOrUnknown() != false) {

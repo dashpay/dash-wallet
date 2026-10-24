@@ -86,14 +86,14 @@ class MayaBlockchainApiImplWalletSessionTest {
         val result = api.commitSwapTransaction("trade", model())
 
         assertTrue("refused: $result", result is ResponseResource.Failure)
-        coVerify(exactly = 0) { sdkL1SendService.buildDeferredMayaDeposit(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        coVerify(exactly = 0) { sdkL1SendService.buildDeferredMayaDeposit(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any(), any()) }
     }
 
     @Test
     fun `a wallet replaced during the build releases the reservation and sends nothing`() = runBlocking {
         val payment = mockk<SdkDeferredPayment>(relaxed = true)
-        coEvery { sdkL1SendService.buildDeferredMayaDeposit(any(), any(), any(), any()) } coAnswers {
+        coEvery { sdkL1SendService.buildDeferredMayaDeposit(any(), any(), any(), any(), any()) } coAnswers {
             installed = walletB
             payment
         }
@@ -104,6 +104,6 @@ class MayaBlockchainApiImplWalletSessionTest {
         val refusal = (result as ResponseResource.Failure).throwable
         assertTrue("refused for its wallet, not anything else: $refusal", refusal is IllegalStateException)
         coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
-        coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any(), any()) }
     }
 }

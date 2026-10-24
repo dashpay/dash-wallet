@@ -1025,7 +1025,7 @@ class PendingDirectPaymentVerifierTest {
 
         assertNotNull(committed)
         assertEquals(tx.txId, committed!!.txId)
-        coVerify(exactly = 1) { engine.broadcast(reservation) }
+        coVerify(exactly = 1) { engine.broadcast(reservation, any()) }
         coVerify(exactly = 0) { engine.release(any()) }
         coVerify { config.remove(tx.txId) }
     }
@@ -1057,7 +1057,7 @@ class PendingDirectPaymentVerifierTest {
 
         coVerify { config.add(match { it.txId == tx.txId && it.abandoned }, any()) }
         coVerify(exactly = 1) { engine.release(reservation) }
-        coVerify(exactly = 0) { engine.broadcast(any()) }
+        coVerify(exactly = 0) { engine.broadcast(any(), any()) }
     }
 
     @Test
@@ -1089,7 +1089,7 @@ class PendingDirectPaymentVerifierTest {
 
         // the caller knows whether the outcome consumed it or frees it
         coVerify(exactly = 0) { engine.release(any()) }
-        coVerify(exactly = 0) { engine.broadcast(any()) }
+        coVerify(exactly = 0) { engine.broadcast(any(), any()) }
         assertNull(verifier.detachReservation(tx.txId))
     }
 

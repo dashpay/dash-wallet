@@ -173,8 +173,12 @@ interface PendingPaymentEngine {
      */
     suspend fun bridge(txIdHex: String, rawTx: ByteArray, origin: org.bitcoinj.wallet.Wallet): Transaction?
 
-    /** Consumes [reservation] by broadcasting its signed transaction. Best effort; never throws. */
-    suspend fun broadcast(reservation: SdkDeferredPayment)
+    /**
+     * Consumes [reservation] by broadcasting its signed transaction. Best effort; never throws.
+     * Refused unless [stillOwned] (asked under the SDK's funding hold, which a wipe drains
+     * first) says the wallet that made it is still the installed one.
+     */
+    suspend fun broadcast(reservation: SdkDeferredPayment, stillOwned: suspend () -> Boolean)
 
     /** Gives [reservation]'s inputs back to the engine. Best effort; never throws. */
     suspend fun release(reservation: SdkDeferredPayment)
@@ -282,9 +286,9 @@ class SdkPendingPaymentEngine @Inject constructor(
             }
         }
 
-    override suspend fun broadcast(reservation: SdkDeferredPayment) {
+    override suspend fun broadcast(reservation: SdkDeferredPayment, stillOwned: suspend () -> Boolean) {
         try {
-            when (val result = sdkL1SendService.broadcastDeferredPayment(reservation)) {
+            when (val result = sdkL1SendService.broadcastDeferredPayment(reservation, stillOwned)) {
                 is SdkWriteResult.Broadcast ->
                     log.info("pending payment {} broadcast via the SDK", result.value)
                 is SdkWriteResult.NotBroadcast ->

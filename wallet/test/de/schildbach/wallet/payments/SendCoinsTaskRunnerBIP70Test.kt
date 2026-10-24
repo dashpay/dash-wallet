@@ -738,8 +738,8 @@ class SendCoinsTaskRunnerBIP70Test {
         // SDK address pool goes into the Payment message.
         coEvery { sdkL1SendService.refundAddressOrNull() } returns
             "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, payment.rawTxBytes, any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
@@ -760,10 +760,11 @@ class SendCoinsTaskRunnerBIP70Test {
         assertEquals(liveTx, result)
         io.mockk.coVerify(exactly = 1) {
             sdkL1SendService.buildDeferredPayment(
-                listOf(testAddress.toBase58() to testAmount.value)
+                listOf(testAddress.toBase58() to testAmount.value),
+                any()
             )
         }
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment, any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
 
         // And the Payment message actually went over HTTP.
@@ -799,8 +800,8 @@ class SendCoinsTaskRunnerBIP70Test {
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val paymentIntent = bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns outcome
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns outcome
         coEvery { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
                 mockk(relaxed = true),
@@ -894,7 +895,7 @@ class SendCoinsTaskRunnerBIP70Test {
             bip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
 
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
 
         mockWebServer.enqueue(
             MockResponse()
@@ -911,7 +912,7 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any(), any()) }
         coVerify(exactly = 0) { pendingPaymentConfig.remove(any()) }
         assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
     }
@@ -924,7 +925,7 @@ class SendCoinsTaskRunnerBIP70Test {
             bip70PaymentIntent(testAddress, testAmount, mockWebServer.url("/payment").toString())
 
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
 
         mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
 
@@ -936,7 +937,7 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any(), any()) }
         assertTrue(pendingPaymentVerifier.isTracked(deferredTx.txId))
     }
 
@@ -947,7 +948,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
         val paymentIntent =
             bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns deferredPayment()
 
         mockWebServer.enqueue(
             MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAVAILABLE).setHeader("Retry-After", "0")
@@ -977,7 +978,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val paymentIntent =
             bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), "http://payment.dash-wallet-test.invalid/pay")
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
 
         try {
             sendCoinsTaskRunner.sendDirectPayment(paymentIntent)
@@ -999,7 +1000,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val paymentIntent =
             bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
@@ -1031,7 +1032,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val payment = deferredPayment()
         val liveTx = mockk<Transaction>(relaxed = true)
         every { liveTx.txId } returns deferredTx.txId
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
@@ -1063,7 +1064,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val paymentIntent =
             bip70PaymentIntent(testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString())
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged("wallet unavailable")
@@ -1083,7 +1084,7 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         // acked: consumed by the broadcast, never released, and the record stays for a later commit
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment, any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
         coVerify(exactly = 0) { pendingPaymentConfig.remove(any()) }
     }
@@ -1095,7 +1096,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val paymentIntent = bip70PaymentIntent(
             testAddress, Coin.parseCoin("1.0"), mockWebServer.url("/payment").toString(), requestHash
         )
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns deferredPayment()
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns deferredPayment()
         mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
 
         try {
@@ -1144,7 +1145,7 @@ class SendCoinsTaskRunnerBIP70Test {
 
         val payment = deferredPayment()
         val liveTx = mockk<org.bitcoinj.core.Transaction>(relaxed = true)
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
         // The POST fails at the transport layer…
         mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
         // …but the engine then OBSERVES the tx on the network at mempool
@@ -1154,7 +1155,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // can only exist for a tx that reached the network: our own build
         // persists nothing.
         coEvery { l1SendProbeService.observedTxContext(deferredTxidHex) } returns 0
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(
@@ -1171,7 +1172,7 @@ class SendCoinsTaskRunnerBIP70Test {
         assertEquals(deferredTx.txId, result.txId)
         io.mockk.coVerify(exactly = 1) { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment, any()) }
     }
 
     @Test
@@ -1202,7 +1203,7 @@ class SendCoinsTaskRunnerBIP70Test {
             assertTrue(e.message!!.contains("not SDK-routable"))
         }
 
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any(), any()) }
         assertEquals(0, mockWebServer.requestCount)
     }
 
@@ -1223,7 +1224,7 @@ class SendCoinsTaskRunnerBIP70Test {
             feeDuffs = 260L,
             native = null
         )
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
 
         val built = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet)
         val outpoints = realTx.inputs.map { it.outpoint }
@@ -1248,7 +1249,7 @@ class SendCoinsTaskRunnerBIP70Test {
             feeDuffs = 260L,
             native = null
         )
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
         val built = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet)
 
         // the screen is left open across a wipe; the replacement holds its own locks on the same
@@ -1320,7 +1321,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // a real wallet: a relaxed mock hands dashj a mock Context and poisons the tests after it
         val replacement = Wallet.createDeterministic(networkParams, org.bitcoinj.script.Script.ScriptType.P2PKH)
         // stubbed so a regression fails on the assertions below rather than inside MockK
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged("test")
@@ -1343,7 +1344,7 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         // nothing may be broadcast through, or committed to, the wallet that replaced the signer
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any(), any()) }
         io.mockk.coVerify(exactly = 0) { bridgedTransactionFactory.bridge(any(), any(), any(), any(), any()) }
         assertNull(replacement.getTransaction(deferredTx.txId))
     }
@@ -1356,7 +1357,7 @@ class SendCoinsTaskRunnerBIP70Test {
         val payment = deferredPayment()
         val liveTx = mockk<Transaction>(relaxed = true)
         every { liveTx.txId } returns deferredTx.txId
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
         coEvery { bridgedTransactionFactory.bridge(deferredTxidHex, any(), any(), any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged(liveTx, adoptedWalletInstance = false)
@@ -1385,11 +1386,11 @@ class SendCoinsTaskRunnerBIP70Test {
         val payment = deferredPayment()
         val liveTx = mockk<Transaction>(relaxed = true)
         every { liveTx.txId } returns deferredTx.txId
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
         var callbackRan = false
         var recordWritten = false
         coEvery { pendingPaymentConfig.add(any(), any()) } answers { recordWritten = true }
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } answers {
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } answers {
             assertTrue("the order must be recorded before the broadcast", callbackRan)
             assertTrue("the recovery record must exist before the broadcast", recordWritten)
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Broadcast(deferredTxidHex)
@@ -1410,7 +1411,7 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         assertEquals(deferredTx.txId, result.txId)
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment) }
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(payment, any()) }
         io.mockk.coVerify(exactly = 0) { sdkL1SendService.sendToAddress(any(), any(), any(), any()) }
         // resolved: attributed, then the record dropped
         coVerifyOrder {
@@ -1423,8 +1424,8 @@ class SendCoinsTaskRunnerBIP70Test {
     fun `a plain dash URI after the cutover that is refused before the network releases and reports it`() = runTest {
         coEvery { sdkL1SendService.cutoverCommitted() } returns true
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.NotBroadcast("refused pre-network")
 
         try {
@@ -1444,8 +1445,8 @@ class SendCoinsTaskRunnerBIP70Test {
     fun `a plain dash URI after the cutover whose broadcast outcome is unknown stays pending`() = runTest {
         coEvery { sdkL1SendService.cutoverCommitted() } returns true
         val payment = deferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
-        coEvery { sdkL1SendService.broadcastDeferredPayment(payment) } returns
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Ambiguous(RuntimeException("timeout"))
 
         try {
@@ -1612,8 +1613,8 @@ class SendCoinsTaskRunnerBIP70Test {
         coEvery { sdkL1SendService.cutoverCommitted() } returns true
         val first = deferredPayment()
         val second = otherDeferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returnsMany listOf(first, second)
-        coEvery { sdkL1SendService.broadcastDeferredPayment(any()) } returns
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returnsMany listOf(first, second)
+        coEvery { sdkL1SendService.broadcastDeferredPayment(any(), any()) } returns
             de.schildbach.wallet.service.platform.sdk.SdkWriteResult.Ambiguous(RuntimeException("timeout"))
         val orderGate = kotlinx.coroutines.CompletableDeferred<Unit>()
         val firstRecording = kotlinx.coroutines.CompletableDeferred<Unit>()
@@ -1641,8 +1642,8 @@ class SendCoinsTaskRunnerBIP70Test {
         }
         awaitUntil("the first purchase to finish") { a.isCompleted }
 
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(first) }
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(second) }
+        io.mockk.coVerify(exactly = 1) { sdkL1SendService.broadcastDeferredPayment(first, any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(second, any()) }
         assertTrue("the second is refused as outstanding: $secondOutcome", secondOutcome is PaymentSubmissionPendingException)
         assertEquals(first.txidHex, (secondOutcome as PaymentSubmissionPendingException).txId)
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(second) }
@@ -1670,7 +1671,7 @@ class SendCoinsTaskRunnerBIP70Test {
         mockWebServer.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR))
         val payment = deferredPayment()
         val replacement = replacementWallet()
-        coEvery { sdkL1SendService.buildDeferredPayment(any()) } answers {
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } answers {
             every { walletDataProvider.wallet } returns replacement
             payment
         }
@@ -1713,7 +1714,7 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         assertEquals("nothing was fetched or posted", 0, mockWebServer.requestCount)
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any(), any()) }
         coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
     }
 
@@ -1933,7 +1934,7 @@ class SendCoinsTaskRunnerBIP70Test {
         assertEquals("one transaction, T1 itself", 1, posted.transactionsCount)
         assertTrue(posted.getTransactions(0).toByteArray().contentEquals(deferredTx.bitcoinSerialize()))
         // nothing new was built or reserved
-        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any(), any()) }
         // acknowledged: committed like any ack, and the record (the invoice block) goes
         assertTrue(stored.isEmpty())
     }

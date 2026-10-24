@@ -1148,7 +1148,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // harmless if the merchant already broadcast it; makes sure the network has it otherwise.
         // A reservation still held is consumed through the engine that made it, and the dashj
         // announce is the same tail the SDK bridge runs after every SDK send.
-        reservations.remove(tx.txId)?.let { engine.broadcast(it) }
+        reservations.remove(tx.txId)?.let { reservation -> engine.broadcast(reservation) { stillOwnedBy(wallet) } }
         if (!bridged) {
             walletApplication.broadcastTransaction(walletTx)
         }

@@ -178,6 +178,25 @@ class SdkL1SendServiceTest {
 
         override suspend fun releaseDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment) {
             mayaReleaseCalls++
+            releasedOnWallets += walletIdHex
+        }
+
+        // ── BIP70 deferred build / broadcast ──────────────────────────────
+        val releasedOnWallets = mutableListOf<String>()
+        var deferredBuildCalls = 0
+        val broadcastOnWallets = mutableListOf<String>()
+
+        override suspend fun buildDeferredPayment(
+            walletIdHex: String,
+            recipients: List<Pair<String, Long>>
+        ): SdkDeferredPayment {
+            deferredBuildCalls++
+            return SdkDeferredPayment(txidHex = "dd".repeat(32), rawTxBytes = ByteArray(0), feeDuffs = 226L, native = null)
+        }
+
+        override suspend fun broadcastDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment): String {
+            broadcastOnWallets += walletIdHex
+            return payment.txidHex
         }
 
         override suspend fun unusedExternalAddress(walletIdHex: String): String? = externalAddress
@@ -767,7 +786,8 @@ class SdkL1SendServiceTest {
             service(source).sendToAddress(validAddress, amount, emptyWallet = false) { throw boom }
             fail("expected the beforeBroadcast throw to propagate")
         } catch (e: IllegalStateException) {
-            assertSame(boom, e)
+            // the caller's own exception (debug-mode stack-trace recovery may hand back a copy of it)
+            assertTrue(e === boom || e.cause === boom)
         }
         assertEquals(0, source.sendCalls)
         assertEquals(0, selfSpendMarks)
@@ -1264,7 +1284,8 @@ class SdkL1SendServiceTest {
                 .sendToAddress(validAddress, amount, emptyWallet = true) { throw boom }
             fail("expected the beforeBroadcast throw to propagate")
         } catch (e: IllegalStateException) {
-            assertSame(boom, e)
+            // the caller's own exception (debug-mode stack-trace recovery may hand back a copy of it)
+            assertTrue(e === boom || e.cause === boom)
         }
         assertEquals(0, source.sendAllCalls)
         assertEquals(0, selfSpendMarks)
@@ -1471,7 +1492,7 @@ class SdkL1SendServiceTest {
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val svc = service(source, hasAppLockedOutputs = { true })
         try {
-            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true)
+            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true, stillOwned = { true })
             fail("expected a direct max build to be refused while app-locked outputs exist")
         } catch (e: IllegalStateException) {
             assertTrue(e.message!!.contains("app-locked"))
@@ -1485,7 +1506,7 @@ class SdkL1SendServiceTest {
         val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
         try {
             service(source, seamRegistry = registry)
-                .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true)
+                .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true, stillOwned = { true })
             fail("expected a direct max build to be refused while seam locks exist")
         } catch (e: IllegalStateException) {
             assertTrue(e.message!!.contains("app-locked"))
@@ -1500,7 +1521,7 @@ class SdkL1SendServiceTest {
         // holding a CrowdNode balance.
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val svc = service(source, hasAppLockedOutputs = { true })
-        svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = false)
+        svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = false, stillOwned = { true })
         assertEquals(1, source.mayaBuildCalls)
     }
 
@@ -1573,6 +1594,141 @@ class SdkL1SendServiceTest {
         registration.await()
     }
 
+    // ── a deferred broadcast across a wipe ────────────────────────────────
+    //
+    // The SDK broadcasts from whichever wallet is bound. A reservation built on one wallet must
+    // never be consumed on another, and its broadcast must be serialized with a wipe.
+
+    @Test
+    fun deferredBroadcast_refusesWhenTheBoundWalletIsNotTheOneItWasBuiltOn() = runBlocking {
+        var bound = walletId
+        val source = FakeSource(boundWalletId = { bound })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        bound = "ef".repeat(32) // a wipe replaced the wallet and bound the new one
+        val result = svc.broadcastDeferredPayment(payment) { true }
+
+        assertTrue("broadcast onto another wallet: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue("reached the SDK broadcast", source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_waitsForAWipeUnderWay_andIsThenRefused() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, fundingSelection = lock)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val wiping = CompletableDeferred<Unit>()
+        val finishWipe = CompletableDeferred<Unit>()
+        val wipe = async(Dispatchers.Default) {
+            lock.exclusiveForWipe {
+                wiping.complete(Unit)
+                finishWipe.await()
+            }
+        }
+        wiping.await()
+        val broadcast = async(Dispatchers.Default) { svc.broadcastDeferredPayment(payment) { true } }
+        delay(200)
+        assertTrue("broadcast while the wipe cleared the wallet", source.broadcastOnWallets.isEmpty())
+        finishWipe.complete(Unit)
+        wipe.await()
+
+        val result = kotlinx.coroutines.withTimeout(2_000) { broadcast.await() }
+        assertTrue("a broadcast that waited through a wipe went on: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_asksTheOwnerUnderTheHold_andRefusesAWipedOne() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val result = svc.broadcastDeferredPayment(payment) { false }
+
+        assertTrue("broadcast for a wiped wallet: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_broadcastsOnTheWalletItWasBuiltOn() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val result = svc.broadcastDeferredPayment(payment) { true }
+
+        assertTrue("$result", result is SdkWriteResult.Broadcast)
+        assertEquals(listOf(walletId), source.broadcastOnWallets)
+    }
+
+    @Test
+    fun deferredBroadcast_neverBroadcastsAPaymentWithNoRecordedWallet() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        val payment = SdkDeferredPayment("dd".repeat(32), ByteArray(0), 226L, null)
+
+        val result = service(source).broadcastDeferredPayment(payment) { true }
+
+        assertTrue("$result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_insideAHeldLock_passesThrough_evenWithAWipeWaiting() = runBlocking {
+        // a caller that already holds the lock (shared) must neither deadlock nor be counted twice
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, fundingSelection = lock)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val result = kotlinx.coroutines.withTimeout(2_000) {
+            lock.withShared { svc.broadcastDeferredPayment(payment) { true } }
+        }
+        assertTrue("$result", result is SdkWriteResult.Broadcast)
+        // released once: a wipe now runs at once
+        assertEquals("wiped", kotlinx.coroutines.withTimeout(2_000) { lock.exclusiveForWipe { "wiped" } })
+    }
+
+    @Test
+    fun deferredBuild_asksTheOwnerUnderTheHold_andBuildsNothingForAWipedOne() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        try {
+            service(source).buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { false })
+            fail("built for a wiped wallet")
+        } catch (expected: IllegalStateException) {
+            // refused
+        }
+        assertEquals(0, source.deferredBuildCalls)
+    }
+
+    @Test
+    fun sendToAddress_refusesWhenTheBoundWalletChangedBeforeTheHold() = runBlocking {
+        var bound = walletId
+        val source = readySource().apply { boundWalletId = { bound } }
+        val svc = service(source)
+
+        // the wallet is swapped after the preflight read the bound wallet, before the send
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false) { bound = "ef".repeat(32) }
+
+        assertTrue("sent from another wallet: $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun deferredRelease_neverReleasesOnAnotherWallet() = runBlocking {
+        var bound = walletId
+        val source = FakeSource(boundWalletId = { bound })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        bound = "ef".repeat(32)
+        svc.releaseDeferredPayment(payment)
+
+        assertTrue("released on another wallet: ${source.releasedOnWallets}", source.releasedOnWallets.isEmpty())
+    }
+
     // ── unprotected pending payment (review 4245734665) ────────────────────
     //
     // After a restart an uncertain BIP70 payment's inputs are locked only on the dashj side, and
@@ -1608,7 +1764,7 @@ class SdkL1SendServiceTest {
         val svc = service(readySource(), unprotectedPendingPayment = { true })
 
         try {
-            svc.buildDeferredPayment(listOf(validAddress to 10_000L))
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
             fail("a deferred build went ahead while a pending payment's inputs were exposed")
         } catch (e: org.dash.wallet.common.services.PaymentStillConfirmingException) {
             assertTrue(e.message!!.isNotEmpty())
@@ -1632,7 +1788,7 @@ class SdkL1SendServiceTest {
         // within the funding gate's tolerance, with the cursors a little apart
         val behind = caughtUpProgress().copy(filterHeight = 1_499_999, walletSyncedHeight = 1_499_998)
         val payment = service(source, progress = { behind })
-            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
 
         assertEquals("the committed wallet cursor", 1_499_998L, payment.reservedAtHeight)
     }
@@ -1645,7 +1801,7 @@ class SdkL1SendServiceTest {
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val noCommittedCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
         val payment = service(source, progress = { noCommittedCursor })
-            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
 
         assertNull(payment.reservedAtHeight)
     }
@@ -1655,7 +1811,7 @@ class SdkL1SendServiceTest {
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val unknown = caughtUpProgress().copy(headerHeight = 0, filterHeight = 0, walletSyncedHeight = 0)
         val payment = try {
-            service(source, progress = { unknown }).buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40))
+            service(source, progress = { unknown }).buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
         } catch (e: IllegalStateException) {
             // the funding gate may refuse an engine with no heights at all, which is fine too
             return@runBlocking

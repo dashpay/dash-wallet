@@ -344,7 +344,9 @@ class MayaBlockchainApiImpl @Inject constructor(
                 swapTradeUIModel.vaultAddress,
                 vaultDuffs,
                 memoBytes,
-                isMaxDeposit = swapTradeUIModel.maximum
+                isMaxDeposit = swapTradeUIModel.maximum,
+                // asked again under the SDK's funding hold, right before it selects
+                stillOwned = { refusedForItsWallet(confirmedOn) == null }
             )
             refusedForItsWallet(confirmedOn)?.let { refusal ->
                 // The build may have selected the replacement wallet's funds. Nothing was sent.
@@ -399,7 +401,10 @@ class MayaBlockchainApiImpl @Inject constructor(
                 return refusal
             }
             log.info("maya swap deposit {}: broadcasting ({} duffs to the vault)", payment.txidHex, depositDuffs)
-            return when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
+            // Ownership asked again inside the SDK's funding hold, which a wipe drains first.
+            return when (
+                val result = sdkL1SendService.broadcastDeferredPayment(payment) { refusedForItsWallet(confirmedOn) == null }
+            ) {
                 is SdkWriteResult.Broadcast -> {
                     // The mirrored reservation locks are deliberately NOT
                     // cleared here. It looks like a leak — the deposit
