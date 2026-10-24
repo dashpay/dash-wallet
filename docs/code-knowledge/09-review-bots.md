@@ -33,7 +33,7 @@
 ## Our rules for the loop (Andrei, 2026-10-22)
 1. Fix only code the PR touches. A finding on code outside the PR gets an answer explaining why it is not this change's
    concern; it is not silently fixed.
-2. At most 2–3 local `/pre-review` rounds per push. If we are digging in (each round finds holes in the previous fix),
+2. At most two local `/pre-review` rounds per push. A third only when the owner asks for it. If we are digging in (each round finds holes in the previous fix),
    get out with the smallest change or ask.
 3. Locally, act only on blocking/major findings. Suggestions and nitpicks wait for the bot's own round.
 4. Pushing back on thepastaclaw is allowed and expected when a comment does not concern our code or is immaterial in

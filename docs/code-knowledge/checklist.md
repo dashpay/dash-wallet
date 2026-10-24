@@ -64,4 +64,4 @@ rule with its reasoning and PR examples.
 
 ## Review loop ([09](09-review-bots.md))
 - [ ] The branch is rebased on the current base. The PR description states product requirements and known limits.
-- [ ] Bot findings: verify each one; fix the class, not the line; 2–3 local rounds at most; stop at zero blockers.
+- [ ] Bot findings: verify each one; fix the class, not the line; at most two local rounds per push; stop at zero blockers.

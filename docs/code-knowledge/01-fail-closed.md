@@ -37,8 +37,9 @@ placeholder) for engine/persistence disagreement, unsettled outputs, runtime not
 - Validate per-phase field combinations, not "any non-empty phase string".
 - Strict ID formats: wallet id is exactly 64 lowercase hex; a tx id is exactly `Sha256Hash.LENGTH` bytes before
   `wrapReversed` (#1603).
-- Overflow-safe deadlines: compare elapsed time (`remainingMillis()`), never `startedAt + timeout`. A start more than
-  60 s in the future reads as expired.
+- Overflow-safe deadlines: compare elapsed time (`remainingMillis()`), never `startedAt + timeout`. Reject a clock
+  skew explicitly: elapsed time alone does not expire a start that lies in the future. In #1607, a start more than
+  60 s in the future is checked for, and reads as expired.
 
 **1.5 `File.exists() == false` is not proof of absence.** It returns false on I/O and permission errors and for
 dangling symlinks, without throwing (#1577, #1581, #1576).

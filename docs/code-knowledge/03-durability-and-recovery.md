@@ -56,7 +56,14 @@ in flight, carrying the stop generation).
 **3.11 Treat a marker as a state machine.**
 - Never overwrite a pending or unverified marker. `begin()` on PENDING returns untouched; on RECOVERY_REQUIRED it
   refuses (#1577).
-- Write atomically: temp file, fsync, `Files.move(ATOMIC_MOVE)`.
+- Write atomically:
+  1. create a temp file in the same directory;
+  2. write it and fsync it;
+  3. `Files.move(..., ATOMIC_MOVE)` over the target.
+
+  A failure at any step is a failed write. This protects against a torn read and against process death, which is what
+  the markers here need. To survive an OS crash or a power loss, also fsync the parent directory after the move:
+  open it with `FileChannel.open(dir, READ)` and call `force(true)`, where the platform allows it.
 - Version shared markers with a generation; `complete(dir, generation)` is a compare-and-delete under the writer lock
   (#1576 `BackupReplacementState`).
 - Arm a marker at the single choke point every write goes through, for example `protobufSerializeWallet()`, not in one

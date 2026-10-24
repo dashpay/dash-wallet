@@ -108,7 +108,8 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 
 ### Module Dependencies
 - Main wallet module depends on common, features, and integration modules
-- Uses external dependencies like dashj for Dash blockchain functionality
+- Uses the Dash Platform Kotlin SDK for L1 and Platform after the cutover. dashj remains for the seed and legacy types,
+  and as an opt-in sync diagnostic
 - Firebase for analytics and crash reporting
 - Material Design components for UI
 
@@ -139,7 +140,8 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 - The app supports both mainnet and testnet Dash networks
 - Exchange rate data comes from multiple sources (CTX, BitPay, Dash Central, etc.)
 - Supports NFC for Dash payment requests
-- Uses dashj library for Dash-specific blockchain operations
+- After the cutover, L1 (balance, history, sends) belongs to the Kotlin SDK. The dashj wallet is still loaded on every
+  launch for its seed and legacy types
 
 ## Before pushing a PR branch
 PRs are reviewed by thepastaclaw, which approves only at zero findings and carries every finding forward across pushes.

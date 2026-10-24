@@ -30,8 +30,9 @@ line numbers, see §7).
    (no DataBinding) mixed with Compose (new UI must be Compose).
 9. Tests: JUnit4 + MockK in `wallet/test` (236 Kotlin files), Robolectric for ~34; most SDK logic is tested
    through **pure top-level functions** extracted for "host-testability". No Turbine, no JUnit5, no detekt.
-10. CI runs `fastlane test` (all modules' debug unit tests) + a release build; ktlint runs only on modules that
-    apply the plugin (not `wallet`, `common`, `coinbase`).
+10. CI runs `fastlane test` (`testDebugUnitTest`: the unflavoured modules only) + a release build. The wallet's unit
+    tests need their flavoured task (`:wallet:test_testNet3DebugUnitTest`), which CI does not run (§5.3). ktlint runs
+    only on modules that apply the plugin (not `wallet`, `common`, `coinbase`).
 
 ---
 

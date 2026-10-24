@@ -70,6 +70,16 @@ tty() {
   else script -q /dev/null "$@" < <(sleep 15); fi
 }
 ok() { if [[ "$2" == "$3" ]]; then echo "ok   $1"; else echo "FAIL $1: got '$2', want '$3'"; FAILS=$((FAILS+1)); fi; }
+# a stalling fake marks the point it stops at (READY) and stays there until RELEASE, or 30 s: tests signal only once
+# the operation they mean to interrupt has really begun, and no fake finishes early on a slow machine
+READY="$T/stall.ready" RELEASE="$T/stall.release"; export READY RELEASE
+STALL='touch "$READY"; i=0; while [[ ! -e "$RELEASE" ]] && (( i++ < 300 )); do sleep 0.1; done'
+stall_reset() { rm -f "$READY" "$RELEASE"; }
+await_ready() {   # <what>: up to 20 s for a fake to reach its stall point
+  local i=0; while [[ ! -e "$READY" ]]; do (( i++ < 200 )) || { echo "FAIL $1: the fake never reached its stall point"; FAILS=$((FAILS+1)); return 1; }; sleep 0.1; done
+}
+# chmod a-w blocks nothing for root (DAC bypass, e.g. in a container): the permission tests are skipped there
+unwritable() { chmod a-w "$1"; if ( : > "$1/.probe" ) 2>/dev/null; then rm -f "$1/.probe"; chmod u+w "$1"; return 1; fi; }
 
 # a fake upstream with master and release, and a clone whose origin URL looks like dash-wallet
 need git init -q --bare "$T/dash-wallet.git"
@@ -106,14 +116,16 @@ FAKE_LAST='garbled' "$P" >/dev/null 2>&1; ok "a failed re-review drops the earli
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 FAKE_LOGIN_RC=1 "$P" >/dev/null 2>&1; ok "a re-review with Codex logged out → exit 2" "$?" 2
 ok "  … and drops the earlier clean verdict too" "$(V)" none
-FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; chmod a-w "$XDG_CACHE_HOME/prereview"
-FAKE_LOGIN_RC=1 "$P" >/dev/null 2>&1; ok "unwritable cache folder: a failed re-review still empties the earlier record" "$?:$(V)" 2:none
-chmod u+w "$XDG_CACHE_HOME/prereview"
-# a commit already on the base needs no review, but its record must still be written for the gate to pass it
-g checkout -q --detach origin/master; "$P" >/dev/null 2>&1; chmod a-w "$XDG_CACHE_HOME/prereview"
-"$P" >/dev/null 2>&1; ok "a commit on the base, verdict folder unwritable → exit 2, not 0" "$?:$(V)" 2:none
-chmod u+w "$XDG_CACHE_HOME/prereview"; "$P" >/dev/null 2>&1; ok "  … writable again → clean" "$?:$(V)" 0:clean
-g checkout -q feat
+FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+if unwritable "$XDG_CACHE_HOME/prereview"; then
+  FAKE_LOGIN_RC=1 "$P" >/dev/null 2>&1; ok "unwritable cache folder: a failed re-review still empties the earlier record" "$?:$(V)" 2:none
+  chmod u+w "$XDG_CACHE_HOME/prereview"
+  # a commit already on the base needs no review, but its record must still be written for the gate to pass it
+  g checkout -q --detach origin/master; "$P" >/dev/null 2>&1; chmod a-w "$XDG_CACHE_HOME/prereview"
+  "$P" >/dev/null 2>&1; ok "a commit on the base, verdict folder unwritable → exit 2, not 0" "$?:$(V)" 2:none
+  chmod u+w "$XDG_CACHE_HOME/prereview"; "$P" >/dev/null 2>&1; ok "  … writable again → clean" "$?:$(V)" 0:clean
+  g checkout -q feat
+else echo "skip unwritable-cache cases: chmod does not block writes here (root?)"; fi
 FAKE_LOGIN_RC=1 CODEX_API_KEY=k-codex FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "logged out, CODEX_API_KEY set → reviewed with it" "$?:$(cat "$T/cdir.key")" 0:k-codex
 FAKE_LOGIN_RC=1 OPENAI_API_KEY=k-openai FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
@@ -157,30 +169,34 @@ FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1;
 kill -9 $LIVE; wait $LIVE 2>/dev/null
 FAKE_LAST='{"blocking": 1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "its holder was killed → the kernel released the lock, reviewed" "$?:$(V)" 1:blocking
 # the lock lives as long as the review: hold it from inside a running review (a slow fake codex), then try another
-printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && { echo codex-cli 0.163.0; exit 0; }\n[[ "$1" == login ]] && exit 0\n[[ " $* " == *" mcp list "* ]] && { echo "[]"; exit 0; }\n[[ " $* " == *" features list "* ]] && { for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do echo "$n stable false"; done; exit 0; }\nsleep 4; while [[ $# -gt 0 ]]; do [[ "$1" == -o ]] && { echo "{\\"blocking\\": 0, \\"suggestion\\": 0, \\"nitpick\\": 0}" > "$2"; shift; }; shift; done\n' > "$T/bin/codex.slow"
+printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && { echo codex-cli 0.163.0; exit 0; }\n[[ "$1" == login ]] && exit 0\n[[ " $* " == *" mcp list "* ]] && { echo "[]"; exit 0; }\n[[ " $* " == *" features list "* ]] && { for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do echo "$n stable false"; done; exit 0; }\n%s\nwhile [[ $# -gt 0 ]]; do [[ "$1" == -o ]] && { echo "{\\"blocking\\": 0, \\"suggestion\\": 0, \\"nitpick\\": 0}" > "$2"; shift; }; shift; done\n' "$STALL" > "$T/bin/codex.slow"
 chmod +x "$T/bin/codex.slow"; mkdir -p "$T/slow"; cp "$T/bin/codex.slow" "$T/slow/codex"
-PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 1
+stall_reset; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a review inside codex"
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "a second review while the first is inside codex → exit 2" "$?" 2
-wait $SLOW; ok "  … the first one finishes and publishes" "$(V)" clean
+touch "$RELEASE"; wait $SLOW; ok "  … the first one finishes and publishes" "$(V)" clean
 # Ctrl-C signals the whole foreground process group: run the review in a group of its own and signal that
-set -m; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; set +m; sleep 2; kill -INT -- -$SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
+stall_reset; set -m; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; set +m; await_ready "Ctrl-C inside codex"
+kill -INT -- -$SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
 ok "a review interrupted inside codex leaves no folder behind" "$(leftovers)" 0
 ok "  … and no verdict (it was dropped when the review started)" "$(V)" none
-PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
+stall_reset; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "TERM inside codex"
+kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
 ok "TERM to the script's own pid alone → the review stops too (no folder, no verdict)" "$(leftovers):$(V)" 0:none
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … and a new review starts at once (the lock is free)" "$?" 0
 # cancelled while a codex probe stalls (login status here): the probe must not keep the lock either
-need mkdir -p "$T/slowlogin"; printf '#!/usr/bin/env bash\n[[ "$1" == login ]] && { sleep 4; exit 0; }\nexec "%s/bin/codex" "$@"\n' "$T" > "$T/slowlogin/codex"; chmod +x "$T/slowlogin/codex"
-PATH="$T/slowlogin:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; sleep 0.5
+need mkdir -p "$T/slowlogin"; printf '#!/usr/bin/env bash\n[[ "$1" == login ]] && { %s; exit 0; }\nexec "%s/bin/codex" "$@"\n' "$STALL" "$T" > "$T/slowlogin/codex"; chmod +x "$T/slowlogin/codex"
+stall_reset; PATH="$T/slowlogin:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a stalled login probe"; kill -TERM $SLOW 2>/dev/null; sleep 0.5
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled codex probe → the review stops at once, the lock is free" "$?" 0; wait $SLOW 2>/dev/null
 # cancelled while still fetching the base: the fetch must not keep the lock either
-REALGIT=$(command -v git); need mkdir -p "$T/slowgit"; printf '#!/usr/bin/env bash\n[[ " $* " == *" fetch "* ]] && sleep 4\nexec "%s" "$@"\n' "$REALGIT" > "$T/slowgit/git"; chmod +x "$T/slowgit/git"
-PATH="$T/slowgit:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; sleep 0.5
+REALGIT=$(command -v git); need mkdir -p "$T/slowgit"; printf '#!/usr/bin/env bash\n[[ " $* " == *" fetch "* ]] && { %s; }\nexec "%s" "$@"\n' "$STALL" "$REALGIT" > "$T/slowgit/git"; chmod +x "$T/slowgit/git"
+stall_reset; PATH="$T/slowgit:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a stalled base fetch"; kill -TERM $SLOW 2>/dev/null; sleep 0.5
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled base fetch → the review stops at once, the lock is free" "$?" 0; wait $SLOW 2>/dev/null
 # a timeout that cannot kill the process group (or none at all): what codex leaves behind must not hold the lock
 need mkdir -p "$T/faketimeout"; printf '#!/bin/sh\nshift; exec "$@"\n' > "$T/faketimeout/timeout"; chmod +x "$T/faketimeout/timeout"
-PATH="$T/faketimeout:$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
+stall_reset; PATH="$T/faketimeout:$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a review under a weak timeout"
+kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … same, with a timeout that does not kill the group: codex's leftover child holds no lock" "$?" 0
+touch "$RELEASE"   # let the stalled leftovers of the cancellation cases exit
 mkdir -p "$T/tmp dir"; echo keep > "$T/tmp"; ( cd "$T" && TMPDIR="$T/tmp dir" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1 ) </dev/null
 cd "$T/app"; TMPDIR="$T/tmp dir" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "TMPDIR with a space: cleanup removes only its own files" "$(cat "$T/tmp" 2>/dev/null):$(ls -A "$T/tmp dir" | wc -l | tr -d ' ')" keep:0
@@ -300,7 +316,8 @@ g checkout -q other5; ok "  … the later ref itself was reviewed against the mo
 # two unreviewed refs, cancelled during the first's review: the hook stops, the second is never started
 g checkout -q -b c1 origin/master; echo c1 > c1; g add c1; g commit -qm c1; g checkout -q -b c2 origin/master; echo c2 > c2; g add c2; g commit -qm c2; g checkout -q feat
 printf 'refs/heads/c1 %s refs/heads/c1 %s\nrefs/heads/c2 %s refs/heads/c2 %s\n' "$(git rev-parse c1)" "$Z" "$(git rev-parse c2)" "$Z" > "$T/cancel.refs"
-PATH="$T/slow:$PATH" tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/cancel.refs'" > "$T/cancel.log" 2>&1 & HK=$!; sleep 2; pkill -TERM -f "$(printf '%s' "$HOOK origin" | sed 's/[][\\.*^$+?(){}|]/\\&/g')" 2>/dev/null; wait $HK 2>/dev/null; sleep 1
+stall_reset; PATH="$T/slow:$PATH" tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/cancel.refs'" > "$T/cancel.log" 2>&1 & HK=$!
+await_ready "the hook's first review"; pkill -TERM -f "$(printf '%s' "$HOOK origin" | sed 's/[][\\.*^$+?(){}|]/\\&/g')" 2>/dev/null; wait $HK 2>/dev/null; sleep 1; touch "$RELEASE"
 g checkout -q c2; ok "cancelled during the first ref's review → the hook stops, the second ref is never reviewed" "$(V):$(grep -c 'cancelled: not pushing' "$T/cancel.log")" none:1; g checkout -q feat
 git -C "$T/dash-wallet.git" update-ref refs/heads/master "$MASTER"; FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 cp "$P" "$T/moved.sh"; "$P" --uninstall >/dev/null 2>&1; "$T/moved.sh" --install >/dev/null 2>&1; mv "$T/moved.sh" "$T/gone.sh"
@@ -309,7 +326,10 @@ echo '#!/bin/sh' > .git/hooks/pre-push; "$P" --install >/dev/null 2>&1; ok "some
 grep -q 'prereview' .git/hooks/pre-push; ok "  … and leaves it alone" "$?" 1
 echo '#!/bin/sh' > .git/hooks/pre-push.keep; mv .git/hooks/pre-push.keep .git/hooks/pre-push; "$P" --uninstall >/dev/null 2>&1
 ok "uninstall leaves a foreign hook" "$(head -1 .git/hooks/pre-push)" '#!/bin/sh'
-rm -f .git/hooks/pre-push; chmod a-w .git/hooks; "$P" --install >/dev/null 2>&1; ok "unwritable hooks folder → install fails (exit 2)" "$?" 2
-chmod u+w .git/hooks; "$P" --install >/dev/null 2>&1; ok "  … writable again → installed" "$?" 0
-chmod a-w .git/hooks; "$P" --uninstall >/dev/null 2>&1; ok "unremovable hook → uninstall fails (exit 2)" "$?" 2; chmod u+w .git/hooks
+rm -f .git/hooks/pre-push
+if unwritable .git/hooks; then
+  "$P" --install >/dev/null 2>&1; ok "unwritable hooks folder → install fails (exit 2)" "$?" 2
+  chmod u+w .git/hooks; "$P" --install >/dev/null 2>&1; ok "  … writable again → installed" "$?" 0
+  chmod a-w .git/hooks; "$P" --uninstall >/dev/null 2>&1; ok "unremovable hook → uninstall fails (exit 2)" "$?" 2; chmod u+w .git/hooks
+else echo "skip unwritable-hooks cases: chmod does not block writes here (root?)"; "$P" --install >/dev/null 2>&1; fi
 echo "fails: $FAILS"; [[ -n "${KEEP:-}" ]] && echo "kept: $T"; exit $FAILS

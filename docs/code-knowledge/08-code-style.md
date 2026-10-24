@@ -49,8 +49,8 @@ components, dark mode).
 
 ## Persistence
 - Multi-key settings are written in one `editPreferences {}` / one `Editor.commit()`.
-- Durable markers are small classes in `util/`. They have a tri-state read, an atomic write (temp, fsync,
-  `ATOMIC_MOVE`), a generation, and a boolean-returning compare-and-delete `complete()`. Examples:
+- Durable markers are small classes in `util/`. They have a tri-state read, an atomic write (temp in the same
+  directory, fsync, `ATOMIC_MOVE`; what that does and does not survive is in 03 §3.11), a generation, and a boolean-returning compare-and-delete `complete()`. Examples:
   `RecoveryResetState`, `BackupReplacementState`, `WalletWipeState`.
 - Distinct keys for distinct obligations.
 - Room: index columns used in joins and subqueries. An index on a shipped DB needs a migration.
