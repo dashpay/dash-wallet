@@ -21,6 +21,7 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,17 +50,22 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.Utils
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.funding.ShieldedProver
 import org.dashfoundation.dashsdk.persistence.entities.ShieldedActivityEntity
 import org.dashfoundation.dashsdk.persistence.entities.ShieldedNoteEntity
 import org.dashfoundation.dashsdk.persistence.entities.ShieldedOutgoingNoteEntity
+import org.dashfoundation.dashsdk.persistence.entities.TxoEntity
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -368,7 +374,7 @@ internal fun mapShieldedSyncStatus(
  * App-neutral view of one tracked shielded-top-up asset lock
  * (`asset_locks` row with `fundingTypeRaw == 5`).
  * [statusRaw]: 0 Built, 1 Broadcast, 2 InstantSendLocked, 3 ChainLocked,
- * 4 Consumed.
+ * 4 Consumed, 5 RecoveredFromChain (SDK `AssetLockEntity.statusRaw`).
  */
 /**
  * App-neutral view of one completed shielded sync pass
@@ -401,17 +407,127 @@ class ShieldedPassResult(
 data class PendingWalletShieldLock(
     val outPointHex: String,
     val statusRaw: Int,
-    val amountDuffs: Long
+    val amountDuffs: Long,
+    /**
+     * Whether the lock transaction spends DIP-9 CoinJoin account-0 outputs
+     * (the mixed-funds drain) — see [classifyCoinJoinFunding]. Null when
+     * that cannot be determined; callers guarding the CoinJoin drain must
+     * treat null as CoinJoin-funded (fail closed), never as BIP44.
+     */
+    val coinJoinFunded: Boolean? = null,
+    /**
+     * A resume got Platform's typed `AssetLockAlreadyConsumed` ([DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED]).
+     * That answer is unauthenticated (it does not prove this wallet's credit exists), so it only
+     * stops automatic resume retries ([retrySuppressed]); it never makes a lock settled.
+     */
+    val platformConsumed: Boolean = false
 ) {
     /**
-     * Resumable = not yet consumed. Includes `Built` (0): a persisted
-     * Built row only survives an AMBIGUOUS broadcast or a crash
-     * mid-operation (a definitively rejected broadcast untracks the row
-     * Rust-side), and resuming re-broadcasts the SAME persisted
-     * transaction bytes — same txid, so it completes the user-authorized
-     * spend rather than creating a new one.
+     * Resumable = pending: the SDK row is not `Consumed` (4), the ONLY terminal
+     * status. Includes `Built` (0): a persisted Built row only survives an
+     * AMBIGUOUS broadcast or a crash mid-operation (a definitively rejected
+     * broadcast untracks the row Rust-side), and resuming re-broadcasts the
+     * SAME persisted transaction bytes — same txid, so it completes the
+     * user-authorized spend rather than creating a new one.
+     *
+     * `RecoveredFromChain` (5) is NOT terminal (Platform consumption unknown;
+     * dropping it let build 41 drain twice). Neither is a Platform
+     * already-consumed record ([platformConsumed]): the SDK keeps such a lock at
+     * 2, 3 or 5, so it stays pending — blocking a fresh CoinJoin drain and every
+     * success, release or clearing proof — and only stops being retried. Any
+     * status this build does not know (a newer SDK's row after a downgrade, or a
+     * corrupted one) may still own its inputs, so it stays pending (fail closed).
      */
-    val resumable: Boolean get() = statusRaw in 0..3
+    val resumable: Boolean get() = statusRaw != ASSET_LOCK_STATUS_CONSUMED
+
+    /**
+     * A pending final (2, 3, 5) lock Platform already reported consumed: the
+     * AUTOMATIC resume sweeps skip it (another attempt likely repeats that
+     * answer); an explicit user retry still resumes it, since the answer is
+     * unauthenticated. Retry suppression ONLY — the lock stays [resumable],
+     * i.e. pending.
+     */
+    val retrySuppressed: Boolean get() =
+        platformConsumed && statusRaw in setOf(2, 3, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN)
+
+    /**
+     * Cutover evidence keeps the `0..3` semantics for known statuses: restore/scan
+     * rebuilds every historical shield as 5, and the SDK keeps such a lock resumable
+     * after cutover. A [retrySuppressed] lock does not block it either: its inputs
+     * are final on L1 and no automatic resume will run, so blocking would only wedge cutover.
+     * An unknown status blocks it like `0..3`: restore never writes one, so it cannot
+     * wedge a restored wallet, and nothing proves its inputs spent.
+     */
+    val blocksCutover: Boolean get() =
+        resumable && !retrySuppressed && statusRaw != ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN
+
+    /**
+     * A resumable lock that holds (or may hold) CoinJoin inputs. Ordinary BIP44
+     * "transfer to shielded" locks own their own inputs and are not. A Platform
+     * already-consumed record does not clear it (see [resumable]); only
+     * [blocksFreshDrain] sets such a stranger aside.
+     */
+    val pendingCoinJoinDrain: Boolean get() = resumable && coinJoinFunded != false
+
+    /**
+     * A [pendingCoinJoinDrain] lock that blocks a FRESH drain: not [retrySuppressed]. A
+     * Platform-consumed lock's inputs are final on L1 (2, 3, 5), so a new drain cannot select
+     * them; it never stops a migration whose own settling lock it is from waiting for Consumed.
+     */
+    val blocksFreshDrain: Boolean get() = pendingCoinJoinDrain && !retrySuppressed
+
+    /** Whether this lock's outpoint is in transaction [txid] (display hex). */
+    fun isOfTransaction(txid: String?): Boolean =
+        txid != null && outPointHex.substringBefore(':').equals(txid, ignoreCase = true)
+}
+
+/**
+ * The typed `AssetLockAlreadyConsumed`, down the JNI cause chain — deliberately
+ * not [isAlreadyConsumed]'s message match: only the SDK's outpoint-matched answer
+ * may stop a lock's resume retries ([PendingWalletShieldLock.retrySuppressed]).
+ */
+internal fun isAssetLockAlreadyConsumed(t: Throwable): Boolean {
+    var cause: Throwable? = t
+    var hops = 0
+    while (cause != null && hops++ < 8) {
+        if (cause is DashSdkError.PlatformWallet.AssetLockAlreadyConsumed) return true
+        cause = cause.cause
+    }
+    return false
+}
+
+/** SDK `AssetLockStatus::RecoveredFromChain` — non-terminal (see [PendingWalletShieldLock.resumable]). */
+internal const val ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN = 5
+
+/** SDK `AssetLockStatus::Consumed` — the ONLY terminal status (see [PendingWalletShieldLock.resumable]). */
+internal const val ASSET_LOCK_STATUS_CONSUMED = 4
+
+/**
+ * Classify a lock's funding source from its [inputOutpoints] (36-byte
+ * wire-order outpoints parsed from the lock transaction) and the wallet's
+ * TXO rows for them ([inputRows]): true when ANY input is a CoinJoin
+ * account-0 output (by account id or a CoinJoin pool address), false when
+ * every input resolved and none is, null when an input row is missing
+ * (not yet persisted) — unknown, NOT "BIP44".
+ */
+internal fun classifyCoinJoinFunding(
+    inputOutpoints: List<ByteArray>,
+    inputRows: List<TxoEntity>,
+    coinJoinAccountId: Long,
+    coinJoinAddresses: Set<String>
+): Boolean? {
+    if (inputOutpoints.isEmpty()) return null
+    val rows = inputRows.associateBy { Utils.HEX.encode(it.outpoint) }
+    var allResolved = true
+    for (outpoint in inputOutpoints) {
+        val row = rows[Utils.HEX.encode(outpoint)]
+        if (row == null) {
+            allResolved = false
+            continue
+        }
+        if (row.accountId == coinJoinAccountId || row.address in coinJoinAddresses) return true
+    }
+    return if (allResolved) false else null
 }
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -530,15 +646,11 @@ interface ShieldedSource {
     suspend fun fundFromAssetLock(walletId: ByteArray, recipientRaw43: ByteArray, amountDuffs: Long)
 
     /**
-     * [fundFromAssetLock], but funded strictly from the ONE funds account
-     * whose account-level derivation path equals [fundingPath] (the DIP-9
-     * CoinJoin account) — SDK `PlatformWalletManager.shieldedFundFromAssetLock`'s
-     * optional `fundingPath` argument (dashpay/platform#4184).
-     *
-     * Single-account selection: no union across accounts, so CoinJoin coins
-     * are never co-spent with BIP44 coins. Change (only) lands on BIP44
-     * account 0 — a non-Standard account cannot derive change Rust-side.
-     * A path that matches no signable funds account fails pre-broadcast.
+     * Drain the DIP-9 CoinJoin account named by [fundingPath] directly into
+     * a shielded asset lock. [amountDuffs] is the UI estimate; the SDK computes
+     * the actual lock value from all account inputs minus the L1 fee. No BIP44
+     * inputs or transparent change are used. Unsupported paths fail before
+     * starting the SDK operation.
      *
      * Default throws: only the production source (and fakes that exercise
      * the mixed-funds migration) need it.
@@ -698,21 +810,16 @@ internal class DashSdkShieldedSource(
         amountDuffs: Long,
         fundingPath: String
     ): Unit {
-        // The v4.2-dev SDK selects the funding account by index only; the
-        // path-based `fundingPath` argument (dashpay/platform#4184) is gone.
-        // Account 0 (BIP44) is always provisioned and is the reachable case
-        // (the plain shield). The ONLY non-null-fundingPath caller is the
-        // CoinJoin-source mixed-funds shield, gated behind the currently-
-        // suppressed mixed-funds prompt — re-enabling it needs a path→funding-
-        // account-index/type mapping against the new API (tracked for the
-        // prompt's re-enable).
-        require(fundingPath.isEmpty() || fundingPath.isNotEmpty()) // param retained for source compat
-        manager().shieldedFundFromAssetLock(
+        require(fundingPath == "m/9'/5'/4'/0'" || fundingPath == "m/9'/1'/4'/0'") {
+            "unsupported CoinJoin funding path: $fundingPath"
+        }
+        require(amountDuffs > 0) { "CoinJoin shield estimate must be positive" }
+        // The ordinary asset-lock API selects BIP44 only. Use the dedicated
+        // drain so CoinJoin UTXOs fund the lock without transparent change.
+        manager().shieldedFundFromCoinJoinDrain(
             walletId = walletId,
             recipientRaw43 = recipientRaw43,
-            amountDuffs = amountDuffs,
-            fundingAccountIndex = 0,
-            surplusOutput = null
+            coinJoinAccountIndex = 0
         )
     }
 
@@ -728,11 +835,37 @@ internal class DashSdkShieldedSource(
         recipientRaw43 = recipientRaw43
     )
 
-    override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> =
-        database().assetLockDao()
-            .observeByWalletAndFundingType(walletId, SHIELDED_TOPUP_FUNDING_TYPE)
+    override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
+        val db = database()
+        val rows = db.assetLockDao()
+            .observeByWalletAndFundingType(walletId, ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
             .first()
-            .map { PendingWalletShieldLock(it.outPointHex, it.statusRaw, it.amountDuffs) }
+        val locks = rows.map { PendingWalletShieldLock(it.outPointHex, it.statusRaw, it.amountDuffs) }
+        if (locks.none { it.resumable }) return locks
+        // Only resumable locks matter to the CoinJoin drain guard; classify
+        // them by whether their transaction spends CoinJoin account-0 TXOs.
+        // Best-effort: any failure leaves the funding source unknown (null).
+        val coinJoin = try {
+            db.accountDao().getByKey(walletId, ACCOUNT_TYPE_TAG_COIN_JOIN, 0).singleOrNull()?.let { account ->
+                account.id to db.coreAddressDao().observeByAccount(account.id).first().map { it.address }.toSet()
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            null
+        } ?: return locks
+        return rows.zip(locks) { row, lock ->
+            if (!lock.resumable) return@zip lock
+            val funded = try {
+                val inputs = Transaction(Constants.NETWORK_PARAMETERS, row.transactionBytes)
+                    .inputs.map { it.outpoint.bitcoinSerialize() }
+                classifyCoinJoinFunding(inputs, db.txoDao().getByOutpoints(inputs), coinJoin.first, coinJoin.second)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                null
+            }
+            lock.copy(coinJoinFunded = funded)
+        }
+    }
 
     override suspend fun estimateShieldFeeCredits(): Long =
         // v42int5: fee estimation moved from the ShieldedProver companion to the
@@ -741,9 +874,6 @@ internal class DashSdkShieldedSource(
         manager().estimateShieldedFee(ShieldedProver.FeeKind.TransferOrShield, SHIELD_NUM_ACTIONS)
 
     private companion object {
-        /** `AssetLockFundingType::AssetLockShieldedAddressTopUp` discriminant. */
-        const val SHIELDED_TOPUP_FUNDING_TYPE = 5
-
         /** On-wire Orchard action count of a single-output Shield bundle. */
         const val SHIELD_NUM_ACTIONS = 2
     }
@@ -893,6 +1023,10 @@ class ShieldedBalanceServiceImpl internal constructor(
      * leaves a harmless grace, a broadcast without one risks the reset.
      */
     private val noteSelfSpendBroadcast: () -> Unit = {},
+    /** [coinJoinOutputsAppLocked] for the CoinJoin shield drain; default `true` (fail closed). */
+    private val hasAppLockedCoinJoinOutputs: () -> Boolean = { true },
+    /** The seam side of [outputsAppLocked]: SDK-only locks [hasAppLockedCoinJoinOutputs] cannot see. */
+    private val seamOutputLockRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
     /**
      * Scope for the post-[ensureShieldedReady] pending-shield retry sweep
      * ([resumePendingWalletShields]); null (tests' default) disables the
@@ -944,7 +1078,9 @@ class ShieldedBalanceServiceImpl internal constructor(
         dashPayConfig: DashPayConfig,
         l1ShadowSyncService: L1ShadowSyncService,
         applicationScope: CoroutineScope,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        walletData: de.schildbach.wallet.data.WalletData,
+        seamOutputLockRegistry: SeamOutputLockRegistry
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -960,6 +1096,11 @@ class ShieldedBalanceServiceImpl internal constructor(
         l1ProgressFlow = { l1ShadowSyncService.progress },
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
+        hasAppLockedCoinJoinOutputs = {
+            @Suppress("DEPRECATION")
+            coinJoinOutputsAppLocked(walletData.wallet)
+        },
+        seamOutputLockRegistry = seamOutputLockRegistry,
         sweepScope = applicationScope,
         seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
     )
@@ -1791,8 +1932,16 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val walletShieldMutex = Mutex()
 
-    /** Per-process resume attempts per outpoint (each costs a ~30s proof). */
-    private val resumeAttempts = HashMap<String, Int>()
+    /**
+     * Per-process resume attempts per outpoint (each costs a ~30s proof). Replaced on
+     * [resetForWalletWipe]: a running sweep keeps counting into the map it started with.
+     */
+    @Volatile
+    private var resumeAttempts = ConcurrentHashMap<String, Int>()
+
+    override fun resetForWalletWipe() {
+        resumeAttempts = ConcurrentHashMap()
+    }
 
     override suspend fun isWalletShieldingAvailable(): Boolean =
         isEnabled() && isL1FundingFlagOn() &&
@@ -1815,11 +1964,63 @@ class ShieldedBalanceServiceImpl internal constructor(
     override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> =
         shieldFromWalletInternal(amount, fundingPath = null)
 
+    /** Tracked locks with [PendingWalletShieldLock.platformConsumed] applied; unreadable → none (fail closed). */
+    private suspend fun trackedShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
+        val locks = source.walletShieldLocks(walletId)
+        val consumed = platformConsumedOutpoints()
+        if (consumed.isEmpty()) return locks
+        return locks.map { if (it.outPointHex in consumed) it.copy(platformConsumed = true) else it }
+    }
+
+    private suspend fun platformConsumedOutpoints(): Set<String> = try {
+        dashPayConfig.getPreservingErrors(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED).orEmpty()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("Platform-consumed shield-lock record unreadable; treating every lock as pending", t)
+        emptySet()
+    }
+
+    /** Durably record [outPointHex]; only called under [walletShieldMutex]. A failure records nothing. */
+    private suspend fun recordPlatformConsumed(outPointHex: String) {
+        try {
+            val current = dashPayConfig.getPreservingErrors(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED).orEmpty()
+            dashPayConfig.set(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED, current + outPointHex)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not record shield lock {} as Platform-consumed; it stays pending", outPointHex, t)
+        }
+    }
+
+    /**
+     * Drop [outPointHexes] from the Platform-consumed record: their lock was resumed successfully or
+     * its row reached Consumed (4), so the unauthenticated answer no longer stands. Only called under
+     * [walletShieldMutex]. A failure keeps the record (the lock is only retried less, never settled).
+     */
+    private suspend fun forgetPlatformConsumed(outPointHexes: Collection<String>) {
+        if (outPointHexes.isEmpty()) return
+        try {
+            val current = dashPayConfig.getPreservingErrors(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED).orEmpty()
+            if (current.none { it in outPointHexes }) return
+            dashPayConfig.set(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED, current - outPointHexes.toSet())
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not clear the Platform-consumed record of {}", outPointHexes, t)
+        }
+    }
+
+    /** The send-all union ([outputsAppLocked]) narrowed on the dashj side to the CoinJoin keychain. */
+    private fun coinJoinOutputsLocked(): Boolean =
+        seamOutputLockRegistry.outputsAppLocked("shieldMixedFundsFromWallet", hasAppLockedCoinJoinOutputs)
+
     override suspend fun shieldMixedFundsFromWallet(
         amount: Dash,
-        coinJoinAccountPath: String
-    ): SdkWriteResult<ShieldFromWalletOutcome> =
-        shieldFromWalletInternal(amount, fundingPath = coinJoinAccountPath)
+        coinJoinAccountPath: String,
+        expectedWalletIdHex: String,
+        onSubmitting: suspend () -> Unit
+    ): SdkWriteResult<ShieldFromWalletOutcome> = shieldFromWalletInternal(
+        amount, fundingPath = coinJoinAccountPath, expectedWalletIdHex = expectedWalletIdHex,
+        onSubmitting = onSubmitting
+    )
 
     /**
      * The one staged Type-18 pipeline behind both [shieldFromWallet]
@@ -1832,7 +2033,9 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private suspend fun shieldFromWalletInternal(
         amount: Dash,
-        fundingPath: String?
+        fundingPath: String?,
+        expectedWalletIdHex: String? = null,
+        onSubmitting: suspend () -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome> {
         val operation = if (fundingPath == null) "shieldFromWallet" else "shieldMixedFundsFromWallet"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
@@ -1847,7 +2050,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (!ensureShieldedReadyInner()) {
             return notBroadcast(operation, "shielded runtime not ready", null)
         }
-        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex)
+        val walletIdHex = readyWalletIdHex.value
+            ?: return notBroadcast(operation, "shielded runtime not ready", null)
+        if (expectedWalletIdHex != null && !walletIdHex.equals(expectedWalletIdHex, ignoreCase = true)) {
+            return notBroadcast(operation, "the shielded runtime is bound to another wallet", null)
+        }
+        val walletId = walletIdFromHex(walletIdHex)
             ?: return notBroadcast(operation, "shielded runtime not ready", null)
 
         // Funding gate: the SDK builds the lock from its OWN SPV wallet,
@@ -1881,6 +2089,23 @@ class ShieldedBalanceServiceImpl internal constructor(
             return notBroadcast(operation, "shielded address lookup failed", t)
         } ?: return notBroadcast(operation, "wallet has no bound shielded address", null)
 
+        // Do not queue a fresh CoinJoin drain behind a recovery sweep. A
+        // persisted CoinJoin-funded lock already owns those inputs, even if
+        // the balance snapshot still includes them until confirmation. An
+        // unrelated BIP44 shield lock holds its own inputs and does not block.
+        if (fundingPath != null) {
+            val pending = try {
+                trackedShieldLocks(walletId).any { it.blocksFreshDrain }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast(operation, "cannot read the tracked asset-lock state", t)
+            }
+            if (pending) return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+            if (coinJoinOutputsLocked()) {
+                return notBroadcast(operation, "the CoinJoin account holds app-locked outputs", null)
+            }
+        }
+
         return walletShieldMutex.withLock {
             // Ensure the SDK's SPV is live immediately before spending: the
             // asset lock is built+broadcast through it, and in this interim
@@ -1907,54 +2132,93 @@ class ShieldedBalanceServiceImpl internal constructor(
             // the attempt. Refuse to spend if it cannot be read — the
             // post-failure classification below depends on it.
             val lockedBefore = try {
-                source.walletShieldLocks(walletId).map { it.outPointHex }.toHashSet()
+                val locks = trackedShieldLocks(walletId)
+                if (fundingPath != null && locks.any { it.blocksFreshDrain }) {
+                    return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+                }
+                locks.map { it.outPointHex }.toHashSet()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 return notBroadcast(operation, "cannot read the tracked asset-lock state", t)
             }
+            // Re-checked right before the native drain.
+            if (fundingPath != null && coinJoinOutputsLocked()) {
+                return notBroadcast(operation, "the CoinJoin account holds app-locked outputs", null)
+            }
+            // The runtime may have rebound since the preflight: spend only from the wallet checked above.
+            if (!walletIdHex.equals(readyWalletIdHex.value, ignoreCase = true)) {
+                return notBroadcast(operation, "the shielded runtime rebound to another wallet", null)
+            }
 
-            // The single staged attempt: (a) build+broadcast the L1 asset
-            // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
-            // The pending reconciliation is durable before anything is submitted.
+            // The pending reconciliation is durable before anything is submitted — and before the
+            // caller's submission checkpoint, so a spend that cannot be recorded leaves no
+            // "submitted" record behind. Ended exactly once, on every path ([endSpend]).
             val spendStartedAtMs = clock()
             if (!beginLocalSpend(spendStartedAtMs)) {
                 return notBroadcast(operation, "could not record the pending spend", null)
             }
-            try {
-                try {
-                    if (fundingPath == null) {
-                        source.fundFromAssetLock(walletId, recipient, amount.duffs)
-                    } else {
-                        // SINGLE-ACCOUNT: every input comes from the account this
-                        // path names (the DIP-9 CoinJoin account); BIP44 coins are
-                        // never co-spent. Only change returns to BIP44 account 0.
-                        source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
-                    }
-                } finally {
+            var spendOpen = true
+            suspend fun endSpend() {
+                if (spendOpen) {
+                    spendOpen = false
                     endLocalSpend(spendStartedAtMs)
                 }
-                kickImmediateShieldedSync()
-                // Seed the funding lock's kind as SHIELD (best-effort, post-
-                // success) so the L1 asset lock renders "Shielded" on first
-                // classification instead of "Internal". The new lock is the
-                // outPointHex absent from lockedBefore; its txid part (before
-                // ':') is ALREADY display hex (AssetLockEntity keys on display),
-                // so it is the resolver's seed key directly.
-                try {
-                    source.walletShieldLocks(walletId)
-                        .map { it.outPointHex }
-                        .firstOrNull { it !in lockedBefore }
-                        ?.substringBefore(':')
-                        ?.takeIf { it.length == 64 }
-                        ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
-                } catch (t: Throwable) {
-                    if (t is CancellationException) throw t
-                    log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
+            }
+            try {
+                // The caller's durable submission checkpoint: from here on the
+                // native call may broadcast, so a caller interrupted after this
+                // point can no longer infer non-submission. A failed write means
+                // nothing is submitted. The CoinJoin drain (the only checkpointed
+                // route) then runs to completion: a cancellation in between would
+                // leave a "submitted" record for a shield that never went out.
+                withContext(if (fundingPath != null) NonCancellable else EmptyCoroutineContext) {
+                    try {
+                        onSubmitting()
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
+                        return@withContext notBroadcast(operation, "could not record the submission checkpoint", t)
+                    }
+
+                    // The single staged attempt: (a) build+broadcast the L1 asset
+                    // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
+                    try {
+                        try {
+                            if (fundingPath == null) {
+                                source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                            } else {
+                                // SINGLE-ACCOUNT DRAIN of the DIP-9 CoinJoin account into
+                                // the lock: no BIP44 inputs, no transparent change.
+                                source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+                            }
+                        } finally {
+                            endSpend()
+                        }
+                        kickImmediateShieldedSync()
+                        // Seed the funding lock's kind as SHIELD (best-effort, post-
+                        // success) so the L1 asset lock renders "Shielded" on first
+                        // classification instead of "Internal". The new lock is the
+                        // outPointHex absent from lockedBefore; its txid part (before
+                        // ':') is ALREADY display hex (AssetLockEntity keys on display),
+                        // so it is the resolver's seed key directly.
+                        try {
+                            source.walletShieldLocks(walletId)
+                                .map { it.outPointHex }
+                                .firstOrNull { it !in lockedBefore }
+                                ?.substringBefore(':')
+                                ?.takeIf { it.length == 64 }
+                                ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
+                        } catch (t: Throwable) {
+                            if (t is CancellationException) throw t
+                            log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
+                        }
+                        SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
+                        classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
+                    }
                 }
-                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
+            } finally {
+                endSpend()
             }
         }
     }
@@ -1976,7 +2240,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         failure: Throwable
     ): SdkWriteResult<ShieldFromWalletOutcome> {
         val newLocks = try {
-            source.walletShieldLocks(walletId).filter { it.outPointHex !in lockedBefore && it.resumable }
+            trackedShieldLocks(walletId).filter { it.outPointHex !in lockedBefore && it.resumable }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.error("shielded {} failed and the tracked-lock evidence is unreadable", operation, failure)
@@ -2012,6 +2276,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         return resumePendingWalletShieldsInner()
     }
 
+    override suspend fun resumePendingWalletShieldsOnUserRequest(): Int {
+        if (!isEnabled()) return 0
+        if (!ensureShieldedReadyInner()) return 0
+        return resumePendingWalletShieldsInner(userRequested = true)
+    }
+
     /**
      * The sweep body: resume every resumable ([PendingWalletShieldLock.resumable])
      * shielded-top-up lock, sequentially, isolating per-lock failures and
@@ -2019,12 +2289,24 @@ class ShieldedBalanceServiceImpl internal constructor(
      * ~30s proof). Requires the ready latch; does NOT require the L1
      * funding gate — the lock already exists, so completing the shield
      * spends nothing new and strands nothing.
+     *
+     * A lock Platform answered already-consumed ([PendingWalletShieldLock.retrySuppressed]) is
+     * skipped by AUTOMATIC sweeps only: that answer is unauthenticated, so an explicit
+     * [userRequested] retry resumes it again — the same tracked lock through the same recovery
+     * call, never a new spend. A successful resume, or a row that reached Consumed, clears the
+     * record; another already-consumed answer keeps it.
      */
-    private suspend fun resumePendingWalletShieldsInner(): Int {
+    private suspend fun resumePendingWalletShieldsInner(userRequested: Boolean = false): Int {
         val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return 0
         return walletShieldMutex.withLock {
+            val attempted = resumeAttempts
             val pending = try {
-                source.walletShieldLocks(walletId).filter { it.resumable }
+                val locks = trackedShieldLocks(walletId)
+                forgetPlatformConsumed(
+                    locks.filter { it.platformConsumed && it.statusRaw == ASSET_LOCK_STATUS_CONSUMED }
+                        .map { it.outPointHex }
+                )
+                locks.filter { it.resumable && (userRequested || !it.retrySuppressed) }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 log.warn("pending wallet-shield sweep: cannot read the tracked asset locks", t)
@@ -2042,8 +2324,10 @@ class ShieldedBalanceServiceImpl internal constructor(
 
             var resumed = 0
             for (lock in pending) {
-                val attempts = resumeAttempts.getOrDefault(lock.outPointHex, 0)
-                if (attempts >= MAX_RESUME_ATTEMPTS_PER_PROCESS) {
+                val attempts = attempted.getOrDefault(lock.outPointHex, 0)
+                // An explicit user retry gets one attempt past the budget;
+                // the counter still advances, so unattended sweeps stay capped.
+                if (attempts >= MAX_RESUME_ATTEMPTS_PER_PROCESS && !userRequested) {
                     log.warn(
                         "pending wallet-shield lock {} skipped after {} failed attempts this " +
                             "process (retries resume on the next app start)",
@@ -2064,7 +2348,8 @@ class ShieldedBalanceServiceImpl internal constructor(
                     log.warn("pending wallet-shield lock {} not resumed: the spend could not be recorded", lock.outPointHex)
                     continue
                 }
-                resumeAttempts[lock.outPointHex] = attempts + 1
+                // Counted into the map this sweep started with ([resetForWalletWipe] replaces it).
+                attempted[lock.outPointHex] = attempts + 1
                 try {
                     try {
                         source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
@@ -2073,12 +2358,23 @@ class ShieldedBalanceServiceImpl internal constructor(
                     }
                     resumed++
                     log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)
+                    // An earlier (unauthenticated) already-consumed answer no longer stands.
+                    if (lock.platformConsumed) forgetPlatformConsumed(listOf(lock.outPointHex))
                     // The direct path kicks this too — without it a shield
                     // completed via RESUME (interrupted stage (b)) sat on the
                     // ~60s tick before the balance appeared (observed live).
                     kickImmediateShieldedSync()
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
+                    if (isAssetLockAlreadyConsumed(t)) {
+                        // Not a completion (our credit may not exist), but nothing left to resume.
+                        log.warn(
+                            "pending wallet-shield lock {}: Platform reports it already consumed",
+                            lock.outPointHex
+                        )
+                        recordPlatformConsumed(lock.outPointHex)
+                        continue
+                    }
                     log.warn(
                         "pending wallet-shield lock {} resume failed (attempt {}); the lock stays " +
                             "tracked and is retried later",
@@ -2261,10 +2557,58 @@ class ShieldedBalanceServiceImpl internal constructor(
     override suspend fun pendingWalletShieldLockCount(): Int? {
         val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
         return try {
-            source.walletShieldLocks(walletId).count { it.resumable }
+            trackedShieldLocks(walletId).count { it.blocksCutover }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("pending-lock count unavailable; cutover evidence stays UNKNOWN", t)
+            null
+        }
+    }
+
+    override suspend fun retrySuppressedShieldLockCount(): Int? {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            trackedShieldLocks(walletId).count { it.resumable && it.retrySuppressed }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("retry-suppressed shield-lock count unavailable; treating it as UNKNOWN", t)
+            null
+        }
+    }
+
+    override suspend fun recoveredCoinJoinShieldLockCount(): Int? {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            trackedShieldLocks(walletId).count {
+                it.blocksFreshDrain && it.statusRaw == ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("recovered CoinJoin-lock count unavailable; treating it as UNKNOWN", t)
+            null
+        }
+    }
+
+    override suspend fun unsuppressedCoinJoinShieldLockCount(settlingLockTxid: String?): Int? {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            trackedShieldLocks(walletId).count {
+                it.blocksFreshDrain || (it.pendingCoinJoinDrain && it.isOfTransaction(settlingLockTxid))
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("unsuppressed CoinJoin-lock count unavailable; treating it as UNKNOWN", t)
+            null
+        }
+    }
+
+    override suspend fun pendingCoinJoinShieldLockCount(): Int? {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            trackedShieldLocks(walletId).count { it.pendingCoinJoinDrain }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("pending CoinJoin-lock count unavailable; treating it as UNKNOWN", t)
             null
         }
     }

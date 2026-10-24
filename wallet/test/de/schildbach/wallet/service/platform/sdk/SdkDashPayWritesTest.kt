@@ -414,6 +414,32 @@ class SdkDashPayWritesTest {
     }
 
     @Test
+    fun classify_assetLockBuilderSigningFailure_isNotBroadcast() {
+        // MO-1099 live shape (build 37, CoinJoin shield while the phone was
+        // locked): the asset-lock BUILDER could not sign its L1 transaction,
+        // so nothing was built or submitted. It used to fall through to
+        // Ambiguous, leaving the migration waiting for a transfer that never
+        // existed and then reporting it "unconfirmed".
+        val liveShape = DashSdkError.PlatformWallet.Generic(
+            99,
+            "Asset lock transaction failed: Asset lock builder failed: Transaction builder error: " +
+                "Signing failed: mnemonic resolver failed with code 3"
+        )
+        val result = classifyBroadcastFailure(liveShape)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING, (result as SdkWriteResult.NotBroadcast).reason)
+        assertSame(liveShape, result.cause)
+
+        // A signer failure in a LATER stage (the lock is already out) must not
+        // be read as "nothing was broadcast".
+        val laterStage = DashSdkError.PlatformWallet.WalletOperation(
+            "shielded resume fund-from-asset-lock failed: SDK error: Protocol error: External signer " +
+                "error: signer failed: mnemonic resolver failed with code 3"
+        )
+        assertTrue(classifyBroadcastFailure(laterStage) is SdkWriteResult.Ambiguous)
+    }
+
+    @Test
     fun classify_typedShortfalls_areNotBroadcast_withRetryableReasons() {
         // The int19+ AAR line raises TYPED shortfall errors where older
         // lines used WalletOperation message strings. Both types must land

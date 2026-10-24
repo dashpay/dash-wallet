@@ -246,6 +246,7 @@ class MainViewModelTest {
         mockk<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> {
             coEvery { shouldPrompt() } returns false
             coEvery { inFlightMigration() } returns null
+            coEvery { shouldPresentPrompt() } returns false
             every { startInFlightWatcherIfNeeded() } returns Unit
         }
     // Application-scoped owner of the bell badge; the ViewModel only reads its

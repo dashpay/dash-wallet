@@ -21,6 +21,7 @@ package de.schildbach.wallet
 
 import androidx.work.WorkManager
 import de.schildbach.wallet.service.platform.sdk.SdkSecretsWipeOutcome
+import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.service.platform.sdk.WalletSecretWriteFence
 import de.schildbach.wallet.service.platform.sdk.fencedSdkSecretsWipe
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
@@ -116,7 +117,12 @@ object WalletApplicationExt {
                 // the NEXT wallet persist SDK secrets again. An unfinished one
                 // keeps the old wallet's producers fenced for the rest of this
                 // (degraded) process.
-                if (wipeComplete) walletSecretWriteFence.lower()
+                if (wipeComplete) {
+                    walletSecretWriteFence.lower()
+                    // Configs are cleared: the next wallet may migrate (the wiped one's steps stay refused).
+                    runCatching { coinJoinFundsMigrationService.get().resumeAfterWalletWipe() }
+                        .onFailure { log.warn("mixed-funds migration resume after wipe failed", it) }
+                }
                 // Before the flag drops: onboarding re-routes on it, and an
                 // unfinished wipe must route to the degraded screen, not to
                 // create/restore.
@@ -180,6 +186,12 @@ object WalletApplicationExt {
         // through beginWalletWipe().
         runCatching { transactionMetadataSaveQueue.pauseAndJoin() }
             .onFailure { rethrowCancellation(it); log.warn("tx-metadata save queue pause failed during wipe", it) }
+        // Before the configs are cleared, so nothing of this wallet is written after.
+        resetInMemoryWalletState(
+            seamOutputLockRegistry,
+            { coinJoinFundsMigrationService.get().stopForWalletWipe() },
+            { shieldedBalanceService.get().resetForWalletWipe() }
+        )
         destroyWalletFiles()
         // Live DataStore-backed configs must be cleared through their API (one
         // atomic memory+disk edit) before the leftover files are deleted:
@@ -193,6 +205,24 @@ object WalletApplicationExt {
         notifyWalletWipeListeners()
         destroyWalletSecrets()
         clearDatabasesInner(isWalletWipe = true)
+    }
+
+    /**
+     * Process state with no wallet identity that would outlive Reset Wallet into the
+     * next wallet: seam output locks, the mixed-funds migration, the shield resume
+     * budget. Every step runs even when an earlier one fails.
+     */
+    internal suspend fun resetInMemoryWalletState(
+        seamOutputLocks: SeamOutputLockRegistry,
+        stopMigrationWatcher: suspend () -> Unit,
+        resetShieldResumeBudget: () -> Unit
+    ) {
+        runCatching { seamOutputLocks.clearForWalletWipe() }
+            .onFailure { rethrowCancellation(it); log.warn("seam output-lock clear failed during wipe", it) }
+        runCatching { stopMigrationWatcher() }
+            .onFailure { rethrowCancellation(it); log.warn("mixed-funds watcher stop failed during wipe", it) }
+        runCatching { resetShieldResumeBudget() }
+            .onFailure { rethrowCancellation(it); log.warn("shield resume-budget reset failed during wipe", it) }
     }
 
     private suspend fun WalletApplication.eraseSdkWalletSecrets(): SdkSecretsWipeOutcome {

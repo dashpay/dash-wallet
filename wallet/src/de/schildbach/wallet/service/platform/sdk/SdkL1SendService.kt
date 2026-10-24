@@ -22,6 +22,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -385,6 +386,22 @@ internal const val ACCOUNT_TYPE_TAG_STANDARD = 0
 internal const val STANDARD_ACCOUNT_TAG_BIP44 = 0
 internal const val STANDARD_ACCOUNT_TAG_BIP32 = 1
 
+/** A required integer field of an account-balance row; null (unknown, never 0) when missing or not an integer. */
+internal fun org.json.JSONObject.balanceRowLongOrNull(name: String): Long? =
+    when (val value = opt(name)) {
+        is Int -> value.toLong()
+        is Long -> value
+        else -> null
+    }
+
+/** [balanceRowLongOrNull] for a tag/index field. */
+internal fun org.json.JSONObject.balanceRowIntOrNull(name: String): Int? =
+    balanceRowLongOrNull(name)?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.toInt()
+
+/** A required non-negative duff amount of an account-balance row; see [balanceRowLongOrNull]. */
+internal fun org.json.JSONObject.balanceRowDuffsOrNull(name: String): Long? =
+    balanceRowLongOrNull(name)?.takeIf { it >= 0L }
+
 /**
  * The BIP44 account 0 SPENDABLE balance (`confirmed + unconfirmed` — the
  * same `WalletCoreBalance.spendable()` split the native wallet-wide
@@ -398,10 +415,13 @@ internal fun parseBip44SpendableDuffs(accountBalancesJson: String?): Long? {
         val rows = org.json.JSONArray(accountBalancesJson)
         for (i in 0 until rows.length()) {
             val row = rows.getJSONObject(i)
-            if (row.optInt("typeTag", -1) != ACCOUNT_TYPE_TAG_STANDARD) continue
-            if (row.optInt("standardTag", -1) != STANDARD_ACCOUNT_TAG_BIP44) continue
-            if (row.optInt("index", -1) != 0) continue
-            return row.optLong("confirmed", 0L) + row.optLong("unconfirmed", 0L)
+            // Missing/non-numeric fields make the snapshot unknown, never a skipped row or 0.
+            if ((row.balanceRowIntOrNull("typeTag") ?: return null) != ACCOUNT_TYPE_TAG_STANDARD) continue
+            if ((row.balanceRowIntOrNull("standardTag") ?: return null) != STANDARD_ACCOUNT_TAG_BIP44) continue
+            if ((row.balanceRowIntOrNull("index") ?: return null) != 0) continue
+            val confirmed = row.balanceRowDuffsOrNull("confirmed") ?: return null
+            val unconfirmed = row.balanceRowDuffsOrNull("unconfirmed") ?: return null
+            return Math.addExact(confirmed, unconfirmed)
         }
         null
     } catch (e: Exception) {
@@ -436,17 +456,22 @@ internal fun pooledSpendableDuffs(accountBalancesJson: String?): Long? {
         var totalDuffs = 0L
         for (i in 0 until rows.length()) {
             val row = rows.getJSONObject(i)
-            val typeTag = row.optInt("typeTag", -1)
+            // Missing/non-numeric fields make the total unknown, never a skipped row or 0.
+            val typeTag = row.balanceRowIntOrNull("typeTag") ?: return null
             val pooled = when (typeTag) {
-                ACCOUNT_TYPE_TAG_STANDARD ->
-                    row.optInt("standardTag", -1)
-                        .let { it == STANDARD_ACCOUNT_TAG_BIP44 || it == STANDARD_ACCOUNT_TAG_BIP32 } &&
-                        row.optInt("index", -1) == 0
+                ACCOUNT_TYPE_TAG_STANDARD -> {
+                    val standardTag = row.balanceRowIntOrNull("standardTag") ?: return null
+                    val index = row.balanceRowIntOrNull("index") ?: return null
+                    index == 0 &&
+                        (standardTag == STANDARD_ACCOUNT_TAG_BIP44 || standardTag == STANDARD_ACCOUNT_TAG_BIP32)
+                }
                 ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS -> true
                 else -> false
             }
             if (pooled) {
-                totalDuffs += row.optLong("confirmed", 0L) + row.optLong("unconfirmed", 0L)
+                val confirmed = row.balanceRowDuffsOrNull("confirmed") ?: return null
+                val unconfirmed = row.balanceRowDuffsOrNull("unconfirmed") ?: return null
+                totalDuffs = Math.addExact(totalDuffs, Math.addExact(confirmed, unconfirmed))
             }
         }
         totalDuffs
@@ -665,12 +690,124 @@ interface SdkL1SendSource {
         addressBase58: String,
         floorDuffs: Long
     ): String = throw UnsupportedOperationException("CoinJoin drain not supported by this source")
+
+    /**
+     * Build on wallet [walletIdHex] BY ID — [destination] was derived from it,
+     * so a rebind must fail the build rather than pay another wallet's inputs there.
+     */
+    suspend fun consolidateCoinJoin(
+        walletIdHex: String, destination: String, amount: Long, drain: Boolean,
+        prepared: suspend (ByteArray) -> Unit
+    ): String = throw UnsupportedOperationException("CoinJoin consolidation not supported")
+
+    /** [ownDestinationAccount] for this source's database. Default throws (callers fail closed). */
+    suspend fun destinationOwner(walletIdHex: String, address: String): OwnDestinationAccount? =
+        throw UnsupportedOperationException("address ownership not supported by this source")
+
+    /**
+     * Submit an ALREADY-SIGNED transaction from its consensus bytes and
+     * return its txid — the replay primitive for a CoinJoin consolidation
+     * whose native handle died with the process between its persisted
+     * `prepared` checkpoint and `ManagedCoreWallet.broadcastTransaction`.
+     * Submitting identical bytes is idempotent (same txid, same inputs).
+     *
+     * DEFERRED: the pinned SDK exposes NO raw-bytes broadcast. Its only
+     * Core broadcast entry points take a native handle —
+     * `ManagedCoreWallet.broadcastTransaction(FinalizedCoreTransaction)`
+     * (`coreWalletBroadcastSignedTransaction(coreHandle, txHandle)`), whose
+     * constructor is `internal` and minted only by `CoreTransactionBuilder`,
+     * and `ManagedPlatformWallet.broadcastSigned(token)`, whose reservation
+     * token is process-local. Needed upstream: a
+     * `ManagedCoreWallet.broadcastRawTransaction(bytes: ByteArray): String`
+     * (FFI `core_wallet_broadcast_raw_transaction`) that hands the bytes to
+     * the SPV broadcaster and registers the tx with the wallet. Until then
+     * the production source inherits this default and recovery degrades to
+     * observation only.
+     */
+    suspend fun broadcastRawTransaction(rawTx: ByteArray): String =
+        throw UnsupportedOperationException(RAW_BROADCAST_UNSUPPORTED)
+}
+
+internal const val DESTINATION_NOT_OWNED = "consolidation destination is not the wallet's own address"
+
+internal const val RAW_BROADCAST_UNSUPPORTED =
+    "raw signed-transaction broadcast is not exposed by the pinned SDK"
+
+/** What replaying a persisted consolidation's signed bytes proved. */
+enum class ConsolidationReplay {
+    /** Accepted, or already known to the network (mempool / chain). */
+    SUBMITTED,
+
+    /** An input is spent by a DIFFERENT transaction: never rebuild; fail closed. */
+    CONFLICT,
+
+    /** No raw-bytes broadcast path in this SDK: observe only. */
+    UNAVAILABLE,
+
+    /** Not submitted this time (gate closed, transport error): observe and retry later. */
+    FAILED
+}
+
+/**
+ * Classify a rejection of a replayed signed transaction. Only an explicit
+ * "already known/in mempool/in chain" answer counts as submitted, and only an
+ * explicit conflict/double-spend answer as [ConsolidationReplay.CONFLICT];
+ * anything else (including the ambiguous "missing or spent inputs", which
+ * the transaction's own confirmation also produces) is [ConsolidationReplay.FAILED].
+ */
+internal fun classifyReplayFailure(t: Throwable): ConsolidationReplay {
+    if (t is UnsupportedOperationException) return ConsolidationReplay.UNAVAILABLE
+    var cause: Throwable? = t
+    var depth = 0
+    while (cause != null && depth++ < 8) {
+        val message = cause.message?.lowercase().orEmpty()
+        when {
+            "txn-already-known" in message || "txn-already-in-mempool" in message ||
+                "already in block chain" in message || "already in chain" in message ||
+                "already have transaction" in message -> return ConsolidationReplay.SUBMITTED
+            "txn-mempool-conflict" in message || "conflict" in message ||
+                "double spend" in message || "double-spend" in message -> return ConsolidationReplay.CONFLICT
+        }
+        cause = cause.cause
+    }
+    return ConsolidationReplay.FAILED
 }
 
 /** Production [SdkL1SendSource]: boots the SDK on demand. */
 internal class DashSdkL1SendSource(
     private val service: DashSdkService
 ) : SdkL1SendSource {
+
+    override suspend fun consolidateCoinJoin(
+        walletIdHex: String, destination: String, amount: Long, drain: Boolean,
+        prepared: suspend (ByteArray) -> Unit
+    ): String = withContext(Dispatchers.IO) {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        val finalized = mapNativeErrors {
+            CoreSendAllNative.buildCoinJoinConsolidation(
+                wallet, toSdkNetwork(Constants.NETWORK_PARAMETERS), destination, amount,
+                drain, manager.mnemonicResolverHandle
+            )
+        }
+        finalized.use {
+            wallet.coreWallet().use { core ->
+                try {
+                    prepared(finalized.serializedData())
+                } catch (t: Throwable) {
+                    core.abandonTransaction(finalized)
+                    throw t
+                }
+                core.broadcastTransaction(finalized)
+            }
+        }
+    }
+
+    override suspend fun destinationOwner(walletIdHex: String, address: String): OwnDestinationAccount? {
+        service.ensureStarted()
+        val db = checkNotNull(service.databaseOrNull()) { "SDK database not open" }
+        return ownDestinationAccount(db, walletIdHex, address)
+    }
 
     /**
      * App-owned serialization lock for the send-all (drain) path. A single
@@ -1182,10 +1319,7 @@ class SdkL1SendService internal constructor(
             // wallet, or an unreadable CoinJoin extension, cannot PROVE the
             // absence of locks → treated as locked (fail closed).
             @Suppress("DEPRECATION")
-            val wallet = walletData.wallet
-            wallet == null || coinJoinOutputsOrNull(wallet)?.any {
-                wallet.isLockedOutput(it.outPointFor)
-            } ?: true
+            coinJoinOutputsAppLocked(walletData.wallet)
         },
         seamOutputLockRegistry = seamOutputLockRegistry,
         onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
@@ -1428,8 +1562,9 @@ class SdkL1SendService internal constructor(
      * [ownAddressBase58] MUST be an address of THIS wallet's unmixed BIP44
      * account (callers derive it via `WalletData.unadvertisedDestinationLive()`,
      * a LIVE engine read on [Dispatchers.IO] — not the plain accessor, which
-     * serves a cache and would hand back an advertised address); the
-     * only validation possible here is network/format.
+     * serves a cache and would hand back an advertised address); only
+     * network/format is validated here — [consolidateCoinJoin] also checks
+     * ownership.
      *
      * The floor is `1` duff: the engine overwrites the single output with
      * `total − fee`, and there is no deliverable to protect on a self-spend.
@@ -1503,6 +1638,87 @@ class SdkL1SendService internal constructor(
         }
     }
 
+    /** [outputsAppLocked] with the dashj side narrowed to the CoinJoin keychain; shared with the migration. */
+    internal fun coinJoinOutputsLocked(): Boolean =
+        seamOutputLockRegistry.outputsAppLocked("SDK coinJoinDrain", hasAppLockedCoinJoinOutputs)
+
+    /** The gate [consolidateCoinJoin] enforces; shared so the migration never offers a refused route. Never throws. */
+    internal suspend fun coinJoinConsolidationGateOpen(): Boolean = isEnabled() && probeSendGate().allowed
+
+    /**
+     * @param expectedWalletIdHex the wallet [destination] came from; any other bound wallet refuses,
+     * and so does a [destination] that wallet does not own ([SdkL1SendSource.destinationOwner],
+     * checked under the core-send lock right before the build).
+     */
+    internal suspend fun consolidateCoinJoin(
+        expectedWalletIdHex: String, destination: String, amount: Long, drain: Boolean,
+        prepared: suspend (ByteArray) -> Unit
+    ): SdkWriteResult<String> {
+        if (!coinJoinConsolidationGateOpen()) return SdkWriteResult.NotBroadcast("funding gate closed")
+        if (coinJoinOutputsLocked()) {
+            return SdkWriteResult.NotBroadcast("CoinJoin outputs are locked")
+        }
+        val walletId = try {
+            source.boundWalletIdOrNull() ?: return SdkWriteResult.NotBroadcast("wallet not bound")
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return SdkWriteResult.NotBroadcast("SDK bootstrap/bind lookup failed", t)
+        }
+        if (!walletId.equals(expectedWalletIdHex, ignoreCase = true)) {
+            return SdkWriteResult.NotBroadcast("bound wallet is not the migration's wallet")
+        }
+        var preparedForBroadcast = false
+        return try {
+            val txid = source.withCoreSendLock(walletId) {
+                checkNotNull(source.destinationOwner(walletId, destination)) { DESTINATION_NOT_OWNED }
+                // Once [prepared] records the txid, the broadcast must follow: a cancellation
+                // in between would abandon a tx the stage already records as sent.
+                withContext(NonCancellable) {
+                    source.consolidateCoinJoin(walletId, destination, amount, drain) { bytes ->
+                        prepared(bytes)
+                        runCatching { onSelfSpendBroadcast() }
+                        preparedForBroadcast = true
+                    }
+                }
+            }
+            runCatching { onSelfSpendBroadcast() }
+            runCatching { bridgeAfterBroadcast(txid) }
+            SdkWriteResult.Broadcast(txid)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            if (!preparedForBroadcast) SdkWriteResult.NotBroadcast("consolidation preparation failed", t)
+            else classifyCoreSendFailure(t)
+        }
+    }
+
+    /**
+     * Re-submit the EXACT signed bytes of a persisted CoinJoin consolidation
+     * ([SdkL1SendSource.broadcastRawTransaction]) — never a rebuild. The
+     * caller has already checked that [rawTx] hashes to [expectedTxid].
+     */
+    internal suspend fun rebroadcastCoinJoinConsolidation(rawTx: ByteArray, expectedTxid: String): ConsolidationReplay {
+        if (!isEnabled() || !probeSendGate().allowed) return ConsolidationReplay.FAILED
+        return try {
+            val txid = source.broadcastRawTransaction(rawTx)
+            if (!txid.equals(expectedTxid, ignoreCase = true)) {
+                log.warn("consolidation replay answered txid {} for {}", txid, expectedTxid)
+            }
+            log.info("SDK consolidation replay: re-submitted {}", expectedTxid)
+            runCatching { onSelfSpendBroadcast() }
+            runCatching { bridgeAfterBroadcast(expectedTxid) }
+            ConsolidationReplay.SUBMITTED
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            val replay = classifyReplayFailure(t)
+            if (replay == ConsolidationReplay.UNAVAILABLE) {
+                log.error("SDK consolidation replay of {} unavailable: {}", expectedTxid, t.message)
+            } else {
+                log.warn("SDK consolidation replay of {} answered {}", expectedTxid, replay, t)
+            }
+            replay
+        }
+    }
+
     /**
      * BIP70/BIP270, post-cutover (issue #1520 Phase 1B item 1): build and
      * sign a multi-recipient payment with its inputs RESERVED, without
@@ -1546,23 +1762,8 @@ class SdkL1SendService internal constructor(
      * see. The FFI has no UTXO-exclusion API, so a sweep-scale build would
      * spend protected funds; a check failure blocks too.
      */
-    private fun hasProtectedOutputs(operation: String): Boolean {
-        val hasLockedOutputs = try {
-            hasAppLockedSpendableOutputs()
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("SDK {}: app-locked-output preflight failed; blocking (fail closed)", operation, t)
-            true
-        }
-        val hasSeamLockedOutputs = try {
-            seamOutputLockRegistry.hasAnyLocks()
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("SDK {}: seam output-lock registry read failed; blocking (fail closed)", operation, t)
-            true
-        }
-        return hasLockedOutputs || hasSeamLockedOutputs
-    }
+    private fun hasProtectedOutputs(operation: String): Boolean =
+        seamOutputLockRegistry.outputsAppLocked("SDK $operation", hasAppLockedSpendableOutputs)
 
     /**
      * The largest amount a MAYACHAIN deposit can pay a vault right now:

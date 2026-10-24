@@ -28,8 +28,8 @@ import org.robolectric.annotation.Config
 /**
  * Host-JVM tests for the mixed-funds detector's pure pieces: the
  * CoinJoin-row parse of the `accountBalances` JSON snapshot
- * ([parseCoinJoinConfirmedDuffs]) and the SDK/dashj source merge
- * ([mergedMixedFundsDuffs]).
+ * ([parseCoinJoinConfirmedDuffs]) and the cutover-aware SDK/dashj source
+ * selection ([mixedFundsDuffs]).
  *
  * Robolectric runner: the parser uses `org.json`, which the plain
  * unit-test android.jar stubs out (returnDefaultValues would silently
@@ -54,6 +54,11 @@ class CoinJoinFundsMigrationServiceTest {
         "userIdentityId":"${"00".repeat(32)}","friendIdentityId":"${"00".repeat(32)}",
         "confirmed":$confirmed,"unconfirmed":0,"immature":0,
         "locked":0,"keysUsed":0,"keysTotal":40,"derivationPath":null}"""
+
+    @Test
+    fun promptHardSuppression_isDisabledForCutoverRecovery() {
+        assertEquals(false, MIXED_FUNDS_PROMPT_HARD_SUPPRESSED)
+    }
 
     // ── parseCoinJoinConfirmedDuffs ───────────────────────────────────
 
@@ -101,6 +106,22 @@ class CoinJoinFundsMigrationServiceTest {
     }
 
     @Test
+    fun parse_missingOrNonNumericFields_areUnknownNotZero() {
+        val cj = ACCOUNT_TYPE_TAG_COIN_JOIN
+        val bad = listOf(
+            """[{"typeTag":$cj,"index":0}]""", // confirmed missing
+            """[{"typeTag":$cj,"index":0,"confirmed":"5"}]""", // a string
+            """[{"typeTag":$cj,"index":0,"confirmed":1.5}]""", // fractional
+            """[{"typeTag":$cj,"index":0,"confirmed":null}]""",
+            """[{"typeTag":$cj,"index":0,"confirmed":-1}]""", // negative
+            """[{"typeTag":$cj,"confirmed":5}]""", // index missing
+            """[{"index":0,"confirmed":5},{"typeTag":$cj,"index":0,"confirmed":5}]""" // a row without its tag
+        )
+        for (json in bad) assertNull(json, parseCoinJoinConfirmedDuffs(json))
+        assertEquals(5L, parseCoinJoinConfirmedDuffs("""[{"typeTag":$cj,"index":0,"confirmed":5}]"""))
+    }
+
+    @Test
     fun parse_nullEmptyOrMalformed_isUnknown() {
         assertNull(parseCoinJoinConfirmedDuffs(null))
         assertNull(parseCoinJoinConfirmedDuffs(""))
@@ -108,30 +129,48 @@ class CoinJoinFundsMigrationServiceTest {
         assertNull(parseCoinJoinConfirmedDuffs("{\"an\":\"object, not an array\"}"))
     }
 
-    // ── mergedMixedFundsDuffs ─────────────────────────────────────────
+    // ── mixedFundsDuffs ───────────────────────────────────────────────
 
     @Test
-    fun merge_bothUnknown_isUnknown() {
-        assertNull(mergedMixedFundsDuffs(null, null))
+    fun preCutover_bothUnknown_isUnknown() {
+        assertNull(mixedFundsDuffs(false, null, null))
     }
 
     @Test
-    fun merge_takesTheMaxAndTreatsAnUnknownSourceAsZero() {
-        // The restore-with-mixed-funds bug: dashj (held, never synced)
-        // reads 0 while the SDK sees the funds — the SDK figure must win.
-        assertEquals(150_000_000L, mergedMixedFundsDuffs(150_000_000L, 0L))
-        assertEquals(150_000_000L, mergedMixedFundsDuffs(150_000_000L, null))
-        // Pre-cutover: the SDK is not started (unknown) and dashj is the
-        // authority.
-        assertEquals(150_000_000L, mergedMixedFundsDuffs(null, 150_000_000L))
-        // Both readable: max.
-        assertEquals(200L, mergedMixedFundsDuffs(100L, 200L))
-        assertEquals(200L, mergedMixedFundsDuffs(200L, 100L))
+    fun preCutover_takesTheMaxAndTreatsAnUnknownSourceAsZero() {
+        assertEquals(150_000_000L, mixedFundsDuffs(false, 150_000_000L, 0L))
+        assertEquals(150_000_000L, mixedFundsDuffs(false, 150_000_000L, null))
+        // The SDK is passive (unknown) pre-cutover and dashj is the authority.
+        assertEquals(150_000_000L, mixedFundsDuffs(false, null, 150_000_000L))
+        assertEquals(200L, mixedFundsDuffs(false, 100L, 200L))
+        assertEquals(200L, mixedFundsDuffs(false, 200L, 100L))
     }
 
     @Test
-    fun merge_bothZero_isZeroNotUnknown() {
-        assertEquals(0L, mergedMixedFundsDuffs(0L, 0L))
+    fun preCutover_bothZero_isZeroNotUnknown() {
+        assertEquals(0L, mixedFundsDuffs(false, 0L, 0L))
+    }
+
+    @Test
+    fun postCutover_staleDashjBalanceIsIgnoredWhenSdkReadsZero() {
+        // Field bug: an UPGRADED wallet's held dashj engine is frozen at its
+        // pre-cutover snapshot (57 DASH mixed) while the SDK — the live
+        // engine — sees the coins already shielded from another device.
+        assertEquals(0L, mixedFundsDuffs(true, 0L, 5_734_663_282L))
+    }
+
+    @Test
+    fun postCutover_usesTheSdkAmountAlone() {
+        assertEquals(150_000_000L, mixedFundsDuffs(true, 150_000_000L, 0L))
+        assertEquals(150_000_000L, mixedFundsDuffs(true, 150_000_000L, null))
+        // Never the larger stale dashj figure.
+        assertEquals(100L, mixedFundsDuffs(true, 100L, 200L))
+    }
+
+    @Test
+    fun postCutover_unreadableSdkIsUnknownEvenWithDashjFunds() {
+        assertNull(mixedFundsDuffs(true, null, 5_734_663_282L))
+        assertNull(mixedFundsDuffs(true, null, null))
     }
 
     // ── the in-flight marker (format/parse/expiry) ────────────────────
@@ -139,25 +178,40 @@ class CoinJoinFundsMigrationServiceTest {
     @Test
     fun inFlightMarker_roundTripsBothActions() {
         for (action in MixedFundsMigrationAction.entries) {
-            val marker = InFlightMixedFundsMigration(
-                action = action,
-                startedAtMillis = 1_760_000_000_123L,
-                baselineShieldedDuffs = 42_000_000L
-            )
+            val marker = InFlightMixedFundsMigration(action = action, startedAtMillis = 1_760_000_000_123L)
             assertEquals(marker, parseInFlightMigration(formatInFlightMigration(marker)))
         }
     }
 
     @Test
     fun inFlightMarker_persistedFormIsStable() {
-        // The persisted form is a compatibility contract: an upgraded build
-        // must still parse a marker written by this one.
-        val marker = InFlightMixedFundsMigration(
-            MixedFundsMigrationAction.SHIELD,
-            1_760_000_000_000L,
-            5L
-        )
-        assertEquals("SHIELD|1760000000000|5", formatInFlightMigration(marker))
+        // The persisted form is a compatibility contract: older builds still read the third
+        // (legacy baseline) field and complete only once a balance EXCEEDS it, which none can.
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1_760_000_000_000L)
+        assertEquals("SHIELD|1760000000000|${Long.MAX_VALUE}", formatInFlightMigration(marker))
+    }
+
+    @Test
+    fun inFlightMarker_definitiveFailureRoundTripsAndOlderFormStaysUnfailed() {
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 1_760_000_000_000L, failed = true)
+        assertEquals("SHIELD|1760000000000|${Long.MAX_VALUE}|failed", formatInFlightMigration(marker))
+        assertEquals(marker, parseInFlightMigration(formatInFlightMigration(marker)))
+        assertEquals(false, parseInFlightMigration("SHIELD|1760000000000|5")?.failed)
+    }
+
+    @Test
+    fun inFlightMarker_everyLegacyBaselineParsesAndIsIgnored() {
+        // 0 (older markExpired/COMBINE), a balance, -1 (UNKNOWN), other legacy numbers and MAX.
+        val legacy = listOf("0", "5", "42000000", "-1", "-2", Long.MIN_VALUE.toString(), Long.MAX_VALUE.toString())
+        for (baseline in legacy) {
+            for (failed in listOf("", "|failed")) {
+                assertEquals(
+                    "$baseline$failed",
+                    InFlightMixedFundsMigration(MixedFundsMigrationAction.SHIELD, 123L, failed = failed.isNotEmpty()),
+                    parseInFlightMigration("SHIELD|123|$baseline$failed")
+                )
+            }
+        }
     }
 
     @Test
@@ -181,7 +235,7 @@ class CoinJoinFundsMigrationServiceTest {
     @Test
     fun inFlightMarker_expiresExactlyPastTheHonestyWindow() {
         val startedAt = 1_000_000L
-        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.COMBINE, startedAt, 0L)
+        val marker = InFlightMixedFundsMigration(MixedFundsMigrationAction.COMBINE, startedAt)
         assertEquals(false, marker.isExpired(nowMillis = startedAt))
         assertEquals(false, marker.isExpired(nowMillis = startedAt + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS))
         assertEquals(true, marker.isExpired(nowMillis = startedAt + MIXED_FUNDS_IN_FLIGHT_TIMEOUT_MS + 1))

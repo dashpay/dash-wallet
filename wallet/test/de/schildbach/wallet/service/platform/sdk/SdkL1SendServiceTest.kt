@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
@@ -86,6 +87,41 @@ class SdkL1SendServiceTest {
         override suspend fun boundWalletIdOrNull(): String? {
             boundCalls++
             return boundWalletId()
+        }
+
+        // ── CoinJoin consolidation (mirrors DashSdkL1SendSource: a throwing
+        // `prepared` abandons the finalized build, releasing its inputs) ──
+        var consolidationAbandons = 0
+        var consolidationBroadcasts = 0
+        val consolidationWallets = mutableListOf<String>()
+
+        /** The persisted address table's answer: which own account holds the destination. */
+        var owner: (String, String) -> OwnDestinationAccount? = { _, _ -> OwnDestinationAccount.BIP44 }
+        val ownershipChecks = mutableListOf<Pair<String, String>>()
+        var ownershipCheckedInsideLock = false
+
+        override suspend fun destinationOwner(walletIdHex: String, address: String): OwnDestinationAccount? {
+            ownershipChecks += walletIdHex to address
+            ownershipCheckedInsideLock = insideLock
+            return owner(walletIdHex, address)
+        }
+
+        override suspend fun consolidateCoinJoin(
+            walletIdHex: String,
+            destination: String,
+            amount: Long,
+            drain: Boolean,
+            prepared: suspend (ByteArray) -> Unit
+        ): String {
+            consolidationWallets += walletIdHex
+            try {
+                prepared(byteArrayOf(1, 2, 3))
+            } catch (t: Throwable) {
+                consolidationAbandons++
+                throw t
+            }
+            consolidationBroadcasts++
+            return "11".repeat(32)
         }
 
         override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
@@ -177,6 +213,15 @@ class SdkL1SendServiceTest {
         }
 
         override suspend fun unusedExternalAddress(walletIdHex: String): String? = externalAddress
+
+        /** Null = the interface default (no raw-bytes broadcast in the pinned SDK). */
+        var onRawBroadcast: ((ByteArray) -> String)? = null
+        val rawBroadcasts = mutableListOf<ByteArray>()
+
+        override suspend fun broadcastRawTransaction(rawTx: ByteArray): String {
+            rawBroadcasts += rawTx
+            return onRawBroadcast?.invoke(rawTx) ?: super.broadcastRawTransaction(rawTx)
+        }
     }
 
     private fun config(enabled: Boolean?, cutoverState: String? = null): DashPayConfig = mockk {
@@ -495,6 +540,207 @@ class SdkL1SendServiceTest {
         val result = service(source).sendToAddress(validAddress, amount, emptyWallet = false)
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.sendCalls)
+    }
+
+    private fun consolidationService(
+        source: FakeSource,
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry()
+    ) = SdkL1SendService(
+        source = source,
+        dashPayConfig = config(true),
+        isValidAddress = { true },
+        l1Progress = { caughtUpProgress() },
+        hasAppLockedCoinJoinOutputs = { false },
+        seamOutputLockRegistry = seamRegistry
+    )
+
+    /** Cancelled once the txid checkpoint is being written: the broadcast still follows, nothing is abandoned. */
+    @Test
+    fun consolidateCoinJoin_cancelledAtTheCheckpoint_stillBroadcasts() = runBlocking {
+        val source = readySource()
+        val svc = consolidationService(source)
+        var result: SdkWriteResult<String>? = null
+        lateinit var call: kotlinx.coroutines.Job
+        call = launch {
+            result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) {
+                call.cancel()
+                kotlinx.coroutines.delay(10) // the checkpoint write, suspended when cancelled
+            }
+        }
+        call.join()
+        assertEquals(1, source.consolidationBroadcasts)
+        assertEquals(0, source.consolidationAbandons)
+        assertTrue(result is SdkWriteResult.Broadcast)
+    }
+
+    /**
+     * The CoinJoin drains use the send-all union: an SDK-only output locked in
+     * the seam registry (invisible to the dashj check) refuses consolidation
+     * and the migration's shield guard, and so does a registry that cannot be read.
+     */
+    @Test
+    fun consolidateCoinJoin_seamLockedOrUnreadableRegistry_isNotBroadcastAndNeverBuilds() = runBlocking {
+        val unreadable = mockk<SeamOutputLockRegistry> {
+            every { hasAnyLocks() } throws IllegalStateException("registry unavailable")
+        }
+        val locked = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        for (registry in listOf(locked, unreadable)) {
+            val source = readySource()
+            val svc = consolidationService(source, registry)
+            assertTrue(svc.coinJoinOutputsLocked())
+            var prepared = false
+            val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+            assertEquals(SdkWriteResult.NotBroadcast("CoinJoin outputs are locked"), result)
+            assertFalse(prepared)
+            assertTrue(source.consolidationWallets.isEmpty())
+        }
+        assertFalse(consolidationService(readySource()).coinJoinOutputsLocked())
+    }
+
+    /** A seam lock of a wiped wallet never blocks the next wallet's CoinJoin drain (registry is process-wide). */
+    @Test
+    fun consolidateCoinJoin_seamLockOfAWipedWallet_noLongerBlocks() = runBlocking {
+        val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        val svc = consolidationService(readySource(), registry)
+        assertTrue(svc.coinJoinOutputsLocked())
+        registry.clearForWalletWipe()
+        assertFalse(svc.coinJoinOutputsLocked())
+    }
+
+    @Test
+    fun consolidateCoinJoin_bindLookupFailure_isNotBroadcast() = runBlocking {
+        val failure = IllegalStateException("bootstrap failed")
+        val source = FakeSource(boundWalletId = { throw failure })
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertEquals(SdkWriteResult.NotBroadcast("SDK bootstrap/bind lookup failed", failure), result)
+        assertEquals(1, source.boundCalls)
+        assertEquals(0, source.lockAcquisitions)
+    }
+
+    @Test
+    fun consolidateCoinJoin_walletNotBound_isNotBroadcast() = runBlocking {
+        val source = FakeSource(boundWalletId = { null })
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertEquals(SdkWriteResult.NotBroadcast("wallet not bound"), result)
+        assertEquals(0, source.lockAcquisitions)
+    }
+
+    @Test
+    fun consolidateCoinJoin_rejectedSignedDrain_isAbandonedAndNotBroadcast() = runBlocking {
+        // The migration rejects a partial drain inside `prepared`
+        // (validateCoinJoinConsolidation): nothing is broadcast, the build is
+        // abandoned (inputs released) and the result is a definitive
+        // pre-broadcast failure, never Ambiguous.
+        val source = readySource()
+        val rejection = IllegalArgumentException("Drain must spend every snapshot coin (spends 2 of 3)")
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { throw rejection }
+        // Compared by message: crossing withContext, coroutine debug mode may rethrow a copy.
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals("consolidation preparation failed", (result as SdkWriteResult.NotBroadcast).reason)
+        assertEquals(rejection.message, result.cause?.message)
+        assertEquals(1, source.consolidationAbandons)
+        assertEquals(0, source.consolidationBroadcasts)
+    }
+
+    @Test
+    fun consolidateCoinJoin_differentBoundWallet_isNotBroadcastAndNeverBuilds() = runBlocking {
+        // A rebind since the migration's snapshot: never build toward its destination.
+        val source = FakeSource(boundWalletId = { "02".repeat(32) })
+        val svc = consolidationService(source)
+        var prepared = false
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+        assertEquals(SdkWriteResult.NotBroadcast("bound wallet is not the migration's wallet"), result)
+        assertTrue(source.consolidationWallets.isEmpty())
+        assertEquals(0, source.lockAcquisitions)
+        assertFalse(prepared)
+    }
+
+    @Test
+    fun consolidateCoinJoin_buildsOnTheExpectedWalletById() = runBlocking {
+        val source = readySource()
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(listOf(walletId), source.consolidationWallets)
+        // The destination was bound to that same wallet, under the build's lock.
+        assertEquals(listOf(walletId to validAddress), source.ownershipChecks)
+        assertTrue(source.ownershipCheckedInsideLock)
+    }
+
+    @Test
+    fun consolidateCoinJoin_destinationNotOwnedByTheWallet_isNotBroadcastAndNeverBuilds() = runBlocking {
+        // A valid address of ANOTHER wallet (or none in the persisted table): refuse before building.
+        val source = readySource().apply { owner = { _, _ -> null } }
+        val svc = consolidationService(source)
+        var prepared = false
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(DESTINATION_NOT_OWNED, (result as SdkWriteResult.NotBroadcast).cause?.message)
+        assertTrue(source.consolidationWallets.isEmpty())
+        assertFalse(prepared)
+    }
+
+    @Test
+    fun consolidateCoinJoin_unreadableOwnership_isNotBroadcastAndNeverBuilds() = runBlocking {
+        val source = readySource().apply { owner = { _, _ -> throw java.io.IOException("db closed") } }
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.consolidationWallets.isEmpty())
+    }
+
+    // ── CoinJoin consolidation replay (exact persisted bytes) ────────────
+
+    private val replayBytes = byteArrayOf(1, 2, 3, 4)
+
+    @Test
+    fun rebroadcastConsolidation_submitsTheExactBytes() = runBlocking {
+        val source = readySource().apply { onRawBroadcast = { txid } }
+        val result = service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid)
+        assertEquals(ConsolidationReplay.SUBMITTED, result)
+        assertEquals(1, source.rawBroadcasts.size)
+        assertTrue(source.rawBroadcasts.single().contentEquals(replayBytes))
+        assertEquals(listOf(txid), bridgedTxids)
+        assertEquals(0, source.sendCalls)
+        assertEquals(0, source.sendAllCalls)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_alreadyKnownCountsAsSubmitted() = runBlocking {
+        for (answer in listOf("txn-already-known", "txn-already-in-mempool", "Transaction already in block chain")) {
+            val source = readySource().apply { onRawBroadcast = { throw IllegalStateException("rejected: $answer") } }
+            assertEquals(answer, ConsolidationReplay.SUBMITTED,
+                service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        }
+    }
+
+    @Test
+    fun rebroadcastConsolidation_conflictIsTerminal() = runBlocking {
+        val source = readySource().apply {
+            onRawBroadcast = { throw RuntimeException("wrapped", IllegalStateException("txn-mempool-conflict")) }
+        }
+        assertEquals(ConsolidationReplay.CONFLICT, service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        assertEquals(1, source.rawBroadcasts.size)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_withoutARawBroadcastApiIsUnavailable() = runBlocking {
+        val source = readySource()
+        assertEquals(ConsolidationReplay.UNAVAILABLE, service(source).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        assertTrue(bridgedTxids.isEmpty())
+    }
+
+    @Test
+    fun rebroadcastConsolidation_otherFailuresAndClosedGateAreRetryable() = runBlocking {
+        val failing = readySource().apply { onRawBroadcast = { throw IllegalStateException("bad-txns-inputs-missingorspent") } }
+        assertEquals(ConsolidationReplay.FAILED, service(failing).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        val gated = readySource().apply { onRawBroadcast = { txid } }
+        assertEquals(ConsolidationReplay.FAILED,
+            service(gated, progress = { ShadowSyncProgress.IDLE }).rebroadcastCoinJoinConsolidation(replayBytes, txid))
+        assertEquals(0, gated.rawBroadcasts.size)
     }
 
     // ── The evidence gate (reuses evaluateWalletFundingGate) ─────────────
