@@ -85,9 +85,11 @@ class PlatformDashConnectRepositoryTest {
     @Test
     fun parseQr_rejectsNonDashConnectContent() = runBlocking {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
-        assertThrows(DashConnectUriException::class.java) {
-            runBlocking { repository.parseQr("https://example.com") }
+        val error = assertThrows(DashConnectUriException::class.java) {
+            runBlocking { repository.parseQr("https://example.com/private?token=sensitive-qr-value") }
         }
+        assertEquals("Not a DashConnect QR code", error.message)
+        assertEquals(null, error.cause)
         Unit
     }
 }

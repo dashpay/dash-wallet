@@ -75,7 +75,7 @@ class PlatformDashConnectRepository @Inject constructor(
     override suspend fun parseQr(qrContent: String): DashConnectQr {
         checkNetwork()
         if (!DashConnectUri.isKeyUri(qrContent.trim())) {
-            throw DashConnectUriException("not a DashConnect QR code: $qrContent")
+            throw DashConnectUriException("Not a DashConnect QR code")
         }
         val request = DashConnectUri.parseKeyRequest(qrContent.trim())
         val expected = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_TESTNET)

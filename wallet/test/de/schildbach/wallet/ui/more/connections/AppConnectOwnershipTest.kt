@@ -38,7 +38,10 @@ class AppConnectOwnershipTest {
     private val profile = mockk<DataContract>(relaxed = true)
     private val vector = JsonParser.parseReader(javaClass.getResourceAsStream("/app-connect-vectors.json")!!.reader()).asJsonObject
     private val decoded = DashConnectUri.parseKeyRequest(vector.getAsJsonObject("request")["uri"].asString)
-    private val request = decoded.copy(appConnect = decoded.appConnect!!.copy(createdAt = System.currentTimeMillis()))
+    private val groupRequest = decoded.copy(appConnect = decoded.appConnect!!.copy(createdAt = System.currentTimeMillis()))
+    private val request = groupRequest.copy(appConnect = groupRequest.appConnect!!.let { raw ->
+        raw.copy(auth = listOf(raw.auth.first().copy(kind = 0, securityLevel = 2, id = groupRequest.contractId)) + raw.auth.drop(1))
+    })
 
     init {
         every { repo.walletApplication.wallet!!.watchingKey.pubKey } returns byteArrayOf(2) + ByteArray(32) { 1 }
@@ -58,7 +61,7 @@ class AppConnectOwnershipTest {
         coEvery { config.getGrants() } returns emptyList()
     }
 
-    @Test fun `owned group plus exact DashPay profile exception prepare successfully`() = runBlocking {
+    @Test fun `owned contract plus exact DashPay profile exception prepare successfully`() = runBlocking {
         nonMainnetOnly()
         val plan = session.prepare(request)
         assertEquals(2, plan.grants.size)
@@ -68,10 +71,47 @@ class AppConnectOwnershipTest {
         Unit
     }
 
-    @Test fun `foreign group ownership is rejected`() {
+    @Test fun `group grants are rejected even when the group owner matches the app`() {
         nonMainnetOnly()
-        every { service.platform.client.getContractGroupOwner(any()) } returns identityId
-        assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
+        val client = service.platform.client
+        for (groupOwner in listOf(owner, identityId)) {
+            every { client.getContractGroupOwner(any()) } returns groupOwner
+            val error = assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(groupRequest) } }
+            assertTrue(error.message!!.contains("full scope"))
+        }
+        verify(exactly = 0) { client.getContractGroupOwner(any()) }
+    }
+
+    @Test fun `approval retry also rejects a previously prepared group grant`() = runBlocking {
+        nonMainnetOnly()
+        val plan = session.prepare(request)
+        val original = groupRequest.appConnect!!.auth.first()
+        val groupPlan = plan.copy(recovering = true, grants = listOf(plan.grants.first().copy(kind = original.kind,
+            securityLevel = original.securityLevel, id = original.id)) + plan.grants.drop(1))
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.approve(groupRequest, groupPlan) }
+        }
+        assertTrue(error.message!!.contains("full scope"))
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `optional group bindings cannot bypass the scope guard`() {
+        nonMainnetOnly()
+        val raw = request.appConnect!!
+        val optionalGroup = groupRequest.appConnect!!.auth.first()
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(appConnect = raw.copy(auth = raw.auth + optionalGroup))) }
+        }
+    }
+
+    @Test fun `foreign single contract ownership is still rejected`() {
+        nonMainnetOnly()
+        every { app.ownerId } returns owner
+        val raw = request.appConnect!!
+        val foreign = raw.auth.first().copy(id = ByteArray(32) { 3 })
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(appConnect = raw.copy(auth = listOf(foreign) + raw.auth.drop(1)))) }
+        }
     }
 
     @Test fun `DashPay exception does not permit contact requests or whole contract`() {
@@ -115,7 +155,7 @@ class AppConnectOwnershipTest {
         val plan = session.prepare(request)
         val primary = plan.grants.first()
         for (bad in listOf(primary.copy(totalBudget = null), primary.copy(totalBudget = primary.totalBudget!! + java.math.BigInteger.ONE),
-            primary.copy(expiresAt = null), primary.copy(kind = 0))) {
+            primary.copy(expiresAt = null), primary.copy(kind = 1, documentType = "profile"))) {
             assertThrows(IllegalArgumentException::class.java) {
                 plan.copy(grants = listOf(bad) + plan.grants.drop(1)).requireMatches(request)
             }

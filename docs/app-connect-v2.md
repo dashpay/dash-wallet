@@ -29,6 +29,13 @@ request age. The approval sheet shows each exact grant, optional binding toggles
 budget and lifetime presets, app ID and callback host. Unknown app labels are
 unverified; no label-based branding or silent approval is used.
 
+New approvals and approval retries reject contract-group bindings. The pinned SDK
+proves group ownership but does not expose the authenticated membership/admin
+metadata needed to verify the complete authorization scope, including future
+membership changes. Apps must request single-contract or document-type bindings
+until that scope can be verified and disclosed. Existing group grants remain
+visible and revocable; the parser retains group support for interoperability.
+
 Requested budgets are capped at 5 DASH per key without dropping a requested
 limit or inventing an absent budget. Missing expiry defaults to 90 days; requested
 expiry is capped at one year and must remain over an hour beyond proved block

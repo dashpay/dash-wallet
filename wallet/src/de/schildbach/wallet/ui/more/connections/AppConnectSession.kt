@@ -196,8 +196,9 @@ internal class AppConnectSession(
         val app = platform.client.getDataContract(request.contractId, true) ?: error("App contract not found")
         check(app.ownerId.toBuffer().any { it != 0.toByte() }) { "System contracts cannot be apps" }
         grants.forEach { grant ->
-            val owner = if (grant.kind == 2) platform.client.getContractGroupOwner(Identifier.from(grant.id))
-            else platform.client.getDataContract(grant.id, true)?.ownerId
+            // Owner equality cannot establish a group's complete or future authorization scope.
+            check(grant.kind != 2) { "Contract-group grants are unavailable until their full scope can be verified. Request a contract-bound grant instead." }
+            val owner = platform.client.getDataContract(grant.id, true)?.ownerId
             val profileException = grant.kind == 1 && Base58.encode(grant.id) == DASHPAY && grant.documentType == "profile"
             check(owner == app.ownerId || profileException) { "A requested bound target is not owned by the app" }
         }

@@ -61,6 +61,28 @@ class AppConnectRequestTest {
         assertNotNull(DashConnectUri.parseKeyRequest(uri(body() + byteArrayOf(7, 0, 7, 0))).appConnect)
     }
 
+    @Test fun `parse errors never retain scanned query values or sensitive parser causes`() {
+        val secret = "private-token-sensitive"
+        val base = "dash-key:${Base58.encode(body())}"
+        val invalidCallback = java.net.URLEncoder.encode("https://example.org/$secret bad", "UTF-8")
+        for (input in listOf(
+            "$base?n=d&v=$secret",
+            "$base?n=$secret&v=1",
+            "$base?n=d&v=2&cb=$invalidCallback",
+            "$base?n=d&v=2&cb=%$secret",
+            "dash-key:$secret?n=d&v=2",
+            "dash-st:2?n=d&v=1&cb=%$secret",
+            "dash-st:$secret?n=d&v=1"
+        )) {
+            val error = assertThrows(DashConnectUriException::class.java) {
+                if (DashConnectUri.isStUri(input)) DashConnectUri.parseStRequest(input)
+                else DashConnectUri.parseKeyRequest(input)
+            }
+            assertFalse(error.stackTraceToString().contains(secret))
+            assertNull(error.cause)
+        }
+    }
+
     @Test fun `timestamp freshness permits clock skew but not old requests`() {
         val parsed = DashConnectUri.parseKeyRequest(request["uri"].asString).appConnect!!
         parsed.requireFresh(parsed.createdAt + 600_000)

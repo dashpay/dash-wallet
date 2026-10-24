@@ -117,7 +117,7 @@ object DashConnectUri {
                 }
             }
         } catch (e: DashConnectUriException) { throw e }
-        catch (e: Exception) { throw DashConnectUriException(e.message ?: "Invalid v2 request", e) }
+        catch (e: Exception) { throw DashConnectUriException("Invalid connection request") }
         val (body, network) = parseEnvelope(uri, KEY_SCHEME)
         val payload = decodeBase58(body)
 
@@ -168,7 +168,7 @@ object DashConnectUri {
         if ('?' !in uri || body.isEmpty() || body.length > 5594)
             throw DashConnectUriException("Invalid dash-st payload")
         val params = try { AppConnectParser.query(uri.substringAfter('?')) }
-        catch (error: Exception) { throw DashConnectUriException("Invalid dash-st query", error) }
+        catch (error: Exception) { throw DashConnectUriException("Invalid dash-st query") }
         if (params["v"] != "1") throw DashConnectUriException("Unsupported dash-st version")
         val network = DashConnectNetwork.fromCode(params["n"])
             ?: throw DashConnectUriException("Unknown dash-st network")
@@ -204,11 +204,11 @@ object DashConnectUri {
 
         val version = params["v"] ?: throw DashConnectUriException("missing v param")
         if (version.toIntOrNull() != VERSION) {
-            throw DashConnectUriException("unsupported version: $version")
+            throw DashConnectUriException("Unsupported connection version")
         }
         val networkCode = params["n"] ?: throw DashConnectUriException("missing n param")
         val network = DashConnectNetwork.fromCode(networkCode)
-            ?: throw DashConnectUriException("unknown network: $networkCode")
+            ?: throw DashConnectUriException("Unknown connection network")
 
         return body to network
     }
@@ -225,6 +225,6 @@ object DashConnectUri {
     private fun decodeBase58(body: String): ByteArray = try {
         Base58.decode(body) // plain Base58, no checksum
     } catch (ex: Exception) {
-        throw DashConnectUriException("invalid Base58 payload", ex)
+        throw DashConnectUriException("Invalid Base58 payload")
     }
 }
