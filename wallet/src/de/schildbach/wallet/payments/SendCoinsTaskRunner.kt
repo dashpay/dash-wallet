@@ -487,12 +487,14 @@ class SendCoinsTaskRunner @Inject constructor(
             )
         ) {
             CutoverSendRoute.DASHJ -> Unit // unchanged path below
+            // Bound to the wallet resolved and checked above, never to the caller's possibly-null
+            // [originWallet]: a wipe during the SDK call must not let the replacement pay.
             CutoverSendRoute.SDK_BRIDGED -> return sendViaSdkBridged(
                 address,
                 amount,
                 beforeSending,
                 emptyWallet,
-                originWallet = originWallet
+                originWallet = wallet
             )
             CutoverSendRoute.FAIL_CLOSED -> throw SendNotSdkRoutableException(
                 "cutover committed: this send type (custom coin selection, locked-output " +
@@ -507,7 +509,8 @@ class SendCoinsTaskRunner @Inject constructor(
             sendRequest,
             checkBalanceConditions = false,
             beforeSending = beforeSending,
-            originWallet = originWallet
+            // the wallet resolved above, which the request was built from
+            originWallet = wallet
         )
     }
 
@@ -546,15 +549,15 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean = false,
         onBroadcast: ((txid: String?) -> Unit)? = null,
         onNotBroadcast: (() -> Unit)? = null,
-        /** The wallet the payment was confirmed on: checked once more right before the broadcast. */
-        originWallet: Wallet? = null
+        /**
+         * The wallet the payment was confirmed on, or the one the caller resolved when it named
+         * none: checked once more right before the broadcast, and the one the result is bridged
+         * into. Never null, so no reroute can go out unbound.
+         */
+        originWallet: Wallet
     ): Transaction {
-        val result = if (originWallet == null) {
-            sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet)
-        } else {
-            sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet) {
-                ensureStillOwned(originWallet, "sending it")
-            }
+        val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet) {
+            ensureStillOwned(originWallet, "sending it")
         }
         return when (result) {
             is SdkWriteResult.Broadcast -> {
@@ -653,7 +656,10 @@ class SendCoinsTaskRunner @Inject constructor(
         session: WalletSession?
     ): String {
         // Taken before anything here can suspend; refused at once if that wallet is already gone.
-        val origin = walletOf(session)
+        // With no session, the wallet installed now: resolved once, here, so every later step
+        // (the pre-broadcast check, the dashj fall-through) is bound to it rather than to
+        // whatever a wipe has installed by then.
+        val origin = walletOf(session) ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         // Same barrier as every other payment entry point (see awaitPaymentReadiness).
         pendingPaymentVerifier.awaitRestored()
         val sdkResult = sdkL1SendService.sendToAddress(address, amount, emptyWallet) {
@@ -662,8 +668,7 @@ class SendCoinsTaskRunner @Inject constructor(
             // to the caller exactly as they do on the dashj path. The wallet
             // the payment was confirmed on is asked again here, right before
             // the broadcast.
-            val wallet = origin?.also { ensureStillOwned(it, "sending it") }
-                ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+            val wallet = origin.also { ensureStillOwned(it, "sending it") }
             val dashAddress = Address.fromString(walletData.networkParameters, address)
             if (checkBalanceConditions && !wallet.isAddressMine(dashAddress)) {
                 walletData.checkSendingConditions(dashAddress, amount.toCoin())
@@ -853,14 +858,16 @@ class SendCoinsTaskRunner @Inject constructor(
         session: WalletSession?
     ): TxInfo {
         // Taken before anything here can suspend; refused at once if that wallet is already gone.
-        val origin = walletOf(session)
+        // With no session, the wallet installed now, resolved once so the selection and the send
+        // below are bound to the same one.
+        val origin = walletOf(session) ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         val params = walletData.networkParameters
         val dashjAddress = Address.fromBase58(params, address)
         val selector = when (selection) {
             is SpendSelection.Any -> null
             is SpendSelection.ByAddress -> ByAddressCoinSelector(Address.fromBase58(params, selection.address))
             is SpendSelection.ExactOutput -> {
-                val tx = walletData.getTransaction(Sha256Hash.wrap(selection.txId))
+                val tx = origin.getTransaction(Sha256Hash.wrap(selection.txId))
                     ?: throw IllegalArgumentException("unknown transaction: " + selection.txId)
                 ExactOutputsSelector(listOf(tx.getOutput(selection.outputIndex.toLong())))
             }

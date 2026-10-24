@@ -121,8 +121,11 @@ class SendCoinsTaskRunnerSdkRoutingTest {
                 // Phase 5d bridge factory: only reached under a committed
                 // cutover (SDK_BRIDGED route), which these tests never take.
                 mockk(relaxed = true),
-                // Pending-payment barrier: relaxed, so awaitRestored() passes straight through.
-                mockk<PendingDirectPaymentVerifier>(relaxed = true)
+                // Pending-payment barrier: relaxed, so awaitRestored() passes straight through;
+                // the installed wallet is still the one each send resolved.
+                mockk<PendingDirectPaymentVerifier>(relaxed = true) {
+                    every { stillOwnedBy(any()) } returns true
+                }
             )
         )
     }
@@ -132,7 +135,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
         val tx = mockk<Transaction>()
         every { tx.txId } returns org.bitcoinj.core.Sha256Hash.wrap("cd".repeat(32))
         coEvery {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
         } returns tx
         return tx
     }
@@ -148,7 +151,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
 
         assertEquals(sdkTxid, txid)
         coVerify(exactly = 0) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
         }
     }
 
@@ -163,7 +166,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
 
         assertEquals("cd".repeat(32), txid)
         coVerify(exactly = 1) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
         }
     }
 
@@ -182,7 +185,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
             assertSame(cause, e)
         }
         coVerify(exactly = 0) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
         }
     }
 
@@ -193,7 +196,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
         val tx = mockk<Transaction>()
         every { tx.txId } returns org.bitcoinj.core.Sha256Hash.wrap("ef".repeat(32))
         coEvery {
-            runner.sendCoins(capture(addressSlot), capture(amountSlot), any(), any(), any(), any(), any())
+            runner.sendCoins(capture(addressSlot), capture(amountSlot), any(), any(), any(), any(), any(), any())
         } returns tx
         coEvery {
             sdkL1SendService.sendToAddress(any(), any(), any(), any())
@@ -262,7 +265,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
             assertSame(leftover, e)
         }
         coVerify(exactly = 0) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
         }
     }
 }

@@ -291,6 +291,84 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
+    fun postCutover_typedOverload_aWipeDuringTheSdkSend_refusesTheBroadcast_evenWithoutANamedOwner() = runTest {
+        // the typed overload resolves and checks the installed wallet when the caller names none:
+        // its SDK reroute must be bound to that resolved wallet, not to the null it was handed
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        every { verifier.stillOwnedBy(wallet) } returns true
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } coAnswers {
+            every { verifier.stillOwnedBy(wallet) } returns false // the wipe lands
+            arg<suspend () -> Unit>(3).invoke() // the pre-broadcast hook
+            SdkWriteResult.Broadcast(sdkTxid)
+        }
+        bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
+
+        try {
+            runner.sendCoins(recipient, Coin.CENT, checkBalanceConditions = false, originWallet = null)
+            fail("a payment confirmed on a wiped wallet was broadcast from its replacement")
+        } catch (expected: IllegalStateException) {
+            // refused before the broadcast
+        }
+
+        coVerify(exactly = 0) { bridgeFactory.bridge(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun postCutover_typedOverload_bridgesIntoTheResolvedWallet() = runTest {
+        // the bridge commits into the wallet the send resolved, never re-resolving it afterwards
+        postCutover(SdkWriteResult.Broadcast(sdkTxid))
+        bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
+        every { verifier.stillOwnedBy(wallet) } returns true
+
+        runner.sendCoins(recipient, Coin.CENT, checkBalanceConditions = false, originWallet = null)
+
+        coVerify(exactly = 1) { bridgeFactory.bridge(sdkTxid, any(), any(), any(), originWallet = wallet) }
+    }
+
+    @Test
+    fun neutralOverload_aWipeBeforeTheBroadcast_refusesIt_evenWithoutASession() = runTest {
+        // no session: the wallet installed when the send began is the one it is bound to; a
+        // replacement installed by a wipe before the broadcast must not be the one asked
+        val replacement = mockk<Wallet>(relaxed = true)
+        val walletData = mockk<WalletData>(relaxed = true)
+        every { walletData.wallet } returns wallet
+        every { walletData.networkParameters } returns networkParams
+        val neutral = SendCoinsTaskRunner(
+            walletData,
+            mockk<WalletApplication>(relaxed = true),
+            mockk<SecurityFunctions>(relaxed = true),
+            mockk<PackageInfoProvider>(relaxed = true),
+            mockk<AnalyticsService>(relaxed = true),
+            mockk<BlockchainIdentityConfig>(relaxed = true),
+            mockk<IdentityRepository>(relaxed = true),
+            mockk(relaxed = true),
+            mockk<TransactionMetadataProvider>(relaxed = true),
+            sdkL1SendService,
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            bridgeFactory,
+            verifier
+        )
+        every { verifier.stillOwnedBy(wallet) } returns true
+        every { verifier.stillOwnedBy(replacement) } returns true
+        coEvery { sdkL1SendService.cutoverCommitted() } returns true
+        coEvery { sdkL1SendService.sendToAddress(any(), any(), any(), any()) } coAnswers {
+            // the wipe lands: the old wallet is retired and a replacement installed
+            every { verifier.stillOwnedBy(wallet) } returns false
+            every { walletData.wallet } returns replacement
+            arg<suspend () -> Unit>(3).invoke()
+            SdkWriteResult.Broadcast(sdkTxid)
+        }
+
+        try {
+            neutral.sendCoins(recipient.toBase58(), org.dash.wallet.common.money.Dash(1_000_000), false, false, null)
+            fail("a payment begun on a wiped wallet was let through on its replacement")
+        } catch (expected: IllegalStateException) {
+            // refused before the broadcast
+        }
+    }
+
+    @Test
     fun preCutover_dashjSend_signalsAfterCommit() = runTest {
         coEvery { sdkL1SendService.cutoverCommitted() } returns false
         val signals = mutableListOf<String?>()
