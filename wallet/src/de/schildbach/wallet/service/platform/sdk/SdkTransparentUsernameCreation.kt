@@ -1642,18 +1642,19 @@ class SdkTransparentUsernameCreation internal constructor(
         // Resolved before accepting, failing closed: a refusal touches nothing and shows the
         // screen's error, so no stamped error can send a later "Try again" anywhere else.
         val resolved = try {
-            val walletId = source.boundWalletIdOrNull()
-                ?: throw IllegalStateException("app wallet not bound to the SDK")
-            val identityId = Identifier.from(identityIdBase58).toBuffer()
-            // A label this identity already owns or contends for (an earlier Ambiguous attempt that
-            // landed, for instance) is never submitted again.
-            // Platform queries: off the caller's dispatcher (Main, from a viewModelScope).
-            val alreadyTaken = withContext(ioDispatcher) {
-                listOfNotNull(username, secondaryUsername)
+            // All of it off the caller's dispatcher (Main, from a viewModelScope): the wallet-id
+            // read can cold-start the SDK and the ownership checks are Platform queries.
+            withContext(ioDispatcher) {
+                val walletId = source.boundWalletIdOrNull()
+                    ?: throw IllegalStateException("app wallet not bound to the SDK")
+                val identityId = Identifier.from(identityIdBase58).toBuffer()
+                // A label this identity already owns or contends for (an earlier Ambiguous attempt
+                // that landed, for instance) is never submitted again.
+                val alreadyTaken = listOfNotNull(username, secondaryUsername)
                     .filter { nameAlreadyTaken(identityIdBase58, it) }
                     .toSet()
+                Triple(walletId, identityId, alreadyTaken)
             }
-            Triple(walletId, identityId, alreadyTaken)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

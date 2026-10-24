@@ -1156,20 +1156,35 @@ class RequestUserNameViewModel @Inject constructor(
                 return@launch
             }
             val reuseTransaction = lockedOrLost || (rejectedAfterRegistration && cutover)
-            if (reuseTransaction && existingIdentityId != null && !isUsingInvite() && cutover) {
+            if (reuseTransaction && !isUsingInvite() && cutover) {
+                // After the cutover a reuse submission is a name-only retry or nothing: the legacy
+                // path below resets the record and can fund a new identity. A record with no
+                // identity id cannot be retried, so it is refused.
                 log.info("name-only retry for the existing identity (cutover committed)")
                 // Accepted means the retry runs on the application scope and survives this screen,
                 // which the submitting state closes; publish it only then.
-                // No requested name: nothing to register, treated as a refusal.
+                // No requested name or no identity id: nothing to register, treated as a refusal.
                 val requestedName = requestedUserName
-                val accepted = requestedName != null &&
+                if (existingIdentityId == null) {
+                    log.warn("username submit refused: the identity to retry has no identity id")
+                }
+                val accepted = requestedName != null && existingIdentityId != null &&
                     transparentUsernameCreation.retryNameForExistingIdentity(
-                        requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
+                        existingIdentityId,
                         requestedName,
                         requestedUsernameSecondary
                     )
                 // A refusal changes nothing; the request is recorded only once the retry runs.
-                if (accepted) withContext(Dispatchers.IO) { updateConfig() }
+                // The retry is already running, so a failed config write must not hide that.
+                if (accepted) {
+                    try {
+                        withContext(Dispatchers.IO) { updateConfig() }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("name-only retry accepted but the requested name was not saved", e)
+                    }
+                }
                 _uiState.update {
                     if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
                 }

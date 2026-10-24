@@ -762,13 +762,19 @@ class SdkTransparentUsernameCreationTest {
     }
 
     @Test
-    fun `the name-ownership checks run on the io dispatcher, not the caller's`() = runTest {
-        // the caller is a viewModelScope (Main): the platform queries must not run there
+    fun `the wallet-id read and the name-ownership checks run on the io dispatcher, not the caller's`() = runTest {
+        // the caller is a viewModelScope (Main): the SDK cold start and the platform queries
+        // must not run there
         val source = source(lockAfterFailure = null)
         coEvery { source.registerDpnsName(walletIdHex, identityId, any()) } returns "alice3.dash"
         val io = java.util.concurrent.Executors.newSingleThreadExecutor { Thread(it, "test-io") }
         val ioDispatcher = io.asCoroutineDispatcher()
         val checkedOn = mutableListOf<String>()
+        val walletIdReadOn = mutableListOf<String>()
+        coEvery { source.boundWalletIdOrNull() } answers {
+            synchronized(walletIdReadOn) { walletIdReadOn += Thread.currentThread().name }
+            walletIdHex
+        }
         val appScope = CoroutineScope(
             kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
         )
@@ -789,6 +795,8 @@ class SdkTransparentUsernameCreationTest {
         try {
             assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice4"))
             assertEquals(listOf("test-io", "test-io"), synchronized(checkedOn) { checkedOn.toList() })
+            // the launched retry may read it again on its own scope; the pre-accept read is first
+            assertEquals("test-io", synchronized(walletIdReadOn) { walletIdReadOn.firstOrNull() })
         } finally {
             appScope.cancel()
             io.shutdown()

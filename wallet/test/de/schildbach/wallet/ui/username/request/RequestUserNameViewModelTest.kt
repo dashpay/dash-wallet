@@ -476,6 +476,62 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun submit_afterTheCutover_aReuseRecordWithNoIdentityId_isRefusedNotSentToLegacyCreation() = runVmTest {
+        // The legacy reuse path resets the record and can fund a new identity: after the cutover
+        // a reuse submission without an identity id must refuse, never fall through to it.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        val locked = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            null,
+            null,
+            false,
+            usernameRequested = UsernameRequestStatus.LOCKED
+        )
+        viewModel.identity = locked
+
+        viewModel.submit()
+
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        assertEquals(false, viewModel.uiState.value.usernameRequestSubmitting)
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) }
+        assertEquals("nothing reset", locked, viewModel.identity)
+    }
+
+    @Test
+    fun submit_anAcceptedNameOnlyRetry_stillPublishesSubmittingWhenTheConfigWriteFails() = runVmTest {
+        // The retry already runs on the application scope; a failed config write must not leave
+        // the screen without the submitting state that closes it.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
+        coEvery { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) } throws
+            java.io.IOException("datastore write failed")
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false,
+            usernameRequested = UsernameRequestStatus.LOST_VOTE
+        )
+
+        viewModel.submit()
+
+        awaitReal("the submitting state") { viewModel.uiState.value.usernameRequestSubmitting }
+        assertEquals(false, viewModel.uiState.value.usernameSubmittedError)
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
     fun submit_aNameOnlyRetryWithNoRequestedName_isRefused() = runVmTest {
         coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
         coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
