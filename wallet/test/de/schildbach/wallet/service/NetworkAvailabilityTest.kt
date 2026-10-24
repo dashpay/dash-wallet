@@ -102,6 +102,24 @@ class NetworkAvailabilityTest {
     }
 
     @Test
+    fun aCallbackThatDecidedNothing_doesNotSkipTheSeed() {
+        // PastaClaw on #1632: every callback used to count, so an onAvailable
+        // whose capabilities could not be read (or a stale event for a former
+        // default) landing during registration skipped the seed, and a service
+        // with no usable network read as online.
+        val token = gate.seedToken()
+        assertEquals(null, gate.networkCallbackUpdate { tracker.onAvailable("wifi", usable = null) })
+        assertEquals(null, gate.networkCallbackUpdate { tracker.onLost("cell") })
+        assertTrue(gate.seedOffline(token, usableNow = false) { impediments.add(network) })
+        assertTrue(network in impediments)
+
+        // A verdict still supersedes it.
+        val later = gate.seedToken()
+        assertEquals(false, gate.networkCallbackUpdate { tracker.onCapabilitiesChanged("wifi", usable = true) })
+        assertFalse(gate.seedOffline(later, usableNow = false) { impediments.add(network) })
+    }
+
+    @Test
     fun aCallbackUpdateAfterTheSeed_overridesIt() {
         val token = gate.seedToken()
         assertTrue(gate.seedOffline(token, usableNow = false) { impediments.add(network) })

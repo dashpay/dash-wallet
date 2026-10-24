@@ -103,12 +103,16 @@ internal class DefaultNetworkTracker<N : Any> {
  * a network lost between the read and the registration was never reported
  * (nothing matched any more), and the service read as online. So the read
  * comes AFTER registration, where it must not overwrite what the callback has
- * already said: every callback update bumps a counter, the token is taken
- * just before registering, and [seedOffline] marks the service offline only if
- * no callback update landed since. A default network that is present after
- * the registration is reported by the callback (`onAvailable`, later
- * `onLost`), so the seed only ever decides the "no default network" case the
- * callback stays silent on.
+ * already said: every callback update that reached a verdict bumps a counter,
+ * the token is taken just before registering, and [seedOffline] marks the
+ * service offline only if no such update landed since. A callback that
+ * decided nothing (a loss of, or an update for, a network that is not the
+ * default; an `onAvailable` whose capabilities could not be read) does not
+ * count: it said nothing the seed would overwrite, and counting it skipped
+ * the seed with no network usable (PastaClaw on #1632). A default network
+ * that is present after the registration is reported by the callback
+ * (`onAvailable`, later `onLost`), so the seed only ever decides the "no
+ * default network" case the callback stays silent on.
  */
 internal class ImpedimentGate {
     private val lock = Any()
@@ -117,10 +121,13 @@ internal class ImpedimentGate {
     /** A change that is not a network-callback update (the keystore health observer). */
     fun <T> update(block: () -> T): T = synchronized(lock, block)
 
-    /** A network-callback update; it supersedes the start-up seed. */
-    fun <T> networkCallbackUpdate(block: () -> T): T = synchronized(lock) {
-        networkCallbackUpdates++
-        block()
+    /**
+     * A network-callback update. [block] applies its verdict and returns it:
+     * true offline, false online, null when it decided nothing. Only a
+     * verdict supersedes the start-up seed.
+     */
+    fun networkCallbackUpdate(block: () -> Boolean?): Boolean? = synchronized(lock) {
+        block().also { if (it != null) networkCallbackUpdates++ }
     }
 
     /** Taken just BEFORE `registerNetworkCallback`. */

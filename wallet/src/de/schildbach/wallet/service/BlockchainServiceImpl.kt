@@ -1831,7 +1831,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     private var networkCallbackRegistered = false
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
-    /** The default network's verdict; touched only inside [ImpedimentGate.networkCallbackUpdate]. */
+    /** The default network's verdict; touched only under [ImpedimentGate]'s lock. */
     private val defaultNetwork = DefaultNetworkTracker<Network>()
     /** Serializes changes to [impediments] and decides the start-up connectivity seed. */
     private val impedimentGate = ImpedimentGate()
@@ -1938,7 +1938,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             super.onUnavailable()
             serviceScope.launch(networkEventDispatcher) {
                 log.info("network unavailable - no network satisfies request")
-                impedimentGate.networkCallbackUpdate { impediments.add(Impediment.NETWORK) }
+                impedimentGate.networkCallbackUpdate {
+                    impediments.add(Impediment.NETWORK)
+                    true // offline: a verdict, which supersedes the start-up seed
+                }
                 updateBlockchainStateImpediments()
                 check()
             }
@@ -3498,7 +3501,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (networkCallbackRegistered) {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             networkCallbackRegistered = false
-            impedimentGate.networkCallbackUpdate { defaultNetwork.clear() }
+            impedimentGate.update { defaultNetwork.clear() }
         }
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
