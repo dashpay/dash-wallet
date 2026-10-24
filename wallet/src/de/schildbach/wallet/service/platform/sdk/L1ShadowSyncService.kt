@@ -2582,6 +2582,12 @@ class L1ShadowSyncService internal constructor(
     private var externalStopGeneration = 0L
 
     /**
+     * The current [externalStopGeneration], for a start decided outside this
+     * class (the bind-heal waiter) to pass back to [startIfEnabled].
+     */
+    fun stopGeneration(): Long = externalStopGeneration
+
+    /**
      * When the engine last delivered ANY wallet event, monotonic-ish wall
      * clock via [nowMs]; 0 until the first one of this run.
      *

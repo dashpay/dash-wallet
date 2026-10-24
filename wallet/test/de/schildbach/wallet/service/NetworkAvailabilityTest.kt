@@ -143,13 +143,54 @@ class NetworkAvailabilityTest {
             sdkPath = { true },
             replayDue = { replayHoldsWakeLock(replaying = true, networkImpeded = impeded, filterScanWedged = false) }
         )
-        replayWakeLock.hold(replayHoldsWakeLock(replaying = true, networkImpeded = impeded, filterScanWedged = false))
+        replayWakeLock.tick(otherHolds = false)
         assertFalse("offline from the start: no wake lock for a replay that cannot move", lock.isHeld)
         assertEquals(0, acquisitions)
 
         // A network appears: the callback clears the impediment and re-checks.
         impeded = false
-        replayWakeLock.reacquireIfDue()
+        replayWakeLock.recheck()
         assertTrue(lock.isHeld)
+    }
+
+    // ── The default network decides (CodeRabbit, PastaClaw on #1632) ───────
+
+    private val tracker = DefaultNetworkTracker<String>()
+
+    @Test
+    fun aValidatedSecondaryNetwork_cannotSayOnline_whileTheDefaultIsUnusable() {
+        // Registered for the default network, the callback never hears about
+        // the secondary one. The default's own capabilities are the answer.
+        assertEquals(true, tracker.onAvailable("wifi", usable = false))
+        assertEquals(true, tracker.onCapabilitiesChanged("wifi", usable = false))
+        assertEquals(false, tracker.onCapabilitiesChanged("wifi", usable = true))
+    }
+
+    @Test
+    fun theDefaultSwitching_isOnlineThroughout_whicheverOrderTheLossArrives() {
+        assertEquals(false, tracker.onAvailable("wifi", usable = true))
+        // The new default reported before the old one's loss: that loss says nothing.
+        assertEquals(false, tracker.onAvailable("cell", usable = true))
+        assertEquals(null, tracker.onLost("wifi"))
+        // The other order: briefly offline, then online with the successor.
+        assertEquals(true, tracker.onLost("cell"))
+        assertEquals(false, tracker.onAvailable("wifi", usable = true))
+    }
+
+    @Test
+    fun theDefaultLosingValidation_isOffline_evenWithAnotherNetworkUp() {
+        // The reverse of the secondary-network case: one network losing
+        // validation is the answer only when it is the default network.
+        assertEquals(false, tracker.onAvailable("wifi", usable = true))
+        assertEquals(true, tracker.onCapabilitiesChanged("wifi", usable = false))
+        // The system moves the default to the validated cell network: online again.
+        assertEquals(false, tracker.onAvailable("cell", usable = true))
+    }
+
+    @Test
+    fun capabilitiesUnreadableOnAvailable_decideNothing_untilTheyArrive() {
+        assertEquals(null, tracker.onAvailable("wifi", usable = null))
+        assertEquals(false, tracker.onCapabilitiesChanged("wifi", usable = true))
+        assertEquals(true, tracker.onLost("wifi"))
     }
 }

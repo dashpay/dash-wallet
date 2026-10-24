@@ -80,7 +80,7 @@ class ReplayWakeLockTest {
     )
 
     // The minute tick's call, with no engine start or durable save in flight.
-    private fun tick() = replayWakeLock.hold(replayDue())
+    private fun tick() = replayWakeLock.tick(otherHolds = false)
 
     private val stuck = 1_500_000L // more than one commit batch behind
     private val target = 1_556_896L
@@ -219,8 +219,62 @@ class ReplayWakeLockTest {
 
         // The network back: the impediment update re-checks.
         networkImpeded = false
-        replayWakeLock.reacquireIfDue()
+        replayWakeLock.recheck()
         assertTrue(lock.isHeld)
+    }
+
+    @Test
+    fun aRecheckThatReadDueBeforeANetworkLoss_isUndoneByTheLossesOwnRecheck() {
+        // PastaClaw on #1632: the re-acquire read "due" outside the lock's
+        // monitor and acquired afterwards, and the network loss in between
+        // could only ever re-acquire. The lock stayed held offline until a tick,
+        // which does not come while the CPU sleeps. Now the read and the change
+        // happen under one monitor, and the loss's own recheck, which runs after
+        // the stale one, releases.
+        exhaustTheWatchdog()
+        tick()
+        assertFalse(lock.isHeld)
+
+        var lossLands = true
+        val racing = ReplayWakeLock(
+            lock = { lock },
+            sdkPath = { true },
+            replayDue = {
+                replayDue().also {
+                    // The network drops right after the recovery's read.
+                    if (lossLands) {
+                        lossLands = false
+                        networkImpeded = true
+                    }
+                }
+            }
+        )
+        check(121 * 60_000L, height = stuck + 1) // the wedge clears
+        racing.recheck() // the recovery: read "due", then the loss, then acquire
+        assertTrue("the stale read still acquired", lock.isHeld)
+
+        racing.recheck() // the impediment update of the loss
+        assertFalse("offline: the replay does not keep the CPU", lock.isHeld)
+        assertFalse(racing.held)
+    }
+
+    @Test
+    fun aNetworkLoss_releasesAtOnce_butNotWhatOnlyTheTickCanSee() {
+        tick()
+        assertTrue(lock.isHeld)
+
+        networkImpeded = true
+        replayWakeLock.recheck()
+        assertFalse("no tick needed to let the CPU sleep when offline", lock.isHeld)
+
+        // An engine start in flight is a hold the events cannot read: the
+        // tick records it, and a recheck keeps honouring it.
+        replayWakeLock.tick(otherHolds = true)
+        assertTrue(lock.isHeld)
+        replayWakeLock.recheck()
+        assertTrue("the engine start still needs the CPU", lock.isHeld)
+        replayWakeLock.tick(otherHolds = false)
+        assertFalse(lock.isHeld)
     }
 
     @Test

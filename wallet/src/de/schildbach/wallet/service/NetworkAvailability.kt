@@ -23,11 +23,12 @@ import android.net.NetworkCapabilities
 /**
  * Whether connectivity AS IT STANDS NOW offers a network the blockchain
  * service can sync over: the default network, with internet and validated —
- * the same capabilities the service's network callback requires.
+ * the same rule the service's default-network callback applies
+ * ([DefaultNetworkTracker]).
  *
  * The service seeds its NETWORK impediment from this once that callback is
- * registered ([ImpedimentGate.seedOffline]). A passive `registerNetworkCallback`
- * reports nothing while no network matches (no `onAvailable`, `onLost` or
+ * registered ([ImpedimentGate.seedOffline]). The callback reports nothing
+ * while there is no default network (no `onAvailable`, `onLost` or
  * `onCapabilitiesChanged`; `onUnavailable` is for `requestNetwork`), so a
  * service created while already offline used to read as online until some
  * network came and went. Never throws: an unreadable state answers "usable",
@@ -44,6 +45,49 @@ fun hasUsableNetworkNow(connectivityManager: ConnectivityManager): Boolean = try
 }
 
 /**
+ * The NETWORK impediment from a DEFAULT-network callback
+ * (`registerDefaultNetworkCallback`): offline unless the default network — the
+ * route the service's own traffic takes — has internet and is validated.
+ *
+ * Review on #1632 (CodeRabbit, PastaClaw): the callback used to be registered
+ * for ANY network with internet + validated. A validated secondary network
+ * then cleared the impediment while the default route was unusable, and the
+ * replay kept its no-timeout wake lock offline. The reverse also happened:
+ * one matching network losing validation set the impediment while another
+ * usable one was still up. The default network is one network, so each event
+ * about it is the whole answer.
+ *
+ * Each method returns the verdict: true offline, false online, null when the
+ * event decides nothing (a loss of a network that is no longer the default —
+ * its successor's `onAvailable` may already have been delivered — or an
+ * `onAvailable` whose capabilities could not be read; `onCapabilitiesChanged`
+ * follows it). Called in delivery order, one at a time.
+ */
+internal class DefaultNetworkTracker<N : Any> {
+    private var current: N? = null
+
+    fun onAvailable(network: N, usable: Boolean?): Boolean? {
+        current = network
+        return usable?.not()
+    }
+
+    fun onCapabilitiesChanged(network: N, usable: Boolean): Boolean {
+        current = network
+        return !usable
+    }
+
+    fun onLost(network: N): Boolean? {
+        if (network != current) return null
+        current = null
+        return true
+    }
+
+    fun clear() {
+        current = null
+    }
+}
+
+/**
  * Serializes every change to the blockchain service's impediment set, and
  * decides the one-off connectivity seed at service start.
  *
@@ -57,10 +101,10 @@ fun hasUsableNetworkNow(connectivityManager: ConnectivityManager): Boolean = try
  * comes AFTER registration, where it must not overwrite what the callback has
  * already said: every callback update bumps a counter, the token is taken
  * just before registering, and [seedOffline] marks the service offline only if
- * no callback update landed since. Any network that is present after the
- * registration is reported by the callback (`onAvailable`, later `onLost`),
- * so the seed only ever decides the "nothing matched" case the callback stays
- * silent on.
+ * no callback update landed since. A default network that is present after
+ * the registration is reported by the callback (`onAvailable`, later
+ * `onLost`), so the seed only ever decides the "no default network" case the
+ * callback stays silent on.
  */
 internal class ImpedimentGate {
     private val lock = Any()

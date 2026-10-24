@@ -32,7 +32,6 @@ import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
@@ -1832,7 +1831,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     private var networkCallbackRegistered = false
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
-    private val availableNetworks: MutableSet<Network> = ConcurrentHashMap.newKeySet()
+    /** The default network's verdict; touched only inside [ImpedimentGate.networkCallbackUpdate]. */
+    private val defaultNetwork = DefaultNetworkTracker<Network>()
     /** Serializes changes to [impediments] and decides the start-up connectivity seed. */
     private val impedimentGate = ImpedimentGate()
     /**
@@ -1882,11 +1882,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info(s.toString())
                 }
 
-                if (hasInternet && hasValidated) {
-                    impedimentGate.networkCallbackUpdate {
-                        availableNetworks.add(network)
-                        impediments.remove(Impediment.NETWORK)
-                    }
+                // The NEW default network: its own capabilities decide, usable or not.
+                val usable = capabilities?.let { hasInternet && hasValidated }
+                val offline = impedimentGate.networkCallbackUpdate {
+                    defaultNetwork.onAvailable(network, usable).also(::applyNetworkVerdict)
+                }
+                if (offline != null) {
                     updateBlockchainStateImpediments()
                     check()
                 }
@@ -1895,13 +1896,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         override fun onLost(network: Network) {
             serviceScope.launch(networkEventDispatcher) {
-                // Only add impediment if no suitable networks remain
-                val noneRemain = impedimentGate.networkCallbackUpdate {
-                    availableNetworks.remove(network)
-                    availableNetworks.isEmpty().also { if (it) impediments.add(Impediment.NETWORK) }
+                // Offline only if this is still the default network: a lost former
+                // default whose successor was already reported says nothing.
+                val offline = impedimentGate.networkCallbackUpdate {
+                    defaultNetwork.onLost(network).also(::applyNetworkVerdict)
                 }
-                log.info("network lost: $network, remaining networks: ${availableNetworks.size}")
-                if (noneRemain) {
+                log.info("network lost: $network, {}", if (offline == true) "no default network" else "not the default")
+                if (offline != null) {
                     updateBlockchainStateImpediments()
                     check()
                 }
@@ -1922,11 +1923,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
 
                 impedimentGate.networkCallbackUpdate {
-                    if (hasInternet && hasValidated) {
-                        impediments.remove(Impediment.NETWORK)
-                    } else {
-                        impediments.add(Impediment.NETWORK)
-                    }
+                    applyNetworkVerdict(defaultNetwork.onCapabilitiesChanged(network, hasInternet && hasValidated))
                 }
                 updateBlockchainStateImpediments()
                 check()
@@ -1940,6 +1937,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 impedimentGate.networkCallbackUpdate { impediments.add(Impediment.NETWORK) }
                 updateBlockchainStateImpediments()
                 check()
+            }
+        }
+
+        /** Inside [ImpedimentGate.networkCallbackUpdate]: true offline, false online, null no change. */
+        private fun applyNetworkVerdict(offline: Boolean?) {
+            when (offline) {
+                true -> impediments.add(Impediment.NETWORK)
+                false -> impediments.remove(Impediment.NETWORK)
+                null -> Unit
             }
         }
 
@@ -2490,9 +2496,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
             )
             // A replay that cannot make progress keeps the service up but releases the CPU.
-            // The same predicate ReplayWakeLock re-reads before releasing — one definition,
-            // or the two could disagree and refuse the release on every tick.
-            replayWakeLock.hold(replayWakeLockDue() || engineStarting || durableLagging)
+            // ReplayWakeLock reads the replay's part itself (replayWakeLockDue), the same
+            // way the event rechecks do; the tick adds what only it can see.
+            replayWakeLock.tick(otherHolds = engineStarting || durableLagging)
             // Those two holds also keep the service in the foreground: the scan reads
             // synced while they last, and a demoted service would be stopped anyway.
             if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
@@ -2771,7 +2777,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // Re-take the replay wake lock the moment the filter wedge clears:
                 // ACTION_TIME_TICK is not delivered while the CPU sleeps (see ReplayWakeLock).
                 // Unconditional: the cutover gate can be re-resolved later in this
-                // service's life, and reacquireIfDue re-reads it itself.
+                // service's life, and recheck re-reads it itself.
                 replayWakeLock.observeWedgeClears(serviceScope, l1ShadowSyncService.filterScanWedgeClears)
 
                 peerConnectivityListener = PeerConnectivityListener()
@@ -2997,22 +3003,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // Initialize network callback (now that securityFunctions is available)
                     networkCallback = NetworkCallbackImpl()
 
-                    // Register network callback for modern network monitoring
-                    // Use NetworkRequest to reliably detect when no validated network is available (e.g., airplane mode)
-                    val networkRequest = NetworkRequest.Builder()
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                        .build()
-                    // The registration reports nothing while no network matches, so a
+                    // Track the DEFAULT network — the route the service's traffic takes —
+                    // not any network with internet: a validated secondary network said
+                    // "online" while the default route was down (see DefaultNetworkTracker).
+                    // The callback reports nothing while there is no default network, so a
                     // service created offline read as online — and a persisted replay
                     // held the no-timeout wake lock in airplane mode. Seed the NETWORK
                     // impediment from connectivity read AFTER registering (a network
                     // lost in between is then not missed), unless a callback update
                     // has already landed: see ImpedimentGate.
                     val seedToken = impedimentGate.seedToken()
-                    connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+                    connectivityManager.registerDefaultNetworkCallback(networkCallback)
                     networkCallbackRegistered = true
-                    log.info("network callback registered with NetworkRequest: {}", networkCallback)
+                    log.info("default network callback registered: {}", networkCallback)
                     val usableNow = hasUsableNetworkNow(connectivityManager)
                     if (impedimentGate.seedOffline(seedToken, usableNow) { impediments.add(Impediment.NETWORK) }) {
                         log.info("no usable network at service start — NETWORK impediment set until one appears")
@@ -3491,7 +3494,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (networkCallbackRegistered) {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             networkCallbackRegistered = false
-            availableNetworks.clear()
+            impedimentGate.networkCallbackUpdate { defaultNetwork.clear() }
         }
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
@@ -3815,9 +3818,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private fun updateBlockchainStateImpediments() {
         blockchainStateDataProvider.updateImpediments(impediments)
-        // The network back (or any impediment change): the replay may be due
-        // the lock again, and the tick will not come while the CPU sleeps.
-        replayWakeLock.reacquireIfDue()
+        // The network back or gone (any impediment change): the replay may be
+        // due the lock again, or no longer, and the tick will not come while
+        // the CPU sleeps.
+        replayWakeLock.recheck()
     }
 
 //    /**

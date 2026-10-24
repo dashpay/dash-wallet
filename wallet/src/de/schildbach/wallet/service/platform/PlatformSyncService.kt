@@ -497,7 +497,8 @@ class PlatformSynchronizationService @Inject constructor(
         scope = syncScope,
         bindEstablished = sdkWalletBinder.bindEstablished,
         serviceTearingDown = { de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow },
-        startL1 = { l1ShadowSyncService.startIfEnabled() }
+        stopGeneration = { l1ShadowSyncService.stopGeneration() },
+        startL1 = { generation -> l1ShadowSyncService.startIfEnabled(expectedExternalStopGeneration = generation) }
     )
     private var lastTopupUpdateTime = 0L
     private var lastMetadataUpdateTime = 0L

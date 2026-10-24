@@ -53,6 +53,7 @@ class BindHealL1StarterTest {
             scope = scope,
             bindEstablished = bound,
             serviceTearingDown = { false },
+            stopGeneration = { 0L },
             startL1 = { starts++; true }
         )
 
@@ -78,6 +79,7 @@ class BindHealL1StarterTest {
             scope = scope,
             bindEstablished = bound,
             serviceTearingDown = { tearingDown },
+            stopGeneration = { 0L },
             startL1 = { starts++; true }
         )
 
@@ -110,6 +112,7 @@ class BindHealL1StarterTest {
             scope = scope,
             bindEstablished = bound,
             serviceTearingDown = { false }, // teardown already finished
+            stopGeneration = { 0L },
             startL1 = { starts++; true }
         )
 
@@ -136,6 +139,7 @@ class BindHealL1StarterTest {
             scope = scope,
             bindEstablished = bound,
             serviceTearingDown = { false },
+            stopGeneration = { 0L },
             startL1 = { starts++; true }
         )
 
@@ -161,6 +165,7 @@ class BindHealL1StarterTest {
             scope = scope,
             bindEstablished = bound,
             serviceTearingDown = { false },
+            stopGeneration = { 0L },
             startL1 = { starts++; true }
         )
 
@@ -190,6 +195,7 @@ class BindHealL1StarterTest {
             scope = scope,
             bindEstablished = bound,
             serviceTearingDown = { false },
+            stopGeneration = { 0L },
             startL1 = { starts++; true }
         )
 
@@ -203,6 +209,56 @@ class BindHealL1StarterTest {
     }
 
     @Test
+    fun aShutdownBetweenTheChecksAndTheStart_keepsL1Down() = runBlocking {
+        // PastaClaw / CodeRabbit on #1632: the lifetime and teardown checks are
+        // not atomic with the start. A shutdown that passes them and finishes the
+        // engine stop before the start runs used to be invisible to it: the
+        // start sampled the stop generation itself, AFTER that stop, and
+        // started L1 with no service. The fake engine refuses as
+        // startIfEnabled(expectedExternalStopGeneration) does under its mutex.
+        val bound = MutableStateFlow(false)
+        var starts = 0
+        var generation = 0L
+        val starter = BindHealL1Starter(
+            scope = scope,
+            bindEstablished = bound,
+            // The last check passes, then the shutdown's engine stop completes.
+            serviceTearingDown = { false.also { generation++ } },
+            stopGeneration = { generation },
+            startL1 = { expected -> (expected == generation).also { if (it) starts++ } }
+        )
+
+        starter.arm()
+        bound.value = true
+
+        assertEquals("a start decided before the stop does not outlive it", 0, starts)
+        assertFalse(starter.isArmed)
+    }
+
+    @Test
+    fun aStopBeforeTheHeal_doesNotBlockTheStart() = runBlocking {
+        // The generation is sampled at the heal, not at arm(): a stop/start the
+        // engine went through while the waiter waited (and which declined, the
+        // bind still failing) must not leave the heal unable to start it.
+        val bound = MutableStateFlow(false)
+        var starts = 0
+        var generation = 0L
+        val starter = BindHealL1Starter(
+            scope = scope,
+            bindEstablished = bound,
+            serviceTearingDown = { false },
+            stopGeneration = { generation },
+            startL1 = { expected -> (expected == generation).also { if (it) starts++ } }
+        )
+
+        starter.arm()
+        generation++ // a recovery path stopped the engine while the bind was failing
+        bound.value = true
+
+        assertEquals(1, starts)
+    }
+
+    @Test
     fun aLaterArmReplacesAnEarlierOne() = runBlocking {
         val bound = MutableStateFlow(false)
         var starts = 0
@@ -210,6 +266,7 @@ class BindHealL1StarterTest {
             scope = scope,
             bindEstablished = bound,
             serviceTearingDown = { false },
+            stopGeneration = { 0L },
             startL1 = { starts++; true }
         )
         starter.arm()

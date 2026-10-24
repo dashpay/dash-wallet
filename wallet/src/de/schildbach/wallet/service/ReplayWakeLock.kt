@@ -41,18 +41,26 @@ interface ReplayWakeLockHandle {
  * progress ([replayHoldsWakeLock]: offline, or wedged with the filter-stall
  * watchdog's restarts spent).
  *
- * Who decides:
- * - the minute tick acquires and releases ([hold]);
- * - the moments a stuck replay can move again re-acquire at once
- *   ([reacquireIfDue]): the network impediment clearing, and the filter wedge
- *   clearing ([observeWedgeClears]). ACTION_TIME_TICK is not delivered while the CPU
- *   sleeps, so waiting for the tick would leave a screen-off replay asleep
- *   until something unrelated woke the device.
+ * Who decides: everyone, the same way. The minute tick ([tick]) and every
+ * event that can change the answer ([recheck]: an impediment change, the
+ * filter wedge clearing via [observeWedgeClears]) read the decision NOW and
+ * acquire or release to match, under one monitor. ACTION_TIME_TICK is not
+ * delivered while the CPU sleeps, so a replay that can move again must not
+ * wait for the tick to get the lock back.
+ *
+ * The read and the change happen under the same monitor, and so does each
+ * later recheck. A recheck that read "due" just before a concurrent network
+ * loss can still acquire. But the loss's own recheck then runs after it, reads
+ * "not due", and releases. (An acquire-only re-check used to leave that lock
+ * held until the next tick, so the replay held the CPU while offline.)
+ *
+ * The tick also knows holds the events cannot see (an engine start, a durable
+ * save in flight). It records them, and a recheck honours the last recorded
+ * value. A stale one only keeps the lock, and a held lock keeps the CPU awake,
+ * so the next tick comes and corrects it.
  *
  * Tracked apart from `isHeld` because the lock is reference-counted and shared
  * with the dashj path ([releaseForTeardown] releases only this owner's count).
- * The tick runs on the main thread and the re-acquires on IO, so the held flag
- * and the lock change together under one monitor.
  *
  * @param lock the service's wake lock; null before onCreate assigns it.
  * @param sdkPath whether the SDK owns L1 (the dashj path manages its own hold).
@@ -79,20 +87,30 @@ internal class ReplayWakeLock(
     @Volatile
     private var retired = false
 
-    /** The tick's decision: [hold] true while the replay (or an engine start / durable save) needs the CPU. */
-    fun hold(hold: Boolean) {
+    /** The tick's holds the events cannot read; written and read under [guard]. */
+    private var tickHolds = false
+
+    /**
+     * The minute tick. [otherHolds]: an engine start or a durable save needs
+     * the CPU (the replay's own part is read by [recheck]).
+     */
+    fun tick(otherHolds: Boolean) {
+        synchronized(guard) { tickHolds = otherHolds }
+        recheck()
+    }
+
+    /** Hold the lock iff the replay (or the tick's last other holds) needs the CPU now. */
+    fun recheck() {
         if (!sdkPath()) return
         val lock = lock() ?: return
         synchronized(guard) {
             try {
-                if (hold && !held && !retired) {
+                val due = tickHolds || replayDue()
+                if (due && !held && !retired) {
                     log.info("replay or engine start in progress on the SDK path — acquiring the wake lock")
                     lock.acquire()
                     held = true
-                } else if (!hold && held && !replayDue()) {
-                    // replayDue() re-reads the inputs under the guard: the tick
-                    // decided from a reading an event may have overtaken (the
-                    // network back, the wedge cleared, the lock re-acquired) since.
+                } else if (!due && held) {
                     log.info("replay / engine start complete or unable to progress — releasing the wake lock")
                     held = false
                     if (lock.isHeld) lock.release()
@@ -101,12 +119,6 @@ internal class ReplayWakeLock(
                 log.warn("wake lock hold/release for the replay failed", t)
             }
         }
-    }
-
-    /** Acquire-only: take the lock back if the replay is due it now. Releasing stays the tick's decision. */
-    fun reacquireIfDue() {
-        if (!sdkPath()) return
-        if (replayDue()) hold(true)
     }
 
     /**
@@ -120,7 +132,7 @@ internal class ReplayWakeLock(
      * during the re-wedge — and no re-check came. A count it has not seen
      * always means a clear happened, so it re-checks. The baseline is read when
      * this is CALLED, not when the collector first runs, so a clear in between
-     * is not taken for the starting value. [reacquireIfDue] reads the current
+     * is not taken for the starting value. [recheck] reads the current
      * state, so a clear that was followed by a new wedge acquires nothing.
      */
     fun observeWedgeClears(scope: CoroutineScope, clears: StateFlow<Long>): Job {
@@ -129,7 +141,7 @@ internal class ReplayWakeLock(
             clears.filter { it != baseline }
                 .collect {
                     log.info("the filter wedge cleared — re-checking the replay wake lock")
-                    reacquireIfDue()
+                    recheck()
                 }
         }
     }
