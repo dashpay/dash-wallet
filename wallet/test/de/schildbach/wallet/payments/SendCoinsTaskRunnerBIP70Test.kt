@@ -1130,7 +1130,9 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         assertEquals("nothing may be posted for a wiped wallet", 0, mockWebServer.requestCount)
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        // and nothing released either: the reservation went with the wiped wallet's engine, and a
+        // release now would reach the engine (and outpoints) of whatever wallet comes next
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(payment) }
     }
 
     @Test
@@ -1227,9 +1229,39 @@ class SendCoinsTaskRunnerBIP70Test {
         val outpoints = realTx.inputs.map { it.outpoint }
         outpoints.forEach { assertTrue("locked after build: $it", wallet.isLockedOutput(it)) }
 
-        sendCoinsTaskRunner.releaseDeferredPayment(built)
+        sendCoinsTaskRunner.releaseDeferredPayment(built, wallet)
         outpoints.forEach { assertTrue("unlocked after release: $it", !wallet.isLockedOutput(it)) }
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+    }
+
+    @Test
+    fun `a preview released after its wallet was replaced touches neither the replacement nor its engine`() = runTest {
+        val paymentIntent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString()
+        )
+        val realTx = wallet.getTransactions(false).first { it.inputs.isNotEmpty() }
+        val payment = de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment(
+            txidHex = deferredTxidHex,
+            rawTxBytes = realTx.unsafeBitcoinSerialize(),
+            feeDuffs = 260L,
+            native = null
+        )
+        coEvery { sdkL1SendService.buildDeferredPayment(any()) } returns payment
+        val built = sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet)
+
+        // the screen is left open across a wipe; the replacement holds its own locks on the same
+        // outpoints (a restore of the same seed), and the bound engine is now the replacement's
+        val replacement = replacementWallet()
+        val outpoints = realTx.inputs.map { it.outpoint }
+        outpoints.forEach { replacement.lockOutput(it) }
+        every { walletDataProvider.wallet } returns replacement
+
+        sendCoinsTaskRunner.releaseDeferredPayment(built, wallet)
+
+        outpoints.forEach { assertTrue("the replacement's lock was given back: $it", replacement.isLockedOutput(it)) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
     }
 
     // ==================== extractBip70Recipients (pure) ====================
@@ -1760,7 +1792,8 @@ class SendCoinsTaskRunnerBIP70Test {
         }
 
         assertEquals(0, mockWebServer.requestCount)
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+        // never released through the replacement's engine, which never reserved it
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(payment) }
         coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
     }
 

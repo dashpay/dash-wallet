@@ -73,10 +73,23 @@ class PaymentProtocolViewModel @Inject constructor(
      * IS the payment. Consumed by [sendPayment]; released in [onCleared]
      * when abandoned (idempotent engine-side, TTL backstop besides).
      */
-    private val deferredPaymentRef =
-        java.util.concurrent.atomic.AtomicReference<de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment?>(null)
+    private val deferredPaymentRef = java.util.concurrent.atomic.AtomicReference<DeferredPreview?>(null)
     val deferredPayment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment?
-        get() = deferredPaymentRef.get()
+        get() = deferredPaymentRef.get()?.payment
+
+    /**
+     * A preview's reservation together with the wallet it was built on. Every release goes to that
+     * wallet ([SendCoinsTaskRunner.releaseDeferredPayment]), never to whatever is installed by
+     * then: after a wipe the installed wallet and the bound SDK engine are the replacement's, and
+     * a release through them would unlock outpoints of a wallet that never reserved them.
+     */
+    private class DeferredPreview(
+        val payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        val origin: org.bitcoinj.wallet.Wallet
+    )
+
+    private suspend fun release(preview: DeferredPreview) =
+        sendCoinsTaskRunner.releaseDeferredPayment(preview.payment, preview.origin)
 
     /**
      * In-flight guard for [sendPayment]: a second confirm while one is
@@ -228,9 +241,7 @@ class PaymentProtocolViewModel @Inject constructor(
                 // A re-preview (retry after a failed send) must not
                 // leak the previous reservation. getAndSet keeps the
                 // take-then-release atomic against a concurrent send.
-                deferredPaymentRef.getAndSet(null)?.let {
-                    sendCoinsTaskRunner.releaseDeferredPayment(it)
-                }
+                deferredPaymentRef.getAndSet(null)?.let { release(it) }
                 // ... nor keep a previous preview's resubmission arm (review 4305506849): a preview
                 // that finds no earlier payment would otherwise still confirm as a resubmission,
                 // fail, and strand the reservation it builds below.
@@ -256,7 +267,10 @@ class PaymentProtocolViewModel @Inject constructor(
                 }
                 // Built on, and later submitted for, the wallet this screen was opened on
                 // ([wallet]): a wipe in between must not have the replacement adopt the payment.
-                deferredPaymentRef.set(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet))
+                val origin = wallet
+                deferredPaymentRef.set(
+                    DeferredPreview(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, origin), origin)
+                )
                 _sendRequestLiveData.postValue(Resource.success(null))
             } catch (x: Exception) {
                 deferredPaymentRef.set(null)
@@ -287,7 +301,7 @@ class PaymentProtocolViewModel @Inject constructor(
 
                 // Atomic take: whoever wins this getAndSet owns the
                 // reservation; any concurrent reader sees null.
-                val prebuilt = deferredPaymentRef.getAndSet(null)
+                val preview = deferredPaymentRef.getAndSet(null)
                     // No armed reservation: the preview failed (the
                     // fragment gates on canSendPayment, so this is a
                     // backstop, not a fallback — the dashj leg is gone).
@@ -328,10 +342,10 @@ class PaymentProtocolViewModel @Inject constructor(
                     //
                     // From here the runner owns the reservation: it consumes, holds or releases it.
                     handedOff = true
-                    sendCoinsTaskRunner.sendPrebuiltDirectPayment(prebuilt, finalPaymentIntent!!, wallet)
+                    sendCoinsTaskRunner.sendPrebuiltDirectPayment(preview.payment, finalPaymentIntent!!, preview.origin)
                 } finally {
                     if (!handedOff) {
-                        withContext(NonCancellable) { sendCoinsTaskRunner.releaseDeferredPayment(prebuilt) }
+                        withContext(NonCancellable) { release(preview) }
                     }
                 }
 
@@ -369,10 +383,10 @@ class PaymentProtocolViewModel @Inject constructor(
         // ViewModel scope is already dead here, the release is idempotent,
         // and the engine's reservation TTL is the backstop if the process
         // dies first.
-        deferredPaymentRef.getAndSet(null)?.let { payment ->
+        deferredPaymentRef.getAndSet(null)?.let { preview ->
             @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
             kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-                sendCoinsTaskRunner.releaseDeferredPayment(payment)
+                release(preview)
             }
         }
         super.onCleared()

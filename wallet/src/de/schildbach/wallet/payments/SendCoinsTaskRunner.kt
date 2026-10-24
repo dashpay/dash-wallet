@@ -1147,16 +1147,24 @@ class SendCoinsTaskRunner @Inject constructor(
     /**
      * Release a [buildDeferredBip70Payment] reservation (abandoned
      * preview / pre-ack failure): SDK engine release + removal of the
-     * mirrored wallet locks.
+     * mirrored wallet locks on [wallet], the wallet it was built on.
+     *
+     * Nothing at all once [wallet] is no longer the installed wallet: its reservation lived in
+     * the engine of the wallet a wipe has since removed, and both the engine and the installed
+     * wallet now belong to the replacement, whose outpoints this must not unlock or release.
+     *
+     * @param wallet null only for a reservation built after its wallet was already replaced
+     *   (then the build ran on the replacement's engine): no mirrored locks were set, and the
+     *   engine release goes to the engine that made it
      */
-    suspend fun releaseDeferredPayment(payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment) =
-        releaseDeferredPayment(payment, walletData.wallet)
-
-    /** [releaseDeferredPayment], unlocking the mirrored locks on [wallet] (null: none were set). */
-    private suspend fun releaseDeferredPayment(
+    suspend fun releaseDeferredPayment(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
         wallet: Wallet?
     ) {
+        if (wallet != null && !pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            log.info("not releasing the reservation of {}: the wallet it was built on was replaced", payment.txidHex)
+            return
+        }
         runCatching { setReservedOutpointLocks(payment, locked = false, wallet = wallet) }
             .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks", it) }
         sdkL1SendService.releaseDeferredPayment(payment)

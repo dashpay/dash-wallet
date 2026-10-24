@@ -153,7 +153,7 @@ class PaymentProtocolDuplicateSubmissionTest {
             // nothing was submitted, so there is no second transaction for the payee to broadcast,
             // and the preview's reservation was given back
             coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
-            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment) }
+            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment, any()) }
         }
     }
 
@@ -171,7 +171,7 @@ class PaymentProtocolDuplicateSubmissionTest {
         assertEquals(Status.SUCCESS, viewModel.directPaymentAckLiveData.value?.status)
         runBlocking {
             coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(payment, any(), any()) }
-            coVerify(exactly = 0) { runner.releaseDeferredPayment(any()) }
+            coVerify(exactly = 0) { runner.releaseDeferredPayment(any(), any()) }
         }
     }
 
@@ -190,7 +190,29 @@ class PaymentProtocolDuplicateSubmissionTest {
         assertEquals(Status.ERROR, viewModel.directPaymentAckLiveData.value?.status)
         runBlocking {
             coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
-            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment) }
+            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment, any()) }
+        }
+    }
+
+    @Test
+    fun `a preview's reservation is released through the wallet it was built on`() {
+        // B2: released through whatever wallet is installed by then, a preview left open across a
+        // wipe would unlock outpoints in, and release them from the engine of, the replacement
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val viewModel = armedViewModel(runner)
+        val origin = viewModel.wallet
+
+        // previewed again (a retry): the previous reservation goes back first
+        viewModel.requestPaymentRequest(
+            mockk<PaymentIntent>(relaxed = true) { every { isExtendedBy(any(), any(), any()) } returns true }
+        )
+        awaitCondition("previous reservation released") {
+            runCatching { coVerify(atLeast = 1) { runner.releaseDeferredPayment(payment, any()) } }.isSuccess
+        }
+
+        runBlocking {
+            coVerify(exactly = 0) { runner.releaseDeferredPayment(any(), match { it !== origin }) }
+            coVerify(atLeast = 1) { runner.releaseDeferredPayment(payment, match { it === origin }) }
         }
     }
 
