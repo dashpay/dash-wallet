@@ -137,7 +137,7 @@ class PaymentProtocolDuplicateSubmissionTest {
     @Test
     fun `an invoice with a submission still outstanding is not paid again`() {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        coEvery { runner.findUnresolvedSubmission(requestHash) } returns earlierSubmission
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns earlierSubmission
         val viewModel = armedViewModel(runner)
 
         viewModel.sendPayment()
@@ -160,7 +160,7 @@ class PaymentProtocolDuplicateSubmissionTest {
     @Test
     fun `an invoice with nothing outstanding is paid as usual`() {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        coEvery { runner.findUnresolvedSubmission(any()) } returns null
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
         val liveTx = mockk<Transaction>(relaxed = true)
         coEvery { runner.sendPrebuiltDirectPayment(any(), any(), any()) } returns liveTx
         val viewModel = armedViewModel(runner)
@@ -181,7 +181,7 @@ class PaymentProtocolDuplicateSubmissionTest {
         // onCleared() can no longer reach it: this screen is its only owner until the runner takes
         // it over, and a failed read must give it back rather than strand its locked inputs.
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        coEvery { runner.findUnresolvedSubmission(any()) } throws IllegalStateException("store unreadable")
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } throws IllegalStateException("store unreadable")
         val viewModel = armedViewModel(runner)
 
         viewModel.sendPayment()
@@ -263,7 +263,7 @@ class PaymentProtocolDuplicateSubmissionTest {
 
         // previewed again: nothing paid before any more, so a new payment is built
         coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
-        coEvery { runner.findUnresolvedSubmission(any()) } returns null
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
         coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
         viewModel.requestPaymentRequest(
             mockk<PaymentIntent>(relaxed = true) { every { isExtendedBy(any(), any(), any()) } returns true }
@@ -382,8 +382,8 @@ class PaymentProtocolDuplicateSubmissionTest {
                 org.dash.wallet.common.payments.bip70.PaymentProtocol.MIMETYPE_PAYMENTREQUEST
             )
         }
-        coEvery { runner.findUnresolvedSubmission(any()) } returns null
-        coEvery { runner.findUnresolvedSubmission(match { it.contentEquals(expectedHash) }) } returns earlierSubmission
+        coEvery { runner.findUnresolvedSubmission(any<ByteArray>()) } returns null
+        coEvery { runner.findUnresolvedSubmission(match<ByteArray> { it.contentEquals(expectedHash) }) } returns earlierSubmission
         val walletData = mockk<WalletData>(relaxed = true) { every { this@mockk.wallet } returns mockk(relaxed = true) }
         val walletUIConfig = mockk<WalletUIConfig> {
             every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()

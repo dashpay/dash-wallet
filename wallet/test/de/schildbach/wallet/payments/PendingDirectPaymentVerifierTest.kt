@@ -2390,4 +2390,38 @@ class PendingDirectPaymentVerifierTest {
         coVerify(exactly = 0) { metadataProvider.forgetTransaction(tx.txId.toTxId()) }
         assertFalse(own.isTracked(tx.txId))
     }
+
+    // --- a stable order identity: a refreshed request is the same invoice ----------------------
+
+    @Test
+    fun `a refreshed request for the same order is matched by its order identity`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(
+            storedPayment(tx, "request-v1", abandoned = true).copy(orderId = "order-1")
+        )
+
+        // the same order re-served with a new hash
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("request-v2", "order-1"))
+        assertEquals(tx.txId, verifier.abandonedSubmissionFor("request-v2", wallet, "order-1")?.txId)
+        assertEquals(tx.txId, verifier.claimSubmission(createTransaction().txId, "request-v2", false, orderId = "order-1"))
+        // a different order is not blocked by it
+        assertNull(verifier.unresolvedSubmissionFor("request-v3", "order-2"))
+    }
+
+    @Test
+    fun `a record from before order identities is still matched by its request`() = runBlocking {
+        val tx = createTransaction()
+        coEvery { config.getAllOrThrow() } returns listOf(storedPayment(tx, "request-v1"))
+
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("request-v1", "order-1"))
+        assertEquals(tx.txId, verifier.claimSubmission(createTransaction().txId, "request-v1", false, orderId = "order-1"))
+    }
+
+    @Test
+    fun `two submissions racing for refreshes of one order get one claim`() = runBlocking {
+        val first = createTransaction().txId
+        assertNull(verifier.claimSubmission(first, "request-v1", false, orderId = "order-1"))
+        assertEquals(first, verifier.claimSubmission(createTransaction().txId, "request-v2", false, orderId = "order-1"))
+        verifier.releaseSubmissionClaim(first)
+    }
 }

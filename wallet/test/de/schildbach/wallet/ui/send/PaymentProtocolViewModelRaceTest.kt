@@ -59,7 +59,7 @@ class PaymentProtocolViewModelRaceTest {
 
     private fun buildViewModel(runner: SendCoinsTaskRunner): PaymentProtocolViewModel {
         // nothing outstanding for this invoice (a relaxed mock would answer with a mock hash)
-        coEvery { runner.findUnresolvedSubmission(any()) } returns null
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
         val wallet = mockk<Wallet>(relaxed = true)
         val walletData = mockk<WalletData>(relaxed = true) { every { this@mockk.wallet } returns wallet }
         val walletUIConfig = mockk<WalletUIConfig> {

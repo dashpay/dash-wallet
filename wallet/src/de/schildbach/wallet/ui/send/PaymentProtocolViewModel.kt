@@ -251,7 +251,7 @@ class PaymentProtocolViewModel @Inject constructor(
                 // build nothing new. A store that cannot be read builds the preview as usual; the
                 // confirm then reads it strictly and refuses.
                 val earlier = try {
-                    sendCoinsTaskRunner.findAbandonedSubmission(paymentIntent.paymentRequestHash, wallet)
+                    sendCoinsTaskRunner.findAbandonedSubmission(paymentIntent, wallet)
                 } catch (e: Exception) {
                     log.warn("could not look for an earlier payment of this request", e)
                     null
@@ -322,7 +322,7 @@ class PaymentProtocolViewModel @Inject constructor(
                 // so its inputs and their mirrored wallet locks are not stranded.
                 var handedOff = false
                 val transaction = try {
-                    sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!.paymentRequestHash)?.let { txId ->
+                    sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!)?.let { txId ->
                         log.info("not submitting again, {} is still unresolved for this payment request", txId)
                         throw PaymentSubmissionPendingException(txId.toString(), null)
                     }

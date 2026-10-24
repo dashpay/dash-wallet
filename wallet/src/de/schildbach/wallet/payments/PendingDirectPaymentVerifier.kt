@@ -127,6 +127,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         private const val REMOVAL_RETRY_MAX_MS = 5 * 60_000L
 
         private const val REQUEST_CLAIM_PREFIX = "request:"
+        private const val ORDER_CLAIM_PREFIX = "order:"
         private const val RESUBMISSION_CLAIM_PREFIX = "resubmission:"
         private const val GIFT_CARD_CLAIM = "gift-card"
     }
@@ -340,7 +341,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
         recovery: PaymentRecoveryMetadata? = null,
         paymentRequestId: String? = null,
         origin: Wallet? = null,
-        reservation: SdkDeferredPayment? = null
+        reservation: SdkDeferredPayment? = null,
+        /** The stable identity of the order [paymentRequestId] is a request for; see [PendingDirectPayment.orderId]. */
+        orderId: String? = null
     ): Deferred<Transaction?> {
         // The caller passes the wallet it actually signed against. Reading the installed one here
         // would be a second, later read: a wipe between signing and this call would bind the
@@ -355,6 +358,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
             txBytes = tx.bitcoinSerialize(),
             paymentUrl = paymentUrl,
             paymentRequestId = paymentRequestId,
+            orderId = orderId,
             serviceName = serviceName,
             createdAt = System.currentTimeMillis(),
             isGiftCardPurchase = recovery?.isGiftCardPurchase ?: false,
@@ -642,8 +646,9 @@ class PendingDirectPaymentVerifier @Inject constructor(
     fun detachReservation(txId: Sha256Hash): SdkDeferredPayment? = reservations.remove(txId)
 
     /**
-     * The transaction of a submission for [paymentRequestId] whose outcome is still unknown, or
-     * null if this invoice has nothing outstanding.
+     * The transaction of a submission for [paymentRequestId], or for any refresh of the same
+     * order ([orderId]), whose outcome is still unknown, or null if this invoice has nothing
+     * outstanding.
      *
      * Restoring input locks is not enough to stop a second payment for the same invoice: it stops
      * the new transaction reusing those outpoints, and a wallet with other funds simply builds one
@@ -657,14 +662,23 @@ class PendingDirectPaymentVerifier @Inject constructor(
      * inputs (it can never confirm). Until then the invoice is paid again by resubmitting that same
      * transaction ([abandonedSubmissionFor]), never with a new one.
      */
-    suspend fun unresolvedSubmissionFor(paymentRequestId: String?): Sha256Hash? {
-        if (paymentRequestId == null) {
+    suspend fun unresolvedSubmissionFor(paymentRequestId: String?, orderId: String? = null): Sha256Hash? {
+        if (paymentRequestId == null && orderId == null) {
             return null
         }
         return config.getAllOrThrow()
-            .firstOrNull { it.paymentRequestId == paymentRequestId && it.txId !in pendingRemovals }
+            .firstOrNull { it.isForInvoice(paymentRequestId, orderId) && it.txId !in pendingRemovals }
             ?.txId
     }
+
+    /**
+     * Whether this record paid the invoice named by [paymentRequestId] (the exact request) or
+     * [orderId] (its order, whatever refresh of the request is being paid). A record written
+     * before order identities were stored is matched by its request alone, as it always was.
+     */
+    private fun PendingDirectPayment.isForInvoice(paymentRequestId: String?, orderId: String?): Boolean =
+        (paymentRequestId != null && this.paymentRequestId == paymentRequestId) ||
+            (orderId != null && this.orderId == orderId)
 
     /**
      * Claims the right to submit [txId] as the one payment for its invoice ([paymentRequestId])
@@ -691,11 +705,14 @@ class PendingDirectPaymentVerifier @Inject constructor(
          * then failed before its POST released T1 while the other's was in flight. Refused, with
          * [txId], while another resubmission of it holds its claim.
          */
-        resubmission: Boolean = false
+        resubmission: Boolean = false,
+        /** The order [paymentRequestId] is a request for: a refreshed request for it is the same invoice. */
+        orderId: String? = null
     ): Sha256Hash? = claimMutex.withLock {
         val resubmissionKey = RESUBMISSION_CLAIM_PREFIX + txId
         val keys = buildList {
             paymentRequestId?.let { add(REQUEST_CLAIM_PREFIX + it) }
+            orderId?.let { add(ORDER_CLAIM_PREFIX + it) }
             if (isGiftCardPurchase) add(GIFT_CARD_CLAIM)
             if (resubmission) add(resubmissionKey)
         }
@@ -717,7 +734,7 @@ class PendingDirectPaymentVerifier @Inject constructor(
         // blocks another. A new purchase is a separate order with its own invoice, not a duplicate
         // of a released one, whose late broadcast is still attributed to its own order.
         val stored = config.getAllOrThrow().filter { it.txId != txId && it.txId !in pendingRemovals }
-        val recorded = paymentRequestId?.let { id -> stored.firstOrNull { it.paymentRequestId == id } }
+        val recorded = stored.firstOrNull { it.isForInvoice(paymentRequestId, orderId) }
             ?: stored.firstOrNull { isGiftCardPurchase && it.isGiftCardPurchase && !it.abandoned }
         if (recorded != null) {
             return@withLock recorded.txId
@@ -1323,15 +1340,20 @@ class PendingDirectPaymentVerifier @Inject constructor(
     }
 
     /**
-     * The released submission of [paymentRequestId] made by [origin], if there is one on record:
+     * The released submission of [paymentRequestId] (or of any refresh of its order, [orderId])
+     * made by [origin], if there is one on record:
      * the exact transaction a re-confirmation of that invoice resubmits instead of building a new
      * one (review 9fa90c30ccf1).
      */
-    suspend fun abandonedSubmissionFor(paymentRequestId: String?, origin: Wallet): PendingDirectPayment? {
-        paymentRequestId ?: return null
+    suspend fun abandonedSubmissionFor(
+        paymentRequestId: String?,
+        origin: Wallet,
+        orderId: String? = null
+    ): PendingDirectPayment? {
+        if (paymentRequestId == null && orderId == null) return null
         val walletId = walletIdentity(origin)
         return config.getAllOrThrow().firstOrNull {
-            it.paymentRequestId == paymentRequestId &&
+            it.isForInvoice(paymentRequestId, orderId) &&
                 (it.abandoned || it.watchExpired) &&
                 it.txId !in pendingRemovals &&
                 belongsTo(it, origin, walletId)

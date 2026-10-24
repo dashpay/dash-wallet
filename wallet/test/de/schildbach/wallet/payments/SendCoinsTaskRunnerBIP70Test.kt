@@ -1867,6 +1867,36 @@ class SendCoinsTaskRunnerBIP70Test {
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(t2) }
     }
 
+    @Test
+    fun `a refreshed request for an order whose earlier payment is unresolved is refused`() = runBlocking {
+        // The merchant re-served the request for the same order (new time, expiry, signature): its
+        // serialized hash differs, but it is the same invoice, and T1 can still pay it.
+        val stored = storeBackedPendingPayments()
+        val address = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val url = mockWebServer.url("/payment").toString()
+        val original = bip70PaymentIntent(address, Coin.parseCoin("1.0"), url, ByteArray(32) { 5 })
+        val refreshed = bip70PaymentIntent(address, Coin.parseCoin("1.0"), url, ByteArray(32) { 6 })
+        val t1 = deferredTx
+        stored.add(
+            de.schildbach.wallet.data.PendingDirectPayment(
+                t1.txId, t1.bitcoinSerialize(), url, "Merchant", System.currentTimeMillis(),
+                abandoned = true, paymentRequestId = original.paymentRequestId,
+                orderId = original.orderIdentity(), walletId = Sha256Hash.of(wallet.watchingKey.pubKey).toString()
+            )
+        )
+
+        assertEquals("the lookup names T1 for the refreshed request", t1.txId, sendCoinsTaskRunner.findUnresolvedSubmission(refreshed))
+        assertEquals("T1 is offered for resubmission", t1.txId, sendCoinsTaskRunner.findAbandonedSubmission(refreshed, wallet)?.txId)
+        val t2 = otherDeferredPayment()
+        try {
+            sendCoinsTaskRunner.sendPrebuiltDirectPayment(t2, refreshed, wallet)
+            fail("T2 was submitted for an order T1 may still pay")
+        } catch (e: PaymentSubmissionPendingException) {
+            assertEquals(t1.txId.toString(), e.txId)
+        }
+        assertEquals(0, mockWebServer.requestCount)
+    }
+
     private fun abandonedT1For(requestHash: ByteArray, stored: MutableList<de.schildbach.wallet.data.PendingDirectPayment>) =
         de.schildbach.wallet.data.PendingDirectPayment(
             deferredTx.txId, deferredTx.bitcoinSerialize(), mockWebServer.url("/payment").toString(), "Merchant",

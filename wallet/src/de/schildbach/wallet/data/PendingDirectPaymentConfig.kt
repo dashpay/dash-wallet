@@ -100,7 +100,18 @@ data class PendingDirectPayment(
      *
      * 0 for a record written before this was stored.
      */
-    val revision: Long = 0L
+    val revision: Long = 0L,
+    /**
+     * Identifies the ORDER this paid, stably across refreshes of its request: a hash of the
+     * request's payment_url, its outputs in canonical order and its verified merchant identity
+     * (see `PaymentIntent.orderIdentity`). [paymentRequestId] changes when the merchant re-serves
+     * the request for the same order with a new time, expiry or signature; this does not, so a
+     * refreshed request is still recognised as the invoice this paid.
+     *
+     * Null for a record written before this was stored (such a record is still matched by
+     * [paymentRequestId]), and for a payment that had no payment request behind it.
+     */
+    val orderId: String? = null
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
@@ -116,6 +127,7 @@ data class PendingDirectPayment(
         .put(KEY_WALLET_ID, walletId ?: JSONObject.NULL)
         .put(KEY_FEE_DUFFS, feeDuffs ?: JSONObject.NULL)
         .put(KEY_REVISION, revision)
+        .put(KEY_ORDER_ID, orderId ?: JSONObject.NULL)
 
     companion object {
         private const val KEY_TX_ID = "txId"
@@ -131,6 +143,7 @@ data class PendingDirectPayment(
         private const val KEY_WALLET_ID = "walletId"
         private const val KEY_FEE_DUFFS = "feeDuffs"
         private const val KEY_REVISION = "revision"
+        private const val KEY_ORDER_ID = "orderId"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
@@ -155,7 +168,9 @@ data class PendingDirectPayment(
             // opt for the same reason as paymentRequestId; a negative value is not a fee
             feeDuffs = if (json.isNull(KEY_FEE_DUFFS)) null else json.optLong(KEY_FEE_DUFFS, -1L).takeIf { it >= 0 },
             // opt for the same reason as paymentRequestId
-            revision = json.optLong(KEY_REVISION, 0L)
+            revision = json.optLong(KEY_REVISION, 0L),
+            // opt for the same reason as paymentRequestId
+            orderId = if (json.isNull(KEY_ORDER_ID)) null else json.optString(KEY_ORDER_ID, "").ifEmpty { null }
         )
     }
 }
