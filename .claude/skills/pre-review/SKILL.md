@@ -67,8 +67,8 @@ login) is in scope and gets fixed.
 1. **Only the PR's own code.** A finding on code this change does not touch is not fixed quietly: answer the
    reviewer with why it is not this change's concern. (Its scope rule says a change is responsible for a sibling
    path it affects — then either fix that path or argue the point, on the thread.)
-2. **Two local rounds per push, three at most.** When each round finds holes in the previous fix, get out with
-   the smallest change, or ask the user what to do next.
+2. **At most two local rounds per push** (a third only when the user asks for it). When each round finds holes in
+   the previous fix, get out with the smallest change, or ask the user what to do next.
 3. **Locally, blocking and major only.** Suggestions and nitpicks wait for the bot's own round, where they are
    cheap to close and where its approval needs them closed.
 4. **Push back when a comment is not about our code or does not matter in our case**: reply with the reasons,
