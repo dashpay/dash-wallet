@@ -168,6 +168,10 @@ rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB_RC=1 FAKE_LAST='{"bloc
 ok "  … the first listing fine, the read-back fails (exit 1, an empty roster printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
 rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB='[{"name": "fs", "enabled": null}]' FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "  … a read-back entry whose enabled state is unknown (null) counts as on → not reviewed (exit 2)" "$?:$(V)" 2:none
+for bad in '{}' '""' '[{"name": "fs"}]'; do
+  rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB="$bad" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+  ok "  … a read-back that does not parse as a roster ($bad) → not reviewed (exit 2)" "$?:$(V)" 2:none
+done
 FAKE_FEAT_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex features list fails (exit 1, every row printed as off) → not reviewed (exit 2)" "$?:$(V)" 2:none
 FAKE_VERSION_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "codex --version fails (exit 1, a version still printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
 DUP=""; for k in 1 2 3 4 5 6 7; do DUP+="apps stable false\\n"; done
