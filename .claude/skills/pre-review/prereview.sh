@@ -220,7 +220,8 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   local transport roster="$probe.roster"
   python3 -c 'import json,sys
 r = json.load(open(sys.argv[1]))
-if not isinstance(r, list) or not all(isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"] for e in r): sys.exit(1)
+if not isinstance(r, list) or not all(isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"]
+                                      and isinstance(e.get("enabled"), bool) for e in r): sys.exit(1)
 print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in r if e.get("enabled")))' "$probe" > "$roster" 2>/dev/null \
     || { rm -f "$roster"; say "codex mcp list gave a roster that does not parse: not reviewing"; return 2; }
   while IFS=$'\t' read -r name transport; do
@@ -238,7 +239,7 @@ print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null \
     || { say "codex mcp list failed on the read-back: not reviewing"; return 2; }
   if [[ -n "$(python3 -c 'import json,sys
-try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
+try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e["enabled"] is not False))   # unknown is on
 except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabled for codex: not reviewing"; return 2; fi
   # codex's other ways out of the sandbox: the implicit Apps connector (never in `mcp list`), browser and computer use,
   # web search (a query can carry data out), lifecycle hooks. Off for the review, and read back: each feature must show
