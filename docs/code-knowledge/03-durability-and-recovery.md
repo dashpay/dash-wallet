@@ -54,8 +54,10 @@ in flight, carrying the stop generation).
 ## Markers and latches
 
 **3.11 Treat a marker as a state machine.**
-- Never overwrite a pending or unverified marker. `begin()` on PENDING returns untouched; on RECOVERY_REQUIRED it
-  refuses (#1577). The state check and the write that publishes the marker belong under one writer lock, so nothing
+- Never overwrite a pending or unverified marker whose content is the authority. `WalletWipeState.begin()` on PENDING
+  returns untouched, and on RECOVERY_REQUIRED it refuses (#1577). The exception is a marker versioned by generation:
+  `BackupReplacementState.arm()` deliberately replaces a pending marker with a fresh generation when a newer
+  replacement supersedes the old one, and `complete(old)` then leaves the newer obligation in place (#1576). The state check and the write that publishes the marker belong under one writer lock, so nothing
   can land between them. A rename on Android replaces the target, so a marker written in that gap would be silently
   overwritten. `BackupReplacementState` does this under the `AtomicFileWriter` lock. `WalletWipeState.begin()` takes
   no lock of its own, so its callers must not run it concurrently.
@@ -88,7 +90,10 @@ operation after a wipe only on confirmed success (#1581).
 - Renewals are conditional on the current record (compare-and-set), so a retry cannot resurrect a cleared record.
 
 **3.14 A failed `SharedPreferences.commit()` still changes the in-memory map.** Restore the saved value, report the
-failure, and make the retry real (#1606). Safety latches use `commit()`, not `apply()` (#1584 `ProtocolVersionLatch`).
+failure, and make the retry real (#1606). A safety latch kept in SharedPreferences uses `commit()`, not `apply()`. Better, keep it in a file of its own:
+`ProtocolVersionLatch` stores its high-water mark in one `AtomicFile` per network, fsyncs the data and the
+directory, and reads its own file back. SharedPreferences cannot tell "unreadable" from "absent", and an absent mark
+after a restart would let a stale 13 choose the higher fee (#1584).
 
 **3.15 Keep "absent" sentinels.** Never substitute `now()` or another constant for a missing preference (#1581). The same
 goes for WorkManager input data, which survives app upgrades: default a missing key by inference, never to a constant
