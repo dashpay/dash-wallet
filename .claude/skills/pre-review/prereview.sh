@@ -95,6 +95,9 @@ ok = bool(need) and bool(tip) and (rec.get("base") or "") == need and (rec.get("
 print((rec.get("verdict") or "none") if ok else "stale")
 PY
 verdict() { python3 -c "$VERDICT_PY" "$@"; }
+# a review's own success: its fresh verdict, read back as the gate reads it. Stale (the base moved meanwhile) or none
+# is no verdict, so not 0
+passed() { case "$(verdict "$@")" in clean|suggestions) return 0 ;; *) return 1 ;; esac; }
 
 fetch_prompts() {
   mkdir -p "$PC"
@@ -158,7 +161,7 @@ review_locked() {
     { printf '{"verdict": "clean", "counts": {}, "base": "%s", "base_tip": "%s", "base_ref": "%s", "model": "none: no commits over the base"}' \
       "$mb" "$(git -C "$repo" rev-parse --verify -q "$base^{commit}")" "$base" > "$VERDICTS/.$sha.json.$$" && mv "$VERDICTS/.$sha.json.$$" "$VERDICTS/$sha.json"; } \
       2>/dev/null || { rm -f "$VERDICTS/.$sha.json.$$" 2>/dev/null; say "cannot write $VERDICTS/$sha.json: not reviewed"; return 2; }
-    say "${sha:0:10} has no commits over $base, nothing to review"; return 0
+    say "${sha:0:10} has no commits over $base, nothing to review"; passed "$repo" "$sha"; return
   fi
   # an older codex accepts the permission-profile settings below without applying them: full-disk reads again
   # probes run under waitfor into files, never in $(…): a command substitution is a foreground subshell, and bash
@@ -343,10 +346,7 @@ publish(path, lambda fh: json.dump({"verdict": v, "counts": c, "base": mb, "base
 print(f"pre-review: verdict {v} {c} (report: {path[:-5]}.md)", file=sys.stderr)
 PY
   rm -f "$out" "$log"
-  case "$(verdict "$repo" "$sha")" in   # stale (the base moved while the review ran) or none is no verdict: not 0
-    clean|suggestions) ;;
-    *) return 1 ;;
-  esac
+  passed "$repo" "$sha"
 }
 
 if [[ "${1:-}" == --locked-review ]]; then   # review() runs this under the lock

@@ -233,6 +233,11 @@ FAKE_DURING="git -C '$T/app' push -q origin '$FIRST:master' && git -C '$T/app' f
   FAKE_LAST='{"blocking": 1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "the base moved during a blocking review → exit 1, not 0" "$?:$(V)" 1:stale
 git push -q -f origin "$MASTER:master"; git fetch -q origin
+# the same for a commit already on the base: its record is written, then the base moves before the review returns
+need mkdir -p "$T/movegit"; printf '#!/usr/bin/env bash\n"%s" "$@"; rc=$?\n[[ " $* " == *" rev-parse --verify -q "*"^{commit}"* && ! -e "%s/moved" ]] && { touch "%s/moved"; "%s" update-ref refs/remotes/origin/master "%s"; }\nexit $rc\n' "$(command -v git)" "$T" "$T" "$(command -v git)" "$FIRST" > "$T/movegit/git"; chmod +x "$T/movegit/git"
+g checkout -q --detach origin/master; PATH="$T/movegit:$PATH" "$P" >/dev/null 2>&1
+ok "a commit on the base, the base moves right after its record is written → exit 1, not 0" "$?" 1
+git fetch -q origin; g checkout -q two
 # the review clone must carry the base as origin has it, not this checkout's stale local master
 g checkout -q -b drift origin/master; echo d2 > d2; g add d2; g commit -qm d2; git push -q origin "$FIRST:master"
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
