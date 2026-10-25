@@ -35,6 +35,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.CoroutineScope
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
 import javax.inject.Inject
@@ -100,6 +103,9 @@ class ConnectionsViewModel @Inject constructor(
     private var operationInProgress = false
     private var walletUnlockCheck: () -> Boolean = { false }
     private var connectionsJob: Job? = null
+    private var walletLockJob: Job? = null
+    private var walletLockGeneration: () -> Long = { 0L }
+    private val sensitiveOperations = SupervisorJob(viewModelScope.coroutineContext[Job])
 
     internal val isWalletUnlocked: Boolean get() = walletUnlockCheck()
     internal val canUseConnections: Boolean get() = _uiState.value.recordsStatus == ConnectionRecordsStatus.READY
@@ -110,6 +116,38 @@ class ConnectionsViewModel @Inject constructor(
 
     internal fun bindWalletUnlockCheck(check: () -> Boolean) {
         walletUnlockCheck = check
+        if (!isWalletUnlocked) cancelSensitiveOperations()
+    }
+
+    internal fun bindWalletLockState(locked: StateFlow<Boolean>, generation: () -> Long = { 0L }) {
+        walletLockJob?.cancel()
+        walletLockGeneration = generation
+        walletLockJob = locked.onEach { if (it) cancelSensitiveOperations() }.launchIn(viewModelScope)
+    }
+
+    private fun cancelSensitiveOperations() {
+        sensitiveOperations.cancelChildren(CancellationException("Wallet locked"))
+    }
+
+    private fun launchAuthorizedOperation(singleFlight: Boolean = false, block: suspend CoroutineScope.() -> Unit): Job {
+        val generation = walletLockGeneration
+        val approvedGeneration = generation()
+        return viewModelScope.launch(sensitiveOperations + ConnectionAuthorization { isWalletUnlocked && generation() == approvedGeneration }) {
+            try {
+                block()
+            } catch (cancelled: CancellationException) {
+                val message = "Operation interrupted. Review its status before continuing. Any recovery records have been retained."
+                if (_approveResult.value == ApproveResult.Loading) _approveResult.value = ApproveResult.Error(message)
+                _uiState.update { state ->
+                    when (state.purchaseStatus) {
+                        TokenPurchaseStatus.SUBMITTING -> state.copy(purchaseStatus = TokenPurchaseStatus.OUTCOME_UNKNOWN, purchaseError = message)
+                        TokenPurchaseStatus.SETTING_UP_KEY -> state.copy(purchaseStatus = TokenPurchaseStatus.FAILED, purchaseError = message)
+                        else -> state
+                    }
+                }
+                throw cancelled
+            }
+        }.also { job -> job.invokeOnCompletion { if (singleFlight) operationInProgress = false } }
     }
 
     init {
@@ -214,13 +252,14 @@ class ConnectionsViewModel @Inject constructor(
         if (operationInProgress || _uiState.value.purchaseStatus !in setOf(TokenPurchaseStatus.READY, TokenPurchaseStatus.FAILED)) return
         val purchase = _uiState.value.pendingPurchase ?: return
         operationInProgress = true
-        viewModelScope.launch {
+        launchAuthorizedOperation(singleFlight = true) {
             try {
-                if (!isWalletUnlocked) return@launch
+                if (!isWalletUnlocked) return@launchAuthorizedOperation
                 requireConnectionRecords()
                 check(!purchase.requiresSigningKey) { "Set up the wallet purchase signing key before approving a purchase" }
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTING, purchaseError = null) }
                 repository.approveTokenPurchase(purchase)
+                coroutineContext.connectionAuthorization()()
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTED) }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
@@ -237,13 +276,14 @@ class ConnectionsViewModel @Inject constructor(
         val purchase = _uiState.value.pendingPurchase ?: return
         if (!purchase.requiresSigningKey) return
         operationInProgress = true
-        viewModelScope.launch {
+        launchAuthorizedOperation(singleFlight = true) {
             try {
-                if (!isWalletUnlocked) return@launch
+                if (!isWalletUnlocked) return@launchAuthorizedOperation
                 requireConnectionRecords()
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SETTING_UP_KEY, purchaseError = null) }
                 repository.setupPurchaseSigningKey(purchase)
                 val refreshed = repository.prepareTokenPurchase(purchase.request)
+                coroutineContext.connectionAuthorization()()
                 _uiState.update { it.copy(pendingPurchase = refreshed, purchaseStatus = TokenPurchaseStatus.READY) }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
@@ -288,15 +328,16 @@ class ConnectionsViewModel @Inject constructor(
         val plan = pendingPlan
         val openedFromUrl = pendingOpenedFromUrl
         operationInProgress = true
-        viewModelScope.launch {
+        launchAuthorizedOperation(singleFlight = true) {
             try {
-                if (!isWalletUnlocked) return@launch
+                if (!isWalletUnlocked) return@launchAuthorizedOperation
                 requireConnectionRecords()
                 // Once approval starts, a transport failure cannot establish that no grant was published.
                 _uiState.update { it.copy(requiresRevocation = true,
                     pendingRequest = it.pendingRequest?.copy(recovering = true)) }
                 _approveResult.value = ApproveResult.Loading
                 val connection = repository.approvePreparedLogin(request, plan)
+                coroutineContext.connectionAuthorization()()
                 pendingLoginRequest = null
                 pendingPlan = null
                 pendingOpenedFromUrl = false
@@ -318,12 +359,13 @@ class ConnectionsViewModel @Inject constructor(
         val openedFromUrl = pendingOpenedFromUrl
         if (_uiState.value.requiresRevocation) {
             operationInProgress = true
-            viewModelScope.launch {
+            launchAuthorizedOperation(singleFlight = true) {
                 try {
-                    if (!isWalletUnlocked) return@launch
+                    if (!isWalletUnlocked) return@launchAuthorizedOperation
                     requireConnectionRecords()
                     _approveResult.value = ApproveResult.Loading
                     repository.revokePreparedLogin(request, pendingPlan)
+                    coroutineContext.connectionAuthorization()()
                     clearPendingRequest()
                     offerCallback(request, "declined", openedFromUrl)
                 } catch (ex: Exception) {
@@ -379,7 +421,7 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun disconnect(connection: DAppConnection) {
-        viewModelScope.launch {
+        launchAuthorizedOperation {
             try { if (isWalletUnlocked) { requireConnectionRecords(); repository.disconnect(connection.id, connection.scope) } }
             catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -390,7 +432,7 @@ class ConnectionsViewModel @Inject constructor(
 
     /** Cancels a pending login or removes an old connection so the user can start over. */
     fun removeConnection(connection: DAppConnection) {
-        viewModelScope.launch {
+        launchAuthorizedOperation {
             try { if (isWalletUnlocked) { requireConnectionRecords(); repository.removeConnection(connection.id, connection.scope) } }
             catch (e: Exception) {
                 if (e is CancellationException) throw e

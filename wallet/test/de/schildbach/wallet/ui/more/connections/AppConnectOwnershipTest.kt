@@ -89,7 +89,7 @@ class AppConnectOwnershipTest {
         val groupPlan = plan.copy(recovering = true, grants = listOf(plan.grants.first().copy(kind = original.kind,
             securityLevel = original.securityLevel, id = original.id)) + plan.grants.drop(1))
         val error = assertThrows(IllegalStateException::class.java) {
-            runBlocking { session.approve(groupRequest, groupPlan) }
+            runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, groupPlan) }
         }
         assertTrue(error.message!!.contains("full scope"))
         coVerify(exactly = 0) { config.saveGrant(any()) }

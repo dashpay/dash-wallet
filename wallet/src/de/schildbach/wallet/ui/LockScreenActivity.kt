@@ -106,6 +106,13 @@ open class LockScreenActivity : SecureActivity() {
 
     private val _walletLocked = MutableStateFlow(true)
     val walletLocked = _walletLocked.asStateFlow()
+    private val lockGeneration = java.util.concurrent.atomic.AtomicLong()
+    val walletLockGeneration: Long get() = lockGeneration.get()
+
+    private fun markWalletLocked() {
+        lockGeneration.incrementAndGet()
+        _walletLocked.value = true
+    }
 
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
@@ -436,7 +443,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun setLockState(suggestedState: State) {
-        _walletLocked.value = true
+        markWalletLocked()
         binding.lockScreen.apply {
             actionScanToPay.isEnabled = true
             var lockState = suggestedState
@@ -585,7 +592,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun handleLockScreenActivated() {
-        _walletLocked.value = true
+        markWalletLocked()
         if (this::alertDialog.isInitialized) {
             alertDialog.dismissDialog()
         }

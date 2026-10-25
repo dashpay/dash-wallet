@@ -111,6 +111,9 @@ class ConnectionsFragment : Fragment() {
         viewModel.bindWalletUnlockCheck {
             host != null && !host.walletLocked.value && !host.lockScreenDisplayed
         }
+        viewModel.bindWalletLockState(host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)) {
+            host?.walletLockGeneration ?: -1L
+        }
 
         if (savedInstanceState == null) {
             // Scanner routes default to no callback; only an app-opening URL opts in.

@@ -89,7 +89,7 @@ interface IdentityRepository {
                                              state: IdentityCreationState,
                                              exception: Throwable? = null)
     suspend fun upgradeIdentity(keyParameter: KeyParameter?): Boolean
-    suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?)
+    suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?, checkAuthorized: () -> Unit)
     fun getIdentityFromPublicKeyId(): Identity?
     suspend fun clearBlockchainIdentityData()
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData)
@@ -399,18 +399,19 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     /** assumes that the blockchainIdentity has been synced against platform */
-    override suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?) {
+    override suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?, checkAuthorized: () -> Unit) {
+        checkAuthorized()
         val identity = checkNotNull(_blockchainIdentity) { "Identity unavailable" }
         check(identity.uniqueIdentifier == expectedIdentity) { "Purchase identity changed" }
-        val added = addMissingKeys(keyParameter, identity, includeCriticalAuthenticationKey = true)
+        addMissingKeys(keyParameter, identity, includeCriticalAuthenticationKey = true, checkAuthorized = checkAuthorized)
         check(_blockchainIdentity === identity) { "Purchase identity changed" }
-        check(added || identity.hasCriticalAuthenticationKey()) {
+        check(identity.hasCriticalAuthenticationKey()) {
             "Unable to register the wallet purchase signing key. Check the identity balance and try again."
         }
     }
 
     private suspend fun addMissingKeys(keyParameter: KeyParameter?, identity: BlockchainIdentity? = _blockchainIdentity,
-                                       includeCriticalAuthenticationKey: Boolean = false): Boolean {
+                                       includeCriticalAuthenticationKey: Boolean = false, checkAuthorized: () -> Unit = {}): Boolean {
         if (hasBlockchainIdentity && identity != null) {
             walletDataProvider.wallet?.let { wallet ->
                 check(identity.wallet === wallet && _blockchainIdentity === identity) { "Wallet or identity changed" }
@@ -427,8 +428,9 @@ class IdentityRepositoryImpl @Inject constructor(
                         )
                         val enough = getIdentityBalance()
                         if (enough != null && !enough.isBalanceEmpty()) {
+                            checkAuthorized()
                             check(walletDataProvider.wallet === wallet && _blockchainIdentity === identity) { "Wallet or identity changed" }
-                            WalletSignerCallback(wallet, keyParameter).use { signer ->
+                            WalletSignerCallback(wallet, keyParameter, checkAuthorized).use { signer ->
                                 identity.addMissingKeys(signer, includeCriticalAuthenticationKey)
                             }
                             updateBlockchainIdentityData()

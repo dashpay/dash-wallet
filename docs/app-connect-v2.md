@@ -19,6 +19,8 @@ not a real user's keys or a pinned production app ID.
   network fee. Setup never purchases tokens; purchase terms are refreshed and
   require a second, separate approval afterward. Background maintenance excludes
   CRITICAL authentication keys, including when other default keys are missing.
+  Bound, disabled, expiring or foreign CRITICAL keys do not suppress explicit
+  provisioning; the pinned SDK checks wallet ownership and these key properties.
 
 CI builds the exact kotlin-platform commit in `platform-sdk-revision.txt`, and
 that SDK pins its Ferment-patched Platform rc.7 commit. The resulting artifacts
@@ -155,6 +157,13 @@ the app or clearing app storage still removes this local audit; this is not a
 cross-device recovery mechanism, and cannot reconstruct history lost before this fix.
 
 ## Verification
+
+Sensitive Connect jobs are cancelled on wallet lock, independently of the screen's
+resumed lifecycle. Native submissions and signer callbacks recheck cancellation,
+the initiating unlock generation and wallet/identity scope. Unlocking again cannot
+reactivate captured authorization. Already-started network operations cannot be
+unsent: grant recovery records and uncertain purchase receipts remain durable,
+and interrupted operations never automatically resume or offer a success callback.
 
 The focused test suite covers published parser/encryption vectors, malformed
 TLVs and labels, u64 budgets, freshness, digest separation, consent limits,

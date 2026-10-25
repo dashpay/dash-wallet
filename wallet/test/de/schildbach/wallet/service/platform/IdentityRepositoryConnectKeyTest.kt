@@ -54,7 +54,7 @@ class IdentityRepositoryConnectKeyTest {
 
     @Test fun purchaseMigrationRejectsAnIdentitySwitchBeforeAnyMutation() {
         assertThrows(IllegalStateException::class.java) {
-            runBlocking { repository.ensureCriticalAuthenticationKey(Identifier.from(ByteArray(32) { 8 }), null) }
+            runBlocking { repository.ensureCriticalAuthenticationKey(Identifier.from(ByteArray(32) { 8 }), null) {} }
         }
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
@@ -63,7 +63,7 @@ class IdentityRepositoryConnectKeyTest {
         every { identity.wallet } returns mockk(relaxed = true)
         every { provider.wallet } returns mockk(relaxed = true)
         assertThrows(IllegalStateException::class.java) {
-            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) }
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
         }
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
@@ -72,7 +72,7 @@ class IdentityRepositoryConnectKeyTest {
         every { provider.wallet } returns null
         every { identity.hasCriticalAuthenticationKey() } returns false
         val error = assertThrows(IllegalStateException::class.java) {
-            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) }
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
         }
         org.junit.Assert.assertTrue(error.message!!.contains("Unable to register"))
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
@@ -90,5 +90,45 @@ class IdentityRepositoryConnectKeyTest {
         org.junit.Assert.assertFalse(repository.upgradeIdentity(null))
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
         org.junit.Assert.assertTrue(!identity.hasCriticalAuthenticationKey())
+    }
+
+    @Test fun purchaseSetupChecksAuthorizationBeforeAccessingKeys() {
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) { throw kotlinx.coroutines.CancellationException("Locked") } }
+        }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+    }
+
+    private fun fundedWallet() {
+        val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
+        every { provider.wallet } returns wallet
+        every { identity.wallet } returns wallet
+        every { wallet.getKeyChainExtension(org.bitcoinj.wallet.authentication.AuthenticationGroupExtension.EXTENSION_ID) } returns
+            mockk<org.bitcoinj.wallet.authentication.AuthenticationGroupExtension>(relaxed = true)
+        every { identity.hasTransferKey() } returns true
+        every { identity.hasEncryptionKey() } returns true
+        every { identity.hasCriticalAuthenticationKey() } returns false
+        every { platform.platform.client.getIdentityBalance(any()) } returns 1_000_000_000L
+        coEvery { identityStorage.load() } returns null
+    }
+
+    @Test fun setupDoesNotAcceptAnAttemptWithoutAUsableKey() {
+        fundedWallet()
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
+        }
+        verify(exactly = 1) { identity.addMissingKeys(any(), true) }
+    }
+
+    @Test fun setupRechecksAuthorizationAfterBalanceReadBeforeSubmitting() {
+        fundedWallet()
+        var authorized = true
+        every { platform.platform.client.getIdentityBalance(any()) } answers { authorized = false; 1_000_000_000L }
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {
+                if (!authorized) throw kotlinx.coroutines.CancellationException("Locked")
+            } }
+        }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
 }

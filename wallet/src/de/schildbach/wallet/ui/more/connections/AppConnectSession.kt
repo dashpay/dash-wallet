@@ -100,11 +100,13 @@ internal class AppConnectSession(
 
     suspend fun submitTokenPurchase(approval: TokenPurchaseApproval) = withContext(Dispatchers.IO) {
         mutex.withLock {
+            val authorize = coroutineContext.connectionAuthorization()
             checkScope(approval.scope)
             check(!config.purchaseWasSubmitted(approval.requestId)) { "This purchase cannot be submitted again" }
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
+            authorize()
             checkScope(approval.scope)
             val identity = readIdentity()
             check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
@@ -117,6 +119,8 @@ internal class AppConnectSession(
                 ?: error("Wallet authentication keys unavailable")
             object : Signer() {
                 override fun sign(publicKey: ByteArray, data: ByteArray): ByteArray {
+                    authorize()
+                    checkScope(approval.scope)
                     val walletKey = if (publicKey.size == 20) chain.findKeyFromPubHash(publicKey)
                         else chain.findKeyFromPubKey(publicKey)
                     return checkNotNull(walletKey) { "Purchase signing key is not controlled by this wallet" }
@@ -131,6 +135,7 @@ internal class AppConnectSession(
                 config.savePurchase(receipt)
                 try {
                     checkScope(approval.scope)
+                    authorize()
                     nativeBytes(dashsdk.submitTokenPurchaseSdk(platform.rustSdk, approval.request.transitionBytes,
                         approval.summary, identity.id.toNative(), key.toNative(), signer.nativeContext,
                         BigInteger.valueOf(signer.signerCallback)))
@@ -145,17 +150,19 @@ internal class AppConnectSession(
 
     suspend fun setupPurchaseSigningKey(approval: TokenPurchaseApproval) = withContext(Dispatchers.IO) {
         mutex.withLock {
+            val authorize = coroutineContext.connectionAuthorization()
             checkScope(approval.scope)
             check(approval.requiresSigningKey) { "Purchase signing-key setup was not requested" }
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
+            authorize()
             val identity = readIdentity()
             check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
             rememberIdentity(identity)
             checkScope(approval.scope)
-            identities.ensureCriticalAuthenticationKey(identity.id, keyParameter)
-            awaitGrantConfirmation(read = { checkScope(approval.scope); readIdentity() }, confirmed = { current ->
+            identities.ensureCriticalAuthenticationKey(identity.id, keyParameter) { authorize(); checkScope(approval.scope) }
+            awaitGrantConfirmation(read = { authorize(); checkScope(approval.scope); readIdentity() }, confirmed = { current ->
                 val time = platform.client.getPlatformTime(current.id)
                 runCatching { signingKey(current, SecurityLevel.CRITICAL, time) }.isSuccess
             }, failureMessage = "Wallet purchase signing key is not confirmed. No purchase was submitted.")
@@ -225,6 +232,7 @@ internal class AppConnectSession(
 
     suspend fun approve(request: DashKeyRequest, plan: AppConnectPlan): DAppConnection = withContext(Dispatchers.IO) {
         mutex.withLock {
+            val authorize = coroutineContext.connectionAuthorization()
             checkScope(plan.scope)
             check(plan.requestHash == requestHash(request)) { "Approval does not match QR" }
             plan.requireMatches(request)
@@ -236,6 +244,7 @@ internal class AppConnectSession(
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
+            authorize()
             checkScope(plan.scope)
             request.appConnect?.requireFresh(System.currentTimeMillis())
             val seed = walletRepo.getWalletSeed()?.seedBytes?.copyOf() ?: error("Wallet seed unavailable")
@@ -322,9 +331,11 @@ internal class AppConnectSession(
                 val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(
                     oldRecords.flatMap { decodeKeys(it) }, identity.publicKeys, time))
                 requireSettled(oldRecords, identity, time)
-                WalletSignerCallback(wallet, keyParameter).use { walletSigner ->
+                WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(plan.scope) }).use { walletSigner ->
                     object : Signer() {
                         override fun sign(publicKey: ByteArray, data: ByteArray): ByteArray {
+                            authorize()
+                            checkScope(plan.scope)
                             privateKeys.forEach { secret ->
                                 val key = ECKey.fromPrivate(secret)
                                 if (key.pubKey.contentEquals(publicKey) || key.pubKeyHash.contentEquals(publicKey))
@@ -350,6 +361,7 @@ internal class AppConnectSession(
                                 checkScope(plan.scope)
                                 request.appConnect?.requireFresh(System.currentTimeMillis())
                                 current.revision++
+                                authorize()
                                 dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
                                     add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext,
                                     BigInteger.valueOf(signer.signerCallback)).unwrap()
@@ -357,6 +369,7 @@ internal class AppConnectSession(
                         }
                         identity = awaitGrantConfirmation(
                             read = {
+                                authorize()
                                 checkScope(plan.scope)
                                 readIdentity()
                             },
@@ -371,7 +384,7 @@ internal class AppConnectSession(
                         rememberIdentity(identity)
                         config.saveGrant(record.put("state", "confirmed"))
                         oldRecords.forEach { config.saveGrant(settleConfirmedRevocation(it, null)) }
-                        publish(identity, record, walletSigner, plan.scope)
+                        publish(identity, record, walletSigner, plan.scope, authorize)
                     }
                 }
                 checkScope(plan.scope)
@@ -446,7 +459,7 @@ internal class AppConnectSession(
                 it.optBoolean("permanentRevocationConfirmed")
         }
 
-    private suspend fun publish(identity: Identity, record: JSONObject, signer: Signer, scope: String) {
+    private suspend fun publish(identity: Identity, record: JSONObject, signer: Signer, scope: String, authorize: () -> Unit) {
         decodeKeys(record).filter { it.purpose == Purpose.ENCRYPTION || it.purpose == Purpose.DECRYPTION }.forEach { key ->
             val indexedId = platform.client.getCurrentContractKeyId(identity.id, key.contractBounds!!.identifier, key.purpose)
             check(indexedId == key.id) { "Current application encryption key changed. Response was not published." }
@@ -455,23 +468,27 @@ internal class AppConnectSession(
         val existing = find(identity, record)
         check(existing.all { exact(it, record) }) { "Conflicting response exists for this QR" }
         // Independent connections may still need their responses. Only confirmed revoked grants are obsolete.
-        responsesToDelete(record, scope).forEach { old -> deleteResponse(identity, old, signer, scope) }
+        responsesToDelete(record, scope).forEach { old -> deleteResponse(identity, old, signer, scope, authorize) }
         if (existing.isNotEmpty()) return
         val doc = platform.documents.create(LOCATOR, identity.id, fields(record).toMutableMap())
         doc.revision = 1
         checkScope(scope)
+        val key = documentKey(identity)
+        authorize()
         dashsdk.platformMobilePutPutDocumentSdk(platform.rustSdk, doc.toNative(), Identifier.from(RESPONSE_CONTRACT).toNative(),
-            TYPE, documentKey(identity).toNative(), BlockHeight(10000), CoreBlockHeight(platform.coreBlockHeight),
+            TYPE, key.toNative(), BlockHeight(10000), CoreBlockHeight(platform.coreBlockHeight),
             signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
         check(find(identity, record).any { exact(it, record) }) { "Response not confirmed. Retry to recover." }
     }
-    private fun deleteResponse(identity: Identity, record: JSONObject, signer: Signer, scope: String) {
+    private fun deleteResponse(identity: Identity, record: JSONObject, signer: Signer, scope: String, authorize: () -> Unit) {
         find(identity, record).forEach { doc ->
             check(exact(doc, record)) { "Stored response differs from Platform; refusing to delete" }
             doc.type = TYPE
             checkScope(scope)
+            val key = documentKey(identity)
+            authorize()
             dashsdk.deleteDocumentSdk(platform.rustSdk, doc.toNative(), Identifier.from(RESPONSE_CONTRACT).toNative(), TYPE,
-                documentKey(identity).toNative(), signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+                key.toNative(), signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
         }
     }
 
@@ -497,6 +514,7 @@ internal class AppConnectSession(
     }
 
     private suspend fun revokeRecords(records: List<JSONObject>, scope: String, completeApp: String? = null) {
+        val authorize = kotlin.coroutines.coroutineContext.connectionAuthorization()
         val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
         val keyParameter = walletRepo.getWalletEncryptionKey()
         check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
@@ -515,17 +533,18 @@ internal class AppConnectSession(
                 fences.add(checkNotNull(identities.blockchainIdentity).createRevocationFenceKey(id, keyParameter, fences))
             }
         }
-        WalletSignerCallback(wallet, keyParameter).use { signer ->
+        WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(scope) }).use { signer ->
             if (disable.isNotEmpty() || fences.isNotEmpty()) {
                 identity = updateIdentityInBatches(fences, disable, read = { checkScope(scope); readIdentity() }) { current, add, ids ->
                     val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
                     checkScope(scope)
                     current.revision++
+                    authorize()
                     dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
                         add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
                 }
             }
-            records.forEach { deleteResponse(identity, it, signer, scope) }
+            records.forEach { deleteResponse(identity, it, signer, scope, authorize) }
         }
         checkScope(scope)
         rememberIdentity(identity)

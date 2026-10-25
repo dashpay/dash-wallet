@@ -283,6 +283,115 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
     }
 
+    private fun assertLockCancelsCapturedOperation(kind: String) {
+        val locked = MutableStateFlow(false)
+        model.bindWalletUnlockCheck { !locked.value }
+        model.bindWalletLockState(locked)
+        val gate = CompletableDeferred<Unit>()
+        var authorize: (() -> Unit)? = null
+        var submitted = false
+        suspend fun capture() {
+            authorize = kotlin.coroutines.coroutineContext.connectionAuthorization()
+            gate.await()
+            authorize!!()
+            submitted = true
+        }
+        when (kind) {
+            "login" -> {
+                coEvery { repository.approvePreparedLogin(any(), any()) } coAnswers { capture(); mockk(relaxed = true) }
+                scan(openedFromUrl = true)
+                model.approvePendingRequest()
+            }
+            "setup" -> {
+                coEvery { repository.prepareTokenPurchase(any()) } returns purchase().copy(requiresSigningKey = true)
+                coEvery { repository.setupPurchaseSigningKey(any()) } coAnswers { capture() }
+                model.onQrScanned("dash-st:2?n=d&v=1")
+                dispatcher.scheduler.runCurrent()
+                model.setupPurchaseSigningKey()
+            }
+            "purchase" -> {
+                scanPurchase()
+                coEvery { repository.approveTokenPurchase(any()) } coAnswers { capture() }
+                model.approveTokenPurchase()
+            }
+            else -> {
+                coEvery { repository.disconnect(any(), any()) } coAnswers { capture() }
+                dispatcher.scheduler.runCurrent()
+                model.disconnect(DAppConnection("app", "App", "", ConnectionStatus.ACTIVE, 1, "scope"))
+            }
+        }
+        dispatcher.scheduler.runCurrent()
+        assertNotNull(authorize)
+        locked.value = true
+        dispatcher.scheduler.runCurrent()
+        locked.value = false
+        dispatcher.scheduler.runCurrent()
+        // Captured native signer authorization must remain revoked even after unlocking again.
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) { authorize!!() }
+        gate.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertFalse(submitted)
+        assertNull(model.callbackOffer.value)
+        if (kind == "login") {
+            assertNotNull(model.uiState.value.pendingRequest)
+            assertTrue(model.uiState.value.requiresRevocation)
+            assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Error)
+            coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
+        } else if (kind == "setup" || kind == "purchase") {
+            assertNotNull(model.uiState.value.pendingPurchase)
+            assertEquals(if (kind == "setup") TokenPurchaseStatus.FAILED else TokenPurchaseStatus.OUTCOME_UNKNOWN,
+                model.uiState.value.purchaseStatus)
+        }
+    }
+
+    @Test fun `lock cancels in flight login and retains recovery without callback`() = assertLockCancelsCapturedOperation("login")
+    @Test fun `lock cancels in flight key setup and requires another explicit action`() = assertLockCancelsCapturedOperation("setup")
+    @Test fun `lock cancels in flight purchase and retains uncertain debit state`() = assertLockCancelsCapturedOperation("purchase")
+    @Test fun `lock cancels in flight disconnect and invalidates captured signer`() = assertLockCancelsCapturedOperation("disconnect")
+
+    @Test fun `fast lock and unlock invalidates signing even before flow collection`() {
+        val locked = MutableStateFlow(false)
+        var generation = 0L
+        model.bindWalletUnlockCheck { !locked.value }
+        model.bindWalletLockState(locked) { generation }
+        lateinit var authorize: () -> Unit
+        val gate = CompletableDeferred<Unit>()
+        coEvery { repository.approvePreparedLogin(any(), any()) } coAnswers {
+            authorize = kotlin.coroutines.coroutineContext.connectionAuthorization()
+            gate.await()
+            authorize()
+            mockk(relaxed = true)
+        }
+        scan()
+        model.approvePendingRequest()
+        dispatcher.scheduler.runCurrent()
+        generation++
+        locked.value = true
+        locked.value = false
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) { authorize() }
+        gate.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(model.uiState.value.requiresRevocation)
+        assertNotNull(model.uiState.value.pendingRequest)
+        assertFalse(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+    }
+
+    @Test fun `cancelled queued operation releases single flight for fresh approval`() {
+        val locked = MutableStateFlow(false)
+        model.bindWalletUnlockCheck { !locked.value }
+        model.bindWalletLockState(locked)
+        scan()
+        model.approvePendingRequest()
+        model.bindWalletUnlockCheck { false }
+        dispatcher.scheduler.runCurrent()
+        model.bindWalletUnlockCheck { true }
+        dispatcher.scheduler.runCurrent()
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.runCurrent()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+    }
+
     private fun purchase() = TokenPurchaseApproval(
         de.schildbach.wallet.ui.more.connections.protocol.DashStRequest(byteArrayOf(1),
             de.schildbach.wallet.ui.more.connections.protocol.DashConnectNetwork.DEVNET),
