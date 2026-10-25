@@ -22,6 +22,7 @@ import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException
+import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Base58
@@ -54,11 +55,14 @@ class PlatformDashConnectRepositoryTest {
 
     private fun testnetKeyUri(): String {
         val payload = ByteArray(67)
-        payload[0] = 0x01
+        payload[0] = 0x02
         System.arraycopy(appPublicKey(), 0, payload, 1, 33)
         System.arraycopy(ByteArray(32) { 0xcd.toByte() }, 0, payload, 34, 32)
         payload[66] = 0 // empty label
-        return "dash-key:${Base58.encode(payload)}?n=t&v=1"
+        val grant = byteArrayOf(0, 2) + ByteArray(32) { 0xcd.toByte() } + ByteArray(16)
+        val createdAt = java.nio.ByteBuffer.allocate(8).putLong(System.currentTimeMillis()).array()
+        val v2 = payload + byteArrayOf(2, grant.size.toByte()) + grant + byteArrayOf(6, 8) + createdAt
+        return "dash-key:${Base58.encode(v2)}?n=t&v=2"
     }
 
     @Test
@@ -71,15 +75,22 @@ class PlatformDashConnectRepositoryTest {
     @Test
     fun parseQr_rejectsMainnetQrOnTestnet() = runBlocking {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
-        val payload = ByteArray(67).also {
-            it[0] = 0x01
-            System.arraycopy(appPublicKey(), 0, it, 1, 33)
-        }
-        val mainnetUri = "dash-key:${Base58.encode(payload)}?n=m&v=1"
-        assertThrows(DashConnectUriException::class.java) {
+        val mainnetUri = testnetKeyUri().replace("?n=t", "?n=m")
+        val error = assertThrows(DashConnectUriException::class.java) {
             runBlocking { repository.parseQr(mainnetUri) }
         }
+        assertEquals("QR network does not match wallet network", error.message)
         Unit
+    }
+
+    @Test
+    fun parseQr_rejectsLegacyLoginInsteadOfClassifyingItAsUsable() {
+        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
+        val legacy = testnetKeyUri().replace("&v=2", "&v=1")
+        val error = assertThrows(DashConnectUriException::class.java) {
+            runBlocking { repository.parseQr(legacy) }
+        }
+        assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, error.message)
     }
 
     @Test

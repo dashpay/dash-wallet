@@ -1,185 +1,101 @@
-/*
- * Copyright 2026 Dash Core Group.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
+/* Copyright 2026 Dash Core Group. SPDX-License-Identifier: GPL-3.0-or-later */
 package de.schildbach.wallet.ui.more.connections.protocol
 
+import com.google.gson.JsonParser
 import org.bitcoinj.core.Base58
-import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.Utils
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
-import java.math.BigInteger
 
 class DashConnectUriTest {
+    private val fixture = JsonParser.parseReader(javaClass.getResourceAsStream("/app-connect-vectors.json")!!.reader())
+        .asJsonObject.getAsJsonObject("request")
+    private fun payload() = Utils.HEX.decode(fixture["bytes"].asString)
+    private fun uri(bytes: ByteArray = payload(), network: String = "d", version: String = "2") =
+        "dash-key:${Base58.encode(bytes)}?n=$network&v=$version"
 
-    private fun hex(s: String): ByteArray = Utils.HEX.decode(s)
-
-    // SERIALIZED_REQUEST_HEX from the DApp fixtures:
-    //   01 || APP_PUBLIC_KEY(33) || cd*32 || 0e || "Login to Yappr"
-    private val serializedRequestHex =
-        "01" +
-            "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f" +
-            "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd" +
-            "0e" +
-            "4c6f67696e20746f205961707072"
-
-    private fun appPublicKey(): ByteArray =
-        ECKey.fromPrivate(BigInteger(1, ByteArray(32) { 0x01 }), true).pubKey
-
-    // ── real-world sample captured from yappr testnet (2026-07-22) ─────────────────
-    @Test
-    fun realWorldYapprLoginUri_parses() {
-        val uri = "dash-key:3pYF4Tv365PGzvLukfiqx44ZinzxvhwjF2nmwgxDu7GXQpsoH7V9VLi5u8fWKMCxVnuERp4" +
-            "7QVLoceh4KvPU9a1Xs7PgAGMjeJmcGHyHQY7yry?n=t&v=1"
-        val request = DashConnectUri.parseKeyRequest(uri)
-
-        assertEquals(DashConnectNetwork.TESTNET, request.network)
+    @Test fun publishedV2FixtureParses() {
+        val request = DashConnectUri.parseKeyRequest(fixture["uri"].asString)
+        assertEquals("Yappr", request.label)
+        assertEquals(DashConnectNetwork.DEVNET, request.network)
         assertEquals(33, request.appEphemeralPubKey.size)
         assertEquals(32, request.contractId.size)
         assertTrue(KeyExchangeCrypto.isValidCompressedPoint(request.appEphemeralPubKey))
-        println(
-            "real-world URI parsed: label='${request.label}' " +
-                "contractId=${Base58.encode(request.contractId)}"
-        )
+        assertArrayEquals(payload(), request.requireAppConnect().bytes)
     }
 
-    // ── serialization matches the exact fixture ────────────────────────────────────
-    @Test
-    fun serializedFixture_decodesToExpectedFields() {
-        val payload = hex(serializedRequestHex)
-        // Build the URI from the fixture payload (testnet), then parse it back.
-        val uri = "dash-key:" + Base58.encode(payload) + "?n=t&v=1"
-        val request = DashConnectUri.parseKeyRequest(uri)
-
-        assertArrayEquals(appPublicKey(), request.appEphemeralPubKey)
-        assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, request.contractId)
-        assertEquals("Login to Yappr", request.label)
-        assertEquals(DashConnectNetwork.TESTNET, request.network)
-    }
-
-    @Test
-    fun appPublicKeyInFixture_isTheCompressedKeyForPriv01() {
-        // Confirms our understanding of SERIALIZED_REQUEST_HEX byte range [1,34).
-        assertArrayEquals(appPublicKey(), hex(serializedRequestHex).copyOfRange(1, 34))
-    }
-
-    // ── network codes ──────────────────────────────────────────────────────────────
-    @Test
-    fun parsesAllNetworkCodes() {
-        val payload = hex(serializedRequestHex)
-        val base58 = Base58.encode(payload)
-        assertEquals(DashConnectNetwork.MAINNET, DashConnectUri.parseKeyRequest("dash-key:$base58?n=m&v=1").network)
-        assertEquals(DashConnectNetwork.TESTNET, DashConnectUri.parseKeyRequest("dash-key:$base58?n=t&v=1").network)
-        assertEquals(DashConnectNetwork.DEVNET, DashConnectUri.parseKeyRequest("dash-key:$base58?n=d&v=1").network)
-    }
-
-    // ── validation failures ──────────────────────────────────────────────────────
-    @Test
-    fun rejects_wrongScheme() {
-        assertThrows(DashConnectUriException::class.java) {
-            DashConnectUri.parseKeyRequest("dash-st:${Base58.encode(hex(serializedRequestHex))}?n=t&v=1")
+    @Test fun v2ParsesAllNetworkCodes() {
+        DashConnectNetwork.entries.forEach { network ->
+            assertEquals(network, DashConnectUri.parseKeyRequest(uri(network = network.code)).network)
         }
     }
 
-    @Test
-    fun rejects_authorityComponent() {
-        assertThrows(DashConnectUriException::class.java) {
-            DashConnectUri.parseKeyRequest("dash-key://${Base58.encode(hex(serializedRequestHex))}?n=t&v=1")
+    @Test fun legacyYapprLoginUriIsExplicitlyRejected() {
+        val legacy = "dash-key:3pYF4Tv365PGzvLukfiqx44ZinzxvhwjF2nmwgxDu7GXQpsoH7V9VLi5u8fWKMCxVnuERp4" +
+            "7QVLoceh4KvPU9a1Xs7PgAGMjeJmcGHyHQY7yry?n=t&v=1"
+        val error = assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest(legacy) }
+        assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, error.message)
+    }
+
+    @Test fun v1IsRejectedForEveryNetworkEvenWithV2Bytes() {
+        DashConnectNetwork.entries.forEach { network ->
+            val error = assertThrows(DashConnectUriException::class.java) {
+                DashConnectUri.parseKeyRequest(uri(network = network.code, version = "1"))
+            }
+            assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, error.message)
         }
     }
 
-    @Test
-    fun rejects_missingQuery() {
-        assertThrows(DashConnectUriException::class.java) {
-            DashConnectUri.parseKeyRequest("dash-key:${Base58.encode(hex(serializedRequestHex))}")
+    @Test fun legacyPayloadCannotBeRelabeledAsV2() {
+        val bytes = payload().copyOfRange(0, 72).also { it[0] = 1 }
+        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest(uri(bytes)) }
+    }
+
+    @Test fun rejectsUnsupportedVersionsAndDuplicateVersionDowngrades() {
+        for (version in listOf("0", "01", "02", "3", "", "-1")) {
+            assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest(uri(version = version)) }
+        }
+        for (input in listOf(uri() + "&v=1", uri(version = "1") + "&v=2", uri() + "&%76=1")) {
+            assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest(input) }
         }
     }
 
-    @Test
-    fun rejects_missingVersionOrNetwork() {
-        val b = Base58.encode(hex(serializedRequestHex))
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$b?v=1") }
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$b?n=t") }
+    @Test fun rejectsMalformedEnvelopeNetworkOrBase58() {
+        val body = Base58.encode(payload())
+        for (input in listOf(
+            "dash-st:$body?n=d&v=2", "dash-key://$body?n=d&v=2", "dash-key:$body", "dash-key:$body?v=2",
+            "dash-key:$body?n=d", uri(network = "x"), "dash-key:?n=d&v=2", "dash-key:0OIl?n=d&v=2",
+            uri() + "#fragment", "dash-key:${"1".repeat(4096)}?n=d&v=2"
+        )) {
+            assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest(input) }
+        }
     }
 
-    @Test
-    fun rejects_wrongVersion() {
-        val b = Base58.encode(hex(serializedRequestHex))
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$b?n=t&v=2") }
+    @Test fun rejectsMalformedV2Payloads() {
+        val original = payload()
+        for (bytes in listOf(
+            ByteArray(10) { 2 }, original.copyOf().also { it[0] = 3 },
+            original.copyOf().also { it[66] = 65 }, original.copyOf().also { it[1] = 0 }, original.copyOfRange(0, 68)
+        )) {
+            assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest(uri(bytes)) }
+        }
     }
 
-    @Test
-    fun rejects_unknownNetwork() {
-        val b = Base58.encode(hex(serializedRequestHex))
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$b?n=x&v=1") }
+    @Test fun legacyLabelsAreNeverDecodedOrExposed() {
+        val label = "private-label\n\u202e"
+        val legacyBytes = payload().copyOfRange(0, 66).also { it[0] = 1 } +
+            byteArrayOf(label.toByteArray().size.toByte()) + label.toByteArray()
+        val error = assertThrows(DashConnectUriException::class.java) {
+            DashConnectUri.parseKeyRequest(uri(legacyBytes, version = "1"))
+        }
+        assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, error.message)
+        assertFalse(error.stackTraceToString().contains(label))
+        assertNull(error.cause)
     }
 
-    @Test
-    fun rejects_shortPayload() {
-        val short = Base58.encode(ByteArray(10) { 0x01 })
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$short?n=t&v=1") }
-    }
-
-    @Test
-    fun rejects_wrongPayloadVersionByte() {
-        val payload = hex(serializedRequestHex).copyOf()
-        payload[0] = 0x02
-        val b = Base58.encode(payload)
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$b?n=t&v=1") }
-    }
-
-    @Test
-    fun rejects_labelLenOverrun() {
-        // Truncate the label but keep the labelLen byte large -> overrun.
-        val full = hex(serializedRequestHex)
-        val truncated = full.copyOfRange(0, full.size - 5) // drop last 5 label bytes, labelLen still 0x0e
-        val b = Base58.encode(truncated)
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$b?n=t&v=1") }
-    }
-
-    @Test
-    fun rejects_labelLenTooLarge() {
-        val payload = hex(serializedRequestHex).copyOf()
-        payload[66] = 0x41 // 65 > 64 max
-        val b = Base58.encode(payload)
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:$b?n=t&v=1") }
-    }
-
-    @Test
-    fun rejects_invalidBase58() {
-        assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseKeyRequest("dash-key:0OIl?n=t&v=1") }
-    }
-
-    @Test
-    fun emptyLabel_isAccepted() {
-        val payload = ByteArray(67)
-        payload[0] = 0x01
-        System.arraycopy(appPublicKey(), 0, payload, 1, 33)
-        // contractId 34..66 left as zeros; labelLen at [66] = 0
-        val b = Base58.encode(payload)
-        val request = DashConnectUri.parseKeyRequest("dash-key:$b?n=t&v=1")
-        assertEquals("", request.label)
-    }
-
-    @Test
-    fun schemeDetectors() {
+    @Test fun schemeDetectionDoesNotClaimVersionSupport() {
         assertTrue(DashConnectUri.isKeyUri("dash-key:abc?n=t&v=1"))
+        assertTrue(DashConnectUri.isKeyUri(uri()))
+        assertTrue(DashConnectUri.isConnectUri("dash-st:2?n=d&v=1"))
     }
 }

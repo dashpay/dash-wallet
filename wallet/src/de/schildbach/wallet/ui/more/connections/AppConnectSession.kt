@@ -71,7 +71,7 @@ internal class AppConnectSession(
     private fun checkScope(expected: String) = check(scope() == expected) { "Wallet, identity or network changed. Scan again." }
     private fun readIdentity(): Identity = platform.client.getIdentity(identityId().toBuffer(), true) ?: error("Identity not found")
     private fun requestHash(request: DashKeyRequest) = Base58.encode(KeyExchangeCrypto.hash256(
-        request.appConnect?.bytes ?: (request.appEphemeralPubKey + request.contractId)
+        request.requireAppConnect().bytes
     ))
 
     private fun nativeBytes(result: org.dashj.platform.sdk.Result_ok_Vec_u8_err_String): ByteArray = try {
@@ -171,16 +171,15 @@ internal class AppConnectSession(
     }
 
     suspend fun prepare(request: DashKeyRequest): AppConnectPlan = withContext(Dispatchers.IO) {
+        val parsed = request.requireAppConnect()
         check(Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) { "App Connect is unavailable on mainnet" }
         check(platform.client.refreshProtocolVersion() >= 14) { "App Connect requires Platform protocol version 14" }
         val scope = scope()
         val identity = readIdentity()
         val blockTime = platform.client.getPlatformTime(identity.id)
-        val parsed = request.appConnect
-        parsed?.requireFresh(System.currentTimeMillis())
-        parsed?.identityHint?.let { check(it.contentEquals(identity.id.toBuffer())) { "QR requests a different identity" } }
-        var grants = (parsed?.auth ?: listOf(AuthBinding(0, 2, request.contractId,
-            BigInteger("5000000000"), null))).map { grant ->
+        parsed.requireFresh(System.currentTimeMillis())
+        parsed.identityHint?.let { check(it.contentEquals(identity.id.toBuffer())) { "QR requests a different identity" } }
+        var grants = parsed.auth.map { grant ->
             AppConnectLimits.clamp(grant, blockTime)
         }
         // A retry must show and use the original approved limits, not a new rolling expiry.
@@ -198,11 +197,11 @@ internal class AppConnectSession(
         checkScope(scope)
         val text = buildString {
             append("App ID: ${Base58.encode(request.contractId)}\nQR label is not verified branding.\n\n")
-            parsed?.callback?.let { append("Return address: ${it.host} (not opened automatically).\n") }
-            parsed?.let { append("Requested ${maxOf(0, (System.currentTimeMillis() - it.createdAt) / 1000)} seconds ago.\n") }
+            parsed.callback?.let { append("Return address: ${it.host} (not opened automatically).\n") }
+            append("Requested ${maxOf(0, (System.currentTimeMillis() - parsed.createdAt) / 1000)} seconds ago.\n")
             append("Only these application keys are shared. Recovery phrase and master key are never shared. The app cannot register names or change identity keys. CRITICAL grants can spend your Platform credits on token purchases from the app, within each approved budget. These payments credit the app's contract owner; other credit transfers are not authorized.")
         }
-        val encChoices = parsed?.encryption.orEmpty().map {
+        val encChoices = parsed.encryption.map {
             "${if (it.purpose == 1) "Encryption" else "Decryption"} key for this app (shared across sessions; omitted if another wallet controls it)."
         }
         AppConnectPlan(requestHash(request), scope, identity.id.toString(), grants, text,
@@ -222,7 +221,7 @@ internal class AppConnectSession(
             val profileException = grant.kind == 1 && Base58.encode(grant.id) == DASHPAY && grant.documentType == "profile"
             check(owner == app.ownerId || profileException) { "A requested bound target is not owned by the app" }
         }
-        request.appConnect?.encryption?.forEach {
+        request.requireAppConnect().encryption.forEach {
             check(it.contractId.contentEquals(request.contractId)) { "Encryption must be bound to the app contract" }
             check(if (it.purpose == 1) app.requiresIdentityEncryptionBoundedKey else app.requiresIdentityDecryptionBoundedKey) {
                 "App contract has not opted into this encryption key"
@@ -231,14 +230,15 @@ internal class AppConnectSession(
     }
 
     suspend fun approve(request: DashKeyRequest, plan: AppConnectPlan): DAppConnection = withContext(Dispatchers.IO) {
+        val parsed = request.requireAppConnect()
         mutex.withLock {
             val authorize = coroutineContext.connectionAuthorization()
             checkScope(plan.scope)
             check(plan.requestHash == requestHash(request)) { "Approval does not match QR" }
             plan.requireMatches(request)
             check(0 in plan.selectedAuth && plan.selectedAuth.all { it in plan.grants.indices }) { "Primary grant is required" }
-            check(plan.selectedEncryption.all { it in request.appConnect?.encryption.orEmpty().indices })
-            request.appConnect?.requireFresh(System.currentTimeMillis())
+            check(plan.selectedEncryption.all { it in parsed.encryption.indices })
+            parsed.requireFresh(System.currentTimeMillis())
             check(platform.client.refreshProtocolVersion() >= 14)
             validateOwnership(request, plan.grants)
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
@@ -246,7 +246,7 @@ internal class AppConnectSession(
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             authorize()
             checkScope(plan.scope)
-            request.appConnect?.requireFresh(System.currentTimeMillis())
+            parsed.requireFresh(System.currentTimeMillis())
             val seed = walletRepo.getWalletSeed()?.seedBytes?.copyOf() ?: error("Wallet seed unavailable")
             val privateKeys = mutableListOf<ByteArray>()
             var ephemeral: ByteArray? = null
@@ -264,8 +264,7 @@ internal class AppConnectSession(
                 var nextId = (identity.publicKeys.maxOfOrNull { it.id } ?: -1) + 1
                 plan.grants.forEachIndexed { index, grant ->
                     if (index !in plan.selectedAuth) return@forEachIndexed
-                    val leaf = KeyExchangeCrypto.sessionRequestLeaf(request.appEphemeralPubKey,
-                        if (request.appConnect == null) null else index)
+                    val leaf = KeyExchangeCrypto.sessionRequestLeaf(request.appEphemeralPubKey, index)
                     val secret = ApplicationKeyDerivation.sessionAuthentication(seed, identity.id.toBuffer(), leaf, false)
                     privateKeys.add(secret)
                     val key = IdentityPublicKey(nextId++, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION,
@@ -274,7 +273,7 @@ internal class AppConnectSession(
                         totalBudget = grant.totalBudget, expiresAt = grant.expiresAt, version = 1)
                     keys.add(key)
                 }
-                request.appConnect?.encryption?.forEachIndexed { index, binding ->
+                parsed.encryption.forEachIndexed { index, binding ->
                     if (index !in plan.selectedEncryption) return@forEachIndexed
                     val purpose = if (binding.purpose == 1) Purpose.ENCRYPTION else Purpose.DECRYPTION
                     val secret = ApplicationKeyDerivation.encryption(seed, identity.id.toBuffer(), binding.contractId, purpose, false)
@@ -307,13 +306,12 @@ internal class AppConnectSession(
                     }) { "This ephemeral request key was already used. Scan a new QR." }
                     val eph = ECKey()
                     ephemeral = eph.privKeyBytes
-                    val payload = if (request.appConnect != null) KeyExchangeCrypto.encryptAppConnect(privateKeys,
+                    val payload = KeyExchangeCrypto.encryptAppConnect(privateKeys,
                         ephemeral!!, request.appEphemeralPubKey, identity.id.toBuffer())
-                    else KeyExchangeCrypto.encryptLoginKey(privateKeys.first(), ephemeral!!, request.appEphemeralPubKey)
                     val response = JSONObject().put("hash", Base58.encode(KeyExchangeCrypto.hash160(request.appEphemeralPubKey)))
                         .put("public", Base58.encode(eph.pubKey)).put("payload", Base58.encode(payload))
                     record = JSONObject().put("id", recordId).put("scope", plan.scope).put("app", Base58.encode(request.contractId))
-                        .put("connection", request.appConnect?.connectionId?.let { Base58.encode(it) }.orEmpty())
+                        .put("connection", parsed.connectionId?.let { Base58.encode(it) }.orEmpty())
                         .put("label", request.label).put("state", "prepared").put("response", response)
                         .put("updatedAt", System.currentTimeMillis())
                         .put("authIndices", JSONArray(plan.selectedAuth.sorted()))
@@ -324,7 +322,7 @@ internal class AppConnectSession(
                 }
                 val registered = keys.all { expected -> identity.publicKeys.any { sameKey(it, expected) && live(it, time) } }
                 val oldRecords = matchingRecords(plan.scope, Base58.encode(request.contractId)).filter {
-                    it.getString("id") != recordId && request.appConnect?.connectionId != null &&
+                    it.getString("id") != recordId && parsed.connectionId != null &&
                         it.optString("connection") == record.optString("connection") &&
                         (it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed"))
                 }
@@ -351,7 +349,7 @@ internal class AppConnectSession(
                             }
                             check(additions.size <= 6) { "A grant must fit in one atomic key registration" }
                             checkScope(plan.scope)
-                            request.appConnect?.requireFresh(System.currentTimeMillis())
+                            parsed.requireFresh(System.currentTimeMillis())
                             config.saveGrant(record.put("state", "pending"))
                             checkScope(plan.scope)
                             // On an uncertain result the durable pending record remains, and a retry reads the identity first.
@@ -359,7 +357,7 @@ internal class AppConnectSession(
                                 read = { checkScope(plan.scope); readIdentity() }) { current, add, ids ->
                                 val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
                                 checkScope(plan.scope)
-                                request.appConnect?.requireFresh(System.currentTimeMillis())
+                                parsed.requireFresh(System.currentTimeMillis())
                                 current.revision++
                                 authorize()
                                 dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),

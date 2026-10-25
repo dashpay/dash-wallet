@@ -140,6 +140,29 @@ class ConnectionsViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
     }
 
+    private fun assertLegacyLoginRejected(openedFromUrl: Boolean) {
+        coEvery { repository.parseQr(any()) } coAnswers {
+            DashConnectQr(DashConnectUri.parseKeyRequest(firstArg()))
+        }
+        val bytes = request.requireAppConnect().bytes.copyOf().also { it[0] = 1 }
+        val uri = "dash-key:${org.bitcoinj.core.Base58.encode(bytes)}?n=d&v=1"
+        if (openedFromUrl) model.onUrlOpened(uri) else model.onQrScanned(uri)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR,
+            (model.scanOutcome.value as ConnectionsViewModel.ScanOutcome.Error).message)
+        assertNull(model.uiState.value.pendingRequest)
+        assertNull(model.uiState.value.pendingPurchase)
+        assertNull(model.callbackOffer.value)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 0) { repository.prepareLogin(any()) }
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+        coVerify(exactly = 0) { repository.prepareTokenPurchase(any()) }
+    }
+
+    @Test fun `legacy scanner login is rejected without preparing or approving a grant`() = assertLegacyLoginRejected(false)
+    @Test fun `legacy URL login is rejected without preparing or approving a grant`() = assertLegacyLoginRejected(true)
+
     private fun failApproval(openedFromUrl: Boolean = false) {
         scan(openedFromUrl)
         model.approvePendingRequest()

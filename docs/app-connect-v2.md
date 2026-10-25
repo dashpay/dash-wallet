@@ -31,6 +31,12 @@ The wallet and Kotlin SDK use DashJ `24.0.0-SNAPSHOT` for networks running Core 
 
 ## Lifecycle
 
+Only `dash-key:` v2 login requests are supported. Legacy v1 links are rejected
+at parsing and again before session preparation or approval, including retries.
+There is no synthesized legacy grant or legacy response-encryption fallback.
+This does not affect the separate `dash-st:` v1 token-purchase format or
+record-based revocation of previously registered application keys.
+
 Preparation proves app/target ownership, encryption opt-in, identity hint and
 request age. The approval sheet shows each exact grant, optional binding toggles,
 budget and lifetime presets, app ID and callback host. Unknown app labels are

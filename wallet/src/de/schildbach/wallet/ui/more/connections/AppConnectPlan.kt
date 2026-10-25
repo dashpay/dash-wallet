@@ -48,7 +48,7 @@ internal fun AppConnectPlan.withPresets(budget: Int, lifetime: Int): AppConnectP
 data class GrantChoice(val index: Int, val description: String, val selected: Boolean, val encryption: Boolean = false)
 
 internal fun AppConnectPlan.requireMatches(request: DashKeyRequest) {
-    val requested = request.appConnect?.auth ?: listOf(AuthBinding(0, 2, request.contractId, BigInteger("5000000000"), null))
+    val requested = request.requireAppConnect().auth
     require(grants.size == requested.size && blockTime > 0) { "Consent does not match request" }
     grants.zip(requested).forEach { (grant, raw) ->
         require(grant.kind == raw.kind && grant.id.contentEquals(raw.id) && grant.documentType == raw.documentType &&

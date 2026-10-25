@@ -71,6 +71,30 @@ class AppConnectOwnershipTest {
         Unit
     }
 
+    @Test fun `legacy preparation and approval retries fail before any identity or signing access`() {
+        val legacy = request.copy(appConnect = null)
+        val plan = AppConnectPlan("hash", "scope", "identity", request.requireAppConnect().auth, "Consent")
+        val error = assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
+            runBlocking { session.prepare(legacy) }
+        }
+        assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, error.message)
+        for (recovering in listOf(false, true)) {
+            val failure = assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(legacy, plan.copy(recovering = recovering)) }
+            }
+            assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, failure.message)
+        }
+        assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
+            plan.requireMatches(legacy)
+        }
+        verify(exactly = 0) { service.platform.client.refreshProtocolVersion() }
+        verify(exactly = 0) { service.platform.client.getIdentity(any(), any()) }
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.getGrants() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
     @Test fun `group grants are rejected even when the group owner matches the app`() {
         nonMainnetOnly()
         val client = service.platform.client
