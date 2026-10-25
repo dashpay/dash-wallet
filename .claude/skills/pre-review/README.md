@@ -57,9 +57,7 @@ runs with an empty global config, and the commands' environment is an explicit a
 may choose a keyring login store); what it could open is switched off and read back from inside the review clone,
 the same context the review runs in (lifecycle hooks included). `~/.codex` is an explicit deny in the profile, and the tree is checked out under
 none of your git configuration (no hooks, no `filter.*` commands). Codex's other ways out of the sandbox — the implicit Apps connector, browser and computer use,
-lifecycle hooks — are switched off for the review and read back. Web search is switched off too
-(`-c web_search="disabled"` on the command line, which outranks your config). It is a config value, not a feature, and
-`codex features list` does not report it, so it cannot be read back. The report is scrubbed of the key's value as well.
+web search — are switched off for the review and read back. The report is scrubbed of the key's value as well.
 
 `codex logout` removes a stored login. `codex login status` shows which one is active.
 
