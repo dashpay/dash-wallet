@@ -54,8 +54,10 @@ components, dark mode).
   marker is really gone. The mechanisms differ by what each marker needs (03 §3.11):
   - `RecoveryResetState`: an empty flag file made with `createNewFile()`; `complete()` deletes it, then confirms the
     absence.
-  - `BackupReplacementState`: temp, fsync, `ATOMIC_MOVE` + `REPLACE_EXISTING`; a generation per arm; `complete(dir,
-    generation)` is a compare-and-delete under the writer lock.
+  - `BackupReplacementState`: temp, fsync, `ATOMIC_MOVE` (it also passes `REPLACE_EXISTING`, which `ATOMIC_MOVE`
+    ignores: whether the target is replaced is the filesystem's, see 03 §3.11); a generation per `arm()`. `arm()`
+    writes under the `AtomicFileWriter` lock, and `complete(dir, generation)` is a compare-and-delete under the same
+    lock.
   - `WalletWipeState`: temp, fsync, `ATOMIC_MOVE`; the marker body is bound to an install token in
     `noBackupFilesDir`, so a marker restored from backup onto another install does not count.
 - Distinct keys for distinct obligations.

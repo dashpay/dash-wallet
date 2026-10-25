@@ -10,7 +10,7 @@ for agents (Claude, `/pre-review`).
 - An independent read of the code at `421514a3a`.
 
 Each rule carries the PRs it came from, so the reasoning can be checked. Some of those PRs are still open: #1548,
-#1563, #1616, #1622, #1626, #1630 and #1632 (#1607 has since been merged). #1600 was closed without merging. Their
+#1563, #1616, #1622, #1626 and #1632 (#1607 and #1630 have since been merged). #1600 was closed without merging. Their
 lessons apply, but a class or function named from them may not exist on the base yet. Check with `git grep` before
 relying on it.
 The heaviest PRs were #1607, #1616, #1584, #1570, #1568 and #1576.
