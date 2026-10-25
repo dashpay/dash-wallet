@@ -215,7 +215,14 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   local mcp_off=() mcp_tab="" name
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null \
     || { say "codex mcp list failed, so the servers to switch off are unknown: not reviewing"; return 2; }
-  local transport
+  # parsed in a checked step: a roster that is not a list of named entries is no roster, and a silent empty one
+  # would leave every server on (the read-back alone proves nothing when the first answer was garbage)
+  local transport roster="$probe.roster"
+  python3 -c 'import json,sys
+r = json.load(open(sys.argv[1]))
+if not isinstance(r, list) or not all(isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"] for e in r): sys.exit(1)
+print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in r if e.get("enabled")))' "$probe" > "$roster" 2>/dev/null \
+    || { rm -f "$roster"; say "codex mcp list gave a roster that does not parse: not reviewing"; return 2; }
   while IFS=$'\t' read -r name transport; do
     [[ -n "$name" ]] || continue
     # a complete entry, not `.enabled=false` alone: a server another layer provides (the desktop app's) is not in
@@ -226,9 +233,7 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
     # splits a dotted -c path on every dot; the table merges into the existing servers like the per-server form did
     if [[ "$transport" == stdio ]]; then mcp_tab+="${mcp_tab:+, }$(toml_str "$name") = { command = \"/bin/sh\", enabled = false }"
     else mcp_tab+="${mcp_tab:+, }$(toml_str "$name") = { url = \"http://127.0.0.1:9/\", enabled = false }"; fi
-  done < <(python3 -c 'import json,sys
-try: print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in json.load(open(sys.argv[1])) if e.get("enabled")))
-except Exception: pass' "$probe")
+  done < "$roster"; rm -f "$roster"
   [[ -n "$mcp_tab" ]] && mcp_off=(-c "mcp_servers={ $mcp_tab }")
   waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null \
     || { say "codex mcp list failed on the read-back: not reviewing"; return 2; }

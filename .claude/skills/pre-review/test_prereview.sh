@@ -7,7 +7,7 @@ need() { "$@" || { echo "FAIL: setup: $*" >&2; exit 1; }; }
 P=${1:-"$(cd "$(dirname "$0")" && pwd)/prereview.sh"}; T=$(mktemp -d "${TMPDIR:-/tmp}/prtest.XXXXXX") || exit 1; export XDG_CACHE_HOME="$T/cache"; FAILS=0
 [[ -n "${KEEP:-}" ]] || trap 'chmod -R u+w "$T" 2>/dev/null; rm -rf "$T"' EXIT   # this run's folder only, writable again first (the chmod tests); KEEP=1 leaves it for a look
 # the cases set these themselves: an inherited API key would pass the logged-out case, a base or timeout would move others
-unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_DURING FAKE_MCP_RC FAKE_FEAT_RC FAKE_FEAT_ROWS FAKE_VERSION_RC FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
+unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_DURING FAKE_MCP_RC FAKE_FEAT_RC FAKE_FEAT_ROWS FAKE_VERSION_RC FAKE_MCP_FIRST FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
 # the caller's git configuration stays out too: a global core.hooksPath would make the fixture's --install and
 # --uninstall write to, and delete from, the caller's real hooks folder
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
@@ -30,6 +30,10 @@ if [[ " $* " == *" features list "* ]]; then   # the six capabilities, each off 
 fi
 if [[ " $* " == *" mcp list "* ]]; then   # the effective servers (FAKE_MCP), each off when a -c mcp_servers.<name>.enabled=false came
   [[ -n "${FAKE_MCP_RC:-}" ]] && { echo '[]'; exit "$FAKE_MCP_RC"; }   # a failing probe, even one that prints a list
+  # FAKE_MCP_FIRST: the first listing of a review answers this (exit 0), every later one an empty roster
+  if [[ -n "${FAKE_MCP_FIRST:-}" ]]; then
+    if [[ -e "${FAKE_CDIR}.mcpfirst" ]]; then echo '[]'; else touch "${FAKE_CDIR}.mcpfirst"; printf '%s\n' "$FAKE_MCP_FIRST"; fi; exit 0
+  fi
   printf '%s\n' "$@" > "${FAKE_CDIR}.mcpargs"; pwd -P > "${FAKE_CDIR}.mcpcwd"
   python3 -c '
 import json, sys
@@ -154,6 +158,10 @@ FAKE_MCP="docs|http,loc" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 
 ok "  … an http server gets an entry of its own transport (a stdio one next to its url fails codex's config load)" "$?:$(grep -c '"docs" = { url = "http://127.0.0.1:9/", enabled = false }' "$T/cdir.args")" 0:1
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
 FAKE_MCP_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex mcp list fails (exit 1, even with a list printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
+for bad in '{not json' '{"name": "fs", "enabled": true}' '[{"enabled": true}]'; do
+  rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST="$bad" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+  ok "  … a first roster that does not parse ($bad), the read-back empty → not reviewed (exit 2)" "$?:$(V)" 2:none
+done
 FAKE_FEAT_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex features list fails (exit 1, every row printed as off) → not reviewed (exit 2)" "$?:$(V)" 2:none
 FAKE_VERSION_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "codex --version fails (exit 1, a version still printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
 DUP=""; for k in 1 2 3 4 5 6 7; do DUP+="apps stable false\\n"; done
