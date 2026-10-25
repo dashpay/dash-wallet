@@ -555,9 +555,9 @@ bound in `di/AnalyticsModule.kt:15`; event names in `AnalyticsConstants.kt`; `An
 
 - UI: `viewModelScope` (335), `lifecycleScope` (321).
 - App-wide: injected app scope (Default dispatcher), service-owned scopes (`syncScope`), 37 ad-hoc
-  `CoroutineScope(SupervisorJob()…)`/`CoroutineScope(Dispatchers…)` constructions, and 3 files still using
-  `GlobalScope` (`CreateIdentityService.kt:414` in the exception handler, `PaymentProtocolViewModel.kt`,
-  `common/.../BaseConfig.kt`).
+  `CoroutineScope(SupervisorJob()…)`/`CoroutineScope(Dispatchers…)` constructions, and 2 files still launching on
+  `GlobalScope` (`CreateIdentityService.kt:414` in the exception handler, `PaymentProtocolViewModel.kt:276`;
+  `common/.../BaseConfig.kt` only imports it).
 - Teardown must survive cancellation: `withContext(NonCancellable)` in wipe finish (`WalletApplicationExt.kt:107`)
   and BIP70 post-ack (`SendCoinsTaskRunner.kt:1062`).
 - Coroutines version is 1.6.4 (`build.gradle:4`) — `runTest` exists but newer test APIs do not.
@@ -848,7 +848,7 @@ No instrumented tests, no lint gate (lint `abortOnError false`), no detekt, no c
 
 ### 7.3 Legacy and duplication
 
-- 115 Java files remain in `wallet/src` (39 `ui`, 26 `rates`, 16 `util`, 6 `payments`, 6 root incl.
+- 110 Java files remain in `wallet/src` (115 in the module with its tests; 39 `ui`, 26 `rates`, 16 `util`, 6 `payments`, 6 root incl.
   `WalletApplication.java` 3,639 lines and `Constants.java`), 41 in `common` (BIP70 `Protos.java` 4,727 lines,
   `Configuration.java`, money ports), 10 in `uphold`. `SecurityGuard.java` is Java and uses `runBlocking`.
 - God files: `CutoverUiDataService.kt` 5,909; `L1ShadowSyncService.kt` 5,557; `BlockchainServiceImpl.kt` 4,306;

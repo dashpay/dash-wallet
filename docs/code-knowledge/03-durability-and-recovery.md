@@ -55,7 +55,10 @@ in flight, carrying the stop generation).
 
 **3.11 Treat a marker as a state machine.**
 - Never overwrite a pending or unverified marker. `begin()` on PENDING returns untouched; on RECOVERY_REQUIRED it
-  refuses (#1577).
+  refuses (#1577). The state check and the write that publishes the marker belong under one writer lock, so nothing
+  can land between them. A rename on Android replaces the target, so a marker written in that gap would be silently
+  overwritten. `BackupReplacementState` does this under the `AtomicFileWriter` lock. `WalletWipeState.begin()` takes
+  no lock of its own, so its callers must not run it concurrently.
 - Write atomically:
   1. create a temp file in the same directory;
   2. write it and fsync it;
