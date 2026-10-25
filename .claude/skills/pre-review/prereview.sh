@@ -96,12 +96,13 @@ print((rec.get("verdict") or "none") if ok else "stale")
 PY
 verdict() { python3 -c "$VERDICT_PY" "$@"; }
 # roster <file>: the enabled servers of a `codex mcp list --json` answer, one "name<TAB>transport" per line; exits 1
-# unless it is a list of entries each with a name and a boolean enabled. Both MCP probes read through it: an answer
+# unless it is a list of entries each with a name (not blank: every enabled server prints a visible line, which the
+# read-back's emptiness check relies on) and a boolean enabled. Both MCP probes read through it: an answer
 # that does not parse is no answer, and an unknown enabled state is not "off"
 read -r -d '' ROSTER_PY <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1]))
-if not isinstance(r, list) or not all(isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"]
+if not isinstance(r, list) or not all(isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"].strip()
                                       and isinstance(e.get("enabled"), bool) for e in r):
     sys.exit(1)
 print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in r if e["enabled"]))

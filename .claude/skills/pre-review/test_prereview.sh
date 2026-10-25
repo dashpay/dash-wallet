@@ -160,7 +160,7 @@ FAKE_MCP="docs|http,loc" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 
 ok "  … an http server gets an entry of its own transport (a stdio one next to its url fails codex's config load)" "$?:$(grep -c '"docs" = { url = "http://127.0.0.1:9/", enabled = false }' "$T/cdir.args")" 0:1
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
 FAKE_MCP_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex mcp list fails (exit 1, even with a list printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
-for bad in '{not json' '{"name": "fs", "enabled": true}' '[{"enabled": true}]' '[{"name": "fs", "enabled": null}]'; do
+for bad in '{not json' '{"name": "fs", "enabled": true}' '[{"enabled": true}]' '[{"name": "fs", "enabled": null}]' '[{"name": " ", "enabled": true}]'; do
   rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST="$bad" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
   ok "  … a first roster that does not parse ($bad), the read-back empty → not reviewed (exit 2)" "$?:$(V)" 2:none
 done
@@ -168,7 +168,7 @@ rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB_RC=1 FAKE_LAST='{"bloc
 ok "  … the first listing fine, the read-back fails (exit 1, an empty roster printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
 rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB='[{"name": "fs", "enabled": null}]' FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "  … a read-back entry whose enabled state is unknown (null) counts as on → not reviewed (exit 2)" "$?:$(V)" 2:none
-for bad in '{}' '""' '[{"name": "fs"}]'; do
+for bad in '{}' '""' '[{"name": "fs"}]' '[{"name": " \t", "enabled": true, "transport": {"type": " "}}]'; do
   rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB="$bad" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
   ok "  … a read-back that does not parse as a roster ($bad) → not reviewed (exit 2)" "$?:$(V)" 2:none
 done
