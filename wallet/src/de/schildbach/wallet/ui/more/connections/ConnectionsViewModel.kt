@@ -106,8 +106,18 @@ class ConnectionsViewModel @Inject constructor(
     private var walletLockJob: Job? = null
     private var walletLockGeneration: () -> Long = { 0L }
     private val sensitiveOperations = SupervisorJob(viewModelScope.coroutineContext[Job])
+    private val foregroundGeneration = java.util.concurrent.atomic.AtomicLong()
+    @Volatile private var foregroundAvailable = false
 
-    internal val isWalletUnlocked: Boolean get() = walletUnlockCheck()
+    internal val isWalletUnlocked: Boolean get() = foregroundAvailable && walletUnlockCheck()
+
+    internal fun onForegroundChanged(available: Boolean) {
+        if (!available) {
+            foregroundAvailable = false
+            foregroundGeneration.incrementAndGet()
+            cancelSensitiveOperations()
+        } else foregroundAvailable = true
+    }
     internal val canUseConnections: Boolean get() = _uiState.value.recordsStatus == ConnectionRecordsStatus.READY
 
     private fun requireConnectionRecords() {
@@ -132,7 +142,10 @@ class ConnectionsViewModel @Inject constructor(
     private fun launchAuthorizedOperation(singleFlight: Boolean = false, block: suspend CoroutineScope.() -> Unit): Job {
         val generation = walletLockGeneration
         val approvedGeneration = generation()
-        return viewModelScope.launch(sensitiveOperations + ConnectionAuthorization { isWalletUnlocked && generation() == approvedGeneration }) {
+        val approvedForeground = foregroundGeneration.get()
+        return viewModelScope.launch(sensitiveOperations + ConnectionAuthorization {
+            isWalletUnlocked && generation() == approvedGeneration && foregroundGeneration.get() == approvedForeground
+        }) {
             try {
                 block()
             } catch (cancelled: CancellationException) {

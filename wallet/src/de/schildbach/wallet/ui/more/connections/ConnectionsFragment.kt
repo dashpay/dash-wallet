@@ -108,8 +108,10 @@ class ConnectionsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val host = activity as? LockScreenActivity
+        val foreground = ConnectionForegroundObserver(requireContext(), viewModel::onForegroundChanged)
+        viewLifecycleOwner.lifecycle.addObserver(foreground)
         viewModel.bindWalletUnlockCheck {
-            host != null && !host.walletLocked.value && !host.lockScreenDisplayed
+            host != null && !host.walletLocked.value && !host.lockScreenDisplayed && foreground.isDeviceAvailable()
         }
         viewModel.bindWalletLockState(host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)) {
             host?.walletLockGeneration ?: -1L

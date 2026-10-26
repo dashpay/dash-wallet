@@ -64,6 +64,7 @@ class ConnectionsViewModelTest {
         coEvery { repository.revokePreparedLogin(any(), any()) } returns Unit
         model = ConnectionsViewModel(repository, identities)
         model.bindWalletUnlockCheck { true }
+        model.onForegroundChanged(true)
     }
 
     @After fun teardown() {
@@ -78,6 +79,7 @@ class ConnectionsViewModelTest {
         every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
         model = ConnectionsViewModel(repository, identities)
         model.bindWalletUnlockCheck { true }
+        model.onForegroundChanged(true)
         val uri = if (purchase) "dash-st:2?n=d&v=1" else vector.getAsJsonObject("request")["uri"].asString
         repeat(2) {
             model.resetScanOutcome()
@@ -382,7 +384,7 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
     }
 
-    private fun assertLockCancelsCapturedOperation(kind: String) {
+    private fun assertLockCancelsCapturedOperation(kind: String, background: Boolean = false) {
         val locked = MutableStateFlow(false)
         model.bindWalletUnlockCheck { !locked.value }
         model.bindWalletLockState(locked)
@@ -421,9 +423,9 @@ class ConnectionsViewModelTest {
         }
         dispatcher.scheduler.runCurrent()
         assertNotNull(authorize)
-        locked.value = true
+        if (background) model.onForegroundChanged(false) else locked.value = true
         dispatcher.scheduler.runCurrent()
-        locked.value = false
+        if (background) model.onForegroundChanged(true) else locked.value = false
         dispatcher.scheduler.runCurrent()
         // Captured native signer authorization must remain revoked even after unlocking again.
         assertThrows(kotlinx.coroutines.CancellationException::class.java) { authorize!!() }
@@ -447,6 +449,36 @@ class ConnectionsViewModelTest {
     @Test fun `lock cancels in flight key setup and requires another explicit action`() = assertLockCancelsCapturedOperation("setup")
     @Test fun `lock cancels in flight purchase and retains uncertain debit state`() = assertLockCancelsCapturedOperation("purchase")
     @Test fun `lock cancels in flight disconnect and invalidates captured signer`() = assertLockCancelsCapturedOperation("disconnect")
+
+    @Test fun `background cancels login with auto logout unchanged`() = assertLockCancelsCapturedOperation("login", true)
+    @Test fun `background cancels purchase key setup`() = assertLockCancelsCapturedOperation("setup", true)
+    @Test fun `background cancels purchase and retains unknown outcome`() = assertLockCancelsCapturedOperation("purchase", true)
+    @Test fun `background cancels revocation without claiming completion`() = assertLockCancelsCapturedOperation("disconnect", true)
+
+    @Test fun `rapid pause resume invalidates captured authorization before dispatch`() {
+        lateinit var authorize: () -> Unit
+        val gate = CompletableDeferred<Unit>()
+        coEvery { repository.approvePreparedLogin(any(), any()) } coAnswers {
+            authorize = kotlin.coroutines.coroutineContext.connectionAuthorization()
+            gate.await()
+            authorize()
+            mockk(relaxed = true)
+        }
+        scan(openedFromUrl = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.runCurrent()
+        model.onForegroundChanged(false)
+        model.onForegroundChanged(true)
+        assertThrows(kotlinx.coroutines.CancellationException::class.java) { authorize() }
+        gate.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(model.uiState.value.requiresRevocation)
+        assertNull(model.callbackOffer.value)
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.runCurrent()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+    }
 
     @Test fun `fast lock and unlock invalidates signing even before flow collection`() {
         val locked = MutableStateFlow(false)
@@ -604,6 +636,7 @@ class ConnectionsViewModelTest {
         model.viewModelScope.cancel()
         model = ConnectionsViewModel(repository, identities)
         var unlocked = !restoredWhileLocked
+        model.onForegroundChanged(true)
         model.bindWalletUnlockCheck { unlocked }
         if (purchase) scanPurchase() else scan(openedFromUrl = true)
         ApprovalTestParent.model = model

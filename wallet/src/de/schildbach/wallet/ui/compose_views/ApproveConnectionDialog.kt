@@ -212,7 +212,7 @@ internal fun ApproveConnectionContent(
                 Text(request.permissionText, style = MyTheme.Typography.BodyMedium, color = colors.textPrimary)
                 GrantPresetMenu(listOf(stringResource(R.string.dash_connect_budget_requested),
                     stringResource(R.string.dash_connect_budget_cap, "0.1"), stringResource(R.string.dash_connect_budget_cap, "0.5"),
-                    stringResource(R.string.dash_connect_budget_cap, "1")),
+                    stringResource(R.string.dash_connect_budget_cap, "2")),
                     request.budgetPreset, !isLoading && !request.recovering) { onLimitsChanged(it, request.lifetimePreset) }
                 GrantPresetMenu(listOf(stringResource(R.string.dash_connect_expiry_requested), stringResource(R.string.dash_connect_days, 30),
                     stringResource(R.string.dash_connect_days, 90), stringResource(R.string.dash_connect_days, 365)),

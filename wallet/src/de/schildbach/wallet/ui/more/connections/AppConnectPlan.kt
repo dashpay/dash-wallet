@@ -84,7 +84,7 @@ private fun VerifiedContractGroup.consentText(): String = buildString {
 
 internal fun AppConnectPlan.withPresets(budget: Int, lifetime: Int): AppConnectPlan {
     require(budget in 0..3 && lifetime in 0..3 && !recovering)
-    val credits = listOf(null, BigInteger("10000000000"), BigInteger("50000000000"), BigInteger("100000000000"))[budget]
+    val credits = listOf(null, BigInteger("10000000000"), BigInteger("50000000000"), BigInteger("200000000000"))[budget]
     val days = listOf(null, 30L, 90L, 365L)[lifetime]
     return copy(grants = proposedGrants.map { grant -> grant.copy(
         totalBudget = if (credits == null) grant.totalBudget else grant.totalBudget?.min(credits) ?: credits,

@@ -42,8 +42,8 @@ class PlatformDashConnectRepository @Inject constructor(
             val currentTime = now()
             val scope = runCatching { session.scope() }.getOrNull()
             val current = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }.map { (app, grants) ->
-                val latest = grants.last()
-                DAppConnection(app, latest.optString("label").ifBlank { "Unknown app" }, "",
+                val latest = grants.maxBy { it.optLong("updatedAt") }
+                DAppConnection(app, unverifiedAppName(latest.optString("label"), app), "",
                     when {
                         grants.any { record -> record.optString("state") == "active" && record.getJSONArray("keys").let { keys ->
                             (0 until keys.length()).any { index -> keys.getJSONObject(index).let { key ->

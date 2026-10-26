@@ -41,6 +41,12 @@ class AppConnectPlanTest {
         assertThrows(IllegalArgumentException::class.java) { plan().copy(recovering = true).withPresets(1, 1) }
     }
 
+    @Test fun `largest preset is two DASH and never increases a smaller request`() {
+        val changed = plan().withPresets(3, 0)
+        assertEquals(BigInteger("200000000000"), changed.grants[0].totalBudget)
+        assertEquals(plan().grants[1].totalBudget, changed.grants[1].totalBudget)
+    }
+
     @Test fun `finite presets cap an unlimited request and consent accepts narrowing`() {
         val requested = plan().grants.map { it.copy(totalBudget = null) }
         val original = plan().copy(grants = requested, proposedGrants = requested)

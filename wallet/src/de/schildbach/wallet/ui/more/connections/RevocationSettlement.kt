@@ -15,8 +15,13 @@ internal fun settleConfirmedRevocation(record: JSONObject, appWideRemainingKeys:
     val appConfirmed = !incomplete && (appWideRemainingKeys != null ||
         (record.optString("state") == "disabled" && record.optBoolean("permanentRevocationConfirmed") &&
             record.optBoolean("appRevocationConfirmed")))
-    return settled.put("state", if (incomplete) "partialRevocation" else "disabled")
+    return settled.withGrantState(if (incomplete) "partialRevocation" else "disabled")
         .put("permanentRevocationConfirmed", true)
         .put("appRevocationConfirmed", appConfirmed)
         .put("unrecordedKeyIds", remaining)
+}
+
+internal fun JSONObject.withGrantState(state: String, now: Long = System.currentTimeMillis()): JSONObject {
+    if (optString("state") != state) put("updatedAt", now)
+    return put("state", state)
 }

@@ -60,4 +60,21 @@ class RevocationSettlementTest {
             settleConfirmedRevocation(partial().put("unrecordedKeyIds", "unreadable"), null)
         }
     }
+
+    @Test fun `state transitions update timestamp but repeated state does not`() {
+        val record = JSONObject().put("state", "prepared").put("updatedAt", 1L)
+        for ((index, state) in listOf("pending", "confirmed", "active", "partialRevocation", "disabled").withIndex()) {
+            val time = index + 10L
+            assertEquals(time, record.withGrantState(state, time).getLong("updatedAt"))
+            assertEquals(time, record.withGrantState(state, time + 1).getLong("updatedAt"))
+        }
+        assertTrue(settleConfirmedRevocation(JSONObject().put("state", "active").put("updatedAt", 1L), emptyList())
+            .getLong("updatedAt") > 1L)
+    }
+
+    @Test fun `QR names stay explicitly unverified and include their app identity`() {
+        assertEquals("Unverified app: \"Yappr\" [contract]", unverifiedAppName("Yappr", "contract"))
+        assertEquals("Unverified app: \"Yappr\" [contract]", unverifiedAppName("Yap\u202epr\n", "contract"))
+        assertTrue(unverifiedAppName("", "contract").contains("Unknown app"))
+    }
 }

@@ -363,7 +363,7 @@ internal class AppConnectSession(
                             check(additions.size <= 6) { "A grant must fit in one atomic key registration" }
                             checkScope(plan.scope)
                             parsed.requireFresh(System.currentTimeMillis())
-                            config.saveGrant(record.put("state", "pending").put("groupScopes", plan.groupScopesJson()))
+                            config.saveGrant(record.withGrantState("pending").put("groupScopes", plan.groupScopesJson()))
                             checkScope(plan.scope)
                             // On an uncertain result the durable pending record remains, and a retry reads the identity first.
                             identity = updateIdentityInBatches(additions, disable,
@@ -396,7 +396,7 @@ internal class AppConnectSession(
                         )
                         checkScope(plan.scope)
                         rememberIdentity(identity)
-                        config.saveGrant(record.put("state", "confirmed"))
+                        config.saveGrant(record.withGrantState("confirmed"))
                         oldRecords.forEach { config.saveGrant(settleConfirmedRevocation(it, null)) }
                         plan.requireGroupScopes(validateOwnership(request, selectedGrants))
                         authorize()
@@ -408,8 +408,8 @@ internal class AppConnectSession(
                     }
                 }
                 checkScope(plan.scope)
-                config.saveGrant(record.put("state", "active"))
-                DAppConnection(Base58.encode(request.contractId), request.label.ifBlank { "Unknown app" }, "",
+                config.saveGrant(record.withGrantState("active"))
+                DAppConnection(Base58.encode(request.contractId), unverifiedAppName(request.label, Base58.encode(request.contractId)), "",
                     ConnectionStatus.ACTIVE, System.currentTimeMillis(), plan.scope)
             } finally { KeyExchangeCrypto.wipe(seed); privateKeys.forEach { KeyExchangeCrypto.wipe(it) }; KeyExchangeCrypto.wipe(ephemeral) }
         }

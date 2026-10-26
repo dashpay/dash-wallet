@@ -242,3 +242,37 @@ pre-seed acknowledgement enforcement, stale saved approval, refresh reset and
 revocation while acknowledgement is unchecked. Both APKs and formatting checks
 passed. The new recovery acknowledgement has not been exercised in a live funded
 scope-change scenario; the earlier Pixel 9 login evidence remains a happy-path test.
+
+### Foreground authorization boundary
+
+Connect authorization now also requires a resumed Connections view, an interactive
+device and an unlocked device keyguard. Pausing/stopping/destroying that view or
+receiving screen-off synchronously invalidates its authorization generation and
+cancels approval, purchase-key setup, purchase and revocation jobs. Returning to
+the view permits another explicit action, never continuation with a captured old
+signer. This does not change wallet-wide auto-logout settings or force a PIN on
+every activity transition. System-only screen-off registration follows Android's
+documented receiver exception and the wallet's existing AutoLogout pattern.
+
+Already-submitted native transitions cannot be rolled back by cancellation.
+Persisted grant and purchase receipts remain available for recovery; interruption
+must not report successful revocation or offer a success callback. Lifecycle and
+device tests complement the prior lock-flow tests, which did not exercise the
+real foreground-to-background event boundary. Live interrupted/funded operations
+still require emulator/device testing.
+
+Connection list names explicitly mark QR branding as unverified and include the
+app contract identity, including for older saved grants. Grant status transitions
+refresh updatedAt without changing it on an ordinary refresh or identical state
+write. The largest finite budget preset is 2 DASH, still capped by the requested
+budget. CI exports SUPPORT_EMAIL only after the external SDK build completes.
+
+The mutable DashJ 24 snapshot remains a release-reproducibility follow-up; this
+change does not downgrade Core 24 support. Terminal URL failure callbacks also
+remain a protocol follow-up: uncertain outcomes retain recovery/revocation and
+must not claim failure when access might exist. Scanner requests never launch a
+website callback.
+
+The foreground/suggestion regression run passed 556 tests across devnet, testnet
+and production, with 77 conditional skips and no failures. Lifecycle observer
+tests run on Android API 28 and 34. Both debug APK builds and ktlintCheck passed.
