@@ -41,10 +41,10 @@ interface ReplayWakeLockHandle {
  * progress ([replayHoldsWakeLock]: offline, or wedged with the filter-stall
  * watchdog's restarts spent).
  *
- * Who decides: everyone, the same way. The minute tick ([tick]) and every
- * event that can change the answer ([recheck]: an impediment change, the
- * filter wedge clearing via [observeWedgeClears]) read the decision NOW and
- * acquire or release to match, under one monitor. ACTION_TIME_TICK is not
+ * Who decides: everyone, the same way. The minute tick and every event that
+ * can change the answer (an impediment change, the filter wedge clearing via
+ * [observeWedgeClears]) call [recheck], which reads the decision NOW and
+ * acquires or releases to match, under one monitor. ACTION_TIME_TICK is not
  * delivered while the CPU sleeps, so a replay that can move again must not
  * wait for the tick to get the lock back.
  *
@@ -54,10 +54,12 @@ interface ReplayWakeLockHandle {
  * "not due", and releases. (An acquire-only re-check used to leave that lock
  * held until the next tick, so the replay held the CPU while offline.)
  *
- * The tick also knows holds the events cannot see (an engine start, a durable
- * save in flight). It records them, and a recheck honours the last recorded
- * value. A stale one only keeps the lock, and a held lock keeps the CPU awake,
- * so the next tick comes and corrects it.
+ * Both halves of the decision are read live: the replay's ([replayDue]) and
+ * the holds besides it ([otherHolds]: an engine start or a durable save in
+ * flight). The other holds used to be the tick's value, recorded once a
+ * minute. During a large replay the durable save keeps that value true, so a
+ * network loss could not release the lock until the next tick: up to a minute
+ * held offline, the waste this class exists to prevent (QA on #1632, D-1632-01).
  *
  * Tracked apart from `isHeld` because the lock is reference-counted and shared
  * with the dashj path ([releaseForTeardown] releases only this owner's count).
@@ -65,11 +67,14 @@ interface ReplayWakeLockHandle {
  * @param lock the service's wake lock; null before onCreate assigns it.
  * @param sdkPath whether the SDK owns L1 (the dashj path manages its own hold).
  * @param replayDue the replay half of the hold decision, read now.
+ * @param otherHolds the rest of it (an engine start, a durable save), read now
+ *   from any thread.
  */
 internal class ReplayWakeLock(
     private val lock: () -> ReplayWakeLockHandle?,
     private val sdkPath: () -> Boolean,
-    private val replayDue: () -> Boolean
+    private val replayDue: () -> Boolean,
+    private val otherHolds: () -> Boolean
 ) {
     private val log = LoggerFactory.getLogger(ReplayWakeLock::class.java)
     private val guard = Any()
@@ -87,25 +92,13 @@ internal class ReplayWakeLock(
     @Volatile
     private var retired = false
 
-    /** The tick's holds the events cannot read; written and read under [guard]. */
-    private var tickHolds = false
-
-    /**
-     * The minute tick. [otherHolds]: an engine start or a durable save needs
-     * the CPU (the replay's own part is read by [recheck]).
-     */
-    fun tick(otherHolds: Boolean) {
-        synchronized(guard) { tickHolds = otherHolds }
-        recheck()
-    }
-
-    /** Hold the lock iff the replay (or the tick's last other holds) needs the CPU now. */
+    /** Hold the lock iff the replay, an engine start or a durable save needs the CPU now. */
     fun recheck() {
         if (!sdkPath()) return
         val lock = lock() ?: return
         synchronized(guard) {
             try {
-                val due = tickHolds || replayDue()
+                val due = otherHolds() || replayDue()
                 if (due && !held && !retired) {
                     log.info("replay or engine start in progress on the SDK path — acquiring the wake lock")
                     lock.acquire()

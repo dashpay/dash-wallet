@@ -73,14 +73,18 @@ class ReplayWakeLockTest {
         filterScanWedged = decider.standingDown
     )
 
+    // An engine start or a durable save in flight, as BlockchainServiceImpl reads it live.
+    private var otherHolds = false
+
     private val replayWakeLock = ReplayWakeLock(
         lock = { lock },
         sdkPath = { true },
-        replayDue = ::replayDue
+        replayDue = ::replayDue,
+        otherHolds = { otherHolds }
     )
 
-    // The minute tick's call, with no engine start or durable save in flight.
-    private fun tick() = replayWakeLock.tick(otherHolds = false)
+    // The minute tick's call.
+    private fun tick() = replayWakeLock.recheck()
 
     private val stuck = 1_500_000L // more than one commit batch behind
     private val target = 1_556_896L
@@ -247,7 +251,8 @@ class ReplayWakeLockTest {
                         networkImpeded = true
                     }
                 }
-            }
+            },
+            otherHolds = { otherHolds }
         )
         check(121 * 60_000L, height = stuck + 1) // the wedge clears
         racing.recheck() // the recovery: read "due", then the loss, then acquire
@@ -259,7 +264,7 @@ class ReplayWakeLockTest {
     }
 
     @Test
-    fun aNetworkLoss_releasesAtOnce_butNotWhatOnlyTheTickCanSee() {
+    fun aNetworkLoss_releasesAtOnce_unlessAnEngineStartOrSaveStillNeedsTheCpu() {
         tick()
         assertTrue(lock.isHeld)
 
@@ -267,14 +272,31 @@ class ReplayWakeLockTest {
         replayWakeLock.recheck()
         assertFalse("no tick needed to let the CPU sleep when offline", lock.isHeld)
 
-        // An engine start in flight is a hold the events cannot read: the
-        // tick records it, and a recheck keeps honouring it.
-        replayWakeLock.tick(otherHolds = true)
-        assertTrue(lock.isHeld)
+        // An engine start or a durable save in flight is local work that goes
+        // on offline: it holds the lock, and any recheck sees it.
+        otherHolds = true
         replayWakeLock.recheck()
         assertTrue("the engine start still needs the CPU", lock.isHeld)
-        replayWakeLock.tick(otherHolds = false)
+        otherHolds = false
+        replayWakeLock.recheck()
         assertFalse(lock.isHeld)
+    }
+
+    @Test
+    fun aNetworkLoss_afterTheDurableSaveCaughtUp_releasesWithoutATick() {
+        // QA on #1632, D-1632-01: the tick recorded the durable-save hold as
+        // true during a large replay, and the event recheck read that recorded
+        // value. A network loss after the save had caught up then kept the lock
+        // until the next tick: 53 s and 11 s on the emulator.
+        otherHolds = true // the durable save is behind
+        tick()
+        assertTrue(lock.isHeld)
+
+        otherHolds = false // it caught up — no tick has run since
+        networkImpeded = true
+        replayWakeLock.recheck() // the loss's impediment update
+        assertFalse("released by the network event, not the next tick", lock.isHeld)
+        assertFalse(replayWakeLock.held)
     }
 
     @Test

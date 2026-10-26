@@ -159,9 +159,10 @@ class NetworkAvailabilityTest {
         val replayWakeLock = ReplayWakeLock(
             lock = { lock },
             sdkPath = { true },
-            replayDue = { replayHoldsWakeLock(replaying = true, networkImpeded = impeded, filterScanWedged = false) }
+            replayDue = { replayHoldsWakeLock(replaying = true, networkImpeded = impeded, filterScanWedged = false) },
+            otherHolds = { false }
         )
-        replayWakeLock.tick(otherHolds = false)
+        replayWakeLock.recheck() // the tick
         assertFalse("offline from the start: no wake lock for a replay that cannot move", lock.isHeld)
         assertEquals(0, acquisitions)
 

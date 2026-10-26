@@ -1000,7 +1000,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         },
         sdkPath = { dashjHeldByCutover },
-        replayDue = { replayWakeLockDue() }
+        replayDue = { replayWakeLockDue() },
+        otherHolds = { replayWakeLockOtherHolds(System.currentTimeMillis()) }
     )
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
@@ -2503,9 +2504,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
             )
             // A replay that cannot make progress keeps the service up but releases the CPU.
-            // ReplayWakeLock reads the replay's part itself (replayWakeLockDue), the same
-            // way the event rechecks do; the tick adds what only it can see.
-            replayWakeLock.tick(otherHolds = engineStarting || durableLagging)
+            // ReplayWakeLock reads both parts live (replayWakeLockDue, replayWakeLockOtherHolds),
+            // the same way the event rechecks do; the observe() above is what ages the
+            // durable height for them.
+            replayWakeLock.recheck()
             // Those two holds also keep the service in the foreground: the scan reads
             // synced while they last, and a demoted service would be stopped anyway.
             if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
@@ -3816,7 +3818,25 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
     }
 
-    /** The replay half of the tick's hold decision, read now. */
+    /**
+     * The rest of the replay wake lock's decision: an SDK engine start in flight,
+     * or the SDK still saving the scan. The same two holds the tick computes, read
+     * live so an event recheck sees them as they are now, not as the last tick
+     * recorded them (D-1632-01). [DurableHeightTracker.msSinceChange] reads the
+     * tracker without recording, so only the tick ages the durable height.
+     */
+    private fun replayWakeLockOtherHolds(nowMs: Long): Boolean {
+        if (!dashjHeldByCutover) return false
+        if (engineStartHoldsService(l1ShadowSyncService.engineStartingSinceMs(), nowMs)) return true
+        val durableHeight = l1ShadowSyncService.durableSyncedHeight()
+        return durableLagHoldsService(
+            durableHeight,
+            l1ShadowSyncService.engineCommittedHeight(),
+            durableHeightTracker.msSinceChange(durableHeight, nowMs)
+        )
+    }
+
+    /** The replay half of the hold decision, read now. */
     private fun replayWakeLockDue(): Boolean = dashjHeldByCutover && replayHoldsWakeLock(
         replaying = blockchainState?.replaying == true && !sdkBindBlocked(),
         networkImpeded = impediments.contains(Impediment.NETWORK),
