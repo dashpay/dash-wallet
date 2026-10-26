@@ -372,3 +372,17 @@ becomes unavailable after cancellation and explicit Retry restores connection ro
 after storage is readable, without registering keys.
 The cancellation-fix run passed 614 tests across devnet, testnet and production,
 with 94 conditional skips and no failures. Both APK builds and ktlintCheck passed.
+
+### Approval Selection Follow-Ups
+
+Approval validates expiry for the selected authentication grants only. An omitted
+optional grant nearing expiry must not prevent a still-valid selected grant from
+being approved; selecting that expired grant still fails before key derivation.
+After a contract-group scope refresh, fresh consent remains editable. Recovery of
+a persisted grant keeps selections and limits frozen so retry cannot change an
+already prepared or submitted key set. A failed refresh retains recovery controls.
+
+Regression tests cover the real session's selected/omitted expiry paths and both
+fresh and persisted-recovery consent controls. The combined run passed 618 tests
+across devnet, testnet and production, with 96 conditional skips and no failures.
+Both debug APK builds and ktlintCheck passed. These paths still need device testing.

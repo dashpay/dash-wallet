@@ -423,7 +423,8 @@ class ConnectionsViewModel @Inject constructor(
                         val refreshed = checkNotNull(repository.prepareLogin(request)) { "Approval terms unavailable" }
                         coroutineContext.connectionAuthorization()()
                         pendingPlan = refreshed
-                        _uiState.update { state -> state.copy(pendingRequest = state.pendingRequest?.copy(
+                        _uiState.update { state -> state.copy(requiresRevocation = refreshed.recovering,
+                            pendingRequest = state.pendingRequest?.copy(
                             permissionText = refreshed.permissionText,
                             grantChoices = refreshed.choices(),
                             recovering = refreshed.recovering,

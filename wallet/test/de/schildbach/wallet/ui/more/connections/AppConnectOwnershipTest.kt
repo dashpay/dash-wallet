@@ -10,6 +10,8 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Base58
 import org.dashj.platform.dpp.contract.DataContract
@@ -80,6 +82,40 @@ class AppConnectOwnershipTest {
         plan.requireMatches(request)
         verify { service.platform.client.getDataContract(request.contractId, true) }
         Unit
+    }
+
+    @Test fun `omitted optional expiry cannot block approval but selected expiry still does`() = runBlocking {
+        nonMainnetOnly()
+        val start = System.currentTimeMillis()
+        every { service.platform.client.getPlatformTime(any()) } returns start
+        val raw = request.requireAppConnect()
+        val bounded = request.copy(appConnect = raw.copy(auth = listOf(
+            raw.auth[0].copy(expiresAt = start + 90L * 86_400_000),
+            raw.auth[1].copy(expiresAt = start + 65L * 60_000))))
+        val prepared = session.prepare(bounded).copy(selectedEncryption = emptySet())
+        every { service.platform.client.getPlatformTime(any()) } returns start + 6L * 60_000
+        every { repo.walletApplication.wallet!!.isEncrypted } returns false
+        every { identity.publicKeys } returns mutableListOf()
+        coEvery { repo.getWalletEncryptionKey() } returns null
+        coEvery { repo.getWalletSeed() } returns mockk { every { seedBytes } returns ByteArray(32) { 1 } }
+        val derivation = org.dashj.platform.dpp.identity.ApplicationKeyDerivation
+        mockkObject(derivation)
+        try {
+            val reached = IllegalStateException("Selected grant reached derivation")
+            every { derivation.sessionAuthentication(any(), any(), any(), any()) } throws reached
+            val selectedOnly = assertThrows(IllegalStateException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(bounded, prepared.copy(selectedAuth = setOf(0))) }
+            }
+            assertEquals(reached.message, selectedOnly.message)
+            val expired = assertThrows(IllegalStateException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(bounded, prepared) }
+            }
+            assertEquals("Grant expired. Scan again.", expired.message)
+            verify(exactly = 1) { derivation.sessionAuthentication(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { config.saveGrant(any()) }
+        } finally {
+            unmockkObject(derivation)
+        }
     }
 
     @Test fun `legacy preparation and approval retries fail before any identity or signing access`() {

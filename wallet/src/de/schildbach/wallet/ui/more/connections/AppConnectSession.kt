@@ -271,7 +271,7 @@ internal class AppConnectSession(
                 var identity = readIdentity()
                 check(identity.id.toString() == plan.identityId) { "Identity changed. Scan again." }
                 val time = platform.client.getPlatformTime(identity.id)
-                check(plan.grants.all { it.expiresAt!! > time + 3_600_000 }) { "Grant expired. Scan again." }
+                check(selectedGrants.all { it.expiresAt!! > time + 3_600_000 }) { "Grant expired. Scan again." }
                 val keys = mutableListOf<IdentityPublicKey>()
                 var nextId = (identity.publicKeys.maxOfOrNull { it.id } ?: -1) + 1
                 plan.grants.forEachIndexed { index, grant ->

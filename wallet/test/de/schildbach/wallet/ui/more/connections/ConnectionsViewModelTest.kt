@@ -193,13 +193,33 @@ class ConnectionsViewModelTest {
         assertEquals(refreshed.permissionText, model.uiState.value.pendingRequest!!.permissionText)
         assertEquals(refreshed.choices(), model.uiState.value.pendingRequest!!.grantChoices)
         assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Error)
-        assertTrue(model.uiState.value.requiresRevocation)
+        assertFalse(model.uiState.value.requiresRevocation)
         assertNull(model.callbackOffer.value)
         coVerify(exactly = 1) { repository.approvePreparedLogin(request, plan) }
         // A second deliberate tap is required, using the newly displayed scope.
         model.approvePendingRequest()
         dispatcher.scheduler.advanceUntilIdle()
         coVerify(exactly = 1) { repository.approvePreparedLogin(request, refreshed) }
+    }
+
+    @Test fun `fresh refreshed consent remains editable while persisted recovery stays frozen`() {
+        for (recovering in listOf(false, true)) {
+            model.closePendingRequest()
+            dispatcher.scheduler.runCurrent()
+            scan()
+            val refreshed = plan.copy(recovering = recovering, blockTime = System.currentTimeMillis())
+            coEvery { repository.approvePreparedLogin(any(), any()) } throws GroupScopeChangedException()
+            coEvery { repository.prepareLogin(any()) } returns refreshed
+            model.approvePendingRequest()
+            dispatcher.scheduler.runCurrent()
+            assertEquals(recovering, model.uiState.value.requiresRevocation)
+            model.selectGrant(1, false, false)
+            model.selectLimits(1, 1)
+            val shown = model.uiState.value.pendingRequest!!
+            assertEquals(recovering, shown.grantChoices.first { it.index == 1 && !it.encryption }.selected)
+            assertEquals(if (recovering) 0 else 1, shown.budgetPreset)
+            assertEquals(if (recovering) 0 else 1, shown.lifetimePreset)
+        }
     }
 
     @Test fun `failed scope refresh retains recovery controls but prevents stale approval`() {
