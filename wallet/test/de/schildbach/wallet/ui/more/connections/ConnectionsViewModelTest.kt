@@ -210,6 +210,43 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 1) { repository.revokePreparedLogin(request, plan) }
     }
 
+    @Test fun `changed recovered scope needs a new acknowledgement and still permits revoke`() {
+        val changed = plan.copy(recovering = true, previousGroupScopes = mapOf(groupId.toString() to group),
+            groupScopes = mapOf(groupId.toString() to group.copy(adminIds = setOf(groupId))))
+        coEvery { repository.prepareLogin(any()) } returns changed
+        scan()
+        assertTrue(model.uiState.value.pendingRequest!!.requiresGroupReapproval)
+        assertFalse(model.uiState.value.pendingRequest!!.groupScopeChangeApproved)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+        model.approveGroupScopeChange(true)
+        assertTrue(model.uiState.value.pendingRequest!!.groupScopeChangeApproved)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approvePreparedLogin(request, changed.copy(groupScopeChangeApproved = true)) }
+        model.approveGroupScopeChange(false)
+        model.denyPendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.revokePreparedLogin(request, changed) }
+    }
+
+    @Test fun `scope refresh resets the prior acknowledgement`() {
+        val changed = plan.copy(recovering = true)
+        coEvery { repository.prepareLogin(any()) } returns changed
+        coEvery { repository.approvePreparedLogin(any(), any()) } throws GroupScopeChangedException()
+        scan()
+        model.approveGroupScopeChange(true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.uiState.value.pendingRequest!!.requiresGroupReapproval)
+        assertFalse(model.uiState.value.pendingRequest!!.groupScopeChangeApproved)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approvePreparedLogin(any(), any()) }
+        assertNull(model.callbackOffer.value)
+    }
+
     @Test fun `cold URL is retained until identity initialization completes`() {
         val initialized = MutableStateFlow<Result<Unit>?>(null)
         every { identities.initializationResult } returns initialized

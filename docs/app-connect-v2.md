@@ -67,6 +67,16 @@ been rolled back. The approved owner/admin/member sets are persisted with the
 exact grant keys. A newer block without a semantic change does not invalidate
 consent. Revocation of recorded keys still uses the existing audit path.
 
+Recovery also decodes the persisted approved group scope instead of treating a
+newly fetched scope as the old approval. Changed or missing prior metadata shows
+a scope-change warning and requires a new, initially unchecked acknowledgement
+before Approve is enabled. The session enforces that acknowledgement before seed
+access, independently of the UI, and checks that the stored approval still matches
+the snapshot captured during preparation. A refreshed sheet resets acknowledgement.
+Only an explicit approval can persist the new scope; opening or refreshing the
+sheet does not overwrite the previous approval. Malformed stored metadata fails
+closed, while recorded-key revocation does not depend on decoding this metadata.
+
 ### Reason For Restoring Group Approvals
 
 The temporary group rejection added in `75cca51d7` addressed the valid concern
@@ -223,3 +233,12 @@ AppsFlyer HTTP 403 errors were unrelated emulator/service issues.
 This validates the tested login happy path, not all live renewal, revocation,
 response cleanup, large-group or configuration-change race cases. Those paths
 still need their own target-network testing before claiming exhaustive coverage.
+
+The subsequent persisted-recovery scope fix passed 525 wallet tests across the
+same three flavors, with 72 conditionally skipped and no failures. Its added
+cases exercise new-session preparation from prepared/pending/confirmed/active
+records, each authorization-scope field, missing and malformed saved metadata,
+pre-seed acknowledgement enforcement, stale saved approval, refresh reset and
+revocation while acknowledgement is unchecked. Both APKs and formatting checks
+passed. The new recovery acknowledgement has not been exercised in a live funded
+scope-change scenario; the earlier Pixel 9 login evidence remains a happy-path test.

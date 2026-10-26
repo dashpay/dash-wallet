@@ -34,7 +34,9 @@ data class AppConnectPlan(
     val proposedGrants: List<AuthBinding> = grants,
     val budgetPreset: Int = 0,
     val lifetimePreset: Int = 0,
-    val groupScopes: Map<String, VerifiedContractGroup> = emptyMap()
+    val groupScopes: Map<String, VerifiedContractGroup> = emptyMap(),
+    val previousGroupScopes: Map<String, VerifiedContractGroup>? = null,
+    val groupScopeChangeApproved: Boolean = false
 )
 
 internal class GroupScopeChangedException : IllegalStateException(

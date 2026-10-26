@@ -208,7 +208,7 @@ internal class AppConnectSession(
         AppConnectPlan(requestHash(request), scope, identity.id.toString(), grants, text,
             prior?.let { indices(it, "authIndices") } ?: grants.indices.toSet(), encChoices,
             prior?.let { indices(it, "encIndices") } ?: encChoices.indices.toSet(), prior != null, blockTime,
-            groupScopes = groupScopes)
+            groupScopes = groupScopes, previousGroupScopes = readApprovedGroupScopes(prior))
     }
 
     private fun validateOwnership(request: DashKeyRequest, grants: List<AuthBinding>): Map<String, VerifiedContractGroup> {
@@ -252,6 +252,12 @@ internal class AppConnectSession(
             check(platform.client.refreshProtocolVersion() >= 14)
             val selectedGrants = plan.selectedAuth.sorted().map { plan.grants[it] }
             plan.requireGroupScopes(validateOwnership(request, selectedGrants))
+            val recordId = "${plan.scope}:${plan.requestHash}"
+            var record = config.getGrants().firstOrNull { it.getString("id") == recordId }
+            plan.requireStoredGroupConsent(record)
+            check(record?.optString("state") != "disabled" && record?.optBoolean("permanentRevocationConfirmed") != true) {
+                "This QR has already been revoked. Scan a new one."
+            }
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
@@ -266,11 +272,6 @@ internal class AppConnectSession(
                 check(identity.id.toString() == plan.identityId) { "Identity changed. Scan again." }
                 val time = platform.client.getPlatformTime(identity.id)
                 check(plan.grants.all { it.expiresAt!! > time + 3_600_000 }) { "Grant expired. Scan again." }
-                val recordId = "${plan.scope}:${plan.requestHash}"
-                var record = config.getGrants().firstOrNull { it.getString("id") == recordId }
-                check(record?.optString("state") != "disabled" && record?.optBoolean("permanentRevocationConfirmed") != true) {
-                    "This QR has already been revoked. Scan a new one."
-                }
                 val keys = mutableListOf<IdentityPublicKey>()
                 var nextId = (identity.publicKeys.maxOfOrNull { it.id } ?: -1) + 1
                 plan.grants.forEachIndexed { index, grant ->

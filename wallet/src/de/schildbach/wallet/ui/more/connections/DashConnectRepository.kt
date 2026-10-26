@@ -75,7 +75,9 @@ data class ConnectionRequest(
     val grantChoices: List<GrantChoice> = emptyList(),
     val recovering: Boolean = false,
     val budgetPreset: Int = 0,
-    val lifetimePreset: Int = 0
+    val lifetimePreset: Int = 0,
+    val requiresGroupReapproval: Boolean = false,
+    val groupScopeChangeApproved: Boolean = false
 )
 
 /**

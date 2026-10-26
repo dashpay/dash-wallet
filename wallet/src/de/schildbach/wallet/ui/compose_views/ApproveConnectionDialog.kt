@@ -146,6 +146,7 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
                     }
                 },
                 onGrantChanged = viewModel::selectGrant,
+                onGroupScopeChanged = viewModel::approveGroupScopeChange,
                 onLimitsChanged = viewModel::selectLimits
             )
         }
@@ -167,6 +168,7 @@ internal fun ApproveConnectionContent(
     onApprove: () -> Unit = {},
     onDeny: () -> Unit = {},
     onGrantChanged: (Int, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onGroupScopeChanged: (Boolean) -> Unit = {},
     onLimitsChanged: (Int, Int) -> Unit = { _, _ -> }
 ) {
     val colors = LocalDashColors.current
@@ -215,6 +217,10 @@ internal fun ApproveConnectionContent(
                 GrantPresetMenu(listOf(stringResource(R.string.dash_connect_expiry_requested), stringResource(R.string.dash_connect_days, 30),
                     stringResource(R.string.dash_connect_days, 90), stringResource(R.string.dash_connect_days, 365)),
                     request.lifetimePreset, !isLoading && !request.recovering) { onLimitsChanged(request.budgetPreset, it) }
+                if (request.requiresGroupReapproval) {
+                    Text(stringResource(R.string.dash_connect_group_scope_changed),
+                        style = MyTheme.Typography.BodyMedium, color = colors.red)
+                }
                 request.grantChoices.forEach { choice ->
                     Row(verticalAlignment = Alignment.Top) {
                         Checkbox(checked = choice.selected,
@@ -279,6 +285,16 @@ internal fun ApproveConnectionContent(
                 )
             }
 
+            if (request.requiresGroupReapproval) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Checkbox(checked = request.groupScopeChangeApproved,
+                        onCheckedChange = onGroupScopeChanged, enabled = !isLoading)
+                    Text(stringResource(R.string.dash_connect_group_scope_approve),
+                        style = MyTheme.Typography.BodyMedium, color = colors.textPrimary,
+                        modifier = Modifier.weight(1f))
+                }
+            }
+
             // Why the approval failed. Without this the sheet just becomes interactive again
             // and the user has no idea what went wrong.
             errorMessage?.let { message ->
@@ -297,7 +313,7 @@ internal fun ApproveConnectionContent(
             primaryButton = SheetButton(
                 text = stringResource(R.string.dash_connect_approve),
                 style = Style.FilledBlue,
-                isEnabled = !isLoading,
+                isEnabled = !isLoading && (!request.requiresGroupReapproval || request.groupScopeChangeApproved),
                 isLoading = isLoading,
                 onClick = onApprove
             ),

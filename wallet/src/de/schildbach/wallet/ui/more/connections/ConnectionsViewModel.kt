@@ -210,6 +210,8 @@ class ConnectionsViewModel @Inject constructor(
                 pendingOpenedFromUrl = openedFromUrl
                 _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
                     grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
+                    requiresGroupReapproval = plan?.requiresGroupReapproval ?: false,
+                    groupScopeChangeApproved = false,
                     walletIdentityId = plan?.identityId ?: request.walletIdentityId),
                     requiresRevocation = plan?.recovering == true) }
                 _approveResult.value = ApproveResult.Idle
@@ -321,11 +323,23 @@ class ConnectionsViewModel @Inject constructor(
             budgetPreset = budget, lifetimePreset = lifetime)) }
     }
 
+    fun approveGroupScopeChange(approved: Boolean) {
+        if (!isWalletUnlocked || operationInProgress) return
+        val plan = pendingPlan ?: return
+        if (!plan.requiresGroupReapproval) return
+        pendingPlan = plan.copy(groupScopeChangeApproved = approved)
+        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.copy(groupScopeChangeApproved = approved)) }
+    }
+
     fun approvePendingRequest() {
         if (!isWalletUnlocked) return
         if (operationInProgress) return
         val request = pendingLoginRequest ?: return
         val plan = pendingPlan
+        if (plan?.requiresGroupReapproval == true && !plan.groupScopeChangeApproved) {
+            _approveResult.value = ApproveResult.Error("Acknowledge the updated group scope before approving this recovered request.")
+            return
+        }
         val openedFromUrl = pendingOpenedFromUrl
         operationInProgress = true
         launchAuthorizedOperation(singleFlight = true) {
@@ -356,6 +370,8 @@ class ConnectionsViewModel @Inject constructor(
                             permissionText = refreshed.permissionText,
                             grantChoices = refreshed.choices(),
                             recovering = refreshed.recovering,
+                            requiresGroupReapproval = refreshed.requiresGroupReapproval,
+                            groupScopeChangeApproved = false,
                             budgetPreset = refreshed.budgetPreset,
                             lifetimePreset = refreshed.lifetimePreset
                         )) }

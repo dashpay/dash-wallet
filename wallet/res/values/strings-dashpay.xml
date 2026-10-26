@@ -595,4 +595,6 @@
     <string name="dash_connect_testnet_only_heading">Unavailable on mainnet</string>
     <string name="dash_connect_testnet_only_message">DashConnect login is not yet available on mainnet</string>
 
+    <string name="dash_connect_group_scope_changed">This group\'s scope has changed since your previous approval, or its previous scope was not recorded. Review the current members and administrators below before continuing. Previously registered keys may still be active; Revoke access remains available.</string>
+    <string name="dash_connect_group_scope_approve">I approve the updated group scope shown above.</string>
 </resources>

@@ -25,6 +25,9 @@ import org.junit.Assume.assumeFalse
 import de.schildbach.wallet.Constants
 import org.bitcoinj.core.NetworkParameters
 
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(application = android.app.Application::class, sdk = [28],
+    manifest = org.robolectric.annotation.Config.NONE, shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class AppConnectOwnershipTest {
     private fun nonMainnetOnly() {
         assumeFalse(Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET)
@@ -132,6 +135,69 @@ class AppConnectOwnershipTest {
         coVerify(exactly = 0) { repo.getWalletSeed() }
         coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
         coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `restart preparation compares persisted approval across all recovery states`() = runBlocking {
+        nonMainnetOnly()
+        val prepared = session.prepare(groupRequest).copy(selectedEncryption = emptySet())
+        val old = prepared.copy(groupScopes = mapOf(group.id.toString() to group.copy(adminIds = emptySet())))
+        val keys = prepared.grants.mapIndexed { index, grant ->
+            val bounds = if (grant.kind == 2) org.dashj.platform.dpp.identity.ContractGroupBounds(Identifier.from(grant.id))
+                else org.dashj.platform.dpp.identity.SingleContractDocumentType(Identifier.from(grant.id), grant.documentType!!)
+            org.json.JSONObject(org.dashj.platform.dpp.identity.IdentityPublicKey(index + 4,
+                org.dashj.platform.sdk.KeyType.ECDSA_HASH160, org.dashj.platform.sdk.Purpose.AUTHENTICATION,
+                if (grant.securityLevel == 1) org.dashj.platform.sdk.SecurityLevel.CRITICAL else org.dashj.platform.sdk.SecurityLevel.HIGH,
+                bounds, ByteArray(20) { index.toByte() }, false, totalBudget = grant.totalBudget,
+                expiresAt = grant.expiresAt, version = 1).toJSON())
+        }
+        val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}")
+            .put("keys", org.json.JSONArray(keys)).put("authIndices", org.json.JSONArray(prepared.selectedAuth.sorted()))
+            .put("encIndices", org.json.JSONArray()).put("groupScopes", old.groupScopesJson())
+        coEvery { config.getGrants() } returns listOf(record)
+        for (state in listOf("prepared", "pending", "confirmed", "active")) {
+            record.put("state", state)
+            val restarted = AppConnectSession(service, repo, identities, config).prepare(groupRequest)
+            assertTrue(state, restarted.recovering)
+            assertTrue(state, restarted.requiresGroupReapproval)
+            assertFalse(state, restarted.groupScopeChangeApproved)
+            assertEquals(readApprovedGroupScopes(record), restarted.previousGroupScopes)
+            assertEquals(prepared.grants.map { it.totalBudget }, restarted.grants.map { it.totalBudget })
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, restarted) }
+            }
+        }
+        record.remove("groupScopes")
+        assertTrue(session.prepare(groupRequest).requiresGroupReapproval)
+        record.put("groupScopes", prepared.groupScopesJson())
+        assertFalse(session.prepare(groupRequest).requiresGroupReapproval)
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `recovered changed scope is blocked before seed access without acknowledgement`() = runBlocking {
+        nonMainnetOnly()
+        val prepared = session.prepare(groupRequest)
+        val old = prepared.copy(groupScopes = mapOf(group.id.toString() to group.copy(adminIds = emptySet())))
+        val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}")
+            .put("state", "confirmed").put("groupScopes", old.groupScopesJson())
+        coEvery { config.getGrants() } returns listOf(record)
+        val recovery = prepared.copy(recovering = true, previousGroupScopes = readApprovedGroupScopes(record))
+        assertTrue(recovery.requiresGroupReapproval)
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, recovery) }
+        }
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+        coEvery { repo.getWalletEncryptionKey() } throws IllegalStateException("Stopped after consent guard")
+        val allowed = assertThrows(IllegalStateException::class.java) {
+            runBlocking(ConnectionAuthorization { true }) {
+                session.approve(groupRequest, recovery.copy(groupScopeChangeApproved = true))
+            }
+        }
+        assertEquals("Stopped after consent guard", allowed.message)
+        coVerify(exactly = 1) { repo.getWalletEncryptionKey() }
     }
 
     @Test fun `missing foreign or unverified groups fail closed`() {
