@@ -390,6 +390,63 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.connections.isEmpty())
     }
 
+    @Test fun `immediate failure after emitting a list cannot leave records ready`() {
+        for (connections in listOf(emptyList(), listOf(DAppConnection("old", "App", "", ConnectionStatus.ACTIVE, 1)))) {
+            every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+                emit(connections)
+                throw java.io.IOException("Scope or records became unavailable")
+            }
+            model.refreshConnections()
+            dispatcher.scheduler.runCurrent()
+            assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+            assertTrue(model.uiState.value.connections.isEmpty())
+            assertFalse(model.canUseConnections)
+        }
+    }
+
+    @Test fun `initialization restart or failure immediately after emitting rows cannot restore stale ready state`() {
+        for (next in listOf(null, Result.failure<Unit>(IllegalStateException("Identity unavailable")))) {
+            val initialized = MutableStateFlow<Result<Unit>?>(Result.success(Unit))
+            every { identities.initializationResult } returns initialized
+            every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+                emit(listOf(DAppConnection("old", "App", "", ConnectionStatus.ACTIVE, 1)))
+                initialized.value = next
+                kotlinx.coroutines.awaitCancellation()
+            }
+            model.refreshConnections()
+            dispatcher.scheduler.runCurrent()
+            assertEquals(if (next == null) ConnectionRecordsStatus.LOADING else ConnectionRecordsStatus.UNAVAILABLE,
+                model.uiState.value.recordsStatus)
+            assertTrue(model.uiState.value.connections.isEmpty())
+            assertFalse(model.canUseConnections)
+        }
+    }
+
+    @Test fun `cancelled observer late failure cannot overwrite successful manual refresh`() {
+        val release = CompletableDeferred<Unit>()
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            try {
+                kotlinx.coroutines.awaitCancellation()
+            } finally {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    release.await()
+                    throw java.io.IOException("Late failure from cancelled observation")
+                }
+            }
+        }
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        val current = listOf(DAppConnection("current", "App", "", ConnectionStatus.ACTIVE, 1))
+        every { repository.observeConnections() } returns MutableStateFlow(current)
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        release.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertEquals(current, model.uiState.value.connections)
+    }
+
     @Test fun `identity changes replace the observer and clear stale rows while reloading scope`() {
         val identity = MutableStateFlow<org.dashj.platform.dashpay.BlockchainIdentity?>(null)
         every { identities.blockchainIdentityFlow } returns identity

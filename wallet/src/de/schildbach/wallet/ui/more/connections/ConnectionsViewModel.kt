@@ -29,13 +29,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -172,7 +171,6 @@ class ConnectionsViewModel @Inject constructor(
         refreshConnections()
     }
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun refreshConnections() {
         connectionsJob?.cancel()
         _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
@@ -181,23 +179,28 @@ class ConnectionsViewModel @Inject constructor(
             _uiState.update { it.copy(featureUnavailable = true, recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
             return
         }
-        connectionsJob = combine(identityRepository.initializationResult, identityRepository.blockchainIdentityFlow) {
-            result, _ -> result
-        }.flatMapLatest { result ->
-            _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
-            flow {
-                if (result == null) return@flow
-                result.getOrThrow()
-                emitAll(repository.observeConnections())
-            }.catch { error ->
-                log.error("Cannot establish connection scope or read grant records", error)
-                _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE, connections = emptyList()) }
+        connectionsJob = viewModelScope.launch {
+            combine(identityRepository.initializationResult, identityRepository.blockchainIdentityFlow) {
+                result, _ -> result
+            }.collectLatest { result ->
+                kotlin.coroutines.coroutineContext.ensureActive()
+                _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
+                if (result == null) return@collectLatest
+                try {
+                    result.getOrThrow()
+                    // Keep rows and availability in this cancellable observation, not separate buffered consumers.
+                    repository.observeConnections().collect { connections ->
+                        kotlin.coroutines.coroutineContext.ensureActive()
+                        _uiState.update { it.copy(connections = connections, recordsStatus = ConnectionRecordsStatus.READY) }
+                    }
+                } catch (error: Exception) {
+                    if (error is CancellationException) throw error
+                    kotlin.coroutines.coroutineContext.ensureActive()
+                    log.error("Cannot establish connection scope or read grant records", error)
+                    _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE, connections = emptyList()) }
+                }
             }
         }
-            .onEach { connections ->
-                _uiState.update { it.copy(connections = connections, recordsStatus = ConnectionRecordsStatus.READY) }
-            }
-            .launchIn(viewModelScope)
     }
 
     /**

@@ -328,3 +328,13 @@ Persisted grants and revocation evidence are unchanged by these UI transitions.
 The scope-availability regression run passed 584 tests across devnet, testnet and
 production, with 85 conditional skips and no failures. Both debug APK builds and
 ktlintCheck passed, including a real repository/ViewModel integration test.
+
+Pre-review found an additional ordering issue: flatMapLatest could buffer an old
+list while a separate state write marked the scope unavailable, then restore
+READY from that stale list. A regression reproduced the failure. Connection rows
+and availability are now updated inside the same collectLatest observation,
+checking the actual collecting coroutine's cancellation before state writes.
+Replaced observers cannot overwrite newer state with late rows or errors. The
+expanded run passed 590 tests, with 88 conditional skips and no failures, plus
+both APK builds and ktlintCheck. Added cases cover emit-then-fail, immediate
+initialization restart/failure, and a late error after manual observer replacement.
