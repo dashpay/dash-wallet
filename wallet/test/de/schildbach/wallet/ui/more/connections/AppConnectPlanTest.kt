@@ -12,7 +12,10 @@ class AppConnectPlanTest {
     private fun plan() = AppConnectPlan("request", "scope", "identity", listOf(
         AuthBinding(2, 1, ByteArray(32), BigInteger("500000000000"), time + 365 * day),
         AuthBinding(1, 2, ByteArray(32), BigInteger("1000000000"), time + 7 * day, "profile")
-    ), "Consent", blockTime = time)
+    ), "Consent", blockTime = time, groupScopes = org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32)).let { id ->
+        mapOf(id.toString() to org.dashj.platform.dpp.contract.VerifiedContractGroup(id, id, emptySet(), null, null,
+            emptySet(), emptySet(), emptySet()))
+    })
 
     @Test fun `presets only narrow budgets and expiry`() {
         val changed = plan().withPresets(1, 1)
@@ -29,7 +32,8 @@ class AppConnectPlanTest {
         val choices = plan().choices()
         assertTrue(choices[0].description.contains("spend your Platform credits"))
         assertTrue(choices[0].description.contains("within this budget"))
-        assertTrue(choices[0].description.contains("app's contract owner"))
+        assertTrue(choices[0].description.contains("purchased token's contract owner"))
+        assertTrue(choices[0].description.contains("may differ from the app owner"))
         assertFalse(choices[1].description.contains("token purchases"))
     }
 

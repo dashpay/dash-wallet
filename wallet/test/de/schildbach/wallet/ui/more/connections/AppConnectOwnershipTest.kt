@@ -13,6 +13,9 @@ import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Base58
 import org.dashj.platform.dpp.contract.DataContract
+import org.dashj.platform.dpp.contract.VerifiedContractGroup
+import org.dashj.platform.dpp.contract.ContractGroupDocumentMember
+import org.dashj.platform.dpp.contract.ContractGroupTokenMember
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.junit.Assert.*
@@ -42,6 +45,10 @@ class AppConnectOwnershipTest {
     private val request = groupRequest.copy(appConnect = groupRequest.appConnect!!.let { raw ->
         raw.copy(auth = listOf(raw.auth.first().copy(kind = 0, securityLevel = 2, id = groupRequest.contractId)) + raw.auth.drop(1))
     })
+    private val group = VerifiedContractGroup(Identifier.from(groupRequest.appConnect!!.auth.first().id), owner,
+        setOf(identityId), null, null, setOf(Identifier.from(request.contractId)),
+        setOf(ContractGroupDocumentMember(Identifier.from(request.contractId), "profile")),
+        setOf(ContractGroupTokenMember(Identifier.from(request.contractId), 0)))
 
     init {
         every { repo.walletApplication.wallet!!.watchingKey.pubKey } returns byteArrayOf(2) + ByteArray(32) { 1 }
@@ -58,6 +65,7 @@ class AppConnectOwnershipTest {
             if ((firstArg<ByteArray>()).contentEquals(request.contractId)) app else profile
         }
         every { service.platform.client.getContractGroupOwner(any()) } returns owner
+        every { service.platform.client.getContractGroup(any()) } returns group
         coEvery { config.getGrants() } returns emptyList()
     }
 
@@ -95,37 +103,60 @@ class AppConnectOwnershipTest {
         coVerify(exactly = 0) { config.saveGrant(any()) }
     }
 
-    @Test fun `group grants are rejected even when the group owner matches the app`() {
+    @Test fun `verified admin managed group prepares with complete dynamic scope disclosure`() = runBlocking {
         nonMainnetOnly()
         val client = service.platform.client
-        for (groupOwner in listOf(owner, identityId)) {
-            every { client.getContractGroupOwner(any()) } returns groupOwner
-            val error = assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(groupRequest) } }
-            assertTrue(error.message!!.contains("full scope"))
+        val plan = session.prepare(groupRequest)
+        assertEquals(group, plan.groupScopes[group.id.toString()])
+        val description = plan.choices().first().description
+        for (text in listOf(owner.toString(), identityId.toString(), "Document:", "position 0", "current AND future", "without another wallet approval")) {
+            assertTrue(description, description.contains(text))
         }
+        plan.requireGroupScopes(mapOf(group.id.toString() to group))
+        assertEquals(owner.toString(), plan.groupScopesJson().getJSONObject(group.id.toString()).getString("ownerId"))
         verify(exactly = 0) { client.getContractGroupOwner(any()) }
     }
 
-    @Test fun `approval retry also rejects a previously prepared group grant`() = runBlocking {
+    @Test fun `changed group scope blocks approval and retry before accessing seed or saving keys`() = runBlocking {
         nonMainnetOnly()
-        val plan = session.prepare(request)
-        val original = groupRequest.appConnect!!.auth.first()
-        val groupPlan = plan.copy(recovering = true, grants = listOf(plan.grants.first().copy(kind = original.kind,
-            securityLevel = original.securityLevel, id = original.id)) + plan.grants.drop(1))
-        val error = assertThrows(IllegalStateException::class.java) {
-            runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, groupPlan) }
+        val plan = session.prepare(groupRequest)
+        for (changed in listOf(group.copy(adminIds = emptySet()), group.copy(contracts = emptySet()),
+            group.copy(documentTypes = emptySet()), group.copy(tokens = emptySet()))) {
+            every { service.platform.client.getContractGroup(any()) } returns changed
+            for (recovering in listOf(false, true)) {
+                assertThrows(GroupScopeChangedException::class.java) {
+                    runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, plan.copy(recovering = recovering)) }
+                }
+            }
         }
-        assertTrue(error.message!!.contains("full scope"))
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
         coVerify(exactly = 0) { config.saveGrant(any()) }
     }
 
-    @Test fun `optional group bindings cannot bypass the scope guard`() {
+    @Test fun `missing foreign or unverified groups fail closed`() {
+        nonMainnetOnly()
+        every { service.platform.client.getContractGroup(any()) } returns null
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(groupRequest) }
+        }
+        every { service.platform.client.getContractGroup(any()) } returns group.copy(ownerId = identityId)
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(groupRequest) } }
+        every { service.platform.client.getContractGroup(any()) } throws IllegalStateException("Invalid proof")
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(groupRequest) } }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `optional unselected group changes do not alter selected consent`() = runBlocking {
         nonMainnetOnly()
         val raw = request.appConnect!!
         val optionalGroup = groupRequest.appConnect!!.auth.first()
-        assertThrows(IllegalStateException::class.java) {
-            runBlocking { session.prepare(request.copy(appConnect = raw.copy(auth = raw.auth + optionalGroup))) }
+        val plan = session.prepare(request.copy(appConnect = raw.copy(auth = raw.auth + optionalGroup)))
+        plan.copy(selectedAuth = setOf(0)).requireGroupScopes(emptyMap())
+        assertThrows(GroupScopeChangedException::class.java) {
+            plan.requireGroupScopes(emptyMap())
         }
+        Unit
     }
 
     @Test fun `foreign single contract ownership is still rejected`() {

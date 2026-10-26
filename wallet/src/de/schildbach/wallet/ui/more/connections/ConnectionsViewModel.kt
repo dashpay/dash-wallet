@@ -347,6 +347,25 @@ class ConnectionsViewModel @Inject constructor(
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 log.error("failed to approve DashConnect login", ex)
+                if (ex is GroupScopeChangedException) {
+                    try {
+                        val refreshed = checkNotNull(repository.prepareLogin(request)) { "Approval terms unavailable" }
+                        coroutineContext.connectionAuthorization()()
+                        pendingPlan = refreshed
+                        _uiState.update { state -> state.copy(pendingRequest = state.pendingRequest?.copy(
+                            permissionText = refreshed.permissionText,
+                            grantChoices = refreshed.choices(),
+                            recovering = refreshed.recovering,
+                            budgetPreset = refreshed.budgetPreset,
+                            lifetimePreset = refreshed.lifetimePreset
+                        )) }
+                    } catch (refreshError: Exception) {
+                        if (refreshError is CancellationException) throw refreshError
+                        log.error("failed to refresh DashConnect group consent", refreshError)
+                        _approveResult.value = ApproveResult.Error("Group scope could not be refreshed. Scan a new QR. ${refreshError.message}")
+                        return@launchAuthorizedOperation
+                    }
+                }
                 _approveResult.value = ApproveResult.Error(ex.message)
             } finally { operationInProgress = false }
         }

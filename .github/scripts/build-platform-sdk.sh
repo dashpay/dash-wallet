@@ -45,7 +45,7 @@ cd "$work/kotlin-platform"
   -x :dash-sdk-android:signReleasePublication --no-parallel --console=plain
 test -s "$repository/org/dashj/platform/dash-sdk-android/5.0.0-SNAPSHOT/dash-sdk-android-5.0.0-SNAPSHOT.aar"
 ./gradlew :dash-sdk-java:test --tests '*TokenPurchaseBridgeTest' \
-  :dpp:test --tests '*AppConnectKeyTest' --tests '*AppConnectIdentityTest' --tests '*IdentityNativeReadbackTest' --tests '*DataContractResponseTest' \
+  :dpp:test --tests '*AppConnectKeyTest' --tests '*AppConnectIdentityTest' --tests '*IdentityNativeReadbackTest' --tests '*DataContractResponseTest' --tests '*VerifiedContractGroupTest' \
   -x :dash-sdk-java:buildRustBindings -x :dash-sdk-java:cmakeBuild --no-parallel --console=plain
 printf 'ORG_GRADLE_PROJECT_platformSdkRepository=%s\n' "$repository" >> "${GITHUB_ENV:?}"
 cd "$root"

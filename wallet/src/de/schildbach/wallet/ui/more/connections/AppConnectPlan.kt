@@ -4,6 +4,7 @@ package de.schildbach.wallet.ui.more.connections
 import de.schildbach.wallet.ui.more.connections.protocol.AuthBinding
 import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
 import java.math.BigInteger
+import org.dashj.platform.dpp.contract.VerifiedContractGroup
 
 internal fun formatDash(credits: BigInteger): String = credits.toBigDecimal()
     .movePointLeft(11).stripTrailingZeros().toPlainString()
@@ -32,8 +33,52 @@ data class AppConnectPlan(
     val blockTime: Long = 0,
     val proposedGrants: List<AuthBinding> = grants,
     val budgetPreset: Int = 0,
-    val lifetimePreset: Int = 0
+    val lifetimePreset: Int = 0,
+    val groupScopes: Map<String, VerifiedContractGroup> = emptyMap()
 )
+
+internal class GroupScopeChangedException : IllegalStateException(
+    "Contract group configuration changed. Review the refreshed scope and approve again."
+)
+
+internal fun AppConnectPlan.requireGroupScopes(current: Map<String, VerifiedContractGroup>) {
+    val selected = selectedAuth.map { grants[it] }.filter { it.kind == 2 }
+        .map { org.bitcoinj.core.Base58.encode(it.id) }.toSet()
+    if (selected.any { groupScopes[it] == null || groupScopes[it] != current[it] }) {
+        throw GroupScopeChangedException()
+    }
+}
+
+internal fun AppConnectPlan.groupScopesJson(): org.json.JSONObject = org.json.JSONObject().also { result ->
+    val ids = selectedAuth.map { grants[it] }.filter { it.kind == 2 }.map { org.bitcoinj.core.Base58.encode(it.id) }.toSet()
+    groupScopes.filterKeys { it in ids }.forEach { (id, group) ->
+        result.put(id, org.json.JSONObject().put("ownerId", group.ownerId.toString())
+            .put("adminIds", org.json.JSONArray(group.adminIds.map { it.toString() }.sorted()))
+            .put("contracts", org.json.JSONArray(group.contracts.map { it.toString() }.sorted()))
+            .put("documentTypes", org.json.JSONArray(group.documentTypes.map {
+                org.json.JSONObject().put("contractId", it.contractId.toString()).put("documentType", it.documentType)
+            }))
+            .put("tokens", org.json.JSONArray(group.tokens.map {
+                org.json.JSONObject().put("contractId", it.contractId.toString()).put("tokenPosition", it.tokenPosition)
+            })))
+    }
+}
+
+private fun VerifiedContractGroup.consentText(): String = buildString {
+    append("\nVerified group owner: $ownerId")
+    append("\nAdmins who can add members: ${adminIds.map { it.toString() }.sorted().joinToString().ifEmpty { "None; owner only" }}")
+    append("\nCurrent members:")
+    contracts.map { it.toString() }.sorted().forEach { append("\nContract: $it (all document types and tokens)") }
+    documentTypes.sortedWith(compareBy({ it.contractId.toString() }, { it.documentType })).forEach {
+        val safeType = it.documentType.replace(Regex("[\\p{Cc}\\p{Cf}]"), "")
+        append("\nDocument: ${it.contractId} / $safeType")
+    }
+    tokens.sortedWith(compareBy({ it.contractId.toString() }, { it.tokenPosition })).forEach {
+        append("\nToken: ${it.contractId} / position ${it.tokenPosition}")
+    }
+    if (contracts.isEmpty() && documentTypes.isEmpty() && tokens.isEmpty()) append("\nNone")
+    append("\nThis grant covers current AND future group members. The owner or any admin can add members without another wallet approval. Whole-contract membership also covers future document types and tokens in that contract.")
+}
 
 internal fun AppConnectPlan.withPresets(budget: Int, lifetime: Int): AppConnectPlan {
     require(budget in 0..3 && lifetime in 0..3 && !recovering)
@@ -69,6 +114,9 @@ internal fun AppConnectPlan.choices(): List<GrantChoice> = grants.mapIndexed { i
         append("${when (grant.kind) { 2 -> "Contract group"; 1 -> "Document ${grant.documentType}"; else -> "Contract" }}: ${org.bitcoinj.core.Base58.encode(grant.id)}\n")
         append("Budget: ${grant.totalBudget?.let { "${formatDash(it)} DASH" } ?: "No budget limit"}\n")
         append("Expires: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(grant.expiresAt!!))}")
-        if (grant.securityLevel == 1) append("\nCan claim and spend this app's tokens and spend your Platform credits on token purchases from the app, within this budget. Purchase payments go to the app's contract owner.")
+        if (grant.kind == 2) append(checkNotNull(groupScopes[org.bitcoinj.core.Base58.encode(grant.id)]) {
+            "Verified group scope is missing"
+        }.consentText())
+        if (grant.securityLevel == 1) append("\nCan claim and spend tokens within these bounds and spend your Platform credits on token purchases within this budget. Purchase payments go to the purchased token's contract owner, which may differ from the app owner.")
     }, index in selectedAuth)
 } + encryptionChoices.mapIndexed { index, text -> GrantChoice(index, text, index in selectedEncryption, true) }

@@ -16,6 +16,7 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
 import org.dashj.platform.dapiclient.model.DocumentQuery
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
+import org.dashj.platform.dpp.contract.VerifiedContractGroup
 import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.*
@@ -193,33 +194,41 @@ internal class AppConnectSession(
                 if (position < 0) grant else grant.copy(totalBudget = saved[position].totalBudget, expiresAt = saved[position].expiresAt)
             }
         }
-        validateOwnership(request, grants)
+        val groupScopes = validateOwnership(request, grants)
         checkScope(scope)
         val text = buildString {
             append("App ID: ${Base58.encode(request.contractId)}\nQR label is not verified branding.\n\n")
             parsed.callback?.let { append("Return address: ${it.host} (not opened automatically).\n") }
             append("Requested ${maxOf(0, (System.currentTimeMillis() - parsed.createdAt) / 1000)} seconds ago.\n")
-            append("Only these application keys are shared. Recovery phrase and master key are never shared. The app cannot register names or change identity keys. CRITICAL grants can spend your Platform credits on token purchases from the app, within each approved budget. These payments credit the app's contract owner; other credit transfers are not authorized.")
+            append("Only these application keys are shared. Recovery phrase and master key are never shared. The app cannot register names or change identity keys. CRITICAL grants can spend your Platform credits on token purchases within the approved bounds and budgets. Payments credit the purchased token's contract owner, which may differ from the app owner; other credit transfers are not authorized.")
         }
         val encChoices = parsed.encryption.map {
             "${if (it.purpose == 1) "Encryption" else "Decryption"} key for this app (shared across sessions; omitted if another wallet controls it)."
         }
         AppConnectPlan(requestHash(request), scope, identity.id.toString(), grants, text,
             prior?.let { indices(it, "authIndices") } ?: grants.indices.toSet(), encChoices,
-            prior?.let { indices(it, "encIndices") } ?: encChoices.indices.toSet(), prior != null, blockTime)
+            prior?.let { indices(it, "encIndices") } ?: encChoices.indices.toSet(), prior != null, blockTime,
+            groupScopes = groupScopes)
     }
 
-    private fun validateOwnership(request: DashKeyRequest, grants: List<AuthBinding>) {
+    private fun validateOwnership(request: DashKeyRequest, grants: List<AuthBinding>): Map<String, VerifiedContractGroup> {
+        val groups = mutableMapOf<String, VerifiedContractGroup>()
         val appId = Identifier.from(request.contractId)
         check(appId.toString() !in SYSTEM_CONTRACTS) { "System contracts cannot be apps" }
         val app = platform.client.getDataContract(request.contractId, true) ?: error("App contract not found")
         check(app.ownerId.toBuffer().any { it != 0.toByte() }) { "System contracts cannot be apps" }
         grants.forEach { grant ->
-            // Owner equality cannot establish a group's complete or future authorization scope.
-            check(grant.kind != 2) { "Contract-group grants are unavailable until their full scope can be verified. Request a contract-bound grant instead." }
-            val owner = platform.client.getDataContract(grant.id, true)?.ownerId
-            val profileException = grant.kind == 1 && Base58.encode(grant.id) == DASHPAY && grant.documentType == "profile"
-            check(owner == app.ownerId || profileException) { "A requested bound target is not owned by the app" }
+            if (grant.kind == 2) {
+                val id = Identifier.from(grant.id)
+                val group = groups[id.toString()] ?: platform.client.getContractGroup(id)
+                    ?: error("Requested contract group not found")
+                check(group.id == id && group.ownerId == app.ownerId) { "Requested group is not owned by the app" }
+                groups[id.toString()] = group
+            } else {
+                val owner = platform.client.getDataContract(grant.id, true)?.ownerId
+                val profileException = grant.kind == 1 && Base58.encode(grant.id) == DASHPAY && grant.documentType == "profile"
+                check(owner == app.ownerId || profileException) { "A requested bound target is not owned by the app" }
+            }
         }
         request.requireAppConnect().encryption.forEach {
             check(it.contractId.contentEquals(request.contractId)) { "Encryption must be bound to the app contract" }
@@ -227,6 +236,7 @@ internal class AppConnectSession(
                 "App contract has not opted into this encryption key"
             }
         }
+        return groups
     }
 
     suspend fun approve(request: DashKeyRequest, plan: AppConnectPlan): DAppConnection = withContext(Dispatchers.IO) {
@@ -240,7 +250,8 @@ internal class AppConnectSession(
             check(plan.selectedEncryption.all { it in parsed.encryption.indices })
             parsed.requireFresh(System.currentTimeMillis())
             check(platform.client.refreshProtocolVersion() >= 14)
-            validateOwnership(request, plan.grants)
+            val selectedGrants = plan.selectedAuth.sorted().map { plan.grants[it] }
+            plan.requireGroupScopes(validateOwnership(request, selectedGrants))
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
@@ -317,6 +328,7 @@ internal class AppConnectSession(
                         .put("authIndices", JSONArray(plan.selectedAuth.sorted()))
                         .put("encIndices", JSONArray(plan.selectedEncryption.sorted()))
                         .put("keys", JSONArray(keys.map { JSONObject(it.toJSON()) }))
+                        .put("groupScopes", plan.groupScopesJson())
                     checkScope(plan.scope)
                     config.saveGrant(record)
                 }
@@ -350,12 +362,15 @@ internal class AppConnectSession(
                             check(additions.size <= 6) { "A grant must fit in one atomic key registration" }
                             checkScope(plan.scope)
                             parsed.requireFresh(System.currentTimeMillis())
-                            config.saveGrant(record.put("state", "pending"))
+                            config.saveGrant(record.put("state", "pending").put("groupScopes", plan.groupScopesJson()))
                             checkScope(plan.scope)
                             // On an uncertain result the durable pending record remains, and a retry reads the identity first.
                             identity = updateIdentityInBatches(additions, disable,
                                 read = { checkScope(plan.scope); readIdentity() }) { current, add, ids ->
                                 val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
+                                checkScope(plan.scope)
+                                parsed.requireFresh(System.currentTimeMillis())
+                                plan.requireGroupScopes(validateOwnership(request, selectedGrants))
                                 checkScope(plan.scope)
                                 parsed.requireFresh(System.currentTimeMillis())
                                 current.revision++
@@ -382,6 +397,12 @@ internal class AppConnectSession(
                         rememberIdentity(identity)
                         config.saveGrant(record.put("state", "confirmed"))
                         oldRecords.forEach { config.saveGrant(settleConfirmedRevocation(it, null)) }
+                        plan.requireGroupScopes(validateOwnership(request, selectedGrants))
+                        authorize()
+                        checkScope(plan.scope)
+                        // Keep the exact scope approved for this response alongside its key set.
+                        record.put("groupScopes", plan.groupScopesJson())
+                        config.saveGrant(record)
                         publish(identity, record, walletSigner, plan.scope, authorize)
                     }
                 }

@@ -41,7 +41,11 @@ class ConnectionsViewModelTest {
     private val vector = JsonParser.parseReader(javaClass.getResourceAsStream("/app-connect-vectors.json")!!.reader()).asJsonObject
     private val decoded = DashConnectUri.parseKeyRequest(vector.getAsJsonObject("request")["uri"].asString)
     private val request = decoded.copy(appConnect = decoded.appConnect!!.copy(callback = java.net.URI("https://example.org/return")))
-    private val plan = AppConnectPlan("hash", "scope", "identity", request.appConnect!!.auth, "Consent")
+    private val groupId = org.dashj.platform.dpp.identifier.Identifier.from(request.appConnect!!.auth.first().id)
+    private val group = org.dashj.platform.dpp.contract.VerifiedContractGroup(groupId, groupId, emptySet(), null, null,
+        emptySet(), emptySet(), emptySet())
+    private val plan = AppConnectPlan("hash", "scope", "identity", request.appConnect!!.auth, "Consent",
+        groupScopes = mapOf(groupId.toString() to group))
 
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
@@ -169,6 +173,41 @@ class ConnectionsViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Error)
         assertTrue(model.uiState.value.requiresRevocation)
+    }
+
+    @Test fun `changed group refreshes consent without automatically approving or opening callback`() {
+        scan(openedFromUrl = true)
+        val refreshed = plan.copy(permissionText = "Updated verified scope",
+            groupScopes = mapOf(groupId.toString() to group.copy(adminIds = setOf(groupId))))
+        coEvery { repository.approvePreparedLogin(any(), any()) } throws GroupScopeChangedException()
+        coEvery { repository.prepareLogin(any()) } returns refreshed
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(refreshed.permissionText, model.uiState.value.pendingRequest!!.permissionText)
+        assertEquals(refreshed.choices(), model.uiState.value.pendingRequest!!.grantChoices)
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Error)
+        assertTrue(model.uiState.value.requiresRevocation)
+        assertNull(model.callbackOffer.value)
+        coVerify(exactly = 1) { repository.approvePreparedLogin(request, plan) }
+        // A second deliberate tap is required, using the newly displayed scope.
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approvePreparedLogin(request, refreshed) }
+    }
+
+    @Test fun `failed scope refresh retains recovery controls but prevents stale approval`() {
+        scan()
+        coEvery { repository.approvePreparedLogin(any(), any()) } throws GroupScopeChangedException()
+        coEvery { repository.prepareLogin(any()) } throws IllegalStateException("Proof unavailable")
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(model.uiState.value.pendingRequest)
+        assertTrue(model.uiState.value.requiresRevocation)
+        assertNull(model.callbackOffer.value)
+        assertTrue((model.approveResult.value as ConnectionsViewModel.ApproveResult.Error).message!!.contains("Scan a new QR"))
+        model.denyPendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.revokePreparedLogin(request, plan) }
     }
 
     @Test fun `cold URL is retained until identity initialization completes`() {

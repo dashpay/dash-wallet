@@ -8,7 +8,8 @@ not a real user's keys or a pinned production app ID.
 ## Requirements
 
 - The rebuilt `org.dashj.platform` Android SDK `5.0.0-SNAPSHOT`, including V1 key
-  limits, DIP-13 application derivation, group-owner and remaining-budget queries,
+  limits, DIP-13 application derivation, complete proof-verified contract-group
+  scope and remaining-budget queries,
   identity updates and index-only document deletion.
 - A non-mainnet network running protocol version 14 or later. Testnet and devnets
   must match the scanned request's network selector. The SDK must be configured
@@ -47,12 +48,43 @@ audit read hides stale rows, blocks scanning and connection/purchase actions, an
 shows Retry without implying that any on-chain access has been revoked. Only a
 successful new observation restores the ready state.
 
-New approvals and approval retries reject contract-group bindings. The pinned SDK
-proves group ownership but does not expose the authenticated membership/admin
-metadata needed to verify the complete authorization scope, including future
-membership changes. Apps must request single-contract or document-type bindings
-until that scope can be verified and disclosed. Existing group grants remain
-visible and revocable; the parser retains group support for interoperability.
+Contract-group approvals require a complete proof-verified snapshot: owner,
+admins, whole-contract members, document-type members and token positions. The
+group owner must match the proved app-contract owner. An administrator-managed
+group is supported; the approval sheet identifies who can expand it and lists
+every current member. Consent explicitly covers future members and, for whole
+contracts, future document types and tokens. Token purchase payments credit the
+purchased token's contract owner, which can differ from the app owner.
+
+The SDK verifies every page at one block, retries a mixed-block read up to three
+times and rejects incomplete or oversized scope instead of truncating it. The
+wallet compares the selected groups against the displayed snapshot before seed
+access, immediately before identity-update submission, and before publishing the
+response. Changed scope stops approval and refreshes the sheet for another
+explicit approval. Proof failures remain failures. Pending/confirmed records and
+revocation controls survive refresh errors; existing keys are not claimed to have
+been rolled back. The approved owner/admin/member sets are persisted with the
+exact grant keys. A newer block without a semantic change does not invalidate
+consent. Revocation of recorded keys still uses the existing audit path.
+
+### Reason For Restoring Group Approvals
+
+The temporary group rejection added in `75cca51d7` addressed the valid concern
+that owner-only validation could authorize a broader scope than the sheet showed
+([review](https://github.com/dashpay/dash-wallet/pull/1604#pullrequestreview-5636671846)).
+However, it also broke the actual Yappr v2 login: its primary CRITICAL key uses
+contract-group bounds. Asking the app to substitute a single-contract binding is
+not functionally equivalent for that CRITICAL profile.
+
+Platform already had proof-verifying membership/admin queries; our Android bridge
+discarded everything except the owner. The fix exposes that information and adds
+informed dynamic-group consent and final scope checks. It does not bypass proof
+verification, weaken the requested security level or change Yappr's QR protocol.
+The SDK's `docs/contract-group-scope.md` documents pagination and JNI build-order
+guarantees. The latter was added after verification caught a stale ARM64 JNI
+wrapper being packaged before SWIG generation completed.
+
+### Grant Lifecycle
 
 Requested budgets are capped at 5 DASH per key without dropping a requested
 limit or inventing an absent budget. Missing expiry defaults to 90 days; requested
@@ -176,5 +208,18 @@ TLVs and labels, u64 budgets, freshness, digest separation, consent limits,
 ownership, the exact DashPay profile exception, encryption opt-in and PV14 gating.
 It also covers uncertain approval/revocation, frozen retry terms, conflicting key
 IDs, partial revocation policy, and approval fragment saved-state restoration.
-Live registration, renewal, revocation and response cleanup still require a
-funded test identity on the target network before this draft is merge-ready.
+On 2026-10-25, the focused regression run passed 499 wallet tests across devnet,
+testnet and production (68 conditionally skipped), plus 17 SDK and three Rust
+tests. Devnet and testnet APKs built, and their two native libraries matched the
+verified Android SDK package byte-for-byte.
+
+The user then completed a Yappr testnet login on the Pixel 9 API 36 AOSP emulator
+using 11.9.2-connect. Logs showed IdentityUpdate submission at 21:38:05, a
+successful identity-update response at 21:38:07, and system-contract response
+submission followed by lookup through 21:38:09. No Connect approval, proof, enum
+or crash errors appeared in that run. Missing Google Play services/Firebase and
+AppsFlyer HTTP 403 errors were unrelated emulator/service issues.
+
+This validates the tested login happy path, not all live renewal, revocation,
+response cleanup, large-group or configuration-change race cases. Those paths
+still need their own target-network testing before claiming exhaustive coverage.
