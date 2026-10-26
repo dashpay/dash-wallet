@@ -321,8 +321,13 @@ Scope lookup errors now propagate to the existing retryable unavailable state.
 While identity initialization is pending, connection records remain loading;
 initialization failure reports unavailable rather than ready/empty. Initialization
 and identity state changes restart observation automatically, clearing stale rows
-before a new scope is projected. Retry re-reads the current initialization state,
-scope and records; it does not itself initialize identities or submit transitions.
+before a new scope is projected. Automatic refresh only re-reads state and records.
+Explicit Retry asks the existing identity loader to re-read local metadata if a
+completed load failed or produced no identity. This is not on-chain identity
+registration and does not submit transitions. An already-running startup load or
+a healthy initialized identity is not restarted. Reload uses the application's
+existing coroutine scope so closing the screen cannot strand the shared loader
+in a pending state; repeated taps are coalesced while that reload is running.
 Only successful scope and record reads can report a ready empty connection list.
 Persisted grants and revocation evidence are unchanged by these UI transitions.
 The scope-availability regression run passed 584 tests across devnet, testnet and
@@ -338,3 +343,13 @@ Replaced observers cannot overwrite newer state with late rows or errors. The
 expanded run passed 590 tests, with 88 conditional skips and no failures, plus
 both APK builds and ktlintCheck. Added cases cover emit-then-fail, immediate
 initialization restart/failure, and a late error after manual observer replacement.
+
+The second review identified the explicit-retry gap: re-observing a cached
+successful-but-empty identity load cannot recover when local identity storage
+becomes readable. Retry now invokes the loading owner as described above. Tests
+cover that owner actually reading storage again, successful-null and failed load
+recovery, duplicate taps, startup/healthy guards and completion after the initiating
+ViewModel is cleared. The loader's existing result/identity flows drive the UI;
+there is no automatic registration, native submission or key migration on Retry.
+The explicit-retry run passed 603 tests across the three flavors, with 93
+conditional skips and no failures. Both APK builds and ktlintCheck passed.

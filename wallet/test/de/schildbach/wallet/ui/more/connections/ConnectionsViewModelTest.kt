@@ -34,6 +34,7 @@ import org.robolectric.util.ReflectionHelpers
 @Config(application = Application::class, sdk = [28])
 class ConnectionsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
+    private val applicationScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + dispatcher)
     private val repository = mockk<DashConnectRepository>(relaxed = true)
     private val identities = mockk<IdentityRepository>(relaxed = true)
     private lateinit var model: ConnectionsViewModel
@@ -63,13 +64,14 @@ class ConnectionsViewModelTest {
         coEvery { repository.resolveAppDisplay(any(), any()) } returns AppDisplay("App", "example.org")
         coEvery { repository.approvePreparedLogin(any(), any()) } throws IllegalStateException("Confirmation uncertain")
         coEvery { repository.revokePreparedLogin(any(), any()) } returns Unit
-        model = ConnectionsViewModel(repository, identities)
+        model = ConnectionsViewModel(repository, identities, applicationScope)
         model.bindWalletUnlockCheck { true }
         model.onForegroundChanged(true)
     }
 
     @After fun teardown() {
         if (::model.isInitialized) model.viewModelScope.cancel()
+        applicationScope.cancel()
         Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
         Dispatchers.resetMain()
     }
@@ -79,7 +81,7 @@ class ConnectionsViewModelTest {
         Constants.SUPPORTS_PLATFORM = false
         every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
         clearMocks(identities, answers = false)
-        model = ConnectionsViewModel(repository, identities)
+        model = ConnectionsViewModel(repository, identities, applicationScope)
         model.bindWalletUnlockCheck { true }
         model.onForegroundChanged(true)
         val uri = if (purchase) "dash-st:2?n=d&v=1" else vector.getAsJsonObject("request")["uri"].asString
@@ -127,7 +129,7 @@ class ConnectionsViewModelTest {
                 }
             }
         }
-        model = ConnectionsViewModel(repository, identities)
+        model = ConnectionsViewModel(repository, identities, applicationScope)
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionStatus.ACTIVE, model.uiState.value.connections.single().status)
         status = ConnectionStatus.APPROVED
@@ -390,6 +392,87 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.connections.isEmpty())
     }
 
+    @Test fun `explicit Retry reloads cached successful missing identity and coalesces repeated taps`() {
+        val initialized = MutableStateFlow<Result<Unit>?>(Result.success(Unit))
+        val identity = MutableStateFlow<org.dashj.platform.dashpay.BlockchainIdentity?>(null)
+        every { identities.initializationResult } returns initialized
+        every { identities.blockchainIdentityFlow } returns identity
+        every { identities.blockchainIdentity } answers { identity.value }
+        val connection = DAppConnection("app", "App", "", ConnectionStatus.ACTIVE, 1)
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            check(identity.value != null) { "Identity unavailable" }
+            emit(listOf(connection))
+        }
+        val loaded = CompletableDeferred<Unit>()
+        coEvery { identities.init() } coAnswers {
+            initialized.value = null
+            loaded.await()
+            identity.value = mockk(relaxed = true)
+            initialized.value = Result.success(Unit)
+        }
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        model.retryConnections()
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        coVerify(exactly = 1) { identities.init() }
+        loaded.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertEquals(listOf(connection), model.uiState.value.connections)
+    }
+
+    @Test fun `explicit Retry reloads failed initialization rather than the cached failure`() {
+        val initialized = MutableStateFlow<Result<Unit>?>(Result.failure(IllegalStateException("Read failed")))
+        every { identities.initializationResult } returns initialized
+        coEvery { identities.init() } coAnswers {
+            initialized.value = null
+            initialized.value = Result.success(Unit)
+        }
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 1) { identities.init() }
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+    }
+
+    @Test fun `Retry does not start another loader while startup initialization is pending`() {
+        every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 0) { identities.init() }
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+    }
+
+    @Test fun `Retry with an initialized identity only reloads the connection records`() {
+        every { identities.blockchainIdentity } returns mockk(relaxed = true)
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 0) { identities.init() }
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+    }
+
+    @Test fun `explicit identity reload finishes after the initiating ViewModel is cleared`() {
+        val initialized = MutableStateFlow<Result<Unit>?>(Result.success(Unit))
+        every { identities.initializationResult } returns initialized
+        val loaded = CompletableDeferred<Unit>()
+        coEvery { identities.init() } coAnswers {
+            initialized.value = null
+            loaded.await()
+            initialized.value = Result.success(Unit)
+        }
+        model.retryConnections()
+        assertNull(initialized.value)
+        model.viewModelScope.cancel()
+        loaded.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(initialized.value!!.isSuccess)
+    }
+
     @Test fun `immediate failure after emitting a list cannot leave records ready`() {
         for (connections in listOf(emptyList(), listOf(DAppConnection("old", "App", "", ConnectionStatus.ACTIVE, 1)))) {
             every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
@@ -486,7 +569,7 @@ class ConnectionsViewModelTest {
         every { config.observeGrants() } returns records
         every { config.observeConnections() } returns MutableStateFlow(emptyList())
         identityFlow.value = null
-        model = ConnectionsViewModel(PlatformDashConnectRepository(platform, wallet, identities, config), identities)
+        model = ConnectionsViewModel(PlatformDashConnectRepository(platform, wallet, identities, config), identities, applicationScope)
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
         initialized.value = Result.failure(IllegalStateException("Identity initialization failed"))
@@ -709,7 +792,7 @@ class ConnectionsViewModelTest {
 
     @Test fun `approval fails closed without a bound unlocked wallet`() {
         model.viewModelScope.cancel()
-        model = ConnectionsViewModel(repository, identities)
+        model = ConnectionsViewModel(repository, identities, applicationScope)
         scan(openedFromUrl = true)
         model.approvePendingRequest()
         dispatcher.scheduler.advanceUntilIdle()
@@ -806,7 +889,7 @@ class ConnectionsViewModelTest {
         ShadowChoreographer.setPaused(true)
         // Use a fresh model so the two pending request kinds cannot block each other.
         model.viewModelScope.cancel()
-        model = ConnectionsViewModel(repository, identities)
+        model = ConnectionsViewModel(repository, identities, applicationScope)
         var unlocked = !restoredWhileLocked
         model.onForegroundChanged(true)
         model.bindWalletUnlockCheck { unlocked }

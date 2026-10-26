@@ -6,6 +6,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.spyk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
@@ -50,6 +52,22 @@ class IdentityRepositoryConnectKeyTest {
         val thrown = assertThrows(IllegalStateException::class.java) { runBlocking { repository.init() } }
         org.junit.Assert.assertSame(failure, thrown)
         org.junit.Assert.assertSame(failure, repository.initializationResult.value!!.exceptionOrNull())
+    }
+
+    @Test fun reloadingAfterAnEmptyReadRereadsIdentityStorageWithoutRegisteringKeys() = runBlocking {
+        val reloadable = spyk(repository)
+        val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
+        val data = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityData>(relaxed = true)
+        every { provider.wallet } returns wallet
+        coEvery { identityStorage.load() } returnsMany listOf(null, data)
+        every { reloadable.initBlockchainIdentity(data, wallet) } returns identity
+        reloadable.init()
+        org.junit.Assert.assertTrue(reloadable.initializationResult.value!!.isSuccess)
+        org.junit.Assert.assertNull(reloadable.blockchainIdentity)
+        reloadable.init()
+        org.junit.Assert.assertSame(identity, reloadable.blockchainIdentity)
+        coVerify(exactly = 2) { identityStorage.load() }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
 
     @Test fun purchaseMigrationRejectsAnIdentitySwitchBeforeAnyMutation() {

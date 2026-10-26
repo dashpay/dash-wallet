@@ -65,7 +65,8 @@ data class ConnectionsUIState(
 @HiltViewModel
 class ConnectionsViewModel @Inject constructor(
     private val repository: DashConnectRepository,
-    private val identityRepository: IdentityRepository
+    private val identityRepository: IdentityRepository,
+    private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
     companion object {
@@ -107,6 +108,7 @@ class ConnectionsViewModel @Inject constructor(
     private var operationInProgress = false
     private var walletUnlockCheck: () -> Boolean = { false }
     private var connectionsJob: Job? = null
+    private var identityRetryJob: Job? = null
     private var walletLockJob: Job? = null
     private var walletLockGeneration: () -> Long = { 0L }
     private val sensitiveOperations = SupervisorJob(viewModelScope.coroutineContext[Job])
@@ -169,6 +171,24 @@ class ConnectionsViewModel @Inject constructor(
 
     init {
         refreshConnections()
+    }
+
+    fun retryConnections() {
+        if (_uiState.value.featureUnavailable || identityRetryJob?.isActive == true) return
+        val initialized = identityRepository.initializationResult.value
+        val reloadIdentity = initialized != null && (initialized.isFailure || identityRepository.blockchainIdentity == null)
+        refreshConnections()
+        if (!reloadIdentity) return
+        val identities = identityRepository
+        // Loading shared identity metadata must finish even if this screen is closed.
+        identityRetryJob = applicationScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            try {
+                identities.init()
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                log.error("Cannot reload identity for connection records", error)
+            }
+        }
     }
 
     fun refreshConnections() {

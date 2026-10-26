@@ -25,6 +25,7 @@ import org.robolectric.util.ReflectionHelpers
 @Config(application = Application::class, sdk = [28])
 class DisabledConnectRequestTest {
     private val dispatcher = StandardTestDispatcher()
+    private val applicationScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + dispatcher)
     private val repository = mockk<DashConnectRepository>(relaxed = true)
     private val identities = mockk<IdentityRepository>(relaxed = true)
     private val network = Constants.NETWORK_PARAMETERS
@@ -42,6 +43,7 @@ class DisabledConnectRequestTest {
 
     @After fun teardown() {
         model?.viewModelScope?.cancel()
+        applicationScope.cancel()
         ReflectionHelpers.setField(network, "id", originalNetworkId)
         Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
         Dispatchers.resetMain()
@@ -53,7 +55,7 @@ class DisabledConnectRequestTest {
             if (!Constants.IS_PROD_BUILD && networkId != NetworkParameters.ID_MAINNET) continue
             ReflectionHelpers.setField(network, "id", networkId)
             model?.viewModelScope?.cancel()
-            val current = ConnectionsViewModel(repository, identities)
+            val current = ConnectionsViewModel(repository, identities, applicationScope)
             model = current
             current.bindWalletUnlockCheck { true }
             val uri = if (purchase) "dash-st:2?n=d&v=1" else "dash-key:2?n=d&v=2"

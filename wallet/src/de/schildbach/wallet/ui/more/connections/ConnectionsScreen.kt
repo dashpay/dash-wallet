@@ -80,7 +80,7 @@ fun ConnectionsScreen(
 
     ConnectionsScreen(
         uiStateFlow = viewModel.uiState,
-        onRetryClick = viewModel::refreshConnections,
+        onRetryClick = viewModel::retryConnections,
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
