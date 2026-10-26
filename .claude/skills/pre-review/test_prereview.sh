@@ -87,7 +87,11 @@ await_ready() {   # <what>: up to 20 s for a fake to reach its stall point
   local i=0; while [[ ! -e "$READY" ]]; do (( i++ < 200 )) || { echo "FAIL $1: the fake never reached its stall point"; FAILS=$((FAILS+1)); return 1; }; sleep 0.1; done
 }
 await_exit() {   # <pid> <what>: up to 10 s for a signalled review to exit (its stalled fake would hold on for 30 s)
-  local i=0; while kill -0 "$1" 2>/dev/null; do (( i++ < 100 )) || { echo "FAIL $2: still running 10 s after the signal"; FAILS=$((FAILS+1)); return 1; }; sleep 0.1; done
+  # on a timeout: a FAIL, then release the stalled fake and wait the review out, so nothing after races its lock
+  local i=0; while kill -0 "$1" 2>/dev/null; do
+    (( i++ < 100 )) || { echo "FAIL $2: still running 10 s after the signal"; FAILS=$((FAILS+1)); touch "$RELEASE"; wait "$1" 2>/dev/null; return 1; }
+    sleep 0.1
+  done
   wait "$1" 2>/dev/null; return 0
 }
 # chmod a-w blocks nothing for root (DAC bypass, e.g. in a container): the permission tests are skipped there
@@ -218,13 +222,15 @@ FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1;
 # cancelled while a codex probe stalls (login status here): the probe must not keep the lock either
 need mkdir -p "$T/slowlogin"; printf '#!/usr/bin/env bash\n[[ "$1" == login ]] && { %s; exit 0; }\nexec "%s/bin/codex" "$@"\n' "$STALL" "$T" > "$T/slowlogin/codex"; chmod +x "$T/slowlogin/codex"
 stall_reset; PATH="$T/slowlogin:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a stalled login probe"; kill -TERM $SLOW 2>/dev/null
-await_exit $SLOW "TERM during a stalled codex probe"
-FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled codex probe → the review stops at once, the lock is free" "$?" 0
+if await_exit $SLOW "TERM during a stalled codex probe"; then   # a timeout is its FAIL; no replacement races the lock
+  FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled codex probe → the review stops at once, the lock is free" "$?" 0
+fi
 # cancelled while still fetching the base: the fetch must not keep the lock either
 REALGIT=$(command -v git); need mkdir -p "$T/slowgit"; printf '#!/usr/bin/env bash\n[[ " $* " == *" fetch "* ]] && { %s; }\nexec "%s" "$@"\n' "$STALL" "$REALGIT" > "$T/slowgit/git"; chmod +x "$T/slowgit/git"
 stall_reset; PATH="$T/slowgit:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a stalled base fetch"; kill -TERM $SLOW 2>/dev/null
-await_exit $SLOW "TERM during a stalled base fetch"
-FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled base fetch → the review stops at once, the lock is free" "$?" 0
+if await_exit $SLOW "TERM during a stalled base fetch"; then   # a timeout is its FAIL; no replacement races the lock
+  FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled base fetch → the review stops at once, the lock is free" "$?" 0
+fi
 # a timeout that cannot kill the process group (or none at all): what codex leaves behind must not hold the lock
 need mkdir -p "$T/faketimeout"; printf '#!/bin/sh\nshift; exec "$@"\n' > "$T/faketimeout/timeout"; chmod +x "$T/faketimeout/timeout"
 stall_reset; PATH="$T/faketimeout:$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a review under a weak timeout"
