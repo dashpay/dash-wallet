@@ -77,4 +77,16 @@ class RevocationSettlementTest {
         assertEquals("Unverified app: \"Yappr\" [contract]", unverifiedAppName("Yap\u202epr\n", "contract"))
         assertTrue(unverifiedAppName("", "contract").contains("Unknown app"))
     }
+
+    @Test fun `app confirmation updates disabled timestamp without changing its state string`() {
+        val record = JSONObject().put("state", "disabled").put("updatedAt", 1L)
+            .put("permanentRevocationConfirmed", true).put("appRevocationConfirmed", false)
+        val settled = settleConfirmedRevocation(record, emptyList())
+        assertEquals("disabled", settled.getString("state"))
+        assertTrue(settled.getBoolean("appRevocationConfirmed"))
+        assertTrue(settled.getLong("updatedAt") > 1L)
+        val repeated = settleConfirmedRevocation(settled, emptyList())
+        assertEquals(settled.getLong("updatedAt"), repeated.getLong("updatedAt"))
+        assertEquals(1L, record.getLong("updatedAt"))
+    }
 }

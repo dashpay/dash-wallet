@@ -273,6 +273,9 @@ remain a protocol follow-up: uncertain outcomes retain recovery/revocation and
 must not claim failure when access might exist. Scanner requests never launch a
 website callback.
 
-The foreground/suggestion regression run passed 556 tests across devnet, testnet
+The foreground/suggestion regression run passed 559 tests across devnet, testnet
 and production, with 77 conditional skips and no failures. Lifecycle observer
 tests run on Android API 28 and 34. Both debug APK builds and ktlintCheck passed.
+This includes the review follow-up where app-wide revocation confirmation changes
+the displayed status while the stored state remains disabled. Confirmation changes
+refresh the timestamp; repeating identical settlement preserves it.

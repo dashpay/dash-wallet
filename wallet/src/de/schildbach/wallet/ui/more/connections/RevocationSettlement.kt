@@ -19,6 +19,12 @@ internal fun settleConfirmedRevocation(record: JSONObject, appWideRemainingKeys:
         .put("permanentRevocationConfirmed", true)
         .put("appRevocationConfirmed", appConfirmed)
         .put("unrecordedKeyIds", remaining)
+        .also {
+            if (!record.optBoolean("permanentRevocationConfirmed") ||
+                record.optBoolean("appRevocationConfirmed") != appConfirmed) {
+                it.put("updatedAt", System.currentTimeMillis())
+            }
+        }
 }
 
 internal fun JSONObject.withGrantState(state: String, now: Long = System.currentTimeMillis()): JSONObject {
