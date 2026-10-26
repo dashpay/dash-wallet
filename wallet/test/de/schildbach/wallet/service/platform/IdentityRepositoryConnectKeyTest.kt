@@ -10,6 +10,13 @@ import io.mockk.coVerify
 import io.mockk.spyk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.identifier.Identifier
@@ -68,6 +75,65 @@ class IdentityRepositoryConnectKeyTest {
         org.junit.Assert.assertSame(identity, reloadable.blockchainIdentity)
         coVerify(exactly = 2) { identityStorage.load() }
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+    }
+
+    @Test fun cancelledIdentityLoadPublishesRetryableFailureAndStillPropagatesCancellation() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        coEvery { identityStorage.load() } coAnswers {
+            entered.complete(Unit)
+            awaitCancellation()
+        }
+        val loading = async(start = CoroutineStart.UNDISPATCHED) { repository.init() }
+        entered.await()
+        org.junit.Assert.assertNull(repository.initializationResult.value)
+        loading.cancel()
+        assertThrows(CancellationException::class.java) { runBlocking { loading.await() } }
+        val failure = repository.initializationResult.value!!.exceptionOrNull()!!
+        org.junit.Assert.assertTrue(failure is IllegalStateException)
+        org.junit.Assert.assertTrue(failure.cause is CancellationException)
+        coEvery { identityStorage.load() } returns null
+        repository.init()
+        org.junit.Assert.assertTrue(repository.initializationResult.value!!.isSuccess)
+    }
+
+    @Test fun queuedInitializerWaitsForCancelledOwnerAndPublishesItsOwnResultLast() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        var calls = 0
+        coEvery { identityStorage.load() } coAnswers {
+            calls++
+            if (calls == 1) {
+                entered.complete(Unit)
+                awaitCancellation()
+            }
+            null
+        }
+        val first = launch(start = CoroutineStart.UNDISPATCHED) { repository.init() }
+        entered.await()
+        val second = launch(start = CoroutineStart.UNDISPATCHED) { repository.init() }
+        org.junit.Assert.assertEquals(1, calls)
+        first.cancelAndJoin()
+        second.join()
+        org.junit.Assert.assertEquals(2, calls)
+        org.junit.Assert.assertTrue(repository.initializationResult.value!!.isSuccess)
+    }
+
+    @Test fun cancellingQueuedInitializerDoesNotSettleOrCancelTheActiveLoader() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        coEvery { identityStorage.load() } coAnswers {
+            entered.complete(Unit)
+            release.await()
+            null
+        }
+        val first = launch(start = CoroutineStart.UNDISPATCHED) { repository.init() }
+        entered.await()
+        val queued = launch(start = CoroutineStart.UNDISPATCHED) { repository.init() }
+        queued.cancelAndJoin()
+        org.junit.Assert.assertNull(repository.initializationResult.value)
+        coVerify(exactly = 1) { identityStorage.load() }
+        release.complete(Unit)
+        first.join()
+        org.junit.Assert.assertTrue(repository.initializationResult.value!!.isSuccess)
     }
 
     @Test fun purchaseMigrationRejectsAnIdentitySwitchBeforeAnyMutation() {

@@ -11,6 +11,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import org.junit.After
@@ -471,6 +472,42 @@ class ConnectionsViewModelTest {
         loaded.complete(Unit)
         dispatcher.scheduler.runCurrent()
         assertTrue(initialized.value!!.isSuccess)
+    }
+
+    @Test fun `real cancelled identity owner exposes Retry and explicit reload restores connections`() {
+        model.viewModelScope.cancel()
+        val storage = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
+        val provider = mockk<org.dash.wallet.common.WalletDataProvider>(relaxed = true)
+        val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
+        every { provider.wallet } returns wallet
+        val owner = spyk(de.schildbach.wallet.service.platform.IdentityRepositoryImpl(mockk(relaxed = true),
+            mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)))
+        val identity = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
+        val data = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityData>(relaxed = true)
+        every { owner.initBlockchainIdentity(data, wallet) } returns identity
+        coEvery { storage.load() } coAnswers { kotlinx.coroutines.awaitCancellation() }
+        val loading = applicationScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) { owner.init() }
+        val connection = DAppConnection("app", "App", "", ConnectionStatus.ACTIVE, 1)
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            check(owner.blockchainIdentity != null) { "Identity unavailable" }
+            emit(listOf(connection))
+        }
+        model = ConnectionsViewModel(repository, owner, applicationScope)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        loading.cancel()
+        dispatcher.scheduler.runCurrent()
+        assertTrue(loading.isCancelled)
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertFalse(model.canUseConnections)
+        assertTrue(owner.initializationResult.value!!.exceptionOrNull()!!.cause is kotlinx.coroutines.CancellationException)
+        coEvery { storage.load() } returns data
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertEquals(listOf(connection), model.uiState.value.connections)
+        coVerify(exactly = 2) { storage.load() }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
 
     @Test fun `immediate failure after emitting a list cannot leave records ready`() {

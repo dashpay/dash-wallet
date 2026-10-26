@@ -25,6 +25,9 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.UPGRADE_IDENTITY_REQUIRED
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -131,6 +134,7 @@ class IdentityRepositoryImpl @Inject constructor(
     override val blockchainIdentityFlow: StateFlow<BlockchainIdentity?> = _blockchainIdentityFlow.asStateFlow()
     private val _initializationResult = MutableStateFlow<Result<Unit>?>(null)
     override val initializationResult = _initializationResult.asStateFlow()
+    private val initializationMutex = Mutex()
 
     private var _blockchainIdentity: BlockchainIdentity?
         get() = _blockchainIdentityFlow.value
@@ -216,10 +220,11 @@ class IdentityRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun init() {
+    override suspend fun init(): Unit = initializationMutex.withLock {
         _initializationResult.value = null
         try {
             val data = blockchainIdentityDataStorage.load()
+            kotlin.coroutines.coroutineContext.ensureActive()
             if (data != null) {
                 _blockchainIdentity = initBlockchainIdentity(data, walletDataProvider.wallet!!)
                 // initializeStateRepository()
@@ -229,8 +234,11 @@ class IdentityRepositoryImpl @Inject constructor(
             }
             _initializationResult.value = Result.success(Unit)
         } catch (error: Exception) {
-            if (error is kotlinx.coroutines.CancellationException) throw error
-            _initializationResult.value = Result.failure(error)
+            // Cancellation still propagates, but observers must not remain stuck in loading.
+            val failure = if (error is kotlinx.coroutines.CancellationException) {
+                IllegalStateException("Identity loading was interrupted. Retry loading it.", error)
+            } else error
+            _initializationResult.value = Result.failure(failure)
             throw error
         }
     }

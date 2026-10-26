@@ -353,3 +353,22 @@ ViewModel is cleared. The loader's existing result/identity flows drive the UI;
 there is no automatic registration, native submission or key migration on Retry.
 The explicit-retry run passed 603 tests across the three flavors, with 93
 conditional skips and no failures. Both APK builds and ktlintCheck passed.
+
+### Cancelled Identity Loads
+
+Shared identity initialization now publishes a retryable interrupted-load failure
+when its owning coroutine is cancelled, then rethrows the original cancellation.
+The published failure is not itself a CancellationException, so UI observation
+reports unavailable and exposes Retry rather than silently cancelling collection.
+Metadata initialization attempts are serialized: cancelling a queued attempt does
+not change the active owner's state, and an older cancelled owner settles before
+a newer attempt can publish its result. A cancellation check after the storage read
+also prevents an interrupted load from installing its result.
+
+Tests cover cancellation propagation, terminal failure publication, reload after
+cancellation, queued-owner ordering, and queued cancellation. An integration test
+uses the real identity owner with the Connections ViewModel to verify that loading
+becomes unavailable after cancellation and explicit Retry restores connection rows
+after storage is readable, without registering keys.
+The cancellation-fix run passed 614 tests across devnet, testnet and production,
+with 94 conditional skips and no failures. Both APK builds and ktlintCheck passed.
