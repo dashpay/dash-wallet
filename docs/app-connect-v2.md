@@ -313,3 +313,18 @@ without the earlier Maven Local DashJ override. Runtime dependencyInsight confir
 that the wallet and transitive SDK requests select the same timestamped build.
 Live terminal failure callbacks and funded interruption/recovery still need
 device testing; the earlier Pixel 9 success is not evidence for those new paths.
+
+### Connection Scope Availability
+
+An unavailable wallet or identity scope is not a valid scope with zero grants.
+Scope lookup errors now propagate to the existing retryable unavailable state.
+While identity initialization is pending, connection records remain loading;
+initialization failure reports unavailable rather than ready/empty. Initialization
+and identity state changes restart observation automatically, clearing stale rows
+before a new scope is projected. Retry re-reads the current initialization state,
+scope and records; it does not itself initialize identities or submit transitions.
+Only successful scope and record reads can report a ready empty connection list.
+Persisted grants and revocation evidence are unchanged by these UI transitions.
+The scope-availability regression run passed 584 tests across devnet, testnet and
+production, with 85 conditional skips and no failures. Both debug APK builds and
+ktlintCheck passed, including a real repository/ViewModel integration test.

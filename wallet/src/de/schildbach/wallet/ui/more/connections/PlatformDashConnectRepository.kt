@@ -40,7 +40,7 @@ class PlatformDashConnectRepository @Inject constructor(
         // A record/identity update cancels the previous expiry schedule.
         while (true) {
             val currentTime = now()
-            val scope = runCatching { session.scope() }.getOrNull()
+            val scope = session.scope()
             val current = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }.map { (app, grants) ->
                 val latest = grants.maxBy { it.optLong("updatedAt") }
                 val authenticationExpiries = grants.filter { it.optString("state") == "active" }.flatMap { record ->

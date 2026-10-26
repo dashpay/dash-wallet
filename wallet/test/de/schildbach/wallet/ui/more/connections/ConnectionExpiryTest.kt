@@ -28,6 +28,7 @@ class ConnectionExpiryTest {
     private val wallet = mockk<PlatformRepo>(relaxed = true)
     private val identities = mockk<IdentityRepository>(relaxed = true)
     private val config = mockk<DashConnectConfig>()
+    private val identityFlow = MutableStateFlow<BlockchainIdentity?>(null)
     private val records = MutableStateFlow<List<JSONObject>>(emptyList())
     private val repository: PlatformDashConnectRepository
     private val scope: String
@@ -35,8 +36,9 @@ class ConnectionExpiryTest {
     init {
         val identity = mockk<BlockchainIdentity>(relaxed = true)
         every { identity.uniqueIdentifier } returns Identifier.from(ByteArray(32) { 7 })
-        every { identities.blockchainIdentity } returns identity
-        every { identities.blockchainIdentityFlow } returns MutableStateFlow(identity)
+        identityFlow.value = identity
+        every { identities.blockchainIdentity } answers { identityFlow.value }
+        every { identities.blockchainIdentityFlow } returns identityFlow
         every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
         every { config.observeGrants() } returns records
         every { config.observeConnections() } returns MutableStateFlow(emptyList())
@@ -110,5 +112,25 @@ class ConnectionExpiryTest {
         val disconnected = repository.observeConnections { 10_000L }.first().single()
         assertEquals(ConnectionStatus.DISCONNECTED, disconnected.status)
         assertEquals(6_000L, disconnected.updatedAt)
+    }
+
+    @Test fun `unavailable identity never projects persisted grants as an empty list`() = runTest {
+        records.value = listOf(grant("app", 9_000))
+        identityFlow.value = null
+        val error = assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.runBlocking { repository.observeConnections { 0L }.first() }
+        }
+        assertEquals("Identity unavailable", error.message)
+        assertEquals(1, records.value.size)
+    }
+
+    @Test fun `unavailable wallet never projects a successful empty list`() = runTest {
+        records.value = listOf(grant("app", 9_000))
+        every { wallet.walletApplication.wallet } returns null
+        val error = assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.runBlocking { repository.observeConnections { 0L }.first() }
+        }
+        assertEquals("Wallet unavailable", error.message)
+        assertEquals(1, records.value.size)
     }
 }

@@ -55,6 +55,7 @@ class ConnectionsViewModelTest {
         Constants.SUPPORTS_PLATFORM = true
         every { repository.observeConnections() } returns MutableStateFlow(emptyList())
         every { identities.blockchainIdentity } returns null
+        every { identities.blockchainIdentityFlow } returns MutableStateFlow(null)
         every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
         coEvery { repository.parseQr(any()) } returns DashConnectQr(request)
         coEvery { repository.prepareLogin(any()) } returns plan
@@ -77,6 +78,7 @@ class ConnectionsViewModelTest {
         model.viewModelScope.cancel()
         Constants.SUPPORTS_PLATFORM = false
         every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
+        clearMocks(identities, answers = false)
         model = ConnectionsViewModel(repository, identities)
         model.bindWalletUnlockCheck { true }
         model.onForegroundChanged(true)
@@ -292,7 +294,6 @@ class ConnectionsViewModelTest {
 
     @Test fun `unreadable cold records are unavailable and block requests until retry succeeds`() {
         every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow { throw java.io.IOException("Unreadable") }
-        every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
         model.refreshConnections()
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
@@ -303,7 +304,6 @@ class ConnectionsViewModelTest {
             assertTrue(model.scanOutcome.value is ConnectionsViewModel.ScanOutcome.Error)
             assertFalse(model.uiState.value.isLoading)
         }
-        verify(exactly = 0) { identities.initializationResult }
         coVerify(exactly = 0) { repository.parseQr(any()) }
         coVerify(exactly = 0) { repository.prepareTokenPurchase(any()) }
         every { repository.observeConnections() } returns MutableStateFlow(emptyList())
@@ -311,7 +311,6 @@ class ConnectionsViewModelTest {
         assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
-        every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
         scan()
         assertNotNull(model.uiState.value.pendingRequest)
     }
@@ -340,6 +339,122 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 0) { repository.disconnect(any(), any()) }
         coVerify(exactly = 0) { repository.removeConnection(any(), any()) }
         coVerify(exactly = 0) { repository.connectionDetails(any(), any()) }
+    }
+
+    @Test fun `pending identity initialization stays loading rather than ready empty`() {
+        val initialized = MutableStateFlow<Result<Unit>?>(null)
+        every { identities.initializationResult } returns initialized
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        initialized.value = Result.success(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        coVerify(exactly = 0) { identities.init() }
+    }
+
+    @Test fun `failed initialization is unavailable and automatically recovers when initialization succeeds`() {
+        val initialized = MutableStateFlow<Result<Unit>?>(Result.failure(IllegalStateException("Identity load failed")))
+        every { identities.initializationResult } returns initialized
+        val connection = DAppConnection("app", "App", "", ConnectionStatus.ACTIVE, 1, "scope")
+        every { repository.observeConnections() } returns MutableStateFlow(listOf(connection))
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertFalse(model.canUseConnections)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        initialized.value = null
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        initialized.value = Result.success(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertEquals(listOf(connection), model.uiState.value.connections)
+    }
+
+    @Test fun `scope failure is unavailable and retry reads scope again instead of reporting empty`() {
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            throw IllegalStateException("Wallet unavailable")
+        }
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertFalse(model.canUseConnections)
+        every { repository.observeConnections() } returns MutableStateFlow(emptyList())
+        model.refreshConnections()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.connections.isEmpty())
+    }
+
+    @Test fun `identity changes replace the observer and clear stale rows while reloading scope`() {
+        val identity = MutableStateFlow<org.dashj.platform.dashpay.BlockchainIdentity?>(null)
+        every { identities.blockchainIdentityFlow } returns identity
+        val connection = DAppConnection("old", "App", "", ConnectionStatus.ACTIVE, 1, "old-scope")
+        every { repository.observeConnections() } returns MutableStateFlow(listOf(connection))
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(listOf(connection), model.uiState.value.connections)
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            kotlinx.coroutines.awaitCancellation()
+        }
+        identity.value = mockk(relaxed = true)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        assertFalse(model.canUseConnections)
+    }
+
+    @Test fun `real repository preserves scope availability through cold start failure recovery and identity loss`() {
+        model.viewModelScope.cancel()
+        val identity = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
+        every { identity.uniqueIdentifier } returns org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 })
+        val identityFlow = MutableStateFlow<org.dashj.platform.dashpay.BlockchainIdentity?>(identity)
+        val initialized = MutableStateFlow<Result<Unit>?>(null)
+        every { identities.blockchainIdentity } answers { identityFlow.value }
+        every { identities.blockchainIdentityFlow } returns identityFlow
+        every { identities.initializationResult } returns initialized
+        val platform = mockk<de.schildbach.wallet.service.platform.PlatformService>(relaxed = true)
+        val wallet = mockk<de.schildbach.wallet.ui.dashpay.PlatformRepo>(relaxed = true)
+        every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
+        val config = mockk<DashConnectConfig>()
+        val scope = AppConnectSession(platform, wallet, identities, config).scope()
+        val record = org.json.JSONObject().put("scope", scope).put("app", "app").put("state", "active")
+            .put("keys", org.json.JSONArray().put(org.json.JSONObject().put("purpose", 0)
+                .put("expiresAt", System.currentTimeMillis() + 60_000)))
+        val records = MutableStateFlow(listOf(record))
+        every { config.observeGrants() } returns records
+        every { config.observeConnections() } returns MutableStateFlow(emptyList())
+        identityFlow.value = null
+        model = ConnectionsViewModel(PlatformDashConnectRepository(platform, wallet, identities, config), identities)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        initialized.value = Result.failure(IllegalStateException("Identity initialization failed"))
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        initialized.value = null
+        identityFlow.value = identity
+        initialized.value = Result.success(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertEquals(ConnectionStatus.ACTIVE, model.uiState.value.connections.single().status)
+        identityFlow.value = null
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        assertEquals(1, records.value.size)
+        identityFlow.value = identity
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertEquals(1, model.uiState.value.connections.size)
+        records.value = emptyList()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        coVerify(exactly = 0) { identities.init() }
     }
 
     @Test fun `signing key setup requires its own action and never purchases tokens`() {

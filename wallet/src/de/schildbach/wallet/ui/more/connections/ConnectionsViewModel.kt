@@ -32,6 +32,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -168,14 +172,28 @@ class ConnectionsViewModel @Inject constructor(
         refreshConnections()
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     fun refreshConnections() {
         connectionsJob?.cancel()
-        _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING) }
-        connectionsJob = repository.observeConnections()
-            .catch { error ->
-                log.error("Cannot read connection grant records", error)
+        _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
+        if (!Constants.SUPPORTS_PLATFORM || Constants.IS_PROD_BUILD ||
+            Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) {
+            _uiState.update { it.copy(featureUnavailable = true, recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
+            return
+        }
+        connectionsJob = combine(identityRepository.initializationResult, identityRepository.blockchainIdentityFlow) {
+            result, _ -> result
+        }.flatMapLatest { result ->
+            _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
+            flow {
+                if (result == null) return@flow
+                result.getOrThrow()
+                emitAll(repository.observeConnections())
+            }.catch { error ->
+                log.error("Cannot establish connection scope or read grant records", error)
                 _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE, connections = emptyList()) }
             }
+        }
             .onEach { connections ->
                 _uiState.update { it.copy(connections = connections, recordsStatus = ConnectionRecordsStatus.READY) }
             }
@@ -201,7 +219,6 @@ class ConnectionsViewModel @Inject constructor(
                     "App Connect is unavailable in production or on mainnet"
                 }
                 uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
-                requireConnectionRecords()
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()
