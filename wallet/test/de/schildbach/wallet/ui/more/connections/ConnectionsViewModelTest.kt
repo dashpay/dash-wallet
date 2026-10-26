@@ -759,7 +759,7 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
     }
 
-    @Test fun `failed approval must revoke before reporting declined`() {
+    @Test fun `failed approval must revoke before reporting failed`() {
         failApproval(openedFromUrl = true)
         val revoked = CompletableDeferred<Unit>()
         coEvery { repository.revokePreparedLogin(any(), any()) } coAnswers { revoked.await() }
@@ -770,8 +770,39 @@ class ConnectionsViewModelTest {
         revoked.complete(Unit)
         dispatcher.scheduler.advanceUntilIdle()
         assertNull(model.uiState.value.pendingRequest)
-        assertTrue(model.callbackOffer.value!!.contains("ac=declined"))
+        assertTrue(model.callbackOffer.value!!.contains("ac=failed"))
         coVerify(exactly = 1) { repository.revokePreparedLogin(request, plan) }
+    }
+
+    @Test fun `failed revocation retains failure until a later confirmed revocation`() {
+        failApproval(openedFromUrl = true)
+        coEvery { repository.revokePreparedLogin(any(), any()) } throws IllegalStateException("Unknown outcome")
+        model.denyPendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNull(model.callbackOffer.value)
+        assertNotNull(model.uiState.value.pendingRequest)
+        coEvery { repository.revokePreparedLogin(any(), any()) } returns Unit
+        model.denyPendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals("https://example.org/return?ac=failed", model.callbackOffer.value)
+    }
+
+    @Test fun `successful retry replaces failure status with ok`() {
+        failApproval(openedFromUrl = true)
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals("https://example.org/return?ac=ok", model.callbackOffer.value)
+    }
+
+    @Test fun `new request does not inherit previous failure callback status`() {
+        failApproval(openedFromUrl = true)
+        model.denyPendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        model.resetCallbackOffer()
+        scan(openedFromUrl = true)
+        model.denyPendingRequest()
+        assertEquals("https://example.org/return?ac=declined", model.callbackOffer.value)
     }
 
     @Test fun `scanner approval never offers website callback`() {

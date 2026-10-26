@@ -100,6 +100,7 @@ class ConnectionsViewModel @Inject constructor(
     private var pendingLoginRequest: DashKeyRequest? = null
     private var pendingPlan: AppConnectPlan? = null
     private var pendingOpenedFromUrl = false
+    private var pendingApprovalFailed = false
     private var operationInProgress = false
     private var walletUnlockCheck: () -> Boolean = { false }
     private var connectionsJob: Job? = null
@@ -221,6 +222,7 @@ class ConnectionsViewModel @Inject constructor(
                 pendingLoginRequest = payload.request
                 pendingPlan = plan
                 pendingOpenedFromUrl = openedFromUrl
+                pendingApprovalFailed = false
                 _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
                     grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
                     requiresGroupReapproval = plan?.requiresGroupReapproval ?: false,
@@ -368,10 +370,12 @@ class ConnectionsViewModel @Inject constructor(
                 pendingLoginRequest = null
                 pendingPlan = null
                 pendingOpenedFromUrl = false
+                pendingApprovalFailed = false
                 _uiState.update { it.copy(pendingRequest = null, requiresRevocation = false) }
                 _approveResult.value = ApproveResult.Success(connection)
                 offerCallback(request, "ok", openedFromUrl)
             } catch (ex: Exception) {
+                pendingApprovalFailed = true
                 if (ex is CancellationException) throw ex
                 log.error("failed to approve DashConnect login", ex)
                 if (ex is GroupScopeChangedException) {
@@ -405,6 +409,7 @@ class ConnectionsViewModel @Inject constructor(
         if (operationInProgress) return
         val request = pendingLoginRequest ?: return
         val openedFromUrl = pendingOpenedFromUrl
+        val terminalStatus = if (pendingApprovalFailed) "failed" else "declined"
         if (_uiState.value.requiresRevocation) {
             operationInProgress = true
             launchAuthorizedOperation(singleFlight = true) {
@@ -415,7 +420,7 @@ class ConnectionsViewModel @Inject constructor(
                     repository.revokePreparedLogin(request, pendingPlan)
                     coroutineContext.connectionAuthorization()()
                     clearPendingRequest()
-                    offerCallback(request, "declined", openedFromUrl)
+                    offerCallback(request, terminalStatus, openedFromUrl)
                 } catch (ex: Exception) {
                     if (ex is CancellationException) throw ex
                     log.error("failed to revoke pending DashConnect approval", ex)
@@ -432,6 +437,7 @@ class ConnectionsViewModel @Inject constructor(
         pendingLoginRequest = null
         pendingPlan = null
         pendingOpenedFromUrl = false
+        pendingApprovalFailed = false
         _uiState.update { it.copy(pendingRequest = null, requiresRevocation = false) }
         _approveResult.value = ApproveResult.Idle
     }

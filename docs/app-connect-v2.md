@@ -267,11 +267,37 @@ refresh updatedAt without changing it on an ordinary refresh or identical state
 write. The largest finite budget preset is 2 DASH, still capped by the requested
 budget. CI exports SUPPORT_EMAIL only after the external SDK build completes.
 
-The mutable DashJ 24 snapshot remains a release-reproducibility follow-up; this
-change does not downgrade Core 24 support. Terminal URL failure callbacks also
-remain a protocol follow-up: uncertain outcomes retain recovery/revocation and
-must not claim failure when access might exist. Scanner requests never launch a
-website callback.
+The follow-up pins DashJ in the wallet and SDK to the published timestamped build
+`24.0.0-20261024.220449-1`, keeping Core 24 support. Wallet resolution forces that
+version across transitive dependencies as well. Gradle resolved it from the public
+Central Portal snapshots repository without Maven Local. Its JAR SHA-256 is:
+
+```text
+1f2afb88ca62ab910554e3aa9bf40c240111fc3d3379da152bf59bc19e7828bd
+```
+
+This records the verified bytes, not checksum enforcement. Snapshot retention may
+still remove that exact build; a retained release remains preferable long-term.
+See the SDK's docs/dashj-build-pin.md for publication provenance.
+
+Yappr's profile and callback consumer already support `ac=failed`:
+https://github.com/PastaPastaPasta/yappr/blob/staging/docs/APP_CONNECT_PROFILE.md#callback
+https://github.com/PastaPastaPasta/yappr/blob/staging/app/connect/page.tsx
+
+After an approved request fails or is interrupted, the wallet retains the failure
+status with the pending request. Only after the user ends recovery and revocation
+is confirmed does a URL-origin request offer `ac=failed`. A successful retry offers
+`ac=ok`; denying an untouched request offers `ac=declined`. Uncertain approval or
+revocation never offers a terminal callback, and closing unresolved recovery does
+not offer one. Scanner requests never launch a website callback. Failure status is
+retained by the pending ViewModel across view recreation, not inferred from an old
+grant after process death; durable grants still require confirmed revocation.
+
+The idle expiry projection derives its displayed status timestamp from the last
+authentication-key expiry across active grants when none remain live, ignoring
+encryption-key expiry and preserving later persisted status changes. This is
+derived on every projection, so it survives process restart without saving a
+fabricated revocation or rewriting grant records.
 
 The foreground/suggestion regression run passed 559 tests across devnet, testnet
 and production, with 77 conditional skips and no failures. Lifecycle observer
@@ -279,3 +305,11 @@ tests run on Android API 28 and 34. Both debug APK builds and ktlintCheck passed
 This includes the review follow-up where app-wide revocation confirmation changes
 the displayed status while the stored state remains disabled. Confirmation changes
 refresh the timestamp; repeating identical settlement preserves it.
+
+The three follow-ups passed 568 wallet tests across the same flavors, with 80
+conditional skips and no failures, plus all 17 targeted SDK tests. Both APK builds
+and ktlintCheck passed using the publicly resolved timestamped DashJ publication,
+without the earlier Maven Local DashJ override. Runtime dependencyInsight confirmed
+that the wallet and transitive SDK requests select the same timestamped build.
+Live terminal failure callbacks and funded interruption/recovery still need
+device testing; the earlier Pixel 9 success is not evidence for those new paths.

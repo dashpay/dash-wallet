@@ -7,6 +7,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.dashj.platform.dashpay.BlockchainIdentity
@@ -53,13 +54,16 @@ class ConnectionExpiryTest {
         backgroundScope.launch { repository.observeConnections { testScheduler.currentTime }.collect { connections = it } }
         runCurrent()
         assertEquals(ConnectionStatus.ACTIVE, connections.single { it.id == "app" }.status)
+        assertEquals(0L, connections.single { it.id == "app" }.updatedAt)
         assertEquals(ConnectionStatus.APPROVED, connections.single { it.id == "encryption" }.status)
         advanceTimeBy(1_000)
         runCurrent()
         assertEquals(ConnectionStatus.ACTIVE, connections.single { it.id == "app" }.status)
+        assertEquals(0L, connections.single { it.id == "app" }.updatedAt)
         advanceTimeBy(1_000)
         runCurrent()
         assertEquals(ConnectionStatus.APPROVED, connections.single { it.id == "app" }.status)
+        assertEquals(2_000L, connections.single { it.id == "app" }.updatedAt)
         // Expiry must not fabricate a confirmed app-wide revocation.
         assertFalse(records.value.first().optBoolean("appRevocationConfirmed"))
     }
@@ -88,5 +92,23 @@ class ConnectionExpiryTest {
         runCurrent()
         assertEquals(ConnectionStatus.DISCONNECTED, connections.single().status)
         collector.cancel()
+    }
+
+    @Test fun `restart derives final expiry across grants without replacing later status writes`() = runTest {
+        val old = grant("app", 1_000, 2_000).put("updatedAt", 10L)
+        val recent = grant("app", 3_000).put("updatedAt", 20L)
+        val encryption = grant("app", 9_000, purpose = 1).put("updatedAt", 15L)
+        records.value = listOf(recent, encryption, old)
+        val expired = repository.observeConnections { 4_000L }.first().single()
+        assertEquals(ConnectionStatus.APPROVED, expired.status)
+        assertEquals(3_000L, expired.updatedAt)
+        assertEquals(20L, recent.getLong("updatedAt"))
+        records.value = listOf(old, encryption, recent, grant("app", 8_000, state = "pending").put("updatedAt", 5_000L))
+        assertEquals(5_000L, repository.observeConnections { 6_000L }.first().single().updatedAt)
+        records.value = listOf(grant("app", 9_000, state = "disabled").put("updatedAt", 6_000L)
+            .put("permanentRevocationConfirmed", true).put("appRevocationConfirmed", true))
+        val disconnected = repository.observeConnections { 10_000L }.first().single()
+        assertEquals(ConnectionStatus.DISCONNECTED, disconnected.status)
+        assertEquals(6_000L, disconnected.updatedAt)
     }
 }

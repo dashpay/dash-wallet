@@ -43,18 +43,26 @@ class PlatformDashConnectRepository @Inject constructor(
             val scope = runCatching { session.scope() }.getOrNull()
             val current = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }.map { (app, grants) ->
                 val latest = grants.maxBy { it.optLong("updatedAt") }
+                val authenticationExpiries = grants.filter { it.optString("state") == "active" }.flatMap { record ->
+                    record.getJSONArray("keys").let { keys ->
+                        (0 until keys.length()).map { keys.getJSONObject(it) }
+                            .filter { it.getInt("purpose") == 0 }
+                            .map { it.optLong("expiresAt", Long.MAX_VALUE) }
+                    }
+                }
+                val active = authenticationExpiries.any { it > currentTime }
+                val lastExpiry = authenticationExpiries.maxOrNull()
+                val updatedAt = if (!active && lastExpiry != null && lastExpiry <= currentTime) {
+                    maxOf(latest.optLong("updatedAt"), lastExpiry)
+                } else latest.optLong("updatedAt")
                 DAppConnection(app, unverifiedAppName(latest.optString("label"), app), "",
                     when {
-                        grants.any { record -> record.optString("state") == "active" && record.getJSONArray("keys").let { keys ->
-                            (0 until keys.length()).any { index -> keys.getJSONObject(index).let { key ->
-                                key.getInt("purpose") == 0 && key.optLong("expiresAt", Long.MAX_VALUE) > currentTime
-                            } }
-                        } } -> ConnectionStatus.ACTIVE
+                        active -> ConnectionStatus.ACTIVE
                         // Revoked request keys do not prove that the app has no surviving access.
                         grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
                             !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
                         else -> ConnectionStatus.DISCONNECTED
-                    }, latest.optLong("updatedAt"), scope)
+                    }, updatedAt, scope)
             }
             emit((current + legacy.filter { old -> current.none { it.id == old.contractId } }.map {
                 DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope, legacyOnly = true)
