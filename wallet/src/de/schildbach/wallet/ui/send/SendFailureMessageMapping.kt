@@ -20,6 +20,7 @@ import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
 import de.schildbach.wallet.service.platform.sdk.ContactPaymentNotRecordableException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 
 /**
  * How [SendCoinsFragment.showFailureDialog] renders a failed send. Pure
@@ -54,6 +55,14 @@ enum class SendFailureKind {
     CONTACT_PAYMENT_NOT_RECORDED,
 
     /**
+     * The payment may have been sent, but its outcome is unknown
+     * ([PaymentSubmissionPendingException]: an ordinary SDK send whose
+     * broadcast came back ambiguous, among others). Never "payment failed"
+     * and never an invitation to retry: the copy says it may have been sent.
+     */
+    OUTCOME_UNKNOWN,
+
+    /**
      * Any other [IllegalStateException] from the send path: internal
      * machinery — show a generic failure, NEVER the raw exception text.
      */
@@ -65,6 +74,7 @@ enum class SendFailureKind {
 
 /** The pure type-based mapping — see [SendFailureKind]. */
 fun classifySendFailure(exception: Exception): SendFailureKind = when (exception) {
+    is PaymentSubmissionPendingException -> SendFailureKind.OUTCOME_UNKNOWN
     is SendEngineNotSyncedException -> SendFailureKind.NOT_SYNCED
     is SendNotSdkRoutableException -> SendFailureKind.NOT_SUPPORTED
     // Before the generic IllegalStateException arm: SendSignerLockedException

@@ -54,6 +54,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.FriendChainAccess
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
@@ -229,16 +230,17 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
-    fun postCutover_ambiguous_signalsAnUnknownTxid_andStillThrowsTheCause() = runTest {
+    fun postCutover_ambiguous_signalsAnUnknownTxid_andThrowsPending() = runTest {
         postCutover(SdkWriteResult.Ambiguous(IllegalStateException("timeout")))
         val signals = mutableListOf<String?>()
 
         try {
             sendCollecting(signals)
             fail("expected the ambiguous failure")
-        } catch (expected: IllegalStateException) {
-            // the SDK's cause, rethrown (coroutine stack recovery may copy it)
-            assertEquals("timeout", expected.message)
+        } catch (expected: PaymentSubmissionPendingException) {
+            // "may have been sent" (never a retryable failure), carrying the
+            // SDK's cause (coroutine stack recovery may copy it)
+            assertEquals("timeout", expected.cause?.message)
         }
 
         assertEquals(listOf<String?>(null), signals)
@@ -404,8 +406,8 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
                 )
             }
             fail("expected the ambiguous failure")
-        } catch (expected: IllegalStateException) {
-            // the UI still reports the failure; the address is not reused
+        } catch (expected: PaymentSubmissionPendingException) {
+            // the UI reports "may have been sent"; the address is not reused
         }
 
         assertEquals(listOf(recipient), marks)

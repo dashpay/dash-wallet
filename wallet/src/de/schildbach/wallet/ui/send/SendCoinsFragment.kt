@@ -490,18 +490,21 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         // for ROUTABILITY on a fully-synced wallet. Post-cutover internal
         // exception text is machinery and is never rendered verbatim; every
         // other exception keeps the original verbatim rendering.
-        val message = when (classifySendFailure(exception)) {
+        val kind = classifySendFailure(exception)
+        val message = when (kind) {
             SendFailureKind.NOT_SYNCED -> getString(R.string.send_coins_fragment_hint_replaying)
             SendFailureKind.NOT_SUPPORTED -> getString(R.string.send_coins_error_not_supported)
             SendFailureKind.SIGNER_LOCKED -> getString(R.string.send_coins_error_signer_locked)
+            SendFailureKind.OUTCOME_UNKNOWN -> getString(R.string.payment_outcome_unknown_message)
             SendFailureKind.CONTACT_PAYMENT_NOT_RECORDED ->
                 getString(R.string.send_coins_error_contact_payment_not_recorded)
             SendFailureKind.GENERIC_INTERNAL -> getString(R.string.send_coins_error_generic)
             SendFailureKind.VERBATIM -> exception.toString()
         }
+        val maybeSent = kind == SendFailureKind.OUTCOME_UNKNOWN
         AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.send_coins_error_msg),
+            if (maybeSent) R.drawable.ic_warning else R.drawable.ic_error,
+            getString(if (maybeSent) R.string.payment_submission_pending_title else R.string.send_coins_error_msg),
             message,
             getString(R.string.button_dismiss),
             null

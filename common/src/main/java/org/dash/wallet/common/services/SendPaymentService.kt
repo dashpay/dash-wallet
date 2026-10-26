@@ -30,6 +30,24 @@ class LeftoverBalanceException(val missing: Dash, message: String) : Insufficien
 class DirectPayException(message: String) : Exception(message)
 
 /**
+ * Thrown when a BIP70 payment was submitted but the merchant's response was lost, so the
+ * transaction may or may not have been broadcast. The transaction's inputs stay locked while
+ * the wallet keeps checking the network in the background; once the transaction is seen it is
+ * committed as sent, and if it never appears the inputs are released.
+ *
+ * Open so the wallet module can say more precisely what is unknown (an acknowledged payment
+ * whose local record could not be written yet), while every caller that must keep the order
+ * and withhold a retry still catches this one type.
+ *
+ * @property txId the transaction id, as hex
+ */
+open class PaymentSubmissionPendingException(
+    val txId: String,
+    cause: Throwable?,
+    message: String = "Payment submission result unknown for $txId; verification pending"
+) : Exception(message, cause)
+
+/**
  * Describes which outputs a send may draw on. The wallet module maps these onto its
  * dashj coin selectors.
  */
