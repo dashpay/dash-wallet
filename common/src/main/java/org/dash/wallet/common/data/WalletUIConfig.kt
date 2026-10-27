@@ -77,6 +77,10 @@ open class WalletUIConfig @Inject constructor(
     fun getExchangeCurrencyCodeBlocking(): String {
         return runBlocking { getExchangeCurrencyCode() }
     }
+
+    fun getAutoHideBalanceBlocking(): Boolean {
+        return runBlocking { get(AUTO_HIDE_BALANCE) ?: false }
+    }
 }
 
 class ExchangeCurrencyMigration(

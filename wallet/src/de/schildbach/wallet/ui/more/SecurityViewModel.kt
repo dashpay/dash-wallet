@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.more
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.BiometricHelper
@@ -131,6 +132,12 @@ class SecurityViewModel @Inject constructor(
     fun setHideBalanceOnLaunch(hide: Boolean) {
         viewModelScope.launch {
             walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, hide)
+            walletApplication.wallet?.let { wallet ->
+                WalletBalanceWidgetProvider.updateWidgets(
+                    walletApplication,
+                    wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+                )
+            }
             analytics.logEvent(
                 if (hide) {
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON
