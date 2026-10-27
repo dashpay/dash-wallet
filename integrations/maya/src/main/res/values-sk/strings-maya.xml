@@ -20,8 +20,17 @@
     <string name="maya_portal_convert_to_title">Konvertovať Dash na</string>
     <string name="maya_portal_convert_subtitle">Z Dash peňaženky na akúkoľvek kryptomenu</string>
     <string name="maya_portal_subtitle">Konvertovať Dash z Dash peňaženky na akúkoľvek kryptomenu, ktorú Maya podporuje, a poslať do ľubovoľnej peňaženky</string>
+    <string name="dash_dex_buy_title">Kúpiť Dash</string>
+    <string name="dash_dex_sell_title">Predať Dash</string>
+    <string name="dash_dex_sell_subtitle">Z Dash peňaženky na akúkoľvek kryptomenu</string>
     <string name="maya_address_input_hint">%s adresa</string>
     <string name="maya_address_input_title">Konvertovať DASH na %s</string>
+    <!-- Nav bar title of the convert-crypto enter-amount screen (Figma 24034:44864) -->
+    <string name="maya_convert_enter_amount_title">Konvertovať</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">Vložiť adresu z</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">Schránka</string>
     <string name="maya_crypto_convert_title">Konvertovať Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Ukážka objednávky</string>
 
@@ -29,13 +38,11 @@
     <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
     <string name="cryptocurrency_dash_network">Dash</string>
     <string name="cryptocurrency_rune_network">Thorchain</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
     <string name="cryptocurrency_kuji_network">Kujira</string>
     <string name="cryptocurrency_usk_network">USK</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
     <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
@@ -56,7 +63,7 @@
     <string name="cryptocurrency_zec_network">Zcash</string>
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
-
+    <string name="cryptocurrency_ltc_network">Litecoin</string>
     <string name="maya_error">Chyba Maya</string>
     <string name="maya_error_not_available">Služba Maya nie je k dispozícii. Skúste to znova neskôr.</string>
     <string name="maya_error_report_issue">Nahláste tento problém tímu podpory Dash Wallet pomocou možnosti „Kontaktovať podporu“ v hlavnej ponuke.</string>
@@ -65,6 +72,8 @@
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">Minimálna suma transakcie je</string>
     <string name="entered_amount_is_too_high">Maximálna suma transakcie je</string>
+    <!-- Short form of the max-amount error on the convert-crypto enter-amount screen, e.g. "Max $205.32" (Figma 24034:44864) -->
+    <string name="maya_max_amount_error">Max</string>
     <string name="we_didnt_find_any_assets">Na vašom Coinbase účte sme nenašli žiadne aktíva.</string>
     <string name="something_wrong_title">Niečo sa pokazilo!</string>
     <string name="dont_have_any_dash">V Dash peňaženke nemáte žiadny Dash.</string>
@@ -103,10 +112,16 @@
     <string name="you_receive">dostanete</string>
     <string name="to_dash_wallet_on_this_device">z Dash peňaženky na tomto zariadení</string>
     <string name="purchase">Nákup</string>
-    <string name="maya_fee">Poplatok Maya</string>
+    <string name="maya_fee">Poplatok</string>
+    <string name="network_label">Sieť</string>
     <string name="total">Celkovo</string>
     <string name="to_external_address">do %s</string>
 
+    <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
+    <string name="button_refresh">Obnoviť</string>
+    <string name="maya_explorer_view_maya">Zobraziť prieskumníka MayaChain</string>
+    <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
+    <string name="maya_explorer_view_near">Zobraziť prieskumníka NEAR Intents</string>
     <string name="maya_error_information">%s%nKryptomena: %s</string>
     <string name="maya_error_invalid_destination_address">Neplatná cieľová adresa</string>
     <string name="maya_error_below_recommended_minimum">Zadaná suma je nižšia ako odporúčané minimum</string>
@@ -115,6 +130,33 @@
     <string name="maya_error_quote">Pre túto konverziu sa nepodarilo získať cenovú ponuku od Maya</string>
     <string name="maya_halted_label">Pozastavené</string>
     <string name="maya_halted_coins_toast">Niektoré mince sú dočasne pozastavené a nie sú k dispozícii na obchodovanie</string>
+    <string name="maya_select_coin_title">Vybrať mincu</string>
+    <string name="dex_enter_amount_checking">Kontroluje sa suma…</string>
+    <string name="dex_enter_amount_invalid">Túto sumu nie je možné momentálne vymeniť. Skúste inú sumu alebo skúste o chvíľu znova.</string>
+    <string name="maya_route_label_multiple">Viacero sietí</string>
+    <string name="dex_refund_address_heading">Zadajte adresu pre vrátenie peňazí</string>
+    <string name="dex_refund_address_field_label">Adresa na vrátenie peňazí</string>
+    <string name="dex_refund_address_placeholder">Dlhým stlačením vložíte</string>
 
+    <string name="dex_receive_description">Keď sieť potvrdí váš prevod, prevedieme ho na Dash a vložíme ho do vašej peňaženky DashPay</string>
+    <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_memo_label">Poznámka / Značka</string>
+    <string name="dex_receive_memo_warning">Váš prevod musí obsahovať túto poznámku. Finančné prostriedky odoslané bez nej nemožno priradiť k vašej výmene a budú stratené.</string>
+    <string name="dex_receive_expiry_title">Platnosť tejto adresy vyprší o 10 minút</string>
+    <string name="dex_receive_back_home">Späť domov</string>
+
+    <!-- DashDEX buy: user-facing swap error messages (mapped from SwapKit error codes by SwapKitErrors).
+         %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
+    <string name="dex_error_generic">Pri nastavovaní výmeny sa vyskytla chyba. Skúste to znova.</string>
+    <string name="dex_error_no_route">Túto sumu nie je možné momentálne vymeniť. Trasy môžu byť krátkodobo nedostupné – skúste to o chvíľu znova alebo skúste inú sumu.</string>
+    <string name="dex_error_validation">Nepodarilo sa nám nastaviť vašu výmenu. Skontrolujte sumu aj adresu a potom skúste to znova.</string>
+    <string name="dex_error_unavailable">Výmeny sú dočasne nedostupné. Skúste to znova neskôr.</string>
+    <string name="dex_error_quote_expired">Platnosť tejto ponuky vypršala. Vráťte sa a skúste to znova.</string>
+    <string name="dex_error_sanctioned">Túto adresu nie je možné použiť na výmeny.</string>
+    <string name="dex_error_insufficient_balance">Suma je vyššia ako suma, ktorú posielate.</string>
+    <string name="dex_error_allowance">Tento token vyžaduje pred výmenou schválenie.</string>
+    <string name="dex_error_build_failed">Túto výmenu sa nám nepodarilo pripraviť. Skúste to znova.</string>
+    <string name="dex_error_invalid_destination">Nepodarilo sa nám nastaviť váš vklad. Skúste to znova.</string>
+    <string name="dex_error_price_moved">Cena sa príliš zmenila. Vráťte sa späť a skúste to znova.</string>
 
 </resources>

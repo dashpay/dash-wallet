@@ -120,7 +120,9 @@ class SendCoinsTaskRunnerSdkRoutingTest {
                 mockk(relaxed = true),
                 // Phase 5d bridge factory: only reached under a committed
                 // cutover (SDK_BRIDGED route), which these tests never take.
-                mockk(relaxed = true)
+                mockk(relaxed = true),
+                // Pending-payment barrier: relaxed, so awaitRestored() passes straight through.
+                mockk<PendingDirectPaymentVerifier>(relaxed = true)
             )
         )
     }
