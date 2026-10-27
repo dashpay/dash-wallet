@@ -415,3 +415,17 @@ request expiry. An omitted optional grant approaching expiry cannot prevent
 recovery of a valid selected grant. Fresh requests and selected grants retain the
 expiry guard, and saved limits remain unchanged. Restart regressions cover all
 four persisted registration states without accessing wallet secrets or writing keys.
+
+Explicit Retry also recognizes a non-null registration-in-progress identity whose
+unique ID has not been initialized. The identity repository's scope-readiness
+check distinguishes that partial object from a usable identity, allowing the
+existing serialized loader to reread local metadata. Pending startup loads and
+healthy identities are not restarted. A reload that still produces a partial
+identity remains unavailable and permits another explicit Retry; no automatic
+loop, registration or native submission is introduced.
+
+The partial-identity run passed 649 tests with 98 conditional skips and no failures
+across devnet, testnet and production, plus both debug APK builds and ktlintCheck.
+The real-loader integration test covers repeated partial results, coalesced taps,
+later storage recovery, restored rows and the healthy-identity reload guard. It
+does not perform on-device or funded network testing.

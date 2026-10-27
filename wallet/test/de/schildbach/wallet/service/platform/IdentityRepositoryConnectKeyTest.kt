@@ -45,12 +45,26 @@ class IdentityRepositoryConnectKeyTest {
         (field.get(repository) as MutableStateFlow<BlockchainIdentity?>).value = identity
     }
 
+    @Test fun partialIdentityIsNotAnInitializedScopeButHealthyIdentityIs() {
+        org.junit.Assert.assertTrue(repository.hasInitializedIdentityScope())
+        every { identity.uniqueIdentifier } throws UninitializedPropertyAccessException("uniqueId")
+        org.junit.Assert.assertFalse(repository.hasInitializedIdentityScope())
+        every { identity.uniqueIdentifier } returns id
+        org.junit.Assert.assertTrue(repository.hasInitializedIdentityScope())
+    }
+
+    @Test fun scopeReadDoesNotHideUnrelatedIdentityFailures() {
+        every { identity.uniqueIdentifier } throws IllegalStateException("Identity storage unavailable")
+        assertThrows(IllegalStateException::class.java) { repository.hasInitializedIdentityScope() }
+    }
+
     @Test fun completedLoadWithoutIdentityIsDifferentFromStillLoading() = runBlocking {
         org.junit.Assert.assertNull(repository.initializationResult.value)
         coEvery { identityStorage.load() } returns null
         repository.init()
         org.junit.Assert.assertTrue(repository.initializationResult.value!!.isSuccess)
         org.junit.Assert.assertNull(repository.blockchainIdentity)
+        org.junit.Assert.assertFalse(repository.hasInitializedIdentityScope())
     }
 
     @Test fun failedIdentityLoadIsPublishedToWaitingRequests() = runBlocking {

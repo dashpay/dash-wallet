@@ -22,6 +22,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.hasInitializedIdentityScope
 import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -176,7 +177,7 @@ class ConnectionsViewModel @Inject constructor(
     fun retryConnections() {
         if (_uiState.value.featureUnavailable || identityRetryJob?.isActive == true) return
         val initialized = identityRepository.initializationResult.value
-        val reloadIdentity = initialized != null && (initialized.isFailure || identityRepository.blockchainIdentity == null)
+        val reloadIdentity = initialized != null && (initialized.isFailure || !identityRepository.hasInitializedIdentityScope())
         refreshConnections()
         if (!reloadIdentity) return
         val identities = identityRepository

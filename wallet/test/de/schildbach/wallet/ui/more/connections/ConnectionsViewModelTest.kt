@@ -530,6 +530,59 @@ class ConnectionsViewModelTest {
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
 
+    @Test fun `real identity owner reloads a successful partial identity and restores saved connections`() {
+        model.viewModelScope.cancel()
+        val storage = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
+        val provider = mockk<org.dash.wallet.common.WalletDataProvider>(relaxed = true)
+        val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
+        every { provider.wallet } returns wallet
+        val owner = spyk(de.schildbach.wallet.service.platform.IdentityRepositoryImpl(mockk(relaxed = true),
+            mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)))
+        val partial = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
+        every { partial.uniqueIdentifier } throws UninitializedPropertyAccessException("uniqueId")
+        val healthy = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
+        every { healthy.uniqueIdentifier } returns groupId
+        val data = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityData>(relaxed = true)
+        val reread = CompletableDeferred<Unit>()
+        var reads = 0
+        coEvery { storage.load() } coAnswers {
+            reads++
+            if (reads == 2) reread.await()
+            data
+        }
+        every { owner.initBlockchainIdentity(data, wallet) } returnsMany listOf(partial, partial, healthy)
+        applicationScope.launch { owner.init() }
+        dispatcher.scheduler.runCurrent()
+        assertTrue(owner.initializationResult.value!!.isSuccess)
+        assertSame(partial, owner.blockchainIdentity)
+        val connection = DAppConnection("saved", "App", "", ConnectionStatus.ACTIVE, 1)
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            check(owner.blockchainIdentity!!.uniqueIdentifier == groupId)
+            emit(listOf(connection))
+        }
+        model = ConnectionsViewModel(repository, owner, applicationScope)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        model.retryConnections()
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 2) { storage.load() }
+        assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
+        reread.complete(Unit)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 3) { storage.load() }
+        assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+        assertEquals(listOf(connection), model.uiState.value.connections)
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 3) { storage.load() }
+        verify(exactly = 0) { partial.addMissingKeys(any(), any()) }
+        verify(exactly = 0) { healthy.addMissingKeys(any(), any()) }
+    }
+
     @Test fun `immediate failure after emitting a list cannot leave records ready`() {
         for (connections in listOf(emptyList(), listOf(DAppConnection("old", "App", "", ConnectionStatus.ACTIVE, 1)))) {
             every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {

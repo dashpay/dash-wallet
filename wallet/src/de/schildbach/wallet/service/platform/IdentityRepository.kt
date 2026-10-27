@@ -114,6 +114,13 @@ interface IdentityRepository {
     fun updateIdentity()
 }
 
+/** A registration-in-progress object may exist before its unique ID is initialized. */
+internal fun IdentityRepository.hasInitializedIdentityScope(): Boolean = try {
+    blockchainIdentity?.uniqueIdentifier != null
+} catch (_: UninitializedPropertyAccessException) {
+    false
+}
+
 class IdentityRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
     val appDatabase: AppDatabase,
