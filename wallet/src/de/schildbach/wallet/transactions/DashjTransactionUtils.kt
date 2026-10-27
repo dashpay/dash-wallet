@@ -19,6 +19,7 @@
 
 package de.schildbach.wallet.transactions
 
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -107,6 +108,29 @@ object TransactionUtils {
 
         return result
     }
+
+    /**
+     * Bug A: "Sent to" addresses for the transaction-details sheet of a
+     * dashj-held, SDK-authored send. The held dashj wallet doesn't recognize
+     * such a send's own change output as "mine" ([getToAddressOfSent]'s
+     * `isMine(bag)` check is false for it too), so it would otherwise list
+     * that change address as a second recipient. [sdkOverride], when present
+     * and successfully decoded, carries the SDK's own change-filtered output
+     * addresses (derived from its TXO ownership records) and is preferred.
+     */
+    fun getSentToAddressesForDetail(tx: Transaction, bag: TransactionBag, sdkOverride: SdkTxDetail?): List<Address> {
+        val overrideAddresses = sdkOverride?.takeIf { !it.decodeFailed }?.outputAddresses
+        return overrideAddresses?.map { Address.fromBase58(tx.params, it) } ?: getToAddressOfSent(tx, bag)
+    }
+
+    /**
+     * Bug A: the fee shown on the transaction-details sheet. `tx.fee` is null
+     * for a dashj-held, SDK-authored send whose inputs the held wallet can't
+     * fully connect (it never tracked the spent outputs) — [sdkOverride]'s
+     * SDK-recorded/derived fee is preferred when present.
+     */
+    fun getFeeForDetail(tx: Transaction, sdkOverride: SdkTxDetail?): Coin? =
+        sdkOverride?.feeDuffs?.let { Coin.valueOf(it) } ?: tx.fee
 
     /** get OP_RETURNS of sent tx's */
     fun getOpReturnsOfSent(
