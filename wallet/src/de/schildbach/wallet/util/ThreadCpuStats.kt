@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.util
 
+import java.io.FileNotFoundException
 import java.util.Locale
 
 /**
@@ -84,6 +85,10 @@ object ThreadCpuStats {
      *   CPU burnt by threads that died before we could see them. A large
      *   value means short-lived thread churn.
      * @param scanMs how long the CURRENT snapshot took to read (see [Snapshot.scanMs]).
+     * @param readErrors / [badStats] / [listFailed] the CURRENT snapshot's
+     *   blind spots (see [Snapshot]): threads it could not see for a reason
+     *   other than having exited, so [threadCount] and [unattributedTicks]
+     *   are not to be trusted when they are nonzero.
      */
     data class IntervalReport(
         val wallMs: Long,
@@ -94,7 +99,10 @@ object ThreadCpuStats {
         val ranked: List<ThreadDelta>,
         val created: List<ThreadStat>,
         val exited: List<ThreadStat>,
-        val unattributedTicks: Long
+        val unattributedTicks: Long,
+        val readErrors: Int = 0,
+        val badStats: Int = 0,
+        val listFailed: Boolean = false
     )
 
     /**
@@ -102,14 +110,69 @@ object ThreadCpuStats {
      *
      * @param scanMs elapsedRealtime spent reading `/proc/self/stat` plus every
      *   `/proc/self/task/<tid>/stat` — the window over which this "point" is smeared.
+     * @param readErrors per-thread stat reads that failed for a reason OTHER
+     *   than the thread having exited (see [isThreadGone]) — e.g. EACCES.
+     * @param badStats per-thread stat lines that were read but rejected by
+     *   [parseStatLine].
+     * @param listFailed `/proc/self/task` itself could not be listed, so
+     *   [threads] is empty because we were blind, not because there were none.
      */
     data class Snapshot(
         val elapsedRealtimeMs: Long,
         val uptimeMs: Long,
         val processTicks: Long,
         val threads: Map<Int, ThreadStat>,
-        val scanMs: Long
+        val scanMs: Long,
+        val readErrors: Int = 0,
+        val badStats: Int = 0,
+        val listFailed: Boolean = false
     )
+
+    /**
+     * Per-scan bookkeeping of what a snapshot could NOT see, so a blind scan
+     * doesn't pass for `thr=0` or for thread churn. Not thread-safe: one per scan.
+     */
+    class ScanTally {
+        var readErrors = 0
+            private set
+        var badStats = 0
+            private set
+        var listFailed = false
+            private set
+
+        /** The first non-[isThreadGone] read failure — at most one gets logged per scan. */
+        var firstError: Throwable? = null
+            private set
+
+        /** [parseStatLine], counting a rejected line in [badStats]. */
+        fun parse(line: String): ThreadStat? = parseStatLine(line).also { if (it == null) badStats++ }
+
+        /** A per-thread read failed; a thread that simply exited is not counted. */
+        fun readFailed(t: Throwable) {
+            if (isThreadGone(t)) return
+            readErrors++
+            if (firstError == null) firstError = t
+        }
+
+        /** Listing the task dir failed ([t] null when `list()` just returned null). */
+        fun listFailed(t: Throwable?) {
+            listFailed = true
+            if (firstError == null && t != null) firstError = t
+        }
+    }
+
+    /**
+     * Whether a /proc read failed because the thread exited between listing and
+     * reading — normal churn, not a blind spot. Android reports that as
+     * `open failed: ENOENT` (or ESRCH on a read racing the exit); the JVM as
+     * `(No such file or directory)`.
+     */
+    fun isThreadGone(t: Throwable): Boolean {
+        val msg = t.message ?: return t is FileNotFoundException
+        return GONE_MARKERS.any { msg.contains(it) }
+    }
+
+    private val GONE_MARKERS = listOf("ENOENT", "ESRCH", "No such file", "No such process")
 
     /**
      * Parses one stat line. Field 2 (comm) is wrapped in parentheses and may
@@ -167,7 +230,10 @@ object ThreadCpuStats {
             ranked = if (deltas.size > topN) deltas.subList(0, topN).toList() else deltas,
             created = created,
             exited = exited,
-            unattributedTicks = (processDelta - attributed).coerceAtLeast(0)
+            unattributedTicks = (processDelta - attributed).coerceAtLeast(0),
+            readErrors = curr.readErrors,
+            badStats = curr.badStats,
+            listFailed = curr.listFailed
         )
     }
 
@@ -226,6 +292,9 @@ object ThreadCpuStats {
      * process was frozen while the device was awake. `scan` is how long the
      * current snapshot took to read; past [SLOW_SCAN_MS] the line ends in
      * ` SLOW_SCAN` and its per-thread numbers are not consistent with `proc`.
+     * Blind spots appear only when nonzero: `readErr=<n>` (thread stats that
+     * could not be read, other than exited threads), `badStat=<n>` (stat
+     * lines the parser rejected) and ` TASK_LIST_FAILED` (no thread was seen).
      */
     fun formatLine(report: IntervalReport, clkTck: Long): String {
         val sb = StringBuilder(256)
@@ -251,6 +320,9 @@ object ThreadCpuStats {
         if (report.unattributedTicks > 0) {
             sb.append(" unattributed=").append(ticksToMs(report.unattributedTicks, clkTck)).append("ms")
         }
+        if (report.readErrors > 0) sb.append(" readErr=").append(report.readErrors)
+        if (report.badStats > 0) sb.append(" badStat=").append(report.badStats)
+        if (report.listFailed) sb.append(" TASK_LIST_FAILED")
         if (isSlowScan(report.scanMs)) sb.append(" SLOW_SCAN")
         return sb.toString()
     }

@@ -22,14 +22,19 @@ import android.system.Os
 import android.system.OsConstants
 import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.util.ThreadCpuStats.Level
+import de.schildbach.wallet.util.ThreadCpuStats.ScanTally
 import de.schildbach.wallet.util.ThreadCpuStats.Snapshot
 import de.schildbach.wallet.util.ThreadCpuStats.ThreadStat
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -68,8 +73,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    `Thread.getAllStackTraces()` runs only on a hot interval.
  *  - **Quiet when idle.** Idle intervals log at DEBUG, with one INFO line at
  *    most every [IDLE_INFO_INTERVAL_MS] as a heartbeat.
- *  - **Never throws into the app.** Every read and every log path is guarded;
- *    a thread vanishing mid-scan is normal and just skipped.
+ *  - **Never throws into the app.** Every read and every log path is guarded,
+ *    and the scope's [CoroutineExceptionHandler] catches anything that still
+ *    escapes; a thread vanishing mid-scan is normal and just skipped. Reads
+ *    that fail for any OTHER reason are counted onto the line (`readErr=`
+ *    etc., see [ThreadCpuStats.formatLine]) so a blind scan is visible.
+ *  - **Stops promptly.** Returning to the foreground cancels the session; a
+ *    scan in progress checks for cancellation before each thread and is
+ *    discarded rather than logged.
  *  - **Testnet/QA only.** Enabled for every flavor except `prod` (the same
  *    predicate as `Constants.IS_PROD_BUILD`, checked via [BuildConfig.FLAVOR]
  *    directly so starting it early in `Application.onCreate` does not force
@@ -108,11 +119,23 @@ object ThreadCpuSampler {
     fun start() {
         try {
             if (!isEnabled || !started.compareAndSet(false, true)) return
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineName("ThreadCpuSampler"))
+            // Last line of defence: anything escaping the guarded paths below is
+            // logged here instead of reaching the default (crashing) handler.
+            val handler = CoroutineExceptionHandler { _, t -> logQuietly("sampler failed", t) }
+            val scope = CoroutineScope(
+                SupervisorJob() + Dispatchers.IO + CoroutineName("ThreadCpuSampler") + handler
+            )
             scope.launch {
                 AppForegroundMonitor.isForeground.collectLatest { foreground ->
                     if (!foreground) {
-                        runSession()
+                        try {
+                            runSession()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (t: Throwable) {
+                            // Contained per session: the next background period starts afresh.
+                            logQuietly("session failed", t)
+                        }
                     }
                 }
             }
@@ -123,34 +146,40 @@ object ThreadCpuSampler {
 
     /** Samples until cancelled by the app coming to the foreground. */
     private suspend fun runSession() {
-        val session = Session()
-        val baseline = session.snapshot()
-        if (baseline == null) {
-            log.info("$PREFIX unavailable: /proc/self not readable")
-            return
-        }
-        log.info(
-            "$PREFIX started (app not in foreground) threads={} interval={}s clkTck={}",
-            baseline.threads.size,
-            SAMPLE_INTERVAL_MS / 1000,
-            session.clkTck
-        )
-        var prev: Snapshot = baseline
-        var lastInfoMs: Long? = null
+        var announced = false
         var samples = 0
         try {
+            val session = Session()
+            val baseline = session.snapshot()
+            if (baseline == null) {
+                log.info("$PREFIX unavailable: /proc/self not readable")
+                return
+            }
+            log.info(
+                "$PREFIX started (app not in foreground) threads={} interval={}s clkTck={}",
+                baseline.threads.size,
+                SAMPLE_INTERVAL_MS / 1000,
+                session.clkTck
+            )
+            announced = true
+            var prev: Snapshot = baseline
+            var lastInfoMs: Long? = null
             while (true) {
                 delay(SAMPLE_INTERVAL_MS)
                 val curr = session.snapshot() ?: continue
+                // A scan that finished just as the app came forward is stale: drop it.
+                currentCoroutineContext().ensureActive()
                 samples++
                 lastInfoMs = session.report(prev, curr, lastInfoMs)
                 prev = curr
             }
         } finally {
             // Cancellation (foreground) lands here; plain non-suspending logging is fine.
-            try {
-                log.info("$PREFIX stopped (app in foreground) after {} samples", samples)
-            } catch (_: Throwable) {
+            if (announced) {
+                try {
+                    log.info("$PREFIX stopped (app in foreground) after {} samples", samples)
+                } catch (_: Throwable) {
+                }
             }
         }
     }
@@ -165,24 +194,50 @@ object ThreadCpuSampler {
         private val buffer = ByteArray(STAT_BUFFER_BYTES)
         private val taskDir = File("/proc/self/task")
 
-        fun snapshot(): Snapshot? = try {
+        /**
+         * Reads the process and every thread; null if the process line itself is
+         * unreadable. Throws [CancellationException] if cancelled mid-scan, so a
+         * partial scan is never reported.
+         */
+        suspend fun snapshot(): Snapshot? = try {
             val wall = SystemClock.elapsedRealtime()
             val up = SystemClock.uptimeMillis()
-            val process = readFile("/proc/self/stat")?.let(ThreadCpuStats::parseStatLine)
+            val tally = ScanTally()
+            val processLine = readFile("/proc/self/stat", tally)
+            val process = processLine?.let(ThreadCpuStats::parseStatLine)
             if (process == null) {
+                val why = tally.firstError?.toString() ?: if (processLine == null) "unreadable" else "unparsable"
+                logQuietly("/proc/self/stat $why")
                 null
             } else {
-                val tids = taskDir.list() ?: emptyArray()
+                // list() returns null (or throws) when the dir can't be read: that's
+                // blindness, flagged on the line, not a process with no threads.
+                val tids = try {
+                    taskDir.list()
+                } catch (t: Throwable) {
+                    tally.listFailed(t)
+                    null
+                } ?: run {
+                    if (!tally.listFailed) tally.listFailed(null)
+                    emptyArray()
+                }
                 val threads = HashMap<Int, ThreadStat>(tids.size * 2)
+                val ctx = currentCoroutineContext()
                 for (tid in tids) {
-                    // A thread that exited between list() and read is simply skipped.
-                    val stat = readFile("/proc/self/task/$tid/stat")?.let(ThreadCpuStats::parseStatLine)
+                    ctx.ensureActive()
+                    // A thread that exited between list() and read is simply skipped;
+                    // any other failure or a rejected line is counted in `tally`.
+                    val stat = readFile("/proc/self/task/$tid/stat", tally)?.let(tally::parse)
                     if (stat != null) threads[stat.tid] = stat
                 }
                 // `wall` was taken just before the first read, so this spans every read.
                 val scanMs = SystemClock.elapsedRealtime() - wall
-                Snapshot(wall, up, process.ticks, threads, scanMs)
+                // One log per scan at most, not one per unreadable thread.
+                tally.firstError?.let { logQuietly("unreadable thread stats (first error)", it) }
+                Snapshot(wall, up, process.ticks, threads, scanMs, tally.readErrors, tally.badStats, tally.listFailed)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (t: Throwable) {
             logQuietly("snapshot failed", t)
             null
@@ -213,6 +268,8 @@ object ThreadCpuSampler {
                         lastInfoMs
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (t: Throwable) {
                 logQuietly("report failed", t)
                 lastInfoMs
@@ -253,8 +310,11 @@ object ThreadCpuSampler {
             }
         }
 
-        /** Reads a small /proc file into the reused buffer; null if gone/unreadable. */
-        private fun readFile(path: String): String? = try {
+        /**
+         * Reads a small /proc file into the reused buffer; null if gone/unreadable.
+         * A failure is handed to [tally] (which ignores exited threads) when given.
+         */
+        private fun readFile(path: String, tally: ScanTally? = null): String? = try {
             FileInputStream(path).use { input ->
                 var total = 0
                 while (total < buffer.size) {
@@ -264,7 +324,8 @@ object ThreadCpuSampler {
                 }
                 String(buffer, 0, total, Charsets.UTF_8)
             }
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            tally?.readFailed(t)
             null
         }
     }
@@ -272,6 +333,13 @@ object ThreadCpuSampler {
     private fun logQuietly(what: String, t: Throwable) {
         try {
             log.debug("$PREFIX {}: {}", what, t.toString())
+        } catch (_: Throwable) {
+        }
+    }
+
+    private fun logQuietly(what: String) {
+        try {
+            log.debug("$PREFIX {}", what)
         } catch (_: Throwable) {
         }
     }

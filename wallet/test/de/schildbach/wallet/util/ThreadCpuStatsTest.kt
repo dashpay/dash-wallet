@@ -196,6 +196,62 @@ class ThreadCpuStatsTest {
         assertTrue(ThreadCpuStats.isSlowScan(ThreadCpuStats.SLOW_SCAN_MS + 1))
     }
 
+    // ── blind spots (unreadable / rejected thread stats) ─────────────
+
+    @Test
+    fun `blind-spot fields are absent when zero`() {
+        val prev = snap(0, 0, stat(1, "main", 0))
+        val curr = Snapshot(60_000, 60_000, 100, mapOf(1 to stat(1, "main", 100)), 0, readErrors = 0, badStats = 0)
+        val line = ThreadCpuStats.formatLine(ThreadCpuStats.diff(prev, curr), clkTck)
+        assertEquals("proc=1.7% cpu=1000ms wall=60.0s up=60.0s scan=0ms thr=1 top=[1 main S 1000ms]", line)
+    }
+
+    @Test
+    fun `blind-spot fields appear when nonzero, before SLOW_SCAN`() {
+        val prev = snap(0, 0, stat(1, "main", 0))
+        val curr = Snapshot(
+            60_000, 60_000, 100, emptyMap(), 6_000,
+            readErrors = 3, badStats = 2, listFailed = true
+        )
+        val report = ThreadCpuStats.diff(prev, curr)
+        assertEquals(3, report.readErrors)
+        assertEquals(2, report.badStats)
+        assertTrue(report.listFailed)
+        assertEquals(
+            "proc=1.7% cpu=1000ms wall=60.0s up=60.0s scan=6000ms thr=0 top=[] churn=+0 -1[1 main] " +
+                "unattributed=1000ms readErr=3 badStat=2 TASK_LIST_FAILED SLOW_SCAN",
+            ThreadCpuStats.formatLine(report, clkTck)
+        )
+    }
+
+    @Test
+    fun `tally counts a rejected stat line and keeps a good one`() {
+        val tally = ThreadCpuStats.ScanTally()
+        assertNull(tally.parse("12 (x) S 1 2 3"))
+        assertEquals(4321, tally.parse(statLine(4321, "main", 'S', 1, 2))?.tid)
+        assertEquals(1, tally.badStats)
+        assertEquals(0, tally.readErrors)
+    }
+
+    @Test
+    fun `tally ignores exited threads but counts other read failures, keeping the first`() {
+        val tally = ThreadCpuStats.ScanTally()
+        tally.readFailed(java.io.FileNotFoundException("/proc/self/task/9/stat: open failed: ENOENT (No such file or directory)"))
+        tally.readFailed(java.io.IOException("read failed: ESRCH (No such process)"))
+        tally.readFailed(java.io.FileNotFoundException("/proc/self/task/9/stat (No such file or directory)"))
+        assertEquals(0, tally.readErrors)
+        assertNull(tally.firstError)
+
+        val denied = java.io.FileNotFoundException("/proc/self/task/7/stat: open failed: EACCES (Permission denied)")
+        tally.readFailed(denied)
+        tally.readFailed(java.io.IOException("EIO"))
+        assertEquals(2, tally.readErrors)
+        assertEquals(denied, tally.firstError)
+        assertFalse(tally.listFailed)
+        tally.listFailed(null)
+        assertTrue(tally.listFailed)
+    }
+
     @Test
     fun `java names match truncated comm`() {
         assertTrue(ThreadCpuStats.javaNameMatchesComm("DefaultDispatcher-worker-3", "DefaultDispatch"))
