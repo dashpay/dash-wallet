@@ -23,8 +23,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.isTransactionPending
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.isInsufficientMoney
@@ -70,6 +70,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
     val onFailure = SingleLiveEvent<String?>()
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
+
+    /** The sale's Dash send may have gone out; the screen must not offer a retry. */
+    val onPaymentOutcomeUnknown = SingleLiveEvent<Unit>()
 
     var isFirstTime = true
 
@@ -209,8 +212,10 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                     _showLoading.value = false
                     getUserAccountAddressFailedCallback.call()
                 } else {
-                    sendDashToCoinbase(coin, result.value)
-                    sellSwapSuccessState.call()
+                    val outcomeUnknown = sendDashToCoinbase(coin, result.value)
+                    if (!outcomeUnknown) {
+                        sellSwapSuccessState.call()
+                    }
                     _showLoading.value = false
                 }
             }
@@ -221,15 +226,23 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Returns true when the send's outcome is unknown ([onPaymentOutcomeUnknown] was raised),
+     * so the caller must not report the sale as successful either.
+     */
     private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String): Boolean {
         val address = addressInfo.trim { it <= ' ' }
         return try {
-            val txId = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
+            sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
             transactionMetadataProvider.markAddressAsTransferOutAsync(
                 address,
                 ServiceName.Coinbase
             )
-            walletDataProvider.isTransactionPending(txId)
+            false
+        } catch (x: PaymentSubmissionPendingException) {
+            onPaymentOutcomeUnknown.call()
+            x.printStackTrace()
+            true
         } catch (x: Exception) {
             if (x.isInsufficientMoney) {
                 onInsufficientMoneyCallback.call()

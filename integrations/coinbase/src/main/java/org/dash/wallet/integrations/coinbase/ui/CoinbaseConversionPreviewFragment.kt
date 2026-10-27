@@ -200,6 +200,21 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             ).show(requireActivity())
         }
 
+        viewModel.onPaymentOutcomeUnknown.observe(viewLifecycleOwner) {
+            // May have been sent: no retry, leave the flow for home and its history.
+            AdaptiveDialog.create(
+                R.drawable.ic_warning,
+                getString(R.string.payment_submission_pending_title),
+                getString(R.string.payment_outcome_unknown_message),
+                getString(R.string.close)
+            ).show(requireActivity()) {
+                if (isAdded) {
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, false)
+                }
+            }
+        }
+
         viewModel.onFailure.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
                 R.drawable.ic_error,

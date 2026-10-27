@@ -161,6 +161,11 @@ class SendSignerLockedException(message: String) : IllegalStateException(message
  * network, and the result carries no txid. The engine keeps the inputs reserved (until its
  * TTL sweep), so the send UI reports "may have been sent" and never offers a retry — a new
  * send could select different inputs and pay twice. [cause] is the SDK's failure.
+ *
+ * Recovery is only that reservation: no signed transaction is kept and nothing watches the
+ * network to commit the payment when it is seen. If it did go out, sync picks it up; once the
+ * TTL sweep frees the inputs, a resend could pick different ones and pay twice. [txId] is
+ * always [UNKNOWN_TXID].
  */
 class SdkSendOutcomeUnknownException(cause: Throwable) : PaymentSubmissionPendingException(
     txId = UNKNOWN_TXID,
