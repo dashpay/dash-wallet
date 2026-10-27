@@ -205,6 +205,7 @@ class MainViewModelTest {
     private val uiConfigMock = mockk<WalletUIConfig> {
         every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
+        every { observePreservingErrors(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
     }
 
     private val identityRepository = mockk<IdentityRepository>() {
@@ -463,7 +464,7 @@ class MainViewModelTest {
     @Test(timeout = 1000)
     fun `hideBalance value is current even with no active collector`() {
         val autoHideBalance = MutableStateFlow(false)
-        every { uiConfigMock.observe(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
 
         val viewModel = MainViewModel(
             analyticsService,
@@ -500,6 +501,65 @@ class MainViewModelTest {
         assertEquals(false, viewModel.hideBalance.value)
 
         autoHideBalance.value = true
+
+        assertEquals(true, viewModel.hideBalance.value)
+    }
+
+    /**
+     * Privacy regression guard (MO-1107), companion to the test above.
+     *
+     * `observe()`'s own IOException rescue ([org.dash.wallet.common.data.BaseConfig.data])
+     * emits [kotlinx.coroutines.flow.emptyPreferences] once and then completes the flow —
+     * harmless under the old `WhileSubscribed(5000)` sharing (the next resubscribe restarts
+     * it), but under `Eagerly`'s one-shot collection a completed upstream would freeze
+     * [MainViewModel.hideBalance] forever at whatever it last held, including a real,
+     * unmasked `false`. [MainViewModel] reads [WalletUIConfig.AUTO_HIDE_BALANCE] through
+     * `observePreservingErrors` (lets the failure through as a real exception instead of
+     * swallowing it) with a `retryWhen` that fails closed and keeps retrying — the same
+     * shape as `homeShieldedBalanceFlow`
+     * (see `de.schildbach.wallet.ui.main.HomeShieldedBalanceTest.anUnreadableFlag_isPending_notZero_andRecovers`).
+     * This stubs a real value followed by a read failure and asserts the result is the
+     * fail-closed `true`, not the stale `false` frozen in place.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance fails closed, not frozen unmasked, when the preference read fails`() {
+        val autoHideBalance = kotlinx.coroutines.flow.flow {
+            emit(false)
+            throw java.io.IOException("datastore unreadable")
+        }
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            crowdNodeApi,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
 
         assertEquals(true, viewModel.hideBalance.value)
     }
