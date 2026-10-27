@@ -70,6 +70,10 @@ plugins {
 }
 
 allprojects {
+    dependencies.components.withModule('org.dashj:dashj-core') {
+        // The forced timestamped build is immutable for this build; verify its checksums.
+        changing = false
+    }
     repositories {
         google()
         if (rootProject.hasProperty('platformSdkRepository')) {

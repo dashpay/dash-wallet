@@ -276,8 +276,13 @@ Central Portal snapshots repository without Maven Local. Its JAR SHA-256 is:
 1f2afb88ca62ab910554e3aa9bf40c240111fc3d3379da152bf59bc19e7828bd
 ```
 
-This records the verified bytes, not checksum enforcement. Snapshot retention may
-still remove that exact build; a retained release remains preferable long-term.
+Gradle now enforces the reviewed JAR, POM, module metadata and source JAR hashes in
+gradle/verification-metadata.xml. The pinned DashJ component is marked non-changing
+so timestamped snapshot resolution participates in checksum verification. Other
+dependencies retain their existing policy; this is not a whole-project dependency
+audit. Do not use lenient/off verification or regenerate hashes to bypass a mismatch.
+Snapshot retention may still remove that exact build; a retained release remains
+preferable long-term.
 See the SDK's docs/dashj-build-pin.md for publication provenance.
 
 Yappr's profile and callback consumer already support `ac=failed`:
@@ -436,3 +441,18 @@ and would otherwise make every reload fail. A regression invokes the real SDK
 constructor and real initBlockchainIdentity implementation, first loading
 IDENTITY_REGISTERING metadata and then replacing it with IDENTITY_REGISTERED
 metadata. This complements the ViewModel integration test's stubbed construction.
+
+ConnectionsFragment supplies its own uiState and Retry handler directly to the
+screen, matching the owner used by scanning, dialogs, wallet-lock binding and
+connection actions. The screen no longer has an implicit Hilt ViewModel lookup.
+The rendered Fragment regression clicks the actual Retry button, observes restored
+rows and invokes the same model's connection-details handler. It supplies test
+context/model fixtures without replacing the Fragment's content or screen wiring.
+
+Verification passed 654 tests with 99 conditional skips and no failures across
+devnet, testnet and production, plus both debug APK builds, production-release
+Kotlin compilation and ktlintCheck. The actual wallet build rejected an intentionally
+wrong DashJ JAR checksum in the common module's compile classpath before compilation;
+the approved checksum was restored and the positive builds passed. An isolated
+Gradle probe also accepted the authentic publication and rejected a wrong checksum.
+No live-device, funded-network or signed-release test is claimed.

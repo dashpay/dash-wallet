@@ -70,6 +70,8 @@ class ConnectionsFragment : Fragment() {
             setContent {
                 DashWalletTheme {
                     ConnectionsScreen(
+                        uiStateFlow = viewModel.uiState,
+                        onRetryClick = viewModel::retryConnections,
                         onBackClick = { findNavController().popBackStack() },
                         onScanClick = { launchScanner() },
                         onConnectionClick = { connection ->

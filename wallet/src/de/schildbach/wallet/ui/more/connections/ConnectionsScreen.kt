@@ -46,7 +46,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.DashButton
@@ -68,27 +67,6 @@ import java.util.Locale
  * DashConnect "Connections" screen (Figma: 5787:50880 empty state;
  * 5775:51511 / 5775:51483 / 5775:51451 list states).
  */
-@Composable
-fun ConnectionsScreen(
-    onBackClick: () -> Unit = {},
-    onScanClick: () -> Unit = {},
-    onConnectionClick: (DAppConnection) -> Unit = {},
-    onConnectionQrClick: (DAppConnection) -> Unit = {},
-    onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
-) {
-    val viewModel: ConnectionsViewModel = hiltViewModel()
-
-    ConnectionsScreen(
-        uiStateFlow = viewModel.uiState,
-        onRetryClick = viewModel::retryConnections,
-        onBackClick = onBackClick,
-        onScanClick = onScanClick,
-        onConnectionClick = onConnectionClick,
-        onConnectionQrClick = onConnectionQrClick,
-        onConnectionToggle = onConnectionToggle
-    )
-}
-
 @Composable
 fun ConnectionsScreen(
     uiStateFlow: StateFlow<ConnectionsUIState>,

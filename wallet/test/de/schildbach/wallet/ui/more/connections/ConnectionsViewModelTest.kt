@@ -1292,6 +1292,68 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.requiresRevocation)
     }
 
+    @Test fun `fragment rendered Retry recovers the same model used by connection actions`() {
+        ShadowChoreographer.setPaused(false)
+        val connection = DAppConnection("saved", "Saved app", "", ConnectionStatus.ACTIVE, 1)
+        var available = false
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
+            check(available) { "Records unavailable" }
+            emit(listOf(connection))
+        }
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        val controller = Robolectric.buildActivity(ApprovalTestActivity::class.java).setup()
+        val activity = controller.get()
+        val host = ApprovalTestParent()
+        ApprovalTestParent.model = model
+        activity.supportFragmentManager.beginTransaction().add(host, "host").commitNow()
+        val fragment = ConnectionsFragment()
+        // Render the real Fragment content without replacing its screen or state wiring.
+        ReflectionHelpers.setField(fragment, "mHost", ReflectionHelpers.getField<Any>(host, "mHost"))
+        ReflectionHelpers.setField(fragment, "componentContext", android.content.ContextWrapper(activity))
+        ReflectionHelpers.setField(fragment, "viewModel\$delegate", lazyOf(model))
+        val view = fragment.onCreateView(activity.layoutInflater, null, null) as androidx.compose.ui.platform.ComposeView
+        activity.setContentView(view)
+        controller.visible()
+        fun render() {
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            view.measure(android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(1920, android.view.View.MeasureSpec.EXACTLY))
+            view.layout(0, 0, 1080, 1920)
+        }
+        fun nodes(node: androidx.compose.ui.semantics.SemanticsNode): List<androidx.compose.ui.semantics.SemanticsNode> =
+            listOf(node) + node.children.flatMap { nodes(it) }
+        try {
+            render()
+            val owner = ReflectionHelpers.callInstanceMethod<androidx.compose.ui.semantics.SemanticsOwner>(
+                view.getChildAt(0), "getSemanticsOwner")
+            val retryText = activity.getString(de.schildbach.wallet_test.R.string.dash_connect_records_retry)
+            val retry = nodes(owner.rootSemanticsNode).first { node ->
+                node.config.contains(androidx.compose.ui.semantics.SemanticsProperties.Text) &&
+                    node.config[androidx.compose.ui.semantics.SemanticsProperties.Text].any { it.text == retryText }
+            }
+            val button = generateSequence(retry) { it.parent }.first {
+                it.config.contains(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+            }
+            available = true
+            assertTrue(button.config[androidx.compose.ui.semantics.SemanticsActions.OnClick].action!!.invoke())
+            dispatcher.scheduler.runCurrent()
+            assertEquals(ConnectionRecordsStatus.READY, model.uiState.value.recordsStatus)
+            assertEquals(listOf(connection), model.uiState.value.connections)
+            render()
+            assertTrue(nodes(owner.rootSemanticsNode).any { node ->
+                node.config.contains(androidx.compose.ui.semantics.SemanticsProperties.Text) &&
+                    node.config[androidx.compose.ui.semantics.SemanticsProperties.Text].any { it.text == connection.name }
+            })
+            coEvery { repository.connectionDetails(connection.id, connection.scope) } returns "Same owner"
+            assertEquals("Same owner", kotlinx.coroutines.runBlocking { model.connectionDetails(connection) })
+        } finally {
+            view.disposeComposition()
+            controller.pause().stop().destroy()
+        }
+    }
+
     @Test fun `approval sheet is restored during operation and retains a later failure`() {
         // Do not auto-advance an infinite loading animation while restoring the activity.
         ShadowChoreographer.setPaused(true)
