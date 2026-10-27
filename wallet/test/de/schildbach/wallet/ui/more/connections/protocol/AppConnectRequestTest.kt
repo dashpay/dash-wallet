@@ -98,6 +98,30 @@ class AppConnectRequestTest {
         }
     }
 
+    private fun withLabel(label: String): ByteArray {
+        val original = body()
+        val encoded = label.toByteArray(Charsets.UTF_8)
+        val originalLength = original[66].toInt() and 255
+        return original.copyOfRange(0, 66) + byteArrayOf(encoded.size.toByte()) + encoded +
+            original.copyOfRange(67 + originalLength, original.size)
+    }
+
+    @Test fun `reject every Unicode format code point and line separator in app labels`() {
+        for (codePoint in 0..Character.MAX_CODE_POINT) {
+            if (Character.getType(codePoint) != Character.FORMAT.toInt() && codePoint !in 0x2028..0x2029) continue
+            val label = "Yap" + String(Character.toChars(codePoint)) + "pr"
+            assertThrows("Accepted U+${codePoint.toString(16)}", DashConnectUriException::class.java) {
+                DashConnectUri.parseKeyRequest(uri(withLabel(label)))
+            }
+        }
+    }
+
+    @Test fun `ordinary international and supplementary app labels remain valid`() {
+        for (label in listOf("Yappr", "Caf\u00e9", "\u65e5\u672c\u8a9e", "Wallet \ud83d\udcb3")) {
+            assertEquals(label, DashConnectUri.parseKeyRequest(uri(withLabel(label))).label)
+        }
+    }
+
     private fun tlv(type: Int, value: ByteArray) = byteArrayOf(type.toByte(), value.size.toByte()) + value
     private fun prefix() = body().copyOfRange(0, 72)
     private fun grant(kind: Int = 0, level: Int = 2, budget: ByteArray = ByteArray(8), suffix: ByteArray = byteArrayOf()) =

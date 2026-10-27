@@ -59,8 +59,8 @@ internal object AppConnectParser {
         val label = Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT)
             .decode(ByteBuffer.wrap(bytes, 67, labelLength)).toString()
-        require(label.none { it.code in 0..31 || it.code in 127..159 || it == '\u061c' ||
-            it.code in 0x200e..0x200f || it.code in 0x202a..0x202e || it.code in 0x2066..0x2069 }) {
+        require(label.codePoints().noneMatch { it in 0..31 || it in 127..159 || it == 0x2028 || it == 0x2029 ||
+            Character.getType(it) == Character.FORMAT.toInt() }) {
             "Unsafe app label"
         }
         val auth = mutableListOf<AuthBinding>()
