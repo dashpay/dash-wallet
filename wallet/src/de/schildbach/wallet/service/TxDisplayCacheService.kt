@@ -195,8 +195,11 @@ class TxDisplayCacheService @Inject constructor(
     /**
      * Unfiltered snapshot backing [_cachedRows] — kept so a direction-filter change can
      * re-derive the fast-path rows (see [buildCachedRows]) without a fresh Room read.
+     * Volatile like [contactsByTxId]/[metadata]: [clearInMemoryCache] documents itself as
+     * callable from any thread, while [buildCachedRows] reads this field on [serviceScope]'s
+     * own thread.
      */
-    private var rawCachedEntries: List<TxDisplayCacheEntry> = emptyList()
+    @Volatile private var rawCachedEntries: List<TxDisplayCacheEntry> = emptyList()
 
     /** Applies the same `filterFlags` bitmask test as [TxDisplayCacheDao.pagingSource]'s WHERE clause. */
     private suspend fun buildCachedRows(entries: List<TxDisplayCacheEntry>, filterFlag: Int): List<HistoryRowView> {
