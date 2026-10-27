@@ -193,13 +193,16 @@ class TxDisplayCacheService @Inject constructor(
     val cachedRows: StateFlow<List<HistoryRowView>> = _cachedRows.asStateFlow()
 
     /**
-     * Unfiltered snapshot backing [_cachedRows] — kept so a direction-filter change can
-     * re-derive the fast-path rows (see [buildCachedRows]) without a fresh Room read.
-     * Volatile like [contactsByTxId]/[metadata]: [clearInMemoryCache] documents itself as
-     * callable from any thread, while [buildCachedRows] reads this field on [serviceScope]'s
-     * own thread.
+     * Unfiltered snapshot backing [_cachedRows] — kept so a direction-filter change (or the
+     * startup load) can re-derive the fast-path rows (see [buildCachedRows]) without a fresh
+     * Room read. A [MutableStateFlow], not a plain field: combined with [_currentFilter] below
+     * through `flatMapLatest`, a newer entries/filter combination cancels whatever
+     * [buildCachedRows] call is still in flight for the previous one (it can suspend on a cold
+     * icon lookup), so a slow build can never publish a result that is already stale by the
+     * time it finishes — e.g. the startup load and a direction-filter change racing as two
+     * independent writers of [_cachedRows].
      */
-    @Volatile private var rawCachedEntries: List<TxDisplayCacheEntry> = emptyList()
+    private val _rawCachedEntries = MutableStateFlow<List<TxDisplayCacheEntry>>(emptyList())
 
     /** Applies the same `filterFlags` bitmask test as [TxDisplayCacheDao.pagingSource]'s WHERE clause. */
     private suspend fun buildCachedRows(entries: List<TxDisplayCacheEntry>, filterFlag: Int): List<HistoryRowView> {
@@ -277,24 +280,32 @@ class TxDisplayCacheService @Inject constructor(
                 System.currentTimeMillis() - t0
             )
             if (cachedEntries.isNotEmpty()) {
-                rawCachedEntries = cachedEntries
-                val historyRows = buildCachedRows(cachedEntries, _currentFilter.value.toFilterFlag())
+                _rawCachedEntries.value = cachedEntries
+            }
+        }
+
+        // Single authoritative pipeline for the fast-path cache snapshot: re-derives
+        // _cachedRows whenever the raw entries (startup load, a reset) or the direction
+        // filter change. flatMapLatest cancels whichever buildCachedRows call is still in
+        // flight for the previous entries/filter combination the moment a newer one arrives,
+        // so the startup build and a direction-filter change (or a reset) can never finish
+        // out of order and overwrite each other's _cachedRows.value with stale rows.
+        combine(_rawCachedEntries, _currentFilter) { entries, direction -> entries to direction }
+            .flatMapLatest { (entries, direction) ->
+                flowOf(entries to buildCachedRows(entries, direction.toFilterFlag()))
+            }
+            .onEach { (entries, historyRows) ->
                 // Always populate the cache adapter, regardless of which coroutine won
                 // the serviceScope race (_txDataSource may already be RoomLive if
-                // getCount() completed before getAll()).
+                // getCount() completed before getAll()). Gated on the raw entries (not
+                // historyRows): an active filter that happens to match none of them must
+                // still flip the cache adapter live and mark transactionsLoaded.
                 _cachedRows.value = historyRows
-                if (_txDataSource.value is TxDataSource.Empty) {
+                if (entries.isNotEmpty() && _txDataSource.value is TxDataSource.Empty) {
                     _txDataSource.value = TxDataSource.PrebuiltCache(historyRows)
                     _transactionsLoaded.value = true
                 }
             }
-        }
-
-        // Re-derive the fast-path cache snapshot whenever the direction filter changes, so
-        // the cacheAdapter (still visible until the live Paging adapter takes over) honors
-        // the same choice instead of always showing every row regardless of _currentFilter.
-        _currentFilter
-            .onEach { direction -> _cachedRows.value = buildCachedRows(rawCachedEntries, direction.toFilterFlag()) }
             .launchIn(serviceScope)
 
         combine(_currentFilter, walletData.observeWallet()) { direction, wallet -> direction to wallet }
@@ -543,7 +554,7 @@ class TxDisplayCacheService @Inject constructor(
                 if (keptHistoryAcrossReset("dashj wallet reset")) return@onEach
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
-                rawCachedEntries = emptyList()
+                _rawCachedEntries.value = emptyList()
                 _cachedRows.value = emptyList()
                 txDisplayCacheDao.deleteAll()
                 txGroupCacheDao.deleteAll()
@@ -807,7 +818,7 @@ class TxDisplayCacheService @Inject constructor(
      * No Room I/O — safe to call from any thread including the main thread.
      */
     fun clearInMemoryCache() {
-        rawCachedEntries = emptyList()
+        _rawCachedEntries.value = emptyList()
         _cachedRows.value = emptyList()
     }
 
@@ -856,7 +867,7 @@ class TxDisplayCacheService @Inject constructor(
         txDisplayCacheDao.deleteAll()
         txGroupCacheDao.deleteAll()
         wrappedTransactionList = emptyList()
-        rawCachedEntries = emptyList()
+        _rawCachedEntries.value = emptyList()
         _cachedRows.value = emptyList()
         // Invalidate the current PagingSource so it re-queries the now-empty table.
         // Do NOT set _txDataSource = Empty: that would stop the Pager, preventing
