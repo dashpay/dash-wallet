@@ -18,8 +18,10 @@
 package de.schildbach.wallet.ui.shielded
 
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.Fiat
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.Locale
 
 /** Formatting helpers backing the More-screen balance cards. */
 class ShieldedUiFormatTest {
@@ -39,5 +41,21 @@ class ShieldedUiFormatTest {
     fun `dash display string keeps two decimals minimum`() {
         assertEquals("2.00", Dash.parse("2").toDisplayString())
         assertEquals("115.50", Dash.parse("115.5").toDisplayString())
+    }
+
+    @Test
+    fun `fiat display without code rounds to two decimals`() {
+        // MO-1111: the amount-entry secondary line must round like the rest of the
+        // app (e.g. the confirm sheet), not show raw conversion precision. The
+        // underlying format is locale-dependent, so pin it for a deterministic result.
+        val originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+        try {
+            assertEquals("232.74", Fiat.parseFiat("USD", "232.7405").toDisplayNoCode())
+            assertEquals("0.93", Fiat.parseFiat("USD", "0.93").toDisplayNoCode())
+            assertEquals("5.00", Fiat.parseFiat("USD", "5").toDisplayNoCode())
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 }

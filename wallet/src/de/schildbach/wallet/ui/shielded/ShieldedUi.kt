@@ -22,6 +22,7 @@ import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.toFormattedStringNoCode
 import java.math.BigDecimal
 import java.text.NumberFormat
 import de.schildbach.wallet.util.format
@@ -172,6 +173,12 @@ fun Fiat.toDashAt(rate: Fiat?): Dash? = rate?.let {
 
 /** "$50.00"-style formatted fiat string. */
 fun Fiat.toDisplay(): String = toFormattedString()
+
+/**
+ * "50.00"-style formatted fiat string, two decimals and no currency symbol — for the
+ * amount-entry secondary line, which renders its own currency symbol separately.
+ */
+fun Fiat.toDisplayNoCode(): String = toFormattedStringNoCode()
 
 /** Ellipsized middle of a long address for one-line display. */
 fun String.ellipsizeAddress(head: Int = 10, tail: Int = 6): String =
