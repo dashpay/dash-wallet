@@ -172,11 +172,6 @@ Requests:
   to return. `wallet_checker.rs` already holds the fully-keyed `AccountType`, so either it
   does the lookup itself, or it passes that keyed value down — but the fieldless helper cannot
   be the place the decision is made.
-
-  (An earlier revision of this section asked for exactly that helper change. The note at the
-  top of this issue corrected the root cause; this bullet had not been brought in line, so the
-  issue as filed still points implementers at an API change that cannot fix the defect.
-  rust-dashcore#1032 needs a comment saying so.)
 - Replace the hardcoded `20` with a named constant. Note `DEFAULT_CONTACT_GAP_LIMIT = 10`
   exists in `rs-platform-wallet/src/wallet/identity/crypto/dip14.rs:254` (quoting DIP-15's
   recommendation) but has **no consumer** — neither it nor `derive_contact_payment_address`

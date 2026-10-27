@@ -17,10 +17,14 @@
 package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.WalletUnlock
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
@@ -65,7 +69,9 @@ class PlatformSyncEngineRestartTest {
     /** The engine kick is asynchronous (`syncScope.launch { bindJob.join(); … }`). */
     private val kickTimeoutMs = 10_000L
 
-    private fun service() = PlatformSynchronizationService(
+    private fun service(
+        sdkWalletBinder: SdkWalletBinder = mockk(relaxed = true)
+    ) = PlatformSynchronizationService(
         platform = mockk(relaxed = true),
         platformRepo = mockk(relaxed = true),
         analytics = mockk(relaxed = true),
@@ -90,7 +96,7 @@ class PlatformSyncEngineRestartTest {
         sdkProfileQueries = mockk(relaxed = true),
         sdkUsernameQueries = mockk(relaxed = true),
         sdkIdentityVerifyQueries = mockk(relaxed = true),
-        sdkWalletBinder = mockk(relaxed = true),
+        sdkWalletBinder = sdkWalletBinder,
         nonInteractiveWalletUnlock = mockk(relaxed = true),
         l1ShadowSyncService = l1ShadowSyncService,
         shieldedBalanceService = shieldedBalanceService,
@@ -184,18 +190,45 @@ class PlatformSyncEngineRestartTest {
      * teardown) reinstates the latch after the second teardown, which is
      * precisely how MO-995 presented: the first service restart of the
      * process looked fine, later ones silently had no SPV.
+     *
+     * Each cycle waits for its own kick to land before the next stop. A stop
+     * cancels a kick still waiting on its bind (see
+     * [stopSdkEngines_cancelsAKickStillWaitingOnItsBind]), so back-to-back
+     * cycles legitimately collapse into fewer starts; asserting three starts
+     * without waiting raced each kick against the next cycle's stop.
      */
     @Test
     fun resume_isRearmableAcrossRepeatedStopRestartCycles() = runBlocking {
         val service = service()
 
-        repeat(3) {
+        for (cycle in 1..3) {
             service.stopSdkEngines()
             service.resume()
+            coVerify(timeout = kickTimeoutMs, exactly = cycle) { l1ShadowSyncService.startIfEnabled() }
         }
 
-        coVerify(timeout = kickTimeoutMs, exactly = 3) { l1ShadowSyncService.startIfEnabled() }
         coVerify(exactly = 3) { l1ShadowSyncService.stop() }
+        Unit
+    }
+
+    /**
+     * The other half of that contract (review 2026-09-24): a stop that lands
+     * while a kick is still waiting on its bind cancels the kick, so no engine
+     * is started behind a service that has just stopped its engines.
+     */
+    @Test
+    fun stopSdkEngines_cancelsAKickStillWaitingOnItsBind() = runBlocking {
+        val bind = CompletableDeferred<Unit>()
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        every { binder.bindInBackground(any<suspend () -> WalletUnlock?>()) } returns bind
+        val service = service(sdkWalletBinder = binder)
+
+        service.resume()
+        service.stopSdkEngines()
+        bind.complete(Unit)
+        delay(500)
+
+        coVerify(exactly = 0) { l1ShadowSyncService.startIfEnabled() }
         Unit
     }
 }

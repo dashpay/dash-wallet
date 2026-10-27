@@ -306,13 +306,20 @@ internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
  * live 1 Hz feed, which resets to [ShadowSyncProgress.IDLE] the moment the
  * engine stops — so IDLE IS the "stale/not running" state, no clock
  * needed):
- * - engine running: phase is not [ShadowSyncPhase.IDLE];
+ * - engine running and connected: phase is not [ShadowSyncPhase.IDLE] or
+ *   [ShadowSyncPhase.CONNECTING];
  * - no sync error: phase is not [ShadowSyncPhase.ERROR];
  * - chain view current: [ShadowSyncProgress.scanCaughtUpToTip] — the header
  *   chain is at a known tip AND the wallet-relevant filter scan has caught
  *   up to it. Deliberately NOT phase==SYNCED (a live shadow may never
  *   report it) and NOT dashj parity (retired above); an all-zero snapshot
- *   or a filter scan short of the tip still keeps the gate closed.
+ *   or a filter scan short of the tip still keeps the gate closed;
+ * - filter scan within [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the
+ *   tip: the HEIGHT rule, even where the display's aggregate rule says
+ *   caught up;
+ * - wallet cursor known: [ShadowSyncProgress.walletSyncedHeight] above 0;
+ * - block pipeline drained: not [ShadowSyncProgress.blockPipelineLagging],
+ *   and the wallet cursor within tolerance of the tip.
  *
  * Wallet binding is NOT re-checked here: every caller already preflights
  * the bound wallet, and an unbound wallet cannot produce a non-IDLE
@@ -323,11 +330,33 @@ internal fun evaluateWalletFundingGate(
 ): WalletFundingGate = when {
     progress.phase == ShadowSyncPhase.IDLE ->
         WalletFundingGate(false, "SDK L1 engine not running")
+    // Waiting for peers: after a route loss or a restart the snapshot can keep
+    // the previous session's heights, which would pass every height rule below
+    // while the engine cannot see a single new block (PastaClaw on #1632). The
+    // display already reads this phase as offline (SdkBlockchainStateMapper).
+    progress.phase == ShadowSyncPhase.CONNECTING ->
+        WalletFundingGate(false, "SDK L1 engine is waiting for peers")
     progress.phase == ShadowSyncPhase.ERROR ->
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
     !progress.scanCaughtUpToTip ->
         WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
-    // THIS GATE STARTS A SPEND, so it keeps the veto the DISPLAY predicate
+    // THIS GATE STARTS A SPEND, so it keeps the HEIGHT rule too.
+    // `scanCaughtUpToTip` also passes on the iOS aggregate rule, which
+    // tolerates a filter shortfall of up to 0.3% of chain height (~4,600
+    // blocks on testnet) — right for a label, wrong for funding: an unscanned
+    // block can hold a spend of a UTXO this wallet still reads unspent, or a
+    // receive the balance is missing. The cursor rules below close that gap
+    // too (an unknown cursor, or one the §34 stall parks with the filter
+    // cursor), but this check names the cause and does not depend on the
+    // cursor feed. The funds-safety argument of SCAN_TIP_TOLERANCE_BLOCKS
+    // needs the scan itself within tolerance.
+    // Measured against the HIGHEST tip the snapshot knows, not headerTarget
+    // alone: dash-spv restores the header target from the last peer report
+    // at engine start, which can sit below the stored header tip until a peer
+    // raises it, while the filter target is already that stored tip.
+    fundingTipHeight(progress) - progress.filterHeight > ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
+        WalletFundingGate(false, "SDK L1 filter scan is still short of the chain tip")
+    // …and it keeps the veto the DISPLAY predicate
     // dropped on 2026-09-21. `scanCaughtUpToTip` now also accepts the iOS
     // aggregate rule and no longer requires the block pipeline drained; that
     // is right for a label and wrong for funding. Matched blocks still being
@@ -335,12 +364,34 @@ internal fun evaluateWalletFundingGate(
     // wallet already spent still reads unspent, and a transfer built on it is
     // a double-spend the network rejects (the 48.86 DASH incident's shape).
     // The wallet cursor within tolerance of the tip is the evidence those
-    // blocks are through; until then the gate stays closed. Unknown cursor
-    // (0) never counts as lagging, so this cannot wedge a wallet at the tip.
-    progress.blockPipelineLagging ->
+    // blocks are through; until then the gate stays closed.
+    //
+    // An UNKNOWN cursor (0) is no evidence either way, so it closes too
+    // (PastaClaw on #1632: filters at the tip with the cursor unknown opened a
+    // spend over a UTXO view nothing proved current). It cannot wedge a synced
+    // wallet: the cursor is seeded at engine start from the SDK's durable
+    // `WalletEntity.syncedHeight`, and dash-spv emits `SyncHeightAdvanced` for
+    // every wallet a committed filter batch covered, matches or not, which is
+    // also what the durable value is written from. A fresh testnet wallet on
+    // the emulator (2026-10-24) logged a non-zero cursor from its first batch
+    // on, and its restart was seeded from the durable value. Unknown is left
+    // for a failed seed read before the next batch commits, or a wallet no
+    // batch has covered yet.
+    progress.walletSyncedHeight <= 0L ->
+        WalletFundingGate(false, "SDK L1 wallet scan cursor is not known yet")
+    // Measured against the same highest-known tip as the height rule above:
+    // `blockPipelineLagging` reads headerTarget alone, which a restart can
+    // leave below the stored tip while the filters already reach it.
+    progress.blockPipelineLagging ||
+        fundingTipHeight(progress) - progress.walletSyncedHeight >
+        ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
         WalletFundingGate(false, "SDK L1 block pipeline is still processing matched blocks")
     else -> WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip")
 }
+
+/** The highest chain tip a progress snapshot knows: the reference both spend-gate height checks measure against. */
+private fun fundingTipHeight(progress: ShadowSyncProgress): Long =
+    maxOf(progress.bestKnownTipHeight, progress.filterTarget)
 
 /**
  * Pure [ShieldedSyncStatus] decision — host-testable. [ready] is the bring-up
