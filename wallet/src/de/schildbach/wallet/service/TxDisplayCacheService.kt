@@ -193,11 +193,43 @@ class TxDisplayCacheService @Inject constructor(
     val cachedRows: StateFlow<List<HistoryRowView>> = _cachedRows.asStateFlow()
 
     /**
+     * Unfiltered snapshot backing [_cachedRows] — kept so a direction-filter change can
+     * re-derive the fast-path rows (see [buildCachedRows]) without a fresh Room read.
+     */
+    private var rawCachedEntries: List<TxDisplayCacheEntry> = emptyList()
+
+    /** Applies the same `filterFlags` bitmask test as [TxDisplayCacheDao.pagingSource]'s WHERE clause. */
+    private fun buildCachedRows(entries: List<TxDisplayCacheEntry>, filterFlag: Int): List<HistoryRowView> {
+        val contacts = contactsByTxId
+        val filtered = entries.filter { matchesFilterFlag(it.filterFlags, filterFlag) }
+        val historyRows = ArrayList<HistoryRowView>(filtered.size + 32)
+        var prevDate: LocalDate? = null
+        for (entry in filtered) {
+            val txRow = entry.toTransactionRowView(contacts[entry.rowId], iconBitmapForEntryCold(entry))
+            val date = Instant.ofEpochMilli(txRow.time).atZone(ZoneId.systemDefault()).toLocalDate()
+            if (date != prevDate) {
+                historyRows.add(HistoryRowView(null, date))
+                prevDate = date
+            }
+            historyRows.add(txRow)
+        }
+        return historyRows
+    }
+
+    /**
      * Live PagingData stream. Switches from empty → Room-live after the first
      * rebuild or display-cache hydration. cachedIn() keeps pages across recompositions.
+     *
+     * Keyed on [_liveFilterFlag] as well as [_txDataSource] (not just the latter): the flag
+     * is an Int, so an actual filter switch always changes it and reliably re-triggers
+     * flatMapLatest to build a fresh Pager/PagingSource for the new flag — unlike gating this
+     * only on [_txDataSource], whose RoomLive branch is a singleton `object` and so a
+     * re-assignment of the same value is silently conflated by the StateFlow (no re-emission).
      */
-    val transactions: Flow<PagingData<HistoryRowView>> = _txDataSource
-        .flatMapLatest { source ->
+    val transactions: Flow<PagingData<HistoryRowView>> = combine(
+        _txDataSource, _liveFilterFlag
+    ) { source, flag -> source to flag }
+        .flatMapLatest { (source, flag) ->
             when (source) {
                 is TxDataSource.Empty -> flowOf(PagingData.empty())
                 is TxDataSource.PrebuiltCache -> flowOf(PagingData.empty())
@@ -205,7 +237,7 @@ class TxDisplayCacheService @Inject constructor(
                     Pager(
                         config = pagingConfig,
                         pagingSourceFactory = {
-                            txDisplayCacheDao.pagingSource(_liveFilterFlag.value)
+                            txDisplayCacheDao.pagingSource(flag)
                                 .also { _currentPagingSource.value = it }
                         }
                     ).flow.map { pagingData ->
@@ -235,29 +267,15 @@ class TxDisplayCacheService @Inject constructor(
         // Load display cache for fast startup
         serviceScope.launch {
             val t0 = System.currentTimeMillis()
-            val cachedRows = txDisplayCacheDao.getAll()
+            val cachedEntries = txDisplayCacheDao.getAll()
             log.info(
                 "STARTUP tx_display_cache loaded {} rows in {}ms",
-                cachedRows.size,
+                cachedEntries.size,
                 System.currentTimeMillis() - t0
             )
-            if (cachedRows.isNotEmpty()) {
-                val contacts = contactsByTxId
-                val historyRows = ArrayList<HistoryRowView>(cachedRows.size + 32)
-                var prevDate: LocalDate? = null
-                for (entry in cachedRows) {
-                    val txRow = entry.toTransactionRowView(
-                        contacts[entry.rowId],
-                        iconBitmapForEntryCold(entry)
-                    )
-                    val date = Instant.ofEpochMilli(txRow.time)
-                        .atZone(ZoneId.systemDefault()).toLocalDate()
-                    if (date != prevDate) {
-                        historyRows.add(HistoryRowView(null, date))
-                        prevDate = date
-                    }
-                    historyRows.add(txRow)
-                }
+            if (cachedEntries.isNotEmpty()) {
+                rawCachedEntries = cachedEntries
+                val historyRows = buildCachedRows(cachedEntries, _currentFilter.value.toFilterFlag())
                 // Always populate the cache adapter, regardless of which coroutine won
                 // the serviceScope race (_txDataSource may already be RoomLive if
                 // getCount() completed before getAll()).
@@ -268,6 +286,13 @@ class TxDisplayCacheService @Inject constructor(
                 }
             }
         }
+
+        // Re-derive the fast-path cache snapshot whenever the direction filter changes, so
+        // the cacheAdapter (still visible until the live Paging adapter takes over) honors
+        // the same choice instead of always showing every row regardless of _currentFilter.
+        _currentFilter
+            .onEach { direction -> _cachedRows.value = buildCachedRows(rawCachedEntries, direction.toFilterFlag()) }
+            .launchIn(serviceScope)
 
         combine(_currentFilter, walletData.observeWallet()) { direction, wallet -> direction to wallet }
             .flatMapLatest { (direction, wallet) ->
@@ -284,9 +309,11 @@ class TxDisplayCacheService @Inject constructor(
                     }
                 } else {
                     log.info("direction changed to {} — switching filter flag only", direction)
+                    // _liveFilterFlag drives transactions' own flatMapLatest, which rebuilds the
+                    // Pager with this flag — no need to also touch _txDataSource (RoomLive is a
+                    // singleton object; re-assigning it is conflated away by the StateFlow) or to
+                    // invalidate the old PagingSource by hand.
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
-                    _txDataSource.value = TxDataSource.RoomLive // force new Pager with updated filter
-                    _currentPagingSource.value?.invalidate()
                 }
                 val allFilter = TxDirectionFilter(TxFilterType.ALL, wallet)
                 walletData.observeTransactions(true, allFilter)
@@ -513,6 +540,7 @@ class TxDisplayCacheService @Inject constructor(
                 if (keptHistoryAcrossReset("dashj wallet reset")) return@onEach
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
+                rawCachedEntries = emptyList()
                 _cachedRows.value = emptyList()
                 txDisplayCacheDao.deleteAll()
                 txGroupCacheDao.deleteAll()
@@ -776,6 +804,7 @@ class TxDisplayCacheService @Inject constructor(
      * No Room I/O — safe to call from any thread including the main thread.
      */
     fun clearInMemoryCache() {
+        rawCachedEntries = emptyList()
         _cachedRows.value = emptyList()
     }
 
@@ -824,6 +853,7 @@ class TxDisplayCacheService @Inject constructor(
         txDisplayCacheDao.deleteAll()
         txGroupCacheDao.deleteAll()
         wrappedTransactionList = emptyList()
+        rawCachedEntries = emptyList()
         _cachedRows.value = emptyList()
         // Invalidate the current PagingSource so it re-queries the now-empty table.
         // Do NOT set _txDataSource = Empty: that would stop the Pager, preventing
@@ -1707,6 +1737,17 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
  */
 internal fun dashjRebuildWouldEraseHistory(cutoverCommitted: Boolean, dashjTxCount: Int): Boolean =
     cutoverCommitted && dashjTxCount == 0
+
+/**
+ * Whether a cached row carrying [entryFlags] should be visible under [filterFlag].
+ *
+ * Mirrors [de.schildbach.wallet.database.dao.TxDisplayCacheDao.pagingSource]'s
+ * `WHERE (:filterFlag = 0 OR (filterFlags & :filterFlag) != 0)` clause, so the fast-path
+ * cache snapshot ([TxDisplayCacheService.cachedRows]) agrees with the live Paging adapter
+ * on which rows a direction filter (ALL/SENT/RECEIVED/GIFT_CARD) lets through.
+ */
+internal fun matchesFilterFlag(entryFlags: Int, filterFlag: Int): Boolean =
+    filterFlag == 0 || (entryFlags and filterFlag) != 0
 
 /**
  * Whether a blockchain rescan may wipe the display/group caches — the pure

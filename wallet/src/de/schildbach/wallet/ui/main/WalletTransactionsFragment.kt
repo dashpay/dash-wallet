@@ -89,6 +89,7 @@ import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.service.syncHeaderPercentLabel
+import de.schildbach.wallet.transactions.TxFilterType
 import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
@@ -260,10 +261,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
                 viewModel.transactionsDirection = direction
                 viewModel.logDirectionChangedEvent(direction)
+                updateFilterButtonLabel()
             }
 
             dialogFragment.show(requireActivity())
         }
+        updateFilterButtonLabel()
 
         header = HistoryHeaderAdapter(
             requireContext().getSharedPreferences(
@@ -704,6 +707,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun showTransactionList() {
         binding.walletTransactionsEmpty.isVisible = false
         binding.walletTransactionsList.isVisible = true
+    }
+
+    /** "Filtered by" indicator: the Filter button itself names the active filter, e.g. "Filter: Received". */
+    private fun updateFilterButtonLabel() {
+        val typeLabel = when (viewModel.transactionsDirection) {
+            TxFilterType.ALL -> null
+            TxFilterType.SENT -> getString(R.string.sent_transactions)
+            TxFilterType.RECEIVED -> getString(R.string.received_transactions)
+            TxFilterType.GIFT_CARD -> getString(R.string.explore_filter_gift_cards)
+        }
+        binding.transactionFilterBtn.text = if (typeLabel == null) {
+            getString(R.string.explore_filter)
+        } else {
+            getString(R.string.explore_filter) + ": " + typeLabel
+        }
     }
 
     private fun showEmptyView() {
