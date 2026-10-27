@@ -263,11 +263,21 @@ FAKE_DURING="git -C '$T/app' push -q origin '$FIRST:master' && git -C '$T/app' f
   FAKE_LAST='{"blocking": 1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "the base moved during a blocking review → exit 1, not 0" "$?:$(V)" 1:stale
 git push -q -f origin "$MASTER:master"; git fetch -q origin
+# the base moves on origin only (nothing here fetches it) while a clean review runs: the pass is read against the base
+# as origin has it now, as the push gate reads it, so the run does not report 0 for a range the gate would refuse
+# (moved in origin's repository itself: a push from this clone would update its origin/master as a side effect)
+FAKE_DURING="git -C '$T/dash-wallet.git' update-ref refs/heads/master '$FIRST'" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "the base moved on origin during a clean review → exit 1, not 0" "$?" 1
+git push -q -f origin "$MASTER:master"; git fetch -q origin
+# and when that last fetch fails, there is no pass to report
+need mkdir -p "$T/failgit"; printf '#!/usr/bin/env bash\nif [[ " $* " == *" fetch "* ]]; then n=$(cat "%s/ffetches" 2>/dev/null || echo 0); echo $((n+1)) > "%s/ffetches"; [[ "$n" -ge 1 ]] && exit 1; fi\nexec "%s" "$@"\n' "$T" "$T" "$(command -v git)" > "$T/failgit/git"; chmod +x "$T/failgit/git"
+rm -f "$T/ffetches"; PATH="$T/failgit:$PATH" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … the fetch before the verdict read fails → exit 1, not 0" "$?" 1
 # the same for a commit already on the base: its record is written, then the base moves before the review returns
-need mkdir -p "$T/movegit"; printf '#!/usr/bin/env bash\n"%s" "$@"; rc=$?\n[[ " $* " == *" rev-parse --verify -q "*"^{commit}"* && ! -e "%s/moved" ]] && { touch "%s/moved"; "%s" update-ref refs/remotes/origin/master "%s"; }\nexit $rc\n' "$(command -v git)" "$T" "$T" "$(command -v git)" "$FIRST" > "$T/movegit/git"; chmod +x "$T/movegit/git"
+need mkdir -p "$T/movegit"; printf '#!/usr/bin/env bash\n"%s" "$@"; rc=$?\n[[ " $* " == *" rev-parse --verify -q "*"^{commit}"* && ! -e "%s/moved" ]] && { touch "%s/moved"; "%s" -C "%s/dash-wallet.git" update-ref refs/heads/master "%s"; }\nexit $rc\n' "$(command -v git)" "$T" "$T" "$(command -v git)" "$T" "$FIRST" > "$T/movegit/git"; chmod +x "$T/movegit/git"
 g checkout -q --detach origin/master; PATH="$T/movegit:$PATH" "$P" >/dev/null 2>&1
-ok "a commit on the base, the base moves right after its record is written → exit 1, not 0" "$?" 1
-git fetch -q origin; g checkout -q two
+ok "a commit on the base, the base moves on origin right after its record is written → exit 1, not 0" "$?" 1
+git -C "$T/dash-wallet.git" update-ref refs/heads/master "$MASTER"; git fetch -q origin; g checkout -q two
 # the review clone must carry the base as origin has it, not this checkout's stale local master
 g checkout -q -b drift origin/master; echo d2 > d2; g add d2; g commit -qm d2; git push -q origin "$FIRST:master"
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
@@ -356,7 +366,7 @@ HOOK=$(git rev-parse --path-format=absolute --git-path hooks)/pre-push; Z=000000
 printf 'refs/heads/feat %s refs/heads/feat-race %s\nrefs/heads/other5 %s refs/heads/other5 %s\n' "$(git rev-parse feat)" "$Z" "$(git rev-parse other5)" "$Z" > "$T/race.refs"
 PATH="$T/racegit:$PATH" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/race.refs'" > "$T/race.log" 2>&1
 # the refusal is read from the hook's own output: util-linux script(1) does not always hand the child's exit status on
-ok "the base moved during the push's own review → the earlier ref is rechecked, push refused" "$(grep -c 'the base moved while this push' "$T/race.log"):$(cat "$T/fetches" 2>/dev/null)" 1:3   # fetches: up front, the review's, the final check's
+ok "the base moved during the push's own review → the earlier ref is rechecked, push refused" "$(grep -c 'the base moved while this push' "$T/race.log"):$(cat "$T/fetches" 2>/dev/null)" 1:4   # fetches: up front, the review's, its verdict read's, the final check's
 g checkout -q other5; ok "  … the later ref itself was reviewed against the moved base" "$(V)" clean; g checkout -q feat
 # two unreviewed refs, cancelled during the first's review: the hook stops, the second is never started
 g checkout -q -b c1 origin/master; echo c1 > c1; g add c1; g commit -qm c1; g checkout -q -b c2 origin/master; echo c2 > c2; g add c2; g commit -qm c2; g checkout -q feat

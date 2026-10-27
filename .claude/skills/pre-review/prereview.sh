@@ -110,7 +110,11 @@ PY
 roster() { python3 -c "$ROSTER_PY" "$@"; }
 # a review's own success: its fresh verdict, read back as the gate reads it. Stale (the base moved meanwhile) or none
 # is no verdict, so not 0
-passed() { case "$(verdict "$@")" in clean|suggestions) return 0 ;; *) return 1 ;; esac; }
+passed() {   # <repo> <sha>; the base is fetched again first, as the push gate does: a review takes minutes, and a pass
+  # read against the base as it was when the review began would differ from the gate's answer. No fetch, no pass
+  refresh_base "$1" || { say "cannot fetch $(base_ref) to check the verdict against it: not a pass"; return 1; }
+  case "$(verdict "$@")" in clean|suggestions) return 0 ;; *) return 1 ;; esac
+}
 
 fetch_prompts() {
   mkdir -p "$PC"
