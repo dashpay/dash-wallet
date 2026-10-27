@@ -199,6 +199,42 @@ interface ShieldedBalanceService {
     suspend fun pendingWalletShieldLockCount(): Int?
 
     /**
+     * Like [pendingWalletShieldLockCount], but only the resumable locks that
+     * are (or may be) funded from the CoinJoin account — the mixed-funds
+     * migration's own drain. Unrelated BIP44 shield locks are excluded; a
+     * lock whose funding source cannot be determined is counted. Null when
+     * the runtime isn't ready or the locks cannot be read (UNKNOWN).
+     */
+    suspend fun pendingCoinJoinShieldLockCount(): Int?
+
+    /**
+     * [pendingCoinJoinShieldLockCount] without the locks Platform already reported consumed
+     * ([PendingWalletShieldLock.retrySuppressed]) — except the outpoints of [settlingLockTxid]
+     * (display hex), a migration's OWN settling lock, which still count. For gates a STRANGER
+     * lock merely blocks (a fresh drain, the "no other lock pending" half of a migration's proof)
+     * and for RELEASES back to the choice (never a success); a migration's own settling lock is
+     * judged by its own row, never by this. Null when unknown.
+     */
+    suspend fun unsuppressedCoinJoinShieldLockCount(settlingLockTxid: String? = null): Int?
+
+    /**
+     * Tracked shield locks of ANY funding (CoinJoin or BIP44) that only an explicit user retry
+     * ([resumePendingWalletShieldsOnUserRequest]) resumes: pending, and answered already-consumed
+     * by Platform ([PendingWalletShieldLock.retrySuppressed]). Null when unknown.
+     */
+    suspend fun retrySuppressedShieldLockCount(): Int?
+
+    /**
+     * How many of [unsuppressedCoinJoinShieldLockCount]'s locks are RecoveredFromChain (5); null
+     * when unknown. An unknown status is pending but never counted here: it is adopted like a
+     * live `0..3` lock.
+     */
+    suspend fun recoveredCoinJoinShieldLockCount(): Int?
+
+    /** Reset Wallet: the next wallet (even the same seed restored) gets a full resume budget. */
+    fun resetForWalletWipe()
+
+    /**
      * Live unspent shielded balance, credits summed from the SDK's note
      * store and floored to [Dash]. Emits [Dash.ZERO] until
      * [ensureShieldedReady] succeeds.
@@ -246,16 +282,30 @@ interface ShieldedBalanceService {
     val shieldedBalanceMaybeStale: StateFlow<Boolean>
 
     /**
-     * Notify the service that a shielded spend was broadcast by an EXTERNAL
-     * executor (username creation, invite creation — the Type-20 family),
-     * outside this service's own write paths. Marks the cached balance
-     * stale and kicks an immediate sync pass, so the More card flips to
-     * "Syncing…" and settles within seconds instead of showing the
-     * pre-spend amount until the next 60-second pass (observed live:
-     * the shielded balance held the old value for up to a minute after a
-     * shielded-funded username submit — Brian, S21 2026-08-18).
+     * An EXTERNAL executor (username creation, invite creation — the
+     * Type-20 family) is about to spend shielded pool notes outside this
+     * service's own write paths: call BEFORE its SDK spend. Durably records
+     * the pending reconciliation (the cached balance is dropped) and marks
+     * the balance stale, so every surface shows "Syncing…" instead of the
+     * pre-spend amount — also after a process death mid-spend.
+     *
+     * Returns the spend's start time, to pass to [endExternalShieldedSpend];
+     * or null when the record could not be written — the caller must then
+     * NOT spend (report it as not broadcast).
      */
-    suspend fun noteExternalShieldedSpendBroadcast()
+    suspend fun beginExternalShieldedSpend(): Long?
+
+    /**
+     * The SDK spend [beginExternalShieldedSpend] announced has returned or
+     * thrown, whatever the outcome — call from `finally`. Lets settlement
+     * proceed (it waits while a spend is in flight, because the SDK writes
+     * the spend's activity row during the call) and kicks a sync pass without
+     * waiting for it, so the balance settles within seconds instead of on the
+     * next 60-second pass (observed live: the shielded balance held the old
+     * value for up to a minute after a shielded-funded username submit —
+     * Brian, S21 2026-08-18).
+     */
+    suspend fun endExternalShieldedSpend(spendStartedAtMs: Long)
 
     /**
      * True when the wallet holds an ANCHORED (confirmed, `blockHeight > 0`)
@@ -338,22 +388,31 @@ interface ShieldedBalanceService {
      * the unmixed BIP44 account — the post-upgrade "move my previously mixed
      * funds into the shielded balance" migration.
      *
-     * PRIVACY INVARIANT: this is single-account selection, NOT a union. The
-     * Rust side resolves [coinJoinAccountPath] to exactly ONE funds account
-     * and every input comes from it (`build_asset_lock_tx_from_selected_account`
-     * in `rs-platform-wallet/src/wallet/asset_lock/build.rs`); BIP44 coins are
-     * never co-spent. Only the CHANGE is routed to BIP44 account 0, because a
-     * non-Standard account cannot derive its own change.
+     * PRIVACY INVARIANT: single-account, NOT a union. The SDK's CoinJoin
+     * drain (`shieldedFundFromCoinJoinDrain`) spends every input of the ONE
+     * account [coinJoinAccountPath] names into the asset lock, with no
+     * transparent change; BIP44 coins are never co-spent.
      *
      * @param coinJoinAccountPath the ACCOUNT-LEVEL BIP32 path string, `m/`
      *   prefixed and hardened with `'` — `m/9'/5'/4'/0'` on mainnet,
      *   `m/9'/1'/4'/0'` elsewhere. Built by
      *   [de.schildbach.wallet.service.platform.sdk.coinJoinAccountPath].
      *   A path naming no account is a clean pre-broadcast failure.
+     * @param expectedWalletIdHex the migration's SDK wallet: re-checked against the
+     *   ready wallet under the shield mutex right before the drain; a mismatch is a
+     *   [SdkWriteResult.NotBroadcast] before [onSubmitting].
+     * @param onSubmitting invoked once every preflight has passed, immediately
+     *   before the native build+broadcast call — the caller's durable
+     *   "submission may have happened" checkpoint. Not invoked when nothing
+     *   reaches the native call (preflight rejections, an already pending
+     *   CoinJoin lock), so a caller that never saw it run knows nothing was
+     *   submitted. If it throws, nothing is submitted ([SdkWriteResult.NotBroadcast]).
      */
     suspend fun shieldMixedFundsFromWallet(
         amount: Dash,
-        coinJoinAccountPath: String
+        coinJoinAccountPath: String,
+        expectedWalletIdHex: String,
+        onSubmitting: suspend () -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome>
 
     /**
@@ -397,6 +456,16 @@ interface ShieldedBalanceService {
     suspend fun resumePendingWalletShields(): Int
 
     /**
+     * [resumePendingWalletShields] for an explicit user retry: each resumable
+     * lock gets ONE attempt even when the automatic per-process budget is
+     * exhausted (the attempt still counts against it, so unattended sweeps
+     * stay capped), including a lock Platform answered already-consumed
+     * (unauthenticated; automatic sweeps skip it). Runs under the same mutex;
+     * never builds a new lock.
+     */
+    suspend fun resumePendingWalletShieldsOnUserRequest(): Int
+
+    /**
      * Emits the number of locks completed each time a
      * [resumePendingWalletShields] sweep finishes stage (b) of at least one
      * interrupted [shieldFromWallet] — the transfer the user was told would
@@ -437,3 +506,11 @@ interface ShieldedBalanceService {
      */
     suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit>
 }
+
+/**
+ * Back-off before a balance surface re-subscribes after a shielded read
+ * failure ([attempt] counts from 0): 5 s, growing by 5 s per retry, capped at
+ * 60 s. The surface shows "Syncing…" meanwhile (fail closed) and recovers on
+ * its own once the read does.
+ */
+fun shieldedReadRetryDelayMs(attempt: Long): Long = (attempt.coerceIn(0L, 11L) + 1) * 5_000L

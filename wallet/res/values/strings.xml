@@ -507,4 +507,5 @@
     <string name="crowdnode_withdraw_funds">Withdraw funds</string>
     <string name="buy_credits_current_identity_balance">Current Identity Balance: %1$s</string>
     <string name="buy_credits_current_identity_balance_unavailable">unavailable</string>
+    <string name="payment_request_resending_earlier_payment">This request was paid before, but that payment was never confirmed. Confirming sends the same payment again, so you cannot be charged twice.</string>
 </resources>

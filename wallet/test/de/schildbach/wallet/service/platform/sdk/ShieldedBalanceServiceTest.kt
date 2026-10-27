@@ -18,22 +18,33 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.coVerifyOrder
+import io.mockk.just
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -41,12 +52,14 @@ import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.persistence.entities.ShieldedActivityEntity
 import org.dashfoundation.dashsdk.persistence.entities.ShieldedNoteEntity
+import org.dashfoundation.dashsdk.persistence.entities.ShieldedOutgoingNoteEntity
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -175,10 +188,20 @@ class ShieldedBalanceServiceTest {
         }
 
         var syncNowCalls = 0
+
+        /** Suspending hook inside syncShieldedNow — the real one blocks for a whole network pass. */
+        var onSyncNowSuspend: suspend () -> Unit = {}
+
         override suspend fun syncShieldedNow() {
             syncNowCalls++
             events += "syncNow"
+            onSyncNowSuspend()
         }
+
+        /** Completed-pass results the test emits (the SDK's WalletSyncEvent.ShieldedResult). */
+        val passResults = MutableSharedFlow<ShieldedPassResult>(extraBufferCapacity = 64)
+
+        override fun shieldedSyncResults(): Flow<ShieldedPassResult> = passResults
 
         /** Suspending hook inside the prover warm-up — the last suspend before ready (review 2026-09-27). */
         var onWarmUpSuspend: suspend () -> Unit = {}
@@ -198,7 +221,26 @@ class ShieldedBalanceServiceTest {
         override suspend fun minUnspentAnchoredBlockHeight(walletId: ByteArray): Long? =
             anchoredNotes.filter { it.blockHeight > 0 }.minOfOrNull { it.blockHeight }
 
-        override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> = activityFlow
+        /** When set, reading the activity store throws it (an unreadable Room store). */
+        @Volatile
+        var activityFailure: Throwable? = null
+
+        /** Spent notes still in Room (`isSpent = true`); with [notesFlow] they make up every note. */
+        val spentNotesFlow = MutableStateFlow<List<ShieldedNoteEntity>>(emptyList())
+        val outgoingFlow = MutableStateFlow<List<ShieldedOutgoingNoteEntity>>(emptyList())
+
+        /** When set, reading the outgoing-note store throws it. */
+        @Volatile
+        var outgoingFailure: Throwable? = null
+
+        override fun observeAllNotes(walletId: ByteArray): Flow<List<ShieldedNoteEntity>> =
+            combine(notesFlow, spentNotesFlow) { unspent, spent -> unspent + spent }
+
+        override fun observeOutgoingNotes(walletId: ByteArray): Flow<List<ShieldedOutgoingNoteEntity>> =
+            outgoingFlow.onStart { outgoingFailure?.let { throw it } }
+
+        override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> =
+            activityFlow.onStart { activityFailure?.let { throw it } }
 
         override suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray? = defaultAddress
 
@@ -271,6 +313,21 @@ class ShieldedBalanceServiceTest {
             onFund()
         }
 
+        var accountFundCalls = 0
+
+        override suspend fun fundFromAssetLockFromAccount(
+            walletId: ByteArray,
+            recipientRaw43: ByteArray,
+            amountDuffs: Long,
+            fundingPath: String
+        ) {
+            accountFundCalls++
+            broadcastCalls++
+            lastFundRecipient = recipientRaw43
+            lastFundAmountDuffs = amountDuffs
+            onFund()
+        }
+
         override suspend fun resumeFundFromAssetLock(
             walletId: ByteArray,
             outPointTxid: ByteArray,
@@ -300,7 +357,8 @@ class ShieldedBalanceServiceTest {
     private fun config(
         enabled: Boolean?,
         l1ShadowEnabled: Boolean = true,
-        lastBalanceDuffs: Long? = null
+        lastBalanceDuffs: Long? = null,
+        consumed: ConsumedStore = ConsumedStore()
     ): DashPayConfig = mockk {
         if (enabled == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } throws
@@ -310,6 +368,21 @@ class ShieldedBalanceServiceTest {
         }
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
         coEvery { getLastShieldedBalanceDuffs() } returns lastBalanceDuffs
+        coEvery { markShieldedSpendReconcilePending(any()) } just Runs
+        coEvery { shieldedSpendReconcilePendingSinceMs() } returns null
+        coEvery { clearShieldedSpendReconcilePending() } just Runs
+        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        coEvery { getPreservingErrors(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED) } answers {
+            consumed.readFailure?.let { throw it }
+            consumed.value
+        }
+        coEvery { set(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED, any()) } answers { consumed.value = secondArg() }
+    }
+
+    /** Durable stand-in for [DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED]; share one to model a restart. */
+    private class ConsumedStore {
+        var value: Set<String>? = null
+        var readFailure: Throwable? = null
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -345,25 +418,33 @@ class ShieldedBalanceServiceTest {
         enabled: Boolean? = true,
         l1ShadowEnabled: Boolean = true,
         lastBalanceDuffs: Long? = null,
+        consumed: ConsumedStore = ConsumedStore(),
         progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
         progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {},
+        hasAppLockedCoinJoinOutputs: () -> Boolean = { false },
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
         afterReadyCommitted: suspend () -> Unit = {},
-        afterStopFallbackBump: suspend () -> Unit = {}
+        afterStopFallbackBump: suspend () -> Unit = {},
+        freshFundingBlocked: suspend () -> Boolean = { false }
     ) = ShieldedBalanceServiceImpl(
         source = source,
-        dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs),
+        dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs, consumed),
         shieldedDbPath = { dbPath },
         displayHrp = { hrp },
         l1Progress = progress,
         l1ProgressFlow = { progressFlow },
         ensureL1SpvRunning = ensureL1SpvRunning,
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
+        hasAppLockedCoinJoinOutputs = hasAppLockedCoinJoinOutputs,
+        seamOutputLockRegistry = seamRegistry,
         stopLockTimeoutMs = stopLockTimeoutMs,
         afterReadyCommitted = afterReadyCommitted,
-        afterStopFallbackBump = afterStopFallbackBump
+        afterStopFallbackBump = afterStopFallbackBump,
+        freshFundingBlocked = freshFundingBlocked,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
     )
 
     // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
@@ -826,7 +907,8 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = config(true),
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (!sweepEntered) delay(10) }
@@ -1013,7 +1095,8 @@ class ShieldedBalanceServiceTest {
             },
             dashPayConfig = config(true),
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         assertTrue(service.ensureShieldedReady())
         assertTrue(warmUpFailed)
@@ -1269,10 +1352,71 @@ class ShieldedBalanceServiceTest {
         val source = readySource().apply {
             onTransfer = { throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed") }
         }
-        val result = service(source).transferShielded(recipientAddress, Dash.COIN, null)
+        val cfg = config(true)
+        val service = ShieldedBalanceServiceImpl(
+            source = source,
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        )
+        val result = service.transferShielded(recipientAddress, Dash.COIN, null)
 
         assertTrue(result is SdkWriteResult.Ambiguous)
         assertEquals(1, source.broadcastCalls)
+        // The spend MAY have landed while its reserved notes still count as
+        // unspent: reconcile like a broadcast spend, durably.
+        assertTrue(service.shieldedBalanceMaybeStale.value)
+        coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
+    }
+
+    /**
+     * Cancelled once the SDK spend call started (thepastaclaw, c99eefff0): it
+     * may have broadcast, so the reconciliation is recorded durably before the
+     * cancellation propagates — a restart must not trust the pre-spend cache.
+     */
+    @Test
+    fun aSpendCancelledMidCall_isReconciledDurably() = runBlocking {
+        val source = readySource().apply {
+            onTransfer = { throw CancellationException("cancelled mid-proof") }
+        }
+        val cfg = config(true)
+        val service = ShieldedBalanceServiceImpl(
+            source = source,
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        )
+        try {
+            service.transferShielded(recipientAddress, Dash.COIN, null)
+            fail("the cancellation must propagate")
+        } catch (expected: CancellationException) {
+            // propagated
+        }
+
+        assertTrue(service.shieldedBalanceMaybeStale.value)
+        coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
+    }
+
+    @Test
+    fun definitiveNotBroadcast_staysReconcilingUntilSettled() = runBlocking {
+        val source = readySource().apply {
+            onShield = { throw DashSdkError.PlatformWallet.ShieldedBroadcastFailed("relay rejected") }
+        }
+        val cfg = config(true)
+        val service = ShieldedBalanceServiceImpl(
+            source = source,
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        )
+        assertTrue(service.shieldFromCredits(Dash.COIN) is SdkWriteResult.NotBroadcast)
+        // The reconciliation was recorded before the call (thepastaclaw,
+        // 7ae06b9e7); a rejected spend just settles on the next stable passes.
+        assertTrue(service.shieldedBalanceMaybeStale.value)
+        coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
     }
 
     @Test
@@ -1378,7 +1522,8 @@ class ShieldedBalanceServiceTest {
             source = readySource(),
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         assertNull(service.lastKnownShieldedBalance())
     }
@@ -1394,6 +1539,1109 @@ class ShieldedBalanceServiceTest {
         // card shows "Syncing…" rather than the now-stale amount until the
         // next completed pass (the poller, which runs only with a sweep scope).
         assertTrue(service.shieldedBalanceMaybeStale.value)
+    }
+
+    @Test
+    fun successfulSpend_durablyInvalidatesTheLastKnownBalance() = runBlocking {
+        // spend → runtime stop / process restart: the in-memory stale flag is
+        // gone, so the persisted pre-spend balance must already be cleared —
+        // a new process then reads no cache (unknown) until a settled READY
+        // balance is persisted again.
+        val cfg = config(true, lastBalanceDuffs = 1_000_000_000L)
+        val source = readySource()
+        val service = ShieldedBalanceServiceImpl(
+            source = source,
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        )
+        val before = System.currentTimeMillis()
+        var calledAt = 0L
+        source.onTransfer = { calledAt = System.currentTimeMillis() }
+        assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+        // the since was taken before the SDK spend call (less the skew allowance)
+        val skew = ShieldedBalanceServiceImpl.SPEND_WINDOW_SKEW_MS
+        coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(match { it in (before - skew)..(calledAt - skew) }) }
+    }
+
+    /**
+     * spend → restart → first READY: the persisted reconcile marker restores
+     * the settlement guard before READY is published, so the first READY pass
+     * is neither trusted (stale stays set) nor persisted as the last-known
+     * balance — the settlement still needs two stable completed passes.
+     */
+    @Test
+    fun afterRestart_aPendingReconcile_keepsTheFirstReadyStale_andUnpersisted() = runBlocking {
+        val cfg = config(true)
+        coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            // a fresh service = a new process: the in-memory flag starts false
+            val source = readySource()
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            )
+            assertFalse(service.shieldedBalanceMaybeStale.value)
+            assertTrue(service.ensureShieldedReady())
+            // READY needs a successful pass after bring-up
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            source.passResults.emit(passOk())
+
+            withTimeout(10_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
+            }
+            assertTrue("first READY after restart is still reconciling", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) }
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * thepastaclaw (182b454a0): READY means the note store covers the ledger,
+     * so only a SUCCESSFUL pass after bring-up latches it — not a failed pass,
+     * and not the in-flight flag simply staying idle (a failed pass or an
+     * unreadable flag look the same). Until then the status stays SYNCING and
+     * the placeholder zero is never presented as a balance.
+     */
+    @Test
+    fun ready_requiresASuccessfulPass_notJustIdlePolls() = runBlocking {
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = scopedService(source, config(true), sweepScope)
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            source.passResults.emit(passFailed())
+            // well past the old idle-poll fallback
+            delay(ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS * 10)
+            assertEquals(ShieldedSyncStatus.SYNCING, service.shieldedSyncStatus.value)
+
+            source.passResults.emit(passOk())
+            withTimeout(5_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
+            }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * thepastaclaw (a6eb7c793): a stopped session's collector that already read
+     * the store — and finishes after the runtime was stopped and brought up
+     * again — must not mark the NEW session's ledger as covered. The new
+     * session stays SYNCING until a pass of its own is reflected.
+     */
+    @Test
+    fun anOldSessionsPass_cannotMakeANewSessionReady() = runBlocking {
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        val paused = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        var pauseNext = false
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = config(true),
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                afterCoverageRead = {
+                    if (pauseNext) {
+                        pauseNext = false
+                        paused.complete(Unit)
+                        // the synchronous tail after the read: cancellation can't stop it
+                        withContext(NonCancellable) { release.await() }
+                    }
+                },
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            pauseNext = true
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) { paused.await() }
+
+            withTimeout(5_000) { service.stop() }
+            assertTrue(service.ensureShieldedReady())
+            release.complete(Unit)
+            delay(ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS * 5)
+            assertEquals(
+                "the old session's pass is not the new session's coverage",
+                ShieldedSyncStatus.SYNCING,
+                service.shieldedSyncStatus.value
+            )
+
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
+            }
+        } finally {
+            release.complete(Unit)
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * thepastaclaw (dc96a3c6d): a successful pass alone is not coverage — the
+     * SDK's note persistence can fail or lag, leaving the displayed store at
+     * the placeholder zero. READY waits until the store matches a successful
+     * pass's balance.
+     */
+    @Test
+    fun ready_requiresTheStoreToReflectASuccessfulPass() = runBlocking {
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = scopedService(source, config(true), sweepScope)
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            // a funded wallet's pass succeeded, but its notes never reached the store
+            source.passResults.emit(passOk(preSpendCredits))
+            delay(ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS * 5)
+            assertEquals(ShieldedSyncStatus.SYNCING, service.shieldedSyncStatus.value)
+
+            source.notesFlow.value = listOf(inputNote, keptNote)
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
+            }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Settlement of an earlier reconciliation pauses while clearing its durable
+     * marker; a new spend arrives in that window. The older settlement must not
+     * clear the newer spend's flag or marker: after both finish the newer
+     * reconciliation is still pending, and its marker was written AFTER the
+     * older clear.
+     */
+    @Test
+    fun anOlderSettlement_doesNotClearANewerSpendsReconciliation() = runBlocking {
+        val cfg = config(true)
+        // the earlier reconciliation (restored at bring-up, as after a restart)
+        coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        val clearEntered = CompletableDeferred<Unit>()
+        val clearGate = CompletableDeferred<Unit>()
+        coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
+            clearEntered.complete(Unit)
+            clearGate.await()
+        }
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (!service.shieldedBalanceMaybeStale.value) delay(20) }
+
+            // Two successful completed passes with an unchanged balance: the
+            // older settlement reaches its marker clear and pauses there.
+            val pollMs = ShieldedBalanceServiceImpl.SYNC_STATUS_POLL_INTERVAL_MS
+            withTimeout(10_000) {
+                while (!clearEntered.isCompleted) {
+                    source.passResults.emit(passOk())
+                    delay(50)
+                }
+            }
+
+            // A newer spend lands while the older settlement is paused.
+            val spend = async(Dispatchers.Default) {
+                service.transferShielded(recipientAddress, Dash.COIN, null)
+            }
+            delay(pollMs)
+            clearGate.complete(Unit)
+            assertTrue(withTimeout(5_000) { spend.await() } is SdkWriteResult.Broadcast)
+
+            assertTrue("the newer spend is still reconciling", service.shieldedBalanceMaybeStale.value)
+            coVerifyOrder {
+                cfg.clearShieldedSpendReconcilePending()
+                cfg.markShieldedSpendReconcilePending(any())
+            }
+        } finally {
+            source.syncing = false
+            sweepScope.cancel()
+        }
+    }
+
+    private fun boundWalletId(): ByteArray = checkNotNull(walletIdFromHex(walletIdHex))
+
+    private fun passOk(credits: Long = 0L, walletId: ByteArray = boundWalletId()) =
+        ShieldedPassResult(walletId, ShieldedPassResult.Outcome.SUCCEEDED, credits)
+
+    private fun passFailed() =
+        ShieldedPassResult(boundWalletId(), ShieldedPassResult.Outcome.FAILED, 0L)
+
+    private fun passSkipped(credits: Long = 0L) =
+        ShieldedPassResult(boundWalletId(), ShieldedPassResult.Outcome.SKIPPED, credits)
+
+    /**
+     * A scoped service with a restored pending reconciliation (stale = true),
+     * returned once its settlement collector is subscribed to the pass results.
+     * [sinceMs] is the restored since (0 = every activity row counts).
+     */
+    private suspend fun reconcilingService(
+        source: FakeSource,
+        cfg: DashPayConfig,
+        sweepScope: CoroutineScope,
+        sinceMs: Long = 0L,
+        clock: () -> Long = System::currentTimeMillis
+    ): ShieldedBalanceServiceImpl {
+        coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns sinceMs
+        val service = scopedService(source, cfg, sweepScope, clock)
+        assertTrue(service.ensureShieldedReady())
+        withTimeout(5_000) {
+            while (!service.shieldedBalanceMaybeStale.value || source.passResults.subscriptionCount.value == 0) {
+                delay(10)
+            }
+        }
+        return service
+    }
+
+    private fun scopedService(
+        source: FakeSource,
+        cfg: DashPayConfig,
+        sweepScope: CoroutineScope,
+        clock: () -> Long = System::currentTimeMillis
+    ) = ShieldedBalanceServiceImpl(
+        source = source,
+        dashPayConfig = cfg,
+        shieldedDbPath = { dbPath },
+        displayHrp = { hrp },
+        sweepScope = sweepScope,
+        clock = clock,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+    )
+
+    /** A ready, scoped service whose settlement collector is subscribed; not reconciling yet. */
+    private suspend fun subscribedService(
+        source: FakeSource,
+        cfg: DashPayConfig,
+        sweepScope: CoroutineScope
+    ): ShieldedBalanceServiceImpl {
+        val service = scopedService(source, cfg, sweepScope)
+        assertTrue(service.ensureShieldedReady())
+        withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+        assertFalse(service.shieldedBalanceMaybeStale.value)
+        return service
+    }
+
+    /** A whole external spend: recorded before the (here absent) SDK call, then ended. */
+    private suspend fun ShieldedBalanceServiceImpl.externalSpend() {
+        val start = beginExternalShieldedSpend() ?: error("the spend could not be recorded")
+        endExternalShieldedSpend(start)
+    }
+
+    /** Emit [results] one by one, letting the collector process each, then give it time to settle. */
+    private suspend fun emitPasses(source: FakeSource, vararg results: ShieldedPassResult) {
+        for (result in results) {
+            source.passResults.emit(result)
+            delay(30)
+        }
+        delay(200)
+    }
+
+    /** Emit two equal successful results and wait for the reconciliation to settle. */
+    private suspend fun settleWith(service: ShieldedBalanceServiceImpl, source: FakeSource, credits: Long) {
+        source.passResults.emit(passOk(credits))
+        delay(30)
+        source.passResults.emit(passOk(credits))
+        withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+    }
+
+    // Pool fixture: two notes before the spend; the spend consumes [inputNote]
+    // and returns [changeNote]; [recipientCmx] is its send to another wallet.
+    private val inputNote = note(value = 600_000_000_000L, nullifierSeed = 1)
+    private val keptNote = note(value = 400_000_000_000L, nullifierSeed = 2)
+    private val changeNote = note(value = 150_000_000_000L, nullifierSeed = 3)
+    private val recipientCmx = ByteArray(32) { 0x55 }
+    private val preSpendCredits = inputNote.value + keptNote.value
+
+    /** The spend's row as the SDK records it before broadcast: inputs + visible outputs. */
+    private fun spendRow(status: Int, createdAtMs: Long = System.currentTimeMillis(), withChange: Boolean = true) =
+        activity(
+            entryId = 1, direction = 1, status = status,
+            createdAtMs = createdAtMs,
+            spentNullifiers = inputNote.nullifier,
+            noteCmxs = if (withChange) recipientCmx + changeNote.cmx else recipientCmx
+        )
+
+    /** What a scan pass stores once it has processed the spend's block. */
+    private fun FakeSource.scanTheSpendsOutputs(withChange: Boolean = true) {
+        if (withChange) notesFlow.value = notesFlow.value + changeNote
+        outgoingFlow.value = outgoingFlow.value + outgoing(recipientCmx)
+    }
+
+    /** The spend's inputs marked spent in Room (the SDK's finalize, or a later scan). */
+    private fun FakeSource.markInputSpent() {
+        notesFlow.value = notesFlow.value.filterNot { it.nullifier.contentEquals(inputNote.nullifier) }
+        spentNotesFlow.value = spentNotesFlow.value + inputNote.copy(isSpent = true)
+    }
+
+    /**
+     * Regression (thepastaclaw review 2026-10-18): results from passes that ran
+     * BEFORE a spend can still be buffered when it is marked (no pass id; the
+     * SDK buffers 256 events). While the store still shows the spend's input
+     * note unspent, two such results equal the store — and used to settle. The
+     * spend's activity row (written by the SDK during the spend call) keeps the
+     * gate closed until its nullifier is spent in the store; from then on the
+     * store excludes the input, so the same stale results can never match it.
+     */
+    private suspend fun assertBufferedPreSpendResultsCannotSettle(rowStatus: Int) {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        // The SDK writes the row during the spend call; the best-effort isSpent
+        // write has not landed yet.
+        source.onTransfer = { source.activityFlow.value = listOf(spendRow(rowStatus)) }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+
+            // Two identical pre-spend results, equal to the store, consumed only now.
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            assertTrue("pre-spend results must not settle", service.shieldedBalanceMaybeStale.value)
+
+            // The input is spent in the store: the same stale results still
+            // count it, so they can never equal the store again.
+            source.markInputSpent()
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            assertTrue("stale results must not match the post-spend store", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            // A scan stores the outputs; post-spend passes match the store.
+            source.scanTheSpendsOutputs()
+            settleWith(service, source, keptNote.value + changeNote.value)
+            coVerify(exactly = 1) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    @Test
+    fun bufferedPreSpendResults_cannotSettle_whileTheConfirmedSpendsInputIsUnspent() = runBlocking {
+        assertBufferedPreSpendResultsCannotSettle(rowStatus = 1)
+    }
+
+    @Test
+    fun bufferedPreSpendResults_cannotSettle_whileThePendingSpendsInputIsUnspent() = runBlocking {
+        assertBufferedPreSpendResultsCannotSettle(rowStatus = 0)
+    }
+
+    /**
+     * Regression (review 2026-10-19): a pass that finishes DURING the ~30 s
+     * proof reports a balance that excludes the reserved inputs (B0 − inputs).
+     * After the spend marks its inputs spent, the store reads that same value
+     * until a scan finds the change — so two such buffered results would match
+     * the store and settle without the change. The gate waits for the spend's
+     * output cmxs to be stored.
+     */
+    @Test
+    fun midProofResults_excludingTheReservedInputs_cannotSettleBeforeTheChangeIsStored() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        // SDK success path: row Confirmed and the input marked spent before the call returns.
+        source.onTransfer = {
+            source.activityFlow.value = listOf(spendRow(status = 1))
+            source.markInputSpent()
+        }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+
+            val reservationExcluded = preSpendCredits - inputNote.value
+            assertEquals("the fixture's store reads B0 − inputs", reservationExcluded, keptNote.value)
+            emitPasses(source, passOk(reservationExcluded), passOk(reservationExcluded), passOk(reservationExcluded))
+            assertTrue("must not settle without the change note", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            source.scanTheSpendsOutputs()
+            // The same buffered value no longer equals the store.
+            emitPasses(source, passOk(reservationExcluded), passOk(reservationExcluded))
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+            settleWith(service, source, keptNote.value + changeNote.value)
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * An exact-amount transfer has NO change output (the SDK's single-transfer
+     * builder omits a zero change), so its only visible cmx is the recipient's,
+     * which the scan stores as an outgoing note. B0 − inputs is then the final
+     * balance; the gate opens once the scan has processed the spend.
+     */
+    @Test
+    fun anExactAmountTransfer_settlesOnceItsSendIsScanned() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        source.onTransfer = {
+            source.activityFlow.value = listOf(spendRow(status = 1, withChange = false))
+            source.markInputSpent()
+        }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+            emitPasses(source, passOk(keptNote.value), passOk(keptNote.value))
+            assertTrue("the send is not scanned yet", service.shieldedBalanceMaybeStale.value)
+
+            source.scanTheSpendsOutputs(withChange = false)
+            settleWith(service, source, keptNote.value)
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * A spend that consumes no notes (Type-15 shield from a platform address):
+     * no nullifiers, but its row names the new note's cmx, so pre-shield
+     * results can't settle at the pre-shield amount before the note is stored.
+     */
+    @Test
+    fun aNoteLessShield_cannotSettleAtThePreShieldAmount() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(keptNote)
+        val newNote = note(value = 200_000_000_000L, nullifierSeed = 7)
+        source.onShield = {
+            source.activityFlow.value = listOf(
+                activity(
+                    entryId = 2, direction = 0, status = 1,
+                    createdAtMs = System.currentTimeMillis(),
+                    noteCmxs = newNote.cmx
+                )
+            )
+        }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.shieldFromCredits(Dash.COIN) is SdkWriteResult.Broadcast)
+            emitPasses(source, passOk(keptNote.value), passOk(keptNote.value), passOk(keptNote.value))
+            assertTrue("the new note is not stored yet", service.shieldedBalanceMaybeStale.value)
+
+            source.notesFlow.value = listOf(keptNote, newNote)
+            settleWith(service, source, keptNote.value + newNote.value)
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * An ambiguous spend (row Pending, input still unspent) keeps the balance
+     * stale however many stable passes arrive; once the SDK resolves the row as
+     * Failed, the unspent input is legitimately back and settlement proceeds.
+     */
+    @Test
+    fun anAmbiguousSpend_staysStaleUntilItsRowResolves() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        val row = spendRow(status = 0)
+        source.onTransfer = {
+            source.activityFlow.value = listOf(row)
+            throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed")
+        }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Ambiguous)
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+
+            emitPasses(source, *Array(6) { passOk(preSpendCredits) })
+            assertTrue("an unresolved spend must keep the balance stale", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            source.activityFlow.value = listOf(row.copy(status = 2))
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Fail closed (thepastaclaw, c99eefff0): a row's age never releases it. A
+     * Pending row whose inputs are still unspent blocks however old it is, and
+     * stops blocking only once the SDK resolves it from protocol evidence —
+     * here, Failed after its recorded anchor was pruned.
+     */
+    @Test
+    fun anUnresolvedPendingRow_blocksWhateverItsAge_untilTheSdkFailsIt() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val start = 1_800_000_000_000L
+        val now = java.util.concurrent.atomic.AtomicLong(start)
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        source.activityFlow.value = listOf(spendRow(status = 0, createdAtMs = start))
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope, sinceMs = start - 1_000L, clock = { now.get() })
+            now.set(start + 365L * 24 * 60 * 60 * 1000)
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits), passOk(preSpendCredits))
+            assertTrue("an unresolved row blocks at any age", service.shieldedBalanceMaybeStale.value)
+
+            // Unknown (an abandoned identity debit that may still execute) blocks too
+            source.activityFlow.value = listOf(spendRow(status = 3, createdAtMs = start))
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            assertTrue("an Unknown row blocks", service.shieldedBalanceMaybeStale.value)
+
+            source.activityFlow.value = listOf(spendRow(status = 2, createdAtMs = start))
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /** A row older than the spend (a long-stuck Pending op) does not block its settlement. */
+    @Test
+    fun activityRowsOlderThanTheSpend_areIgnored() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        val stuck = activity(
+            entryId = 9, direction = 1, status = 0,
+            createdAtMs = System.currentTimeMillis() - 3_600_000L,
+            spentNullifiers = keptNote.nullifier,
+            noteCmxs = ByteArray(32) { 0x66 }
+        )
+        source.activityFlow.value = listOf(stuck)
+        source.onTransfer = {
+            // SDK success path: the row is Confirmed and the input marked spent.
+            source.activityFlow.value = listOf(stuck, spendRow(status = 1))
+            source.markInputSpent()
+        }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
+            source.scanTheSpendsOutputs()
+            settleWith(service, source, keptNote.value + changeNote.value)
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * spend → restart: the restored since still selects the spend's row (and
+     * only rows from then on), so an unresolved spend from before the restart
+     * keeps the balance stale.
+     */
+    @Test
+    fun afterRestart_theRestoredSince_stillGatesSettlement() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val now = System.currentTimeMillis()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        val pendingSpend = spendRow(status = 0, createdAtMs = now - 300_000L)
+        val olderStuck = activity(
+            entryId = 9, direction = 1, status = 0,
+            createdAtMs = now - 3_600_000L,
+            spentNullifiers = keptNote.nullifier
+        )
+        source.activityFlow.value = listOf(olderStuck, pendingSpend)
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope, sinceMs = now - 600_000L)
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits), passOk(preSpendCredits))
+            assertTrue("the restored spend is unresolved", service.shieldedBalanceMaybeStale.value)
+
+            source.activityFlow.value = listOf(olderStuck, pendingSpend.copy(status = 2))
+            source.passResults.emit(passOk(preSpendCredits))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /** An unreadable activity or outgoing-note store keeps the gate closed (fail closed). */
+    @Test
+    fun anUnreadableActivityOrOutgoingStore_keepsTheReconciliationPending() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            source.activityFailure = IllegalStateException("room closed")
+            val service = reconcilingService(source, cfg, sweepScope)
+            emitPasses(source, passOk(), passOk(), passOk())
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+
+            source.activityFailure = null
+            source.outgoingFailure = IllegalStateException("room closed")
+            emitPasses(source, passOk(), passOk(), passOk())
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            source.outgoingFailure = null
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression (codex review 2026-10-18): if the durable marker can't be
+     * cleared, the reconciliation stays pending — clearing only the flag would
+     * show a balance the persister refuses to cache. The next stable pass
+     * retries the clear.
+     */
+    @Test
+    fun settlement_keepsTheFlag_whenClearingTheMarkerFails() = runBlocking {
+        val cfg = config(true)
+        var clearFails = true
+        coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
+            if (clearFails) throw IllegalStateException("datastore write failed")
+        }
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.passResults.emit(passOk())
+            delay(30)
+            source.passResults.emit(passOk())
+            withTimeout(5_000) {
+                while (true) {
+                    try {
+                        coVerify(atLeast = 1) { cfg.clearShieldedSpendReconcilePending() }
+                        break
+                    } catch (e: AssertionError) {
+                        delay(10)
+                    }
+                }
+            }
+            delay(100)
+            assertTrue("marker still set: must stay stale", service.shieldedBalanceMaybeStale.value)
+
+            clearFails = false
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression (codex review 2026-10-18): stopping the runtime cancels the
+     * settlement driver — it must not keep forcing passes against a stopped
+     * loop (or a wiped wallet). The durable marker restarts it on bring-up.
+     */
+    @Test
+    fun stop_cancelsTheSettlementDriver() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+
+            // Every forced pass fails, so the driver would retry indefinitely.
+            source.onSyncNowSuspend = { throw IllegalStateException("not ready") }
+            withTimeout(2_000) { service.externalSpend() }
+            withTimeout(5_000) { while (source.syncNowCalls == 0) delay(10) }
+
+            withTimeout(5_000) { service.stop() }
+            val callsAtStop = source.syncNowCalls
+            delay(ShieldedBalanceServiceImpl.SETTLEMENT_RETRY_BASE_MS * 4 + 200)
+            assertEquals("no forced pass after stop", callsAtStop, source.syncNowCalls)
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression (thepastaclaw review 2026-10-18): an unreadable reconcile
+     * marker on restart counts as PENDING — fail closed — not as "no spend".
+     */
+    @Test
+    fun afterRestart_anUnreadableMarker_isTreatedAsPending() = runBlocking {
+        val cfg = config(true)
+        coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } throws java.io.IOException("unreadable")
+        val source = readySource()
+        // An hour-old unresolved spend: with the since unknown (0), it counts.
+        source.notesFlow.value = listOf(inputNote)
+        source.activityFlow.value = listOf(
+            activity(
+                entryId = 1, direction = 1, status = 0,
+                createdAtMs = System.currentTimeMillis() - 3_600_000L,
+                spentNullifiers = inputNote.nullifier
+            )
+        )
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            source.passResults.emit(passOk(inputNote.value))
+            withTimeout(10_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
+            }
+            assertTrue("an unknown marker must keep the balance stale", service.shieldedBalanceMaybeStale.value)
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            emitPasses(source, passOk(inputNote.value), passOk(inputNote.value))
+            assertTrue("since = 0: every unresolved row gates", service.shieldedBalanceMaybeStale.value)
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Smoke test (thepastaclaw review 2026-10-18): two overlapping spends still
+     * end in a settled reconciliation. Each driver starts under the reconcile
+     * mutex, so an older start can't cancel a newer driver; that has no window
+     * left to force deterministically, so this guards the outcome. The
+     * reconciliation keeps the EARLIER of the two spends' since.
+     */
+    @Test
+    fun overlappingSpends_stillSettle_andKeepTheEarliestSince() = runBlocking {
+        val cfg = config(true)
+        val markGate = CompletableDeferred<Unit>()
+        var marks = 0
+        coEvery { cfg.markShieldedSpendReconcilePending(any()) } coAnswers {
+            if (++marks == 1) markGate.await() // the first spend pauses inside its mark
+        }
+        val clockMs = java.util.concurrent.atomic.AtomicLong(0L)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                clock = { clockMs.get() },
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            )
+            assertTrue(service.ensureShieldedReady())
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+
+            val now = System.currentTimeMillis()
+            val skew = ShieldedBalanceServiceImpl.SPEND_WINDOW_SKEW_MS
+            // An old (but still in-window) row for the FIRST spend, unresolved.
+            val firstSpendRow = activity(
+                entryId = 1, direction = 1, status = 0,
+                createdAtMs = now - 60_000L,
+                spentNullifiers = ByteArray(32) { 1 }
+            )
+            source.notesFlow.value = listOf(note(value = 0L, nullifierSeed = 1))
+            source.activityFlow.value = listOf(firstSpendRow)
+
+            clockMs.set(now - 60_000L)
+            val first = async(Dispatchers.Default) { service.externalSpend() }
+            withTimeout(5_000) { while (marks == 0) delay(10) }
+            clockMs.set(now)
+            val second = async(Dispatchers.Default) { service.externalSpend() }
+            delay(50)
+            markGate.complete(Unit)
+            withTimeout(5_000) { first.await(); second.await() }
+            assertEquals(2, marks)
+            coVerify { cfg.markShieldedSpendReconcilePending(now - 60_000L - skew) }
+            coVerify { cfg.markShieldedSpendReconcilePending(now - skew) }
+
+            // The second spend's since alone would ignore the first spend's row.
+            emitPasses(source, passOk(), passOk(), passOk())
+            assertTrue("the first spend's row is still gated", service.shieldedBalanceMaybeStale.value)
+
+            source.activityFlow.value = listOf(firstSpendRow.copy(status = 2))
+            withTimeout(5_000) {
+                while (service.shieldedBalanceMaybeStale.value) {
+                    source.passResults.emit(passOk())
+                    delay(30)
+                }
+            }
+        } finally {
+            markGate.complete(Unit)
+            sweepScope.cancel()
+        }
+    }
+
+    /** Failed / skipped passes are no settlement evidence, however many of them complete. */
+    @Test
+    fun failedOrSkippedPasses_neverSettleAReconciliation() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            repeat(3) {
+                source.passResults.emit(passFailed())
+                delay(30)
+                source.passResults.emit(passSkipped())
+                delay(30)
+            }
+            delay(200)
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Regression: two successful results with DIFFERENT pass balances queued
+     * back-to-back while the store already reads the later one. Re-reading the
+     * store for each made them look stable; comparing the balances the passes
+     * themselves observed keeps the reconciliation pending.
+     */
+    @Test
+    fun bufferedPassesWithDifferentBalances_doNotSettle() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.notesFlow.value = listOf(note(value = 600_000_000_000L)) // store already at B
+            source.passResults.emit(passOk(credits = 1_000_000_000_000L)) // pass A
+            source.passResults.emit(passOk(credits = 600_000_000_000L)) // pass B, queued right behind
+            delay(300)
+            assertTrue("A != B: not two stable passes", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            source.passResults.emit(passOk(credits = 600_000_000_000L)) // B again: now stable
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /** A cooldown-skipped pass between two successes neither counts nor breaks the streak. */
+    @Test
+    fun aSkippedPassBetweenSuccesses_doesNotBreakTheStreak() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.passResults.emit(passOk())
+            delay(30)
+            source.passResults.emit(passSkipped())
+            delay(30)
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Stable pass balances, but the note store the surfaces display has not
+     * caught up yet: stay pending (the header would show the old figure), and
+     * settle on the next successful pass once it has.
+     */
+    @Test
+    fun stablePasses_waitForTheDisplayedStoreToCatchUp() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.notesFlow.value = listOf(note(value = 900_000_000_007L)) // store still pre-settlement (distinct low byte: the fixture's nullifier is value.toByte())
+            source.passResults.emit(passOk(credits = 500_000_000_003L))
+            delay(30)
+            source.passResults.emit(passOk(credits = 500_000_000_003L))
+            delay(300)
+            assertTrue("store not caught up", service.shieldedBalanceMaybeStale.value)
+
+            source.notesFlow.value = listOf(note(value = 500_000_000_003L))
+            source.passResults.emit(passOk(credits = 500_000_000_003L))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * Two consecutive SUCCESSFUL passes with a stable balance settle it — with
+     * no in-flight flag ever observed by the poller (a pass shorter than the
+     * poll interval), which the old busy→idle sampling could never see.
+     */
+    @Test
+    fun twoSuccessfulPasses_settle_evenIfNeverObservedInFlight() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            assertFalse(source.syncing)
+            source.passResults.emit(passOk())
+            delay(30)
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+            coVerify(exactly = 1) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /** success → FAILED → success is not two consecutive successes: still reconciling. */
+    @Test
+    fun aFailedPassBetweenSuccesses_resetsTheStreak() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            source.passResults.emit(passOk())
+            delay(30)
+            source.passResults.emit(passFailed())
+            delay(30)
+            source.passResults.emit(passOk())
+            delay(200)
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+
+            source.passResults.emit(passOk())
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /** Another wallet's successful passes are not evidence for the bound wallet. */
+    @Test
+    fun anotherWalletsPasses_areIgnored() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = reconcilingService(source, cfg, sweepScope)
+            val other = checkNotNull(walletIdFromHex("cd".repeat(32)))
+            repeat(4) {
+                source.passResults.emit(passOk(walletId = other))
+                delay(30)
+            }
+            delay(200)
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * External spend (invite / username): the durable invalidation happens
+     * before the call returns, but the network refresh does not hold the caller
+     * — the invite flow still has to persist its one-time key afterwards.
+     */
+    @Test
+    fun externalSpend_marksDurably_withoutWaitingForTheSyncPass() = runBlocking {
+        val cfg = config(true)
+        val syncGate = CompletableDeferred<Unit>()
+        val source = readySource().apply { onSyncNowSuspend = { syncGate.await() } }
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = ShieldedBalanceServiceImpl(
+                source = source,
+                dashPayConfig = cfg,
+                shieldedDbPath = { dbPath },
+                displayHrp = { hrp },
+                sweepScope = sweepScope,
+                clock = { 1_700_000_000_000L },
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            )
+            assertTrue(service.ensureShieldedReady())
+            // returns although syncShieldedNow is blocked
+            withTimeout(2_000) { service.externalSpend() }
+            assertTrue(service.shieldedBalanceMaybeStale.value)
+            // the since is the caller's start time less the skew allowance
+            coVerify(exactly = 1) {
+                cfg.markShieldedSpendReconcilePending(
+                    1_700_000_000_000L - ShieldedBalanceServiceImpl.SPEND_WINDOW_SKEW_MS
+                )
+            }
+        } finally {
+            syncGate.complete(Unit)
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * thepastaclaw (7ae06b9e7): a spend whose invalidation can't be made
+     * durable is never submitted — after a process death the pre-spend cache
+     * would otherwise be trusted again.
+     */
+    @Test
+    fun aSpendWhoseRecordFails_isNotBroadcast_andNeverReachesTheSdk() = runBlocking {
+        val cfg = config(true, lastBalanceDuffs = 1_000_000_000L)
+        coEvery { cfg.markShieldedSpendReconcilePending(any()) } throws IllegalStateException("datastore down")
+        val source = readySource()
+        val service = ShieldedBalanceServiceImpl(
+            source = source,
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        )
+        assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.broadcastCalls)
+        assertFalse(service.shieldedBalanceMaybeStale.value)
+        assertNull(service.beginExternalShieldedSpend())
+    }
+
+    /**
+     * Settlement waits while a spend's SDK call is in flight: its activity row
+     * is written only after the proof, so stable passes during the call — the
+     * gate sees no row yet — must not settle it.
+     */
+    @Test
+    fun stablePassesDuringTheSpendCall_cannotSettleIt() = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote, keptNote)
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = subscribedService(source, cfg, sweepScope)
+            val start = service.beginExternalShieldedSpend()!!
+            emitPasses(source, *Array(4) { passOk(preSpendCredits) })
+            assertTrue("in flight: no row yet, still stale", service.shieldedBalanceMaybeStale.value)
+            coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
+
+            service.endExternalShieldedSpend(start)
+            emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
+            withTimeout(5_000) { while (service.shieldedBalanceMaybeStale.value) delay(10) }
+        } finally {
+            sweepScope.cancel()
+        }
     }
 
     @Test
@@ -1706,6 +2954,184 @@ class ShieldedBalanceServiceTest {
         assertArrayEquals(source.defaultAddress, source.lastFundRecipient)
     }
 
+    @Test
+    fun mixedFundsShield_existingLockReturnsRecoveryWithoutNewFunding() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = { listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 1, 206751800L)) }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+        assertEquals(0, source.fundCalls)
+        assertEquals(0, source.broadcastCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_coinJoinFundedLockBlocksANewDrain() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = {
+                listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 2, 206751800L, coinJoinFunded = true))
+            }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+        assertEquals(0, source.accountFundCalls)
+        assertEquals(1, service.pendingCoinJoinShieldLockCount())
+    }
+
+    @Test
+    fun mixedFundsShield_submissionCheckpointRunsOnlyRightBeforeTheFundingCall() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        var fundCallsAtCheckpoint = -1
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) {
+            fundCallsAtCheckpoint = source.accountFundCalls
+        }
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        assertEquals(0, fundCallsAtCheckpoint)
+        assertEquals(1, source.accountFundCalls)
+
+        // An existing CoinJoin lock answers without reaching the native call.
+        source.shieldLocks = {
+            listOf(PendingWalletShieldLock("${"ab".repeat(32)}:0", 2, 206751800L, coinJoinFunded = true))
+        }
+        var checkpointed = false
+        service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) { checkpointed = true }
+        assertFalse(checkpointed)
+        assertEquals(1, source.accountFundCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_failedSubmissionCheckpointSubmitsNothing() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) {
+            throw java.io.IOException("disk full")
+        }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.accountFundCalls)
+    }
+
+    @Test
+    fun mixedFundsShield_unrelatedBip44LockDoesNotBlockTheDrain() = runBlocking {
+        val source = readySource().apply {
+            shieldLocks = {
+                listOf(
+                    PendingWalletShieldLock("${"ab".repeat(32)}:0", 1, 5_000_000L, coinJoinFunded = false),
+                    // A consumed CoinJoin lock is history, not pending work.
+                    PendingWalletShieldLock("${"cd".repeat(32)}:0", 4, 5_000_000L, coinJoinFunded = true)
+                )
+            }
+        }
+        val service = service(source, progress = { caughtUpProgress() })
+
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        assertEquals(0, service.pendingCoinJoinShieldLockCount())
+        assertEquals(1, service.pendingWalletShieldLockCount())
+        assertEquals(1, source.accountFundCalls)
+        assertEquals(0, source.fundCalls)
+    }
+
+    /**
+     * The native CoinJoin drain spends the whole account and cannot exclude
+     * an input: an app-locked (e.g. CrowdNode) CoinJoin output — or a check
+     * that cannot answer — refuses it before the submission checkpoint.
+     */
+    @Test
+    fun mixedFundsShield_appLockedCoinJoinOutputRefusesTheDrain() = runBlocking {
+        for (guard in listOf<() -> Boolean>({ true }, { throw IllegalStateException("wallet unavailable") })) {
+            val source = readySource()
+            val service = service(source, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = guard)
+            var checkpointed = false
+            val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) {
+                checkpointed = true
+            }
+            assertTrue(result is SdkWriteResult.NotBroadcast)
+            assertFalse(checkpointed)
+            assertEquals(0, source.accountFundCalls)
+            // The BIP44 shield never touches the CoinJoin account: unaffected.
+            assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.Broadcast)
+            assertEquals(1, source.fundCalls)
+        }
+
+        // A lock taken after the first check is caught right before the native call.
+        val source = readySource()
+        var checks = 0
+        val service = service(source, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = { ++checks > 1 })
+        var checkpointed = false
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) { checkpointed = true }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(2, checks)
+        assertFalse(checkpointed)
+        assertEquals(0, source.accountFundCalls)
+
+        // A pending CoinJoin lock still answers as recovery (never a NotBroadcast that drops the record).
+        val pending = readySource().apply {
+            shieldLocks = { listOf(PendingWalletShieldLock("ab".repeat(32) + ":0", 3, 1L, coinJoinFunded = true)) }
+        }
+        assertEquals(
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+            service(pending, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = { true })
+                .shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+        )
+    }
+
+    /** Cancelled once the submission checkpoint is being written: the CoinJoin drain still runs. */
+    @Test
+    fun mixedFundsShield_cancelledAtTheCheckpoint_stillSubmits() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        var checkpointed = false
+        lateinit var call: kotlinx.coroutines.Job
+        call = launch {
+            service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) {
+                call.cancel()
+                delay(10) // the checkpoint write, suspended when cancelled
+                checkpointed = true
+            }
+        }
+        call.join()
+        assertTrue(checkpointed)
+        assertEquals(1, source.accountFundCalls)
+    }
+
+    /**
+     * The shield drain uses the send-all union: an SDK-only output locked in the
+     * seam registry (which the dashj check cannot see) refuses it, as does a
+     * registry that cannot be read — the BIP44 shield is unaffected.
+     */
+    @Test
+    fun mixedFundsShield_seamLockedOutputRefusesTheDrain() = runBlocking {
+        val unreadable = mockk<SeamOutputLockRegistry> {
+            every { hasAnyLocks() } throws IllegalStateException("registry unavailable")
+        }
+        val locked = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        for (registry in listOf(locked, unreadable)) {
+            val source = readySource()
+            val service = service(
+                source, progress = { caughtUpProgress() }, hasAppLockedCoinJoinOutputs = { false },
+                seamRegistry = registry
+            )
+            var checkpointed = false
+            val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) {
+                checkpointed = true
+            }
+            assertTrue(result is SdkWriteResult.NotBroadcast)
+            assertFalse(checkpointed)
+            assertEquals(0, source.accountFundCalls)
+        }
+        // No lock on either side: the same drain runs.
+        val source = readySource()
+        val result = service(source, progress = { caughtUpProgress() }).shieldMixedFundsFromWallet(
+            Dash.COIN, "m/9'/1'/4'/0'", walletIdHex
+        )
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(1, source.accountFundCalls)
+    }
+
     /**
      * Regression guard for the bricked-shields bug: the gate must NOT
      * consult ANY dashj comparison. A caught-up engine shields regardless
@@ -1953,6 +3379,413 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
+    fun resumeSweep_userRequestGetsOneAttemptPastTheBudget() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        source.shieldLocks = { listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1)) }
+        source.onResume = { _, _ -> throw RuntimeException("no chainlock yet") }
+        repeat(4) { assertEquals(0, service.resumePendingWalletShields()) }
+        assertEquals(3, source.resumeCalls)
+
+        // Connectivity is back and the user taps Try again: one real attempt.
+        source.onResume = { _, _ -> }
+        assertEquals(1, service.resumePendingWalletShieldsOnUserRequest())
+        assertEquals(4, source.resumeCalls)
+        // Unattended sweeps stay capped.
+        service.resumePendingWalletShields()
+        assertEquals(4, source.resumeCalls)
+    }
+
+    /**
+     * SDK `AssetLockStatus` discriminants (AssetLockEntity.statusRaw): every
+     * status but Consumed (4) is still recoverable. RecoveredFromChain (5)
+     * is what the chainlock promotion writes for a ChainLocked lock nothing
+     * live is completing — it must stay pending, not drop out of `0..3`.
+     */
+    @Test
+    fun pendingWalletShieldLock_everyStatusButConsumedIsResumable() {
+        for (status in listOf(0, 1, 2, 3, 5)) {
+            val lock = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, coinJoinFunded = true)
+            assertTrue("status $status", lock.resumable)
+            assertTrue("status $status", lock.pendingCoinJoinDrain)
+        }
+        val consumed = PendingWalletShieldLock("aa".repeat(32) + ":0", 4, 1, coinJoinFunded = true)
+        assertFalse(consumed.resumable)
+        assertFalse(consumed.pendingCoinJoinDrain)
+        // Platform reported a FINAL lock consumed (unauthenticated): still pending, its retries
+        // stop, and — its inputs final on L1 — it no longer blocks a FRESH drain.
+        for (status in listOf(2, 3, 5)) {
+            val reported = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, true, platformConsumed = true)
+            assertTrue("status $status", reported.resumable)
+            assertTrue("status $status", reported.pendingCoinJoinDrain)
+            assertTrue("status $status", reported.retrySuppressed)
+            assertFalse("status $status", reported.blocksFreshDrain)
+            assertFalse("status $status: no wedged cutover", reported.blocksCutover)
+            val unreported = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, true)
+            assertTrue("status $status", unreported.blocksFreshDrain)
+        }
+        // A not-yet-final lock stays pending and retried whatever was reported.
+        for (status in listOf(0, 1)) {
+            val reported = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, true, platformConsumed = true)
+            assertTrue("status $status", reported.resumable)
+            assertFalse("status $status", reported.retrySuppressed)
+            assertTrue("status $status", reported.blocksFreshDrain)
+            assertTrue("status $status", reported.blocksCutover)
+        }
+        assertFalse(PendingWalletShieldLock("aa".repeat(32) + ":0", 2, 1, true).retrySuppressed)
+        // Cutover evidence keeps the 0..3 semantics: 5 never blocks it.
+        assertEquals(
+            listOf(true, true, true, true, false, false),
+            (0..5).map { PendingWalletShieldLock("aa".repeat(32) + ":0", it, 1).blocksCutover }
+        )
+    }
+
+    /**
+     * A status this build does not know (a newer SDK's row after a downgrade, or a
+     * corrupted one) is PENDING, never terminal: only Consumed (4) is. It stays
+     * pending even after a Platform already-consumed record, blocks a CoinJoin drain
+     * (funding known or unknown) and the cutover, and is never counted as recovered.
+     */
+    @Test
+    fun pendingWalletShieldLock_unknownStatusIsPendingNotTerminal() {
+        for (status in unknownLockStatuses) {
+            for (funded in listOf(true, null)) {
+                for (reported in listOf(false, true)) {
+                    val label = "status $status, funded $funded, platformConsumed $reported"
+                    val lock = PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, funded, reported)
+                    assertTrue(label, lock.resumable)
+                    assertTrue(label, lock.pendingCoinJoinDrain)
+                    assertTrue(label, lock.blocksCutover)
+                    assertFalse(label, lock.retrySuppressed)
+                    assertTrue(label, lock.blocksFreshDrain)
+                }
+            }
+            // A BIP44-funded unknown lock still never blocks the CoinJoin drain.
+            assertFalse(PendingWalletShieldLock("aa".repeat(32) + ":0", status, 1, false).pendingCoinJoinDrain)
+        }
+        val consumed = PendingWalletShieldLock("aa".repeat(32) + ":0", ASSET_LOCK_STATUS_CONSUMED, 1, true)
+        assertFalse(consumed.resumable)
+        assertFalse(consumed.blocksCutover)
+    }
+
+    /** Statuses outside the SDK's 0..5 `AssetLockStatus`. */
+    private val unknownLockStatuses = listOf(-1, 6, 7, 42, Int.MAX_VALUE)
+
+    /** The service counts an unknown-status CoinJoin lock as pending everywhere, never as recovered (5). */
+    @Test
+    fun mixedFundsShield_unknownStatusCoinJoinLockBlocksADrainAndTheCutover() = runBlocking {
+        for (status in unknownLockStatuses) {
+            val source = readySource()
+            val service = service(source, progress = { caughtUpProgress() })
+            val lockA = "02".repeat(32) + ":0"
+            source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, status, 84_997_634L, coinJoinFunded = true)) }
+            source.onResume = { _, _ -> throw RuntimeException("SDK error: unknown lock status") }
+            assertTrue("status $status", service.ensureShieldedReady())
+            assertEquals("status $status", 1, service.pendingCoinJoinShieldLockCount())
+            assertEquals("status $status", 0, service.recoveredCoinJoinShieldLockCount())
+            assertEquals("status $status", 1, service.pendingWalletShieldLockCount())
+            assertEquals(
+                "status $status",
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+                service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+            )
+            assertEquals("status $status: no second drain", 0, source.accountFundCalls)
+        }
+    }
+
+    /**
+     * The CoinJoin drain is pinned to the migration's wallet: a runtime bound to another
+     * wallet, or one that rebinds between the preflight and the drain (here: stopped under the
+     * shield mutex), is a NotBroadcast before the submission checkpoint — nothing drained.
+     */
+    @Test
+    fun mixedFundsShield_spendsOnlyFromTheExpectedWallet() = runBlocking {
+        val other = readySource()
+        var checkpointed = false
+        val wrongWallet = service(other, progress = { caughtUpProgress() })
+            .shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", "cd".repeat(32)) { checkpointed = true }
+        assertTrue(wrongWallet is SdkWriteResult.NotBroadcast)
+        assertFalse(checkpointed)
+        assertEquals(0, other.accountFundCalls)
+
+        val source = readySource()
+        lateinit var rebinding: ShieldedBalanceServiceImpl
+        rebinding = service(source, progress = { caughtUpProgress() }, ensureL1SpvRunning = {
+            rebinding.stop()
+            true
+        })
+        val rebound = rebinding.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) {
+            checkpointed = true
+        }
+        assertTrue(rebound is SdkWriteResult.NotBroadcast)
+        assertFalse(checkpointed)
+        assertEquals(0, source.accountFundCalls)
+    }
+
+    /**
+     * Reset Wallet forgets the per-process resume budget: the next wallet (here the
+     * same seed restored, so the same outpoint) gets its full budget, not the wiped
+     * wallet's exhausted one.
+     */
+    @Test
+    fun resetForWalletWipe_nextWalletGetsAFullResumeBudget() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        val lockA = "02".repeat(32) + ":0"
+        source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, 2, 84_997_634L, coinJoinFunded = true)) }
+        source.onResume = { _, _ -> throw RuntimeException("SDK error: cannot decode consensus error") }
+        repeat(4) { service.resumePendingWalletShields() }
+        assertEquals("capped at 3 attempts", 3, source.resumeCalls)
+
+        service.resetForWalletWipe()
+        repeat(4) { service.resumePendingWalletShields() }
+        assertEquals("a fresh budget of 3", 6, source.resumeCalls)
+    }
+
+    /**
+     * Field failure (build 41): CoinJoin lock A is IS/Chain-locked (later
+     * RecoveredFromChain) but its Platform transition keeps failing, the
+     * per-process resume budget is spent, and new CoinJoin coins arrive. A
+     * second shield must not drain them: A stays a pending CoinJoin lock,
+     * blocks the drain, and only the user's Try again resumes A once more.
+     */
+    @Test
+    fun mixedFundsShield_unresolvedCoinJoinLockPastTheResumeBudgetBlocksASecondDrain() = runBlocking {
+        for (status in listOf(2, 3, 5)) {
+            val source = readySource()
+            val service = service(source, progress = { caughtUpProgress() })
+            val lockA = "02".repeat(32) + ":0"
+            source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, status, 84_997_634L, coinJoinFunded = true)) }
+            source.onResume = { _, _ -> throw RuntimeException("SDK error: cannot decode consensus error") }
+            repeat(4) { assertEquals("status $status", 0, service.resumePendingWalletShields()) }
+            assertEquals("status $status: capped at 3 attempts", 3, source.resumeCalls)
+
+            assertEquals("status $status", 1, service.pendingCoinJoinShieldLockCount())
+            // Cutover evidence: 0..3 only (a historical 5 must never block a cutover).
+            assertEquals("status $status", if (status == 5) 0 else 1, service.pendingWalletShieldLockCount())
+            assertEquals(
+                "status $status",
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+                service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+            )
+            assertEquals("status $status: no second drain", 0, source.accountFundCalls)
+            assertEquals("status $status", 0, source.fundCalls)
+
+            // Try again: lock A only, one attempt past the budget.
+            assertEquals("status $status", 0, service.resumePendingWalletShieldsOnUserRequest())
+            assertEquals("status $status", 4, source.resumeCalls)
+            assertTrue("status $status", source.resumedOutPoints.all { it.first.all { b -> b == 0x02.toByte() } })
+            assertEquals("status $status", 0, source.accountFundCalls)
+        }
+    }
+
+    /**
+     * Platform answers a status-5 CoinJoin lock's resume with the typed
+     * already-consumed signal (the SDK keeps it at 5, non-terminal): that one
+     * round trip records it durably and stops the AUTOMATIC sweeps' retries — in
+     * this process and after a restart. The answer is unauthenticated, so the lock
+     * STAYS pending in the strict count, and an explicit user retry still re-asks
+     * (the same lock, nothing new built; the same answer keeps it suppressed); as
+     * a stranger (inputs final on L1) it no longer blocks a fresh drain.
+     */
+    @Test
+    fun resumeSweep_alreadyConsumedStatus5LockStopsAutomaticRetriesAndUnblocksTheDrain() = runBlocking {
+        val failures = listOf<(String) -> Throwable>(
+            { DashSdkError.PlatformWallet.AssetLockAlreadyConsumed(it) },
+            // Wrapped by the JNI: matched down the cause chain.
+            { RuntimeException("resume failed", DashSdkError.PlatformWallet.AssetLockAlreadyConsumed(it)) }
+        )
+        for ((i, failure) in failures.withIndex()) {
+            for (userRequested in listOf(false, true)) {
+                val label = "failure $i, userRequested $userRequested"
+                val consumed = ConsumedStore()
+                val source = readySource()
+                val lockA = "02".repeat(32) + ":0"
+                source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, 5, 84_997_634L, coinJoinFunded = true)) }
+                source.onResume = { _, _ -> throw failure("asset lock $lockA already consumed") }
+                val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+                assertTrue(label, service.ensureShieldedReady())
+                assertEquals(label, 1, service.pendingCoinJoinShieldLockCount())
+
+                val resumed = if (userRequested) {
+                    service.resumePendingWalletShieldsOnUserRequest()
+                } else {
+                    service.resumePendingWalletShields()
+                }
+                assertEquals(label, 0, resumed)
+                assertEquals(label, setOf(lockA), consumed.value)
+                assertEquals(label, 1, service.pendingCoinJoinShieldLockCount())
+                // Not retried on later automatic sweeps.
+                assertEquals(label, 0, service.resumePendingWalletShields())
+                assertEquals(label, 1, source.resumeCalls)
+                // An explicit retry re-asks; the same answer keeps it suppressed, nothing new built.
+                assertEquals(label, 0, service.resumePendingWalletShieldsOnUserRequest())
+                assertEquals(label, 2, source.resumeCalls)
+                assertEquals(label, setOf(lockA), consumed.value)
+                assertEquals(label, 0, service.unsuppressedCoinJoinShieldLockCount())
+                assertEquals(label, 0, source.fundCalls)
+                assertEquals(label, 0, source.accountFundCalls)
+
+                // A new process (fresh service, same store) reads the record.
+                val restarted = service(source, consumed = consumed, progress = { caughtUpProgress() })
+                assertTrue(label, restarted.ensureShieldedReady())
+                assertEquals(label, 1, restarted.pendingCoinJoinShieldLockCount())
+                assertEquals(label, 0, restarted.unsuppressedCoinJoinShieldLockCount())
+                // Its own migration still counts it, by txid.
+                assertEquals(label, 1, restarted.unsuppressedCoinJoinShieldLockCount("02".repeat(32)))
+                assertEquals(label, 0, restarted.unsuppressedCoinJoinShieldLockCount("03".repeat(32)))
+                assertEquals(label, 0, restarted.recoveredCoinJoinShieldLockCount())
+                assertEquals(label, 0, restarted.resumePendingWalletShields())
+                assertEquals(label, 2, source.resumeCalls)
+                // After the restart an explicit retry still re-asks.
+                assertEquals(label, 0, restarted.resumePendingWalletShieldsOnUserRequest())
+                assertEquals(label, 3, source.resumeCalls)
+                assertEquals(label, 0, source.accountFundCalls)
+                // The user's next shield drains the new coins instead of waiting on A.
+                assertEquals(
+                    label,
+                    SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED),
+                    restarted.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+                )
+                assertEquals(label, 1, source.accountFundCalls)
+            }
+        }
+    }
+
+    /**
+     * An explicit retry of a Platform-consumed lock that then LANDS (its row reaches Consumed):
+     * resumed through the recovery call only, the record cleared, the lock no longer pending. A row
+     * already Consumed has its stale record cleared by any sweep.
+     */
+    @Test
+    fun resumeSweep_explicitRetryOfAPlatformConsumedLockThatLandsClearsTheRecord() = runBlocking {
+        val lockA = "02".repeat(32) + ":0"
+        val consumed = ConsumedStore().apply { value = setOf(lockA) }
+        val source = readySource()
+        var status = ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN
+        source.shieldLocks = { listOf(PendingWalletShieldLock(lockA, status, 84_997_634L, coinJoinFunded = true)) }
+        source.onResume = { _, _ -> status = ASSET_LOCK_STATUS_CONSUMED }
+        val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+        assertTrue(service.ensureShieldedReady())
+        // Automatic: skipped.
+        assertEquals(0, service.resumePendingWalletShields())
+        assertEquals(0, source.resumeCalls)
+        assertEquals(1, service.retrySuppressedShieldLockCount())
+        // Explicit: resumed; it lands.
+        assertEquals(1, service.resumePendingWalletShieldsOnUserRequest())
+        assertEquals(0, service.retrySuppressedShieldLockCount())
+        assertEquals(1, source.resumeCalls)
+        assertEquals(emptySet<String>(), consumed.value)
+        assertEquals(0, service.pendingCoinJoinShieldLockCount())
+        assertEquals(0, source.fundCalls)
+        assertEquals(0, source.accountFundCalls)
+
+        // A stale record over a row that reached Consumed by itself: cleared, nothing resumed.
+        val stale = ConsumedStore().apply { value = setOf(lockA, "05".repeat(32) + ":1") }
+        val other = readySource()
+        other.shieldLocks = {
+            listOf(PendingWalletShieldLock(lockA, ASSET_LOCK_STATUS_CONSUMED, 84_997_634L, coinJoinFunded = true))
+        }
+        val swept = service(other, consumed = stale, progress = { caughtUpProgress() })
+        assertTrue(swept.ensureShieldedReady())
+        assertEquals(0, swept.resumePendingWalletShields())
+        assertEquals(setOf("05".repeat(32) + ":1"), stale.value)
+        assertEquals(0, other.resumeCalls)
+    }
+
+    /** Locks waiting on an explicit retry: any funding (BIP44 too), suppressed and pending only. */
+    @Test
+    fun retrySuppressedShieldLockCount_countsEveryFundingButOnlySuppressedPendingLocks() = runBlocking {
+        val bip44 = "0b".repeat(32) + ":0"
+        val coinJoin = "02".repeat(32) + ":0"
+        val unanswered = "03".repeat(32) + ":0"
+        val landed = "04".repeat(32) + ":0"
+        val consumed = ConsumedStore().apply { value = setOf(bip44, coinJoin, landed) }
+        val source = readySource()
+        source.shieldLocks = {
+            listOf(
+                PendingWalletShieldLock(bip44, 3, 1L, coinJoinFunded = false),
+                PendingWalletShieldLock(coinJoin, ASSET_LOCK_STATUS_RECOVERED_FROM_CHAIN, 1L, coinJoinFunded = true),
+                PendingWalletShieldLock(unanswered, 2, 1L, coinJoinFunded = true),
+                PendingWalletShieldLock(landed, ASSET_LOCK_STATUS_CONSUMED, 1L, coinJoinFunded = true)
+            )
+        }
+        val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(2, service.retrySuppressedShieldLockCount())
+    }
+
+    /**
+     * Any other resume failure — including the untyped "already completely
+     * used" wording — proves nothing: the status-5 CoinJoin lock (e.g. live
+     * lock A, whose transition never reached Platform) keeps blocking.
+     */
+    @Test
+    fun resumeSweep_otherFailureKeepsAStatus5CoinJoinLockBlocking() = runBlocking {
+        val failures = listOf(
+            RuntimeException("SDK error: cannot decode consensus error"),
+            RuntimeException("asset lock output 0 already completely used"),
+            DashSdkError.PlatformWallet.AssetLockNotTracked("not tracked")
+        )
+        for (failure in failures) {
+            val consumed = ConsumedStore()
+            val source = readySource()
+            source.shieldLocks = {
+                listOf(PendingWalletShieldLock("02".repeat(32) + ":0", 5, 84_997_634L, coinJoinFunded = true))
+            }
+            source.onResume = { _, _ -> throw failure }
+            val service = service(source, consumed = consumed, progress = { caughtUpProgress() })
+            assertTrue(service.ensureShieldedReady())
+            assertEquals(failure.message, 0, service.resumePendingWalletShieldsOnUserRequest())
+            assertNull(failure.message, consumed.value)
+            assertEquals(failure.message, 1, service.pendingCoinJoinShieldLockCount())
+            assertEquals(failure.message, 1, service.unsuppressedCoinJoinShieldLockCount())
+            assertEquals(
+                failure.message,
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+                service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex)
+            )
+            assertEquals(failure.message, 0, source.accountFundCalls)
+        }
+        // An unreadable record never unblocks a lock it may list.
+        val consumed = ConsumedStore().apply {
+            value = setOf("02".repeat(32) + ":0")
+            readFailure = java.io.IOException("unreadable preferences")
+        }
+        val source = readySource().apply {
+            shieldLocks = { listOf(PendingWalletShieldLock("02".repeat(32) + ":0", 5, 1L, coinJoinFunded = true)) }
+        }
+        val unreadable = service(source, consumed = consumed)
+        assertTrue(unreadable.ensureShieldedReady())
+        assertEquals(1, unreadable.pendingCoinJoinShieldLockCount())
+        assertEquals(1, unreadable.unsuppressedCoinJoinShieldLockCount())
+    }
+
+    /**
+     * Restore/scan rebuilds every historical chain-locked shield top-up as
+     * RecoveredFromChain (5). Those must never hold up the cutover — not even
+     * before any resume could record them consumed — while live 0..3 locks
+     * still do.
+     */
+    @Test
+    fun cutoverEvidence_historicalStatus5LocksNeverBlock() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        assertTrue(service.ensureShieldedReady())
+        source.shieldLocks = {
+            listOf(
+                PendingWalletShieldLock("aa".repeat(32) + ":0", 5, 1L, coinJoinFunded = false),
+                PendingWalletShieldLock("bb".repeat(32) + ":1", 5, 1L),
+                PendingWalletShieldLock("cc".repeat(32) + ":0", 4, 1L)
+            )
+        }
+        assertEquals(0, service.pendingWalletShieldLockCount())
+        val historical = source.shieldLocks()
+        source.shieldLocks = { historical + PendingWalletShieldLock("dd".repeat(32) + ":0", 3, 1L) }
+        assertEquals(1, service.pendingWalletShieldLockCount())
+    }
+
+    @Test
     fun resumeSweep_nothingPending_isCheap() = runBlocking {
         val source = readySource()
         val service = service(source, progress = { caughtUpProgress() })
@@ -1991,14 +3824,61 @@ class ShieldedBalanceServiceTest {
         assertEquals(2L, ceilCreditsToDuffs(1_001))
     }
 
+    // ── Pure settlement gate ──────────────────────────────────────────────
+
+    @Test
+    fun spendsReflected_decisionTable() {
+        val a = note(value = 1L, nullifierSeed = 1)
+        val b = note(value = 2L, nullifierSeed = 2)
+        val change = note(value = 3L, nullifierSeed = 3)
+        val sent = ByteArray(32) { 0x55 }
+        val now = 1_800_000_000_000L
+        fun row(status: Int, createdAtMs: Long = now, nullifiers: ByteArray = ByteArray(0), cmxs: ByteArray = ByteArray(0)) =
+            activity(
+                entryId = 1, direction = 1, status = status, createdAtMs = createdAtMs,
+                spentNullifiers = nullifiers, noteCmxs = cmxs
+            )
+        fun reflected(rows: List<ShieldedActivityEntity>, notes: List<ShieldedNoteEntity>, outgoing: List<ByteArray> = emptyList(), since: Long = 0L) =
+            shieldedSpendsReflected(rows, notes, outgoing, since)
+        val aSpent = a.copy(isSpent = true)
+
+        assertTrue(reflected(emptyList(), listOf(a, b)))
+        // input still unspent: Pending and Confirmed both close the gate; Failed doesn't
+        assertFalse(reflected(listOf(row(0, nullifiers = a.nullifier)), listOf(a, b)))
+        assertFalse(reflected(listOf(row(1, nullifiers = a.nullifier)), listOf(a, b)))
+        assertTrue(reflected(listOf(row(2, nullifiers = a.nullifier, cmxs = change.cmx)), listOf(a, b)))
+        // input spent, but the change output not stored yet: closed; stored: open
+        assertFalse(reflected(listOf(row(1, nullifiers = a.nullifier, cmxs = change.cmx)), listOf(aSpent, b)))
+        assertTrue(reflected(listOf(row(1, nullifiers = a.nullifier, cmxs = change.cmx)), listOf(aSpent, b, change)))
+        // ... even when the change was spent again by a later spend
+        assertTrue(reflected(listOf(row(1, nullifiers = a.nullifier, cmxs = change.cmx)), listOf(aSpent, b, change.copy(isSpent = true))))
+        // every visible cmx must be known: a send counts once the scan recovers it as outgoing
+        val transfer = row(1, nullifiers = a.nullifier, cmxs = sent + change.cmx)
+        assertFalse(reflected(listOf(transfer), listOf(aSpent, change)))
+        assertTrue(reflected(listOf(transfer), listOf(aSpent, change), outgoing = listOf(sent)))
+        // a note-less shield: gated on its new note
+        assertFalse(reflected(listOf(row(1, cmxs = change.cmx)), listOf(b)))
+        assertTrue(reflected(listOf(row(1, cmxs = change.cmx)), listOf(b, change)))
+        // concatenated nullifiers: any one still unspent closes it
+        assertFalse(reflected(listOf(row(1, nullifiers = a.nullifier + b.nullifier)), listOf(b)))
+        // rows before the since are ignored; at the since they count
+        assertTrue(reflected(listOf(row(0, createdAtMs = now - 10, nullifiers = a.nullifier)), listOf(a), since = now - 9))
+        assertFalse(reflected(listOf(row(0, createdAtMs = now - 9, nullifiers = a.nullifier)), listOf(a), since = now - 9))
+        // Unknown (may still execute) closes it like Pending
+        assertFalse(reflected(listOf(row(3, nullifiers = a.nullifier)), listOf(a)))
+        // malformed lists are unreadable: closed
+        assertFalse(reflected(listOf(row(1, nullifiers = ByteArray(33))), emptyList()))
+        assertFalse(reflected(listOf(row(1, cmxs = ByteArray(31))), emptyList()))
+    }
+
     // ── Fixtures ──────────────────────────────────────────────────────────
 
-    private fun note(value: Long, isSpent: Boolean = false) = ShieldedNoteEntity(
-        nullifier = ByteArray(32) { value.toByte() },
+    private fun note(value: Long, isSpent: Boolean = false, nullifierSeed: Int = value.toInt()) = ShieldedNoteEntity(
+        nullifier = ByteArray(32) { nullifierSeed.toByte() },
         walletId = walletIdBytes,
         accountIndex = 0,
         position = 0L,
-        cmx = ByteArray(32),
+        cmx = ByteArray(32) { (nullifierSeed + 100).toByte() },
         blockHeight = 1L,
         isSpent = isSpent,
         value = value,
@@ -2011,7 +3891,9 @@ class ShieldedBalanceServiceTest {
         status: Int,
         amount: Long = 1_000L,
         createdAtMs: Long = 0L,
-        memo: ByteArray = ByteArray(0)
+        memo: ByteArray = ByteArray(0),
+        spentNullifiers: ByteArray = ByteArray(0),
+        noteCmxs: ByteArray = ByteArray(0)
     ) = ShieldedActivityEntity(
         walletId = walletIdBytes,
         accountIndex = 0,
@@ -2025,7 +3907,19 @@ class ShieldedBalanceServiceTest {
         blockHeight = 0L,
         hasBlockHeight = false,
         createdAtMs = createdAtMs,
-        memo = memo
+        memo = memo,
+        noteCmxs = noteCmxs,
+        spentNullifiers = spentNullifiers
+    )
+
+    private fun outgoing(cmx: ByteArray) = ShieldedOutgoingNoteEntity(
+        walletId = walletIdBytes,
+        accountIndex = 0,
+        cmx = cmx,
+        recipient = ByteArray(43),
+        value = 1L,
+        memo = ByteArray(0),
+        blockHeight = 1L
     )
 
     /** Build a 36-byte on-chain text memo: LE u32 kind 1 + zero-padded UTF-8. */
@@ -2036,5 +3930,39 @@ class ShieldedBalanceServiceTest {
         require(bytes.size <= 32)
         bytes.copyInto(out, destinationOffset = 4)
         return out
+    }
+
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun shieldFromWallet_refusedWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() }, freshFundingBlocked = { true })
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertEquals(0, source.fundCalls)
+    }
+
+    /**
+     * The CoinJoin shield asks the gate again under the shared selection lock, before its
+     * submission checkpoint: a payment exposed after the preflight refuses it with nothing
+     * recorded as submitted and nothing built.
+     */
+    @Test
+    fun mixedFundsShield_refusedUnderTheHoldBeforeTheCheckpoint() = runBlocking {
+        val source = readySource()
+        var asks = 0
+        val service = service(source, progress = { caughtUpProgress() }, freshFundingBlocked = { ++asks > 1 })
+        var checkpointed = false
+
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) { checkpointed = true }
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertFalse(checkpointed)
+        assertEquals(0, source.accountFundCalls)
     }
 }

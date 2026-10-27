@@ -198,6 +198,7 @@
     <string name="purchase_gift_card_details">기프트 카드 상세 정보</string>
     <string name="purchase_original_purchase">초기 구매</string>
     <string name="purchase_check_current_balance">카드 상세 정보 보기</string>
+    <string name="purchase_redeem_url_challange">챌린지</string>
     <string name="purchase_card_number">카드 번호</string>
     <string name="purchase_card_pin">카드 PIN</string>
     <string name="purchase_view_transaction">거래 상세 정보 확인하기</string>

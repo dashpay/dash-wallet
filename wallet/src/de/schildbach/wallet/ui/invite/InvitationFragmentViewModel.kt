@@ -31,10 +31,13 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SHIELDED_INVITE_FEE_MARGIN_CREDITS
 import de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedInviteCreation
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
@@ -49,6 +52,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -83,15 +87,16 @@ import javax.inject.Inject
  *   opaquely at the FFI. The tiles/confirm screen still DISPLAY the bare
  *   denomination (what the invite is worth); this requirement is what the
  *   user must HOLD, and what the insufficiency message quotes.
- * - L1 invite: the L1 fee — [Constants.DASH_PAY_FEE_CONTESTED] (0.25)
- *   contested / [Constants.DASH_PAY_FEE] (0.03) non-contested.
+ * - L1 invite: the L1 fee — [contestedFee] (the protocol-gated contested fee
+ *   resolved via [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees],
+ *   MO-1069) / [Constants.DASH_PAY_FEE] (0.03) non-contested.
  */
-internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean): Coin {
+internal fun inviteFeeRequirement(shielded: Boolean, contestedSelected: Boolean, contestedFee: Coin): Coin {
     return if (shielded) {
         (if (contestedSelected) SHIELDED_INVITE_CONTESTED else SHIELDED_INVITE_NON_CONTESTED)
             .add(SHIELDED_INVITE_FEE_MARGIN)
     } else {
-        if (contestedSelected) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+        if (contestedSelected) contestedFee else Constants.DASH_PAY_FEE
     }
 }
 
@@ -137,15 +142,28 @@ internal fun inviteFeeGate(
     l1Balance: Coin,
     shieldedReady: Boolean,
     shieldedBalance: Coin,
-    contestedSelected: Boolean
+    contestedSelected: Boolean,
+    contestedFee: Coin
 ): Boolean {
-    val requirement = inviteFeeRequirement(shielded, contestedSelected)
+    val requirement = inviteFeeRequirement(shielded, contestedSelected, contestedFee)
     return if (shielded) {
         shieldedReady && shieldedBalance >= requirement
     } else {
         l1Balance >= requirement
     }
 }
+
+/**
+ * True while "Continue" must wait for the live contested fee (MO-1069): an L1
+ * invite of the contested kind is approved on the confirm screen at
+ * [ContestedUsernameFees.contested], so it must not be continued on the
+ * pre-resolve LEGACY placeholder — that would have the user approve 0.25 DASH
+ * on a protocol-14 network where funding then spends 0.15. A private invite
+ * spends its fixed exit denomination (0.25 under either fee pair) and a
+ * non-contested invite the fixed fee, so neither waits. Pure.
+ */
+internal fun awaitingContestedInviteFee(shielded: Boolean, contestedSelected: Boolean, feeResolved: Boolean): Boolean =
+    !shielded && contestedSelected && !feeResolved
 
 /**
  * Why an SDK-routed invite creation failed, bucketed by what the user can DO
@@ -175,7 +193,14 @@ internal enum class InviteCreationFailureKind {
     POSSIBLY_CREATED,
 
     /** Anything transient-looking (network, SDK bootstrap, …) — retryable, bounded. */
-    UNREACHABLE
+    UNREACHABLE,
+
+    /**
+     * Refused before anything was built: an earlier payment's outcome is still being confirmed
+     * and its inputs are not protected from coin selection. Retryable without limit once that
+     * payment resolves — it is not a failed attempt.
+     */
+    PAYMENT_STILL_CONFIRMING
 }
 
 /**
@@ -199,6 +224,9 @@ internal fun classifyInviteCreationFailure(result: SdkWriteResult<*>): InviteCre
         is SdkWriteResult.Broadcast -> throw IllegalArgumentException("not a failure: $result")
         is SdkWriteResult.Ambiguous -> return InviteCreationFailureKind.POSSIBLY_CREATED
         is SdkWriteResult.NotBroadcast -> result
+    }
+    if (isPaymentStillConfirmingReason(notBroadcast.reason)) {
+        return InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING
     }
     val text = buildString {
         append(notBroadcast.reason)
@@ -241,6 +269,7 @@ internal fun inviteRetryAllowed(kind: InviteCreationFailureKind, failedAttempts:
         InviteCreationFailureKind.POSSIBLY_CREATED -> false
         InviteCreationFailureKind.INSUFFICIENT_FUNDS,
         InviteCreationFailureKind.UNREACHABLE -> failedAttempts < MAX_INVITE_CREATE_ATTEMPTS
+        InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING -> true
     }
 
 /** Total create attempts the confirm dialog allows for transient failures. */
@@ -258,6 +287,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val sdkL1InviteCreation: SdkL1InviteCreation,
     private val shieldedBalanceService: ShieldedBalanceService,
     private val assetLockFundingPreflight: de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight,
+    private val dashSdkService: DashSdkService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
@@ -265,6 +295,17 @@ open class InvitationFragmentViewModel @Inject constructor(
     private val workerJob = Job()
     private val workerScope = CoroutineScope(workerJob + Dispatchers.IO)
     private val authExtension = platformRepo.authenticationGroupExtension!!
+
+    /**
+     * Protocol-gated contested fee (MO-1069) from a live
+     * [DashSdkService.currentProtocolVersion] read; null while that read is in
+     * flight, so the fee dialog can tell "not resolved yet" from a resolved
+     * LEGACY ([ContestedUsernameFees.current] maps a failed read to LEGACY, so a
+     * read always resolves). The dialog shows LEGACY meanwhile but does not
+     * let a contested L1 invite continue on it ([awaitingContestedInviteFee]).
+     */
+    private val _contestedFees = MutableStateFlow<ContestedUsernameFees?>(null)
+    val contestedFees: StateFlow<ContestedUsernameFees?> = _contestedFees.asStateFlow()
 
     private val pubkeyHash: ByteArray
         get() = authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
@@ -305,7 +346,7 @@ open class InvitationFragmentViewModel @Inject constructor(
         }
     }
 
-    suspend fun sendInviteTransaction(value: Coin): String {
+    suspend fun sendInviteTransaction(value: Coin, contested: Boolean): String {
         // this view model is activity-scoped: drop any invitation selected on a previous screen so
         // the created screen cannot offer its link while the new invite is still pending
         clearInvitationSelection()
@@ -322,7 +363,7 @@ open class InvitationFragmentViewModel @Inject constructor(
         }
         val fundingAddress = this.fundingAddress // save the address locally
         SendInviteOperation(walletApplication)
-            .create(fundingAddress, value)
+            .create(fundingAddress, value, contested)
             .enqueue()
         return fundingAddress
     }
@@ -535,6 +576,24 @@ open class InvitationFragmentViewModel @Inject constructor(
             .onEach { invitation ->
                 _invitation.value = invitation
             }.launchIn(workerScope)
+        refreshContestedFees()
+    }
+
+    /**
+     * Re-resolves [contestedFees] from a live [DashSdkService.currentProtocolVersion]
+     * read. This ViewModel is obtained through `activityViewModels()`, so [init]
+     * only resolves once per activity instance — reopening the invite flow
+     * (e.g. after a protocol 13-to-14 activation, or a failed initial lookup)
+     * must call this explicitly to pick up the current fee instead of quoting
+     * the stale one.
+     */
+    fun refreshContestedFees() {
+        // Unresolved again until this read lands: a value from an earlier open
+        // of the activity-scoped flow must not be approved as current.
+        _contestedFees.value = null
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+        }
     }
 
     suspend fun getInvitedUserProfile(): DashPayProfile? = dashPayProfileDao.loadByUserId(identityId.value!!)

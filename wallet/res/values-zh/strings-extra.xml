@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">购买 &amp; 出售</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">Dash 去中心化交易所</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">导入私钥</string>
@@ -294,11 +296,15 @@
     <string name="about_review_and_rate">对app评价并评分</string>
     <string name="about_contact_support">联系支持</string>
     <string name="about_fork_disclaimer">这是从比特币钱包分叉而来的开源应用程序</string>
+    <string name="about_copyright">版权所有 © %1$d Dash Core Group</string>
     <string name="about_license">GNU 公共通用许可 v3.0</string>
     <string name="about_version_name">DashPay 钱包 %s</string>
     <string name="about_last_explore_device_sync">最后一次探索设备同步</string>
     <string name="about_last_explore_server_update">最后一次探索服务器更新</string>
+    <string name="about_app_version_label">App 版本</string>
+    <string name="about_platform_label">平台</string>
     <string name="about_explore_section">探索Dash</string>
+    <string name="about_explore_update">更新</string>
     <string name="about_last_device_sync">最后一次设备同步</string>
     <string name="about_last_server_update">最后一次服务器更新</string>
     <string name="about_value_not_available">不可用</string>

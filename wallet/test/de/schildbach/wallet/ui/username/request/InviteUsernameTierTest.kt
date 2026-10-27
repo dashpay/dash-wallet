@@ -19,8 +19,8 @@ package de.schildbach.wallet.ui.username.request
 
 import android.app.Application
 import androidx.core.net.toUri
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import org.bitcoinj.core.Coin
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -59,6 +59,9 @@ import org.robolectric.annotation.Config
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class InviteUsernameTierTest {
 
+    /** MO-1069: a fixed test fixture — the tier logic under test is agnostic to which protocol era it came from. */
+    private val contestedFee = ContestedUsernameFees.CURRENT.contested
+
     private companion object {
         const val OSK = "0011223344556677889900aabbccddeeff00112233445566778899aabbccddee"
 
@@ -91,7 +94,7 @@ class InviteUsernameTierTest {
     fun `a shielded invite funded at the contested denomination reads as CONTESTED`() {
         assertEquals(
             InviteUsernameTier.CONTESTED,
-            inviteUsernameTier(shielded(CONTESTED_CREDITS), Coin.ZERO)
+            inviteUsernameTier(shielded(CONTESTED_CREDITS), Coin.ZERO, contestedFee)
         )
     }
 
@@ -99,7 +102,7 @@ class InviteUsernameTierTest {
     fun `a shielded invite funded at the non-contested denomination reads as NON_CONTESTED`() {
         assertEquals(
             InviteUsernameTier.NON_CONTESTED,
-            inviteUsernameTier(shielded(NON_CONTESTED_CREDITS), Coin.ZERO)
+            inviteUsernameTier(shielded(NON_CONTESTED_CREDITS), Coin.ZERO, contestedFee)
         )
     }
 
@@ -109,12 +112,12 @@ class InviteUsernameTierTest {
         // the tier. Reporting NON_CONTESTED here is what produced the false
         // "you can only create a non-contested username" notice on an invite
         // that had in fact paid the 0.3 DASH contested fee.
-        assertEquals(InviteUsernameTier.UNKNOWN, inviteUsernameTier(reportedLink(), Coin.ZERO))
+        assertEquals(InviteUsernameTier.UNKNOWN, inviteUsernameTier(reportedLink(), Coin.ZERO, contestedFee))
     }
 
     @Test
     fun `no invitation at all is UNKNOWN`() {
-        assertEquals(InviteUsernameTier.UNKNOWN, inviteUsernameTier(null, Coin.ZERO))
+        assertEquals(InviteUsernameTier.UNKNOWN, inviteUsernameTier(null, Coin.ZERO, contestedFee))
     }
 
     // ── L1 invites keep their existing behaviour ──────────────────────
@@ -123,11 +126,11 @@ class InviteUsernameTierTest {
     fun `an L1 invite is classified from its asset-lock amount`() {
         assertEquals(
             InviteUsernameTier.CONTESTED,
-            inviteUsernameTier(l1(), Constants.DASH_PAY_FEE_CONTESTED)
+            inviteUsernameTier(l1(), contestedFee, contestedFee)
         )
         assertEquals(
             InviteUsernameTier.NON_CONTESTED,
-            inviteUsernameTier(l1(), Constants.DASH_PAY_FEE)
+            inviteUsernameTier(l1(), de.schildbach.wallet.Constants.DASH_PAY_FEE, contestedFee)
         )
     }
 
@@ -135,7 +138,7 @@ class InviteUsernameTierTest {
     fun `an L1 invite whose asset lock has not been read yet stays non-contested as before`() {
         // Unchanged legacy behaviour: the lookup is async and the observers
         // re-render when it lands. Only the SHIELDED path changes here.
-        assertEquals(InviteUsernameTier.NON_CONTESTED, inviteUsernameTier(l1(), Coin.ZERO))
+        assertEquals(InviteUsernameTier.NON_CONTESTED, inviteUsernameTier(l1(), Coin.ZERO, contestedFee))
     }
 
     // ── The notice and the submit gate must agree ─────────────────────
@@ -144,7 +147,7 @@ class InviteUsernameTierTest {
     fun `a contested invite permits a contested username`() {
         // The product owner's case: he paid 0.3, so `test-me` must be allowed
         // AND the "non-contested only" notice must not be shown.
-        val tier = inviteUsernameTier(shielded(CONTESTED_CREDITS), Coin.ZERO)
+        val tier = inviteUsernameTier(shielded(CONTESTED_CREDITS), Coin.ZERO, contestedFee)
         assertTrue(inviteTierAllowsUsername(tier, contestable = true))
         assertEquals(InviteUsernameTier.CONTESTED, tier)
     }
@@ -153,7 +156,7 @@ class InviteUsernameTierTest {
     fun `a known non-contested invite blocks a contested username`() {
         // This is the pairing that was broken the other way: the notice said
         // "non-contested only" while the gate returned true regardless.
-        val tier = inviteUsernameTier(shielded(NON_CONTESTED_CREDITS), Coin.ZERO)
+        val tier = inviteUsernameTier(shielded(NON_CONTESTED_CREDITS), Coin.ZERO, contestedFee)
         assertFalse(inviteTierAllowsUsername(tier, contestable = true))
         assertTrue(inviteTierAllowsUsername(tier, contestable = false))
     }
@@ -163,7 +166,7 @@ class InviteUsernameTierTest {
         // Refusing on a guess would strand exactly the user who reported this:
         // he paid the contested fee and would be locked out of using it. The
         // claim itself fails closed if the note turns out to be too small.
-        val tier = inviteUsernameTier(reportedLink(), Coin.ZERO)
+        val tier = inviteUsernameTier(reportedLink(), Coin.ZERO, contestedFee)
         assertTrue(inviteTierAllowsUsername(tier, contestable = true))
         assertTrue(inviteTierAllowsUsername(tier, contestable = false))
     }

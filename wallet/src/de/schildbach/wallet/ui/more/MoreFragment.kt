@@ -60,6 +60,7 @@ import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.shieldedReadRetryDelayMs
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -69,6 +70,8 @@ import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.money.Dash
@@ -486,15 +489,29 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             // known-stale until the runtime re-settles → show "Syncing…".
             var latestMaybeStale =
                 shieldedBalanceService.shieldedBalanceMaybeStale.value || arrivedFromCompletedTransfer
+            // Fail closed: while the live balance can't be read no amount on
+            // this card is trustworthy, so it shows "Syncing…" until a retry
+            // reads it again.
+            var balanceUnreadable = false
 
             fun render() = renderShieldedCardAmount(
-                latestStatus, latestBalance, latestHasShieldedContext, latestCachedBalance, latestMaybeStale
+                latestStatus, latestBalance, latestHasShieldedContext, latestCachedBalance,
+                latestMaybeStale || balanceUnreadable
             )
 
-            shieldedBalanceService.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->
-                latestBalance = balance
-                render()
-            }
+            shieldedBalanceService.observeShieldedBalance()
+                .retryWhen { e, attempt ->
+                    log.error("shielded balance card flow error (attempt {})", attempt, e)
+                    balanceUnreadable = true
+                    render()
+                    delay(shieldedReadRetryDelayMs(attempt))
+                    true
+                }
+                .observe(viewLifecycleOwner) { balance ->
+                    latestBalance = balance
+                    balanceUnreadable = false
+                    render()
+                }
             shieldedBalanceService.shieldedSyncStatus.observe(viewLifecycleOwner) { status ->
                 latestStatus = status
                 // Once the runtime is fully synced the live balance is fresh
@@ -509,10 +526,13 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 latestMaybeStale = stale || arrivedFromCompletedTransfer
                 render()
             }
-            mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) { identity ->
-                latestHasShieldedContext = hasShieldedContext(identity)
-                render()
-            }
+            mainActivityViewModel.blockchainIdentityDataDao.observeBase()
+                // Unreadable: keep the conservative "has a context" default.
+                .catch { e -> log.error("identity flow error on the shielded card", e) }
+                .observe(viewLifecycleOwner) { identity ->
+                    latestHasShieldedContext = hasShieldedContext(identity)
+                    render()
+                }
             render()
 
             // Bring the shielded runtime up so the balance loads and the sync
@@ -757,11 +777,12 @@ internal enum class ShieldedCardDisplay { LIVE_AMOUNT, CACHED_AMOUNT, SYNCING }
  * when trustworthy, otherwise the persisted last-known balance — so a
  * background re-scan on relaunch never hides a balance the app already knows.
  *
+ * - [balanceMaybeStale] (a shielded spend from this app is still reconciling,
+ *   or the balance can't be read) → "Syncing…", even when READY: until the
+ *   spend settles, both the cached amount and the live note store can be
+ *   pre-spend or mid-spend, so showing either would be wrong. Same rule and
+ *   order as the home header ([de.schildbach.wallet.ui.main.homeShieldedBalance]).
  * - READY → the LIVE amount: the balance is trustworthy.
- * - [balanceMaybeStale] (a shielded spend from this app just happened and the
- *   runtime has not re-settled) → "Syncing…": the last-known amount is
- *   known-stale, so showing it would be wrong. This is the only case that
- *   overrides an available cached balance.
  * - a persisted [cachedBalance] exists → the CACHED amount, no placeholder:
  *   the common relaunch case (durable notes, runtime re-binding in the
  *   background), and any not-yet-READY rebind where a known balance beats a
@@ -782,8 +803,8 @@ internal fun mapShieldedCardDisplay(
     cachedBalance: Dash?,
     balanceMaybeStale: Boolean
 ): ShieldedCardDisplay = when {
-    status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.LIVE_AMOUNT
     balanceMaybeStale -> ShieldedCardDisplay.SYNCING
+    status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.LIVE_AMOUNT
     cachedBalance != null -> ShieldedCardDisplay.CACHED_AMOUNT
     !hasShieldedContext -> ShieldedCardDisplay.LIVE_AMOUNT
     else -> ShieldedCardDisplay.SYNCING

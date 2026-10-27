@@ -37,6 +37,20 @@ import org.junit.Test
  */
 class InviteCreationFailureTest {
 
+    // ── An unavailable protocol version is TRANSIENT: bounded retry, not a rejection ──
+    @Test
+    fun protocolVersionUnavailable_isUnreachable_andRetryable() {
+        // The exact shape SdkL1InviteCreation returns when
+        // ContestedUsernameFees.resolved() refuses an unknown protocol version at
+        // funding time (MO-1069). It must NOT share the deterministic "invite fee
+        // unavailable" reason, which latches the dialog's retry gate.
+        val result = SdkWriteResult.NotBroadcast(
+            "protocol version unavailable",
+            de.schildbach.wallet.service.platform.sdk.ProtocolVersionUnavailableException()
+        )
+        assertEquals(InviteCreationFailureKind.UNREACHABLE, classifyInviteCreationFailure(result))
+    }
+
     // ── The observed amount-cap rejection (deterministic → never retry) ──
 
     @Test
@@ -152,5 +166,20 @@ class InviteCreationFailureTest {
                 classifyInviteCreationFailure(SdkWriteResult.NotBroadcast(reason))
             )
         }
+    }
+
+    // ── Review 1b15e950af15: refused while an earlier payment is still confirming ──
+
+    @Test
+    fun pendingPaymentRefusal_isPaymentStillConfirming_andStaysRetryable() {
+        // The exact reason SdkL1InviteCreation returns when the funding gate is closed.
+        val result = SdkWriteResult.NotBroadcast("pending payment inputs unprotected")
+
+        val kind = classifyInviteCreationFailure(result)
+
+        assertEquals(InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING, kind)
+        // Nothing was spent and the refusal clears once that payment resolves: never latch
+        // the dialog shut, however many times the user has tried.
+        assertTrue(inviteRetryAllowed(kind, MAX_INVITE_CREATE_ATTEMPTS + 5))
     }
 }

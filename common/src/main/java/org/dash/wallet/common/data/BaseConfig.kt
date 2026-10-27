@@ -147,6 +147,16 @@ abstract class BaseConfig(
         return data.map { preferences -> preferences[key] }.first()
     }
 
+    /**
+     * One-shot [observePreservingErrors]: `null` means the key is ABSENT; an
+     * unreadable store THROWS (IOException) instead of reading as absent the
+     * way [get] does. For state whose absence authorises an action — callers
+     * must fail closed on the throw. [get] is unchanged for ordinary hints.
+     */
+    open suspend fun <T> getPreservingErrors(key: Preferences.Key<T>): T? {
+        return observePreservingErrors(key).first()
+    }
+
     open suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
             preferences[key] = value

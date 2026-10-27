@@ -20,6 +20,8 @@ import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
 import de.schildbach.wallet.service.platform.sdk.ContactPaymentNotRecordableException
+import org.dash.wallet.common.services.PaymentStillConfirmingException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 
 /**
  * How [SendCoinsFragment.showFailureDialog] renders a failed send. Pure
@@ -46,12 +48,26 @@ enum class SendFailureKind {
     SIGNER_LOCKED,
 
     /**
+     * An earlier payment's outcome is still unknown and its inputs could not be kept out of this
+     * one. Nothing was sent; the copy says to wait for it, never "payment failed".
+     */
+    PAYMENT_STILL_CONFIRMING,
+
+    /**
      * A contact payment was refused before sending because the claim of its
      * address could not be made durable (the paid-address store could not be
      * read or written). Nothing was sent; resolving the address again does
      * not help, so the copy points at storage / a restart.
      */
     CONTACT_PAYMENT_NOT_RECORDED,
+
+    /**
+     * The payment may have been sent, but its outcome is unknown
+     * ([PaymentSubmissionPendingException]: an SDK broadcast a Reset Wallet
+     * cancelled after it went out, among others). Never "payment failed" and
+     * never an invitation to retry: the copy says it may have been sent.
+     */
+    OUTCOME_UNKNOWN,
 
     /**
      * Any other [IllegalStateException] from the send path: internal
@@ -70,6 +86,8 @@ fun classifySendFailure(exception: Exception): SendFailureKind = when (exception
     // Before the generic IllegalStateException arm: SendSignerLockedException
     // IS an IllegalStateException and must keep its own honest copy.
     is SendSignerLockedException -> SendFailureKind.SIGNER_LOCKED
+    is PaymentStillConfirmingException -> SendFailureKind.PAYMENT_STILL_CONFIRMING
+    is PaymentSubmissionPendingException -> SendFailureKind.OUTCOME_UNKNOWN
     // Also an IllegalStateException: its own copy, not the generic one.
     is ContactPaymentNotRecordableException -> SendFailureKind.CONTACT_PAYMENT_NOT_RECORDED
     is IllegalStateException -> SendFailureKind.GENERIC_INTERNAL

@@ -117,9 +117,9 @@ object WalletWipeState {
      * Records that a wipe has started. MUST return before the first
      * destructive step runs.
      *
-     * @return true when a valid marker is on disk. False means the wipe is
-     *   about to run unrecorded — it still proceeds, but a mid-wipe process
-     *   death would not be recoverable, so the caller logs it.
+     * @return true only when a valid marker is confirmed on disk (written and
+     *   read back). False refuses the reset: nothing may be torn down without
+     *   a marker the teardown and the next launch can rely on.
      */
     fun begin(filesDir: File, noBackupFilesDir: File): Boolean {
         return try {
@@ -174,6 +174,26 @@ object WalletWipeState {
     /** True when a wipe was started and never recorded as finished. */
     fun isPending(filesDir: File, noBackupFilesDir: File): Boolean =
         inspect(filesDir, noBackupFilesDir) == State.PENDING
+
+    /** What the marker says about a wipe, for the teardown that must not read "unknown" as "none". */
+    enum class Pending {
+        /** A valid marker: a wipe was started and not finished. */
+        PENDING,
+
+        /** The marker is confirmed absent. */
+        NOT_PENDING,
+
+        /** Unreadable, unverified, or not establishable either way. */
+        UNKNOWN
+    }
+
+    /** [inspect] as [Pending]; never throws. */
+    fun pendingState(filesDir: File, noBackupFilesDir: File): Pending =
+        when (inspect(filesDir, noBackupFilesDir)) {
+            State.PENDING -> Pending.PENDING
+            State.NONE -> Pending.NOT_PENDING
+            State.RECOVERY_REQUIRED -> Pending.UNKNOWN
+        }
 
     fun inspect(filesDir: File, noBackupFilesDir: File): State {
         return try {

@@ -64,6 +64,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
+        // Fresh fee quote on every flow entry: the activity-scoped ViewModel's
+        // init read may have failed (legacy fallback) or predate a 13→14 activation.
+        requestUserNameViewModel.refreshContestedFees()
         
         // Get username type from arguments if provided. Consider error states
         usernameType = if (dashPayViewModel.createUsernameArgs?.actions == CreateUsernameActions.REUSE_TRANSACTION) {
@@ -264,6 +267,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 enoughBalance = it.enoughBalance,
                 usernameExists = it.usernameExists,
                 usernameContestable = it.usernameContestable,
+                usernameBlocked = it.usernameBlocked,
                 fundingNoteAnchored = it.fundingNoteAnchored
             )
             // While the shielded pool is still preparing, its balance is a
@@ -647,6 +651,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     }
 
     private fun onContinue() {
+        val username = binding.usernameInput.text.toString()
+        if (!requestUserNameViewModel.hasAvailableResultFor(username)) {
+            // the button state can lag the input; never continue without a current result for this name
+            processUsername(username)
+            return
+        }
         KeyboardUtil.hideKeyboard(requireContext(), binding.usernameInput)
 
         if (requestUserNameViewModel.uiState.value.usernameContestable) {

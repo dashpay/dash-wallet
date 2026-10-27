@@ -34,6 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -270,21 +271,54 @@ open class DashPayConfig @Inject constructor(
          * See [de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService].
          */
         val MIXED_FUNDS_MIGRATION_DONE = booleanPreferencesKey("mixed_funds_migration_done")
+        val MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS = longPreferencesKey("mixed_funds_migration_deferred_duffs")
 
         /**
          * A mixed-funds migration that BROADCAST but whose result is not
-         * user-visible yet — `ACTION|startedAtMillis|baselineShieldedDuffs`
-         * (see [de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration]),
+         * user-visible yet — `ACTION|startedAtMillis|legacyBaseline[|failed]`, the third field
+         * ignored on read (see [de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration]),
          * blank/absent when nothing is in flight. Written alongside
          * [MIXED_FUNDS_MIGRATION_DONE] when a migration records STARTED and
-         * cleared once the result lands (the shielded credit for SHIELD, an
-         * empty SDK CoinJoin account for COMBINE) or the user acknowledges
-         * the timed-out state. Keeps the sheet's PROCESSING presentation
+         * cleared once the result is proven (the CoinJoin-funded lock consumed for SHIELD, an
+         * empty SDK CoinJoin account for COMBINE). Acknowledging the
+         * timed-out state does NOT clear it (see
+         * [MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT]). Keeps the sheet's PROCESSING presentation
          * alive across lock-screen teardown / activity recreation / process
          * death — the on-device bug where the ~1-minute confirmation window
          * left an unexplained near-zero balance behind the lock screen.
          */
         val MIXED_FUNDS_MIGRATION_IN_FLIGHT = stringPreferencesKey("mixed_funds_migration_in_flight")
+        val MIXED_FUNDS_CONSOLIDATION = stringPreferencesKey("mixed_funds_consolidation")
+
+        /**
+         * `startedAtMillis` of the in-flight marker whose "could not confirm"
+         * guidance the user closed. While it matches the current marker the
+         * automatic triggers (startup, resume) stop re-presenting the sheet;
+         * the marker — and any consolidation stage — is kept, so Tools still
+         * opens it and Try again resumes it (which restarts the window, so a
+         * fresh attempt is presented again).
+         */
+        val MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT = longPreferencesKey("mixed_funds_migration_acknowledged_at")
+
+        /**
+         * Submission journal of a DIRECT (no consolidation) mixed-funds shield:
+         * `preparing` from the tap until the native funding call is about to
+         * run, `submitted` from then on. A `preparing` journal left by a dead
+         * process proves nothing was submitted; `submitted` (or an absent
+         * journal on an older marker) is uncertain and is never rebuilt.
+         */
+        val MIXED_FUNDS_DIRECT_SHIELD_PHASE = stringPreferencesKey("mixed_funds_direct_shield_phase")
+
+        /**
+         * CoinJoin outpoints (comma-separated hex) a mixed-funds SHIELD recorded
+         * before its native funding call. Completion requires THESE to be spent
+         * by one shielded top-up lock, so a later CoinJoin coin never blocks it.
+         * Blank on older/adopted records, which keep the account-level check.
+         */
+        val MIXED_FUNDS_SHIELD_INPUTS = stringPreferencesKey("mixed_funds_shield_inputs")
+
+        /** Shield-lock outpoints whose resume got `AssetLockAlreadyConsumed` (`PendingWalletShieldLock`). */
+        val SHIELD_LOCKS_PLATFORM_CONSUMED = stringSetPreferencesKey("shield_locks_platform_consumed")
 
         /**
          * Phase 3c of the dashj → Kotlin SDK migration
@@ -793,6 +827,27 @@ open class DashPayConfig @Inject constructor(
          * above (e.g. [TRANSACTION_METADATA_LAST_PAST_SAVE]).
          */
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
+
+        /**
+         * A local shielded spend is still reconciling (its note settlement can
+         * span several sync passes). Set together with removing
+         * [LAST_SHIELDED_BALANCE_DUFFS]; cleared only once the balance has
+         * settled. Survives a runtime stop and process death so the next
+         * bring-up restores the settlement guard instead of trusting the first
+         * READY pass.
+         */
+        val SHIELDED_SPEND_RECONCILE_PENDING = booleanPreferencesKey("shielded_spend_reconcile_pending")
+
+        /**
+         * Wall-clock lower bound (Unix millis, skew allowance already
+         * subtracted) of the EARLIEST local shielded spend still reconciling —
+         * the SDK activity rows created at or after it are the spends whose
+         * input notes must be spent in the store before the balance may
+         * settle. Written and removed together with
+         * [SHIELDED_SPEND_RECONCILE_PENDING]; a marker without it (written by
+         * an older build) reads as 0, i.e. every row counts.
+         */
+        val SHIELDED_SPEND_RECONCILE_SINCE_MS = longPreferencesKey("shielded_spend_reconcile_since_ms")
     }
 
     // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
@@ -850,8 +905,66 @@ open class DashPayConfig @Inject constructor(
      */
     suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
 
-    /** Persist the last trustworthy shielded balance (duffs). See [LAST_SHIELDED_BALANCE_DUFFS]. */
-    suspend fun setLastShieldedBalanceDuffs(duffs: Long) = set(LAST_SHIELDED_BALANCE_DUFFS, duffs)
+    /**
+     * Durably record that a local shielded spend is reconciling: in ONE
+     * transaction, drop the last-known balance, set
+     * [SHIELDED_SPEND_RECONCILE_PENDING] and record [sinceMs] as
+     * [SHIELDED_SPEND_RECONCILE_SINCE_MS], so a runtime stop or process death
+     * before the balance settles can neither bring the pre-spend amount back
+     * nor lose the pending settlement. Overlapping spends keep the EARLIEST
+     * since: the first spend's activity row must still be checked until the
+     * whole reconciliation settles. A marker already set without a since
+     * (older build) keeps 0 — every row counts.
+     */
+    suspend fun markShieldedSpendReconcilePending(sinceMs: Long) = editPreferences { prefs ->
+        prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
+        val alreadyPending = prefs[SHIELDED_SPEND_RECONCILE_PENDING] == true
+        val existingSince = prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS]
+        prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
+        prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS] = when {
+            !alreadyPending -> sinceMs
+            existingSince == null -> 0L
+            else -> minOf(existingSince, sinceMs)
+        }
+    }
+
+    /**
+     * Persist [duffs] as the last-known shielded balance UNLESS a local spend
+     * is reconciling — checked in the same DataStore transaction as the write,
+     * so a balance sampled before a spend can never be written back after
+     * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
+     * and whichever lands second wins against the stale snapshot (the spend's
+     * removes it; this one sees the marker and skips). Returns whether it was
+     * written.
+     */
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long): Boolean {
+        var written = false
+        editPreferences { prefs ->
+            if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
+                prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
+                written = true
+            }
+        }
+        return written
+    }
+
+    /**
+     * The since ([SHIELDED_SPEND_RECONCILE_SINCE_MS]) of the local shielded
+     * spend reconciliation still pending, or null when none is pending. A
+     * pending marker with no since reads as 0 (every activity row counts).
+     * Read via [observePreservingErrors]: an unreadable store THROWS instead
+     * of reading as "not pending", so the caller can fail closed.
+     */
+    suspend fun shieldedSpendReconcilePendingSinceMs(): Long? {
+        if (observePreservingErrors(SHIELDED_SPEND_RECONCILE_PENDING).first() != true) return null
+        return observePreservingErrors(SHIELDED_SPEND_RECONCILE_SINCE_MS).first() ?: 0L
+    }
+
+    /** The pending spend has settled: removes the marker and its since together. */
+    suspend fun clearShieldedSpendReconcilePending() = editPreferences { prefs ->
+        prefs.remove(SHIELDED_SPEND_RECONCILE_PENDING)
+        prefs.remove(SHIELDED_SPEND_RECONCILE_SINCE_MS)
+    }
 
     /**
      * Whether the dashj-sync DIAGNOSTIC toggle is on (see

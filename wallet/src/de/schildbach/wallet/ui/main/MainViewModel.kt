@@ -47,6 +47,10 @@ import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
+import de.schildbach.wallet.service.platform.sdk.MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.shieldedReadRetryDelayMs
 import de.schildbach.wallet.service.L1SyncStatusService
 import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
@@ -67,10 +71,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -78,6 +84,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
@@ -136,7 +143,8 @@ class MainViewModel @Inject constructor(
     l1SyncStatusService: L1SyncStatusService,
     private val contactRequestNotificationService: ContactRequestNotificationService,
     private val swapProvider: DispatchingSwapProvider,
-    sdkBindRetryService: de.schildbach.wallet.service.platform.sdk.SdkBindRetryService
+    sdkBindRetryService: de.schildbach.wallet.service.platform.sdk.SdkBindRetryService,
+    private val shieldedBalanceService: ShieldedBalanceService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
 
@@ -209,6 +217,23 @@ class MainViewModel @Inject constructor(
     val totalBalance: LiveData<Coin>
         get() = _totalBalance
 
+    /**
+     * The home-screen header balance ONLY: the transparent (L1) total plus
+     * the shielded balance. Every other screen keeps showing the L1-only
+     * [totalBalance] / `observeTotalBalance()`.
+     */
+    private val _homeBalance = MutableLiveData<Coin>()
+    val homeBalance: LiveData<Coin>
+        get() = _homeBalance
+
+    /**
+     * True while [homeBalance] is missing the shielded part because it is not
+     * known yet (see [homeShieldedBalance]) — the home header keeps its
+     * "Syncing balance" indicator on until it arrives.
+     */
+    private val _homeShieldedPending = MutableStateFlow(false)
+    val homeShieldedPending: StateFlow<Boolean> = _homeShieldedPending.asStateFlow()
+
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
@@ -273,22 +298,10 @@ class MainViewModel @Inject constructor(
      * (see [recheckMixedFundsMigrationPrompt]).
      */
     /**
-     * TEMPORARY KILL SWITCH for the mixed-funds prompt.
-     *
-     * Both choices the sheet offers route through
-     * [CoinJoinFundsMigrationService.combineIntoUnmixedBalance], which takes its
-     * destination from dashj's `freshReceiveAddress()` — and that forces a
-     * SYNCHRONOUS full-wallet save on the calling thread. On the main thread,
-     * on a wallet whose save re-serializes every DashPay friend key chain, that
-     * is a multi-second freeze (~7 s measured on a 215-chain mainnet wallet,
-     * which the tester read as a hang and force-quit).
-     *
-     * Suppressing the PROMPT touches neither the migration nor its persisted
-     * state: the in-flight and done markers keep their meaning, so flipping
-     * this back to false restores the previous behaviour exactly. Remove once
-     * the address allocation is off the main thread.
+     * Mirrors the service/dialog emergency kill-switch so the startup and
+     * lock-dismiss triggers cannot diverge from the sheet's own gate.
      */
-    private val mixedFundsPromptSuppressed = true
+    private val mixedFundsPromptSuppressed = MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
 
     val showMixedFundsMigration = SingleLiveEvent<Unit>()
 
@@ -444,11 +457,10 @@ class MainViewModel @Inject constructor(
                 // A persisted IN-FLIGHT marker re-shows the sheet in its
                 // post-choice PROCESSING presentation (a broadcast whose
                 // result is not user-visible yet — e.g. the lock screen tore
-                // the sheet down during the confirmation window); otherwise
-                // the service decides whether the forced choice is due.
-                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
-                    coinJoinFundsMigrationService.shouldPrompt()
-                ) {
+                // the sheet down during the confirmation window) unless its
+                // "could not confirm" guidance was already acknowledged;
+                // otherwise the service decides whether the forced choice is due.
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
                     mixedFundsPromptShownThisSession = true
                     showMixedFundsMigration.postCall()
                 }
@@ -479,6 +491,16 @@ class MainViewModel @Inject constructor(
         walletData.observeTotalBalance()
             .onEach { _totalBalance.value = it }
             .catch { e -> log.error("total balance flow error", e) }
+            .launchIn(viewModelScope)
+
+        // Home header only: L1 total + shielded balance.
+        walletData.observeTotalBalance()
+            .combine(observeHomeShieldedBalance()) { transparent, shielded ->
+                _homeShieldedPending.value = shielded == null
+                transparent.add(Coin.valueOf((shielded ?: Dash.ZERO).duffs))
+            }
+            .onEach { _homeBalance.value = it }
+            .catch { e -> log.error("home balance flow error", e) }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -572,6 +594,24 @@ class MainViewModel @Inject constructor(
     fun logError(ex: Exception, details: String) {
         analytics.logError(ex, details)
     }
+
+    /**
+     * The shielded part of [homeBalance]: zero unless the shielded feature is
+     * on (`SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`). The runtime is
+     * brought up at startup by [PlatformSyncService]; null — the header shows
+     * the shielded part as pending — until it is READY (see
+     * [homeShieldedBalance]), and while a read is failing.
+     */
+    private fun observeHomeShieldedBalance(): Flow<Dash?> = homeShieldedBalanceFlow(
+        // WITHOUT the IOException rescue: only a flag READ as disabled or
+        // unset may authorize a zero; an unreadable one is unknown.
+        enabledFlag = dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
+            .map { Constants.SUPPORTS_PLATFORM && it == true },
+        live = { shieldedBalanceService.observeShieldedBalance() },
+        status = { shieldedBalanceService.shieldedSyncStatus },
+        maybeStale = { shieldedBalanceService.shieldedBalanceMaybeStale },
+        onError = { e, attempt -> log.error("home shielded balance flow error (attempt {})", attempt, e) }
+    )
 
     fun triggerHideBalance() {
         _temporaryHideBalance.value = !hideBalance.value
@@ -935,11 +975,11 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // The in-flight marker re-shows the PROCESSING presentation
-                // (a broadcast migration whose result is not visible yet);
+                // (a broadcast migration whose result is not visible yet) —
+                // but not "could not confirm" guidance the user already
+                // closed, which would otherwise return on every resume;
                 // shouldPrompt() covers the pre-decision forced choice.
-                if (coinJoinFundsMigrationService.inFlightMigration() != null ||
-                    coinJoinFundsMigrationService.shouldPrompt()
-                ) {
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
                     mixedFundsPromptShownThisSession = true
                     showMixedFundsMigration.postCall()
                 }
@@ -970,6 +1010,72 @@ class MainViewModel @Inject constructor(
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
+}
+
+/**
+ * The shielded part of the home header as a flow — host-testable: zero while
+ * [enabledFlag] reads false, otherwise [homeShieldedBalance] over the live
+ * sources; null while the amount is unknown.
+ *
+ * Fail closed: an error anywhere — the flag read included — emits null (the
+ * header marks the shielded amount pending instead of ending the whole
+ * home-balance flow on a stale total) and re-subscribes the whole branch
+ * after [retryDelayMs], so it recovers once the reads do.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal fun homeShieldedBalanceFlow(
+    enabledFlag: Flow<Boolean>,
+    live: () -> Flow<Dash>,
+    status: () -> Flow<ShieldedSyncStatus>,
+    maybeStale: () -> Flow<Boolean>,
+    onError: (Throwable, Long) -> Unit,
+    retryDelayMs: (Long) -> Long = ::shieldedReadRetryDelayMs
+): Flow<Dash?> = enabledFlag
+    .distinctUntilChanged()
+    .flatMapLatest { enabled ->
+        if (!enabled) {
+            flowOf(Dash.ZERO)
+        } else {
+            combine(live(), status(), maybeStale()) { balance, syncStatus, stale ->
+                homeShieldedBalance(syncStatus, balance, stale)
+            }
+        }
+    }
+    .retryWhen { e, attempt ->
+        onError(e, attempt)
+        emit(null)
+        delay(retryDelayMs(attempt))
+        true
+    }
+    .distinctUntilChanged()
+
+/**
+ * The shielded amount the home header adds to the L1 total — pure and
+ * host-testable. `observeShieldedBalance()` reads `Dash.ZERO` until the
+ * runtime is READY and during a re-scan, so only a READY balance is used;
+ * otherwise the amount is unknown (null) and the header shows it as pending.
+ * The persisted last-known balance is deliberately NOT used here: it is one
+ * install-wide value that can't be proven to belong to the loaded wallet.
+ *
+ * After a local shielded spend ([balanceMaybeStale]) the amount is unknown
+ * until the service clears the flag (the note balance has settled) — even
+ * while READY: once the first pass completes the status stays READY through
+ * later sync passes, so READY alone does not mean the spend has settled.
+ *
+ * Platform identity is deliberately NOT consulted: with the shielded flag
+ * on, `SdkWalletBinder` binds identity-free wallets too (fund → shield →
+ * create identity), so a wallet without an identity can hold shielded
+ * funds. Ownership comes from the bound runtime itself — the service tears
+ * its READY state down when it stops.
+ */
+internal fun homeShieldedBalance(
+    status: ShieldedSyncStatus,
+    live: Dash,
+    balanceMaybeStale: Boolean
+): Dash? = when {
+    balanceMaybeStale -> null
+    status == ShieldedSyncStatus.READY -> live
+    else -> null
 }
 
 /**

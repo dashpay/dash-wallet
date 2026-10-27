@@ -203,6 +203,7 @@
     <string name="purchase_gift_card_details">Gegevens cadeaukaart</string>
     <string name="purchase_original_purchase">Originele aankoop</string>
     <string name="purchase_check_current_balance">Bekijk kaartdetails</string>
+    <string name="purchase_redeem_url_challange">Uitdaging</string>
     <string name="purchase_card_number">Kaartnummer</string>
     <string name="purchase_card_pin">Pincode kaart</string>
     <string name="purchase_view_transaction">Transactiedetails bekijken</string>

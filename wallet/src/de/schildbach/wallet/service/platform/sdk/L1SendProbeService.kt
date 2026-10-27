@@ -527,6 +527,14 @@ class L1SendProbeService internal constructor(
      * the network (IS-locks only exist for broadcast transactions).
      * Read-only, never boots the SDK, contained.
      */
+    /** The value of one SDK-store output by its 36-byte outpoint key, or null when unknown. */
+    suspend fun txoAmountOrNull(outpoint: ByteArray): Long? = try {
+        source.sdkTxoAmount(outpoint)
+    } catch (e: Exception) {
+        if (e is kotlinx.coroutines.CancellationException) throw e
+        null
+    }
+
     suspend fun observedTxContext(txidHex: String): Int? = try {
         wireTxidBytesOrNull(txidHex)?.let { source.sdkTxRow(it)?.context }
     } catch (t: Throwable) {

@@ -37,6 +37,8 @@ import de.schildbach.wallet.service.platform.PlatformHealthProbe
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.service.platform.sdk.AssetLockFundingEvidence
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.sdk.assetLockFundingVerdict
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
@@ -45,6 +47,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
@@ -119,6 +122,13 @@ data class RequestUserNameUIState(
      */
     val usernameSubmittedPoolSyncing: Boolean = false,
     /**
+     * A transparent (L1-funded) submit was refused because an earlier payment's outcome is still
+     * being confirmed and its inputs are not protected from coin selection
+     * ([de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason]). Nothing was
+     * spent; the screen shows `R.string.payment_still_confirming`, not the network-error dialog.
+     */
+    val usernameSubmittedPaymentStillConfirming: Boolean = false,
+    /**
      * The shielded creation's outcome is UNCONFIRMED (may already be on
      * chain; the spent notes stay reserved) — the UI must NOT offer a
      * retry and must not claim "no extra cost"; the app reconciles on
@@ -137,6 +147,8 @@ data class RequestUserNameUIState(
     val usernameContested: Boolean = false,
     val usernameExists: Boolean = false,
     val usernameBlocked: Boolean = false,
+    /** The name the availability flags above were checked for, or null when there is no current result. */
+    val checkedUsername: String? = null,
     val enoughBalance: Boolean = false,
     /**
      * What the chosen payment source actually requires for this name, as a
@@ -230,15 +242,18 @@ enum class InviteUsernameTier {
  *   link when minted by a build that includes it; older links carry nothing
  *   and are [InviteUsernameTier.UNKNOWN].
  *
- * The threshold is the same for both: the contested fee. The shielded note
- * values (current v13 mints 0.03 / 0.25 DASH, legacy links 0.1 / 0.3)
- * straddle it just as the L1 amounts do — the contested mints (0.25 / 0.3)
- * are >= the 0.25 fee, the non-contested ones (0.03 / 0.1) below it.
+ * The threshold is the same for both: [contestedFee] (the protocol-gated
+ * contested fee, MO-1069 — pass the SMALLER of the two possible values, e.g.
+ * [de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees.CURRENT]'s,
+ * so an invite funded under EITHER protocol era still classifies correctly).
+ * The shielded note values (current v13 mints 0.03 / 0.25 DASH, legacy links
+ * 0.1 / 0.3) straddle it just as the L1 amounts do — the contested mints
+ * (0.25 / 0.3) are >= the fee, the non-contested ones (0.03 / 0.1) below it.
  */
-fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin): InviteUsernameTier {
+fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin, contestedFee: Coin): InviteUsernameTier {
     if (invite == null) return InviteUsernameTier.UNKNOWN
     if (!invite.isShielded) {
-        return if (l1InviteBalance >= Constants.DASH_PAY_FEE_CONTESTED) {
+        return if (l1InviteBalance >= contestedFee) {
             InviteUsernameTier.CONTESTED
         } else {
             InviteUsernameTier.NON_CONTESTED
@@ -246,7 +261,7 @@ fun inviteUsernameTier(invite: InvitationLinkData?, l1InviteBalance: Coin): Invi
     }
     val credits = invite.shieldedFundingCredits ?: return InviteUsernameTier.UNKNOWN
     val funded = Coin.valueOf(creditsToDash(credits).duffs)
-    return if (funded >= Constants.DASH_PAY_FEE_CONTESTED) {
+    return if (funded >= contestedFee) {
         InviteUsernameTier.CONTESTED
     } else {
         InviteUsernameTier.NON_CONTESTED
@@ -304,6 +319,8 @@ fun usernameSubmitButtonState(
     enoughBalance: Boolean,
     usernameExists: Boolean,
     usernameContestable: Boolean,
+    /** A finished vote locked the name, or the lock tally leads: nobody can register it. */
+    usernameBlocked: Boolean = false,
     /**
      * Whether the shielded funding note is anchored/confirmed and covers the
      * denomination (see [RequestUsernameUIState.fundingNoteAnchored]). The
@@ -326,7 +343,7 @@ fun usernameSubmitButtonState(
     ) {
         return UsernameSubmitButtonState.PreparingShielded
     }
-    return if (enoughBalance && !usernameExists) {
+    return if (enoughBalance && !usernameExists && !usernameBlocked) {
         UsernameSubmitButtonState.Enabled
     } else {
         UsernameSubmitButtonState.Disabled
@@ -438,11 +455,11 @@ class RequestUserNameViewModel @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val platformHealthProbe: PlatformHealthProbe,
     private val identityCreationStatus: IdentityCreationStatusHolder,
-    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
+    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight,
+    private val dashSdkService: DashSdkService
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
-        private val CONTEST_DOCUMENT_FEE = Coin.valueOf(0, 20).value * 1000
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
 
         /**
@@ -566,7 +583,7 @@ class RequestUserNameViewModel @Inject constructor(
      */
     private fun canShieldedFundContestedUsername(): Boolean {
         if (_shieldedSyncStatus.value != ShieldedSyncStatus.READY) return false
-        val requirement = shieldedIdentityFundingRequirement(Dash(Constants.DASH_PAY_FEE_CONTESTED.value))
+        val requirement = shieldedIdentityFundingRequirement(Dash(_contestedFees.value.contested.value))
             ?: return false
         return _shieldedBalance.value >= requirement
     }
@@ -581,7 +598,7 @@ class RequestUserNameViewModel @Inject constructor(
         val contestable = lastGateUsername?.let {
             runCatching { Names.isUsernameContestable(it) }.getOrDefault(false)
         } ?: false
-        val fee = if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+        val fee = if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE
         return shieldedIdentityFundingRequirement(Dash(fee.value))
             ?: shieldedIdentityFundingRequirement(Dash(Constants.DASH_PAY_FEE.value))
             ?: Dash(Constants.DASH_PAY_FEE.value)
@@ -602,6 +619,16 @@ class RequestUserNameViewModel @Inject constructor(
             if (it.fundingNoteAnchored == anchored) it else it.copy(fundingNoteAnchored = anchored)
         }
     }
+
+    /**
+     * Protocol-gated contested fee (MO-1069), refreshed once from a live
+     * [DashSdkService.currentProtocolVersion] read. Defaults to
+     * [ContestedUsernameFees.LEGACY] (the safe fallback for "not resolved
+     * yet") until that read lands — see [ConfirmUserNameDialogViewModel] for
+     * the same pattern on the confirm sheet.
+     */
+    private val _contestedFees = MutableStateFlow(ContestedUsernameFees.LEGACY)
+    val contestedFees: StateFlow<ContestedUsernameFees> get() = _contestedFees
 
     private val _identityBalance = MutableStateFlow(0L)
     val identityBalance: StateFlow<Long>
@@ -694,14 +721,23 @@ class RequestUserNameViewModel @Inject constructor(
         return hasRequestedName && creationState != IdentityCreationState.NONE && creationState.ordinal <= IdentityCreationState.VOTING.ordinal
     }
 
+    /**
+     * USERNAME_REQUESTED is only written once a contested-name request has a status other than NONE
+     * (see IdentityRepository.updateBlockchainIdentityData). While identity creation is still in
+     * progress (e.g. stuck at USERNAME_REGISTERING) the key is absent, so treat that as "no status".
+     */
+    private suspend fun getUsernameRequestStatus(): UsernameRequestStatus? {
+        return identityConfig.get(USERNAME_REQUESTED)?.let { value ->
+            runCatching { UsernameRequestStatus.valueOf(value) }.getOrNull()
+        }
+    }
+
     suspend fun isUsernameLocked(): Boolean {
-        return isUserNameRequested() &&
-                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOCKED
+        return isUserNameRequested() && getUsernameRequestStatus() == UsernameRequestStatus.LOCKED
     }
 
     suspend fun isUsernameLostAfterVoting(): Boolean {
-        return isUserNameRequested() &&
-                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOST_VOTE
+        return isUserNameRequested() && getUsernameRequestStatus() == UsernameRequestStatus.LOST_VOTE
     }
 
     suspend fun isUsernameInVotingState(): Boolean {
@@ -745,9 +781,9 @@ class RequestUserNameViewModel @Inject constructor(
     fun canAffordContestedUsername(): Boolean {
         return if (identity?.userId != null) {
             val credits = _identityBalance.value
-            credits > CONTEST_DOCUMENT_FEE
+            credits > contestedNameFeeCredits()
         } else {
-            _walletBalance.value >= Constants.DASH_PAY_FEE_CONTESTED
+            _walletBalance.value >= _contestedFees.value.contested
         }
     }
 
@@ -761,6 +797,7 @@ class RequestUserNameViewModel @Inject constructor(
                 identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
             }
         }
+        refreshContestedFees()
         // L1/non-shielded creation completion feedback. The L1 branch of
         // submit() starts CreateIdentityService and sets
         // usernameRequestSubmitting=true, but that service runs out-of-band
@@ -934,6 +971,29 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     /**
+     * Re-resolves [contestedFees] from a live [DashSdkService.currentProtocolVersion]
+     * read and recomputes the balance gate. This ViewModel is activity-scoped,
+     * so [init] resolves once per activity; a null (unreachable) first read
+     * would otherwise pin the legacy quote — and the legacy requirement — for
+     * the ViewModel's whole lifetime even after connectivity recovers.
+     * Called on every username-flow entry (RequestUsernameFragment).
+     */
+    fun refreshContestedFees() {
+        viewModelScope.launch {
+            _contestedFees.value = ContestedUsernameFees.current(dashSdkService)
+            recomputeBalanceGate()
+        }
+    }
+
+    /**
+     * The name-only contested fee an EXISTING identity pays, in Platform
+     * credits (identity balances are credits = duffs × 1000). Resolved from the
+     * live protocol version like every other fee figure (MO-1069) — a fixed
+     * 0.20 DASH here rejected identities that cover the activated 0.10 DASH.
+     */
+    private fun contestedNameFeeCredits(): Long = _contestedFees.value.contestedName.value * 1000
+
+    /**
      * Shared uiState mapping for a [ShieldedUsernameSubmitState] emitted by
      * EITHER the shielded or the transparent app-scoped username-creation
      * executor (both use the same three-valued state machine). [acknowledge]
@@ -964,11 +1024,17 @@ class RequestUserNameViewModel @Inject constructor(
                 // preparing" message rather than the red "network error"
                 // dialog (Fix A). (Transparent funding never emits these.)
                 val poolNotReady = SdkShieldedUsernameCreation.isPoolNotReadyReason(state.reason)
+                val stillConfirming = isPaymentStillConfirmingReason(state.reason)
                 _uiState.update {
                     if (poolNotReady) {
                         it.copy(
                             usernameRequestSubmitting = false,
                             usernameSubmittedPoolSyncing = true
+                        )
+                    } else if (stillConfirming) {
+                        it.copy(
+                            usernameRequestSubmitting = false,
+                            usernameSubmittedPaymentStillConfirming = true
                         )
                     } else {
                         it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
@@ -1071,8 +1137,12 @@ class RequestUserNameViewModel @Inject constructor(
         viewModelScope.launch {
             withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
+            // If an identity was already registered but the username step failed (lost vote, locked name,
+            // or the domain document was rejected), keep the identity and only register the new name.
             val reuseTransaction = identity?.let {
-                it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+                it.usernameRequested == UsernameRequestStatus.LOCKED ||
+                    it.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
+                    (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
             } ?: false
             // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
             // dashj asset-lock funding CreateIdentityService drives fails
@@ -1090,9 +1160,45 @@ class RequestUserNameViewModel @Inject constructor(
             val submitSource = effectivePaymentSource(
                 requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
             )
-            val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
-                submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
-                transparentUsernameCreation.isCutoverCommitted()
+            // After the cutover an identity that already exists on chain gets ONLY its name
+            // retried (review 4299080469): the legacy reuse path below resets it to NONE and
+            // looks for a dashj funding transaction an SDK-created identity never had, so it
+            // would start fresh legacy funding. Before the cutover the legacy path is master's
+            // (#1567) and stays as it is.
+            val existingIdentityId = identity?.userId
+            val nameOnlyCandidate = reuseTransaction && existingIdentityId != null && !isUsingInvite()
+            val freshSdkCandidate = !isUsingInvite() && !reuseTransaction &&
+                submitSource != UsernamePaymentSource.SHIELDED_BALANCE
+            // Fail closed (review 4299080469, reopened): for both of these, "not committed" starts
+            // CreateIdentityService, which resets a registered identity to NONE or funds through
+            // the dashj engine. The lenient read turns an unreadable cutover state into exactly
+            // that answer, so these read the state strictly, and an unknown one refuses the
+            // submission, starting and resetting nothing.
+            val cutover: Boolean? = if (nameOnlyCandidate || freshSdkCandidate) {
+                transparentUsernameCreation.cutoverStateOrUnknown()
+            } else {
+                false
+            }
+            if (cutover == null) {
+                log.warn("username submit refused: the cutover state cannot be read")
+                _uiState.update { it.copy(usernameSubmittedError = true) }
+                return@launch
+            }
+            if (nameOnlyCandidate && cutover) {
+                log.info("name-only retry for the existing identity (cutover committed)")
+                // Accepted means the retry runs on the application scope and survives this screen,
+                // which the submitting state closes; publish it only then.
+                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
+                    requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
+                    requestedUserName!!,
+                    requestedUsernameSecondary
+                )
+                _uiState.update {
+                    if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
+                }
+                return@launch
+            }
+            val cutoverCommitted = freshSdkCandidate && cutover
             if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
             ) {
@@ -1221,6 +1327,7 @@ class RequestUserNameViewModel @Inject constructor(
             it.copy(
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 usernameRequestSubmitted = false,
                 usernameRequestSubmitting = false
             )
@@ -1268,7 +1375,7 @@ class RequestUserNameViewModel @Inject constructor(
         val username = requestedUserName ?: return null
         val token = ++usernameCheckToken
         return viewModelScope.launch {
-            _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false) }
+            _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false, checkedUsername = null) }
             val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
             if (usernameSearchResult.status != Status.SUCCESS) {
                 // Fail CLOSED: a lookup that never completed says
@@ -1286,28 +1393,44 @@ class RequestUserNameViewModel @Inject constructor(
                 }
                 return@launch
             }
-            val usernameExists = usernameSearchResult.data != null
+            var usernameExists = usernameSearchResult.data != null
             var usernameContested = false
             var firstCreatedAt = -1L
             val usernameBlocked = try {
                 withContext(Dispatchers.IO) {
                     val contenders = platformRepo.getVoteContendersOrThrow(username)
-                    usernameContested = contenders.map.isNotEmpty()
-                    var maxApprovalVotes = 0
-                    firstCreatedAt = try {
-                        contenders.map.values.minOf { contender ->
-                            val document = contender.serializedDocument?.let {
-                                DomainDocument(platformRepo.platform.names.deserialize(it))
+                    val finishedVote = contenders.winner.orElse(null)?.first
+                    when {
+                        finishedVote == null -> {
+                            // no vote, or a vote that is still in progress
+                            usernameContested = contenders.map.isNotEmpty()
+                            var maxApprovalVotes = 0
+                            firstCreatedAt = try {
+                                contenders.map.values.minOf { contender ->
+                                    val document = contender.serializedDocument?.let {
+                                        DomainDocument(platformRepo.platform.names.deserialize(it))
+                                    }
+                                    maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                                    document?.createdAt ?: -1
+                                }
+                            } catch (e: NoSuchElementException) {
+                                -1L
                             }
-                            maxApprovalVotes = max(contender.votes, maxApprovalVotes)
-                            document?.createdAt ?: -1
-                        }
-                    } catch (e: NoSuchElementException) {
-                        -1L
-                    }
 
-                    // is the name blocked
-                    firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                            // is the name blocked
+                            firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                        }
+                        // masternodes voted to lock this name: nobody can register it
+                        finishedVote.isLocked -> true
+                        // the vote ended without a winner, so the name can be requested again
+                        finishedVote.noWinner -> false
+                        // won by another identity; the domain document should exist, but treat it
+                        // as taken even if the name lookup above has not caught up yet
+                        else -> {
+                            usernameExists = true
+                            false
+                        }
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -1337,8 +1460,10 @@ class RequestUserNameViewModel @Inject constructor(
                     usernameCheckFailed = false,
                     usernameSubmittedError = false,
                     usernameSubmittedPoolSyncing = false,
+                    usernameSubmittedPaymentStillConfirming = false,
                     usernameContested = usernameContested, usernameExists = usernameExists,
                     usernameBlocked = usernameBlocked,
+                    checkedUsername = username,
                     votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
                 )
             }
@@ -1421,6 +1546,16 @@ class RequestUserNameViewModel @Inject constructor(
     // the spinner early and writing an older read's verdict. A token separates them.
     private var usernameCheckToken: Long = 0L
 
+    /**
+     * True only when the last completed check was for exactly [username] and found it available, so
+     * a result for an earlier input can never let a different name through.
+     */
+    fun hasAvailableResultFor(username: String): Boolean {
+        val state = _uiState.value
+        return state.usernameCheckSuccess && state.checkedUsername == username &&
+            !state.usernameExists && !state.usernameBlocked
+    }
+
     /** The resolved balance gate: button enablement + row copy inputs. */
     private data class BalanceGateResult(
         val enoughBalance: Boolean,
@@ -1457,12 +1592,12 @@ class RequestUserNameViewModel @Inject constructor(
         val walletBalance = _walletBalance.value
         return when {
             identityBalance > 0L && contestable ->
-                (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
+                (Coin.valueOf(identityBalance / 1000) + walletBalance) > _contestedFees.value.contestedName
             identityBalance > 0L && !contestable ->
                 (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
             contestable ->
-                walletBalance >= Constants.DASH_PAY_FEE_CONTESTED &&
-                    assetLockFundingEligible(Constants.DASH_PAY_FEE_CONTESTED)
+                walletBalance >= _contestedFees.value.contested &&
+                    assetLockFundingEligible(_contestedFees.value.contested)
             else ->
                 walletBalance >= Constants.DASH_PAY_FEE &&
                     assetLockFundingEligible(Constants.DASH_PAY_FEE)
@@ -1533,7 +1668,7 @@ class RequestUserNameViewModel @Inject constructor(
             // allowed). An UNKNOWN tier still passes — see InviteUsernameTier.UNKNOWN.
             isUsingInvite() && createUsernameArgs?.invite?.isShielded == true ->
                 inviteTierAllowsUsername(inviteTier(), contestable)
-            isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
+            isUsingInvite() && contestable -> inviteBalance >= _contestedFees.value.contested
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
             // Paying from the shielded pool: the welcome-screen decision
             // point only offers this source when the pool covers the
@@ -1545,13 +1680,13 @@ class RequestUserNameViewModel @Inject constructor(
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && !contestable -> true
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && contestable ->
                 canShieldedFundContestedUsername()
-            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
-                CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && contestable ->
+                (Coin.valueOf(identityBalance / 1000) + walletBalance) > _contestedFees.value.contestedName
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 NON_CONTEST_DOCUMENT_FEE / 1000)
             identityBalance == 0L && contestable ->
-                walletBalance >= Constants.DASH_PAY_FEE_CONTESTED &&
-                    assetLockFundingEligible(Constants.DASH_PAY_FEE_CONTESTED)
+                walletBalance >= _contestedFees.value.contested &&
+                    assetLockFundingEligible(_contestedFees.value.contested)
             identityBalance == 0L && !contestable ->
                 walletBalance >= Constants.DASH_PAY_FEE &&
                     assetLockFundingEligible(Constants.DASH_PAY_FEE)
@@ -1565,22 +1700,22 @@ class RequestUserNameViewModel @Inject constructor(
             paymentSource != UsernamePaymentSource.SHIELDED_BALANCE &&
             identityBalance == 0L &&
             run {
-                val fee = if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+                val fee = if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE
                 walletBalance >= fee && !assetLockFundingEligible(fee)
             }
         // The same branch structure, resolved to the amount the
         // insufficient-balance row must name (the old layout hardcoded
         // 0.25 for every case).
         val requiredAmount = when {
-            isUsingInvite() && contestable -> Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            isUsingInvite() && contestable -> _contestedFees.value.contested.toPlainString()
             isUsingInvite() && !contestable -> Constants.DASH_PAY_FEE.toPlainString()
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE ->
                 shieldedIdentityFundingRequirement(
-                    Dash((if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE).value)
-                )?.toPlainString() ?: Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
-            identityBalance > 0L && contestable -> Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000).toPlainString()
+                    Dash((if (contestable) _contestedFees.value.contested else Constants.DASH_PAY_FEE).value)
+                )?.toPlainString() ?: _contestedFees.value.contested.toPlainString()
+            identityBalance > 0L && contestable -> _contestedFees.value.contestedName.toPlainString()
             identityBalance > 0L && !contestable -> Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000).toPlainString()
-            contestable -> Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            contestable -> _contestedFees.value.contested.toPlainString()
             else -> Constants.DASH_PAY_FEE.toPlainString()
         }
         if (!enoughBalance) {
@@ -1678,9 +1813,11 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,
+                checkedUsername = null,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )
@@ -1758,7 +1895,12 @@ class RequestUserNameViewModel @Inject constructor(
      * including invites whose creator had paid the contested fee.
      */
     fun inviteTier(): InviteUsernameTier =
-        inviteUsernameTier(createUsernameArgs?.invite, getInvitationAmount())
+        // The SMALLER of the two possible contested fees (CURRENT, MO-1069):
+        // an invite may have been funded under either protocol era, and this
+        // floor classifies a genuine contested funding correctly regardless
+        // of which one — the live _contestedFees value governs what THIS
+        // registration needs, not what a past invite's creator paid.
+        inviteUsernameTier(createUsernameArgs?.invite, getInvitationAmount(), ContestedUsernameFees.CURRENT.contested)
 
     fun isInviteForContestedNames(): Boolean = inviteTier() == InviteUsernameTier.CONTESTED
 
