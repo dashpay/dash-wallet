@@ -132,11 +132,13 @@ class SecurityViewModel @Inject constructor(
     fun setHideBalanceOnLaunch(hide: Boolean) {
         viewModelScope.launch {
             walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, hide)
-            walletApplication.wallet?.let { wallet ->
-                WalletBalanceWidgetProvider.updateWidgets(
-                    walletApplication,
-                    wallet.getBalance(Wallet.BalanceType.ESTIMATED)
-                )
+            withContext(Dispatchers.IO) {
+                if (walletApplication.hasWallet()) {
+                    WalletBalanceWidgetProvider.updateWidgets(
+                        walletApplication,
+                        walletData.getWalletBalance()
+                    )
+                }
             }
             analytics.logEvent(
                 if (hide) {

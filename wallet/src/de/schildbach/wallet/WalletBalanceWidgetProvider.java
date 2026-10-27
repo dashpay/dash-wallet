@@ -80,6 +80,45 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    /** Values and visibility used to render the two widget balance rows. */
+    static final class BalanceDisplay {
+        private final CharSequence dashBalance;
+        private final CharSequence localBalance;
+        private final boolean localBalanceVisible;
+
+        private BalanceDisplay(final CharSequence dashBalance, final CharSequence localBalance,
+                               final boolean localBalanceVisible) {
+            this.dashBalance = dashBalance;
+            this.localBalance = localBalance;
+            this.localBalanceVisible = localBalanceVisible;
+        }
+
+        /** Returns the value rendered in the Dash balance row. */
+        CharSequence getDashBalance() {
+            return dashBalance;
+        }
+
+        /** Returns the value rendered in the local-currency row. */
+        CharSequence getLocalBalance() {
+            return localBalance;
+        }
+
+        /** Returns whether the local-currency row should be visible. */
+        boolean isLocalBalanceVisible() {
+            return localBalanceVisible;
+        }
+    }
+
+    /** Selects masked or formatted values and local-row visibility for the widget. */
+    static BalanceDisplay createBalanceDisplay(final CharSequence balance, final CharSequence localBalance,
+                                               final boolean hideBalance, final CharSequence hiddenBalance) {
+        if (hideBalance) {
+            return new BalanceDisplay(hiddenBalance, hiddenBalance, true);
+        }
+
+        return new BalanceDisplay(balance, localBalance, localBalance != null);
+    }
+
     private Coin getBalance(Context context) {
         final WalletApplication application = (WalletApplication) context.getApplicationContext();
         return application.getWallet().getBalance(BalanceType.ESTIMATED);
@@ -176,16 +215,15 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                     localBalanceStr = null;
                 }
 
-                if (widgetData.hideBalance) {
-                    final String hiddenBalance = context.getString(R.string.appwidget_balance_hidden);
-                    views.setTextViewText(R.id.widget_wallet_balance_btc, hiddenBalance);
-                    views.setViewVisibility(R.id.widget_wallet_balance_local, View.VISIBLE);
-                    views.setTextViewText(R.id.widget_wallet_balance_local, hiddenBalance);
-                } else {
-                    views.setTextViewText(R.id.widget_wallet_balance_btc, balanceStr);
-                    views.setViewVisibility(R.id.widget_wallet_balance_local, localBalanceStr != null ? View.VISIBLE : View.GONE);
-                    views.setTextViewText(R.id.widget_wallet_balance_local, localBalanceStr);
-                }
+                final BalanceDisplay display = createBalanceDisplay(
+                        balanceStr,
+                        localBalanceStr,
+                        widgetData.hideBalance,
+                        context.getString(R.string.appwidget_balance_hidden));
+                views.setTextViewText(R.id.widget_wallet_balance_btc, display.getDashBalance());
+                views.setViewVisibility(R.id.widget_wallet_balance_local,
+                        display.isLocalBalanceVisible() ? View.VISIBLE : View.GONE);
+                views.setTextViewText(R.id.widget_wallet_balance_local, display.getLocalBalance());
 
                 if (appWidgetOptions != null) {
                     final int minWidth = appWidgetOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
