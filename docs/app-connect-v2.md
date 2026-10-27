@@ -403,3 +403,9 @@ extra is absent. Both activities share the existing send implementation.
 Regression verification passed 639 tests across devnet, testnet and production,
 with 96 conditional skips and no failures, plus both debug APK builds and
 ktlintCheck. No on-device quick-send or payment-link testing is claimed.
+
+The Tools menu keeps Connections reachable on supported builds even when username
+metadata is unavailable. The Connections screen owns identity loading, errors and
+Retry; the menu must not hide that recovery path behind a successful metadata read.
+Credits retain their existing username gate. This navigation correction was found
+by the full-PR pre-review of the group/payment-entry fixes.
