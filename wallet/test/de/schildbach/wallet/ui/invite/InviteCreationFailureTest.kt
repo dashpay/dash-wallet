@@ -167,4 +167,19 @@ class InviteCreationFailureTest {
             )
         }
     }
+
+    // ── Review 1b15e950af15: refused while an earlier payment is still confirming ──
+
+    @Test
+    fun pendingPaymentRefusal_isPaymentStillConfirming_andStaysRetryable() {
+        // The exact reason SdkL1InviteCreation returns when the funding gate is closed.
+        val result = SdkWriteResult.NotBroadcast("pending payment inputs unprotected")
+
+        val kind = classifyInviteCreationFailure(result)
+
+        assertEquals(InviteCreationFailureKind.PAYMENT_STILL_CONFIRMING, kind)
+        // Nothing was spent and the refusal clears once that payment resolves: never latch
+        // the dialog shut, however many times the user has tried.
+        assertTrue(inviteRetryAllowed(kind, MAX_INVITE_CREATE_ATTEMPTS + 5))
+    }
 }

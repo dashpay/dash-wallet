@@ -374,6 +374,9 @@ public class WalletApplication extends MultiDexApplication
     dagger.Lazy<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> coinJoinFundsMigrationService;
     @Inject
     dagger.Lazy<de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService> shieldedBalanceService;
+    // The payment paths' wipe barrier: raised when Reset Wallet starts, lowered once the old wallet is gone.
+    @Inject
+    public de.schildbach.wallet.payments.FundingSelectionLock fundingSelectionLock;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -1618,6 +1621,15 @@ public class WalletApplication extends MultiDexApplication
         return wallet;
     }
 
+    /**
+     * Whether a wallet is loaded, safe to ask from any thread. The wallet field is not volatile,
+     * so a background thread reading it can go on seeing a wallet a wipe has already removed;
+     * the state flow is updated alongside it and publishes the change to every thread.
+     */
+    public boolean hasWallet() {
+        return walletStateFlow.getValue() != null;
+    }
+
     private final MutableStateFlow<Wallet> walletStateFlow = StateFlowKt.MutableStateFlow(null);
     @NonNull
     @Override
@@ -2488,14 +2500,18 @@ public class WalletApplication extends MultiDexApplication
             int importance = runningAppProcesses.get(0).importance;
             if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
                 if (wallet == null) {
-                    log.warn("wallet does not exist, but starting blockchain service");
+                    // The environment was never initialized in this process (no wallet file at
+                    // startup), so blockchainServiceIntent may still be null and the service has
+                    // no wallet to work with anyway.
+                    log.warn("wallet does not exist, not starting blockchain service");
+                    return;
                 }
                 if (cancelCoinsReceived) {
                     Intent blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
                             this, BlockchainServiceImpl.class);
                     startService(blockchainServiceCancelCoinsReceivedIntent);
                 } else {
-                    startService(blockchainServiceIntent);
+                    startService(getBlockchainServiceIntent());
                 }
             }
         }
@@ -2544,7 +2560,19 @@ public class WalletApplication extends MultiDexApplication
 
     @Deprecated(message = "not used")
     public void stopBlockchainService() {
-        stopService(blockchainServiceIntent);
+        stopService(getBlockchainServiceIntent());
+    }
+
+    /**
+     * {@link #blockchainServiceIntent} is only assigned by {@link #initEnvironment()}, which does
+     * not run when the app starts without a wallet file. Build it on demand so that callers can
+     * never pass null to startService()/stopService().
+     */
+    private Intent getBlockchainServiceIntent() {
+        if (blockchainServiceIntent == null) {
+            blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
+        }
+        return blockchainServiceIntent;
     }
 
     /**
@@ -2775,17 +2803,27 @@ public class WalletApplication extends MultiDexApplication
      * mainnet wallet, so callers get no completion callback — a callback that
      * outlives the screen it was created on is what crashed this path before
      * (Fragment.startActivity on a fragment detached two minutes earlier).
+     *
+     * @return false when the reset was refused (recovery required, or the wipe
+     *     marker could not be confirmed): nothing was torn down and the UI was
+     *     not handed off, so the caller must tell the user Reset Wallet failed.
      */
-    public void triggerWipe() {
+    public boolean triggerWipe() {
         if (WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir())
                 == WalletWipeState.State.RECOVERY_REQUIRED) {
             walletWipeRecoveryRequired = true;
             log.warn("refusing wallet wipe while recovery is required");
-            return;
+            return false;
         }
         log.info("Removing all the data and restarting the app.");
-        WalletApplicationExt.INSTANCE.beginWalletWipe(this);
+        if (!WalletApplicationExt.INSTANCE.beginWalletWipe(this)) {
+            // Fail closed: no marker, no wipe. The wallet is untouched and the
+            // UI was not handed off, so the caller reports the failure.
+            log.error("Reset Wallet refused: the wipe could not be recorded");
+            return false;
+        }
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
+        return true;
     }
 
     /** Called only after wipe destruction succeeds; retain recovery protection if the marker remains. */

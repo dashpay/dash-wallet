@@ -23,8 +23,11 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.WalletSession
 import java.util.function.Consumer
 import java.util.function.Predicate
 
@@ -42,7 +45,9 @@ interface WalletSendPaymentService : SendPaymentService {
         emptyWallet: Boolean = false,
         checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
-        canSendLockedOutput: Predicate<TransactionOutput>? = null
+        canSendLockedOutput: Predicate<TransactionOutput>? = null,
+        /** The wallet the payment was confirmed on; refused once it is wiped. Null: the installed one. */
+        originWallet: Wallet? = null
     ): Transaction
 
     suspend fun estimateNetworkFee(
@@ -57,6 +62,20 @@ interface WalletSendPaymentService : SendPaymentService {
         val totalAmount: String
     )
 
+    /**
+     * The wallet [session] was taken on, or null for no session. Refused, with nothing sent, when
+     * that wallet has been wiped or replaced since.
+     *
+     * @throws IllegalStateException when that wallet is no longer the installed one
+     */
+    fun walletOf(session: WalletSession?): Wallet?
+
     /** The dashj-typed twin of the neutral `payWithDashUrl` (returns the live transaction). */
-    suspend fun payWithDashUrlTx(dashUri: String, serviceName: String?): Transaction
+    suspend fun payWithDashUrlTx(
+        dashUri: String,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata? = null,
+        session: WalletSession? = null,
+        onTransactionCreated: (suspend (String) -> Unit)? = null
+    ): Transaction
 }

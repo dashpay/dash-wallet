@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform.work
 import android.app.Application
 import android.content.Context
 import androidx.hilt.work.HiltWorker
+import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
@@ -29,6 +30,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION
 import de.schildbach.wallet.service.platform.sdk.REASON_PRE_BROADCAST_BUILD_SHORTFALL
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
 import kotlinx.coroutines.CancellationException
@@ -76,6 +78,20 @@ class PerformTopUpWorker @AssistedInject constructor(
         const val KEY_IS_MAX_SPEND = "PerformTopUpWorker.IS_MAX_SPEND"
         const val KEY_NEW_BALANCE = "PerformTopUpWorker.NEW_BALANCE"
         const val KEY_AMBIGUOUS = "PerformTopUpWorker.AMBIGUOUS"
+
+        /**
+         * Failure output flag: the purchase was refused, with nothing built, because an
+         * earlier payment's outcome is still being confirmed and its inputs are not protected
+         * from coin selection. The screen shows `R.string.payment_still_confirming`; the purchase
+         * is the user's to retry once that payment resolves.
+         */
+        const val KEY_PAYMENT_STILL_CONFIRMING = "PerformTopUpWorker.PAYMENT_STILL_CONFIRMING"
+
+        /** Failure output for a NotBroadcast [reason]: nothing was spent. */
+        internal fun notSentOutput(reason: String): Data = workDataOf(
+            BaseWorker.KEY_ERROR_MESSAGE to reason,
+            KEY_PAYMENT_STILL_CONFIRMING to isPaymentStillConfirmingReason(reason)
+        )
 
         /** Progress marker: the SDK call that does the actual work has begun. */
         const val KEY_SDK_CALL_STARTED = "PerformTopUpWorker.SDK_CALL_STARTED"
@@ -234,7 +250,9 @@ class PerformTopUpWorker @AssistedInject constructor(
             }
             is SdkWriteResult.NotBroadcast -> {
                 log.warn("top-up not sent: {}", result.reason)
-                Result.failure(workDataOf(KEY_ERROR_MESSAGE to result.reason))
+                // Never Result.retry(): a refused purchase is the user's to retry. A pending-payment
+                // refusal is no exception — re-running later would spend while nobody is watching.
+                Result.failure(notSentOutput(result.reason))
             }
             is SdkWriteResult.Ambiguous -> {
                 // The lock, if broadcast, is Rust-tracked — the recovery

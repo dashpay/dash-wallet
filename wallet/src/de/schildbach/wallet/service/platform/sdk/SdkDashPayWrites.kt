@@ -53,6 +53,31 @@ sealed class SdkWriteResult<out T> {
 }
 
 /**
+ * The result of an SDK submission a wallet wipe cancelled
+ * ([de.schildbach.wallet.payments.FundingSelectionLock.withSharedSubmission]). Cancelled before
+ * it was submitted, nothing went out: [SdkWriteResult.NotBroadcast]. Cancelled after, it may
+ * have: [SdkWriteResult.Ambiguous] carrying a
+ * [de.schildbach.wallet.payments.WalletWipedDuringSubmissionException], a
+ * PaymentSubmissionPendingException, so a caller that rethrows the cause reports it as "may have
+ * been sent", and it is never a cancellation, which would read as "nothing happened".
+ */
+internal fun wipeCancelledWriteResult(
+    operation: String,
+    txIdHex: String?,
+    cause: de.schildbach.wallet.payments.WalletWipedCancellationException,
+    submitted: Boolean
+): SdkWriteResult<Nothing> = if (!submitted) {
+    SdkWriteResult.NotBroadcast("$operation: a wallet wipe cancelled it before it was submitted", cause)
+} else {
+    LoggerFactory.getLogger(SdkWriteResult::class.java).error(
+        "SDK {}: a wallet wipe cancelled it after submission{}; the outcome is unknown and it is NOT retried",
+        operation,
+        txIdHex?.let { " ($it)" } ?: ""
+    )
+    SdkWriteResult.Ambiguous(de.schildbach.wallet.payments.WalletWipedDuringSubmissionException(txIdHex, cause))
+}
+
+/**
  * The no-double-broadcast decision table for a throwable raised by the
  * SDK's native write call itself (preflight failures never reach here —
  * they are [SdkWriteResult.NotBroadcast] by construction).

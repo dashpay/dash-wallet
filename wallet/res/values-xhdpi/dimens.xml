@@ -17,7 +17,6 @@
     <dimen name="welcome_screen_skip_size">15sp</dimen>
     <dimen name="welcome_screen_title_margin_top">26dp</dimen>
 
-    <dimen name="lock_screen_bottom_guideline_margin">48dp</dimen>
     <dimen name="pin_preview_textview_padding">12dp</dimen>
     <dimen name="lock_screen_content_margin_bottom">0dp</dimen>
 

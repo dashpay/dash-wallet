@@ -20,8 +20,17 @@
     <string name="maya_portal_convert_to_title">다음으로 대시 변환하기</string>
     <string name="maya_portal_convert_subtitle">대시 지갑에서 다른 어떤 암호화폐로</string>
     <string name="maya_portal_subtitle">Maya에서는 대시 지갑에서 대시를 어떤 암호화폐로도 전환하고 이를 어떤 지갑으로도 보낼 수 있도록 지원합니다</string>
+    <string name="dash_dex_buy_title">대시 매수</string>
+    <string name="dash_dex_sell_title">대시 매도</string>
+    <string name="dash_dex_sell_subtitle">대시 지갑에서 다른 어떤 암호화폐로</string>
     <string name="maya_address_input_hint">%s 주소</string>
     <string name="maya_address_input_title">DASH를 %s로 전환하기</string>
+    <!-- Nav bar title of the convert-crypto enter-amount screen (Figma 24034:44864) -->
+    <string name="maya_convert_enter_amount_title">환전</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">다음으로부터 주소 복사하기</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">클립보드</string>
     <string name="maya_crypto_convert_title">대시 변환하기</string>
     <string name="maya_crypto_convert_order_preview_title">주문 미리보기</string>
 
@@ -29,13 +38,11 @@
     <string name="cryptocurrency_bitcoin_network">비트코인</string>
     <string name="cryptocurrency_dash_network">대시</string>
     <string name="cryptocurrency_rune_network">Thorchain</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
     <string name="cryptocurrency_kuji_network">Kujira</string>
     <string name="cryptocurrency_usk_network">USK</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
     <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
@@ -56,7 +63,7 @@
     <string name="cryptocurrency_zec_network">Zcash</string>
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
-
+    <string name="cryptocurrency_ltc_network">라이트코인</string>
     <string name="maya_error">Maya 오류</string>
     <string name="maya_error_not_available">이 Maya 서비스는 사용할 수 없습니다. 다시 시도해주세요.</string>
     <string name="maya_error_report_issue">메인 메뉴의 “고객 지원 문의”를 통해 이 문제를 Dash Wallet 지원팀에 신고해 주세요.</string>
@@ -65,6 +72,8 @@
     <!-- taken from Coinbase -->
     <string name="entered_amount_is_too_low">최소 송금 금액은 다음과 같습니다</string>
     <string name="entered_amount_is_too_high">최대 송금 금액은 다음과 같습니다</string>
+    <!-- Short form of the max-amount error on the convert-crypto enter-amount screen, e.g. "Max $205.32" (Figma 24034:44864) -->
+    <string name="maya_max_amount_error">최대</string>
     <string name="we_didnt_find_any_assets">귀하의 코인베이스 계정에서 어떤 자산도 찾지 못했습니다.</string>
     <string name="something_wrong_title">무언가 잘못되었습니다!</string>
     <string name="dont_have_any_dash">당신의 대시 지갑에 보유하고 있는 대시가 없습니다.</string>
@@ -103,10 +112,16 @@
     <string name="you_receive">다음을 통해 보낸 금액을 받을 수 있습니다</string>
     <string name="to_dash_wallet_on_this_device">이 기기의 대시 지갑에서</string>
     <string name="purchase">매수하기</string>
-    <string name="maya_fee">Maya 수수료</string>
+    <string name="maya_fee">수수료</string>
+    <string name="network_label">네트워크</string>
     <string name="total">총합</string>
     <string name="to_external_address">%s에</string>
 
+    <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
+    <string name="button_refresh">새로고침</string>
+    <string name="maya_explorer_view_maya">MayaChain 탐색기 보기</string>
+    <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
+    <string name="maya_explorer_view_near">NEAR Intents 탐색기 보기</string>
     <string name="maya_error_information">%s%n암호화폐: %s</string>
     <string name="maya_error_invalid_destination_address">유효하지 않은 도착지 주소</string>
     <string name="maya_error_below_recommended_minimum">입력한 금액이 제안된 최소 금액보다 낮습니다</string>
@@ -115,6 +130,33 @@
     <string name="maya_error_quote">이 전환에 관한 Maya의 견적을 받을 수 없었습니다</string>
     <string name="maya_halted_label">중단됨</string>
     <string name="maya_halted_coins_toast">일부 코인이 일시적으로 중단되어 거래할 수 없습니다</string>
+    <string name="maya_select_coin_title">코인 선택</string>
+    <string name="dex_enter_amount_checking">금액 확인중...</string>
+    <string name="dex_enter_amount_invalid">이 금액은 현재 스왑될 수 없습니다. 다른 금액을 시도하시거나, 잠시 후 다시 시도하세요.</string>
+    <string name="maya_route_label_multiple">다중 네트워크</string>
+    <string name="dex_refund_address_heading">환불 주소 입력하기</string>
+    <string name="dex_refund_address_field_label">환불 주소</string>
+    <string name="dex_refund_address_placeholder">복사하시려면 길게 누르십시오</string>
 
+    <string name="dex_receive_description">네트워크가 당신의 송금을 확인하면, 이를 대시로 전환하여 당신의 대시페이 지갑에 입금합니다.</string>
+    <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_memo_label">메모 / 태그</string>
+    <string name="dex_receive_memo_warning">당신의 송금은 이 메모를 포함하여야 합니다. 메모 없이 송금된 자금은 당신의 스왑과 매치될 수 없으며 사라지게 됩니다.</string>
+    <string name="dex_receive_expiry_title">이 주소는 10분 후 만료됩니다</string>
+    <string name="dex_receive_back_home">홈으로 돌아가기</string>
+
+    <!-- DashDEX buy: user-facing swap error messages (mapped from SwapKit error codes by SwapKitErrors).
+         %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
+    <string name="dex_error_generic">당신의 스왑을 설정하는 과정에서 무언가 잘못되었습니다. 다시 시도해주세요.</string>
+    <string name="dex_error_no_route">이 금액은 현재 스왑될 수 없습니다. 현재 일시적으로 루트를 이용할 수 없습니다 - 잠시 후 다시 시도하시거나, 다른 금액을 시도하세요.</string>
+    <string name="dex_error_validation">스왑을 처리할 수 없습니다. 금액과 주소를 확인하신 후 다시 시도하세요.</string>
+    <string name="dex_error_unavailable">현재 스왑을 이용할 수 없습니다. 잠시 후 다시 시도하세요.</string>
+    <string name="dex_error_quote_expired">해당 견적은 만료되었습니다. 뒤로 돌아가 다시 시도하세요.</string>
+    <string name="dex_error_sanctioned">이 주소는 스왑에 이용할 수 없습니다.</string>
+    <string name="dex_error_insufficient_balance">이 금액은 보내고자 하는 금액보다 큽니다.</string>
+    <string name="dex_error_allowance">이 토큰은 스왑 전 승인이 필요합니다.</string>
+    <string name="dex_error_build_failed">이 스왑을 준비할 수 없습니다. 다시 시도하세요.</string>
+    <string name="dex_error_invalid_destination">입금을 처리할 수 없습니다. 다시 시도하세요.</string>
+    <string name="dex_error_price_moved">가격이 지나치게 변동하였습니다. 뒤로 돌아가 다시 시도하세요.</string>
 
 </resources>

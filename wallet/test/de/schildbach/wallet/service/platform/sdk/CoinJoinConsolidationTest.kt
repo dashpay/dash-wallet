@@ -275,7 +275,7 @@ class CoinJoinConsolidationTest {
             coEvery { send.cutoverCommitted() } returns true
             coEvery { send.coinJoinConsolidationGateOpen() } returns true
             // The pinned SDK has no raw-bytes broadcast.
-            coEvery { send.rebroadcastCoinJoinConsolidation(any(), any()) } returns ConsolidationReplay.UNAVAILABLE
+            coEvery { send.rebroadcastCoinJoinConsolidation(any(), any(), any()) } returns ConsolidationReplay.UNAVAILABLE
             coEvery { blockchain.getState() } returns chainState
             every { chainState.isSynced() } returns true
             coEvery { shield.ensureShieldedReady() } returns true
@@ -321,7 +321,7 @@ class CoinJoinConsolidationTest {
         coVerify(exactly = 1) { f.shield.shieldMixedFundsFromWallet(any(), coinJoinAccountPath(params), any(), any()) }
         coVerify(exactly = 1) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
         // Broadcast by this process: no replay; the settled stage drops the bytes.
-        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) }
         assertEquals("", CoinJoinConsolidationState.decode(f.consolidation).rawTx)
     }
 
@@ -348,8 +348,8 @@ class CoinJoinConsolidationTest {
         val tx = transaction(f.coins.value)
         val raw = tx.bitcoinSerialize()
         val replayed = mutableListOf<ByteArray>()
-        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } coAnswers {
-            replayed += firstArg<ByteArray>()
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) } coAnswers {
+            replayed += secondArg<ByteArray>()
             ConsolidationReplay.SUBMITTED
         }
         // Process death after the prepared checkpoint, before the native broadcast.
@@ -359,7 +359,7 @@ class CoinJoinConsolidationTest {
         advanceTimeBy(60_000); runCurrent()
         assertEquals(1, replayed.size)
         assertArrayEquals(raw, replayed.single())
-        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(any(), tx.txId.toString()) }
+        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), tx.txId.toString()) }
         // Try again replays the identical bytes once more and resumes observation.
         assertEquals(MixedFundsMigrationOutcome.STARTED, f.service.retryPendingMigration())
         runCurrent()
@@ -499,7 +499,7 @@ class CoinJoinConsolidationTest {
         val f = Fixture(this)
         val tx = transaction(f.coins.value)
         var replays = 0
-        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } coAnswers {
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) } coAnswers {
             replays++
             ConsolidationReplay.SUBMITTED
         }
@@ -1718,7 +1718,7 @@ class CoinJoinConsolidationTest {
     @Test fun replayConflictFailsClosedWithoutRebuilding() = runTest {
         val f = Fixture(this)
         val tx = transaction(f.coins.value)
-        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } returns ConsolidationReplay.CONFLICT
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) } returns ConsolidationReplay.CONFLICT
         f.consolidation = waitingState(tx)
         assertTrue(f.service.restorePendingShieldMigration())
         runCurrent()
@@ -1730,7 +1730,7 @@ class CoinJoinConsolidationTest {
         runCurrent()
         advanceTimeBy(30_000); runCurrent()
         assertTrue(requireNotNull(f.service.inFlightMigration()).isExpired())
-        coVerify(exactly = 2) { f.send.rebroadcastCoinJoinConsolidation(any(), tx.txId.toString()) }
+        coVerify(exactly = 2) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), tx.txId.toString()) }
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
         assertEquals(tx.txId.toString(), CoinJoinConsolidationState.decode(f.consolidation).txid)
@@ -1746,7 +1746,7 @@ class CoinJoinConsolidationTest {
         runCurrent()
         advanceTimeBy(15_000); runCurrent()
         assertTrue(requireNotNull(f.service.inFlightMigration()).isExpired())
-        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) }
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
     }
 
@@ -1758,7 +1758,7 @@ class CoinJoinConsolidationTest {
         assertTrue(f.service.restorePendingShieldMigration())
         runCurrent()
         advanceTimeBy(15_000); runCurrent()
-        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(any(), tx.txId.toString()) }
+        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), tx.txId.toString()) }
         assertFalse(requireNotNull(f.service.inFlightMigration()).isExpired())
     }
 
@@ -1770,7 +1770,7 @@ class CoinJoinConsolidationTest {
         assertTrue(f.service.restorePendingShieldMigration())
         runCurrent()
         advanceTimeBy(30_000); runCurrent()
-        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) }
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
         // Observation continues as for a legacy state.
         assertFalse(requireNotNull(f.service.inFlightMigration()).isExpired())
@@ -1786,7 +1786,7 @@ class CoinJoinConsolidationTest {
         coVerify(exactly = 0) { f.send.consolidateCoinJoin(any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { f.shield.shieldMixedFundsFromWallet(any(), any(), any(), any()) }
         // A legacy state carries no signed bytes: observation only, as before.
-        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) }
     }
 
     @Test fun missingAddressOrIncompleteSyncCannotStartConsolidation() = runTest {
@@ -3666,7 +3666,7 @@ class CoinJoinConsolidationTest {
         runCurrent()
         advanceTimeBy(60_000); runCurrent()
         f.assertNothingBuilt()
-        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) }
         // Stood down into the guidance, the record kept.
         assertTrue(f.expired())
         assertEquals(rawStage("waiting"), f.consolidation)
@@ -3691,7 +3691,7 @@ class CoinJoinConsolidationTest {
         f.engineBalance = output.amount
         advanceTimeBy(15_000); runCurrent()
         f.assertNothingBuilt()
-        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any()) }
+        coVerify(exactly = 0) { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) }
         assertTrue(f.expired())
         assertEquals(tx.txId.toString(), invalid(f.consolidation).txid)
     }
@@ -3702,8 +3702,8 @@ class CoinJoinConsolidationTest {
         f.consolidation = rawStage("transferring", tx.txId.toString(), "", Utils.HEX.encode(tx.bitcoinSerialize()))
         f.coinJoinLocks = 1
         val replayed = mutableListOf<ByteArray>()
-        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } coAnswers {
-            replayed += firstArg<ByteArray>()
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) } coAnswers {
+            replayed += secondArg<ByteArray>()
             ConsolidationReplay.SUBMITTED
         }
         assertTrue(f.service.restorePendingShieldMigration())
@@ -3728,12 +3728,12 @@ class CoinJoinConsolidationTest {
         val tx = transaction(f.coins.value, regular)
         val hex = Utils.HEX.encode(tx.bitcoinSerialize())
         f.consolidation = rawStage("finalizing", tx.txId.toString(), regular, hex)
-        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } returns ConsolidationReplay.SUBMITTED
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) } returns ConsolidationReplay.SUBMITTED
         assertTrue(f.service.restorePendingShieldMigration())
         runCurrent()
         assertEquals(MixedFundsMigrationAction.COMBINE, f.service.inFlightMigration()?.action)
         advanceTimeBy(30_000); runCurrent()
-        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(tx.bitcoinSerialize(), tx.txId.toString()) }
+        coVerify(exactly = 1) { f.send.rebroadcastCoinJoinConsolidation(any(), tx.bitcoinSerialize(), tx.txId.toString()) }
         assertFalse(f.expired())
         // Final but not yet persisted as settled: keeps observing.
         f.store(tx)
@@ -3754,7 +3754,7 @@ class CoinJoinConsolidationTest {
         val f = Fixture(this)
         val tx = transaction(f.coins.value)
         f.consolidation = rawStage("ready", tx.txId.toString(), "", Utils.HEX.encode(tx.bitcoinSerialize()))
-        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any()) } returns ConsolidationReplay.CONFLICT
+        coEvery { f.send.rebroadcastCoinJoinConsolidation(any(), any(), any()) } returns ConsolidationReplay.CONFLICT
         assertTrue(f.service.restorePendingShieldMigration())
         runCurrent()
         advanceTimeBy(15_000); runCurrent()

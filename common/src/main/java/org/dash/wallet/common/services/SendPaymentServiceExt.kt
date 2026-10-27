@@ -59,9 +59,15 @@ val Throwable.isLeftoverBalanceWarning: Boolean
  * Dashj-side insufficient-funds failures (including [LeftoverBalanceException]) are rethrown as
  * the neutral [InsufficientFundsException]; all other exceptions propagate unchanged.
  */
-suspend fun SendPaymentService.payAndGetTxId(dashUri: String, serviceName: String?): String {
+suspend fun SendPaymentService.payAndGetTxId(
+    dashUri: String,
+    serviceName: String?,
+    recovery: PaymentRecoveryMetadata? = null,
+    session: WalletSession? = null,
+    onTransactionCreated: (suspend (String) -> Unit)? = null
+): String {
     val transaction = try {
-        payWithDashUrl(dashUri, serviceName)
+        payWithDashUrl(dashUri, serviceName, recovery, session, onTransactionCreated)
     } catch (e: Exception) {
         if (e.isInsufficientMoney && e !is InsufficientFundsException) {
             throw InsufficientFundsException(e.message, e)

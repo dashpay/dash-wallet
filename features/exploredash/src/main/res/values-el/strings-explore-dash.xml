@@ -203,6 +203,7 @@
     <string name="purchase_gift_card_details">Λεπτομέριες δωροκάρτας</string>
     <string name="purchase_original_purchase">Αρχική αγορά</string>
     <string name="purchase_check_current_balance">Δείτε τις λεπτομέρειες της κάρτας</string>
+    <string name="purchase_redeem_url_challange">Πρόκληση</string>
     <string name="purchase_card_number">Αριθμός κάρτας</string>
     <string name="purchase_card_pin">PIN κάρτας</string>
     <string name="purchase_view_transaction">Προβολή στοιχείων συναλλαγής</string>

@@ -21,6 +21,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import de.schildbach.wallet.database.dao.*
+import de.schildbach.wallet.database.dao.TransactionRecordsDao
 import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -94,4 +95,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun txGroupCacheDao(): TxGroupCacheDao
     abstract fun swapOrderDao(): SwapOrderDao
     abstract fun instantSendLockDao(): InstantSendLockDao
+    abstract fun transactionRecordsDao(): TransactionRecordsDao
 }

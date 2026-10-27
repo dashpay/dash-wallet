@@ -22,6 +22,12 @@ import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -130,7 +136,8 @@ class WalletWipeSequenceTest {
             assertEquals("backup sentinel", backup.readText())
             runBlocking {
                 WalletWipeSequence.finish(
-                    pending = { WalletWipeState.isPending(filesDir, noBackupFilesDir) },
+                    pending = { WalletWipeState.pendingState(filesDir, noBackupFilesDir) },
+                    fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                     detachWallet = { throw AssertionError("must not detach an unverified wallet") },
                     destroy = { throw AssertionError("must not destroy an unverified wallet") },
                     markComplete = { throw AssertionError("must preserve the recovery guard") }
@@ -183,13 +190,17 @@ class WalletWipeSequenceTest {
     @Test
     fun `nothing is destroyed until the wipe is recorded and the ui has been handed off`() {
         val order = mutableListOf<String>()
-        WalletWipeSequence.begin(
+        val confirmed = WalletWipeSequence.begin(
             markPending = { order.add("mark"); true },
+            fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
             handOffUi = { order.add("ui") }
         )
+        assertTrue(confirmed)
         runBlocking {
             WalletWipeSequence.finish(
-                pending = { true },
+                beginConfirmed = confirmed,
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                 detachWallet = { order.add("detach") },
                 destroy = { order.add("destroy") },
                 markComplete = { order.add("complete") }
@@ -199,12 +210,126 @@ class WalletWipeSequenceTest {
     }
 
     @Test
-    fun `the wipe is still handed off to the ui when the marker cannot be written`() {
-        // Losing the marker costs mid-wipe recovery, not the wipe: the user
-        // asked for a reset and must not be left on the wallet screen.
+    fun `a marker write failure refuses the reset - no hand-off, wallet intact, barrier down`() {
+        // Handing off without a marker left the old wallet installed behind onboarding: finish()
+        // found no marker and destroyed nothing while the user believed the wallet was reset.
+        val filesDir = newFilesDir()
+        val noBackupFilesDir = newNoBackupFilesDir()
+        val wallet = File(filesDir, "wallet-protobuf-testnet").apply { writeText("wallet sentinel") }
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val previousWrite = WalletWipeState.writeMarker
+        WalletWipeState.writeMarker = { _, _ -> throw IOException("disk full") }
         var handedOff = false
-        WalletWipeSequence.begin(markPending = { false }, handOffUi = { handedOff = true })
-        assertTrue(handedOff)
+        val confirmed = try {
+            WalletWipeSequence.begin(
+                markPending = { WalletWipeState.begin(filesDir, noBackupFilesDir) },
+                fundingBarrier = lock,
+                handOffUi = { handedOff = true }
+            )
+        } finally {
+            WalletWipeState.writeMarker = previousWrite
+        }
+        assertFalse(confirmed)
+        assertFalse("handed off to onboarding without a marker", handedOff)
+        assertFalse(lock.isWipeBarrierRaised)
+        assertEquals("next", runBlocking { withTimeout(2_000) { lock.withShared { "next" } } })
+        assertEquals("wallet sentinel", wallet.readText())
+        assertEquals(WalletWipeState.Pending.NOT_PENDING, WalletWipeState.pendingState(filesDir, noBackupFilesDir))
+    }
+
+    @Test
+    fun `a marker that writes but does not read back refuses the reset`() {
+        var handedOff = false
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        assertFalse(WalletWipeSequence.begin(markPending = { false }, fundingBarrier = lock, handOffUi = { handedOff = true }))
+        assertFalse(WalletWipeSequence.begin(markPending = { throw IOException("x") }, fundingBarrier = lock, handOffUi = { handedOff = true }))
+        assertFalse(handedOff)
+        assertFalse(lock.isWipeBarrierRaised)
+    }
+
+    @Test
+    fun `a refused reset leaves a barrier an earlier wipe raised up`() {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        lock.raiseWipeBarrier()
+        assertFalse(WalletWipeSequence.begin(markPending = { false }, fundingBarrier = lock, handOffUi = { fail("handed off") }))
+        assertTrue(lock.isWipeBarrierRaised)
+    }
+
+    @Test
+    fun `a confirmed begin raises the barrier before the hand-off`() {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        var barrierAtHandOff = false
+        assertTrue(
+            WalletWipeSequence.begin(
+                markPending = { true },
+                fundingBarrier = lock,
+                handOffUi = { barrierAtHandOff = lock.isWipeBarrierRaised }
+            )
+        )
+        assertTrue(barrierAtHandOff)
+    }
+
+    @Test
+    fun `an unreadable marker after a confirmed begin still wipes`() = runBlocking {
+        val filesDir = newFilesDir()
+        val noBackupFilesDir = newNoBackupFilesDir()
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val confirmed = WalletWipeSequence.begin(
+            markPending = { WalletWipeState.begin(filesDir, noBackupFilesDir) },
+            fundingBarrier = lock,
+            handOffUi = { }
+        )
+        assertTrue(confirmed)
+        val previousLookup = WalletWipeState.lookup
+        WalletWipeState.lookup = { WalletWipeState.Entry.UNKNOWN } // the marker can no longer be read
+        val events = mutableListOf<String>()
+        val ran = try {
+            assertEquals(WalletWipeState.Pending.UNKNOWN, WalletWipeState.pendingState(filesDir, noBackupFilesDir))
+            WalletWipeSequence.finish(
+                beginConfirmed = confirmed,
+                pending = { WalletWipeState.pendingState(filesDir, noBackupFilesDir) },
+                fundingBarrier = lock,
+                detachWallet = { events += "detach" },
+                destroy = { events += "destroy" },
+                markComplete = { events += "complete" }
+            )
+        } finally {
+            WalletWipeState.lookup = previousLookup
+        }
+        assertTrue(ran)
+        assertEquals(listOf("detach", "destroy", "complete"), events)
+        assertFalse(lock.isWipeBarrierRaised)
+    }
+
+    @Test
+    fun `an unknown marker on resume keeps the barrier and does not report the wipe complete`() = runBlocking {
+        // resumeInterruptedWipe / a service teardown with no confirmed begin in hand.
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        lock.raiseWipeBarrier()
+        val ran = WalletWipeSequence.finish(
+            beginConfirmed = false,
+            pending = { WalletWipeState.Pending.UNKNOWN },
+            fundingBarrier = lock,
+            detachWallet = { fail("detached") },
+            destroy = { fail("destroyed") },
+            markComplete = { fail("marked complete") }
+        )
+        assertFalse(ran)
+        assertTrue(lock.isWipeBarrierRaised)
+        assertTrue(
+            runCatching { lock.withShared { "paid" } }.exceptionOrNull() is
+                de.schildbach.wallet.payments.WalletWipedException
+        )
+        // a marker read that throws is the same unknown
+        val ranOnThrow = WalletWipeSequence.finish(
+            pending = { throw IOException("unreadable") },
+            fundingBarrier = lock,
+            detachWallet = { fail("detached") },
+            destroy = { fail("destroyed") },
+            markComplete = { fail("marked complete") }
+        )
+        assertFalse(ranOnThrow)
+        assertTrue(lock.isWipeBarrierRaised)
     }
 
     @Test
@@ -212,7 +337,8 @@ class WalletWipeSequenceTest {
         val order = mutableListOf<String>()
         runBlocking {
             WalletWipeSequence.finish(
-                pending = { true },
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                 detachWallet = { order.add("detach") },
                 destroy = { order.add("destroy") },
                 markComplete = { }
@@ -228,7 +354,8 @@ class WalletWipeSequenceTest {
         var touched = false
         val ran = runBlocking {
             WalletWipeSequence.finish(
-                pending = { false },
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.NOT_PENDING },
+                fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                 detachWallet = { touched = true },
                 destroy = { touched = true },
                 markComplete = { touched = true }
@@ -244,7 +371,8 @@ class WalletWipeSequenceTest {
         try {
             runBlocking {
                 WalletWipeSequence.finish(
-                    pending = { true },
+                    pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                    fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                     detachWallet = { },
                     destroy = { throw IOException("store gone") },
                     markComplete = { completed = true }
@@ -275,7 +403,8 @@ class WalletWipeSequenceTest {
 
                 val wipe = launch(oneThread) {
                     WalletWipeSequence.finish(
-                        pending = { true },
+                        pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                        fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                         detachWallet = { },
                         destroy = {
                             destroyEntered.complete(Unit)
@@ -295,5 +424,111 @@ class WalletWipeSequenceTest {
         } finally {
             oneThread.close()
         }
+    }
+
+    // ── the payment paths' wipe barrier ────────────────────────────────
+
+    @Test
+    fun `a wipe with a payment hold in flight drains it first and deadlocks on nothing its teardown awaits`() =
+        runBlocking {
+            val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+            // a send under way when the user confirms the reset (waiting on the network)
+            val holding = CompletableDeferred<Unit>()
+            val send = async(Dispatchers.Default) {
+                runCatching {
+                    lock.withShared {
+                        holding.complete(Unit)
+                        awaitCancellation()
+                    }
+                }
+            }
+            holding.await()
+            // app-scoped work that keeps asking for holds (the mixed-funds migration, a username's
+            // asset-lock funding): the teardown cancels and joins it
+            val worker = launch(Dispatchers.Default) {
+                while (isActive) {
+                    lock.selectIfAllowed({ false }) { "selected" }
+                    delay(5)
+                }
+            }
+
+            lock.raiseWipeBarrier() // Reset Wallet starts
+            val events = java.util.concurrent.CopyOnWriteArrayList<String>()
+            val finished = withTimeout(10_000) {
+                WalletWipeSequence.finish(
+                    pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                    fundingBarrier = lock,
+                    detachWallet = { events += "detach, send over=${send.isCompleted}" },
+                    destroy = {
+                        // the SDK stop, the migration stop, the verifier's job drain: each joins
+                        // work that may be asking for a hold right now; none of it may wait
+                        val asked = async(Dispatchers.Default) { runCatching { lock.withShared { "late" } } }
+                        events += "teardown hold refused=${asked.await().exceptionOrNull() is
+                            de.schildbach.wallet.payments.WalletWipedException}"
+                        worker.cancelAndJoin()
+                        events += "reactivation=${lock.tryExclusive { "reactivated" }}"
+                        // the verifier's clear, a wipe listener, inside the barrier already up
+                        lock.exclusiveForWipe { events += "verifier clear" }
+                    },
+                    markComplete = { events += "complete" }
+                )
+            }
+
+            assertTrue(finished)
+            assertEquals(
+                listOf(
+                    "detach, send over=true",
+                    "teardown hold refused=true",
+                    "reactivation=null",
+                    "verifier clear",
+                    "complete"
+                ),
+                events
+            )
+            assertTrue(
+                "${send.await()}",
+                send.await().exceptionOrNull() is de.schildbach.wallet.payments.WalletWipedCancellationException
+            )
+            // the old wallet is gone: the next wallet's payments go through
+            assertFalse(lock.isWipeBarrierRaised)
+            assertEquals("next", withTimeout(2_000) { lock.withShared { "next" } })
+        }
+
+    @Test
+    fun `a wipe that fails keeps the payment paths refused`() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        lock.raiseWipeBarrier()
+        try {
+            WalletWipeSequence.finish(
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                fundingBarrier = lock,
+                detachWallet = { },
+                destroy = { throw IOException("keystore delete failed") },
+                markComplete = { fail("marked complete") }
+            )
+            fail("a failed wipe returned")
+        } catch (expected: IOException) {
+            // the marker stays; the next launch finishes the wipe
+        }
+        assertTrue(lock.isWipeBarrierRaised)
+        assertTrue(
+            runCatching { lock.withShared { "paid" } }.exceptionOrNull() is
+                de.schildbach.wallet.payments.WalletWipedException
+        )
+    }
+
+    @Test
+    fun `a stop with no wipe recorded lowers the barrier and destroys nothing`() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        lock.raiseWipeBarrier()
+        val ran = WalletWipeSequence.finish(
+            pending = { de.schildbach.wallet.util.WalletWipeState.Pending.NOT_PENDING },
+            fundingBarrier = lock,
+            detachWallet = { fail("detached") },
+            destroy = { fail("destroyed") },
+            markComplete = { fail("marked complete") }
+        )
+        assertFalse(ran)
+        assertFalse(lock.isWipeBarrierRaised)
     }
 }

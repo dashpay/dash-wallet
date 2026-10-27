@@ -1,0 +1,566 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.payments
+
+import android.app.Application
+import androidx.test.core.app.ApplicationProvider
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.PendingDirectPayment
+import de.schildbach.wallet.data.PendingDirectPaymentConfig
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.params.TestNet3Params
+import org.bitcoinj.script.Script
+import org.bitcoinj.script.ScriptBuilder
+import org.bitcoinj.wallet.Wallet
+import de.schildbach.wallet.data.WalletData
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.NetworkStatus
+import org.dash.wallet.common.services.BlockchainStateProvider
+import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * A wipe against the real pending-payment store, with both real wipe listeners.
+ *
+ * The verifier's own tests mock the config, so they cannot see the one thing that matters here:
+ * whether a write the wipe raced against is still on disk afterwards, and what the next recovery
+ * scan does with it. A record that survives a wipe is picked up by that scan and, once the
+ * transaction shows up on the network, committed to and rebroadcast from the replacement wallet,
+ * which never made it.
+ */
+@RunWith(RobolectricTestRunner::class)
+// a plain Application: this needs only a Context for DataStore, and booting the real
+// WalletApplication would drag in Hilt and Firebase
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
+class PendingDirectPaymentWipeTest {
+    private val params = TestNet3Params.get()
+    private val paymentUrl = "https://merchant.example/payment"
+
+    // deterministic, so each has a watching key and the two have different ones
+    private lateinit var oldWallet: Wallet
+    private lateinit var replacement: Wallet
+    @Volatile private var installed: Wallet? = null
+
+    /** What the verifier sees (the dashj-typed wallet module surface). */
+    private lateinit var walletData: WalletData
+
+    /** What the store sees (BaseConfig registers its own wipe listener on the neutral one). */
+    private lateinit var walletDataProvider: WalletDataProvider
+    private lateinit var blockchainStateProvider: BlockchainStateProvider
+    private lateinit var config: HeldWriteConfig
+    private lateinit var verifier: PendingDirectPaymentVerifier
+
+    /** In registration order, as WalletApplication keeps them. */
+    private val wipeListeners = mutableListOf<suspend () -> Unit>()
+
+    @Before
+    fun setUp() {
+        Context.propagate(Context(params))
+        oldWallet = Wallet.createDeterministic(params, Script.ScriptType.P2PKH)
+        replacement = Wallet.createDeterministic(params, Script.ScriptType.P2PKH)
+        installed = oldWallet
+
+        walletData = mockk(relaxed = true)
+        every { walletData.wallet } answers { installed }
+        every { walletData.attachOnWalletWipedListener(any()) } answers { wipeListeners.add(firstArg()) }
+        // both surfaces feed the one listener list WalletApplication keeps
+        walletDataProvider = mockk(relaxed = true)
+        every { walletDataProvider.attachOnWalletWipedListener(any()) } answers { wipeListeners.add(firstArg()) }
+
+        blockchainStateProvider = mockk(relaxed = true)
+        every { blockchainStateProvider.getNetworkStatus() } returns NetworkStatus.DISCONNECTED
+        every { blockchainStateProvider.getConnectedPeerCount() } returns 0
+        coEvery { blockchainStateProvider.getState() } returns null
+
+        // the real store, which registers BaseConfig's own clearAll() as the first wipe listener
+        config = HeldWriteConfig(ApplicationProvider.getApplicationContext<Application>(), walletDataProvider)
+        runBlocking { config.clearAll() }
+
+        verifier = PendingDirectPaymentVerifier(
+            walletData,
+            mockk<WalletApplication>(relaxed = true),
+            blockchainStateProvider,
+            mockk<TransactionMetadataProvider>(relaxed = true),
+            config,
+            mockk<PendingPaymentEngine>(relaxed = true) {
+                coEvery { sdkOwnsL1() } returns false
+                coEvery { sdkOwnsL1OrUnknown() } returns false
+                coEvery { observation(any()) } returns EngineObservation.ABSENT
+                every { isObservationLive() } returns true
+                coEvery { bridge(any(), any(), any()) } returns null
+            },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        ).apply {
+            // the watches must not act during a test; nothing here is ever on the network
+            pollIntervalMs = 60_000L
+        }
+        assertEquals("both the store and the verifier listen for wipes", 2, wipeListeners.size)
+    }
+
+    /**
+     * The real store, able to hold one write back until something else has run.
+     *
+     * A subclass rather than a MockK spy: callOriginal() from coAnswers does not resume properly
+     * once the original really suspends, which DataStore's edit does, so a spy reports the write
+     * as done without it ever having run, and the test passes or fails for the wrong reason.
+     */
+    class HeldWriteConfig(context: android.content.Context, walletData: WalletDataProvider) :
+        PendingDirectPaymentConfig(context, walletData) {
+        var beforeNextWrite: (suspend () -> Unit)? = null
+        var heldWrites = 0
+
+        override suspend fun add(payment: PendingDirectPayment, stillValid: () -> Boolean) {
+            beforeNextWrite?.let {
+                beforeNextWrite = null
+                heldWrites++
+                it()
+            }
+            super.add(payment, stillValid)
+        }
+
+        /** Runs between a removal's read and its write, inside whatever makes them one step. */
+        var beforeNextRemovalLands: (suspend () -> Unit)? = null
+        var heldRemovals = 0
+
+        override suspend fun beforeRemovalLands() {
+            beforeNextRemovalLands?.let {
+                beforeNextRemovalLands = null
+                heldRemovals++
+                it()
+            }
+        }
+
+        /** Runs before the next strict read, which is where a recovery scan starts. */
+        var beforeNextStrictRead: (suspend () -> Unit)? = null
+        var heldReads = 0
+
+        override suspend fun getAllOrThrow(): List<PendingDirectPayment> {
+            beforeNextStrictRead?.let {
+                beforeNextStrictRead = null
+                heldReads++
+                it()
+            }
+            return super.getAllOrThrow()
+        }
+    }
+
+    /**
+     * What WalletApplication.finalizeWipe() does: every listener in turn, each to completion,
+     * while the old wallet is still installed, and only then the wallet goes.
+     */
+    private suspend fun wipe(listenersReversed: Boolean, installAfterwards: Wallet? = replacement) {
+        val order = if (listenersReversed) wipeListeners.reversed() else wipeListeners.toList()
+        order.forEach { it() }
+        installed = installAfterwards
+    }
+
+    private fun createTransaction(): Transaction {
+        val tx = Transaction(params)
+        tx.addInput(Sha256Hash.of("wipe-${System.nanoTime()}".toByteArray()), 0, ScriptBuilder.createEmpty())
+        tx.addOutput(Coin.parseCoin("0.01"), Address.fromString(params, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        return tx
+    }
+
+    private fun identityOf(wallet: Wallet) = Sha256Hash.of(wallet.watchingKey.pubKey).toString()
+
+    /** The scan a restart, or the next payment, runs; must find nothing and adopt nothing. */
+    private suspend fun assertReplacementAdoptsNothing(tx: Transaction) {
+        withTimeout(5_000) { verifier.awaitRestored() }
+        assertEquals("the erased payment is back on disk", emptyList<PendingDirectPayment>(), config.getAllOrThrow())
+        assertFalse("the replacement wallet is watching a payment it never made", verifier.isTracked(tx.txId))
+        tx.inputs.forEach {
+            assertFalse("the replacement wallet locked an outpoint it does not own", replacement.isLockedOutput(it.outpoint))
+        }
+    }
+
+    // --- a quarantine write held back until the wipe has cleared the store ------------------------
+
+    private fun aWriteHeldAcrossAWipeIsNotRecreated(listenersReversed: Boolean) = runBlocking {
+        val tx = createTransaction()
+        // Given: the write has passed every check made before it and is about to land when the
+        // wipe starts. The wipe clears the records under the record lock the write holds, so it
+        // waits for the write; the write must then be refused where it lands, and the wipe's
+        // clear must leave nothing behind for the replacement.
+        val test = this
+        val wipeDone = CompletableDeferred<Unit>()
+        config.beforeNextWrite = {
+            test.launch {
+                wipe(listenersReversed)
+                wipeDone.complete(Unit)
+            }
+            // the wipe has started (retired the wallet) and waits for the record lock
+            withTimeoutOrNull(300) { wipeDone.await() }
+        }
+
+        // When
+        try {
+            verifier.quarantine(tx, paymentUrl, "CTXSpend", origin = oldWallet)
+            fail("a payment was quarantined for a wallet that was wiped while its record was being written")
+        } catch (e: IllegalStateException) {
+            // Expected: refused where it would have landed, so nothing is submitted for it either
+        }
+        withTimeout(5_000) { wipeDone.await() }
+
+        // Then: without this the test could pass by refusing before the write was ever reached
+        assertEquals("the write was never held across the wipe", 1, config.heldWrites)
+        // nothing is left for the next scan, and the scan adopts nothing
+        assertReplacementAdoptsNothing(tx)
+    }
+
+    @Test
+    fun `a quarantine write held across a wipe is not recreated, store listener first`() =
+        aWriteHeldAcrossAWipeIsNotRecreated(listenersReversed = false)
+
+    @Test
+    fun `a quarantine write held across a wipe is not recreated, verifier listener first`() =
+        aWriteHeldAcrossAWipeIsNotRecreated(listenersReversed = true)
+
+    // --- a quarantine that starts after the listeners ran, while the old wallet is still installed
+
+    @Test
+    fun `a quarantine begun during the wipe is refused even though the old wallet is still installed`() = runBlocking {
+        val tx = createTransaction()
+        // Given: the listeners have run but finalizeWipe() has not yet taken the wallet away, so
+        // "is it the installed wallet" still says yes
+        wipe(listenersReversed = false, installAfterwards = oldWallet)
+
+        // When
+        try {
+            verifier.quarantine(tx, paymentUrl, "CTXSpend", origin = oldWallet)
+            fail("a payment was quarantined for a wallet a wipe had already started on")
+        } catch (e: IllegalStateException) {
+            // Expected
+        }
+
+        // Then: the wipe has already cleared the store, so a record written now would outlive it
+        assertEquals(emptyList<PendingDirectPayment>(), config.getAllOrThrow())
+        installed = replacement
+        assertReplacementAdoptsNothing(tx)
+    }
+
+    // --- a record another wallet left behind, however it got there ---------------------------------
+
+    @Test
+    fun `a recovery scan does not adopt a payment another wallet left behind`() = runBlocking {
+        // Given: a record stamped by the wiped wallet is on disk - a clear that failed, say - and
+        // the replacement is the installed wallet
+        val tx = createTransaction()
+        installed = replacement
+        config.add(
+            PendingDirectPayment(
+                txId = tx.txId,
+                txBytes = tx.bitcoinSerialize(),
+                paymentUrl = paymentUrl,
+                serviceName = "CTXSpend",
+                createdAt = System.currentTimeMillis(),
+                walletId = identityOf(oldWallet)
+            )
+        )
+
+        // Then: the scan neither locks nor watches it, and drops it, since no wallet that could
+        // use it is left
+        assertReplacementAdoptsNothing(tx)
+    }
+
+    // --- a record that names no owner is never taken on trust ------------------------------------
+
+    private fun ownerless(tx: Transaction, abandoned: Boolean = false) = PendingDirectPayment(
+        txId = tx.txId,
+        txBytes = tx.bitcoinSerialize(),
+        paymentUrl = paymentUrl,
+        serviceName = "CTXSpend",
+        createdAt = System.currentTimeMillis(),
+        abandoned = abandoned,
+        paymentRequestId = "abc123"
+    )
+
+    @Test
+    fun `a recovery scan keeps an ownerless payment it cannot place, without adopting it`() = runBlocking {
+        // Given: a record with no owner on it (written before owners were stored, or when the
+        // identity could not be read) survived the wipe, and the replacement is installed
+        val tx = createTransaction()
+        installed = replacement
+        config.add(ownerless(tx))
+
+        // When
+        withTimeout(5_000) { verifier.awaitRestored() }
+
+        // Then: nothing proves it is the replacement's, so it is neither locked nor watched ...
+        assertFalse("the replacement wallet is watching a payment it never made", verifier.isTracked(tx.txId))
+        tx.inputs.forEach {
+            assertFalse("the replacement wallet locked an outpoint it does not own", replacement.isLockedOutput(it.outpoint))
+        }
+        // ... but nothing proves it is another wallet's either (its inputs may be SDK-only ones
+        // dashj never saw), so the only record of it is kept, unstamped, and still blocks its invoice
+        val kept = config.getAllOrThrow().single { it.txId == tx.txId }
+        assertEquals(null, kept.walletId)
+        assertEquals(tx.txId, verifier.unresolvedSubmissionFor("abc123"))
+
+        // a wipe still clears it with everything else
+        wipe(listenersReversed = false)
+        assertEquals(emptyList<PendingDirectPayment>(), config.getAllOrThrow())
+    }
+
+    @Test
+    fun `an ownerless payment is neither resubmitted nor counted for a wallet it does not belong to`() = runBlocking {
+        val released = createTransaction()
+        val active = createTransaction()
+        installed = replacement
+        config.add(ownerless(released, abandoned = true))
+        config.add(ownerless(active))
+
+        assertEquals(null, verifier.abandonedSubmissionFor("abc123", replacement))
+        assertFalse("an ownerless record blocks the replacement's funding", verifier.hasUnprotectedPendingPayment())
+    }
+
+    @Test
+    fun `an ownerless payment whose own inputs are this wallet's is adopted, and its owner written down`() = runBlocking {
+        // Given: a record from before owners were stored, spending an output of the installed wallet
+        val parent = Transaction(params)
+        parent.addInput(Sha256Hash.of("funding-${System.nanoTime()}".toByteArray()), 0, ScriptBuilder.createEmpty())
+        parent.addOutput(Coin.parseCoin("1"), oldWallet.freshReceiveAddress())
+        oldWallet.receivePending(parent, null)
+        val tx = Transaction(params)
+        tx.addInput(parent.getOutput(0))
+        tx.addOutput(Coin.parseCoin("0.5"), Address.fromString(params, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"))
+        config.add(ownerless(tx))
+
+        // When
+        withTimeout(5_000) { verifier.awaitRestored() }
+
+        // Then: protected like any of its own, and never ambiguous again
+        assertTrue(verifier.isTracked(tx.txId))
+        tx.inputs.forEach { assertTrue(oldWallet.isLockedOutput(it.outpoint)) }
+        assertEquals(identityOf(oldWallet), config.getAllOrThrow().single { it.txId == tx.txId }.walletId)
+    }
+
+    // --- the durable half only works if the owner is actually written down -----------------------
+
+    @Test
+    fun `a quarantined payment records which wallet signed it`() = runBlocking {
+        val tx = createTransaction()
+
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", origin = oldWallet)
+
+        // Without this the scan's refusal above has nothing to go on for any real record: it
+        // would be tested against a record the test wrote, and never see one production wrote.
+        assertEquals(identityOf(oldWallet), config.getAllOrThrow().single { it.txId == tx.txId }.walletId)
+    }
+
+    // --- a removal held between its read and its write while the wipe clears the store ----------
+
+    private fun recordFor(tx: Transaction, wallet: Wallet) = PendingDirectPayment(
+        txId = tx.txId,
+        txBytes = tx.bitcoinSerialize(),
+        paymentUrl = paymentUrl,
+        serviceName = "CTXSpend",
+        createdAt = System.currentTimeMillis(),
+        walletId = identityOf(wallet)
+    )
+
+    private fun aRemovalHeldAcrossAWipeDoesNotRestoreTheRest(listenersReversed: Boolean) = runBlocking {
+        // Given: two payments on disk, and the one whose outcome is now known is being removed by
+        // the acknowledgement path, which runs NonCancellable and is not one of the verifier's
+        // drained jobs. The removal has read both and is about to write back the one it keeps
+        // when the wipe starts, and the wipe is given every chance to finish first: if it can
+        // clear the store in that gap, it will, and the write then puts the other payment back.
+        val settled = createTransaction()
+        val stillPending = createTransaction()
+        config.add(recordFor(settled, oldWallet))
+        config.add(recordFor(stillPending, oldWallet))
+        val test = this
+        val wipeFinished = CompletableDeferred<Unit>()
+        config.beforeNextRemovalLands = {
+            test.launch {
+                wipe(listenersReversed)
+                wipeFinished.complete(Unit)
+            }
+            withTimeoutOrNull(1_000) { wipeFinished.await() }
+        }
+
+        // When
+        verifier.cancelQuarantine(settled, oldWallet)
+        withTimeout(5_000) { wipeFinished.await() }
+
+        // Then: without this the test could pass with the removal never reaching the gap
+        assertEquals("the removal was never held across the wipe", 1, config.heldRemovals)
+        // read before any recovery scan, which would quietly drop a survivor from another wallet
+        // and hide that the wipe's clear had been undone
+        assertEquals("the wipe's clear was undone", emptyList<PendingDirectPayment>(), config.getAllOrThrow())
+        assertReplacementAdoptsNothing(stillPending)
+    }
+
+    @Test
+    fun `a removal held across a wipe does not restore the other payments, store listener first`() =
+        aRemovalHeldAcrossAWipeDoesNotRestoreTheRest(listenersReversed = false)
+
+    @Test
+    fun `a removal held across a wipe does not restore the other payments, verifier listener first`() =
+        aRemovalHeldAcrossAWipeDoesNotRestoreTheRest(listenersReversed = true)
+
+    // --- a cancel for the wiped wallet must not reach the replacement's locks or record ------------
+
+    /** The replacement has its own record of [tx] and its own locks on the same outpoints. */
+    private suspend fun replacementHoldsItsOwn(tx: Transaction) {
+        tx.inputs.forEach { replacement.lockOutput(it.outpoint) }
+        config.add(recordFor(tx, replacement))
+    }
+
+    private suspend fun assertReplacementUntouched(tx: Transaction) {
+        tx.inputs.forEach {
+            assertTrue("the replacement's lock was given back by the wiped wallet's cancel", replacement.isLockedOutput(it.outpoint))
+        }
+        assertEquals(
+            "the replacement's record was dropped by the wiped wallet's cancel",
+            identityOf(replacement),
+            config.getAllOrThrow().single { it.txId == tx.txId }.walletId
+        )
+    }
+
+    @Test
+    fun `a cancel arriving after the wipe leaves the replacement's locks and record alone`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", origin = oldWallet)
+        wipe(listenersReversed = false)
+        replacementHoldsItsOwn(tx)
+
+        // the old wallet's submission learns its outcome only now
+        verifier.cancelQuarantine(tx, oldWallet)
+
+        assertReplacementUntouched(tx)
+    }
+
+    @Test
+    fun `a cancel waiting for the record lock across a wipe leaves the replacement alone`() = runBlocking {
+        val tx = createTransaction()
+        verifier.quarantine(tx, paymentUrl, "CTXSpend", origin = oldWallet)
+        // another quarantine of the old wallet holds the record lock while its write is held
+        val release = CompletableDeferred<Unit>()
+        val holding = CompletableDeferred<Unit>()
+        config.beforeNextWrite = {
+            holding.complete(Unit)
+            release.await()
+        }
+        val other = createTransaction()
+        val held = async { runCatching { verifier.quarantine(other, paymentUrl, "CTXSpend", origin = oldWallet) } }
+        withTimeout(5_000) { holding.await() }
+        // the cancel passes its first ownership check and waits for the record lock
+        val cancel = async(start = CoroutineStart.UNDISPATCHED) { verifier.cancelQuarantine(tx, oldWallet) }
+        assertFalse("the cancel did not wait for the record lock", cancel.isCompleted)
+
+        // the wipe starts meanwhile; it clears the records under the same lock, so it waits too,
+        // and the replacement is installed only once it is done
+        val wiping = async { wipe(listenersReversed = false) }
+        release.complete(Unit)
+        withTimeout(5_000) { cancel.await() }
+        withTimeout(5_000) { held.await() }
+        withTimeout(5_000) { wiping.await() }
+        replacementHoldsItsOwn(tx)
+
+        assertEquals(1, config.heldWrites)
+        tx.inputs.forEach {
+            assertTrue("the wiped wallet's cancel acted although its wallet was retired", oldWallet.isLockedOutput(it.outpoint))
+        }
+        assertReplacementUntouched(tx)
+    }
+
+    // --- a payment waiting at the readiness barrier when the wipe lands ---------------------------
+
+    private fun aPaymentWaitingAtTheBarrierIsRefused(listenersReversed: Boolean) = runBlocking {
+        // Given: a payment on the old wallet is waiting for restoration, which the wipe runs to
+        // completion in the middle of, installing a replacement. The caller reads the installed
+        // wallet again as soon as the barrier lets it through.
+        //
+        // Reset Wallet runs on a coroutine of its own, never inside the scan's: the scan holds the
+        // wipe barrier's shared lock, so the wipe cancels it and waits for it to let go.
+        var wiping: kotlinx.coroutines.Deferred<Unit>? = null
+        config.beforeNextStrictRead = {
+            val running = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
+                .async { wipe(listenersReversed) }
+            wiping = running
+            running.await()
+        }
+
+        // When
+        val thrown = try {
+            withTimeout(5_000) { verifier.awaitRestored() }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then: without this the test could pass by refusing before the scan was ever reached
+        assertEquals("the scan was never held across the wipe", 1, config.heldReads)
+        assertTrue(
+            "the barrier let a payment confirmed on a wiped wallet go on to its replacement: $thrown",
+            thrown is IllegalStateException && thrown !is CancellationException
+        )
+        // and a payment begun on the replacement, once the wipe is done, is not held up by it
+        withTimeout(5_000) { wiping?.await() }
+        withTimeout(5_000) { verifier.awaitRestored() }
+    }
+
+    @Test
+    fun `a payment waiting at the barrier across a wipe is refused, store listener first`() =
+        aPaymentWaitingAtTheBarrierIsRefused(listenersReversed = false)
+
+    @Test
+    fun `a payment waiting at the barrier across a wipe is refused, verifier listener first`() =
+        aPaymentWaitingAtTheBarrierIsRefused(listenersReversed = true)
+
+    @Test
+    fun `the barrier lets the first payment through once the wallet loads at startup`() = runBlocking {
+        // Given: nothing is installed yet when the payment arrives at the barrier, as at app start
+        installed = null
+        val loaded = MutableStateFlow<Wallet?>(null)
+        every { walletData.observeWallet() } returns loaded
+        // undispatched, so it is already waiting when the wallet appears
+        val waiting = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { verifier.awaitRestored() } }
+
+        // When: the wallet finishes loading
+        installed = oldWallet
+        loaded.value = oldWallet
+
+        // Then: a caller that held no wallet had none to lose, so it goes on
+        waiting.await()
+    }
+}

@@ -21,6 +21,7 @@ import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
+import de.schildbach.wallet.service.platform.sdk.SdkTxPresence
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -124,6 +125,9 @@ class WalletTransactionMetadataProviderSdkStoreTest {
                 batchLookups.add(txIds.toSet())
                 return txIds.filter { it == sdkOnlyTxId }.associateWith { sdkRow.copy() }
             }
+
+            override suspend fun presenceOf(txId: TxId): SdkTxPresence =
+                if (txId == sdkOnlyTxId) SdkTxPresence.HELD else SdkTxPresence.ABSENT
         }
 
         provider = WalletTransactionMetadataProvider(
@@ -132,6 +136,7 @@ class WalletTransactionMetadataProviderSdkStoreTest {
             iconBitmapDao = mockk(relaxed = true),
             walletData = walletData,
             giftCardDao = mockk(relaxed = true),
+            transactionRecordsDao = mockk(relaxed = true),
             swapOrderDao = mockk(relaxed = true),
             transactionMetadataChangeCacheDao = changeCacheDao,
             transactionMetadataDocumentDao = documentDao,

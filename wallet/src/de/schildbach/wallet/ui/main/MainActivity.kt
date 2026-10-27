@@ -307,11 +307,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     // retry still fires. retryCreationIfInProgress is cleared above
                     // so this never lingers or re-fires.
                     lifecycleScope.launch {
-                        val cutoverCommitted = try {
-                            transparentUsernameCreation.isCutoverCommitted()
-                        } catch (e: Exception) {
-                            log.warn("cutover-state read failed on creation retry; assuming not committed", e)
-                            false
+                        // Read strictly (review 4299080469, reopened): an unreadable state is not
+                        // "not committed". Unknown skips the legacy retry, which post-cutover would
+                        // drive a registered SDK identity through the dashj path; a later start retries.
+                        val cutoverCommitted = transparentUsernameCreation.cutoverStateOrUnknown()
+                        if (cutoverCommitted == null) {
+                            log.warn("cutover state unknown on creation retry; not retrying through dashj")
+                            return@launch
                         }
                         if (cutoverCommitted) {
                             log.info(

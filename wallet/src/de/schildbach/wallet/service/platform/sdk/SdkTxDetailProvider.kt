@@ -585,6 +585,21 @@ class SdkTxDetailProvider internal constructor(
         }
     }
 
+    /** [SdkTxMetadataSource.presenceOf]: one indexed store read, no record correction. */
+    override suspend fun presenceOf(txId: TxId): SdkTxPresence {
+        val txIdDisplayHex = txId.toString().lowercase()
+        val wireTxid = displayTxIdToWireBytes(txIdDisplayHex) ?: return SdkTxPresence.UNAVAILABLE
+        return try {
+            val db = sdkService.databaseOrNull() ?: return SdkTxPresence.UNAVAILABLE
+            if (db.transactionDao().getByTxid(wireTxid) != null) SdkTxPresence.HELD else SdkTxPresence.ABSENT
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("SDK store presence lookup for {} failed", txIdDisplayHex, e)
+            SdkTxPresence.UNAVAILABLE
+        }
+    }
+
     /**
      * [SdkTxMetadataSource] batch form, for a platform metadata sync that imports
      * many SDK-only transactions. Same rows as [defaultMetadataFor] per txid, but
