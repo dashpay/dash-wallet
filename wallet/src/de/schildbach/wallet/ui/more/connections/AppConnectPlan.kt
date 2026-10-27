@@ -46,7 +46,7 @@ internal class GroupScopeChangedException : IllegalStateException(
 internal fun AppConnectPlan.requireGroupScopes(current: Map<String, VerifiedContractGroup>) {
     val selected = selectedAuth.map { grants[it] }.filter { it.kind == 2 }
         .map { org.bitcoinj.core.Base58.encode(it.id) }.toSet()
-    if (selected.any { groupScopes[it] == null || groupScopes[it] != current[it] }) {
+    if (selected.any { groupScopes[it] == null || groupScopes[it].authorizationScope() != current[it].authorizationScope() }) {
         throw GroupScopeChangedException()
     }
 }

@@ -386,3 +386,20 @@ Regression tests cover the real session's selected/omitted expiry paths and both
 fresh and persisted-recovery consent controls. The combined run passed 618 tests
 across devnet, testnet and production, with 96 conditional skips and no failures.
 Both debug APK builds and ktlintCheck passed. These paths still need device testing.
+
+### Group Metadata and Trusted Payment Launches
+
+Fresh approval and recovery use the same authorization-scope normalization: group
+name and description changes do not invalidate consent. Missing scopes or changes
+to group identity, owner, administrators or membership still invalidate approval.
+
+In-app payment helpers launch the non-exported InAppSendCoinsActivity, preserving
+explicit quick-send keep-unlocked requests. Exported payment links still use
+SendCoinsActivity and cannot request that shortcut through intent extras. Ordinary
+sends, credit purchases and the externally reachable shared-image handler retain
+normal locking. Neither send entry point invents a keep-unlocked request when the
+extra is absent. Both activities share the existing send implementation.
+
+Regression verification passed 639 tests across devnet, testnet and production,
+with 96 conditional skips and no failures, plus both debug APK builds and
+ktlintCheck. No on-device quick-send or payment-link testing is claimed.

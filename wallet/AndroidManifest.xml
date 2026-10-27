@@ -185,6 +185,13 @@
             </intent-filter>
         </activity>
         <activity
+            android:name="de.schildbach.wallet.ui.send.InAppSendCoinsActivity"
+            android:label="@string/pay_title"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            tools:ignore="LockedOrientationActivity"
+            android:exported="false" />
+        <activity
             android:name="de.schildbach.wallet.ui.send.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:screenOrientation="portrait"

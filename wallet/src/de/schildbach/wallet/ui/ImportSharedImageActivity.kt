@@ -119,7 +119,7 @@ class ImportSharedImageActivity : AppCompatActivity() {
     private fun handleQRCode(input: String) {
         object : StringInputParser(input, true) {
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
-                SendCoinsActivity.start(this@ImportSharedImageActivity, intent.action, paymentIntent, true)
+                SendCoinsActivity.start(this@ImportSharedImageActivity, intent.action, paymentIntent, false)
                 finish()
             }
 

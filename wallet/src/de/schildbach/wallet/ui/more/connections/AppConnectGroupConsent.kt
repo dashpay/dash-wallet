@@ -42,7 +42,7 @@ internal fun readApprovedGroupScopes(record: JSONObject?): Map<String, VerifiedC
     }
 }
 
-private fun VerifiedContractGroup?.authorizationScope() = this?.copy(name = null, description = null)
+internal fun VerifiedContractGroup?.authorizationScope() = this?.copy(name = null, description = null)
 
 private fun AppConnectPlan.selectedGroups() = selectedAuth.map { grants[it] }.filter { it.kind == 2 }
     .map { Base58.encode(it.id) }.toSet()

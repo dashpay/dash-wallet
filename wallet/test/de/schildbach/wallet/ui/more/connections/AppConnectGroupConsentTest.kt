@@ -23,6 +23,25 @@ class AppConnectGroupConsentTest {
     private fun recovery(record: JSONObject = record()) = plan.copy(recovering = true,
         previousGroupScopes = readApprovedGroupScopes(record))
 
+    @Test fun `fresh scope comparison ignores descriptive metadata changes`() {
+        for (changed in listOf(group.copy(name = "Renamed"), group.copy(description = "Reworded"),
+            group.copy(name = null, description = null))) {
+            plan.requireGroupScopes(mapOf(id.toString() to changed))
+        }
+    }
+
+    @Test fun `fresh scope comparison still rejects all authorization changes and missing scopes`() {
+        for (changed in listOf(group.copy(id = other), group.copy(ownerId = other), group.copy(adminIds = emptySet()),
+            group.copy(contracts = emptySet()), group.copy(documentTypes = emptySet()), group.copy(tokens = emptySet()))) {
+            assertThrows(GroupScopeChangedException::class.java) {
+                plan.requireGroupScopes(mapOf(id.toString() to changed))
+            }
+        }
+        assertThrows(GroupScopeChangedException::class.java) { plan.requireGroupScopes(emptyMap()) }
+        assertThrows(GroupScopeChangedException::class.java) { plan.copy(groupScopes = emptyMap()).requireGroupScopes(emptyMap()) }
+        plan.copy(selectedAuth = emptySet()).requireGroupScopes(emptyMap())
+    }
+
     @Test fun `unchanged recovery accepts the saved approval regardless of member ordering or labels`() {
         val saved = record()
         saved.getJSONObject("groupScopes").getJSONObject(id.toString())
