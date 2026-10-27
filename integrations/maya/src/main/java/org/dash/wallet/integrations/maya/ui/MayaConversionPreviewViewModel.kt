@@ -33,6 +33,7 @@ import org.dash.wallet.common.data.entity.SwapOrder
 import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.services.NetworkStateInt
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -116,6 +117,13 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
     /** The deposit may have gone out; the screen must not offer a retry. */
     val onPaymentOutcomeUnknown = SingleLiveEvent<Unit>()
+
+    /**
+     * The deposit was refused before anything was built: an earlier payment's outcome is still
+     * being confirmed and its inputs are not protected from coin selection. Not a swap failure;
+     * the screen says to try again once that payment is confirmed.
+     */
+    val onPaymentStillConfirmingCallback = SingleLiveEvent<Unit>()
 
     fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
@@ -217,6 +225,10 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 }
                 if (result.throwable is PaymentSubmissionPendingException) {
                     onPaymentOutcomeUnknown.call()
+                    return@launch
+                }
+                if (result.throwable is PaymentStillConfirmingException) {
+                    onPaymentStillConfirmingCallback.call()
                     return@launch
                 }
                 val error = result.errorBody

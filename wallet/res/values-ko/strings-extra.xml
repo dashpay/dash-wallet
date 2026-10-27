@@ -40,6 +40,8 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">매수 &amp; 매도</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_dash_dex">대시 DEX</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">받기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">프라이빗 키 불러오기</string>
@@ -294,11 +296,15 @@
     <string name="about_review_and_rate">어플 리뷰 및 평점</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
+    <string name="about_copyright">Copyright © %1$d 대시 코어 그룹</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시페이 지갑 %s</string>
     <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
     <string name="about_last_explore_server_update">마지막 익스플로어 서버 업데이트</string>
+    <string name="about_app_version_label">어플 버전</string>
+    <string name="about_platform_label">플랫폼</string>
     <string name="about_explore_section">대시 탐색하기</string>
+    <string name="about_explore_update">업데이트</string>
     <string name="about_last_device_sync">마지막 기기 동기화</string>
     <string name="about_last_server_update">마지막 서버 업데이트</string>
     <string name="about_value_not_available">이용할 수 없음</string>

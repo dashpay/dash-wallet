@@ -425,7 +425,8 @@ class ShieldedBalanceServiceTest {
         seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
         afterReadyCommitted: suspend () -> Unit = {},
-        afterStopFallbackBump: suspend () -> Unit = {}
+        afterStopFallbackBump: suspend () -> Unit = {},
+        freshFundingBlocked: suspend () -> Boolean = { false }
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs, consumed),
@@ -439,7 +440,9 @@ class ShieldedBalanceServiceTest {
         seamOutputLockRegistry = seamRegistry,
         stopLockTimeoutMs = stopLockTimeoutMs,
         afterReadyCommitted = afterReadyCommitted,
-        afterStopFallbackBump = afterStopFallbackBump
+        afterStopFallbackBump = afterStopFallbackBump,
+        freshFundingBlocked = freshFundingBlocked,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
     )
 
     // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
@@ -902,7 +905,8 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = config(true),
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (!sweepEntered) delay(10) }
@@ -1089,7 +1093,8 @@ class ShieldedBalanceServiceTest {
             },
             dashPayConfig = config(true),
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         assertTrue(service.ensureShieldedReady())
         assertTrue(warmUpFailed)
@@ -1350,7 +1355,8 @@ class ShieldedBalanceServiceTest {
             source = source,
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         val result = service.transferShielded(recipientAddress, Dash.COIN, null)
 
@@ -1377,7 +1383,8 @@ class ShieldedBalanceServiceTest {
             source = source,
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         try {
             service.transferShielded(recipientAddress, Dash.COIN, null)
@@ -1400,7 +1407,8 @@ class ShieldedBalanceServiceTest {
             source = source,
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         assertTrue(service.shieldFromCredits(Dash.COIN) is SdkWriteResult.NotBroadcast)
         // The reconciliation was recorded before the call (thepastaclaw,
@@ -1512,7 +1520,8 @@ class ShieldedBalanceServiceTest {
             source = readySource(),
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         assertNull(service.lastKnownShieldedBalance())
     }
@@ -1542,7 +1551,8 @@ class ShieldedBalanceServiceTest {
             source = source,
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         val before = System.currentTimeMillis()
         var calledAt = 0L
@@ -1573,7 +1583,8 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = cfg,
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertFalse(service.shieldedBalanceMaybeStale.value)
             assertTrue(service.ensureShieldedReady())
@@ -1649,7 +1660,8 @@ class ShieldedBalanceServiceTest {
                         // the synchronous tail after the read: cancellation can't stop it
                         withContext(NonCancellable) { release.await() }
                     }
-                }
+                },
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
@@ -1734,7 +1746,8 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = cfg,
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (!service.shieldedBalanceMaybeStale.value) delay(20) }
@@ -1813,7 +1826,8 @@ class ShieldedBalanceServiceTest {
         shieldedDbPath = { dbPath },
         displayHrp = { hrp },
         sweepScope = sweepScope,
-        clock = clock
+        clock = clock,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
     )
 
     /** A ready, scoped service whose settlement collector is subscribed; not reconciling yet. */
@@ -2246,7 +2260,8 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = cfg,
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
@@ -2290,7 +2305,8 @@ class ShieldedBalanceServiceTest {
                 dashPayConfig = cfg,
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
-                sweepScope = sweepScope
+                sweepScope = sweepScope,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
@@ -2332,7 +2348,8 @@ class ShieldedBalanceServiceTest {
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
                 sweepScope = sweepScope,
-                clock = { clockMs.get() }
+                clock = { clockMs.get() },
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
@@ -2557,7 +2574,8 @@ class ShieldedBalanceServiceTest {
                 shieldedDbPath = { dbPath },
                 displayHrp = { hrp },
                 sweepScope = sweepScope,
-                clock = { 1_700_000_000_000L }
+                clock = { 1_700_000_000_000L },
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
             // returns although syncShieldedNow is blocked
@@ -2589,7 +2607,8 @@ class ShieldedBalanceServiceTest {
             source = source,
             dashPayConfig = cfg,
             shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
+            displayHrp = { hrp },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.broadcastCalls)
@@ -3873,5 +3892,39 @@ class ShieldedBalanceServiceTest {
         require(bytes.size <= 32)
         bytes.copyInto(out, destinationOffset = 4)
         return out
+    }
+
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun shieldFromWallet_refusedWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() }, freshFundingBlocked = { true })
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertEquals(0, source.fundCalls)
+    }
+
+    /**
+     * The CoinJoin shield asks the gate again under the shared selection lock, before its
+     * submission checkpoint: a payment exposed after the preflight refuses it with nothing
+     * recorded as submitted and nothing built.
+     */
+    @Test
+    fun mixedFundsShield_refusedUnderTheHoldBeforeTheCheckpoint() = runBlocking {
+        val source = readySource()
+        var asks = 0
+        val service = service(source, progress = { caughtUpProgress() }, freshFundingBlocked = { ++asks > 1 })
+        var checkpointed = false
+
+        val result = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", walletIdHex) { checkpointed = true }
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertFalse(checkpointed)
+        assertEquals(0, source.accountFundCalls)
     }
 }

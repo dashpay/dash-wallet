@@ -71,6 +71,18 @@ class SendFailureClassificationTest {
     }
 
     @Test
+    fun paymentStillConfirming_mapsToItsOwnWaitCopy_notGenericInternal() {
+        // An earlier payment's inputs could not be kept out of this send; nothing failed, it
+        // lifts once that payment resolves (review 4245734665).
+        assertEquals(
+            SendFailureKind.PAYMENT_STILL_CONFIRMING,
+            classifySendFailure(
+                org.dash.wallet.common.services.PaymentStillConfirmingException("pending payment inputs unprotected")
+            )
+        )
+    }
+
+    @Test
     fun contactPaymentNotRecordable_mapsToItsOwnCopy_notGenericInternal() {
         // Also an IllegalStateException: nothing was sent and re-resolving
         // does not help, so it gets its own storage / restart copy.

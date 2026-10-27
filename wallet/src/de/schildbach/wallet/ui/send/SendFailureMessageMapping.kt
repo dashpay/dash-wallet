@@ -20,6 +20,7 @@ import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
 import de.schildbach.wallet.service.platform.sdk.ContactPaymentNotRecordableException
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 
 /**
@@ -47,6 +48,12 @@ enum class SendFailureKind {
     SIGNER_LOCKED,
 
     /**
+     * An earlier payment's outcome is still unknown and its inputs could not be kept out of this
+     * one. Nothing was sent; the copy says to wait for it, never "payment failed".
+     */
+    PAYMENT_STILL_CONFIRMING,
+
+    /**
      * A contact payment was refused before sending because the claim of its
      * address could not be made durable (the paid-address store could not be
      * read or written). Nothing was sent; resolving the address again does
@@ -57,7 +64,8 @@ enum class SendFailureKind {
     /**
      * The payment may have been sent, but its outcome is unknown
      * ([PaymentSubmissionPendingException]: an ordinary SDK send whose
-     * broadcast came back ambiguous, among others). Never "payment failed"
+     * broadcast came back ambiguous, or an SDK broadcast a Reset Wallet
+     * cancelled after it went out, among others). Never "payment failed"
      * and never an invitation to retry: the copy says it may have been sent.
      */
     OUTCOME_UNKNOWN,
@@ -74,12 +82,13 @@ enum class SendFailureKind {
 
 /** The pure type-based mapping — see [SendFailureKind]. */
 fun classifySendFailure(exception: Exception): SendFailureKind = when (exception) {
-    is PaymentSubmissionPendingException -> SendFailureKind.OUTCOME_UNKNOWN
     is SendEngineNotSyncedException -> SendFailureKind.NOT_SYNCED
     is SendNotSdkRoutableException -> SendFailureKind.NOT_SUPPORTED
     // Before the generic IllegalStateException arm: SendSignerLockedException
     // IS an IllegalStateException and must keep its own honest copy.
     is SendSignerLockedException -> SendFailureKind.SIGNER_LOCKED
+    is PaymentStillConfirmingException -> SendFailureKind.PAYMENT_STILL_CONFIRMING
+    is PaymentSubmissionPendingException -> SendFailureKind.OUTCOME_UNKNOWN
     // Also an IllegalStateException: its own copy, not the generic one.
     is ContactPaymentNotRecordableException -> SendFailureKind.CONTACT_PAYMENT_NOT_RECORDED
     is IllegalStateException -> SendFailureKind.GENERIC_INTERNAL

@@ -112,7 +112,13 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
                 mockk(relaxed = true),
                 // Phase 5d bridge factory: only reached under a committed
                 // cutover, which these flows never take.
-                mockk(relaxed = true)
+                mockk(relaxed = true),
+                // Pending-payment barrier: relaxed, so awaitRestored() passes straight through,
+                // and the wallet the send resolved is still the installed one.
+                mockk<PendingDirectPaymentVerifier>(relaxed = true) {
+                    every { stillOwnedBy(any()) } returns true
+                },
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
         )
         coEvery { runner.logSendTxEvent(any(), any()) } returns Unit

@@ -125,7 +125,8 @@ class SdkBridgedTransactionFactoryTest {
         onSelfSpendBroadcast = { hooks.selfSpendMarks++ },
         logSendTx = { tx, w -> hooks.analytics += tx to w },
         pollIntervalMs = 1,
-        bytesTimeoutMs = 25
+        bytesTimeoutMs = 25,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
     )
 
     // ── Reconstruct + verify + commit (bytes provided directly) ────────
@@ -274,7 +275,8 @@ class SdkBridgedTransactionFactoryTest {
             wallet = { throw IllegalStateException("wallet loading") },
             networkParameters = { params },
             pollIntervalMs = 1,
-            bytesTimeoutMs = 25
+            bytesTimeoutMs = 25,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         val result = factory.bridge(txidOf(bytes), rawTxBytes = bytes)
         assertTrue(result is BridgedTxResult.NotBridged)
@@ -316,7 +318,8 @@ class SdkBridgedTransactionFactoryTest {
             onSelfSpendBroadcast = { throw IllegalStateException("shadow not running") },
             logSendTx = { _, _ -> throw IllegalStateException("analytics down") },
             pollIntervalMs = 1,
-            bytesTimeoutMs = 25
+            bytesTimeoutMs = 25,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
 
         val result = factory.bridge(txidOf(bytes), rawTxBytes = bytes)

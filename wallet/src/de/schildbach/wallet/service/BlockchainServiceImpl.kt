@@ -56,11 +56,13 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRecoveryReset
 import de.schildbach.wallet.WalletApplicationExt.clearDatabasesForRescan
+import de.schildbach.wallet.WalletApplicationExt
 import de.schildbach.wallet.WalletApplicationExt.finishWalletWipe
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -372,6 +374,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
+        internal const val STUCK_CLEANUP_STOP_REASON = "previous cleanup stuck"
+
         /** What a teardown does with the replay restart alarm. */
         enum class ReplayRestartAlarmAction { ARM, RETIRE, LEAVE }
 
@@ -401,10 +405,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             initialised: Boolean,
             replaying: Boolean,
             deliberateStop: Boolean,
-            bindBlocked: Boolean
+            bindBlocked: Boolean,
+            /**
+             * This instance armed the restart itself just before stopping
+             * (memory pressure, a blockstore stall) and is counting on it to
+             * come back. Its own teardown must leave that alarm standing even
+             * with no replay in progress; a wipe/reset or a blocked bind still
+             * retires it, and the next instance's teardown decides afresh.
+             */
+            recoveryRestartRequested: Boolean = false
         ): ReplayRestartAlarmAction = when {
             !initialised -> ReplayRestartAlarmAction.LEAVE
-            !replaying || deliberateStop || bindBlocked -> ReplayRestartAlarmAction.RETIRE
+            deliberateStop || bindBlocked -> ReplayRestartAlarmAction.RETIRE
+            recoveryRestartRequested -> ReplayRestartAlarmAction.LEAVE
+            !replaying -> ReplayRestartAlarmAction.RETIRE
             else -> ReplayRestartAlarmAction.ARM
         }
 
@@ -557,6 +571,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         // Set to 0 to disable test timeout (use Android's default 6-hour limit)
         // Set to 1-2 minutes for testing the timeout behavior
         private val TEST_TIMEOUT_MINUTES = 0L // Change to 0 to disable
+        /** How long a new instance waits for the previous instance's cleanup before complaining. */
+        private const val CLEANUP_WAIT_MS = 15_000L
+        /** Additional wait before giving up, stopping and rescheduling the service. */
+        private const val CLEANUP_EXTRA_WAIT_MS = 60_000L
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -711,7 +729,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (action != null) {
                 log.warn("owed stop ({}) suppresses command {}", reason, action)
             }
-            stopSelfIfNoNewerStart(reason, mustStop = true)
+            if (owedRecoveryRestart) {
+                // The owed stop is a recovery stop: it arms its restart only now that it lands.
+                stopSelfForRecovery(reason, mustStop = true)
+            } else {
+                stopSelfIfNoNewerStart(reason, mustStop = true)
+            }
             return true
         }
         if (action == BlockchainService.ACTION_WIPE_WALLET) {
@@ -740,6 +763,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // Every later command repeats this check, so a refused stop needs no debt.
             stopSelfIfNoNewerStart("wallet not initialized")
             return true
+        }
+        // This instance is running a command normally, so a recovery restart it asked for has
+        // happened (a bound service outlives its accepted stop, and the alarm's start lands here).
+        // Its next teardown decides the alarm afresh instead of keeping it for a stale request.
+        if (recoveryRestartRequested || owedRecoveryRestart) {
+            log.info("running a command after a recovery stop; the next teardown decides the restart alarm afresh")
+            recoveryRestartRequested = false
+            owedRecoveryRestart = false
         }
         return false
     }
@@ -802,6 +833,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     lateinit var dashSystemService: DashSystemService
 
     @Inject lateinit var serviceConfig: BlockchainServiceConfig
+    @Inject lateinit var pendingDirectPaymentVerifier: PendingDirectPaymentVerifier
     @Inject lateinit var analyticsService: AnalyticsService
     @Inject lateinit var securityFunctions: AuthenticationManager
     @Inject lateinit var cutoverCoordinator: de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
@@ -1459,6 +1491,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (stopped.get()) return
             // The network-status flip is cheap in-memory state — keep it
             // immediate and per-event.
+            blockchainStateDataProvider.setConnectedPeerCount(numPeers)
             val networkStatus = blockchainStateDataProvider.getNetworkStatus()
             if (numPeers > 0 && networkStatus == NetworkStatus.CONNECTING) blockchainStateDataProvider.setNetworkStatus(
                 NetworkStatus.CONNECTED
@@ -1524,12 +1557,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         serviceConfig.set(BLOCKCHAIN_STORE_MEMORY_FAILURE, true)
                         log.warn("BLOCKSTORE_MEMORY_ACCESS timeout detected - forcing shutdown and scheduling restart in 1 minute")
                         analyticsService.logError(Exception("Blockstore memory stalled"))
-                        rescheduleService()
-
                         // Force immediate shutdown. Owed when refused: the
                         // memory-failure flag above makes this branch one-shot.
+                        // The restart is armed with the stop that actually lands
+                        // (this one, or the owed one a newer command honours).
                         withContext(Dispatchers.Main) {
-                            stopSelfIfNoNewerStart("blockstore memory stall", mustStop = true)
+                            stopSelfForRecovery("blockstore memory stall", mustStop = true)
                         }
                     }
                 }
@@ -1621,9 +1654,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             val replaying = blockchainState?.replaying == true
             val deliberateStop = deleteWalletFileOnShutdown || resetBlockchainOnShutdown
             val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
-            when (decideOnReplayRestartAlarm(initCompleted, replaying, deliberateStop, bindBlocked)) {
+            when (
+                decideOnReplayRestartAlarm(
+                    initCompleted, replaying, deliberateStop, bindBlocked, recoveryRestartRequested
+                )
+            ) {
                 ReplayRestartAlarmAction.LEAVE ->
-                    log.info("service never finished initialising — leaving the replay restart alarm as it is")
+                    if (recoveryRestartRequested && initCompleted) {
+                        log.info("this instance asked for a recovery restart — leaving the restart alarm armed")
+                    } else {
+                        log.info("service never finished initialising — leaving the replay restart alarm as it is")
+                    }
                 ReplayRestartAlarmAction.RETIRE -> {
                     val why = when {
                         deliberateStop -> "replay interrupted by a deliberate wipe/reset"
@@ -1671,6 +1712,78 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 "if no matching 'started by alarm' line follows, the background FGS start was refused",
             reason, Date(whenMs), exempt?.toString() ?: "unknown"
         )
+    }
+
+    /**
+     * Set when this instance arms the restart alarm because it is about to
+     * stop itself and wants to come back ([requestRecoveryRestart]), so its
+     * own teardown leaves that alarm alone (see [decideOnReplayRestartAlarm]).
+     */
+    @Volatile
+    private var recoveryRestartRequested = false
+
+    /**
+     * Set while a recovery stop ([stopSelfForRecovery] with `mustStop`) is owed after the gate
+     * refused it, so the command that honours it arms the restart then. Main thread only.
+     */
+    private var owedRecoveryRestart = false
+
+    /**
+     * The previous instance's cleanup is stuck, so this instance will never initialise: release the
+     * init latch so queued commands stop waiting. Main thread.
+     */
+    internal fun releaseInitLatchForStuckCleanup() {
+        // BEFORE the latch: the commands it releases may run before [stopForStuckCleanup] does,
+        // and they must stop as the recovery stop, not through the plain "wallet not initialized"
+        // stop, which arms nothing. Both are on Main, so a released command always sees the debt.
+        selfStopGate.oweStop(STUCK_CLEANUP_STOP_REASON)
+        owedRecoveryRestart = true
+        if (onCreateCompleted.isActive) {
+            onCreateCompleted.complete(Unit)
+        }
+    }
+
+    /**
+     * The recovery stop for a stuck previous cleanup. A MUST-stop: refused (a newer start is
+     * queued), it stays owed together with its restart, and the command that honours it arms the
+     * restart with the stop that lands. Already honoured by a command the latch released: nothing
+     * left to do. Main thread.
+     */
+    internal fun stopForStuckCleanup(): Boolean {
+        if (selfStopGate.owedStopReason == null) {
+            log.info("the stuck-cleanup recovery stop was already honoured by a released command")
+            return true
+        }
+        return stopSelfForRecovery(STUCK_CLEANUP_STOP_REASON, mustStop = true)
+    }
+
+    /** Arms the restart for an instance that is about to stop itself and must come back. */
+    private fun requestRecoveryRestart() {
+        recoveryRestartRequested = true
+        rescheduleService()
+    }
+
+    /**
+     * A self-stop that must bring the service back (memory pressure, a blockstore stall, a
+     * previous instance's cleanup still running). It goes through [stopSelfIfNoNewerStart] like
+     * every other self-stop, and arms the recovery restart only when the system ACCEPTED the
+     * stop. A refused stop means a newer start is about to run this instance: arming then would
+     * leave a stray alarm and a [recoveryRestartRequested] flag that would make a later, unrelated
+     * teardown keep it. A refused [mustStop] stays owed, and so does its restart: the command that
+     * honours it arms the restart with the stop that actually lands. Main thread.
+     *
+     * @return true when the system accepted the stop.
+     */
+    internal fun stopSelfForRecovery(reason: String, mustStop: Boolean = false): Boolean {
+        val stopped = stopSelfIfNoNewerStart(reason, mustStop)
+        if (stopped) {
+            owedRecoveryRestart = false
+            // Before onDestroy, which the system posts after an accepted stop, reads the flag.
+            requestRecoveryRestart()
+        } else if (mustStop) {
+            owedRecoveryRestart = true
+        }
+        return stopped
     }
 
     private fun rescheduleService() {
@@ -2221,6 +2334,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.error("Error shutting down risk analyzer", e)
             }
             peerGroup = null
+            blockchainStateDataProvider.setConnectedPeerCount(0)
             log.debug("releasing wakelock")
             if (wakeLock!!.isHeld) {
                 wakeLock!!.release()
@@ -2662,17 +2776,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
 
-                val cleanupCompleted = awaitPreviousInstanceCleanup(15_000)
+                var cleanupCompleted = awaitPreviousInstanceCleanup(CLEANUP_WAIT_MS)
 
                 if (!cleanupCompleted) {
-                    log.error("CRITICAL: Cleanup did not complete within 15 seconds")
+                    // The previous instance is still shutting down (forced peergroup stop, long wallet
+                    // saves on big wallets). This is common when the user leaves and re-enters the app
+                    // within a minute, so keep waiting instead of giving up right away.
+                    log.error(
+                        "Cleanup of the previous service instance did not complete within {} seconds, " +
+                            "waiting up to {} more seconds",
+                        CLEANUP_WAIT_MS / 1000, CLEANUP_EXTRA_WAIT_MS / 1000
+                    )
+                    cleanupCompleted = awaitPreviousInstanceCleanup(CLEANUP_EXTRA_WAIT_MS)
+                }
+
+                if (!cleanupCompleted) {
+                    log.error("CRITICAL: Cleanup did not complete within {} seconds", (CLEANUP_WAIT_MS + CLEANUP_EXTRA_WAIT_MS) / 1000)
                     log.error("This indicates a deadlock in onDestroy - cannot proceed with onCreate")
-                    log.error("Stopping service to prevent resource conflicts and file lock exceptions")
+                    log.error("Stopping service to prevent resource conflicts and file lock exceptions; restart scheduled")
 
                     // Complete onCreate to unblock any waiting onStartCommand calls
-                    if (onCreateCompleted.isActive) {
-                        onCreateCompleted.complete(Unit)
-                    }
+                    withContext(Dispatchers.Main) { releaseInitLatchForStuckCleanup() }
 
                     // Plan §37: a cleanup stuck past the bound is never going to
                     // finish. With the app in the background, end the process so
@@ -2705,8 +2829,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                     // Stop the service - we cannot safely initialize with cleanup still running.
                     // initCompleted stays false, so a refused stop is retried by the next command.
+                    // An accepted one arms the recovery restart: don't leave the wallet without a
+                    // service (and without peers for any payment in progress), come back once the
+                    // old instance has had time to release its locks.
                     withContext(Dispatchers.Main) {
-                        stopSelfIfNoNewerStart("previous cleanup stuck")
+                        stopForStuckCleanup()
                     }
                     return@launch
                 }
@@ -2765,7 +2892,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
                 )
 
+                // re-lock inputs of BIP70 payments with an unknown result and keep watching for them
+                pendingDirectPaymentVerifier.resume()
                 peerConnectivityListener = PeerConnectivityListener()
+                blockchainStateDataProvider.setConnectedPeerCount(0)
                 broadcastPeerState(0)
                 blockChainFile =
                     File(getDir("blockstore", MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME)
@@ -3514,6 +3644,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 return@launch
             }
             try {
+                if (deleteWalletFileOnShutdown) {
+                    // A wipe: before any of the teardown below (the SDK shutdown, the peer group,
+                    // the wallet detach in finishWalletWipe), raise the payment paths' wipe barrier
+                    // (Reset Wallet raised it already; this covers a wipe command from anywhere
+                    // else) and wait, with no timeout, for every payment admitted before it - an
+                    // SDK funding or broadcast, a BIP70 POST - to finish. Nothing here holds
+                    // anything those could need yet, and from now on no new one is admitted, so
+                    // nothing the teardown awaits can wait for the barrier.
+                    application.fundingSelectionLock.raiseWipeBarrier()
+                    application.fundingSelectionLock.awaitWipeDrained()
+                }
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
                 log.info("The check() mutex is locked: {}", checkMutex.isLocked)
@@ -3660,7 +3801,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         // minutes of SDK cleanup on a live mainnet wallet)
                         // WITHOUT blocking this dispatcher thread, which is
                         // what the old runBlocking clear did.
-                        application.finishWalletWipe()
+                        // A confirmed Reset Wallet in this process wipes even if its
+                        // marker now reads as unknown; without one the marker decides.
+                        application.finishWalletWipe(
+                            beginConfirmed = WalletApplicationExt.consumeConfirmedWipeBegin()
+                        )
                     } else if (shutdownPlan.clearRescanDatabases) {
                         //Clear the blockchain identity
                         application.clearDatabasesForRescan()
@@ -3697,10 +3842,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     override fun onTrimMemory(level: Int) {
         log.info("onTrimMemory({}) called", level)
         if (shouldStopForMemoryPressure(level)) {
+            // Stop gracefully so the wallet is saved cleanly, and come back once memory frees up.
             log.warn("memory pressure (onTrimMemory level {}), stopping service", level)
-            // A refused stop needs no debt: a newer start is about to run, and
-            // the next trim callback or idle tick re-decides.
-            stopSelfIfNoNewerStart("memory pressure")
+            // A refused stop needs no debt and arms nothing: a newer start is about to run, and
+            // the next trim callback or idle tick re-decides. An accepted one arms the restart.
+            stopSelfForRecovery("memory pressure")
         }
     }
 

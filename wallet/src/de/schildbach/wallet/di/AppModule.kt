@@ -31,6 +31,9 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
+import de.schildbach.wallet.payments.PendingPaymentEngine
+import de.schildbach.wallet.payments.SdkPendingPaymentEngine
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.*
@@ -122,9 +125,29 @@ abstract class AppModule {
             sdkL1SendService: SdkL1SendService,
             l1ShadowSyncService: L1ShadowSyncService,
             l1SendProbeService: L1SendProbeService,
-            bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory
+            bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory,
+            pendingPaymentVerifier: PendingDirectPaymentVerifier,
+            // The process-wide wipe barrier (a @Singleton): Reset Wallet raises this instance, so
+            // the runner must hold the same one.
+            fundingSelectionLock: de.schildbach.wallet.payments.FundingSelectionLock
         ): WalletSendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService, l1SendProbeService, bridgedTransactionFactory)
+            val realService = SendCoinsTaskRunner(
+                walletData,
+                walletApplication,
+                securityFunctions,
+                packageInfoProvider,
+                analyticsService,
+                identityConfig,
+                identityRepository,
+                platformRepo,
+                transactionMetadataProvider,
+                sdkL1SendService,
+                l1ShadowSyncService,
+                l1SendProbeService,
+                bridgedTransactionFactory,
+                pendingPaymentVerifier,
+                fundingSelectionLock
+            )
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService
@@ -142,6 +165,11 @@ abstract class AppModule {
             return CoroutineScope(SupervisorJob() + Dispatchers.Default)
         }
     }
+
+    @Binds
+    abstract fun bindPendingPaymentEngine(
+        engine: SdkPendingPaymentEngine
+    ): PendingPaymentEngine
 
     @Binds
     abstract fun bindConfirmTransactionService(

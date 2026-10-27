@@ -47,6 +47,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
@@ -121,6 +122,13 @@ data class RequestUserNameUIState(
      */
     val usernameSubmittedPoolSyncing: Boolean = false,
     /**
+     * A transparent (L1-funded) submit was refused because an earlier payment's outcome is still
+     * being confirmed and its inputs are not protected from coin selection
+     * ([de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason]). Nothing was
+     * spent; the screen shows `R.string.payment_still_confirming`, not the network-error dialog.
+     */
+    val usernameSubmittedPaymentStillConfirming: Boolean = false,
+    /**
      * The shielded creation's outcome is UNCONFIRMED (may already be on
      * chain; the spent notes stay reserved) — the UI must NOT offer a
      * retry and must not claim "no extra cost"; the app reconciles on
@@ -139,6 +147,8 @@ data class RequestUserNameUIState(
     val usernameContested: Boolean = false,
     val usernameExists: Boolean = false,
     val usernameBlocked: Boolean = false,
+    /** The name the availability flags above were checked for, or null when there is no current result. */
+    val checkedUsername: String? = null,
     val enoughBalance: Boolean = false,
     /**
      * What the chosen payment source actually requires for this name, as a
@@ -309,6 +319,8 @@ fun usernameSubmitButtonState(
     enoughBalance: Boolean,
     usernameExists: Boolean,
     usernameContestable: Boolean,
+    /** A finished vote locked the name, or the lock tally leads: nobody can register it. */
+    usernameBlocked: Boolean = false,
     /**
      * Whether the shielded funding note is anchored/confirmed and covers the
      * denomination (see [RequestUsernameUIState.fundingNoteAnchored]). The
@@ -331,7 +343,7 @@ fun usernameSubmitButtonState(
     ) {
         return UsernameSubmitButtonState.PreparingShielded
     }
-    return if (enoughBalance && !usernameExists) {
+    return if (enoughBalance && !usernameExists && !usernameBlocked) {
         UsernameSubmitButtonState.Enabled
     } else {
         UsernameSubmitButtonState.Disabled
@@ -709,14 +721,23 @@ class RequestUserNameViewModel @Inject constructor(
         return hasRequestedName && creationState != IdentityCreationState.NONE && creationState.ordinal <= IdentityCreationState.VOTING.ordinal
     }
 
+    /**
+     * USERNAME_REQUESTED is only written once a contested-name request has a status other than NONE
+     * (see IdentityRepository.updateBlockchainIdentityData). While identity creation is still in
+     * progress (e.g. stuck at USERNAME_REGISTERING) the key is absent, so treat that as "no status".
+     */
+    private suspend fun getUsernameRequestStatus(): UsernameRequestStatus? {
+        return identityConfig.get(USERNAME_REQUESTED)?.let { value ->
+            runCatching { UsernameRequestStatus.valueOf(value) }.getOrNull()
+        }
+    }
+
     suspend fun isUsernameLocked(): Boolean {
-        return isUserNameRequested() &&
-                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOCKED
+        return isUserNameRequested() && getUsernameRequestStatus() == UsernameRequestStatus.LOCKED
     }
 
     suspend fun isUsernameLostAfterVoting(): Boolean {
-        return isUserNameRequested() &&
-                UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOST_VOTE
+        return isUserNameRequested() && getUsernameRequestStatus() == UsernameRequestStatus.LOST_VOTE
     }
 
     suspend fun isUsernameInVotingState(): Boolean {
@@ -1003,11 +1024,17 @@ class RequestUserNameViewModel @Inject constructor(
                 // preparing" message rather than the red "network error"
                 // dialog (Fix A). (Transparent funding never emits these.)
                 val poolNotReady = SdkShieldedUsernameCreation.isPoolNotReadyReason(state.reason)
+                val stillConfirming = isPaymentStillConfirmingReason(state.reason)
                 _uiState.update {
                     if (poolNotReady) {
                         it.copy(
                             usernameRequestSubmitting = false,
                             usernameSubmittedPoolSyncing = true
+                        )
+                    } else if (stillConfirming) {
+                        it.copy(
+                            usernameRequestSubmitting = false,
+                            usernameSubmittedPaymentStillConfirming = true
                         )
                     } else {
                         it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
@@ -1110,8 +1137,12 @@ class RequestUserNameViewModel @Inject constructor(
         viewModelScope.launch {
             withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
+            // If an identity was already registered but the username step failed (lost vote, locked name,
+            // or the domain document was rejected), keep the identity and only register the new name.
             val reuseTransaction = identity?.let {
-                it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+                it.usernameRequested == UsernameRequestStatus.LOCKED ||
+                    it.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
+                    (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
             } ?: false
             // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
             // dashj asset-lock funding CreateIdentityService drives fails
@@ -1129,9 +1160,45 @@ class RequestUserNameViewModel @Inject constructor(
             val submitSource = effectivePaymentSource(
                 requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
             )
-            val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
-                submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
-                transparentUsernameCreation.isCutoverCommitted()
+            // After the cutover an identity that already exists on chain gets ONLY its name
+            // retried (review 4299080469): the legacy reuse path below resets it to NONE and
+            // looks for a dashj funding transaction an SDK-created identity never had, so it
+            // would start fresh legacy funding. Before the cutover the legacy path is master's
+            // (#1567) and stays as it is.
+            val existingIdentityId = identity?.userId
+            val nameOnlyCandidate = reuseTransaction && existingIdentityId != null && !isUsingInvite()
+            val freshSdkCandidate = !isUsingInvite() && !reuseTransaction &&
+                submitSource != UsernamePaymentSource.SHIELDED_BALANCE
+            // Fail closed (review 4299080469, reopened): for both of these, "not committed" starts
+            // CreateIdentityService, which resets a registered identity to NONE or funds through
+            // the dashj engine. The lenient read turns an unreadable cutover state into exactly
+            // that answer, so these read the state strictly, and an unknown one refuses the
+            // submission, starting and resetting nothing.
+            val cutover: Boolean? = if (nameOnlyCandidate || freshSdkCandidate) {
+                transparentUsernameCreation.cutoverStateOrUnknown()
+            } else {
+                false
+            }
+            if (cutover == null) {
+                log.warn("username submit refused: the cutover state cannot be read")
+                _uiState.update { it.copy(usernameSubmittedError = true) }
+                return@launch
+            }
+            if (nameOnlyCandidate && cutover) {
+                log.info("name-only retry for the existing identity (cutover committed)")
+                // Accepted means the retry runs on the application scope and survives this screen,
+                // which the submitting state closes; publish it only then.
+                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
+                    requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
+                    requestedUserName!!,
+                    requestedUsernameSecondary
+                )
+                _uiState.update {
+                    if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
+                }
+                return@launch
+            }
+            val cutoverCommitted = freshSdkCandidate && cutover
             if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
             ) {
@@ -1260,6 +1327,7 @@ class RequestUserNameViewModel @Inject constructor(
             it.copy(
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 usernameRequestSubmitted = false,
                 usernameRequestSubmitting = false
             )
@@ -1307,7 +1375,7 @@ class RequestUserNameViewModel @Inject constructor(
         val username = requestedUserName ?: return null
         val token = ++usernameCheckToken
         return viewModelScope.launch {
-            _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false) }
+            _uiState.update { it.copy(checkingUsername = true, usernameCheckFailed = false, checkedUsername = null) }
             val usernameSearchResult = withContext(Dispatchers.IO) { platformRepo.getUsername(username) }
             if (usernameSearchResult.status != Status.SUCCESS) {
                 // Fail CLOSED: a lookup that never completed says
@@ -1325,28 +1393,44 @@ class RequestUserNameViewModel @Inject constructor(
                 }
                 return@launch
             }
-            val usernameExists = usernameSearchResult.data != null
+            var usernameExists = usernameSearchResult.data != null
             var usernameContested = false
             var firstCreatedAt = -1L
             val usernameBlocked = try {
                 withContext(Dispatchers.IO) {
                     val contenders = platformRepo.getVoteContendersOrThrow(username)
-                    usernameContested = contenders.map.isNotEmpty()
-                    var maxApprovalVotes = 0
-                    firstCreatedAt = try {
-                        contenders.map.values.minOf { contender ->
-                            val document = contender.serializedDocument?.let {
-                                DomainDocument(platformRepo.platform.names.deserialize(it))
+                    val finishedVote = contenders.winner.orElse(null)?.first
+                    when {
+                        finishedVote == null -> {
+                            // no vote, or a vote that is still in progress
+                            usernameContested = contenders.map.isNotEmpty()
+                            var maxApprovalVotes = 0
+                            firstCreatedAt = try {
+                                contenders.map.values.minOf { contender ->
+                                    val document = contender.serializedDocument?.let {
+                                        DomainDocument(platformRepo.platform.names.deserialize(it))
+                                    }
+                                    maxApprovalVotes = max(contender.votes, maxApprovalVotes)
+                                    document?.createdAt ?: -1
+                                }
+                            } catch (e: NoSuchElementException) {
+                                -1L
                             }
-                            maxApprovalVotes = max(contender.votes, maxApprovalVotes)
-                            document?.createdAt ?: -1
-                        }
-                    } catch (e: NoSuchElementException) {
-                        -1L
-                    }
 
-                    // is the name blocked
-                    firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                            // is the name blocked
+                            firstCreatedAt == -1L && contenders.lockVoteTally > maxApprovalVotes
+                        }
+                        // masternodes voted to lock this name: nobody can register it
+                        finishedVote.isLocked -> true
+                        // the vote ended without a winner, so the name can be requested again
+                        finishedVote.noWinner -> false
+                        // won by another identity; the domain document should exist, but treat it
+                        // as taken even if the name lookup above has not caught up yet
+                        else -> {
+                            usernameExists = true
+                            false
+                        }
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -1376,8 +1460,10 @@ class RequestUserNameViewModel @Inject constructor(
                     usernameCheckFailed = false,
                     usernameSubmittedError = false,
                     usernameSubmittedPoolSyncing = false,
+                    usernameSubmittedPaymentStillConfirming = false,
                     usernameContested = usernameContested, usernameExists = usernameExists,
                     usernameBlocked = usernameBlocked,
+                    checkedUsername = username,
                     votingPeriodStart = if (firstCreatedAt == -1L) System.currentTimeMillis() else firstCreatedAt
                 )
             }
@@ -1459,6 +1545,16 @@ class RequestUserNameViewModel @Inject constructor(
     // FIRST alice lookup pass as current while the second is still in flight — clearing
     // the spinner early and writing an older read's verdict. A token separates them.
     private var usernameCheckToken: Long = 0L
+
+    /**
+     * True only when the last completed check was for exactly [username] and found it available, so
+     * a result for an earlier input can never let a different name through.
+     */
+    fun hasAvailableResultFor(username: String): Boolean {
+        val state = _uiState.value
+        return state.usernameCheckSuccess && state.checkedUsername == username &&
+            !state.usernameExists && !state.usernameBlocked
+    }
 
     /** The resolved balance gate: button enablement + row copy inputs. */
     private data class BalanceGateResult(
@@ -1717,9 +1813,11 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,
+                checkedUsername = null,
                 usernameNonContestedLength = validateNonContestedUsernameSize(username),
                 usernameNonContestedChars = validateNonContestedUsernameCharacters(username)
             )

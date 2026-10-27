@@ -75,6 +75,7 @@ class UsernameSubmitStatusDialogs(
 ) {
     private var errorDialogShown = false
     private var poolSyncingDialogShown = false
+    private var stillConfirmingDialogShown = false
     private var ambiguousDialogShown = false
     private var navigatedHome = false
 
@@ -112,6 +113,14 @@ class UsernameSubmitStatusDialogs(
                 showPoolSyncingDialog()
             } else if (!state.usernameSubmittedPoolSyncing) {
                 poolSyncingDialogShown = false
+            }
+            // An earlier payment is still confirming: nothing was spent, and retrying now would
+            // be refused again, so this is a calm single-button notice with no "Try again".
+            if (state.usernameSubmittedPaymentStillConfirming && !stillConfirmingDialogShown) {
+                stillConfirmingDialogShown = true
+                showPaymentStillConfirmingDialog()
+            } else if (!state.usernameSubmittedPaymentStillConfirming) {
+                stillConfirmingDialogShown = false
             }
             if (state.usernameSubmittedAmbiguous && !ambiguousDialogShown) {
                 ambiguousDialogShown = true
@@ -151,6 +160,16 @@ class UsernameSubmitStatusDialogs(
             R.drawable.ic_hourglass,
             fragment.getString(R.string.username_shielded_pool_syncing_title),
             fragment.getString(R.string.username_shielded_pool_syncing),
+            fragment.getString(R.string.button_ok),
+            null
+        ).show(fragment.requireActivity()) { }
+    }
+
+    private fun showPaymentStillConfirmingDialog() {
+        AdaptiveDialog.create(
+            R.drawable.ic_hourglass,
+            fragment.getString(R.string.something_wrong_title),
+            fragment.getString(R.string.payment_still_confirming),
             fragment.getString(R.string.button_ok),
             null
         ).show(fragment.requireActivity()) { }

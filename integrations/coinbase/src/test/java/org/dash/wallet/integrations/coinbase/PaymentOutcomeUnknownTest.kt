@@ -69,8 +69,9 @@ class PaymentOutcomeUnknownTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
         } throws outcomeUnknown
+        every { sendPaymentService.currentWalletSession() } returns null
         every { networkState.isConnected } returns MutableStateFlow(true)
         every { walletDataProvider.observeTotalBalance() } returns emptyFlow()
         coEvery { coinBaseRepository.getUserAccountAddress() } returns failure()
@@ -98,7 +99,7 @@ class PaymentOutcomeUnknownTest {
             walletUIConfig
         )
 
-        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false)
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
 
         assertEquals(
             SendDashResponseState.OutcomeUnknownState,

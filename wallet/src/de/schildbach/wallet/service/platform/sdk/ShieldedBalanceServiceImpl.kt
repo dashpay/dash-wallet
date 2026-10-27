@@ -1060,6 +1060,20 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val afterStopFallbackBump: suspend () -> Unit = {},
     /**
+     * True while an uncertain BIP70 payment's inputs are exposed to the engine's coin selection
+     * ([de.schildbach.wallet.payments.PendingPaymentFundingGate]); a shield from the wallet (a fresh
+     * asset-lock build) is then refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON].
+     * [resumeFundFromAssetLock] re-consumes a tracked lock and is never asked. Default false keeps
+     * the host-JVM tests inert.
+     */
+    private val freshFundingBlocked: suspend () -> Boolean = { false },
+    /**
+     * The process-wide wipe barrier, shared with a resubmission's reactivation; see
+     * [de.schildbach.wallet.payments.FundingSelectionLock]. No default: a private instance is one
+     * no wipe ever raises.
+     */
+    private val fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock,
+    /**
      * Wall clock (Unix millis) for spend start times. Injectable for tests.
      */
     private val clock: () -> Long = System::currentTimeMillis,
@@ -1080,7 +1094,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         applicationScope: CoroutineScope,
         assetLockKindResolver: AssetLockKindResolver,
         walletData: de.schildbach.wallet.data.WalletData,
-        seamOutputLockRegistry: SeamOutputLockRegistry
+        seamOutputLockRegistry: SeamOutputLockRegistry,
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1102,7 +1117,9 @@ class ShieldedBalanceServiceImpl internal constructor(
         },
         seamOutputLockRegistry = seamOutputLockRegistry,
         sweepScope = applicationScope,
-        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
+        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
+        fundingSelection = fundingGate.selectionLock
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -2045,6 +2062,16 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (!amount.isPositive) {
             return notBroadcast(operation, "non-positive amount", null)
         }
+        // A shield from the wallet builds a fresh asset lock: refuse it while an uncertain
+        // payment's inputs are exposed (fails closed). Nothing is spent; retry-safe.
+        val fundingBlocked = try {
+            freshFundingBlocked()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not check for unprotected pending payments; refusing $operation", t)
+            true
+        }
+        if (fundingBlocked) return notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
 
         // Preflights — nothing has been submitted if any of this fails.
         if (!ensureShieldedReadyInner()) {
@@ -2165,58 +2192,85 @@ class ShieldedBalanceServiceImpl internal constructor(
                 }
             }
             try {
-                // The caller's durable submission checkpoint: from here on the
-                // native call may broadcast, so a caller interrupted after this
-                // point can no longer infer non-submission. A failed write means
-                // nothing is submitted. The CoinJoin drain (the only checkpointed
-                // route) then runs to completion: a cancellation in between would
-                // leave a "submitted" record for a shield that never went out.
-                withContext(if (fundingPath != null) NonCancellable else EmptyCoroutineContext) {
-                    try {
-                        onSubmitting()
+                // The funding gate is asked again under the shared selection lock, held through the
+                // checkpoint and the build (review 4309551218): a resubmission's reactivation cannot
+                // slip in between, and a wallet wipe waits for the native call to return. A refusal
+                // comes before the checkpoint, so nothing is recorded as submitted. A wipe that
+                // cancels the hold after the checkpoint leaves the outcome unknown (Ambiguous),
+                // never a cancellation ([wipeCancelledWriteResult]).
+                fundingSelection.withSharedSubmission<
+                    de.schildbach.wallet.payments.FundingSelectionLock.Selected<SdkWriteResult<ShieldFromWalletOutcome>>?
+                    >(
+                    refused = { null },
+                    cancelled = { e, submitted ->
+                        de.schildbach.wallet.payments.FundingSelectionLock.Selected(
+                            wipeCancelledWriteResult(operation, null, e, submitted)
+                        )
+                    }
+                ) { mark ->
+                    val blocked = try {
+                        freshFundingBlocked()
                     } catch (t: Throwable) {
                         if (t is CancellationException) throw t
-                        return@withContext notBroadcast(operation, "could not record the submission checkpoint", t)
+                        true
                     }
-
-                    // The single staged attempt: (a) build+broadcast the L1 asset
-                    // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
-                    try {
+                    if (blocked) return@withSharedSubmission null
+                    de.schildbach.wallet.payments.FundingSelectionLock.Selected(
+                    // The caller's durable submission checkpoint: from here on the
+                    // native call may broadcast, so a caller interrupted after this
+                    // point can no longer infer non-submission. A failed write means
+                    // nothing is submitted. The CoinJoin drain (the only checkpointed
+                    // route) then runs to completion: a cancellation in between would
+                    // leave a "submitted" record for a shield that never went out.
+                    withContext(if (fundingPath != null) NonCancellable else EmptyCoroutineContext) {
                         try {
-                            if (fundingPath == null) {
-                                source.fundFromAssetLock(walletId, recipient, amount.duffs)
-                            } else {
-                                // SINGLE-ACCOUNT DRAIN of the DIP-9 CoinJoin account into
-                                // the lock: no BIP44 inputs, no transparent change.
-                                source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
-                            }
-                        } finally {
-                            endSpend()
-                        }
-                        kickImmediateShieldedSync()
-                        // Seed the funding lock's kind as SHIELD (best-effort, post-
-                        // success) so the L1 asset lock renders "Shielded" on first
-                        // classification instead of "Internal". The new lock is the
-                        // outPointHex absent from lockedBefore; its txid part (before
-                        // ':') is ALREADY display hex (AssetLockEntity keys on display),
-                        // so it is the resolver's seed key directly.
-                        try {
-                            source.walletShieldLocks(walletId)
-                                .map { it.outPointHex }
-                                .firstOrNull { it !in lockedBefore }
-                                ?.substringBefore(':')
-                                ?.takeIf { it.length == 64 }
-                                ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
+                            onSubmitting()
                         } catch (t: Throwable) {
                             if (t is CancellationException) throw t
-                            log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
+                            return@withContext notBroadcast(operation, "could not record the submission checkpoint", t)
                         }
-                        SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
+                        mark.submitting()
+
+                        // The single staged attempt: (a) build+broadcast the L1 asset
+                        // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
+                        try {
+                            try {
+                                if (fundingPath == null) {
+                                    source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                                } else {
+                                    // SINGLE-ACCOUNT DRAIN of the DIP-9 CoinJoin account into
+                                    // the lock: no BIP44 inputs, no transparent change.
+                                    source.fundFromAssetLockFromAccount(walletId, recipient, amount.duffs, fundingPath)
+                                }
+                            } finally {
+                                endSpend()
+                            }
+                            kickImmediateShieldedSync()
+                            // Seed the funding lock's kind as SHIELD (best-effort, post-
+                            // success) so the L1 asset lock renders "Shielded" on first
+                            // classification instead of "Internal". The new lock is the
+                            // outPointHex absent from lockedBefore; its txid part (before
+                            // ':') is ALREADY display hex (AssetLockEntity keys on display),
+                            // so it is the resolver's seed key directly.
+                            try {
+                                source.walletShieldLocks(walletId)
+                                    .map { it.outPointHex }
+                                    .firstOrNull { it !in lockedBefore }
+                                    ?.substringBefore(':')
+                                    ?.takeIf { it.length == 64 }
+                                    ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
+                            } catch (t: Throwable) {
+                                if (t is CancellationException) throw t
+                                log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
+                            }
+                            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+                        } catch (t: Throwable) {
+                            if (t is CancellationException) throw t
+                            classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
+                        }
                     }
-                }
+                    )
+                }?.value ?: notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
             } finally {
                 endSpend()
             }

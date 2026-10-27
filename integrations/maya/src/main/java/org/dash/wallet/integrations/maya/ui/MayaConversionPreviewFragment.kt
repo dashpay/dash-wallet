@@ -260,6 +260,15 @@ class MayaConversionPreviewFragment : Fragment() {
                 getString(R.string.button_close)
             ).show(requireActivity())
         }
+
+        viewModel.onPaymentStillConfirmingCallback.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.send_coins_error_msg),
+                getString(R.string.payment_still_confirming),
+                getString(R.string.button_close)
+            ).show(requireActivity())
+        }
     }
 
     private fun onCancelClick() {

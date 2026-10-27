@@ -104,9 +104,8 @@ class SecurityViewModel @Inject constructor(
         analytics.logEvent(event, mapOf())
     }
 
-    fun triggerWipe() {
-        walletApplication.triggerWipe()
-    }
+    /** @return false when Reset Wallet was refused and the wallet is untouched (see [WalletApplication.triggerWipe]). */
+    fun triggerWipe(): Boolean = walletApplication.triggerWipe()
 
     fun setEnableFingerprint(enable: Boolean) {
         val isEnabled = enable && biometricHelper.isEnabled

@@ -147,6 +147,8 @@ class SendCoinsViewModelStaleDryRunTest {
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
+                any<Wallet>(),
+                any<Boolean>(),
                 any<(String?) -> Unit>(),
                 any<() -> Unit>()
             )
@@ -536,7 +538,8 @@ class SendCoinsViewModelStaleDryRunTest {
         val modeService = SdkL1SendService(
             source = mockk(relaxed = true),
             dashPayConfig = config,
-            isValidAddress = { true }
+            isValidAddress = { true },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         val sends = Sends()
         val viewModel = buildViewModel(

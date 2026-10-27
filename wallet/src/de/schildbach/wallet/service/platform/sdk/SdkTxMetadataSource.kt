@@ -45,4 +45,24 @@ interface SdkTxMetadataSource {
      * the batch size, not batch size × wallet-wide work per txid.
      */
     suspend fun defaultMetadataFor(txIds: Collection<TxId>): Map<TxId, TransactionMetadata>
+
+    /**
+     * Whether the SDK store holds [txId]. Unlike [defaultMetadataFor], which reads
+     * "not held" and "could not look" both as null, this keeps them apart, for a
+     * caller that may only act on a positive [SdkTxPresence.ABSENT]. Never starts
+     * the SDK.
+     */
+    suspend fun presenceOf(txId: TxId): SdkTxPresence
+}
+
+/** Answer of [SdkTxMetadataSource.presenceOf]. */
+enum class SdkTxPresence {
+    /** The SDK store holds the transaction. */
+    HELD,
+
+    /** The SDK store is open and does not hold the transaction. */
+    ABSENT,
+
+    /** The SDK store is not open or the lookup failed: nothing is known. */
+    UNAVAILABLE
 }

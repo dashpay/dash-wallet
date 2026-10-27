@@ -102,6 +102,12 @@ data class MixedFundsMigrationUIState(
 internal data class MixedFundsSheetPresentation(
     /** The attempt provably spent nothing (NOT_ATTEMPTED). */
     val failed: Boolean,
+    /**
+     * Refused because an earlier payment's outcome is still being confirmed (PAYMENT_STILL_CONFIRMING):
+     * nothing was spent and nothing is wrong, so the choice stays on offer with the reason shown, and
+     * the sheet may be dismissed (the prompt returns on the next start).
+     */
+    val stillConfirming: Boolean,
     /** "Could not confirm": an UNCONFIRMED outcome or the honesty window lapsed. */
     val terminalGuidance: Boolean,
     /** The destination choice (Shield / Keep spendable / Later) is on offer. */
@@ -126,6 +132,7 @@ internal data class MixedFundsSheetPresentation(
 
 internal fun MixedFundsMigrationUIState.presentation(): MixedFundsSheetPresentation {
     val failed = outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED
+    val stillConfirming = outcome == MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
     // Terminal guidance is closable on its own: the recovery marker and any
     // still-suspended native call outlive the sheet, so closing cancels
     // nothing and the marker re-presents the migration later.
@@ -143,6 +150,7 @@ internal fun MixedFundsMigrationUIState.presentation(): MixedFundsSheetPresentat
     }
     return MixedFundsSheetPresentation(
         failed = failed,
+        stillConfirming = stillConfirming,
         terminalGuidance = terminalGuidance,
         choiceMode = choiceMode,
         processing = processing,
@@ -159,7 +167,7 @@ internal fun MixedFundsMigrationUIState.presentation(): MixedFundsSheetPresentat
         showRetryPendingShields = choiceMode && amountChecked && pendingShieldRetryAvailable &&
             !pendingShieldRetryRunning && (amount == null || (!shieldOperable && !combineOperable)),
         showClose = !processing,
-        cancelable = !processing && !choiceMode
+        cancelable = !processing && (!choiceMode || stillConfirming)
     )
 }
 
@@ -240,7 +248,10 @@ internal fun MixedFundsMigrationFacts.reduce(): MixedFundsMigrationOutcomeView {
             resultLanded = false
         )
     }
-    val uncertainOrStarted = callResult.takeIf { it != MixedFundsMigrationOutcome.NOT_ATTEMPTED }
+    // A refusal spent nothing, like NOT_ATTEMPTED: it cannot speak for a pending marker.
+    val uncertainOrStarted = callResult.takeIf {
+        it != MixedFundsMigrationOutcome.NOT_ATTEMPTED && it != MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
+    }
     return when {
         marker == MarkerPhase.FAILED -> MixedFundsMigrationOutcomeView(
             outcome = MixedFundsMigrationOutcome.NOT_ATTEMPTED,
@@ -607,6 +618,11 @@ class MixedFundsMigrationViewModel @Inject constructor(
         if (state.inProgress) return
         if (state.resultLanded) {
             updateFacts { it.copy(landed = false, callResult = null, action = null, markerSeenSinceCall = false) }
+            return
+        }
+        if (state.outcome == MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING) {
+            // Refused before anything was spent: the next showing starts from the choice.
+            updateFacts { it.copy(callResult = null, action = null) }
             return
         }
         if (state.outcome != MixedFundsMigrationOutcome.NOT_ATTEMPTED) return

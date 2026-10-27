@@ -133,6 +133,12 @@ class SdkBridgedTransactionFactory internal constructor(
     private val scope: CoroutineScope,
     /** The dashj wallet-of-record; null (→ NotBridged) while unavailable. */
     private val wallet: () -> Wallet?,
+    /**
+     * The process-wide wipe barrier; see [de.schildbach.wallet.payments.FundingSelectionLock].
+     * [bridgeInBackground] commits under a shared hold of it, so a Reset Wallet never has it
+     * mutate a wallet that is being detached. No default: a private instance no wipe raises.
+     */
+    private val fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock,
     /** Lazy per call: [Constants] untouched until a bridge actually runs. */
     private val networkParameters: () -> NetworkParameters = { Constants.NETWORK_PARAMETERS },
     /** Tail hook: [WalletApplication.broadcastTransaction] on the live instance. */
@@ -155,11 +161,13 @@ class SdkBridgedTransactionFactory internal constructor(
         identityConfig: BlockchainIdentityConfig,
         identityRepository: IdentityRepository,
         analyticsService: AnalyticsService,
-        scope: CoroutineScope
+        scope: CoroutineScope,
+        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock
     ) : this(
         source = DashSdkTxRowSource(sdkService),
         scope = scope,
         wallet = { walletData.wallet },
+        fundingSelection = fundingSelection,
         onCommitted = { walletApplication.broadcastTransaction(it) },
         onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         logSendTx = { tx, wallet ->
@@ -171,19 +179,35 @@ class SdkBridgedTransactionFactory internal constructor(
      * Fire-and-forget [bridge] pass, detached in the application scope —
      * the shape the 5c.2 debug consumer uses. Contains every failure;
      * can never block or fail the send it follows.
+     *
+     * Bound to the wallet installed when this is called (the one that just broadcast), and run
+     * under a shared hold of the wipe barrier with that wallet asked again under it: a Reset
+     * Wallet either refuses the pass, or cancels it and waits for it before detaching the wallet,
+     * and a pass that starts after a replacement was installed commits nothing.
      */
     fun bridgeInBackground(
         txidHex: String,
         rawTxBytes: ByteArray? = null,
         memo: String? = null,
         exchangeRate: ExchangeRate? = null
-    ): Job = scope.launch {
-        try {
-            bridge(txidHex, rawTxBytes, memo, exchangeRate)
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            // bridge() already contains everything; this is belt-and-braces.
-            log.warn("bridge pass failed unexpectedly for txid {}; send unaffected", txidHex, t)
+    ): Job {
+        val origin = walletOrNull()
+        return scope.launch {
+            try {
+                fundingSelection.withShared {
+                    if (origin == null || walletOrNull() !== origin) {
+                        log.info("bridge pass for txid {} skipped: the wallet that sent it is gone", txidHex)
+                    } else {
+                        bridge(txidHex, rawTxBytes, memo, exchangeRate, originWallet = origin)
+                    }
+                }
+            } catch (e: de.schildbach.wallet.payments.WalletWipedException) {
+                log.info("bridge pass for txid {} skipped: the wallet is being wiped", txidHex)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                // bridge() already contains everything; this is belt-and-braces.
+                log.warn("bridge pass failed unexpectedly for txid {}; send unaffected", txidHex, t)
+            }
         }
     }
 
@@ -197,14 +221,19 @@ class SdkBridgedTransactionFactory internal constructor(
      *   them (GAP-1); null → bounded poll of the SDK Room row.
      * @param memo app-side memo to persist on the committed instance.
      * @param exchangeRate fiat rate to persist on the committed instance.
+     * @param originWallet the wallet that signed this transaction, when the caller captured it.
+     *   The commit goes to that wallet and never to whatever is installed by the time the bridge
+     *   runs: after a wipe the two differ, and `maybeCommitTx` does not ask whose transaction it
+     *   is handed. Null keeps the installed wallet.
      */
     suspend fun bridge(
         txidHex: String,
         rawTxBytes: ByteArray? = null,
         memo: String? = null,
-        exchangeRate: ExchangeRate? = null
+        exchangeRate: ExchangeRate? = null,
+        originWallet: Wallet? = null
     ): BridgedTxResult = try {
-        bridgeContained(txidHex, rawTxBytes, memo, exchangeRate)
+        bridgeContained(txidHex, rawTxBytes, memo, exchangeRate, originWallet)
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         notBridged(txidHex, "unexpected bridge failure", t)
@@ -214,13 +243,14 @@ class SdkBridgedTransactionFactory internal constructor(
         txidHex: String,
         rawTxBytes: ByteArray?,
         memo: String?,
-        exchangeRate: ExchangeRate?
+        exchangeRate: ExchangeRate?,
+        originWallet: Wallet?
     ): BridgedTxResult {
         val bytes = rawTxBytes ?: resolveBytesFromSdkStore(txidHex)
             ?: return notBridged(
                 txidHex, "tx bytes unavailable (SDK Room row absent after ${bytesTimeoutMs}ms)", null
             )
-        val wallet = walletOrNull()
+        val wallet = originWallet ?: walletOrNull()
             ?: return notBridged(txidHex, "dashj wallet unavailable", null)
         org.bitcoinj.core.Context.propagate(wallet.context)
 

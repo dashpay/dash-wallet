@@ -255,6 +255,8 @@
     <string name="something_wrong_title">Что-то пошло не так!</string>
     <string name="retry">Повторить</string>
     <string name="gift_card_purchase_failed">Покупка подарочной карты не состоялась</string>
+    <string name="gift_card_save_failed_title">Данные подарочной карты не сохранены</string>
+    <string name="gift_card_save_failed_message">Ваш платёж успешно отправлен, но подарочную карту не удалось сохранить на этом устройстве. Не покупайте эту подарочную карту повторно. Платёж можно найти в истории транзакций, и техподдержка сможет восстановить карту по нему.</string>
     <string name="try_again">Попробуйте ещё раз</string>
     <string name="cancel">Отмена</string>
     <string name="gift_card_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, попробуйте ещё раз.</string>

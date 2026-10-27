@@ -375,12 +375,37 @@ class RecoveredWalletPersistenceTest {
         every { guardedApp.noBackupFilesDir } returns noBackup
         every { guardedApp.startService(any()) } answers { fail("must not start wipe service"); null }
 
-        guardedApp.triggerWipe()
+        assertFalse(guardedApp.triggerWipe())
 
         assertTrue(guardedApp.isWalletWipeRecoveryRequired)
         assertEquals("", marker.readText())
         assertTrue(noBackup.listFiles()!!.isEmpty())
         verify(exactly = 0) { guardedApp.startService(any()) }
+    }
+
+    @Test
+    fun `reset request whose marker cannot be written is refused and never starts wipe service`() {
+        val files = directory.newFolder("files")
+        val noBackup = directory.newFolder("no-backup")
+        val walletSentinel = File(files, "wallet-protobuf-testnet").apply { writeText("wallet sentinel") }
+        val guardedApp = spyk(app)
+        every { guardedApp.filesDir } returns files
+        every { guardedApp.noBackupFilesDir } returns noBackup
+        every { guardedApp.startService(any()) } answers { fail("must not start wipe service"); null }
+        guardedApp.fundingSelectionLock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val previousWrite = de.schildbach.wallet.util.WalletWipeState.writeMarker
+        de.schildbach.wallet.util.WalletWipeState.writeMarker = { _, _ -> throw java.io.IOException("disk full") }
+        try {
+            assertFalse(guardedApp.triggerWipe())
+        } finally {
+            de.schildbach.wallet.util.WalletWipeState.writeMarker = previousWrite
+        }
+
+        verify(exactly = 0) { guardedApp.startService(any()) }
+        assertFalse(guardedApp.wipeInProgress.value)
+        assertFalse(guardedApp.fundingSelectionLock.isWipeBarrierRaised)
+        assertFalse(de.schildbach.wallet.WalletApplicationExt.consumeConfirmedWipeBegin())
+        assertEquals("wallet sentinel", walletSentinel.readText())
     }
 
     @Test
@@ -810,7 +835,8 @@ class RecoveredWalletPersistenceTest {
         every { wipeApp.filesDir } returns directory.root
         every { wipeApp.noBackupFilesDir } returns noBackupDir
         suspend fun wipe(destroy: suspend () -> Unit): Boolean = WalletWipeSequence.finish(
-            pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
+            pending = { WalletWipeState.pendingState(directory.root, noBackupDir) },
+            fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
             detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
             destroy = destroy,
             markComplete = { wipeApp.markWalletWipeComplete() }
@@ -865,7 +891,8 @@ class RecoveredWalletPersistenceTest {
         every { wipeApp.noBackupFilesDir } returns noBackupDir
         // As finishWalletWipe does: the sequence, then the stopped-wipe verdict.
         suspend fun wipe(): Boolean = WalletWipeSequence.finish(
-            pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
+            pending = { WalletWipeState.pendingState(directory.root, noBackupDir) },
+            fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
             detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
             destroy = { },
             markComplete = { wipeApp.markWalletWipeComplete() }
@@ -919,7 +946,8 @@ class RecoveredWalletPersistenceTest {
         // stopped-wipe verdict; destroyWalletData ends with the confirmation.
         suspend fun wipe(): Result<Boolean> = runCatching {
             WalletWipeSequence.finish(
-                pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
+                pending = { WalletWipeState.pendingState(directory.root, noBackupDir) },
+                fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                 detachWallet = { ReflectionHelpers.setField(wipeApp, "wallet", null) },
                 destroy = { wipeApp.confirmWalletSourcesDestroyed() },
                 markComplete = { wipeApp.markWalletWipeComplete() }
@@ -1006,7 +1034,8 @@ class RecoveredWalletPersistenceTest {
     }
 
     private suspend fun finishWipe(wipeApp: WalletApplication): Boolean = WalletWipeSequence.finish(
-        pending = { WalletWipeState.isPending(directory.root, noBackupDir) },
+        pending = { WalletWipeState.pendingState(directory.root, noBackupDir) },
+        fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
         detachWallet = { wipeApp.detachWalletForWipe() },
         destroy = {
             primary.delete()

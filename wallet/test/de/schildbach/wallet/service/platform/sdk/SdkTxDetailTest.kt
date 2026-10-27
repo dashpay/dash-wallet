@@ -451,6 +451,32 @@ class SdkTxDetailTest {
     }
 
     @Test
+    fun `presenceOf tells a missing tx apart from a store that cannot be consulted`() {
+        val txId = TxId.wrap("e5169bfc4989585abd4b0476188611b981e3c750539da5b8a39fe135e3bbb957")
+        fun presence(sdkService: DashSdkService) = runBlocking {
+            SdkTxDetailProvider(sdkService, mockk(), mockk(relaxed = true)) { _, _ -> null }.presenceOf(txId)
+        }
+        fun storeWith(lookup: TransactionDao.() -> Unit) = mockk<DashSdkService> {
+            every { databaseOrNull() } returns mockk<DashDatabase> {
+                every { transactionDao() } returns mockk<TransactionDao>(block = lookup)
+            }
+        }
+
+        val closed = mockk<DashSdkService> { every { databaseOrNull() } returns null }
+        assertEquals(SdkTxPresence.UNAVAILABLE, presence(closed))
+        coVerify(exactly = 0) { closed.ensureStarted() }
+        assertEquals(
+            SdkTxPresence.UNAVAILABLE,
+            presence(storeWith { coEvery { getByTxid(any()) } throws IllegalStateException("db closed") })
+        )
+        assertEquals(SdkTxPresence.ABSENT, presence(storeWith { coEvery { getByTxid(any()) } returns null }))
+        assertEquals(
+            SdkTxPresence.HELD,
+            presence(storeWith { coEvery { getByTxid(any()) } returns mockk<TransactionEntity>() })
+        )
+    }
+
+    @Test
     fun `defaultMetadataFor follows the walker record over a misattributed store row`() {
         // A contact send the store row records as INCOMING +change; the walker
         // reattributes it to OUTGOING with the whole-wallet net. The metadata row
