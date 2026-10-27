@@ -21,7 +21,7 @@ FIREBASE_APP_IDS = {
   "prod"      => "1:1039839682638:android:989eecd6db36de6a",
   "_testNet3" => "1:1039839682638:android:3202b16d460a1a88",
   "staging"   => "1:1039839682638:android:bbcfa8c9939ee993ea631f",
-  "devnet"    => "1:1039839682638:android:12d2ad31cc39093cea631f"
+  "devnet"    => "1:1039839682638:android:fdff563e24b69c5fea631f"
 }.freeze
 
 def repo_root
