@@ -199,7 +199,7 @@ class TxDisplayCacheService @Inject constructor(
     private var rawCachedEntries: List<TxDisplayCacheEntry> = emptyList()
 
     /** Applies the same `filterFlags` bitmask test as [TxDisplayCacheDao.pagingSource]'s WHERE clause. */
-    private fun buildCachedRows(entries: List<TxDisplayCacheEntry>, filterFlag: Int): List<HistoryRowView> {
+    private suspend fun buildCachedRows(entries: List<TxDisplayCacheEntry>, filterFlag: Int): List<HistoryRowView> {
         val contacts = contactsByTxId
         val filtered = entries.filter { matchesFilterFlag(it.filterFlags, filterFlag) }
         val historyRows = ArrayList<HistoryRowView>(filtered.size + 32)
