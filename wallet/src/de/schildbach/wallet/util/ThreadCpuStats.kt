@@ -77,13 +77,21 @@ object ThreadCpuStats {
      *
      * @param ranked live threads, busiest first, zero-delta threads excluded.
      * @param created threads present now but not in the previous snapshot.
+     *   Only when that snapshot was complete (see [Snapshot.isComplete]):
+     *   otherwise a thread absent from it may just have been missed, and is
+     *   counted in [noBaseline] instead.
      * @param exited threads present before but gone now (their CPU in the
      *   interval is NOT in [ranked] — it shows up in [unattributedTicks]).
+     *   Only when the CURRENT snapshot is complete: a thread missing from a
+     *   partial scan may still be alive.
      * @param processDeltaTicks the process total (`/proc/self/stat`), which
      *   includes threads that exited during the interval.
      * @param unattributedTicks process delta minus the sum of [ranked]:
      *   CPU burnt by threads that died before we could see them. A large
      *   value means short-lived thread churn.
+     * @param noBaseline live threads absent from an INCOMPLETE previous
+     *   snapshot: their start-of-interval ticks are unknown, so they are in
+     *   neither [ranked] nor [created], and their CPU is in [unattributedTicks].
      * @param scanMs how long the CURRENT snapshot took to read (see [Snapshot.scanMs]).
      * @param readErrors / [badStats] / [listFailed] the CURRENT snapshot's
      *   blind spots (see [Snapshot]): threads it could not see for a reason
@@ -102,7 +110,8 @@ object ThreadCpuStats {
         val unattributedTicks: Long,
         val readErrors: Int = 0,
         val badStats: Int = 0,
-        val listFailed: Boolean = false
+        val listFailed: Boolean = false,
+        val noBaseline: Int = 0
     )
 
     /**
@@ -126,7 +135,11 @@ object ThreadCpuStats {
         val readErrors: Int = 0,
         val badStats: Int = 0,
         val listFailed: Boolean = false
-    )
+    ) {
+        /** Whether [threads] holds every live thread (no blind spot in this scan). */
+        val isComplete: Boolean
+            get() = readErrors == 0 && badStats == 0 && !listFailed
+    }
 
     /**
      * Per-scan bookkeeping of what a snapshot could NOT see, so a blind scan
@@ -195,15 +208,26 @@ object ThreadCpuStats {
         return ThreadStat(tid, name, state, utime + stime, start)
     }
 
-    /** Diffs two snapshots into one interval report. */
+    /**
+     * Diffs two snapshots into one interval report. An incomplete snapshot is
+     * never read as churn: a thread absent from an incomplete [prev] has no
+     * baseline (counted in [IntervalReport.noBaseline], its CPU left
+     * unattributed rather than its whole lifetime charged to this interval),
+     * and a thread absent from an incomplete [curr] is not reported as exited.
+     */
     fun diff(prev: Snapshot, curr: Snapshot, topN: Int = TOP_N): IntervalReport {
         val created = ArrayList<ThreadStat>()
         val exited = ArrayList<ThreadStat>()
         val deltas = ArrayList<ThreadDelta>(curr.threads.size)
         var attributed = 0L
+        var noBaseline = 0
         for (now in curr.threads.values) {
             val before = prev.threads[now.tid]
-            val delta = if (before == null || before.startTicks != now.startTicks) {
+            val delta = if (before == null && !prev.isComplete) {
+                // Possibly just missed by the previous scan: its delta is unknown.
+                noBaseline++
+                continue
+            } else if (before == null || before.startTicks != now.startTicks) {
                 // New thread (or a reused tid): ALL of its CPU fell in this interval.
                 created.add(now)
                 if (before != null) exited.add(before)
@@ -214,8 +238,10 @@ object ThreadCpuStats {
             attributed += delta
             if (delta > 0) deltas.add(ThreadDelta(now.tid, now.name, now.state, delta))
         }
-        for (before in prev.threads.values) {
-            if (!curr.threads.containsKey(before.tid)) exited.add(before)
+        if (curr.isComplete) {
+            for (before in prev.threads.values) {
+                if (!curr.threads.containsKey(before.tid)) exited.add(before)
+            }
         }
         deltas.sortWith(compareByDescending<ThreadDelta> { it.deltaTicks }.thenBy { it.tid })
         created.sortBy { it.tid }
@@ -233,7 +259,8 @@ object ThreadCpuStats {
             unattributedTicks = (processDelta - attributed).coerceAtLeast(0),
             readErrors = curr.readErrors,
             badStats = curr.badStats,
-            listFailed = curr.listFailed
+            listFailed = curr.listFailed,
+            noBaseline = noBaseline
         )
     }
 
@@ -262,13 +289,21 @@ object ThreadCpuStats {
         return over.ifEmpty { report.ranked.take(1) }
     }
 
+    /**
+     * Whether the CURRENT scan had a blind spot or was too slow to be
+     * consistent (`readErr`, `badStat`, `TASK_LIST_FAILED`, `SLOW_SCAN`).
+     */
+    fun hasScanDiagnostics(report: IntervalReport): Boolean =
+        report.readErrors > 0 || report.badStats > 0 || report.listFailed || isSlowScan(report.scanMs)
+
     enum class Level { DEBUG, INFO, WARN }
 
     /**
-     * Hot → WARN every time. Active (between idle and hot) → INFO. Idle →
-     * INFO at most once per [idleInfoIntervalMs] (so a quiet log still shows
-     * the sampler alive), DEBUG otherwise. Thread churn alone does not lift
-     * an idle sample.
+     * Hot → WARN every time. Active (between idle and hot) → INFO. A sample
+     * with [hasScanDiagnostics] → at least INFO, so a degraded scan is never
+     * filtered out by the INFO root logger. Idle → INFO at most once per
+     * [idleInfoIntervalMs] (so a quiet log still shows the sampler alive),
+     * DEBUG otherwise. Thread churn alone does not lift an idle sample.
      */
     fun levelFor(
         report: IntervalReport,
@@ -279,6 +314,7 @@ object ThreadCpuStats {
     ): Level = when {
         isHot(report.processDeltaTicks, clkTck, report.wallMs) -> Level.WARN
         !isIdle(report.processDeltaTicks, clkTck, report.wallMs) -> Level.INFO
+        hasScanDiagnostics(report) -> Level.INFO
         lastInfoMs == null || nowMs - lastInfoMs >= idleInfoIntervalMs -> Level.INFO
         else -> Level.DEBUG
     }
@@ -295,6 +331,9 @@ object ThreadCpuStats {
      * Blind spots appear only when nonzero: `readErr=<n>` (thread stats that
      * could not be read, other than exited threads), `badStat=<n>` (stat
      * lines the parser rejected) and ` TASK_LIST_FAILED` (no thread was seen).
+     * `noBaseline=<n>` (only when nonzero, after `unattributed`) counts live
+     * threads the PREVIOUS, incomplete scan missed: their CPU is in
+     * `unattributed`, not in `top` or `churn`.
      */
     fun formatLine(report: IntervalReport, clkTck: Long): String {
         val sb = StringBuilder(256)
@@ -320,6 +359,7 @@ object ThreadCpuStats {
         if (report.unattributedTicks > 0) {
             sb.append(" unattributed=").append(ticksToMs(report.unattributedTicks, clkTck)).append("ms")
         }
+        if (report.noBaseline > 0) sb.append(" noBaseline=").append(report.noBaseline)
         if (report.readErrors > 0) sb.append(" readErr=").append(report.readErrors)
         if (report.badStats > 0) sb.append(" badStat=").append(report.badStats)
         if (report.listFailed) sb.append(" TASK_LIST_FAILED")

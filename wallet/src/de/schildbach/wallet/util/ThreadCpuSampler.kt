@@ -72,7 +72,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  *  - **Cheap.** One small read per thread per minute; the expensive
  *    `Thread.getAllStackTraces()` runs only on a hot interval.
  *  - **Quiet when idle.** Idle intervals log at DEBUG, with one INFO line at
- *    most every [IDLE_INFO_INTERVAL_MS] as a heartbeat.
+ *    most every [IDLE_INFO_INTERVAL_MS] as a heartbeat. An idle sample whose
+ *    scan was degraded (`readErr=` etc.) is still INFO, and like any INFO
+ *    line it restarts the heartbeat clock.
  *  - **Never throws into the app.** Every read and every log path is guarded,
  *    and the scope's [CoroutineExceptionHandler] catches anything that still
  *    escapes; a thread vanishing mid-scan is normal and just skipped. Reads

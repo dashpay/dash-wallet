@@ -218,10 +218,117 @@ class ThreadCpuStatsTest {
         assertEquals(2, report.badStats)
         assertTrue(report.listFailed)
         assertEquals(
-            "proc=1.7% cpu=1000ms wall=60.0s up=60.0s scan=6000ms thr=0 top=[] churn=+0 -1[1 main] " +
+            "proc=1.7% cpu=1000ms wall=60.0s up=60.0s scan=6000ms thr=0 top=[] " +
                 "unattributed=1000ms readErr=3 badStat=2 TASK_LIST_FAILED SLOW_SCAN",
             ThreadCpuStats.formatLine(report, clkTck)
         )
+    }
+
+    // ── incomplete snapshots are not a churn baseline ─────────────────
+
+    @Test
+    fun `a thread missing from an incomplete previous scan is neither created nor ranked`() {
+        val prev = Snapshot(0, 0, 100, mapOf(1 to stat(1, "main", 10)), 0, readErrors = 1)
+        val curr = snap(60_000, 9_500, stat(1, "main", 20), stat(2, "missed", 9_000))
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertTrue(r.created.isEmpty())
+        assertTrue(r.exited.isEmpty())
+        assertEquals(listOf(1), r.ranked.map { it.tid })
+        assertEquals(1, r.noBaseline)
+        // The process delta is exact; the missed thread's share lands in unattributed.
+        assertEquals(9_390L, r.unattributedTicks)
+        // Process is hot, but the no-baseline thread is never picked for a dump.
+        assertEquals(listOf(1), ThreadCpuStats.hotThreads(r, clkTck).map { it.tid })
+        assertEquals(
+            "proc=156.7% cpu=94000ms wall=60.0s up=60.0s scan=0ms thr=2 top=[1 main S 100ms] " +
+                "unattributed=93900ms noBaseline=1",
+            ThreadCpuStats.formatLine(r, clkTck)
+        )
+    }
+
+    @Test
+    fun `every kind of blind spot in the previous scan withholds the baseline`() {
+        val curr = snap(60_000, 100, stat(1, "main", 20), stat(2, "missed", 50))
+        val prevs = listOf(
+            Snapshot(0, 0, 0, mapOf(1 to stat(1, "main", 10)), 0, badStats = 1),
+            Snapshot(0, 0, 0, emptyMap(), 0, listFailed = true)
+        )
+        for (prev in prevs) {
+            val r = ThreadCpuStats.diff(prev, curr)
+            assertTrue(r.created.isEmpty())
+            assertFalse(r.ranked.any { it.tid == 2 })
+        }
+    }
+
+    @Test
+    fun `a reused tid is still exited plus created after an incomplete previous scan`() {
+        val prev = Snapshot(0, 0, 100, mapOf(5 to stat(5, "old", 900, start = 100)), 0, readErrors = 1)
+        val curr = snap(60_000, 1000, stat(5, "new", 30, start = 7000))
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertEquals(listOf("new"), r.created.map { it.name })
+        assertEquals(listOf("old"), r.exited.map { it.name })
+        assertEquals(0, r.noBaseline)
+    }
+
+    @Test
+    fun `a thread missing from an incomplete current scan is not exited`() {
+        val prev = snap(0, 100, stat(1, "main", 10), stat(2, "unseen", 50))
+        val curr = Snapshot(60_000, 60_000, 400, mapOf(1 to stat(1, "main", 20)), 0, readErrors = 1)
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertTrue(r.exited.isEmpty())
+        assertTrue(r.created.isEmpty())
+        assertEquals(0, r.noBaseline)
+        assertEquals(listOf(1), r.ranked.map { it.tid })
+    }
+
+    @Test
+    fun `complete scans keep created and exited churn`() {
+        val prev = snap(0, 100, stat(1, "main", 10), stat(2, "gone", 50))
+        val curr = snap(60_000, 400, stat(1, "main", 20), stat(3, "new", 40))
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertEquals(listOf(3), r.created.map { it.tid })
+        assertEquals(listOf(2), r.exited.map { it.tid })
+        assertEquals(0, r.noBaseline)
+        assertEquals(listOf(3, 1), r.ranked.map { it.tid })
+    }
+
+    // ── scan diagnostics lift the level ───────────────────────────────
+
+    private val tenMin = 600_000L
+
+    /** ~0.8% of a core: idle; the heartbeat went out at t=0, so normally DEBUG. */
+    private fun idleReport(readErrors: Int = 0, badStats: Int = 0, listFailed: Boolean = false, scanMs: Long = 0) =
+        ThreadCpuStats.diff(
+            snap(0, 0, stat(1, "a", 0)),
+            Snapshot(60_000, 60_000, 50, mapOf(1 to stat(1, "a", 50)), scanMs, readErrors, badStats, listFailed)
+        )
+
+    @Test
+    fun `a clean idle sample is unchanged, one with any scan diagnostic logs at INFO`() {
+        assertFalse(ThreadCpuStats.hasScanDiagnostics(idleReport()))
+        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(idleReport(), clkTck, 300_000, 0, tenMin))
+        val degraded = listOf(
+            idleReport(readErrors = 1),
+            idleReport(badStats = 1),
+            idleReport(listFailed = true),
+            idleReport(scanMs = ThreadCpuStats.SLOW_SCAN_MS + 1)
+        )
+        for (r in degraded) {
+            assertTrue(ThreadCpuStats.hasScanDiagnostics(r))
+            assertEquals(Level.INFO, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin))
+        }
+    }
+
+    @Test
+    fun `a hot sample with scan diagnostics stays WARN`() {
+        val prev = snap(0, 0, stat(1, "a", 0))
+        val curr = Snapshot(
+            60_000, 60_000, 12_000, mapOf(1 to stat(1, "a", 12_000)), 6_000,
+            readErrors = 2, listFailed = true
+        )
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertTrue(ThreadCpuStats.hasScanDiagnostics(r))
+        assertEquals(Level.WARN, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin))
     }
 
     @Test
