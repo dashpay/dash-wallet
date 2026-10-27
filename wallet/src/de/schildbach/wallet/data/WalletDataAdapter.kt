@@ -154,6 +154,8 @@ class WalletDataAdapter @Inject constructor(
         return all.filter { tx -> filters.isEmpty() || filters.any { it.matches(tx) } }
     }
 
+    override fun transactionCount(): Int = walletData.transactionCount()
+
     override fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {
         return walletData.wrapAllTransactions(*wrappers)
     }

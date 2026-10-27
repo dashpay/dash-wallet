@@ -596,7 +596,28 @@ class CrowdNodeApiAggregator @Inject constructor(
         return true
     }
 
+    /**
+     * Scans every wallet transaction for a CrowdNode sign up. When none is found, the wallet's
+     * transaction count is cached and the scan is skipped until it changes: a wallet that never
+     * signed up would otherwise rescan its whole history each time the status is restored.
+     */
     private suspend fun tryRestoreSignUp(): Boolean {
+        val txCount = walletDataProvider.transactionCount()
+
+        if (config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT) == txCount) {
+            log.info("no CrowdNode sign up found in the last scan of $txCount transactions, skipping the scan")
+            return false
+        }
+
+        if (tryRestoreSignUpFromTransactions()) {
+            return true
+        }
+
+        config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, txCount)
+        return false
+    }
+
+    private suspend fun tryRestoreSignUpFromTransactions(): Boolean {
         val fullSignUpSet = blockchainApi.getFullSignUpTxSet()
         fullSignUpSet?.let { set ->
             if (set.welcomeToApiResponse != null) {

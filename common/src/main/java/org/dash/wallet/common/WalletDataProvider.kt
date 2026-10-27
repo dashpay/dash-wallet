@@ -88,6 +88,9 @@ interface WalletDataProvider {
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<TxInfo>
 
+    /** The number of wallet transactions, including dead ones, i.e. those [wrapAllTransactions] goes over. */
+    fun transactionCount(): Int
+
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     /**

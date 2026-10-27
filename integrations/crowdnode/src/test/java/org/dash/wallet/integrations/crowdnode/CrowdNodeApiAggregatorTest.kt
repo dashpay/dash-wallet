@@ -170,6 +170,69 @@ class CrowdNodeApiAggregatorTest {
     }
 
     @Test
+    fun restoreStatus_noSignUpFound_cachesTransactionCount() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                on { transactionCount() } doReturn 33307
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, 33307)
+        }
+    }
+
+    @Test
+    fun restoreStatus_transactionCountUnchanged_skipsScan() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                onBlocking { get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT) } doReturn 33307
+            }
+            walletData.stub {
+                on { transactionCount() } doReturn 33307
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(blockchainApi, never()).getFullSignUpTxSet()
+        }
+    }
+
+    @Test
+    fun restoreStatus_transactionCountChanged_rescans() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                onBlocking { get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT) } doReturn 33307
+            }
+            walletData.stub {
+                on { transactionCount() } doReturn 33308
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, 33308)
+        }
+    }
+
+    @Test
     fun onlineStatusDone_restoredCorrectly() {
         runBlocking {
             localConfig.stub {

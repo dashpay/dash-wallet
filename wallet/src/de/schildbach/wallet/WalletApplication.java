@@ -3608,6 +3608,12 @@ public class WalletApplication extends MultiDexApplication
         return filteredTransactions;
     }
 
+    @Override
+    public int transactionCount() {
+        awaitDeferredWalletLoad();
+        return wallet != null ? wallet.getTransactionCount(true) : 0;
+    }
+
     @NonNull
     @Override
     public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {

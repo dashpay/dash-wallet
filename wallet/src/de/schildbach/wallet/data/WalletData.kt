@@ -154,6 +154,8 @@ interface WalletData {
 
     fun getTransactions(vararg filters: WalletTransactionFilter): Collection<Transaction>
 
+    fun transactionCount(): Int
+
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
