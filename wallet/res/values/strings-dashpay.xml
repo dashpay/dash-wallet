@@ -649,6 +649,10 @@
     <!-- Shown on the More-screen "Shielded" card while the pool is still
          syncing, so a funded wallet never briefly reads a misleading "0". -->
     <string name="shielded_balance_syncing">Syncing…</string>
+    <!-- Shown on both More-screen balance cards (Dash Wallet and Shielded)
+         in place of the amount when Autohide Balance is on, mirroring the
+         Home screen's eye-icon treatment. Dots only — not translatable. -->
+    <string name="more_balance_card_hidden" translatable="false">••••••</string>
     <string name="shielded_tab_receive">Receive</string>
     <string name="shielded_tab_internal">Internal</string>
     <string name="shielded_tab_send">Send</string>

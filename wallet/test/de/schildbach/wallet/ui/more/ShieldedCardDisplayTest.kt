@@ -149,6 +149,46 @@ class ShieldedCardDisplayTest {
         }
     }
 
+    @Test
+    fun `MO-1107 - hideBalance shows the masked placeholder regardless of sync state`() {
+        // Autohide Balance (hideBalance) outranks every other display-trust
+        // state: READY with a live balance, a cached balance, and the
+        // reconciling/stale state all collapse to HIDDEN once the user has
+        // asked for the amount not to be shown.
+        assertEquals(
+            ShieldedCardDisplay.HIDDEN,
+            mapShieldedCardDisplay(
+                ShieldedSyncStatus.READY, hasShieldedContext = true,
+                cachedBalance = null, balanceMaybeStale = false, hideBalance = true
+            )
+        )
+        assertEquals(
+            ShieldedCardDisplay.HIDDEN,
+            mapShieldedCardDisplay(
+                ShieldedSyncStatus.NOT_READY, hasShieldedContext = true,
+                cachedBalance = cached, balanceMaybeStale = false, hideBalance = true
+            )
+        )
+        assertEquals(
+            ShieldedCardDisplay.HIDDEN,
+            mapShieldedCardDisplay(
+                ShieldedSyncStatus.SYNCING, hasShieldedContext = true,
+                cachedBalance = cached, balanceMaybeStale = true, hideBalance = true
+            )
+        )
+    }
+
+    @Test
+    fun `MO-1107 - hideBalance defaults to off so existing call sites are unaffected`() {
+        assertEquals(
+            ShieldedCardDisplay.LIVE_AMOUNT,
+            mapShieldedCardDisplay(
+                ShieldedSyncStatus.READY, hasShieldedContext = true,
+                cachedBalance = null, balanceMaybeStale = false
+            )
+        )
+    }
+
     // ── hasShieldedContext (mirrors SdkWalletBinder's bind eligibility) ──
 
     @Test

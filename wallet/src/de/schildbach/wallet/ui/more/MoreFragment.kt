@@ -458,10 +458,31 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
             binding.balanceCardsContainer.isVisible = true
 
-            walletData.observeTotalBalance().observe(viewLifecycleOwner) { balance ->
-                binding.walletBalanceCardAmount.text =
-                    "${balanceCardFormat.format(org.dash.wallet.common.money.Dash(balance.value))} Đ"
+            // Autohide Balance (MO-1107): Home swaps its header for the eye icon
+            // the instant this flips (HeaderBalanceFragment.hideBalance); these
+            // cards share the same MainViewModel instance and must track the
+            // same signal instead of always rendering a numeric amount.
+            // Fail closed on the very first frame, before the observer below has
+            // delivered anything: start masked, then let it replace this with
+            // the real (now always-current, see MainViewModel.hideBalance)
+            // preference.
+            var latestHideBalance = true
+            var latestWalletBalance = org.bitcoinj.core.Coin.ZERO
+
+            fun renderWalletCard() {
+                binding.walletBalanceCardAmount.text = walletBalanceCardAmountText(
+                    org.dash.wallet.common.money.Dash(latestWalletBalance.value),
+                    latestHideBalance,
+                    balanceCardFormat,
+                    getString(R.string.more_balance_card_hidden)
+                )
             }
+
+            walletData.observeTotalBalance().observe(viewLifecycleOwner) { balance ->
+                latestWalletBalance = balance
+                renderWalletCard()
+            }
+            renderWalletCard()
 
             // The shielded card must never flash a bare "0" for a funded wallet
             // while the pool re-syncs (observeShieldedBalance emits Dash.ZERO
@@ -496,7 +517,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
             fun render() = renderShieldedCardAmount(
                 latestStatus, latestBalance, latestHasShieldedContext, latestCachedBalance,
-                latestMaybeStale || balanceUnreadable
+                latestMaybeStale || balanceUnreadable, latestHideBalance
             )
 
             shieldedBalanceService.observeShieldedBalance()
@@ -533,6 +554,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     latestHasShieldedContext = hasShieldedContext(identity)
                     render()
                 }
+            mainActivityViewModel.hideBalance.observe(viewLifecycleOwner) { hide ->
+                latestHideBalance = hide
+                renderWalletCard()
+                render()
+            }
             render()
 
             // Bring the shielded runtime up so the balance loads and the sync
@@ -560,24 +586,27 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
      * 2026-07-12). [ShieldedCardDisplay.LIVE_AMOUNT] shows the live [balance],
      * [ShieldedCardDisplay.CACHED_AMOUNT] the persisted last-known
      * [cachedBalance] (so a relaunch re-scan shows the known balance instead
-     * of a spinner), and the SYNCING arm a subtle "Syncing…" placeholder, so
-     * a still-syncing funded wallet is never misread as empty — while a fresh
-     * wallet with nothing shielded to sync shows its honest zero (see
-     * [mapShieldedCardDisplay]).
+     * of a spinner), the SYNCING arm a subtle "Syncing…" placeholder (so a
+     * still-syncing funded wallet is never misread as empty, while a fresh
+     * wallet with nothing shielded to sync shows its honest zero), and the
+     * HIDDEN arm the same masked placeholder as the sibling Dash Wallet card
+     * when Autohide Balance is on (MO-1107) — see [mapShieldedCardDisplay].
      */
     private fun renderShieldedCardAmount(
         status: ShieldedSyncStatus,
         balance: Dash,
         hasShieldedContext: Boolean,
         cachedBalance: Dash?,
-        balanceMaybeStale: Boolean
+        balanceMaybeStale: Boolean,
+        hideBalance: Boolean
     ) {
         val amount = binding.shieldedBalanceCardAmount
         binding.shieldedBalanceCardSymbol.isVisible = false
-        val shown = when (mapShieldedCardDisplay(status, hasShieldedContext, cachedBalance, balanceMaybeStale)) {
+        val display = mapShieldedCardDisplay(status, hasShieldedContext, cachedBalance, balanceMaybeStale, hideBalance)
+        val shown = when (display) {
             ShieldedCardDisplay.LIVE_AMOUNT -> balance
             ShieldedCardDisplay.CACHED_AMOUNT -> cachedBalance ?: balance
-            ShieldedCardDisplay.SYNCING -> null
+            ShieldedCardDisplay.HIDDEN, ShieldedCardDisplay.SYNCING -> null
         }
         if (shown != null) {
             // Mirror the sibling Dash card's EXACT size (both are Subtitle2;
@@ -586,6 +615,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             amount.setTextSize(TypedValue.COMPLEX_UNIT_PX, binding.walletBalanceCardAmount.textSize)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_primary))
             amount.text = "${balanceCardFormat.format(shown)} Đ"
+        } else if (display == ShieldedCardDisplay.HIDDEN) {
+            amount.setTextSize(TypedValue.COMPLEX_UNIT_PX, binding.walletBalanceCardAmount.textSize)
+            amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_primary))
+            amount.text = getString(R.string.more_balance_card_hidden)
         } else {
             amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_secondary))
@@ -761,11 +794,25 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 }
 
 /**
+ * The More-screen "Dash Wallet" card's amount text — pure, host-testable
+ * (MO-1107): the masked [hiddenPlaceholder] when Autohide Balance is on
+ * (same precedence as the Home header and the sibling Shielded card, see
+ * [mapShieldedCardDisplay]), the formatted [balance] otherwise.
+ */
+internal fun walletBalanceCardAmountText(
+    balance: Dash,
+    hideBalance: Boolean,
+    format: org.dash.wallet.common.money.MoneyFormat,
+    hiddenPlaceholder: String
+): String = if (hideBalance) hiddenPlaceholder else "${format.format(balance)} Đ"
+
+/**
  * What the More-screen "Shielded" balance card renders (see
  * [mapShieldedCardDisplay]): the live balance, the persisted last-known
- * (cached) balance, or the "Syncing…" placeholder.
+ * (cached) balance, the masked placeholder when Autohide Balance is on, or
+ * the "Syncing…" placeholder.
  */
-internal enum class ShieldedCardDisplay { LIVE_AMOUNT, CACHED_AMOUNT, SYNCING }
+internal enum class ShieldedCardDisplay { LIVE_AMOUNT, CACHED_AMOUNT, HIDDEN, SYNCING }
 
 /**
  * Pure, host-testable display decision for the More-screen "Shielded" card.
@@ -777,6 +824,10 @@ internal enum class ShieldedCardDisplay { LIVE_AMOUNT, CACHED_AMOUNT, SYNCING }
  * when trustworthy, otherwise the persisted last-known balance — so a
  * background re-scan on relaunch never hides a balance the app already knows.
  *
+ * - [hideBalance] (Autohide Balance is on, MO-1107) → HIDDEN, checked first:
+ *   the user asked for the amount not to be shown, which outranks every
+ *   display-trust concern below — same precedence as the Home header
+ *   ([de.schildbach.wallet.ui.main.HeaderBalanceFragment]).
  * - [balanceMaybeStale] (a shielded spend from this app is still reconciling,
  *   or the balance can't be read) → "Syncing…", even when READY: until the
  *   spend settles, both the cached amount and the live note store can be
@@ -801,8 +852,10 @@ internal fun mapShieldedCardDisplay(
     status: ShieldedSyncStatus,
     hasShieldedContext: Boolean,
     cachedBalance: Dash?,
-    balanceMaybeStale: Boolean
+    balanceMaybeStale: Boolean,
+    hideBalance: Boolean = false
 ): ShieldedCardDisplay = when {
+    hideBalance -> ShieldedCardDisplay.HIDDEN
     balanceMaybeStale -> ShieldedCardDisplay.SYNCING
     status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.LIVE_AMOUNT
     cachedBalance != null -> ShieldedCardDisplay.CACHED_AMOUNT

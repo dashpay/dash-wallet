@@ -235,14 +235,35 @@ class MainViewModel @Inject constructor(
     val homeShieldedPending: StateFlow<Boolean> = _homeShieldedPending.asStateFlow()
 
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
-    val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
+    // Eagerly, not WhileSubscribed: MainViewModel is activity-scoped and already
+    // lives for the activity's lifetime, so this stays collected even with no
+    // active screen observer, closing the stale-replay window WhileSubscribed(5000)
+    // used to leave open (a fresh collector — e.g. a fragment returning to the
+    // screen — used to replay a stale cached value instead of the preference just
+    // persisted elsewhere; thepastaclaw/coderabbitai review #1645).
+    //
+    // observePreservingErrors + retryWhen, not observe: observe()'s own
+    // IOException rescue (BaseConfig.data) swallows the error and completes the
+    // flow after one emission — harmless under WhileSubscribed (the next
+    // resubscribe restarts it), but Eagerly collects exactly once for this
+    // ViewModel's lifetime, so that completion would otherwise freeze hideBalance
+    // forever. Fail closed and keep retrying instead, same shape as
+    // homeShieldedBalanceFlow below; initialValue = true fails closed the same
+    // way until the first real read lands.
+    val hideBalance = walletUIConfig.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
             temporaryHide ?: autoHide ?: false
         }
+        .retryWhen { e, attempt ->
+            log.warn("hideBalance read failed (attempt {})", attempt, e)
+            emit(true)
+            delay(shieldedReadRetryDelayMs(attempt))
+            true
+        }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
+            started = SharingStarted.Eagerly,
+            initialValue = true
         )
     private val _remindMetadata = MutableStateFlow(false)
     val remindMetadata = _remindMetadata.asStateFlow()
