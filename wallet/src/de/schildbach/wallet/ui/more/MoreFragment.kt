@@ -462,7 +462,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             // the instant this flips (HeaderBalanceFragment.hideBalance); these
             // cards share the same MainViewModel instance and must track the
             // same signal instead of always rendering a numeric amount.
-            var latestHideBalance = mainActivityViewModel.hideBalance.value
+            // Fail closed: hideBalance is a WhileSubscribed(5000) StateFlow, so
+            // its cached .value can be a stale `false` right after the screen
+            // becomes active again. Start masked; the observer below replaces
+            // this the moment the current preference arrives.
+            var latestHideBalance = true
             var latestWalletBalance = org.bitcoinj.core.Coin.ZERO
 
             fun renderWalletCard() {
