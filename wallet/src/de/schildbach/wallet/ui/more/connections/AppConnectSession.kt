@@ -180,17 +180,18 @@ internal class AppConnectSession(
         val blockTime = platform.client.getPlatformTime(identity.id)
         parsed.requireFresh(System.currentTimeMillis())
         parsed.identityHint?.let { check(it.contentEquals(identity.id.toBuffer())) { "QR requests a different identity" } }
-        var grants = parsed.auth.map { grant ->
-            AppConnectLimits.clamp(grant, blockTime)
-        }
         // A retry must show and use the original approved limits, not a new rolling expiry.
         val prior = config.getGrants().firstOrNull { it.getString("id") == "$scope:${requestHash(request)}" }
+        val selectedAuth = prior?.let { indices(it, "authIndices") } ?: parsed.auth.indices.toSet()
+        check(0 in selectedAuth && selectedAuth.all { it in parsed.auth.indices }) { "Stored grant does not match request" }
+        var grants = parsed.auth.mapIndexed { index, grant ->
+            AppConnectLimits.clamp(grant, blockTime, requireUsableExpiry = index in selectedAuth)
+        }
         if (prior != null) {
             val saved = decodeKeys(prior).filter { it.purpose == Purpose.AUTHENTICATION }
-            val indices = indices(prior, "authIndices")
-            check(saved.size == indices.size) { "Stored grant does not match request" }
+            check(saved.size == selectedAuth.size) { "Stored grant does not match request" }
             grants = grants.mapIndexed { index, grant ->
-                val position = indices.sorted().indexOf(index)
+                val position = selectedAuth.sorted().indexOf(index)
                 if (position < 0) grant else grant.copy(totalBudget = saved[position].totalBudget, expiresAt = saved[position].expiresAt)
             }
         }
@@ -206,7 +207,7 @@ internal class AppConnectSession(
             "${if (it.purpose == 1) "Encryption" else "Decryption"} key for this app (shared across sessions; omitted if another wallet controls it)."
         }
         AppConnectPlan(requestHash(request), scope, identity.id.toString(), grants, text,
-            prior?.let { indices(it, "authIndices") } ?: grants.indices.toSet(), encChoices,
+            selectedAuth, encChoices,
             prior?.let { indices(it, "encIndices") } ?: encChoices.indices.toSet(), prior != null, blockTime,
             groupScopes = groupScopes, previousGroupScopes = readApprovedGroupScopes(prior))
     }

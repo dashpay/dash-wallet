@@ -13,10 +13,10 @@ internal object AppConnectLimits {
     private const val DAY = 86_400_000L
     private val MAX_BUDGET = BigInteger("500000000000")
 
-    fun clamp(grant: AuthBinding, blockTime: Long): AuthBinding = grant.copy(
+    fun clamp(grant: AuthBinding, blockTime: Long, requireUsableExpiry: Boolean = true): AuthBinding = grant.copy(
         totalBudget = grant.totalBudget?.min(MAX_BUDGET),
         expiresAt = minOf(grant.expiresAt ?: (blockTime + 90 * DAY), blockTime + 365 * DAY)
-    ).also { require(it.expiresAt!! > blockTime + 3_600_000) { "Requested grant expires too soon" } }
+    ).also { require(!requireUsableExpiry || it.expiresAt!! > blockTime + 3_600_000) { "Requested grant expires too soon" } }
 }
 
 /** The immutable terms presented for explicit consent. No private keys are kept here. */

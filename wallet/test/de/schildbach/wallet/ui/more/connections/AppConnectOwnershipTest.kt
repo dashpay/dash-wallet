@@ -118,6 +118,43 @@ class AppConnectOwnershipTest {
         }
     }
 
+    @Test fun `restart restores omitted grant selection before enforcing expiry`() = runBlocking {
+        nonMainnetOnly()
+        val start = System.currentTimeMillis()
+        every { service.platform.client.getPlatformTime(any()) } returns start
+        val raw = request.requireAppConnect()
+        val bounded = request.copy(appConnect = raw.copy(auth = listOf(
+            raw.auth[0].copy(expiresAt = start + 90L * 86_400_000),
+            raw.auth[1].copy(expiresAt = start + 65L * 60_000))))
+        val prepared = session.prepare(bounded).copy(selectedAuth = setOf(0), selectedEncryption = emptySet())
+        val approved = prepared.grants.first().copy(totalBudget = java.math.BigInteger.ONE, expiresAt = start + 86_400_000)
+        val key = org.dashj.platform.dpp.identity.IdentityPublicKey(4,
+            org.dashj.platform.sdk.KeyType.ECDSA_HASH160, org.dashj.platform.sdk.Purpose.AUTHENTICATION,
+            org.dashj.platform.sdk.SecurityLevel.HIGH,
+            org.dashj.platform.dpp.identity.SingleContractBounds(Identifier.from(approved.id)), ByteArray(20), false,
+            totalBudget = approved.totalBudget, expiresAt = approved.expiresAt, version = 1)
+        val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}")
+            .put("keys", org.json.JSONArray().put(org.json.JSONObject(key.toJSON())))
+            .put("authIndices", org.json.JSONArray(listOf(0))).put("encIndices", org.json.JSONArray())
+        coEvery { config.getGrants() } returns listOf(record)
+        every { service.platform.client.getPlatformTime(any()) } returns start + 6L * 60_000
+        for (state in listOf("prepared", "pending", "confirmed", "active")) {
+            record.put("state", state)
+            val restarted = AppConnectSession(service, repo, identities, config).prepare(bounded)
+            assertTrue(restarted.recovering)
+            assertEquals(setOf(0), restarted.selectedAuth)
+            assertEquals(approved.totalBudget, restarted.grants[0].totalBudget)
+            assertEquals(approved.expiresAt, restarted.grants[0].expiresAt)
+            restarted.requireMatches(bounded)
+        }
+        record.put("authIndices", org.json.JSONArray(listOf(0, 1)))
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { session.prepare(bounded) } }
+        coEvery { config.getGrants() } returns emptyList()
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { session.prepare(bounded) } }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
     @Test fun `legacy preparation and approval retries fail before any identity or signing access`() {
         val legacy = request.copy(appConnect = null)
         val plan = AppConnectPlan("hash", "scope", "identity", request.requireAppConnect().auth, "Consent")

@@ -409,3 +409,9 @@ metadata is unavailable. The Connections screen owns identity loading, errors an
 Retry; the menu must not hide that recovery path behind a successful metadata read.
 Credits retain their existing username gate. This navigation correction was found
 by the full-PR pre-review of the group/payment-entry fixes.
+
+Restart preparation restores the persisted authentication selection before testing
+request expiry. An omitted optional grant approaching expiry cannot prevent
+recovery of a valid selected grant. Fresh requests and selected grants retain the
+expiry guard, and saved limits remain unchanged. Restart regressions cover all
+four persisted registration states without accessing wallet secrets or writing keys.
