@@ -441,6 +441,69 @@ class MainViewModelTest {
      * which runs on this JUnit thread — so any access recorded on this thread is an
      * access that would happen on the real main thread in production.
      */
+    /**
+     * Privacy regression guard (MO-1107).
+     *
+     * [MainViewModel.hideBalance] used to be shared with
+     * `SharingStarted.WhileSubscribed(5000)`: the upstream `combine` only ran while at
+     * least one screen was actively collecting it, so its cached `.value` could freeze
+     * stale once every collector went away (e.g. the user navigated off both Home and
+     * More for 5+ seconds). A later preference change made with no active collector —
+     * like enabling Autohide Balance from Settings → Security while no balance screen
+     * is on screen — would not reach `.value` until something re-subscribed, so a
+     * fresh collector's first emission replayed the stale value and briefly rendered a
+     * real amount instead of the just-enabled hidden state.
+     *
+     * `Eagerly` keeps the upstream collected for the lifetime of the activity-scoped
+     * `viewModelScope`, so `.value` is always current even with zero collectors. This
+     * test never collects [MainViewModel.hideBalance] itself — it only flips the
+     * preference and reads `.value` — so it fails under `WhileSubscribed` and passes
+     * under `Eagerly`.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance value is current even with no active collector`() {
+        val autoHideBalance = MutableStateFlow(false)
+        every { uiConfigMock.observe(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            crowdNodeApi,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(false, viewModel.hideBalance.value)
+
+        autoHideBalance.value = true
+
+        assertEquals(true, viewModel.hideBalance.value)
+    }
+
     @Test(timeout = 10_000)
     fun `dashj wallet is never accessed on the main dispatcher thread`() {
         val mainThread = Thread.currentThread()

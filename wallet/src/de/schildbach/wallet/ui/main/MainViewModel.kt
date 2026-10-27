@@ -235,13 +235,20 @@ class MainViewModel @Inject constructor(
     val homeShieldedPending: StateFlow<Boolean> = _homeShieldedPending.asStateFlow()
 
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
+    // Eagerly, not WhileSubscribed: MainViewModel is activity-scoped and already
+    // lives for the activity's lifetime, so this stays collected even with no
+    // active screen observer. WhileSubscribed(5000) let .value freeze stale after
+    // 5s with no collector, so a fresh collector (e.g. a fragment returning to the
+    // screen) could replay a stale value instead of the preference just persisted
+    // elsewhere (More-screen balance cards briefly showing a real amount after
+    // Autohide Balance was turned on — thepastaclaw/coderabbitai review #1645).
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
             temporaryHide ?: autoHide ?: false
         }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = false
         )
     private val _remindMetadata = MutableStateFlow(false)
