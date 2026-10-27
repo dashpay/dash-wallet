@@ -249,6 +249,7 @@ class MixedFundsMigrationDialogFragment :
                             }
                         state.outcome == MixedFundsMigrationOutcome.UNCONFIRMED ->
                             getString(R.string.mixed_funds_migration_unconfirmed)
+                        presentation.stillConfirming -> getString(R.string.payment_still_confirming)
                         presentation.showRetryPendingShields ->
                             getString(R.string.mixed_funds_migration_pending_shield_retry)
                         // While awaiting, the started message lives in the

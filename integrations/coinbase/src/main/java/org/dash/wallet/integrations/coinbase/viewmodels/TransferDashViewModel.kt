@@ -200,8 +200,15 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, checkConditions: Boolean) {
-        _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions)
+    /** The wallet installed now, taken when the user confirms a transfer (see [sendDash]). */
+    fun currentWalletSession(): WalletSession? = sendPaymentService.currentWalletSession()
+
+    /**
+     * Sends the transfer from the wallet of [session], taken when the user confirmed it, and
+     * refused with nothing sent if that wallet has since been wiped (review 4304575003).
+     */
+    suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, checkConditions: Boolean, session: WalletSession?) {
+        _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions, session)
     }
 
     suspend fun estimateNetworkFee(value: Dash, emptyWallet: Boolean): SendPaymentService.TransactionEstimate? {
@@ -228,14 +235,16 @@ class TransferDashViewModel @Inject constructor(
     private suspend fun checkTransaction(
         coin: Dash,
         isEmptyWallet: Boolean,
-        checkConditions: Boolean
+        checkConditions: Boolean,
+        session: WalletSession?
     ): SendDashResponseState {
         return try {
             val txId = sendPaymentService.sendCoins(
                 dashAddress,
                 coin,
                 emptyWallet = isEmptyWallet,
-                checkBalanceConditions = checkConditions
+                checkBalanceConditions = checkConditions,
+                session = session
             )
             transactionMetadataProvider.markAddressAsTransferOutAsync(
                 dashAddress,

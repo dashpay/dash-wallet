@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.payments.PendingPaymentFundingGate
 import de.schildbach.wallet.service.platform.sdk.ASSET_LOCK_PREFLIGHT_FEE_HEADROOM_DUFFS
 import de.schildbach.wallet.service.platform.sdk.SdkAssetLockFundingPreflight
 import de.schildbach.wallet.service.platform.work.PerformTopUpOperation
@@ -40,7 +41,8 @@ class BuyCreditsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val platformRepo: PlatformRepo,
     private val identity: BlockchainIdentityConfig,
-    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight
+    private val assetLockFundingPreflight: SdkAssetLockFundingPreflight,
+    private val fundingGate: PendingPaymentFundingGate
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(BuyCreditsViewModel::class.java)
@@ -130,6 +132,13 @@ class BuyCreditsViewModel @Inject constructor(
      * WorkManager prune is app-global and would erase finished work states
      * other features still observe by tag).
      */
+    /**
+     * True while an earlier payment's outcome is still being confirmed and its inputs are not
+     * protected from coin selection, so a purchase would be refused (fails closed). Checked
+     * before queueing the purchase; the worker's pipeline stays the authority.
+     */
+    suspend fun isPaymentStillConfirming(): Boolean = fundingGate.isFreshFundingBlocked()
+
     fun topUpWorkStatus(): LiveData<List<WorkInfo>> =
         PerformTopUpOperation.status(walletApplication)
 

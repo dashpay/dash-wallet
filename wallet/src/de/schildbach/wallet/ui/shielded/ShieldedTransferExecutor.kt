@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.shielded
 
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.StringRes
@@ -80,6 +81,19 @@ internal data class ShieldedOutcomeNotification(
  *   "taking longer than expected" — may still complete in the
  *   background; no failure wording, no retry.
  */
+/**
+ * The body text for a [ShieldedSubmitState.NotSent]: a refusal because an earlier payment is
+ * still confirming says so (nothing was spent; it clears once that payment resolves), every
+ * other refusal keeps the generic "transfer failed" body.
+ */
+@StringRes
+internal fun shieldedNotSentMessageRes(state: ShieldedSubmitState.NotSent): Int =
+    if (isPaymentStillConfirmingReason(state.reason)) {
+        R.string.payment_still_confirming
+    } else {
+        R.string.shielded_transfer_failed_message
+    }
+
 internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOutcomeNotification? =
     when (state) {
         ShieldedSubmitState.Success -> ShieldedOutcomeNotification(
@@ -94,7 +108,7 @@ internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOu
         )
         is ShieldedSubmitState.NotSent -> ShieldedOutcomeNotification(
             R.string.shielded_transfer_failed,
-            R.string.shielded_transfer_failed_message,
+            shieldedNotSentMessageRes(state),
             showsTransferCompletedToast = false
         )
         ShieldedSubmitState.MayHaveGoneThrough -> ShieldedOutcomeNotification(

@@ -105,7 +105,7 @@ interface TransactionMetadataProvider {
      *   because the transaction turned out to be real; false when the cleanup could not be
      *   attempted and the caller should keep the payment and retry later.
      */
-    suspend fun forgetTransaction(txId: Sha256Hash): Boolean
+    suspend fun forgetTransaction(txId: TxId): Boolean
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 

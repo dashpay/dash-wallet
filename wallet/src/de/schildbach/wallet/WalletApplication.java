@@ -374,6 +374,9 @@ public class WalletApplication extends MultiDexApplication
     dagger.Lazy<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> coinJoinFundsMigrationService;
     @Inject
     dagger.Lazy<de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService> shieldedBalanceService;
+    // The payment paths' wipe barrier: raised when Reset Wallet starts, lowered once the old wallet is gone.
+    @Inject
+    public de.schildbach.wallet.payments.FundingSelectionLock fundingSelectionLock;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -2800,17 +2803,27 @@ public class WalletApplication extends MultiDexApplication
      * mainnet wallet, so callers get no completion callback — a callback that
      * outlives the screen it was created on is what crashed this path before
      * (Fragment.startActivity on a fragment detached two minutes earlier).
+     *
+     * @return false when the reset was refused (recovery required, or the wipe
+     *     marker could not be confirmed): nothing was torn down and the UI was
+     *     not handed off, so the caller must tell the user Reset Wallet failed.
      */
-    public void triggerWipe() {
+    public boolean triggerWipe() {
         if (WalletWipeState.INSTANCE.inspect(getFilesDir(), getNoBackupFilesDir())
                 == WalletWipeState.State.RECOVERY_REQUIRED) {
             walletWipeRecoveryRequired = true;
             log.warn("refusing wallet wipe while recovery is required");
-            return;
+            return false;
         }
         log.info("Removing all the data and restarting the app.");
-        WalletApplicationExt.INSTANCE.beginWalletWipe(this);
+        if (!WalletApplicationExt.INSTANCE.beginWalletWipe(this)) {
+            // Fail closed: no marker, no wipe. The wallet is untouched and the
+            // UI was not handed off, so the caller reports the failure.
+            log.error("Reset Wallet refused: the wipe could not be recorded");
+            return false;
+        }
         startService(new Intent(BlockchainService.ACTION_WIPE_WALLET, null, this, BlockchainServiceImpl.class));
+        return true;
     }
 
     /** Called only after wipe destruction succeeds; retain recovery protection if the marker remains. */

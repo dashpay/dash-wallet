@@ -25,6 +25,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
@@ -38,9 +39,11 @@ import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.UnresolvedPaymentsProvider
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
@@ -77,6 +80,7 @@ class DashSpendSubmissionStateTest {
     private lateinit var sendPaymentService: SendPaymentService
     private lateinit var unresolvedPayments: UnresolvedPaymentsProvider
     private lateinit var walletDataProvider: WalletDataProvider
+    private val transactionMetadata = mockk<TransactionMetadataProvider>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -105,7 +109,7 @@ class DashSpendSubmissionStateTest {
             mockk<Configuration>(relaxed = true),
             sendPaymentService,
             mockk<DashSpendRepositoryFactory>(relaxed = true),
-            mockk<TransactionMetadataProvider>(relaxed = true),
+            transactionMetadata,
             mockk<GiftCardDao>(relaxed = true),
             mockk<GiftCardProviderDao>(relaxed = true),
             networkState,
@@ -120,7 +124,7 @@ class DashSpendSubmissionStateTest {
 
     /** Submits a payment whose result never came back, leaving the purchase unresolved. */
     private suspend fun submitAmbiguously(viewModel: DashSpendViewModel) {
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } answers {
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
             // the verifier quarantines and persists the payment before the submission fails, so
             // the record is already on disk by the time the screen hears about it
             unresolvedOnDisk.value = true
@@ -133,6 +137,121 @@ class DashSpendSubmissionStateTest {
         } catch (expected: PaymentSubmissionPendingException) {
             // what an ambiguous submission looks like to the screen
         }
+    }
+
+    @Test
+    fun `a wallet replaced while the purchase waits is never the one that pays`() = runBlocking {
+        // review 4304575003: the purchase suspends in the unresolved-payment lookup (and in the IO
+        // dispatch) before it reaches the payment service. Wallet A, on which the user confirmed,
+        // is wiped and B installed meanwhile; the purchase must be refused, not paid from B.
+        val walletA = WalletSession("wallet A")
+        val walletB = WalletSession("wallet B")
+        var installed: WalletSession? = walletA
+        every { sendPaymentService.currentWalletSession() } answers { installed }
+        coEvery { unresolvedPayments.hasUnresolvedGiftCardPurchase() } coAnswers {
+            installed = walletB
+            false
+        }
+        val paidFrom = mutableListOf<WalletSession?>()
+        // the payment service's contract: a session whose wallet is no longer installed is refused
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+            val session = arg<WalletSession?>(3)
+            if (session == null || session !== installed) {
+                throw IllegalStateException("the wallet this payment was confirmed on has been wiped")
+            }
+            paidFrom += session
+            mockk<TxInfo>(relaxed = true) { every { txId } returns ZERO_TX_ID }
+        }
+        val viewModel = createViewModel()
+
+        try {
+            viewModel.payAndRecordOrder(paymentUri, emptyList())
+            fail("a purchase confirmed on wallet A was paid after A was replaced")
+        } catch (expected: IllegalStateException) {
+            // refused: nothing was sent
+        }
+
+        assertTrue("nothing was paid from the replacement wallet: $paidFrom", paidFrom.isEmpty())
+        assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+    }
+
+    @Test
+    fun `a purchase claimed at the tap pays from the wallet it was confirmed on, or not at all`() = runBlocking {
+        // the dialog claims at the confirm tap, then creates the order at the merchant (and may
+        // show the minimum-balance dialog) before payAndRecordOrder; a wipe in that window must
+        // not have the replacement pay for the order
+        val walletA = WalletSession("wallet A")
+        val walletB = WalletSession("wallet B")
+        var installed: WalletSession? = walletA
+        every { sendPaymentService.currentWalletSession() } answers { installed }
+        val paidFrom = mutableListOf<WalletSession?>()
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+            val session = arg<WalletSession?>(3)
+            if (session == null || session !== installed) {
+                throw IllegalStateException("the wallet this payment was confirmed on has been wiped")
+            }
+            paidFrom += session
+            mockk<TxInfo>(relaxed = true) { every { txId } returns ZERO_TX_ID }
+        }
+        val viewModel = createViewModel()
+
+        assertTrue(viewModel.tryStartSubmission())
+        installed = walletB // the order is being created at the merchant; the wallet is replaced
+
+        try {
+            viewModel.payAndRecordOrder(paymentUri, emptyList())
+            fail("a purchase confirmed on wallet A was paid after A was replaced")
+        } catch (expected: IllegalStateException) {
+            // refused: nothing was sent
+        }
+        assertTrue("nothing was paid from the replacement wallet: $paidFrom", paidFrom.isEmpty())
+    }
+
+    @Test
+    fun `a purchase is attributed to the provider it was confirmed with`() = runBlocking {
+        // review 4307041834: a recreated dialog can be dismissed while the NonCancellable purchase
+        // waits, and another provider picked; the purchase must keep the one it was confirmed with
+        val viewModel = createViewModel()
+        viewModel.selectedProvider = GiftCardProviderType.CTX
+        coEvery { unresolvedPayments.hasUnresolvedGiftCardPurchase() } coAnswers {
+            viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+            false
+        }
+        val transaction = mockk<TxInfo>(relaxed = true)
+        every { transaction.txId } returns ZERO_TX_ID
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
+
+        viewModel.payAndRecordOrder(paymentUri, emptyList())
+
+        val ctx = GiftCardProviderType.CTX.serviceName
+        coVerify(exactly = 1) { sendPaymentService.payWithDashUrl(any(), ctx, any(), any(), any()) }
+        coVerify(exactly = 0) {
+            sendPaymentService.payWithDashUrl(any(), GiftCardProviderType.PiggyCards.serviceName, any(), any(), any())
+        }
+        coVerify(exactly = 1) { transactionMetadata.markGiftCardTransaction(any(), ctx, any()) }
+    }
+
+    @Test
+    fun `a gift card attribution failing after the payment was sent keeps the order and the block`() = runBlocking {
+        // The payment service returned: the payment is sent. The purchase screen's own attribution
+        // of it then fails; that must not be read as an unsent payment, which would discard the
+        // order and let the user pay for it again.
+        val transaction = mockk<TxInfo>(relaxed = true)
+        every { transaction.txId } returns ZERO_TX_ID
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } coAnswers {
+            arg<(suspend (String) -> Unit)?>(4)?.invoke(ZERO_TX_ID)
+            transaction
+        }
+        coEvery { transactionMetadata.markGiftCardTransaction(any(), any(), any()) } throws
+            IllegalStateException("metadata store unavailable")
+        val viewModel = createViewModel()
+
+        val txId = viewModel.payAndRecordOrder(paymentUri, emptyList())
+
+        assertEquals(ZERO_TX_ID, txId)
+        assertEquals(GiftCardSubmissionState.COMPLETED, viewModel.submissionState.value)
+        coVerify(exactly = 0) { transactionMetadata.forgetTransaction(any()) }
+        assertFalse("a paid order must not be claimable again", viewModel.tryStartSubmission())
     }
 
     @Test
@@ -156,7 +275,7 @@ class DashSpendSubmissionStateTest {
         val viewModel = createViewModel()
         val transaction = mockk<TxInfo>(relaxed = true)
         every { transaction.txId } returns ZERO_TX_ID
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) } returns transaction
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
 
         viewModel.payAndRecordOrder(paymentUri, emptyList())
         assertEquals(GiftCardSubmissionState.COMPLETED, viewModel.submissionState.value)
@@ -254,6 +373,28 @@ class DashSpendSubmissionStateTest {
     }
 
     @Test
+    fun `a store read that fails once is retried, and purchases are allowed again once it recovers`() = runBlocking {
+        // 4297952501: a failed read used to complete the observation for good, leaving every later
+        // purchase blocked for the view model's lifetime even after storage recovered
+        var collections = 0
+        every { unresolvedPayments.observeUnresolvedGiftCardPurchase() } returns flow {
+            if (collections++ == 0) throw IllegalStateException("pending payments could not be read")
+            emitAll(MutableStateFlow(false))
+        }
+        DashSpendViewModel.unresolvedObservationRetryDelayMs = 0L
+        try {
+            val viewModel = createViewModel()
+
+            assertTrue("the failed read was retried", collections >= 2)
+            assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+            assertTrue(viewModel.tryStartSubmission())
+        } finally {
+            DashSpendViewModel.unresolvedObservationRetryDelayMs =
+                DashSpendViewModel.DEFAULT_UNRESOLVED_OBSERVATION_RETRY_MS
+        }
+    }
+
+    @Test
     fun `a claim taken before the store was read still cannot pay twice`() = runBlocking {
         // the observed value has not caught up with the store, which is where a view model built
         // moments ago sits, so the claim below is granted on no knowledge at all
@@ -270,7 +411,7 @@ class DashSpendSubmissionStateTest {
             assertEquals(GiftCardSubmissionState.PENDING, expected.state)
         }
 
-        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) }
     }
 
     private companion object {

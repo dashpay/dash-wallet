@@ -211,7 +211,6 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
 
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-        (requireActivity() as AbstractBindServiceActivity).doUnbindService()
         // Nothing is posted back here on completion. The wipe hands the UI
         // over to OnboardingActivity itself, before it destroys anything, and
         // then runs for minutes — this fragment and its activity are long gone
@@ -220,7 +219,19 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
         // took the process down with "Fragment SecurityFragment not attached
         // to Activity"; the progress it showed is now owned by the screen that
         // survives the wipe.
-        viewModel.triggerWipe()
+        if (viewModel.triggerWipe()) {
+            // Still synchronous with the start request, so the service is unbound
+            // before it handles the wipe command.
+            (requireActivity() as? AbstractBindServiceActivity)?.doUnbindService()
+        } else {
+            // Refused (the wipe could not be recorded): the wallet is untouched.
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.wallet_lock_reset_wallet_title),
+                getString(R.string.loading_error),
+                getString(R.string.button_dismiss)
+            ).show(requireActivity())
+        }
     }
 
     private fun showSeed(seed: Array<String>) {

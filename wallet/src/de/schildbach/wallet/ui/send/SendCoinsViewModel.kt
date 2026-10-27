@@ -617,6 +617,9 @@ class SendCoinsViewModel @Inject constructor(
                     finalSendRequest,
                     checkBalanceConditions = checkBalance,
                     intendedRecipient = intendedRecipient,
+                    // the wallet this screen built and confirmed the payment on: a wipe since
+                    // must not have the replacement pay it, on either route
+                    originWallet = wallet,
                     onBroadcast = { txid ->
                         if (payment != null) spentContactPayment.set(payment)
                         signals.broadcast(txid)

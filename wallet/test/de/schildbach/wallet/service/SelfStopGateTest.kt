@@ -138,4 +138,16 @@ class SelfStopGateTest {
         }
         assertEquals(4, reported)
     }
+
+    @Test
+    fun `a stop owed in advance is honoured by the next command and cleared once accepted`() {
+        val gate = SelfStopGate()
+        gate.onStart(1)
+
+        gate.oweStop("previous cleanup stuck")
+        assertEquals("previous cleanup stuck", gate.owedStopReason)
+
+        assertTrue(gate.requestStop("previous cleanup stuck", mustStop = true) { true })
+        assertNull(gate.owedStopReason)
+    }
 }

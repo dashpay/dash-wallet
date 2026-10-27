@@ -854,6 +854,18 @@ class ShieldedTransferExecutorTest {
             ),
             shieldedOutcomeNotification(ShieldedSubmitState.NotSent("reason"))
         )
+        // Review 1b15e950af15: a shield refused because an earlier payment is still confirming
+        // says so, instead of the generic "transfer failed" body.
+        assertEquals(
+            ShieldedOutcomeNotification(
+                R.string.shielded_transfer_failed,
+                R.string.payment_still_confirming,
+                showsTransferCompletedToast = false
+            ),
+            shieldedOutcomeNotification(
+                ShieldedSubmitState.NotSent("shieldFromWallet: pending payment inputs unprotected")
+            )
+        )
         assertEquals(
             ShieldedOutcomeNotification(
                 R.string.shielded_transfer_ambiguous_title,

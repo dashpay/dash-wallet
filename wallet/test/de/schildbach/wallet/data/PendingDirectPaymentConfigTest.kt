@@ -71,12 +71,20 @@ class PendingDirectPaymentConfigTest {
             """"tx":"zzzz","paymentUrl":"https://merchant.example/pay/3",""" +
             """"serviceName":"CTX","createdAt":1700000000000}"""
 
+    /** Makes [PendingDirectPaymentConfig.remove] fail where the change would be written, as a full disk does. */
+    private var removalFails = false
+
     @Before
     fun setUp() {
-        config = PendingDirectPaymentConfig(
+        // One config per test: DataStore refuses a second instance on the same file.
+        config = object : PendingDirectPaymentConfig(
             ApplicationProvider.getApplicationContext<Application>(),
             mockk<WalletDataProvider>(relaxed = true)
-        )
+        ) {
+            override suspend fun beforeRemovalLands() {
+                if (removalFails) throw java.io.IOException("disk full")
+            }
+        }
         runBlocking { config.clearAll() }
     }
 
@@ -154,6 +162,77 @@ class PendingDirectPaymentConfigTest {
     fun undecodableEntryRefusesToRead() = runBlocking {
         seed("[$undecodableEntry]")
         assertRefusesToRead("an undecodable entry") { runBlocking { config.getAllOrThrow() } }
+    }
+
+    // --- a refusal must not carry the stored blob (review 23bcca3c4bfd) ------------------------
+
+    /**
+     * Stands in for what the blob really holds: signed transaction bytes, amounts, payment URLs.
+     * Android's JSON parser quotes its input in syntax errors, so a parser exception kept as a
+     * cause would put it in every log line that prints the throwable.
+     */
+    private val marker = "SECRET-0102030405-amount-123456789-https://merchant.example/pay/leak"
+
+    private val leakyBlobs = listOf(
+        "truncated JSON" to """[{"tx":"$marker""",
+        "a JSON object" to """{"tx":"$marker"}""",
+        "a bare string" to """"$marker"""",
+        "a non-object element" to """["$marker"]""",
+        "an undecodable entry" to """[{"txId":"$marker","tx":"$marker","paymentUrl":"$marker"}]"""
+    )
+
+    private fun assertCarriesNoStoredData(what: String, failure: Throwable) {
+        var current: Throwable? = failure
+        var depth = 0
+        while (current != null && depth < 16) {
+            val texts = listOfNotNull(current.message, current.localizedMessage, current.toString()) +
+                current.suppressed.map { it.toString() }
+            texts.forEach { text ->
+                assertFalse("$what: stored data leaked via ${current?.javaClass?.name}: $text", marker in text)
+            }
+            current = current.cause
+            depth++
+        }
+    }
+
+    private inline fun refusalOf(what: String, block: () -> Unit): IllegalStateException {
+        try {
+            block()
+        } catch (e: IllegalStateException) {
+            return e
+        }
+        fail("$what was accepted; an unreadable store must not read as an empty one")
+        throw AssertionError("unreachable")
+    }
+
+    @Test
+    fun strictReadRefusalsCarryNoStoredData() {
+        for ((what, blob) in leakyBlobs) {
+            seed(blob)
+            assertCarriesNoStoredData(what, refusalOf(what) { runBlocking { config.getAllOrThrow() } })
+        }
+    }
+
+    @Test
+    fun observedReadRefusalsCarryNoStoredData() {
+        for ((what, blob) in leakyBlobs) {
+            seed(blob)
+            assertCarriesNoStoredData(
+                what,
+                refusalOf(what) { runBlocking { config.observeUnresolvedGiftCardPurchase().first() } }
+            )
+        }
+    }
+
+    @Test
+    fun writeRefusalsCarryNoStoredDataAndLeaveTheStoreAsItWas() {
+        // Only the blobs that do not parse as an array refuse a write; the others are carried.
+        for ((what, blob) in leakyBlobs.take(3)) {
+            seed(blob)
+            assertCarriesNoStoredData(what, refusalOf(what) { runBlocking { config.add(payment) } })
+            assertCarriesNoStoredData(what, refusalOf(what) { runBlocking { config.remove(payment.txId) } })
+            assertEquals(what, blob, raw())
+        }
     }
 
     // --- writes must never erase what they could not read -------------------------------------
@@ -281,10 +360,10 @@ class PendingDirectPaymentConfigTest {
     }
 
     @Test
-    fun aReleasedPurchaseNoLongerBlocks() = runBlocking {
-        // its inputs are free again, and the order that outlives it is kept only to explain a late
-        // broadcast, so waiting out an unlucky purchase must not cost the user gift cards for the
-        // whole retention period
+    fun aReleasedPurchaseNoLongerBlocksAnotherPurchase() = runBlocking {
+        // A new gift card purchase is a separate order with its own invoice, not a second payment
+        // of this one: a late broadcast of the released payment is still attributed to its own
+        // order. Only the same invoice stays blocked (review 9fa90c30ccf1, by request hash).
         config.add(giftCardPayment.copy(abandoned = true))
 
         assertFalse(config.hasUnresolvedGiftCardPurchase())
@@ -321,6 +400,52 @@ class PendingDirectPaymentConfigTest {
         assertEquals(listOf(false, true, false), seen)
     }
 
+    @Test
+    fun aSettledPurchaseWhoseRemovalFailedNoLongerBlocks() = runBlocking {
+        // The verifier settled the payment and keeps retrying the removal; a new purchase must
+        // not wait for that retry to land.
+        config.add(giftCardPayment)
+        removalFails = true
+
+        assertTrue(runCatching { config.remove(giftCardPayment.txId) }.isFailure)
+
+        val onDisk = config.getAllOrThrow().map { it.txId }
+        assertEquals("the record is still on disk", listOf(giftCardPayment.txId), onDisk)
+        assertFalse(config.hasUnresolvedGiftCardPurchase())
+        assertFalse(config.observeUnresolvedGiftCardPurchase().first())
+    }
+
+    @Test
+    fun aFailedRemovalHidesOnlyTheRecordItWasFor() = runBlocking {
+        config.add(giftCardPayment)
+        config.add(otherPayment.copy(isGiftCardPurchase = true))
+        removalFails = true
+
+        runCatching { config.remove(giftCardPayment.txId) }
+
+        assertTrue(config.hasUnresolvedGiftCardPurchase())
+        assertTrue(config.observeUnresolvedGiftCardPurchase().first())
+    }
+
+    @Test
+    fun aQuarantineAfterAFailedRemovalBlocksAgain() = runBlocking {
+        // the same txid quarantined anew is an active payment, whatever the earlier one left behind
+        config.add(giftCardPayment)
+        removalFails = true
+        runCatching { config.remove(giftCardPayment.txId) }
+        assertFalse(config.hasUnresolvedGiftCardPurchase())
+
+        config.add(giftCardPayment.copy(revision = 7L))
+
+        assertTrue(config.hasUnresolvedGiftCardPurchase())
+        assertTrue(config.observeUnresolvedGiftCardPurchase().first())
+
+        // and a removal that lands afterwards still lifts it
+        removalFails = false
+        config.remove(giftCardPayment.txId)
+        assertFalse(config.hasUnresolvedGiftCardPurchase())
+    }
+
     // --- the invoice identity, and records written before it existed ---------------------------
 
     @Test
@@ -353,5 +478,35 @@ class PendingDirectPaymentConfigTest {
         config.add(payment)
 
         assertEquals(null, config.getAllOrThrow().single().paymentRequestId)
+    }
+
+    @Test
+    fun theFeeRoundTripsAndAnOlderRecordHasNone() = runBlocking {
+        // review 4303472428: the fee is stored so a resubmission can show it; a record written
+        // before it was (the seeded shape above) decodes with no fee rather than being refused
+        config.add(payment.copy(feeDuffs = 1_234L))
+        assertEquals(1_234L, config.getAllOrThrow().single().feeDuffs)
+
+        seed(
+            """[{"txId":"${payment.txId}","tx":"01020304",""" +
+                """"paymentUrl":"https://merchant.example/pay/1",""" +
+                """"serviceName":"CTX","createdAt":1700000000000}]"""
+        )
+        assertEquals(null, config.getAllOrThrow().single().feeDuffs)
+    }
+
+    @Test
+    fun theVerifiedMerchantRoundTripsAndAnOlderRecordHasNone() = runBlocking {
+        // what a different order to the same merchant is matched on; a record written before it
+        // was stored decodes with none (it is still matched by its url host and payee scripts)
+        config.add(payment.copy(merchantName = "Acme Inc"))
+        assertEquals("Acme Inc", config.getAllOrThrow().single().merchantName)
+
+        seed(
+            """[{"txId":"${payment.txId}","tx":"01020304",""" +
+                """"paymentUrl":"https://merchant.example/pay/1",""" +
+                """"serviceName":"CTX","createdAt":1700000000000}]"""
+        )
+        assertEquals(null, config.getAllOrThrow().single().merchantName)
     }
 }

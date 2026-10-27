@@ -349,8 +349,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private suspend fun handleSend(value: Dash, isEmptyWallet: Boolean): Boolean {
+        // Bound once, at the confirm: the leftover-balance dialog below waits on the user, and
+        // the send it leads to must still come from the wallet the transfer was confirmed on.
+        val session = transferDashViewModel.currentWalletSession()
         try {
-            transferDashViewModel.sendDash(value, isEmptyWallet, true)
+            transferDashViewModel.sendDash(value, isEmptyWallet, true, session)
             return true
         } catch (ex: Exception) {
             if (!ex.isLeftoverBalanceWarning) {
@@ -360,7 +363,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             val result = MinimumBalanceDialog().showAsync(requireActivity())
 
             if (result == true) {
-                transferDashViewModel.sendDash(value, isEmptyWallet, false)
+                transferDashViewModel.sendDash(value, isEmptyWallet, false, session)
                 return true
             }
         }

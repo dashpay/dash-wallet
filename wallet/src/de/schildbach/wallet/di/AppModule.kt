@@ -126,7 +126,10 @@ abstract class AppModule {
             l1ShadowSyncService: L1ShadowSyncService,
             l1SendProbeService: L1SendProbeService,
             bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory,
-            pendingPaymentVerifier: PendingDirectPaymentVerifier
+            pendingPaymentVerifier: PendingDirectPaymentVerifier,
+            // The process-wide wipe barrier (a @Singleton): Reset Wallet raises this instance, so
+            // the runner must hold the same one.
+            fundingSelectionLock: de.schildbach.wallet.payments.FundingSelectionLock
         ): WalletSendPaymentService {
             val realService = SendCoinsTaskRunner(
                 walletData,
@@ -142,7 +145,8 @@ abstract class AppModule {
                 l1ShadowSyncService,
                 l1SendProbeService,
                 bridgedTransactionFactory,
-                pendingPaymentVerifier
+                pendingPaymentVerifier,
+                fundingSelectionLock
             )
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {

@@ -22,8 +22,10 @@ import androidx.annotation.VisibleForTesting
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.Sha256Hash
@@ -32,7 +34,6 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.services.UnresolvedPaymentsProvider
 import org.json.JSONArray
-import org.json.JSONException
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -84,7 +85,43 @@ data class PendingDirectPayment(
      *
      * Null for a record written before this was stored.
      */
-    val walletId: String? = null
+    val walletId: String? = null,
+    /**
+     * The fee of [txBytes] in duffs, as the SDK reported it when the transaction was built, so a
+     * resubmission can show the real fee (review 4303472428). Rebuilding it later needs the value
+     * of every input, which the wallet may no longer be able to supply.
+     *
+     * Null for a record written before this was stored, and when the fee was not known.
+     */
+    val feeDuffs: Long? = null,
+    /**
+     * Which write of this record this is. Every write of a record (a quarantine, a release, a
+     * reactivation, putting an unsent resubmission back) stores a fresh value, so a step that
+     * decided what to do from an earlier read can tell, under the verifier's record lock, whether
+     * the record is still the one it decided on, and do nothing when it is not.
+     *
+     * 0 for a record written before this was stored.
+     */
+    val revision: Long = 0L,
+    /**
+     * Identifies the ORDER this paid, stably across refreshes of its request: a hash of the
+     * request's payment_url, its outputs in canonical order and its verified merchant identity
+     * (see `PaymentIntent.orderIdentity`). [paymentRequestId] changes when the merchant re-serves
+     * the request for the same order with a new time, expiry or signature; this does not, so a
+     * refreshed request is still recognised as the invoice this paid.
+     *
+     * Null for a record written before this was stored (such a record is still matched by
+     * [paymentRequestId]), and for a payment that had no payment request behind it.
+     */
+    val orderId: String? = null,
+    /**
+     * The merchant name the request was signed with, when its PKI signature was verified. One of
+     * the things a different order to the same merchant is recognised by while this payment is
+     * unresolved (see `PendingDirectPaymentVerifier.Merchant`).
+     *
+     * Null for an unsigned or unverified request, and for a record written before this was stored.
+     */
+    val merchantName: String? = null
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put(KEY_TX_ID, txId.toString())
@@ -98,6 +135,10 @@ data class PendingDirectPayment(
         .put(KEY_ABANDONED, abandoned)
         .put(KEY_WATCH_EXPIRED, watchExpired)
         .put(KEY_WALLET_ID, walletId ?: JSONObject.NULL)
+        .put(KEY_FEE_DUFFS, feeDuffs ?: JSONObject.NULL)
+        .put(KEY_REVISION, revision)
+        .put(KEY_ORDER_ID, orderId ?: JSONObject.NULL)
+        .put(KEY_MERCHANT_NAME, merchantName ?: JSONObject.NULL)
 
     companion object {
         private const val KEY_TX_ID = "txId"
@@ -111,6 +152,10 @@ data class PendingDirectPayment(
         private const val KEY_ICON_URL = "iconUrl"
         private const val KEY_WATCH_EXPIRED = "watchExpired"
         private const val KEY_WALLET_ID = "walletId"
+        private const val KEY_FEE_DUFFS = "feeDuffs"
+        private const val KEY_REVISION = "revision"
+        private const val KEY_ORDER_ID = "orderId"
+        private const val KEY_MERCHANT_NAME = "merchantName"
 
         fun fromJson(json: JSONObject): PendingDirectPayment = PendingDirectPayment(
             txId = Sha256Hash.wrap(json.getString(KEY_TX_ID)),
@@ -131,7 +176,19 @@ data class PendingDirectPayment(
             abandoned = json.optBoolean(KEY_ABANDONED, false),
             watchExpired = json.optBoolean(KEY_WATCH_EXPIRED, false),
             // opt for the same reason as paymentRequestId
-            walletId = if (json.isNull(KEY_WALLET_ID)) null else json.optString(KEY_WALLET_ID, "").ifEmpty { null }
+            walletId = if (json.isNull(KEY_WALLET_ID)) null else json.optString(KEY_WALLET_ID, "").ifEmpty { null },
+            // opt for the same reason as paymentRequestId; a negative value is not a fee
+            feeDuffs = if (json.isNull(KEY_FEE_DUFFS)) null else json.optLong(KEY_FEE_DUFFS, -1L).takeIf { it >= 0 },
+            // opt for the same reason as paymentRequestId
+            revision = json.optLong(KEY_REVISION, 0L),
+            // opt for the same reason as paymentRequestId
+            orderId = if (json.isNull(KEY_ORDER_ID)) null else json.optString(KEY_ORDER_ID, "").ifEmpty { null },
+            // opt for the same reason as paymentRequestId
+            merchantName = if (json.isNull(KEY_MERCHANT_NAME)) {
+                null
+            } else {
+                json.optString(KEY_MERCHANT_NAME, "").ifEmpty { null }
+            }
         )
     }
 }
@@ -153,6 +210,16 @@ open class PendingDirectPaymentConfig @Inject constructor(
     }
 
     private val mutex = Mutex()
+
+    /**
+     * Payments whose removal was asked for and has not landed yet. Only a settled payment is ever
+     * removed (see PendingDirectPaymentVerifier.removeRecord), so asking settles it: the gift card
+     * answers below leave these out, rather than letting a failed delete block new purchases until
+     * the verifier's retry lands. Cleared by the removal that lands, by a fresh [add] of the same
+     * txid (a payment quarantined anew is active again) and by a wipe. In memory only: after a
+     * restart the record is recovered and settled again like any other.
+     */
+    private val settling = MutableStateFlow<Set<Sha256Hash>>(emptySet())
 
     open suspend fun getAll(): List<PendingDirectPayment> = decode(get(PENDING_PAYMENTS)).readable
 
@@ -185,7 +252,11 @@ open class PendingDirectPaymentConfig @Inject constructor(
      * strictly; answering "nothing pending" here would only let the user get further first.
      */
     override suspend fun hasUnresolvedGiftCardPurchase(): Boolean = try {
-        getAllOrThrow().any { it.isUnresolvedGiftCard }
+        // Store first, marks second: a removal landing in between leaves its record counted, not
+        // a fresh quarantine of the same txid uncounted.
+        val stored = getAllOrThrow()
+        val settled = settling.value
+        stored.any { it.isUnresolvedGiftCard && it.txId !in settled }
     } catch (e: Exception) {
         log.error("could not read pending payments; treating a gift card purchase as outstanding", e)
         true
@@ -198,18 +269,23 @@ open class PendingDirectPaymentConfig @Inject constructor(
      * unreadable store blocks instead of quietly permitting.
      */
     override fun observeUnresolvedGiftCardPurchase(): Flow<Boolean> =
-        appContext.dataStore.data.map { preferences ->
+        combine(appContext.dataStore.data, settling) { preferences, settled ->
             val stored = parse(preferences[PENDING_PAYMENTS])
             check(stored.unreadable.isEmpty()) {
                 "${stored.unreadable.size} pending direct payment(s) could not be decoded"
             }
-            stored.readable.any { it.isUnresolvedGiftCard }
+            stored.readable.any { it.isUnresolvedGiftCard && it.txId !in settled }
         }
 
     /**
-     * Released payments are deliberately not counted: their inputs are free again and the order
-     * that outlives them is kept only to explain a late broadcast, so a user who has waited out an
-     * unlucky purchase can buy again rather than being locked out for the retention period.
+     * Only an unreleased gift card purchase blocks another one (the #1560 rule). A released
+     * (abandoned) one does not: a new purchase is a separate order with its own invoice, not a
+     * second payment of the released one, and if the payee still broadcasts that late, the watch
+     * attributes it to its own order, so the user gets that card and loses nothing.
+     *
+     * The protection of review 9fa90c30ccf1 is untouched: it is about paying the SAME invoice twice,
+     * and the released record keeps blocking its own request (by request hash, in
+     * PendingDirectPaymentVerifier) until its transaction is seen or invalidated.
      */
     private val PendingDirectPayment.isUnresolvedGiftCard: Boolean
         get() = isGiftCardPurchase && !abandoned
@@ -240,6 +316,10 @@ open class PendingDirectPaymentConfig @Inject constructor(
             }
             val stored = parse(preferences[PENDING_PAYMENTS])
             val payments = stored.readable.filter { it.txId != payment.txId } + payment
+            // Before the write lands, so no reader sees the new record still marked. Should the
+            // write fail, the settled record is counted again until the verifier's retry of its
+            // removal marks it anew: blocking, never permitting.
+            settling.update { it - payment.txId }
             preferences[PENDING_PAYMENTS] = encode(payments, stored.unreadable)
         }
         if (refused) {
@@ -249,6 +329,7 @@ open class PendingDirectPaymentConfig @Inject constructor(
 
     /** Leaves the store as it is when nothing matches [txId], rather than rewriting it unchanged. */
     open suspend fun remove(txId: Sha256Hash) = mutex.withLock {
+        settling.update { it + txId }
         appContext.dataStore.edit { preferences ->
             val stored = parse(preferences[PENDING_PAYMENTS])
             val remaining = stored.readable.filter { it.txId != txId }
@@ -256,6 +337,16 @@ open class PendingDirectPaymentConfig @Inject constructor(
                 beforeRemovalLands()
                 preferences[PENDING_PAYMENTS] = encode(remaining, stored.unreadable)
             }
+        }
+        settling.update { it - txId }
+    }
+
+    override suspend fun clearAll() {
+        try {
+            super.clearAll()
+        } finally {
+            // nothing of the wiped wallet is retried, as the verifier drops its removal queue
+            settling.value = emptySet()
         }
     }
 
@@ -300,7 +391,13 @@ open class PendingDirectPaymentConfig @Inject constructor(
     private fun decode(value: String?): StoredPayments = try {
         parse(value)
     } catch (e: Exception) {
-        log.error("pending direct payments are unreadable, reporting none: {}", value, e)
+        // Never the value or the exception itself: the blob holds the raw signed transactions
+        // (amounts included), and JSON parse errors echo the text they choked on.
+        log.error(
+            "pending direct payments are unreadable ({} chars), reporting none: {}",
+            value?.length,
+            e.javaClass.simpleName
+        )
         StoredPayments(emptyList(), emptyList())
     }
 
@@ -322,8 +419,15 @@ open class PendingDirectPaymentConfig @Inject constructor(
 
         val array = try {
             JSONArray(value)
-        } catch (e: JSONException) {
-            throw IllegalStateException("pending direct payments are not a JSON array", e)
+        } catch (e: Exception) {
+            // Sanitized, and deliberately WITHOUT the parser exception as its cause: Android's
+            // JSON parser quotes its input in the message ("... at character N of <input>"), and
+            // the input is the stored blob of signed transactions, amounts and payment URLs.
+            // Every caller logs this throwable whole. Still a refusal: the read stays fail-closed.
+            throw IllegalStateException(
+                "pending direct payments are not a JSON array " +
+                    "(${value.length} chars, ${e.javaClass.simpleName})"
+            )
         }
 
         val readable = mutableListOf<PendingDirectPayment>()
@@ -338,7 +442,12 @@ open class PendingDirectPaymentConfig @Inject constructor(
                 // failures, so naming types would let one entry escape and hide every payment
                 // again. getJSONObject also lands here when the element is not an object at all,
                 // which has to count as unreadable rather than be skipped.
-                log.error("could not read pending direct payment at index {}, keeping it as is", i, e)
+                // Type only: the entry holds a raw transaction and JSON errors quote it back.
+                log.error(
+                    "could not read pending direct payment at index {} ({}), keeping it as is",
+                    i,
+                    e.javaClass.simpleName
+                )
                 unreadable.add(array.opt(i) ?: JSONObject.NULL)
             }
         }

@@ -70,6 +70,7 @@ import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -189,7 +190,13 @@ internal fun isCompleteTxFailure(e: Exception): Boolean =
         e is IKey.KeyIsEncryptedException
 
 fun sdkSendNotAttemptedException(reason: String): IllegalStateException =
-    if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
+    if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_PENDING_PAYMENT_UNPROTECTED_REASON)) {
+        // An earlier payment's outcome is unknown and the engine cannot keep its inputs out of
+        // this build. Nothing was built; it lifts once that payment resolves.
+        org.dash.wallet.common.services.PaymentStillConfirmingException(
+            "cutover committed but an earlier payment is still being confirmed ($reason)"
+        )
+    } else if (reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)) {
         SendEngineNotSyncedException(
             "cutover committed but the SDK engine cannot fund a send yet ($reason)"
         )
@@ -319,6 +326,24 @@ fun extractSdkRoutablePayment(
 }
 
 /**
+ * [tx], a payment just sent, as a [TxInfo] for the caller. The conversion reads the installed
+ * wallet, which a wipe can take away. A failure then must not reach the caller as a failed payment,
+ * which a gift card purchase answers by discarding its order and letting it be paid again; like an
+ * acknowledged payment whose display failed, it is reported as [PaymentSubmissionPendingException].
+ */
+internal fun sentTxInfo(tx: Transaction, walletData: WalletData): TxInfo = try {
+    tx.toTxInfo(walletData.transactionBag, walletData.networkParameters)
+} catch (e: CancellationException) {
+    throw e
+} catch (e: Exception) {
+    throw PaymentSubmissionPendingException(
+        tx.txId.toString(),
+        e,
+        "payment ${tx.txId} was sent, but could not be read back from the wallet"
+    )
+}
+
+/**
  * Post-cutover BIP70/BIP270 (issue #1520 Phase 1B item 1): the
  * `(base58 address, duffs)` recipients of a payment intent when — and ONLY
  * when — EVERY output is a standard pay-to-address script (P2PKH/P2SH)
@@ -365,7 +390,12 @@ class SendCoinsTaskRunner @Inject constructor(
     private val l1ShadowSyncService: L1ShadowSyncService,
     private val l1SendProbeService: L1SendProbeService,
     private val bridgedTransactionFactory: de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory,
-    private val pendingPaymentVerifier: PendingDirectPaymentVerifier
+    private val pendingPaymentVerifier: PendingDirectPaymentVerifier,
+    /**
+     * The process-wide wipe barrier; see [FundingSelectionLock]. No default: a private instance is
+     * one no wipe ever raises, so every construction passes the singleton.
+     */
+    private val fundingSelection: FundingSelectionLock
 ) : WalletSendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
@@ -393,6 +423,42 @@ class SendCoinsTaskRunner @Inject constructor(
         Constants.HTTP_CLIENT.newBuilder().retryOnConnectionFailure(false).build()
     }
 
+    /** The HTTP exchange of a BIP70 Payment message; replaced by tests to stage a race with it. */
+    @VisibleForTesting
+    internal var directPayExchange: suspend (Request) -> okhttp3.Response = { request -> exchangeUntilDone(request) }
+
+    /**
+     * POSTs [request] and returns the response. Unlike a plain cancellable call, a cancellation
+     * (a wipe, through [PendingDirectPaymentVerifier.submitWhileOwned]) aborts the HTTP call and
+     * returns only once OkHttp has finished with it. The wipe waiting on the hold this runs in
+     * then clears the payment's records only after nothing more of it can leave the device.
+     * Cancelled before the call is made, nothing is sent at all.
+     */
+    private suspend fun exchangeUntilDone(request: Request): okhttp3.Response {
+        currentCoroutineContext().ensureActive()
+        val call = directPayHttpClient.newCall(request)
+        val outcome = CompletableDeferred<okhttp3.Response>()
+        call.enqueue(
+            object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                    outcome.completeExceptionally(e)
+                }
+
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    if (!outcome.complete(response)) response.close()
+                }
+            }
+        )
+        return try {
+            outcome.await()
+        } catch (e: CancellationException) {
+            call.cancel()
+            // OkHttp answers a cancelled call with onFailure (or a response already on its way)
+            withContext(NonCancellable) { runCatching { outcome.await() }.getOrNull()?.close() }
+            throw e
+        }
+    }
+
     /**
      * Waits until the inputs of any unresolved payment are protected again.
      *
@@ -415,6 +481,19 @@ class SendCoinsTaskRunner @Inject constructor(
         pendingPaymentVerifier.unresolvedSubmissionFor(paymentRequestHash?.let { Constants.HEX.encode(it) })
 
     /**
+     * [findUnresolvedSubmission] for a fetched request: also matches an earlier submission for the
+     * same ORDER made from a different refresh of its request (new time, expiry or signature).
+     */
+    suspend fun findUnresolvedSubmission(paymentIntent: PaymentIntent): Sha256Hash? =
+        pendingPaymentVerifier.unresolvedSubmissionFor(
+            paymentIntent.paymentRequestId,
+            paymentIntent.orderIdentity(),
+            paymentIntent.legacyOrderIdentity(),
+            paymentIntent.paymentUrl,
+            paymentIntent.merchant()
+        )
+
+    /**
      * Refuses to go on with a payment whose wallet has been wiped since the user confirmed it,
      * including one a wipe has started on but not yet removed.
      */
@@ -422,6 +501,17 @@ class SendCoinsTaskRunner @Inject constructor(
         if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
             throw IllegalStateException("the wallet this payment was confirmed on has been wiped; not $next")
         }
+    }
+
+    override fun currentWalletSession(): WalletSession? = walletData.wallet?.let { WalletSession(it) }
+
+    override fun walletOf(session: WalletSession?): Wallet? {
+        session ?: return null
+        val wallet = session.handle as? Wallet
+            ?: throw IllegalArgumentException("not a wallet session: ${session.handle.javaClass.name}")
+        // The same refusal every origin wallet gets, retired-wallet guard included.
+        ensureStillOwned(wallet, "sending anything")
+        return wallet
     }
 
     private val paymentIntentParser = DashPaymentIntentParser(org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.id))
@@ -434,12 +524,14 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean,
         checkBalanceConditions: Boolean,
         beforeSending: Consumer<Transaction>?,
-        canSendLockedOutput: Predicate<TransactionOutput>?
+        canSendLockedOutput: Predicate<TransactionOutput>?,
+        originWallet: Wallet?
     ): Transaction {
         // Coin selection below must not be able to pick an outpoint reserved by an uncertain
         // payment whose locks have not been restored since the last process death.
         pendingPaymentVerifier.awaitRestored()
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val wallet = originWallet?.also { ensureStillOwned(it, "sending it") }
+            ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
         if (checkBalanceConditions && !wallet.isAddressMine(address)) {
@@ -460,7 +552,15 @@ class SendCoinsTaskRunner @Inject constructor(
             )
         ) {
             CutoverSendRoute.DASHJ -> Unit // unchanged path below
-            CutoverSendRoute.SDK_BRIDGED -> return sendViaSdkBridged(address, amount, beforeSending, emptyWallet)
+            // Bound to the wallet resolved and checked above, never to the caller's possibly-null
+            // [originWallet]: a wipe during the SDK call must not let the replacement pay.
+            CutoverSendRoute.SDK_BRIDGED -> return sendViaSdkBridged(
+                address,
+                amount,
+                beforeSending,
+                emptyWallet,
+                originWallet = wallet
+            )
             CutoverSendRoute.FAIL_CLOSED -> throw SendNotSdkRoutableException(
                 "cutover committed: this send type (custom coin selection, locked-output " +
                     "predicate, or typed-overload send-all) is not SDK-routable and dashj cannot " +
@@ -473,7 +573,9 @@ class SendCoinsTaskRunner @Inject constructor(
         return sendCoins(
             sendRequest,
             checkBalanceConditions = false,
-            beforeSending = beforeSending
+            beforeSending = beforeSending,
+            // the wallet resolved above, which the request was built from
+            originWallet = wallet
         )
     }
 
@@ -504,6 +606,13 @@ class SendCoinsTaskRunner @Inject constructor(
      * reusing it. Never called for NotBroadcast (nothing left the wallet):
      * [onNotBroadcast] is, just before the throw — the proof a caller needs
      * to treat the payment as never sent.
+     *
+     * The broadcast, the last ownership check, the bridge into [originWallet], [onBroadcast] and
+     * [beforeSending] all run in ONE shared hold of the wipe barrier ([sdkSendTail]; the SDK
+     * service's own hold nests inside it): a Reset Wallet either refuses the whole send (nothing
+     * sent), or cancels it and waits for it before it detaches the wallet. Cancelled after the
+     * broadcast, nothing more runs (no bridge into a wallet being wiped) and the payment is
+     * reported pending ([WalletWipedDuringSubmissionException]), never "not sent" or "cancelled".
      */
     private suspend fun sendViaSdkBridged(
         address: Address,
@@ -511,13 +620,32 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>?,
         emptyWallet: Boolean = false,
         onBroadcast: ((txid: String?) -> Unit)? = null,
-        onNotBroadcast: (() -> Unit)? = null
-    ): Transaction {
-        val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet)
-        return when (result) {
+        onNotBroadcast: (() -> Unit)? = null,
+        /**
+         * The wallet the payment was confirmed on, or the one the caller resolved when it named
+         * none: checked once more right before the broadcast, and the one the result is bridged
+         * into. Never null, so no reroute can go out unbound.
+         */
+        originWallet: Wallet
+    ): Transaction = sdkSendTail(
+        knownTxIdHex = null,
+        notSent = { cause ->
+            notifyNotBroadcast(onNotBroadcast)
+            IllegalStateException("the wallet is being wiped; this payment was not sent", cause)
+        }
+    ) { tail ->
+        val result = sdkL1SendService.sendToAddress(address.toBase58(), Dash(amount.value), emptyWallet = emptyWallet) {
+            ensureStillOwned(originWallet, "sending it")
+        }
+        when (result) {
             is SdkWriteResult.Broadcast -> {
+                tail.reached(result.value)
+                // Stops here if a wipe was raised during the broadcast: nothing below may touch a
+                // wallet that is being detached.
+                tail.ensureNotWiped(originWallet)
                 notifyBroadcast(onBroadcast, result.value)
-                when (val bridged = bridgedTransactionFactory.bridge(result.value)) {
+                // Bridged into the wallet the payment was confirmed on, never re-resolved.
+                when (val bridged = bridgedTransactionFactory.bridge(result.value, originWallet = originWallet)) {
                     is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> {
                         beforeSending?.accept(bridged.transaction)
                         bridged.transaction
@@ -530,6 +658,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
             }
             is SdkWriteResult.Ambiguous -> {
+                tail.reached(null)
                 // Outcome unknown: the payment may be on the network. Signal it
                 // (no txid known) so a contact address is not reused, then
                 // rethrow as before — never retried (double-pay risk).
@@ -540,6 +669,70 @@ class SendCoinsTaskRunner @Inject constructor(
                 notifyNotBroadcast(onNotBroadcast)
                 throw sdkSendNotAttemptedException(result.reason)
             }
+        }
+    }
+
+    /** Where an [sdkSendTail] has got to. */
+    private inner class SdkSendTail(private val mark: SubmissionMark) {
+        /** The broadcast transaction's id, once a result names it. */
+        @Volatile
+        var txIdHex: String? = null
+            private set
+
+        /** The SDK result shows the payment went out, or may have: a wipe from here leaves it pending. */
+        fun reached(txIdHex: String?) {
+            txIdHex?.let { this.txIdHex = it }
+            mark.submitting()
+        }
+
+        /**
+         * Before anything after the broadcast touches [origin]: throws the wipe's cancellation
+         * when a wipe has been raised (the tail reports it pending), and refuses, as pending, a
+         * wallet that is no longer installed for any other reason.
+         */
+        suspend fun ensureNotWiped(origin: Wallet) {
+            currentCoroutineContext().ensureActive()
+            if (!pendingPaymentVerifier.stillOwnedBy(origin)) {
+                val txId = txIdHex
+                throw PaymentSubmissionPendingException(
+                    txId.orEmpty(),
+                    null,
+                    "payment ${txId ?: ""} went out, but the wallet that sent it is no longer installed; not committing it"
+                )
+            }
+        }
+    }
+
+    /**
+     * An SDK send's tail on one wallet — the broadcast, the last ownership check, the bridge,
+     * metadata and attribution, and every post-broadcast callback — in ONE shared hold of the
+     * wipe barrier ([FundingSelectionLock.withSharedSubmission]). The SDK service's own hold
+     * nests inside it and marks the same [SubmissionMark], so a wipe is reported by what had
+     * actually happened:
+     * - refused before the hold, or cancelled before the SDK call was made: nothing was sent,
+     *   [notSent] is thrown;
+     * - cancelled once the SDK call was made (during it, or between the broadcast and the
+     *   bridge): [WalletWipedDuringSubmissionException], a [PaymentSubmissionPendingException]
+     *   naming the transaction when it is known ([knownTxIdHex], or what [SdkSendTail.reached]
+     *   recorded). Nothing after the cancellation runs, so the bridge never reaches a wallet
+     *   being detached.
+     */
+    private suspend fun <T> sdkSendTail(
+        knownTxIdHex: String?,
+        notSent: (Throwable) -> Exception,
+        block: suspend (SdkSendTail) -> T
+    ): T {
+        var tail: SdkSendTail? = null
+        return fundingSelection.withSharedSubmission(
+            refused = { throw notSent(it) },
+            cancelled = { e, submitted ->
+                if (!submitted) throw notSent(e)
+                val txId = tail?.txIdHex ?: knownTxIdHex
+                log.warn("an SDK send ({}) was cancelled by a wallet wipe after it went out; reporting it pending", txId, e)
+                throw WalletWipedDuringSubmissionException(txId, e)
+            }
+        ) { mark ->
+            block(SdkSendTail(mark).also { tail = it })
         }
     }
 
@@ -606,15 +799,23 @@ class SendCoinsTaskRunner @Inject constructor(
         address: String,
         amount: Dash,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean
+        checkBalanceConditions: Boolean,
+        session: WalletSession?
     ): String {
+        // Taken before anything here can suspend; refused at once if that wallet is already gone.
+        // With no session, the wallet installed now: resolved once, here, so every later step
+        // (the pre-broadcast check, the dashj fall-through) is bound to it rather than to
+        // whatever a wipe has installed by then.
+        val origin = walletOf(session) ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         // Same barrier as every other payment entry point (see awaitPaymentReadiness).
         pendingPaymentVerifier.awaitRestored()
         val sdkResult = sdkL1SendService.sendToAddress(address, amount, emptyWallet) {
             // Same conditions the dashj-typed overload enforces before its
             // broadcast; throws (e.g. LeftoverBalanceException) propagate
-            // to the caller exactly as they do on the dashj path.
-            val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+            // to the caller exactly as they do on the dashj path. The wallet
+            // the payment was confirmed on is asked again here, right before
+            // the broadcast.
+            val wallet = origin.also { ensureStillOwned(it, "sending it") }
             val dashAddress = Address.fromString(walletData.networkParameters, address)
             if (checkBalanceConditions && !wallet.isAddressMine(dashAddress)) {
                 walletData.checkSendingConditions(dashAddress, amount.toCoin())
@@ -661,7 +862,8 @@ class SendCoinsTaskRunner @Inject constructor(
                 dashAddress,
                 amount.toCoin(),
                 emptyWallet = emptyWallet,
-                checkBalanceConditions = checkBalanceConditions
+                checkBalanceConditions = checkBalanceConditions,
+                originWallet = origin
             )
         } catch (t: Throwable) {
             baselineEstimate?.cancel()
@@ -764,15 +966,18 @@ class SendCoinsTaskRunner @Inject constructor(
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
+        session: WalletSession?,
         onTransactionCreated: (suspend (String) -> Unit)?
     ): Transaction {
-        // Taken before anything here can suspend. The barrier and the invoice fetch can each take
-        // many seconds, and everything after them selects coins, signs and submits; reading the
-        // installed wallet only then would let a wipe in between pay for this purchase from the
-        // replacement.
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        // The wallet the caller confirmed the payment on ([session], taken before the caller's own
+        // waits, review 4304575003), else the one installed now - taken before anything here can
+        // suspend. The barrier and the invoice fetch can each take many seconds, and everything
+        // after them selects coins, signs and submits; reading the installed wallet only then
+        // would let a wipe in between pay for this purchase from the replacement.
+        val wallet = walletOf(session) ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         return withContext(Dispatchers.IO) {
             pendingPaymentVerifier.awaitRestored()
+            ensureStillOwned(wallet, "paying it")
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
             createPaymentRequest(wallet, paymentIntent, serviceName, recovery, onTransactionCreated)
         }
@@ -782,10 +987,9 @@ class SendCoinsTaskRunner @Inject constructor(
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
+        session: WalletSession?,
         onTransactionCreated: (suspend (String) -> Unit)?
-    ): TxInfo =
-        payWithDashUrlTx(dashUri, serviceName, recovery, onTransactionCreated)
-            .toTxInfo(walletData.transactionBag, walletData.networkParameters)
+    ): TxInfo = sentTxInfo(payWithDashUrlTx(dashUri, serviceName, recovery, session, onTransactionCreated), walletData)
 
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoinsSelected(
@@ -795,15 +999,20 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean,
         checkBalanceConditions: Boolean,
         lockSentOutputsTo: String?,
-        canSpendLockedOutputsTo: String?
+        canSpendLockedOutputsTo: String?,
+        session: WalletSession?
     ): TxInfo {
+        // Taken before anything here can suspend; refused at once if that wallet is already gone.
+        // With no session, the wallet installed now, resolved once so the selection and the send
+        // below are bound to the same one.
+        val origin = walletOf(session) ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         val params = walletData.networkParameters
         val dashjAddress = Address.fromBase58(params, address)
         val selector = when (selection) {
             is SpendSelection.Any -> null
             is SpendSelection.ByAddress -> ByAddressCoinSelector(Address.fromBase58(params, selection.address))
             is SpendSelection.ExactOutput -> {
-                val tx = walletData.getTransaction(Sha256Hash.wrap(selection.txId))
+                val tx = origin.getTransaction(Sha256Hash.wrap(selection.txId))
                     ?: throw IllegalArgumentException("unknown transaction: " + selection.txId)
                 ExactOutputsSelector(listOf(tx.getOutput(selection.outputIndex.toLong())))
             }
@@ -821,7 +1030,8 @@ class SendCoinsTaskRunner @Inject constructor(
             },
             canSendLockedOutput = canSpendAddress?.let { ca ->
                 Predicate<TransactionOutput> { it.scriptPubKey.getToAddress(params) == ca }
-            }
+            },
+            originWallet = origin
         )
         return tx.toTxInfo(walletData.transactionBag, params)
     }
@@ -893,9 +1103,13 @@ class SendCoinsTaskRunner @Inject constructor(
         paymentIntent: PaymentIntent,
         serviceName: String? = null,
         recovery: PaymentRecoveryMetadata? = null
-    ): Transaction = withContext(Dispatchers.IO) {
-        pendingPaymentVerifier.awaitRestored()
-        directPayViaSdk(paymentIntent, serviceName, recovery)
+    ): Transaction {
+        // Taken before anything here suspends: the payment belongs to the wallet installed now.
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        return withContext(Dispatchers.IO) {
+            pendingPaymentVerifier.awaitRestored()
+            directPayViaSdk(wallet, paymentIntent, serviceName, recovery)
+        }
     }
 
     /**
@@ -917,9 +1131,12 @@ class SendCoinsTaskRunner @Inject constructor(
             // so leaving the screen does not end the wait: a wipe can start, or finish and
             // install a replacement, before the invoice arrives.
             ensureStillOwned(wallet, "selecting coins")
-            return directPayViaSdk(paymentIntent, serviceName, recovery, onTransactionCreated)
+            return directPayViaSdk(wallet, paymentIntent, serviceName, recovery, onTransactionCreated)
         } else {
             ensureStillOwned(wallet, "selecting coins")
+            if (sdkL1SendService.cutoverCommitted()) {
+                return payPlainIntentViaSdk(wallet, basePaymentIntent, serviceName, recovery, onTransactionCreated)
+            }
             val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
             val sendRequestForSigning = createSendRequest(
                 false,
@@ -927,16 +1144,6 @@ class SendCoinsTaskRunner @Inject constructor(
                 true,
                 sendRequest.ensureMinRequiredFee
             )
-            if (sdkL1SendService.cutoverCommitted()) {
-                // The SDK builds, signs and broadcasts a plain send in one step and selects its
-                // own inputs, so there is no transaction id before the broadcast and a dashj
-                // completeTx here would sign a transaction that is never sent (the held dashj
-                // wallet has no spendable outputs anyway). The caller hears about the
-                // transaction as soon as it exists, which is after it left.
-                val sent = sendCoins(sendRequestForSigning, serviceName = serviceName)
-                reportCreatedAfterBroadcast(sent.txId.toString(), onTransactionCreated)
-                return sent
-            }
             // Pre-cutover: the same ordering as the BIP70 branch. Complete and sign locally so
             // the transaction id is final, let the caller record its order, and only then commit
             // and broadcast. Recording afterwards would mean a failed insert arriving when the
@@ -953,27 +1160,14 @@ class SendCoinsTaskRunner @Inject constructor(
             // The callback suspends, and the gift card flow runs this NonCancellable, so a wipe can
             // finish while the order is being recorded. Committing to whatever is installed by
             // then would hand the replacement wallet this one's signed transaction.
-            return sendCoins(sendRequestForSigning, txCompleted = true, serviceName = serviceName, originWallet = wallet)
-        }
-    }
-
-    /**
-     * [onTransactionCreated] for a payment that is already on its way: the transaction exists,
-     * so a failure to record it must not read as a failed payment, which would send the caller
-     * into cleanup for an order it has paid for. It is reported as pending instead, which tells
-     * the caller to keep the order and withhold a retry.
-     */
-    private suspend fun reportCreatedAfterBroadcast(
-        txIdHex: String,
-        onTransactionCreated: (suspend (String) -> Unit)?
-    ) {
-        if (onTransactionCreated == null) return
-        try {
-            onTransactionCreated(txIdHex)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            log.error("payment {} was sent but the caller could not record it", txIdHex, e)
-            throw PaymentSubmissionPendingException(txIdHex, e)
+            // Pinned: the order just recorded is keyed to this exact transaction.
+            return sendCoins(
+                sendRequestForSigning,
+                txCompleted = true,
+                serviceName = serviceName,
+                originWallet = wallet,
+                recordedForDashjRoute = true
+            )
         }
     }
 
@@ -1015,18 +1209,37 @@ class SendCoinsTaskRunner @Inject constructor(
      * SDK builder is address-only. Also runs the same pre-send
      * leftover-balance condition the dashj path enforces at commit time.
      */
-    suspend fun buildDeferredBip70Payment(paymentIntent: PaymentIntent): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
+    suspend fun buildDeferredBip70Payment(
+        paymentIntent: PaymentIntent,
+        originWallet: Wallet
+    ): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment =
+        buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = true, originWallet = originWallet)
+
+    /**
+     * Builds, signs and reserves [paymentIntent]'s outputs through the SDK without broadcasting
+     * (see [buildDeferredBip70Payment]). [requirePaymentUrl] is false for a plain `dash:` payment,
+     * which has no BIP70 endpoint and is broadcast by the wallet itself.
+     */
+    private suspend fun buildDeferredSdkPayment(
+        paymentIntent: PaymentIntent,
+        requirePaymentUrl: Boolean,
+        originWallet: Wallet
+    ): de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment {
         // Before the SDK selects and reserves inputs: an uncertain payment's dashj-side locks
         // must be back first (see awaitPaymentReadiness).
         pendingPaymentVerifier.awaitRestored()
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        // The SDK API takes no wallet to build from: it builds from whichever wallet is bound. So
+        // this is bracketed instead. A wipe retires the old wallet before it unbinds anything, so
+        // a wallet still owned on both sides of the build was the bound one throughout.
+        val wallet = originWallet
+        ensureStillOwned(wallet, "building the payment")
         Context.propagate(wallet.context)
         val recipients = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
             ?: throw SendNotSdkRoutableException(
                 "cutover committed: this payment request has an output the SDK builder cannot " +
                     "express (non-address script or missing amount) — not SDK-routable"
             )
-        if (paymentIntent.paymentUrl == null) {
+        if (requirePaymentUrl && paymentIntent.paymentUrl == null) {
             // Fail fast BEFORE reserving inputs for a payment that could
             // never be submitted.
             throw InvalidPaymentRequestURL("Final payment intent URL is null")
@@ -1042,7 +1255,17 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
 
-        val payment = sdkL1SendService.buildDeferredPayment(recipients)
+        // Ownership asked again under the SDK's funding hold, right before it selects: the
+        // check after the build below remains, for a wipe that lands once the hold is gone.
+        val payment = sdkL1SendService.buildDeferredPayment(recipients) { pendingPaymentVerifier.stillOwnedBy(wallet) }
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            // The build may have selected the replacement wallet's funds. Nothing has been sent:
+            // give the reservation back and refuse.
+            releaseDeferredPayment(payment, wallet = null)
+            throw IllegalStateException(
+                "the wallet this payment was confirmed on was replaced during its build; not submitting"
+            )
+        }
         // Reservation mirror — TRANSITION-ONLY, delete with Phase 2
         // (#1521): until the dashj engine is retired, a not-yet-cut-over
         // install still has dashj-side spenders (manual sends, the
@@ -1054,7 +1277,7 @@ class SendCoinsTaskRunner @Inject constructor(
         // a lock failure must not fail the build. Once Phase 2 lands
         // (no dashj engine constructs at all) this mirror is dead code,
         // and Phase 3 (#1522) removes the Wallet object it locks.
-        runCatching { setReservedOutpointLocks(payment, locked = true) }
+        runCatching { setReservedOutpointLocks(payment, locked = true, wallet = wallet) }
             .onFailure { log.warn("failed to mirror the BIP70 reservation into wallet locks", it) }
         return payment
     }
@@ -1066,9 +1289,10 @@ class SendCoinsTaskRunner @Inject constructor(
      */
     private fun setReservedOutpointLocks(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
-        locked: Boolean
+        locked: Boolean,
+        wallet: Wallet? = walletData.wallet
     ) {
-        val wallet = walletData.wallet ?: return
+        wallet ?: return
         Context.propagate(wallet.context)
         val tx = Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
         for (input in tx.inputs) {
@@ -1084,10 +1308,25 @@ class SendCoinsTaskRunner @Inject constructor(
     /**
      * Release a [buildDeferredBip70Payment] reservation (abandoned
      * preview / pre-ack failure): SDK engine release + removal of the
-     * mirrored wallet locks.
+     * mirrored wallet locks on [wallet], the wallet it was built on.
+     *
+     * Nothing at all once [wallet] is no longer the installed wallet: its reservation lived in
+     * the engine of the wallet a wipe has since removed, and both the engine and the installed
+     * wallet now belong to the replacement, whose outpoints this must not unlock or release.
+     *
+     * @param wallet null only for a reservation built after its wallet was already replaced
+     *   (then the build ran on the replacement's engine): no mirrored locks were set, and the
+     *   engine release goes to the engine that made it
      */
-    suspend fun releaseDeferredPayment(payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment) {
-        runCatching { setReservedOutpointLocks(payment, locked = false) }
+    suspend fun releaseDeferredPayment(
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        wallet: Wallet?
+    ) {
+        if (wallet != null && !pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            log.info("not releasing the reservation of {}: the wallet it was built on was replaced", payment.txidHex)
+            return
+        }
+        runCatching { setReservedOutpointLocks(payment, locked = false, wallet = wallet) }
             .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks", it) }
         sdkL1SendService.releaseDeferredPayment(payment)
     }
@@ -1100,13 +1339,201 @@ class SendCoinsTaskRunner @Inject constructor(
      * [sendPrebuiltDirectPayment] on confirm.
      */
     private suspend fun directPayViaSdk(
+        wallet: Wallet,
         finalPaymentIntent: PaymentIntent,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): Transaction {
-        val payment = buildDeferredBip70Payment(finalPaymentIntent)
-        return sendPrebuiltDirectPayment(payment, finalPaymentIntent, serviceName, recovery, onTransactionCreated)
+        // [wallet] is the one the caller captured before anything suspended. The build suspends,
+        // and a wipe that finishes meanwhile installs a replacement: build and submit both stay
+        // bound to [wallet], and each refuses once it is no longer the installed one.
+        val payment = buildDeferredBip70Payment(finalPaymentIntent, wallet)
+        return sendPrebuiltDirectPayment(payment, finalPaymentIntent, wallet, serviceName, recovery, onTransactionCreated)
+    }
+
+    /**
+     * A plain `dash:` payment (no BIP70 request, e.g. a PiggyCards gift card order) once the SDK
+     * owns L1, with the same ordering as a BIP70 submission: the SDK builds, signs and reserves
+     * the transaction first; the caller records its order ([onTransactionCreated]) and the
+     * payment is quarantined with [PendingDirectPaymentVerifier] while nothing has been sent;
+     * only then is it broadcast. A process death after the broadcast therefore leaves both the
+     * order and a recovery record, and the watch commits and attributes the payment once the
+     * engine observes it.
+     *
+     * The one-step SDK send could not do this: it broadcast before any transaction id existed,
+     * so the order could only be written afterwards.
+     *
+     * Outcomes: a broadcast commits through the bridge (bound to [wallet]), attributes and drops
+     * the quarantine; a definitive pre-network refusal releases the reservation and the
+     * quarantine and throws, so the caller discards its order; an unknown outcome keeps both and
+     * throws [PaymentSubmissionPendingException].
+     */
+    private suspend fun payPlainIntentViaSdk(
+        wallet: Wallet,
+        paymentIntent: PaymentIntent,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata?,
+        onTransactionCreated: (suspend (String) -> Unit)?
+    ): Transaction {
+        val payment = buildDeferredSdkPayment(paymentIntent, requirePaymentUrl = false, originWallet = wallet)
+        return withContext(NonCancellable) {
+            val tx = try {
+                Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
+            } catch (e: Exception) {
+                releaseDeferredPayment(payment, wallet)
+                throw e
+            }
+            val paymentLabel = extractBip70Recipients(paymentIntent, de.schildbach.wallet.Constants.ADDRESS_NETWORK)
+                ?.firstOrNull()?.first?.let { "dash:$it" } ?: "dash:"
+            // No invoice to key on here, but a gift card purchase is still the one outstanding
+            // gift card purchase: refused before the caller records an order for it.
+            claimSubmissionOrRelease(wallet, tx, payment, null, recovery?.isGiftCardPurchase == true)
+
+            try {
+                ensureStillOwned(wallet, "recording the order")
+                serviceName?.let { metadataProvider.setTransactionService(TxId.wrap(payment.txidHex), it) }
+                // Nothing has been sent: the last point at which the caller can record what it
+                // needs to recover the payment.
+                onTransactionCreated?.invoke(payment.txidHex)
+                pendingPaymentVerifier.quarantine(
+                    tx,
+                    paymentLabel,
+                    serviceName,
+                    recovery,
+                    null,
+                    origin = wallet,
+                    reservation = payment
+                )
+                if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                    pendingPaymentVerifier.detachReservation(tx.txId)
+                    throw IllegalStateException("the wallet that signed ${payment.txidHex} has been wiped; not broadcasting")
+                }
+            } catch (e: Exception) {
+                // Nothing has been sent. Free the inputs; the caller discards its order.
+                releaseDeferredPayment(payment, wallet)
+                throw e
+            } finally {
+                pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
+            }
+
+            // The broadcast consumes the reservation, so the watch must not hold it any more.
+            pendingPaymentVerifier.detachReservation(tx.txId)
+            // The broadcast, the last ownership check, the bridge and the attribution in ONE hold
+            // of the wipe barrier. A wipe that refuses or cancels it before the broadcast leaves
+            // nothing sent; the quarantine and the reservation then go with the wiped wallet.
+            sdkSendTail(
+                knownTxIdHex = payment.txidHex,
+                notSent = { cause ->
+                    IllegalStateException("the wallet that signed ${payment.txidHex} is being wiped; not broadcasting it", cause)
+                }
+            ) { sdkTail ->
+                payPlainIntentTail(sdkTail, payment, tx, wallet, serviceName, recovery)
+            }
+        }
+    }
+
+    /** [payPlainIntentViaSdk] from the broadcast on, inside its [sdkSendTail] hold. */
+    private suspend fun payPlainIntentTail(
+        sdkTail: SdkSendTail,
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        tx: Transaction,
+        wallet: Wallet,
+        serviceName: String?,
+        recovery: PaymentRecoveryMetadata?
+    ): Transaction {
+            // Ownership asked again inside the SDK's funding hold (this one, nested).
+            val result = broadcastOrPending(payment) { pendingPaymentVerifier.stillOwnedBy(wallet) }
+            when (result) {
+                is SdkWriteResult.Broadcast -> {
+                    sdkTail.reached(result.value)
+                    log.info("plain payment {} broadcast via the SDK", result.value)
+                    // Spent now: the mirrored locks have done their job. Cleared only once the
+                    // broadcast went out, so an unknown outcome keeps its inputs locked.
+                    runCatching { setReservedOutpointLocks(payment, locked = false, wallet = wallet) }
+                        .onFailure { log.warn("failed to clear the mirrored reservation locks", it) }
+                }
+                is SdkWriteResult.NotBroadcast -> {
+                    // Refused before reaching the network: definitively not sent.
+                    pendingPaymentVerifier.cancelQuarantine(tx, wallet)
+                    releaseDeferredPayment(payment, wallet)
+                    throw sdkSendNotAttemptedException(result.reason)
+                }
+                is SdkWriteResult.Ambiguous -> {
+                    // It may be on the network. Keep the quarantine: the watch commits it once
+                    // the engine observes it, or releases it after the grace period.
+                    sdkTail.reached(null)
+                    log.error("plain payment {} broadcast outcome unknown", payment.txidHex, result.cause)
+                    throw PaymentSubmissionPendingException(payment.txidHex, result.cause)
+                }
+            }
+
+            // Sent: a wipe raised by now stops everything below (reported pending), and a wallet
+            // no longer installed is never committed to.
+            sdkTail.ensureNotWiped(wallet)
+            val sent = when (
+                val bridged = bridgedTransactionFactory.bridge(payment.txidHex, payment.rawTxBytes, originWallet = wallet)
+            ) {
+                is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> bridged.transaction
+                // Sent, but not yet in the wallet record: the quarantine stays and the watch
+                // commits and attributes it once the engine observes it.
+                is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged ->
+                    throw PaymentSubmissionPendingException(
+                        payment.txidHex,
+                        null,
+                        "payment ${payment.txidHex} was broadcast but the wallet display bridge failed " +
+                            "(${bridged.reason}); it appears after the next sync"
+                    )
+            }
+            try {
+                applyGiftCardRecoveryMetadata(sent.txId, serviceName, recovery)
+                pendingPaymentVerifier.cancelQuarantine(tx, wallet)
+            } catch (e: Exception) {
+                log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
+            }
+            return sent
+    }
+
+    /**
+     * Takes the app-wide claim for submitting [tx] (see [PendingDirectPaymentVerifier.claimSubmission]),
+     * or releases [payment] and refuses. Separate screens each have their own view model and their
+     * own in-flight flag, and the saved record that would stop a duplicate is written only at the
+     * quarantine, a few suspensions later; this is the one check that is atomic across them.
+     *
+     * The loser gets what the duplicate check gives: [PaymentSubmissionPendingException] naming the
+     * submission already outstanding. A store that cannot be read refuses too (fail closed).
+     * Called inside the submission's NonCancellable block, so the release cannot be skipped.
+     */
+    private suspend fun claimSubmissionOrRelease(
+        wallet: Wallet,
+        tx: Transaction,
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        paymentRequestId: String?,
+        isGiftCardPurchase: Boolean,
+        orderId: String? = null,
+        legacyOrderId: String? = null,
+        paymentUrl: String? = null,
+        merchant: PendingDirectPaymentVerifier.Merchant? = null
+    ) {
+        val conflicting = try {
+            pendingPaymentVerifier.claimSubmission(
+                tx.txId,
+                paymentRequestId,
+                isGiftCardPurchase,
+                orderId = orderId,
+                legacyOrderId = legacyOrderId,
+                paymentUrl = paymentUrl,
+                merchant = merchant
+            )
+        } catch (e: Exception) {
+            releaseDeferredPayment(payment, wallet)
+            throw e
+        }
+        if (conflicting != null) {
+            log.info("not submitting {}, {} is still unresolved for the same purchase", tx.txId, conflicting)
+            releaseDeferredPayment(payment, wallet)
+            throw PaymentSubmissionPendingException(conflicting.toString(), null)
+        }
     }
 
     /**
@@ -1132,6 +1559,10 @@ class SendCoinsTaskRunner @Inject constructor(
      *   the transaction is seen within [ambiguousSubmissionWaitMs] it is returned as sent,
      *   otherwise [PaymentSubmissionPendingException] is thrown and verification continues in the
      *   background, surviving this screen and the process.
+     * - a wallet wipe: the last ownership check and the POST run in one wipe-barrier hold
+     *   ([PendingDirectPaymentVerifier.submitWhileOwned]). Refused there, nothing was sent. A POST
+     *   the wipe cancels is reported as [PaymentSubmissionPendingException], like a lost reply;
+     *   its quarantine is left for the wipe to clear.
      * - POST-ACK: the reservation is consumed by the broadcast and never released — the merchant
      *   holds the signed tx, and releasing would let a retry select different inputs and
      *   double-pay. A display-bridge failure throws the typed [Bip70AckedDisplayException] (a
@@ -1144,24 +1575,50 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun sendPrebuiltDirectPayment(
         payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
         finalPaymentIntent: PaymentIntent,
+        /**
+         * The wallet [payment] was built on ([buildDeferredBip70Payment]'s `originWallet`), and
+         * the one its quarantine belongs to. Never re-read from the installed wallet: a wipe
+         * between build and submit installs a replacement, which must not adopt this payment.
+         */
+        originWallet: Wallet,
         serviceName: String? = null,
         recovery: PaymentRecoveryMetadata? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): Transaction = withContext(NonCancellable) {
-        val requestUrl = finalPaymentIntent.paymentUrl
-            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
-        // The wallet the user confirmed this payment on, and the one its quarantine belongs to.
-        val wallet = walletData.wallet ?: run {
-            releaseDeferredPayment(payment)
-            throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val wallet = originWallet
+        val requestUrl = finalPaymentIntent.paymentUrl ?: run {
+            releaseDeferredPayment(payment, wallet)
+            throw InvalidPaymentRequestURL("Final payment intent URL is null")
+        }
+        // Before anything else: once the wallet is no longer the installed one, nothing of this
+        // payment may be recorded or sent. The reservation goes back.
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            releaseDeferredPayment(payment, wallet)
+            throw IllegalStateException(
+                "the wallet ${payment.txidHex} was built on has been replaced; not submitting"
+            )
         }
         Context.propagate(wallet.context)
         val tx = try {
             Transaction(NETWORK_PARAMETERS, payment.rawTxBytes)
         } catch (e: Exception) {
-            releaseDeferredPayment(payment)
+            releaseDeferredPayment(payment, wallet)
             throw e
         }
+        // The one payment for this invoice: refused here, before anything can leave, when another
+        // submission for it is already outstanding or on its way to its quarantine.
+        claimSubmissionOrRelease(
+            wallet,
+            tx,
+            payment,
+            finalPaymentIntent.paymentRequestId,
+            recovery?.isGiftCardPurchase == true,
+            finalPaymentIntent.orderIdentity(),
+            finalPaymentIntent.legacyOrderIdentity(),
+            finalPaymentIntent.paymentUrl,
+            // a new payment: also refused while one to the same merchant is unresolved
+            finalPaymentIntent.merchant()
+        )
 
         val (verification, request) = try {
             ensureStillOwned(wallet, "submitting")
@@ -1199,9 +1656,11 @@ class SendCoinsTaskRunner @Inject constructor(
                 requestUrl,
                 serviceName,
                 recovery,
-                finalPaymentIntent.paymentRequestHash?.let { Constants.HEX.encode(it) },
+                finalPaymentIntent.paymentRequestId,
                 origin = wallet,
-                reservation = payment
+                reservation = payment,
+                orderId = finalPaymentIntent.orderIdentity(),
+                merchantName = finalPaymentIntent.verifiedMerchantName()
             ).also {
                 // Last check before anything leaves. A wipe can start after the quarantine was
                 // written, and its clear then removes that record; submitting anyway would send
@@ -1213,47 +1672,50 @@ class SendCoinsTaskRunner @Inject constructor(
             } to request
         } catch (e: Exception) {
             // Nothing has been sent. Free the inputs for an immediate retry.
-            releaseDeferredPayment(payment)
+            releaseDeferredPayment(payment, wallet)
             throw e
+        } finally {
+            // Saved, the quarantine blocks a duplicate from here on; failed, there is nothing left
+            // to block. Either way the claim has done its job.
+            pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
         }
 
         try {
             log.info("trying to send tx {} to {}", payment.txidHex, requestUrl)
-            val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
-            val response = directPayHttpClient.call(request)
-            response.ensureSuccessful()
-            requestUrl.toUri().host?.let {
-                timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
-            }
-            log.info("tx sent via http")
-
-            val byteStream = response.body?.byteStream()
-                ?: throw IOException("Null response for the payment request: $requestUrl")
-            val paymentAck = byteStream.use { Protos.PaymentACK.parseFrom(it) }
-            val acknowledged = PaymentProtocol.parsePaymentAck(paymentAck).memo != "nack"
-            log.info("received {} via http", if (acknowledged) "ack" else "nack")
-            if (!acknowledged) {
-                // A nack is not a refusal we can act on. It is reached only after the request
-                // arrived and the payee answered, so by then it has had the transaction and may
-                // have broadcast it whatever the memo says. Treating it as proof of non-receipt
-                // would free the inputs and send callers into cleanup that deletes a gift card
-                // order, so a payee that nacked and relayed anyway would leave a paid purchase
-                // with nothing to redeem. Falls through to the ambiguous handling below.
-                throw DirectPayException("Payment was not acknowledged by the server")
-            }
+            // The last ownership check and the POST in one wipe-barrier hold: a wipe that starts
+            // after the check cancels the POST and waits for it before clearing this payment's
+            // quarantine and reservation, so the payee never receives it after they are gone.
+            pendingPaymentVerifier.submitWhileOwned(wallet) { postPaymentForAck(request, requestUrl) }
+        } catch (e: PendingDirectPaymentVerifier.SubmissionRefusedException) {
+            // Refused before anything left: the wipe that retired this wallet clears its
+            // quarantine, and its reservation went with the wiped wallet's engine.
+            pendingPaymentVerifier.detachReservation(tx.txId)
+            throw e
         } catch (e: Exception) {
             if (isDefinitelyNotSubmitted(e)) {
                 log.warn("Payment submission failed before the request could be sent: {}", payment.txidHex, e)
-                pendingPaymentVerifier.cancelQuarantine(tx)
-                releaseDeferredPayment(payment)
+                pendingPaymentVerifier.cancelQuarantine(tx, wallet)
+                releaseDeferredPayment(payment, wallet)
                 throw e
             }
 
             log.warn("Payment submission failed, but transaction may have been sent: {}", payment.txidHex, e)
+            if (e is WalletWipedCancellationException) {
+                // Cancelled by a wipe mid-POST: as uncertain as a lost reply. The quarantine is left
+                // to the wipe, which clears it with the rest of the wallet; nothing is released.
+                throw PaymentSubmissionPendingException(payment.txidHex, e)
+            }
             // Leave the quarantine standing: the payee may have received the payment and
             // broadcast it. The verifier is application-scoped and has the transaction on disk,
             // so it keeps going after this call, the purchase screen and even the process.
-            val result = withTimeoutOrNull(ambiguousSubmissionWaitMs) { verification.await() }
+            val result = withTimeoutOrNull(ambiguousSubmissionWaitMs) {
+                try {
+                    verification.await()
+                } catch (cancelled: CancellationException) {
+                    // The watch was stopped (a wipe): no answer either way, still pending.
+                    if (verification.isCancelled) null else throw cancelled
+                }
+            }
             if (result != null) {
                 log.info("Transaction found on network despite HTTP failure: {}", payment.txidHex)
                 return@withContext result
@@ -1268,24 +1730,244 @@ class SendCoinsTaskRunner @Inject constructor(
         // Acknowledged: the broadcast below consumes the reservation, so take it back from the
         // verifier first and nothing can broadcast or release it a second time.
         pendingPaymentVerifier.detachReservation(tx.txId)
-        // completeAckedPayment throws Bip70AckedDisplayException when the bridge fails; the
-        // quarantine then stays, holding what is needed to commit and attribute it later.
-        val sent = completeAckedPayment(payment)
-
-        // Committed, so the outcome is certain. Apply the recovery metadata first: the
-        // quarantine record is the only durable copy of it, and cancelling first would leave a
-        // process death here with a committed payment and no way to attribute it.
-        try {
-            if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
-                throw IllegalStateException("the wallet that sent ${payment.txidHex} has been wiped")
-            }
-            applyGiftCardRecoveryMetadata(sent.txId, serviceName, recovery)
-            pendingPaymentVerifier.cancelQuarantine(tx)
-        } catch (e: Exception) {
-            // Keep the quarantine: it still holds what is needed to attribute this later.
-            log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
+        // This whole function is NonCancellable, so the answer can arrive after the wallet that
+        // signed was wiped and a replacement installed. The engine and walletData.wallet now
+        // belong to that replacement: broadcasting through one and committing to the other would
+        // import this wallet's payment into a wallet that never made it. The payee has it, and
+        // its own broadcast delivers it; the wipe has already cleared this wallet's records.
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            throw IllegalStateException(
+                "the wallet that signed ${payment.txidHex} was wiped before its acknowledgement; not completing it"
+            )
         }
-        sent
+        // The broadcast, the bridge and the attribution in ONE hold of the wipe barrier. The payee
+        // has acknowledged it, so a wipe that refuses or cancels any of it leaves the payment
+        // pending, never "not sent"; nothing after the wipe touches the wallet.
+        sdkSendTail(
+            knownTxIdHex = payment.txidHex,
+            notSent = { cause ->
+                PaymentSubmissionPendingException(
+                    payment.txidHex,
+                    cause,
+                    "payment ${payment.txidHex} was acknowledged by the payee, but its wallet is being wiped"
+                )
+            }
+        ) { sdkTail ->
+            // The payee has it: it may be on the network whatever happens from here.
+            sdkTail.reached(payment.txidHex)
+            // completeAckedPayment throws Bip70AckedDisplayException when the bridge fails; the
+            // quarantine then stays, holding what is needed to commit and attribute it later.
+            val sent = completeAckedPayment(payment, tx, wallet, sdkTail)
+
+            // Committed, so the outcome is certain. Apply the recovery metadata first: the
+            // quarantine record is the only durable copy of it, and cancelling first would leave a
+            // process death here with a committed payment and no way to attribute it.
+            try {
+                currentCoroutineContext().ensureActive()
+                if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                    throw IllegalStateException("the wallet that sent ${payment.txidHex} has been wiped")
+                }
+                applyGiftCardRecoveryMetadata(sent.txId, serviceName, recovery)
+                pendingPaymentVerifier.cancelQuarantine(tx, wallet)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Keep the quarantine: it still holds what is needed to attribute this later.
+                log.error("could not attribute committed payment {}, keeping its recovery record", payment.txidHex, e)
+            }
+            sent
+        }
+    }
+
+    /**
+     * POSTs a BIP70 Payment message and returns once the payee acknowledged it. Throws on anything
+     * else; a nack included ([DirectPayException]), see the callers for what each failure proves.
+     */
+    private suspend fun postPaymentForAck(request: Request, requestUrl: String) {
+        val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
+        val response = directPayExchange(request)
+        response.ensureSuccessful()
+        requestUrl.toUri().host?.let {
+            timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
+        }
+        log.info("tx sent via http")
+
+        val byteStream = response.body?.byteStream()
+            ?: throw IOException("Null response for the payment request: $requestUrl")
+        val paymentAck = byteStream.use { Protos.PaymentACK.parseFrom(it) }
+        val acknowledged = PaymentProtocol.parsePaymentAck(paymentAck).memo != "nack"
+        log.info("received {} via http", if (acknowledged) "ack" else "nack")
+        if (!acknowledged) {
+            // A nack is not a refusal we can act on. It is reached only after the request
+            // arrived and the payee answered, so by then it has had the transaction and may
+            // have broadcast it whatever the memo says. Treating it as proof of non-receipt
+            // would free the inputs and send callers into cleanup that deletes a gift card
+            // order, so a payee that nacked and relayed anyway would leave a paid purchase
+            // with nothing to redeem. Falls through to the ambiguous handling of the caller.
+            throw DirectPayException("Payment was not acknowledged by the server")
+        }
+    }
+
+    /**
+     * The released submission for this invoice made from [originWallet], if there is one: what a
+     * re-confirmation resubmits ([resubmitAbandonedPayment]) instead of building a new payment.
+     */
+    suspend fun findAbandonedSubmission(
+        paymentIntent: PaymentIntent,
+        originWallet: Wallet
+    ): de.schildbach.wallet.data.PendingDirectPayment? =
+        pendingPaymentVerifier.abandonedSubmissionFor(
+            paymentIntent.paymentRequestId,
+            originWallet,
+            paymentIntent.orderIdentity(),
+            paymentIntent.legacyOrderIdentity()
+        )
+
+    /**
+     * Best-effort fee of a stored transaction, for the confirm screen: Σ(inputs) − Σ(outputs),
+     * with the input values from the dashj wallet or the SDK store. Null when any is unknown.
+     */
+    suspend fun knownFeeOf(rawTx: ByteArray, originWallet: Wallet): Coin? = try {
+        val tx = Transaction(NETWORK_PARAMETERS, rawTx)
+        var inputs = 0L
+        for (input in tx.inputs) {
+            val fromWallet = originWallet.getTransaction(input.outpoint.hash)
+                ?.outputs?.getOrNull(input.outpoint.index.toInt())?.value?.value
+            val value = fromWallet ?: l1SendProbeService.txoAmountOrNull(
+                de.schildbach.wallet.service.platform.sdk.sdkOutpointBytes(
+                    input.outpoint.hash.reversedBytes,
+                    input.outpoint.index
+                )
+            ) ?: return null
+            inputs += value
+        }
+        val fee = inputs - tx.outputs.sumOf { it.value.value }
+        if (fee >= 0) Coin.valueOf(fee) else null
+    } catch (e: Exception) {
+        log.warn("could not work out the fee of a stored payment", e)
+        null
+    }
+
+    /**
+     * Pays an invoice again with the EXACT transaction submitted for it before (T1), never with a
+     * new one (review 9fa90c30ccf1). T1 was released after going unseen, but its signatures are
+     * still valid: a new transaction from other coins could be broadcast alongside it and pay the
+     * invoice twice. So the stored T1 is posted to the payee again, as a new Payment message for
+     * the same request. Same rules as a first submission: the app-wide claim, the origin wallet,
+     * nothing recorded or sent for a wallet that has been replaced.
+     *
+     * Outcomes: acknowledged, T1 is committed from its record like any acknowledged payment;
+     * anything after the request may have arrived, [PaymentSubmissionPendingException] for T1,
+     * whose record and watch carry on; a request that never left, its error (T1 stays on record
+     * and keeps blocking the invoice).
+     */
+    suspend fun resubmitAbandonedPayment(
+        finalPaymentIntent: PaymentIntent,
+        originWallet: Wallet
+    ): Transaction = withContext(NonCancellable) {
+        val wallet = originWallet
+        val requestUrl = finalPaymentIntent.paymentUrl
+            ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
+        if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+            throw IllegalStateException("the wallet this invoice was paid from has been replaced; not resubmitting")
+        }
+        val paymentRequestId = finalPaymentIntent.paymentRequestId
+        val orderId = finalPaymentIntent.orderIdentity()
+        val record = pendingPaymentVerifier.abandonedSubmissionFor(
+            paymentRequestId,
+            wallet,
+            orderId,
+            finalPaymentIntent.legacyOrderIdentity()
+        )
+            ?: throw IllegalStateException("no earlier payment on record for this request")
+        Context.propagate(wallet.context)
+        val tx = Transaction(NETWORK_PARAMETERS, record.txBytes)
+
+        // Exclusive per transaction: a second resubmission of T1 is refused here with T1 as the
+        // payment outstanding, so it can never release T1 while this one's POST is in flight. Held
+        // until this one's outcome is settled (acknowledged, pending, or released again).
+        pendingPaymentVerifier.claimSubmission(
+            tx.txId,
+            paymentRequestId,
+            record.isGiftCardPurchase,
+            resubmission = true,
+            orderId = orderId,
+            legacyOrderId = finalPaymentIntent.legacyOrderIdentity(),
+            paymentUrl = requestUrl
+        )?.let { other ->
+            throw PaymentSubmissionPendingException(other.toString(), null)
+        }
+        // Set once the request may have reached the payee: from then on the payment stays active.
+        var mayHaveLeft = false
+        var reactivated = false
+        try {
+            // Protected again before it is posted, like a fresh quarantine (review 4307041830): its
+            // record active and durable, its inputs locked, a new watch with a new grace period,
+            // and fresh SDK funding blocked by the funding gate. Restoration runs first, since this
+            // path skips the payment build and its barrier (review 4302741463).
+            when (pendingPaymentVerifier.reactivateForResubmission(tx, wallet)) {
+                PendingDirectPaymentVerifier.Reactivation.REACTIVATED -> reactivated = true
+                PendingDirectPaymentVerifier.Reactivation.ALREADY_ACTIVE ->
+                    // Another resubmission made it active since this one looked it up, and left its
+                    // outcome unknown (review 4307815170). That is this attempt's outcome too;
+                    // nothing here touches the payment, so its protection stays.
+                    throw PaymentSubmissionPendingException(tx.txId.toString(), null)
+                PendingDirectPaymentVerifier.Reactivation.FUNDING_IN_PROGRESS ->
+                    // Fresh SDK funding is selecting inputs right now and may run for minutes (an
+                    // identity registration waits for its asset lock): refused rather than waited
+                    // for, so the claim is not held meanwhile. Nothing was touched; retry later.
+                    throw PaymentSubmissionPendingException(tx.txId.toString(), null)
+                PendingDirectPaymentVerifier.Reactivation.SETTLED -> {
+                    // settled meanwhile (restoration found it on the network): that is the result
+                    wallet.getTransaction(tx.txId)?.let { return@withContext it }
+                    throw IllegalStateException("the earlier payment for this request is no longer on record")
+                }
+            }
+            val refundAddress = sdkL1SendService.refundAddressOrNull()
+            val paymentMessage = PaymentProtocol.createPaymentMessage(
+                listOf(record.txBytes),
+                finalPaymentIntent.amount,
+                refundAddress,
+                null,
+                finalPaymentIntent.payeeData
+            )
+            val request = buildOkHttpDirectPayRequest(requestUrl, paymentMessage)
+            try {
+                log.info("resubmitting the earlier payment {} to {}", tx.txId, requestUrl)
+                // The last ownership check and the POST in one wipe-barrier hold, as for a first
+                // submission: a wipe starting after the check waits for the POST before clearing.
+                pendingPaymentVerifier.submitWhileOwned(wallet) {
+                    mayHaveLeft = true
+                    postPaymentForAck(request, requestUrl)
+                }
+            } catch (e: PendingDirectPaymentVerifier.SubmissionRefusedException) {
+                // refused before the POST: nothing left (mayHaveLeft is still false)
+                throw e
+            } catch (e: Exception) {
+                if (isDefinitelyNotSubmitted(e)) {
+                    log.warn("resubmission of {} failed before the request could be sent", tx.txId, e)
+                    mayHaveLeft = false
+                    throw e
+                }
+                log.warn("resubmission of {} failed, but it may have arrived", tx.txId, e)
+                throw PaymentSubmissionPendingException(tx.txId.toString(), e)
+            }
+            if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                throw IllegalStateException(
+                    "the wallet that signed ${tx.txId} was wiped before its acknowledgement; not completing it"
+                )
+            }
+            pendingPaymentVerifier.commitAcknowledged(tx, wallet)
+        } catch (e: Exception) {
+            // Nothing reached the payee this time: released again, as it was before - and only by
+            // the attempt that did the reactivating.
+            if (reactivated && !mayHaveLeft) {
+                pendingPaymentVerifier.releaseUnsentResubmission(tx, wallet)
+            }
+            throw e
+        } finally {
+            pendingPaymentVerifier.releaseSubmissionClaim(tx.txId)
+        }
     }
 
     /**
@@ -1310,28 +1992,65 @@ class SendCoinsTaskRunner @Inject constructor(
      * merchant and is treated as ambiguous. Relies on [directPayHttpClient] not retrying, so the
      * exception describes the only attempt made.
      */
+    /**
+     * [SdkL1SendService.broadcastDeferredPayment] for a payment whose order and quarantine are
+     * recorded. Called only inside an [sdkSendTail] hold, which reports a wipe that cancels the
+     * broadcast: once the SDK call was made the outcome is unknown, like a lost reply, never
+     * "not sent". Nothing is released then and the quarantine is left alone (the wipe clears it
+     * with the rest of the wallet).
+     */
+    private suspend fun broadcastOrPending(
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        stillOwned: suspend () -> Boolean
+    ): SdkWriteResult<String> = sdkL1SendService.broadcastDeferredPayment(payment, stillOwned)
+
     private fun isDefinitelyNotSubmitted(e: Exception): Boolean {
         return e is UnknownHostException || e is ConnectException || e is NoRouteToHostException
     }
 
     /**
-     * The acked tail of a BIP70 submission (also the IS-lock rescue's
-     * completion): clear the mirrored locks, broadcast (tolerated — the
-     * merchant's own broadcast covers delivery), bridge into the wallet
-     * record, return the live transaction.
+     * The acked tail of a BIP70 submission: broadcast, clear the mirrored locks, bridge into the
+     * wallet record, return the live transaction.
+     *
+     * An ack proves no delivery: a payee can acknowledge without broadcasting. Before the cutover
+     * a broadcast that did not go out is tolerated, since the dashj announcement after the bridge
+     * still relays. After it, the bridge's announcement cannot relay through the held peer group,
+     * so an SDK broadcast that was refused or is unconfirmed leaves the payment exactly as it is -
+     * its record, its watch and its input locks - and reports it pending (review 4306185713), the
+     * same rule [PendingDirectPaymentVerifier.commitAcknowledged] applies to a resubmission.
+     *
+     * @throws PaymentSubmissionPendingException after the cutover when the broadcast did not go out
      */
     private suspend fun completeAckedPayment(
-        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
+        payment: de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment,
+        tx: Transaction,
+        origin: Wallet,
+        sdkTail: SdkSendTail
     ): Transaction {
-        // The reservation is being consumed — the mirrored locks have
-        // done their job (the inputs are spent from here on).
-        runCatching { setReservedOutpointLocks(payment, locked = false) }
+        // Broadcast ourselves too (identical bytes/txid; a payee broadcast makes this a harmless
+        // duplicate announce), but never release.
+        // Ownership asked again inside the SDK's funding hold, which a wipe drains first.
+        val broadcast = broadcastOrPending(payment) { pendingPaymentVerifier.stillOwnedBy(origin) }
+        // Fail closed (review 4306695898): only a state read as "not committed" takes the dashj
+        // completion below; an unreadable one is treated as the SDK owning L1.
+        if (broadcast !is SdkWriteResult.Broadcast && sdkL1SendService.cutoverCommittedOrUnknown() != false) {
+            log.warn(
+                "BIP70 tx {} acknowledged, but the SDK broadcast did not go out ({}); keeping it " +
+                    "recorded and watched until the network shows it",
+                payment.txidHex,
+                broadcast
+            )
+            // The resubmission's rule: with the SDK owning L1 this keeps (or starts) the watch and
+            // reports the payment pending. Returns only if the watch has settled it meanwhile.
+            return pendingPaymentVerifier.commitAcknowledged(tx, origin)
+        }
+
+        // Delivered (or, before the cutover, relayed by the dashj announcement below): the
+        // reservation is consumed and the mirrored locks have done their job.
+        runCatching { setReservedOutpointLocks(payment, locked = false, wallet = origin) }
             .onFailure { log.warn("failed to clear the mirrored BIP70 reservation locks post-ack", it) }
 
-        // The payment IS made from the merchant's side. Broadcast
-        // ourselves too (identical bytes/txid — a merchant broadcast makes
-        // this a harmless duplicate announce), but never release.
-        when (val result = sdkL1SendService.broadcastDeferredPayment(payment)) {
+        when (val result = broadcast) {
             is SdkWriteResult.Broadcast ->
                 log.info("BIP70 tx {} broadcast via the SDK", result.value)
             is SdkWriteResult.NotBroadcast ->
@@ -1349,8 +2068,17 @@ class SendCoinsTaskRunner @Inject constructor(
                 )
         }
 
+        // The broadcast suspends, and a wipe can land during it. Past this point nothing may
+        // touch the wallet unless it is still the one that signed; the commit below is bound to
+        // that wallet in any case, never to whatever walletData.wallet reads by then. A wipe
+        // raised by now stops this here (reported pending by the enclosing hold).
+        sdkTail.ensureNotWiped(origin)
         return when (
-            val bridged = bridgedTransactionFactory.bridge(payment.txidHex, payment.rawTxBytes)
+            val bridged = bridgedTransactionFactory.bridge(
+                payment.txidHex,
+                payment.rawTxBytes,
+                originWallet = origin
+            )
         ) {
             is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged ->
                 bridged.transaction
@@ -1421,12 +2149,25 @@ class SendCoinsTaskRunner @Inject constructor(
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
         intendedRecipient: Address? = null,
+        originWallet: Wallet? = null,
+        /**
+         * The caller has already recorded [sendRequest]'s finalized transaction (an order keyed
+         * to its txid). Then that exact transaction goes out on the dashj route chosen when it
+         * was built, or nothing does: never rerouted through the SDK, which would discard it and
+         * broadcast a different one the record knows nothing about.
+         */
+        recordedForDashjRoute: Boolean = false,
         onBroadcast: ((txid: String?) -> Unit)? = null,
-        onNotBroadcast: (() -> Unit)? = null,
-        originWallet: Wallet? = null
+        onNotBroadcast: (() -> Unit)? = null
     ): Transaction = withContext(Dispatchers.IO) {
         // Callers may have built this request before restoration finished, so wait here too.
-        pendingPaymentVerifier.awaitRestored()
+        // Nothing has been sent if it fails.
+        try {
+            pendingPaymentVerifier.awaitRestored()
+        } catch (e: Exception) {
+            notifyNotBroadcast(onNotBroadcast)
+            throw e
+        }
         // A caller that signed against a particular wallet passes it, and this commits to that one
         // rather than to whatever is installed by the time we get here. The two differ only after
         // a wipe, and then committing is the harm: maybeCommitTx does not ask whether the
@@ -1453,6 +2194,17 @@ class SendCoinsTaskRunner @Inject constructor(
         // anything the SDK can't reproduce (BIP70 multi-output, CrowdNode
         // selectors/locked outputs).
         if (sdkL1SendService.cutoverCommitted()) {
+            if (recordedForDashjRoute) {
+                // The cutover committed after this transaction was finalized and recorded. The held
+                // dashj engine can no longer broadcast it, and rebuilding through the SDK would
+                // send a different transaction than the one recorded. Nothing has been committed
+                // or broadcast: refuse, and the caller discards what it recorded.
+                notifyNotBroadcast(onNotBroadcast)
+                throw IllegalStateException(
+                    "the cutover committed after ${sendRequest.tx.txId} was recorded; " +
+                        "not broadcasting it, and not rebuilding it as another transaction"
+                )
+            }
             val payment = extractSdkRoutablePayment(
                 sendRequest,
                 walletData.networkParameters,
@@ -1472,8 +2224,19 @@ class SendCoinsTaskRunner @Inject constructor(
                     payment.address.toBase58().take(8),
                     if (payment.sendAll) ", send-all" else ""
                 )
+                // With its owner (review 5560810479): the typed overload can have seen the
+                // pre-cutover route before the cutover committed, and the SDK binds a wallet only
+                // inside this call, so the owner is checked again right before the broadcast. A
+                // caller that named no owner still gets the check, against the wallet this call
+                // resolved above: a wipe during the SDK call must not let the replacement pay.
                 return@withContext sendViaSdkBridged(
-                    payment.address, payment.amount, beforeSending, payment.sendAll, onBroadcast, onNotBroadcast
+                    payment.address,
+                    payment.amount,
+                    beforeSending,
+                    payment.sendAll,
+                    onBroadcast,
+                    onNotBroadcast,
+                    originWallet = wallet
                 )
             }
             notifyNotBroadcast(onNotBroadcast)
@@ -1499,40 +2262,48 @@ class SendCoinsTaskRunner @Inject constructor(
         // before it provably sent nothing ([onNotBroadcast]).
         var committing = false
         try {
-            if (checkBalanceConditions) {
-                checkBalanceConditions(wallet, sendRequest.tx)
-            }
-            log.info("sending: {}", sendRequest)
-
-            if (txCompleted) {
-                // Use maybeCommitTx to avoid "commitTx called on the same transaction twice":
-                // a BIP70 merchant (e.g. CTX) may broadcast the tx to the network as soon as it
-                // receives the payment message, so our wallet can pick it up via the P2P peer
-                // group and add it to the pending pool before we reach this commit.
-                committing = true
-                if (!wallet.maybeCommitTx(sendRequest.tx)) {
-                    log.info(
-                        "tx was already in the wallet (likely received via network broadcast): {}",
-                        sendRequest.tx.txId
+            // The last ownership check, the commit and the broadcast in one hold of the wipe
+            // barrier ([FundingSelectionLock]): a Reset Wallet that starts after the check either
+            // refuses the hold (nothing was committed: an ordinary failure) or waits for the
+            // commit-to-broadcast section, which ignores cancellation once it has begun, before it
+            // detaches the wallet. Asked outside, a wipe could start between the answer and the
+            // commit and commit and announce this payment from a wallet that is being torn down.
+            val transaction = try {
+                fundingSelection.withShared {
+                    if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
+                        throw IllegalStateException(
+                            "the wallet that signed ${sendRequest.tx.txId} has been wiped; not sending it"
+                        )
+                    }
+                    commitAndBroadcastDashj(
+                        wallet,
+                        sendRequest,
+                        txCompleted,
+                        checkBalanceConditions,
+                        beforeSending,
+                        serviceName,
+                        watch,
+                        onBroadcast
+                    ) { committing = true }
+                }
+            } catch (e: WalletWipedException) {
+                // refused before anything was committed: definitely not sent
+                throw IllegalStateException(
+                    "the wallet is being wiped; ${sendRequest.tx.txId} was not sent",
+                    e
+                )
+            } catch (e: WalletWipedCancellationException) {
+                if (!committing) {
+                    // cancelled before the commit: definitely not sent
+                    throw IllegalStateException(
+                        "the wallet is being wiped; ${sendRequest.tx.txId} was not sent",
+                        e
                     )
                 }
-            } else {
-                signSendRequest(sendRequest)
-                committing = true
-                // completeTx, then commitTx: completeTx's failures (below) are
-                // still before the commit.
-                wallet.sendCoinsOffline(sendRequest)
+                // Committed, and perhaps announced: the outcome is unknown, never "not sent".
+                log.warn("the dashj send of {} was cancelled by a wallet wipe after its commit", sendRequest.tx.txId, e)
+                throw PaymentSubmissionPendingException(sendRequest.tx.txId.toString(), e)
             }
-
-            val transaction = sendRequest.tx
-            beforeSending?.accept(transaction)
-            serviceName?.let {
-                metadataProvider.setTransactionService(sendRequest.tx.txId.toTxId(), serviceName)
-            }
-            log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
-            log.info("  transaction: {}", transaction.toStringHex())
-            walletApplication.broadcastTransaction(transaction)
-            notifyBroadcast(onBroadcast, transaction.txId.toString())
             // EVERY dashj spend of the shared UTXOs (main send UI, CrowdNode,
             // BIP70 — they all funnel through here) briefly inflates the SDK's
             // shadow view by the fee until the next mined block, exactly like
@@ -1560,6 +2331,64 @@ class SendCoinsTaskRunner @Inject constructor(
                 notifyNotBroadcast(onNotBroadcast)
             }
             throw ex
+        }
+    }
+
+    /**
+     * The dashj (pre-cutover) send of [sendRequest] from [wallet]: balance checks and signing,
+     * then the commit, the metadata and the broadcast. Run inside the caller's wipe-barrier hold.
+     * Cancellation (a wipe cancelling the hold) is honoured up to the commit; from [onCommitting]
+     * on the rest runs to the end, so a wipe waits for the broadcast instead of interrupting a
+     * committed payment half way.
+     */
+    private suspend fun commitAndBroadcastDashj(
+        wallet: Wallet,
+        sendRequest: SendRequest,
+        txCompleted: Boolean,
+        checkBalanceConditions: Boolean,
+        beforeSending: Consumer<Transaction>?,
+        serviceName: String?,
+        watch: Stopwatch,
+        onBroadcast: ((txid: String?) -> Unit)?,
+        onCommitting: () -> Unit
+    ): Transaction {
+        if (checkBalanceConditions) {
+            checkBalanceConditions(wallet, sendRequest.tx)
+        }
+        log.info("sending: {}", sendRequest)
+        if (!txCompleted) {
+            signSendRequest(wallet, sendRequest)
+        }
+        // The last point a wipe can stop this with nothing committed.
+        currentCoroutineContext().ensureActive()
+        onCommitting()
+        return withContext(NonCancellable) {
+            if (txCompleted) {
+                // Use maybeCommitTx to avoid "commitTx called on the same transaction twice":
+                // a BIP70 merchant (e.g. CTX) may broadcast the tx to the network as soon as it
+                // receives the payment message, so our wallet can pick it up via the P2P peer
+                // group and add it to the pending pool before we reach this commit.
+                if (!wallet.maybeCommitTx(sendRequest.tx)) {
+                    log.info(
+                        "tx was already in the wallet (likely received via network broadcast): {}",
+                        sendRequest.tx.txId
+                    )
+                }
+            } else {
+                // completeTx, then commitTx: completeTx's failures are still before the commit.
+                wallet.sendCoinsOffline(sendRequest)
+            }
+
+            val transaction = sendRequest.tx
+            beforeSending?.accept(transaction)
+            serviceName?.let {
+                metadataProvider.setTransactionService(sendRequest.tx.txId.toTxId(), serviceName)
+            }
+            log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
+            log.info("  transaction: {}", transaction.toStringHex())
+            walletApplication.broadcastTransaction(transaction)
+            notifyBroadcast(onBroadcast, transaction.txId.toString())
+            transaction
         }
     }
 

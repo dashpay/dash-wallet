@@ -34,6 +34,7 @@ import de.schildbach.wallet.service.platform.sdk.ContactPaymentNotRecordableExce
 import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.emptyFlow
@@ -260,12 +261,14 @@ class SendCoinsViewModelContactResubmitTest {
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
+                any<Wallet>(),
+                any<Boolean>(),
                 any<(String?) -> Unit>(),
                 any<() -> Unit>()
             )
         } coAnswers {
             @Suppress("UNCHECKED_CAST")
-            val onBroadcast = args[6] as ((String?) -> Unit)?
+            val onBroadcast = args[8] as ((String?) -> Unit)?
             val first = synchronized(sends) {
                 sends.recipients += args[5] as Address?
                 sends.recipients.size == 1
@@ -293,12 +296,14 @@ class SendCoinsViewModelContactResubmitTest {
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
+                any<Wallet>(),
+                any<Boolean>(),
                 any<(String?) -> Unit>(),
                 any<() -> Unit>()
             )
         } coAnswers {
             @Suppress("UNCHECKED_CAST")
-            val onBroadcast = args[6] as ((String?) -> Unit)?
+            val onBroadcast = args[8] as ((String?) -> Unit)?
             synchronized(sends) { sends.recipients += args[5] as Address? }
             onBroadcast?.invoke("cc".repeat(32))
             mockk<Transaction>(relaxed = true)
@@ -322,12 +327,14 @@ class SendCoinsViewModelContactResubmitTest {
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
+                any<Wallet>(),
+                any<Boolean>(),
                 any<(String?) -> Unit>(),
                 any<() -> Unit>()
             )
         } coAnswers {
             @Suppress("UNCHECKED_CAST")
-            val onBroadcast = args[6] as ((String?) -> Unit)?
+            val onBroadcast = args[8] as ((String?) -> Unit)?
             sends.recipients += args[5] as Address?
             if (sends.recipients.size == 1) {
                 onBroadcast?.invoke("aa".repeat(32))
@@ -383,6 +390,35 @@ class SendCoinsViewModelContactResubmitTest {
         runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromUserId(contactUserId)) }
         awaitCondition("contact payment ready to confirm") {
             viewModel.everythingPlausible() && viewModel.dryrunSendRequest != null
+        }
+    }
+
+    @Test
+    fun aConfirmedSend_isBoundToTheWalletTheScreenWasOpenedOn() {
+        // A wipe between confirmation and the send must not have the replacement wallet pay it:
+        // the runner can only refuse that if it is told which wallet the payment was made on, on
+        // the dashj route and on the reroute to the SDK alike.
+        val chain = FakeDashjChain(keys)
+        val sends = Sends()
+        val runner = succeedingRunner(sends)
+        val viewModel = buildViewModel(chain, runner)
+        open(viewModel)
+
+        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+
+        coVerify(exactly = 1) {
+            runner.sendCoins(
+                any<SendRequest>(),
+                any<Boolean>(),
+                any<Boolean>(),
+                any<Consumer<Transaction>>(),
+                any<String>(),
+                any<Address>(),
+                match<Wallet> { it === viewModel.wallet },
+                any<Boolean>(),
+                any<(String?) -> Unit>(),
+                any<() -> Unit>()
+            )
         }
     }
 

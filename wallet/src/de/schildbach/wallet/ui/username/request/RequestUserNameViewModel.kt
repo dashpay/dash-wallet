@@ -47,6 +47,7 @@ import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.service.platform.sdk.creditsToDash
+import de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason
 import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
@@ -120,6 +121,13 @@ data class RequestUserNameUIState(
      * submit still reaches the SDK.
      */
     val usernameSubmittedPoolSyncing: Boolean = false,
+    /**
+     * A transparent (L1-funded) submit was refused because an earlier payment's outcome is still
+     * being confirmed and its inputs are not protected from coin selection
+     * ([de.schildbach.wallet.service.platform.sdk.isPaymentStillConfirmingReason]). Nothing was
+     * spent; the screen shows `R.string.payment_still_confirming`, not the network-error dialog.
+     */
+    val usernameSubmittedPaymentStillConfirming: Boolean = false,
     /**
      * The shielded creation's outcome is UNCONFIRMED (may already be on
      * chain; the spent notes stay reserved) — the UI must NOT offer a
@@ -1016,11 +1024,17 @@ class RequestUserNameViewModel @Inject constructor(
                 // preparing" message rather than the red "network error"
                 // dialog (Fix A). (Transparent funding never emits these.)
                 val poolNotReady = SdkShieldedUsernameCreation.isPoolNotReadyReason(state.reason)
+                val stillConfirming = isPaymentStillConfirmingReason(state.reason)
                 _uiState.update {
                     if (poolNotReady) {
                         it.copy(
                             usernameRequestSubmitting = false,
                             usernameSubmittedPoolSyncing = true
+                        )
+                    } else if (stillConfirming) {
+                        it.copy(
+                            usernameRequestSubmitting = false,
+                            usernameSubmittedPaymentStillConfirming = true
                         )
                     } else {
                         it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
@@ -1146,9 +1160,45 @@ class RequestUserNameViewModel @Inject constructor(
             val submitSource = effectivePaymentSource(
                 requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
             )
-            val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
-                submitSource != UsernamePaymentSource.SHIELDED_BALANCE &&
-                transparentUsernameCreation.isCutoverCommitted()
+            // After the cutover an identity that already exists on chain gets ONLY its name
+            // retried (review 4299080469): the legacy reuse path below resets it to NONE and
+            // looks for a dashj funding transaction an SDK-created identity never had, so it
+            // would start fresh legacy funding. Before the cutover the legacy path is master's
+            // (#1567) and stays as it is.
+            val existingIdentityId = identity?.userId
+            val nameOnlyCandidate = reuseTransaction && existingIdentityId != null && !isUsingInvite()
+            val freshSdkCandidate = !isUsingInvite() && !reuseTransaction &&
+                submitSource != UsernamePaymentSource.SHIELDED_BALANCE
+            // Fail closed (review 4299080469, reopened): for both of these, "not committed" starts
+            // CreateIdentityService, which resets a registered identity to NONE or funds through
+            // the dashj engine. The lenient read turns an unreadable cutover state into exactly
+            // that answer, so these read the state strictly, and an unknown one refuses the
+            // submission, starting and resetting nothing.
+            val cutover: Boolean? = if (nameOnlyCandidate || freshSdkCandidate) {
+                transparentUsernameCreation.cutoverStateOrUnknown()
+            } else {
+                false
+            }
+            if (cutover == null) {
+                log.warn("username submit refused: the cutover state cannot be read")
+                _uiState.update { it.copy(usernameSubmittedError = true) }
+                return@launch
+            }
+            if (nameOnlyCandidate && cutover) {
+                log.info("name-only retry for the existing identity (cutover committed)")
+                // Accepted means the retry runs on the application scope and survives this screen,
+                // which the submitting state closes; publish it only then.
+                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
+                    requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
+                    requestedUserName!!,
+                    requestedUsernameSecondary
+                )
+                _uiState.update {
+                    if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
+                }
+                return@launch
+            }
+            val cutoverCommitted = freshSdkCandidate && cutover
             if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
             ) {
@@ -1277,6 +1327,7 @@ class RequestUserNameViewModel @Inject constructor(
             it.copy(
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 usernameRequestSubmitted = false,
                 usernameRequestSubmitting = false
             )
@@ -1409,6 +1460,7 @@ class RequestUserNameViewModel @Inject constructor(
                     usernameCheckFailed = false,
                     usernameSubmittedError = false,
                     usernameSubmittedPoolSyncing = false,
+                    usernameSubmittedPaymentStillConfirming = false,
                     usernameContested = usernameContested, usernameExists = usernameExists,
                     usernameBlocked = usernameBlocked,
                     checkedUsername = username,
@@ -1761,6 +1813,7 @@ class RequestUserNameViewModel @Inject constructor(
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameSubmittedPoolSyncing = false,
+                usernameSubmittedPaymentStillConfirming = false,
                 checkingUsername = if (lookupWillFollow) it.checkingUsername else false,
                 usernameCheckSuccess = false,
                 usernameCheckFailed = false,

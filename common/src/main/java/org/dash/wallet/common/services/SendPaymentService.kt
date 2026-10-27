@@ -48,6 +48,14 @@ open class PaymentSubmissionPendingException(
 ) : Exception(message, cause)
 
 /**
+ * Thrown instead of building a payment while an earlier payment's outcome is still unknown and its
+ * inputs cannot be kept out of coin selection. Nothing was built, signed or sent. It lifts by
+ * itself once that payment is confirmed on the network or released; the screen should say so
+ * (`R.string.payment_still_confirming`) rather than report a failure.
+ */
+class PaymentStillConfirmingException(message: String) : IllegalStateException(message)
+
+/**
  * Facts a caller wants kept with a payment so one recovered long afterwards looks like the
  * original. Only for payments whose submission result may be unknown; ordinary payments record
  * their metadata directly.
@@ -76,7 +84,22 @@ sealed class SpendSelection {
  * Neutral (dashj-free) payment service facade: amounts are [Dash], addresses are base58
  * strings, created transactions are returned as [TxInfo] snapshots or hex tx ids.
  */
+/**
+ * The wallet a payment was confirmed against. Taken without suspending at the moment the user
+ * confirms ([SendPaymentService.currentWalletSession]) and handed to the send, so the steps in
+ * between (a lookup, an invoice fetch, a quote) cannot change which wallet pays: a payment that
+ * carries one is refused, with nothing sent, once that wallet has been wiped or replaced. Opaque
+ * outside the wallet module.
+ */
+class WalletSession(val handle: Any)
+
 interface SendPaymentService {
+
+    /**
+     * The wallet installed right now as a [WalletSession], or null when none is. Never suspends,
+     * so a caller can take it at the moment the user confirms, before anything can wait.
+     */
+    fun currentWalletSession(): WalletSession?
 
     /**
      * Sends [amount] to the base58 [address] and returns the created transaction's txId
@@ -88,7 +111,8 @@ interface SendPaymentService {
         address: String,
         amount: Dash,
         emptyWallet: Boolean = false,
-        checkBalanceConditions: Boolean = true
+        checkBalanceConditions: Boolean = true,
+        session: WalletSession? = null
     ): String
 
     /**
@@ -108,7 +132,8 @@ interface SendPaymentService {
         emptyWallet: Boolean = false,
         checkBalanceConditions: Boolean = true,
         lockSentOutputsTo: String? = null,
-        canSpendLockedOutputsTo: String? = null
+        canSpendLockedOutputsTo: String? = null,
+        session: WalletSession? = null
     ): TxInfo
 
     /** Fee/total estimate for sending [amount] to [address]. */
@@ -127,8 +152,9 @@ interface SendPaymentService {
     /**
      * Pays the given `dash:` payment URI and returns the created transaction.
      *
-     * The payment is made from the wallet installed when this is called, and refused if a wipe
-     * takes that wallet away before it is submitted.
+     * The payment is made from the wallet of [session] when one is given, otherwise from the
+     * wallet installed when this is called, and refused if a wipe takes that wallet away before
+     * it is submitted.
      *
      * @param recovery facts to keep with a payment whose submission result may turn out unknown
      * @param onTransactionCreated invoked with the hex transaction id once the transaction is
@@ -143,6 +169,7 @@ interface SendPaymentService {
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
+        session: WalletSession? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): TxInfo
 }

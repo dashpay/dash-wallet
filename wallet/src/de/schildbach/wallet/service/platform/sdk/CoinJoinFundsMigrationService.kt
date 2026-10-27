@@ -358,6 +358,18 @@ data class MixedFundsRoutes(val shieldOperable: Boolean, val combineOperable: Bo
     val any: Boolean get() = shieldOperable || combineOperable
 }
 
+/** The outcome of one migration attempt's spend. */
+internal fun migrationOutcomeOf(result: SdkWriteResult<*>): MixedFundsMigrationOutcome = when (result) {
+    is SdkWriteResult.Broadcast -> MixedFundsMigrationOutcome.STARTED
+    is SdkWriteResult.NotBroadcast ->
+        if (isPaymentStillConfirmingReason(result.reason)) {
+            MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
+        } else {
+            MixedFundsMigrationOutcome.NOT_ATTEMPTED
+        }
+    is SdkWriteResult.Ambiguous -> MixedFundsMigrationOutcome.UNCONFIRMED
+}
+
 /** What the user chose, and how it went. */
 enum class MixedFundsMigrationOutcome {
     /** Broadcast/submitted; the CoinJoin account is being emptied. */
@@ -365,6 +377,13 @@ enum class MixedFundsMigrationOutcome {
 
     /** Nothing was spent — safe to re-offer immediately. */
     NOT_ATTEMPTED,
+
+    /**
+     * Nothing was spent: refused because an earlier payment's outcome is still being confirmed
+     * and its inputs are not protected from coin selection. Same retry path as [NOT_ATTEMPTED]
+     * (the migration stays unrecorded), but the sheet says why and lets the user come back later.
+     */
+    PAYMENT_STILL_CONFIRMING,
 
     /** The outcome is unknown; the transaction MAY be on the network. */
     UNCONFIRMED
@@ -865,7 +884,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
             writeConfig(DashPayConfig.MIXED_FUNDS_DIRECT_SHIELD_PHASE, DIRECT_SHIELD_SUBMITTED)
         }
         val outcome = result.toOutcome()
-        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED ||
+            outcome == MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
+        ) {
             clearInFlightMigrationInner()
         } else {
             // Something is (or may be) out — e.g. an existing CoinJoin lock
@@ -962,7 +983,9 @@ class CoinJoinFundsMigrationService @Inject constructor(
         outcome: MixedFundsMigrationOutcome,
         markerAlreadyRecorded: Boolean = false
     ): MixedFundsMigrationOutcome {
-        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED) {
+        if (outcome == MixedFundsMigrationOutcome.NOT_ATTEMPTED ||
+            outcome == MixedFundsMigrationOutcome.PAYMENT_STILL_CONFIRMING
+        ) {
             // Nothing was spent — leave the flag unset so the prompt returns
             // on the next startup. This is the retry path.
             log.warn("mixed-funds migration ({}) did not run; the prompt will reappear", action)
@@ -1923,6 +1946,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
                         onSignerLocked()
                         return false
                     }
+                    // Same retry as a locked signer: nothing was spent, the step runs again later.
+                    ConsolidationStep.PAYMENT_STILL_CONFIRMING -> {
+                        log.info("mixed-funds migration: an earlier payment is still confirming; retrying later")
+                        onSignerLocked()
+                        return false
+                    }
                     ConsolidationStep.SETTLED -> return true
                     ConsolidationStep.PROCEED -> Unit
                 }
@@ -2145,7 +2174,12 @@ class CoinJoinFundsMigrationService @Inject constructor(
         /** Stopped for good, always after recording expired guidance or a definitive failure. */
         STOPPED,
         /** A step could not sign because the device is locked; retry it later. */
-        SIGNER_LOCKED
+        SIGNER_LOCKED,
+        /**
+         * A step was refused, nothing spent, because an earlier payment's outcome is still being
+         * confirmed and its inputs are exposed to the SDK's coin selection; retry it later.
+         */
+        PAYMENT_STILL_CONFIRMING
     }
 
     /**
@@ -2284,6 +2318,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 if (result is SdkWriteResult.NotBroadcast) {
                     saveConsolidation(state.copy(phase = CoinJoinConsolidationState.READY))
                     if (isSignerLockedFailure(result)) return ConsolidationStep.SIGNER_LOCKED
+                    if (isPaymentStillConfirmingReason(result.reason)) return ConsolidationStep.PAYMENT_STILL_CONFIRMING
                     // Definitive, with every consolidation settled and no lock
                     // pending: offer the choice again (incl. the wallet-balance
                     // fallback) instead of "could not confirm".
@@ -2332,6 +2367,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 state = state.copy(phase = CoinJoinConsolidationState.READY, txid = "", rawTx = "")
                 saveConsolidation(state)
                 if (isSignerLockedFailure(result)) return ConsolidationStep.SIGNER_LOCKED
+                if (isPaymentStillConfirmingReason(result.reason)) return ConsolidationStep.PAYMENT_STILL_CONFIRMING
                 failMigration()
                 return ConsolidationStep.STOPPED
             }
@@ -2422,7 +2458,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             return ConsolidationReplay.CONFLICT
         }
         log.info("CoinJoin consolidation {}: replaying the persisted signed transaction", txid)
-        return sdkL1SendService.rebroadcastCoinJoinConsolidation(bytes, txid)
+        return sdkL1SendService.rebroadcastCoinJoinConsolidation(state.walletId, bytes, txid)
     }
 
     /**
@@ -2496,11 +2532,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
     private suspend fun hasPersistedInstantLock(txid: String): Boolean =
         txid.lowercase().let { it in persistedInstantLocks(listOf(it)) }
 
-    private fun SdkWriteResult<*>.toOutcome(): MixedFundsMigrationOutcome = when (this) {
-        is SdkWriteResult.Broadcast -> MixedFundsMigrationOutcome.STARTED
-        is SdkWriteResult.NotBroadcast -> MixedFundsMigrationOutcome.NOT_ATTEMPTED
-        is SdkWriteResult.Ambiguous -> MixedFundsMigrationOutcome.UNCONFIRMED
-    }
+    private fun SdkWriteResult<*>.toOutcome(): MixedFundsMigrationOutcome = migrationOutcomeOf(this)
 
     companion object {
         private val log = LoggerFactory.getLogger(CoinJoinFundsMigrationService::class.java)
