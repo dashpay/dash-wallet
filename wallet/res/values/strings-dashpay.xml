@@ -465,7 +465,7 @@
          runtime always sets request_username_balance_requirement_amount with
          the real path-dependent amount. Kept (with its translations) purely
          to avoid translation churn; do not add new usages. -->
-    <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
+    <string name="request_username_balance_requirement">You need to have %s DASH to create this username</string>
     <!-- Make-username-private sheet: the private-username funding bar (%s =
          SHIELDED_USERNAME_FUND_MIN — the smallest v13 shielded exit
          denomination 0.03 plus the SHIELDED_FEE_MARGIN Shield-fee margin). -->
