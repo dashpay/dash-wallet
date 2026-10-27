@@ -429,3 +429,10 @@ across devnet, testnet and production, plus both debug APK builds and ktlintChec
 The real-loader integration test covers repeated partial results, coalesced taps,
 later storage recovery, restored rows and the healthy-identity reload guard. It
 does not perform on-device or funded network testing.
+
+The loader also avoids reading the previous identity's uniqueIdString while
+constructing its replacement: that diagnostic read throws for a partial identity
+and would otherwise make every reload fail. A regression invokes the real SDK
+constructor and real initBlockchainIdentity implementation, first loading
+IDENTITY_REGISTERING metadata and then replacing it with IDENTITY_REGISTERED
+metadata. This complements the ViewModel integration test's stubbed construction.

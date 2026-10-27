@@ -91,6 +91,38 @@ class IdentityRepositoryConnectKeyTest {
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
 
+    @Test
+    @Config(shadows = [de.schildbach.wallet.ui.more.connections.AppConnectKeyStateTest.ShadowSdkEnums::class])
+    fun realInitializerReplacesPartialIdentityWithoutReadingItsUninitializedId() = runBlocking {
+        val reloadable = spyk(repository)
+        val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
+        every { provider.wallet } returns wallet
+        every { reloadable.authenticationGroupExtension } returns mockk(relaxed = true)
+        every { platform.platform.platform.params } returns org.bitcoinj.params.TestNet3Params.get()
+        val data = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityData>(relaxed = true)
+        every { data.creationState } returns de.schildbach.wallet.database.entity.IdentityCreationState.IDENTITY_REGISTERING
+        every { data.userId } returns id.toString()
+        every { data.username } returns null
+        every { data.usernameSecondary } returns null
+        every { data.creditBalance } returns null
+        every { data.registrationStatus } returns org.dashj.platform.dashpay.IdentityStatus.REGISTERED
+        coEvery { identityStorage.load() } returns data
+        reloadable.init()
+        val partial = reloadable.blockchainIdentity!!
+        org.junit.Assert.assertTrue(reloadable.initializationResult.value!!.isSuccess)
+        org.junit.Assert.assertFalse(reloadable.hasInitializedIdentityScope())
+        assertThrows(UninitializedPropertyAccessException::class.java) { partial.uniqueIdString }
+        every { data.creationState } returns de.schildbach.wallet.database.entity.IdentityCreationState.IDENTITY_REGISTERED
+        reloadable.init()
+        org.junit.Assert.assertNotSame(partial, reloadable.blockchainIdentity)
+        org.junit.Assert.assertTrue(reloadable.initializationResult.value!!.isSuccess)
+        org.junit.Assert.assertTrue(reloadable.hasInitializedIdentityScope())
+        org.junit.Assert.assertEquals(id, reloadable.blockchainIdentity!!.uniqueIdentifier)
+        coVerify(exactly = 2) { identityStorage.load() }
+        coVerify(exactly = 0) { reloadable.ensureCriticalAuthenticationKey(any(), any(), any()) }
+        coVerify(exactly = 0) { reloadable.upgradeIdentity(any()) }
+    }
+
     @Test fun cancelledIdentityLoadPublishesRetryableFailureAndStillPropagatesCancellation() = runBlocking {
         val entered = CompletableDeferred<Unit>()
         coEvery { identityStorage.load() } coAnswers {
