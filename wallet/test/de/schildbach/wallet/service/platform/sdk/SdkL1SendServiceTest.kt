@@ -38,6 +38,7 @@ import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -2411,16 +2412,26 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun aDeferredBuildWithNoCommittedCursorRecordsNoHeight() = runBlocking {
+    fun aDeferredBuildWithNoCommittedCursor_isRefusedBeforeReserving() = runBlocking {
         // Review 28775c57d545: header and filter cursors at the tip say nothing about how far the
-        // engine has processed (that can be 100 blocks behind). Recording one as the reservation
-        // height would make an older reservation look fresh; unknown must stay unknown.
+        // engine has processed (that can be 100 blocks behind), so they must never stand in for
+        // the reservation height. Since #1632 an unknown cursor does not get that far: the funding
+        // gate refuses it ("wallet scan cursor is not known yet") before anything is reserved, so
+        // no reservation is ever stamped from an unknown cursor. reservationHeightLowerBound()'s
+        // null stays as the defence behind the gate.
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val noCommittedCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
-        val payment = service(source, progress = { noCommittedCursor })
-            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+        val refused = try {
+            service(source, progress = { noCommittedCursor })
+                .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+            null
+        } catch (e: IllegalStateException) {
+            e
+        }
 
-        assertNull(payment.reservedAtHeight)
+        assertNotNull("the gate refuses an unknown cursor", refused)
+        assertTrue(refused!!.message, refused.message!!.contains("cursor is not known"))
+        assertEquals("nothing was reserved", 0, source.mayaBuildCalls)
     }
 
     @Test
