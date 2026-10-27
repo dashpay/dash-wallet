@@ -116,10 +116,15 @@ object TransactionUtils {
      * `isMine(bag)` check is false for it too), so it would otherwise list
      * that change address as a second recipient. [sdkOverride], when present
      * and successfully decoded, carries the SDK's own change-filtered output
-     * addresses (derived from its TXO ownership records) and is preferred.
+     * addresses (derived from its TXO ownership records) and is preferred —
+     * except when it comes back empty: that means the SDK couldn't resolve a
+     * recipient address at all (e.g. a bare P2PK output; see
+     * [SdkTxDetail.outputAddresses]), not that there is none, so
+     * [getToAddressOfSent]'s dashj-derived address resolution (which does
+     * handle P2PK) is used instead.
      */
     fun getSentToAddressesForDetail(tx: Transaction, bag: TransactionBag, sdkOverride: SdkTxDetail?): List<Address> {
-        val overrideAddresses = sdkOverride?.takeIf { !it.decodeFailed }?.outputAddresses
+        val overrideAddresses = sdkOverride?.takeIf { !it.decodeFailed }?.outputAddresses?.takeIf { it.isNotEmpty() }
         return overrideAddresses?.map { Address.fromBase58(tx.params, it) } ?: getToAddressOfSent(tx, bag)
     }
 

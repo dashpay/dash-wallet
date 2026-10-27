@@ -218,6 +218,35 @@ class SdkTxDetailTest {
         assertEquals(listOf(recipientAddress, changeAddress), detail.outputAddresses)
     }
 
+    @Test
+    fun `outgoing send with an unresolved recipient output never falls back to the change address`() {
+        // Stands in for a P2PK (or other non-standard) recipient output:
+        // Address::from_script has no arm for it, so transaction_decode
+        // returns no address for that output — not OP_RETURN, just unresolved.
+        val unresolved = DecodedTransaction(
+            txid = decoded.txid,
+            inputs = decoded.inputs,
+            outputs = listOf(
+                DecodedTransaction.Output(null, decoded.outputs[0].valueDuffs, decoded.outputs[0].scriptPubkey),
+                decoded.outputs[1], // change — decodes fine
+                decoded.outputs[2] // OP_RETURN
+            )
+        )
+
+        val detail = buildSdkTxDetail(
+            record = record(netAmountDuffs = -70_247, directionCode = 1),
+            decoded = unresolved,
+            myOutputAddresses = setOf(changeAddress),
+            inputTxoAddresses = listOf(null),
+            inputTxoValues = listOf(null)
+        )
+
+        assertTrue(
+            "an unresolved recipient must not be mistaken for an entirely-self move",
+            detail.outputAddresses.isEmpty()
+        )
+    }
+
     // ── Incoming receive ──────────────────────────────────────────────
 
     @Test

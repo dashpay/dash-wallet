@@ -126,6 +126,22 @@ class DashjTransactionUtilsTest {
     }
 
     @Test
+    fun `an empty override address list is not trusted either so it falls back to the dashj list`() {
+        // A successfully decoded override can still come back with no resolved
+        // addresses (e.g. a bare P2PK recipient — the SDK's address decoder has
+        // no arm for it; see SdkTxDetailProvider.buildSdkTxDetail). Empty must
+        // not be read as "no recipient": the payee still needs to be shown, via
+        // the dashj-derived fallback, which does resolve P2PK.
+        val tx = sendWithChange()
+        val bag = bagMock(myAddresses = listOf(changeAddress))
+        val override = sentOverride(feeDuffs = 226L, outputAddresses = emptyList())
+
+        val addresses = TransactionUtils.getSentToAddressesForDetail(tx, bag, override)
+
+        assertEquals(listOf(payeeAddress), addresses)
+    }
+
+    @Test
     fun `a failed decode has no addresses to trust so it falls back to the dashj list`() {
         val tx = sendWithChange()
         val bag = bagMock(myAddresses = listOf(changeAddress))

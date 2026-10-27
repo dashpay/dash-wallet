@@ -175,9 +175,24 @@ internal fun buildSdkTxDetail(
         L1TxUiDirection.OUTGOING -> {
             // External recipients; when every output pays the wallet back
             // (entirely-self move) fall back to all addresses — the same
-            // display dashj's "moved internally to" list produces.
+            // display dashj's "moved internally to" list produces. But a
+            // non-standard PAYMENT output (e.g. P2PK — Address::from_script
+            // has no P2PK arm, so its address comes back null and is dropped
+            // by mapNotNull above) must not be mistaken for "entirely self":
+            // an empty `external` then means "recipient unresolved", not "no
+            // recipient", so the caller's own (dashj-derived) fallback is
+            // preferred over silently presenting the change address as if it
+            // were the payee. OP_RETURN outputs are excluded from that check —
+            // they are known data-only outputs, not unresolved recipients.
             val external = allOutputAddresses.filter { it !in myOutputAddresses }
-            external.ifEmpty { allOutputAddresses }
+            val hasUnresolvedPaymentOutput = outputs.any {
+                it.address == null && it.scriptPubkey.firstOrNull() != OP_RETURN
+            }
+            when {
+                external.isNotEmpty() -> external
+                hasUnresolvedPaymentOutput -> emptyList()
+                else -> allOutputAddresses
+            }
         }
         L1TxUiDirection.INTERNAL, L1TxUiDirection.COINJOIN -> allOutputAddresses
         // Received: only the outputs that are provably ours. No fallback —
